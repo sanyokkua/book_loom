@@ -1,0 +1,17 @@
+flowchart TD
+    S0["0 · Setup & Book Brief<br/>languages, genre, tone, options"] --> S1
+    S1["1 · Open & unpack<br/>unzip EPUB / read FB2 / detect real language / refuse DRM"] --> S2
+    S2["2 · Read structure into a tree<br/>pull out text segments, protect tags/code/images/links"] --> S3
+    S3["3 · Glossary pre-scan (Prep)<br/>LLM proposes names/terms + gender<br/>(offline fallback: frequency + casing)"] --> S4
+    S4["4 · Translate loop<br/>chunk by chunk, with context"] --> S5
+    S5["5 · Auto-check + LLM judge<br/>accept if confidence ≥ τ and judge score ≥ τ_judge<br/>repair only what fails"] --> S6
+    S6{"More chunks / chapters?"}
+    S6 -- yes --> S4
+    S6 -- no --> BR["6 · Optional backward revision<br/>resolve deferred gender/terms with full-book facts"]
+    BR --> S7["7 · Put text back into the tree<br/>images/fonts/IDs untouched, update language tags"]
+    S7 --> S8["8 · Repackage<br/>EPUB (mimetype-first) / FB2 / MD / TXT"]
+    S8 --> S9["9 · Optional whole-book consistency pass"]
+    S9 --> DONE(["Translated book saved"])
+    S5 -. " failing segments (rare) " .-> Q["Flagged segments<br/>(optional human look)"]
+    S5 -. " deferrals emitted<br/>(facts revealed later) " .-> BR
+    S8 --> Q

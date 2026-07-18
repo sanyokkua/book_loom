@@ -1,0 +1,26 @@
+flowchart TD
+    A["Take next chunk<br/>(a few whole paragraphs)"] --> TM{"TM context match?<br/>(same text + same neighbours)"}
+    TM -- " yes — reuse saved translation<br/>(skip draft & judge) " --> D
+    TM -- no --> B["Build the prompt<br/>brief + glossary + summary + previous translation + text"]
+    B --> C["Model translates<br/>(JSON out, keyed by segment id)"]
+    C --> IDM{"All segment ids<br/>present once?"}
+    IDM -- " missing ids " --> PS["Per-segment calls<br/>for the missing ids only"]
+    PS --> D
+    IDM -- yes --> D["Restore tags & locked names<br/>check placeholders are intact"]
+    D --> E["Automatic checks<br/>language? nothing dropped? names right? tags ok?<br/>→ confidence score"]
+    E --> F{"Hard gates pass and<br/>confidence ≥ τ?"}
+    F -- yes --> G["LLM judge score<br/>(dial-gated; skipped for TM reuse)"]
+    G --> H{"Judge off or<br/>score ≥ τ_judge?"}
+    H -- yes --> ACC["Accept"]
+    H -- no --> R
+    F -- no --> R["Repair"]
+    R --> R1{"Do we know<br/>what is wrong?"}
+    R1 -- " yes (from checks) " --> R2["Directed fix — 1 call<br/>tell model exactly what to correct"]
+    R1 -- " no (vague quality) " --> R3["Reflect then improve — 2 calls<br/>(+ optional monolingual polish<br/>if still borderline)"]
+    R2 --> E
+    R3 --> E
+    R -. " a segment still failing<br/>after N tries " .-> FLAG["Flag that segment<br/>for optional review"]
+    ACC --> SAVE["Save: translation + glossary + summary + memory<br/>(crash-safe); record deferrals<br/>for backward revision"]
+    FLAG --> SAVE
+    style ACC fill: #d4edda, stroke: #28a745
+    style FLAG fill: #fff3cd, stroke: #e0a800

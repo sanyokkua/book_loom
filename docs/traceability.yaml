@@ -1,0 +1,9 @@
+# traceability.yaml — GENERATED. Do not edit by hand. Regenerate with `./gradlew trace`.
+# Schema: docs/implementation_plan/03_TRACEABILITY.md
+# This seed shows the shape; it stays empty until stories land in docs/stories/ and `./gradlew trace` runs.
+generated_at: '2026-07-17T00:00:00Z'
+generator_version: 1
+stories: { }
+clauses: { }
+edge_cases: { }
+modules: { }

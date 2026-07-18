@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>BookLoom — High-Fidelity Mockup</title>
+    <style>
+        /* ============================================================
+   DESIGN TOKENS  (mirror JavaFX ".root" looked-up colors)
+   Palette: Slate #b2babd · Sand Dollar #e7d6c0 · Cognac #a58075 · Charcoal #3a4a52
+   ============================================================ */
+        :root {
+            --slate: #b2babd;
+            --sand: #e7d6c0;
+            --cognac: #a58075;
+            --charcoal: #3a4a52;
+            /* spacing (8px base) */
+            --s1: 4px;
+            --s2: 8px;
+            --s3: 12px;
+            --s4: 16px;
+            --s5: 24px;
+            --s6: 32px;
+            --r-sm: 4px;
+            --r: 6px;
+            --r-lg: 9px;
+            --r-pill: 999px;
+            --fs-xs: 11px;
+            --fs-sm: 12px;
+            --fs-base: 13.5px;
+            --fs-md: 15px;
+            --fs-lg: 18px;
+            --fs-xl: 22px;
+            --fs-2xl: 28px;
+        }
+
+        :root[data-theme="light"] {
+            --bg: #f4f1ea;
+            --surface: #ffffff;
+            --surface-2: #f6f1e8;
+            --surface-alt: #fbf9f4;
+            --border: #ddd5c8;
+            --border-cool: #cdd2d3;
+            --divider: #eae4d8;
+            --text: #2c3941;
+            --text-strong: #22303a;
+            --muted: #6f7c82;
+            --muted-2: #95928a;
+            --primary: #a58075;
+            --primary-hover: #916b60;
+            --primary-press: #7e5b51;
+            --primary-fg: #ffffff;
+            --primary-soft: #f0e5dd;
+            --sand-soft: #f2e9db;
+            --sand-strong: #dcc4a3;
+            --selected: #f0e6d6;
+            --nav-bg: #3a4a52;
+            --nav-bg-2: #324148;
+            --nav-fg: #cdd5d8;
+            --nav-fg-muted: #859399;
+            --nav-active-bg: rgba(231, 214, 192, .13);
+            --nav-active-fg: #f3ede3;
+            --nav-accent: #c99a86;
+            --title-bg: #324148;
+            --title-fg: #dfe4e6;
+            --ok: #5f8a6b;
+            --ok-bg: #e7efe8;
+            --ok-bd: #bcd4c1;
+            --warn: #bd863a;
+            --warn-bg: #f6ecd8;
+            --warn-bd: #e4cfa2;
+            --err: #b0574c;
+            --err-bg: #f7e4df;
+            --err-bd: #e4b6ad;
+            --info: #4d6b78;
+            --info-bg: #e5edf0;
+            --info-bd: #b7cbd2;
+            --shadow-sm: 0 1px 2px rgba(58, 74, 82, .10);
+            --shadow: 0 3px 10px rgba(58, 74, 82, .12);
+            --shadow-lg: 0 12px 34px rgba(35, 45, 50, .22);
+            --focus: #a58075;
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #283237;
+            --surface: #33424a;
+            --surface-2: #2e3b41;
+            --surface-alt: #38474f;
+            --border: #48585f;
+            --border-cool: #48585f;
+            --divider: #3c4a51;
+            --text: #e6ebed;
+            --text-strong: #f4f7f8;
+            --muted: #9fb0b7;
+            --muted-2: #7f9098;
+            --primary: #c4917e;
+            --primary-hover: #d4a593;
+            --primary-press: #b47e6b;
+            --primary-fg: #241c19;
+            --primary-soft: #3f3733;
+            --sand-soft: #3a3a37;
+            --sand-strong: #6d5f4a;
+            --selected: rgba(231, 214, 192, .12);
+            --nav-bg: #20292e;
+            --nav-bg-2: #1c2429;
+            --nav-fg: #cdd6da;
+            --nav-fg-muted: #7d8f97;
+            --nav-active-bg: rgba(231, 214, 192, .10);
+            --nav-active-fg: #f3ede3;
+            --nav-accent: #c99a86;
+            --title-bg: #1c2429;
+            --title-fg: #dfe4e6;
+            --ok: #7faa8a;
+            --ok-bg: #2b3a33;
+            --ok-bd: #3f5a49;
+            --warn: #d0a25a;
+            --warn-bg: #3a3327;
+            --warn-bd: #5c4d31;
+            --err: #cc7a6f;
+            --err-bg: #3b2b28;
+            --err-bd: #5e3f39;
+            --info: #7a9dab;
+            --info-bg: #293940;
+            --info-bd: #3d525b;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
+            --shadow: 0 4px 14px rgba(0, 0, 0, .35);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, .5);
+            --focus: #c4917e;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            height: 100%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: var(--fs-base);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4 {
+            margin: 0;
+            color: var(--text-strong);
+            font-weight: 600;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .mono {
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+        }
+
+        /* ============================================================ WINDOW FRAME */
+        .window {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .titlebar {
+            height: 38px;
+            flex: none;
+            background: var(--title-bg);
+            color: var(--title-fg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            user-select: none;
+        }
+
+        .titlebar .left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .traffic {
+            display: flex;
+            gap: 7px;
+        }
+
+        .traffic i {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: block;
+        }
+
+        .traffic .r {
+            background: #e06c60;
+        }
+
+        .traffic .y {
+            background: #e6b04b;
+        }
+
+        .traffic .g {
+            background: #68b05a;
+        }
+
+        .titlebar .app {
+            font-weight: 600;
+            font-size: 12.5px;
+            letter-spacing: .2px;
+        }
+
+        .titlebar .right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tbtn {
+            background: transparent;
+            border: none;
+            color: var(--title-fg);
+            opacity: .8;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tbtn:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .body {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+
+        /* ============================================================ SIDEBAR NAV */
+        .sidebar {
+            width: 236px;
+            flex: none;
+            background: var(--nav-bg);
+            color: var(--nav-fg);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .nav-brand {
+            padding: 14px 16px 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-brand .logo {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            background: var(--cognac);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .nav-brand .t {
+            font-weight: 600;
+            color: var(--nav-active-fg);
+            font-size: 13.5px;
+        }
+
+        .nav-brand .s {
+            font-size: 10.5px;
+            color: var(--nav-fg-muted);
+        }
+
+        .nav-group {
+            padding: 8px 10px 2px;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .9px;
+            color: var(--nav-fg-muted);
+            padding: 6px 8px 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            color: var(--nav-fg);
+            border-left: 3px solid transparent;
+            margin: 1px 0;
+            font-size: 13px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, .05);
+        }
+
+        .nav-item.active {
+            background: var(--nav-active-bg);
+            color: var(--nav-active-fg);
+            border-left-color: var(--nav-accent);
+            font-weight: 600;
+        }
+
+        .nav-item .ico {
+            width: 16px;
+            text-align: center;
+            opacity: .85;
+        }
+
+        .nav-item .step {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, .09);
+            color: var(--nav-fg-muted);
+        }
+
+        .nav-item.active .step {
+            background: var(--nav-accent);
+            color: #2a211d;
+            font-weight: 700;
+        }
+
+        .nav-item.done .step {
+            background: var(--ok);
+            color: #fff;
+        }
+
+        .nav-spacer {
+            flex: 1;
+        }
+
+        .nav-foot {
+            padding: 10px 14px;
+            border-top: 1px solid rgba(255, 255, 255, .07);
+            font-size: 11px;
+            color: var(--nav-fg-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot-ok {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--ok);
+            display: inline-block;
+        }
+
+        /* ============================================================ MAIN */
+        .main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .toolbar {
+            height: 46px;
+            flex: none;
+            border-bottom: 1px solid var(--divider);
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .crumbs {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+
+        .crumbs b {
+            color: var(--text-strong);
+            font-weight: 600;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 22px 26px 40px;
+        }
+
+        .page-h {
+            margin-bottom: 4px;
+            font-size: var(--fs-xl);
+        }
+
+        .page-sub {
+            color: var(--muted);
+            margin: 0 0 18px;
+            font-size: 13px;
+            max-width: 760px;
+        }
+
+        /* ============================================================ LAYOUT HELPERS */
+        .row {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .col {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns:1fr 1fr;
+            gap: 14px;
+        }
+
+        .stack > * + * {
+            margin-top: 14px;
+        }
+
+        .between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .gap8 {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .mt2 {
+            margin-top: 8px;
+        }
+
+        .mt3 {
+            margin-top: 12px;
+        }
+
+        .mt4 {
+            margin-top: 16px;
+        }
+
+        /* ============================================================ CARD */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card.pad {
+            padding: 16px 18px;
+        }
+
+        .card-h {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--divider);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-h h3 {
+            font-size: 13.5px;
+        }
+
+        .card-b {
+            padding: 16px;
+        }
+
+        .card.warm {
+            background: var(--surface-2);
+        }
+
+        /* ============================================================ BUTTONS  (JavaFX Button + styleClass) */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1;
+            padding: 8px 15px;
+            border-radius: var(--r);
+            border: 1px solid transparent;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background .12s, border-color .12s;
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--focus);
+            outline-offset: 2px;
+        }
+
+        .btn .ico {
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--primary-fg);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-primary:active {
+            background: var(--primary-press);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text-strong);
+            border-color: var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-2);
+            border-color: var(--slate);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--muted);
+        }
+
+        .btn-ghost:hover {
+            background: var(--surface-2);
+            color: var(--text-strong);
+        }
+
+        .btn-danger {
+            background: var(--err);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            filter: brightness(.94);
+        }
+
+        .btn-danger-outline {
+            background: transparent;
+            color: var(--err);
+            border-color: var(--err-bd);
+        }
+
+        .btn-danger-outline:hover {
+            background: var(--err-bg);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .btn-lg {
+            padding: 11px 20px;
+            font-size: 14px;
+        }
+
+        .btn-icon {
+            padding: 7px;
+            width: 33px;
+            height: 33px;
+            justify-content: center;
+        }
+
+        .btn[disabled] {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        .btn .spin {
+            width: 13px;
+            height: 13px;
+            border: 2px solid rgba(255, 255, 255, .5);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: sp .7s linear infinite;
+        }
+
+        @keyframes sp {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* ============================================================ INPUTS  (JavaFX TextField / TextArea / ComboBox) */
+        label.fld {
+            display: block;
+            font-size: 11.5px;
+            color: var(--muted);
+            margin: 0 0 5px;
+            font-weight: 500;
+        }
+
+        .input, select.input, textarea.input {
+            width: 100%;
+            font-family: inherit;
+            font-size: 13px;
+            color: var(--text);
+            background: var(--surface);
+            border: 1px solid var(--border-cool);
+            border-radius: var(--r);
+            padding: 8px 10px;
+            transition: border-color .12s, box-shadow .12s;
+        }
+
+        .input:focus, select.input:focus, textarea.input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+        }
+
+        textarea.input {
+            resize: vertical;
+            line-height: 1.55;
+        }
+
+        .input.err-field {
+            border-color: var(--err);
+            box-shadow: 0 0 0 3px var(--err-bg);
+        }
+
+        .field-err {
+            color: var(--err);
+            font-size: 11px;
+            margin-top: 4px;
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        .hint {
+            font-size: 11px;
+            color: var(--muted-2);
+            margin-top: 5px;
+        }
+
+        .input-group {
+            display: flex;
+        }
+
+        .input-group .input {
+            border-radius: var(--r) 0 0 var(--r);
+        }
+
+        .input-group .btn {
+            border-radius: 0 var(--r) var(--r) 0;
+            border: 1px solid var(--border);
+            border-left: none;
+        }
+
+        /* ============================================================ SEGMENTED  (JavaFX SegmentedButton / ToggleGroup) */
+        .seg {
+            display: inline-flex;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .seg span {
+            padding: 7px 13px;
+            font-size: 12.5px;
+            cursor: pointer;
+            border-right: 1px solid var(--border);
+            color: var(--muted);
+            user-select: none;
+        }
+
+        .seg span:last-child {
+            border-right: none;
+        }
+
+        .seg span.on {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .seg.warm span.on {
+            background: var(--sand-strong);
+            color: #3a2f22;
+        }
+
+        /* ============================================================ TOGGLE SWITCH  (ControlsFX/AtlantaFX ToggleSwitch) */
+        .switch {
+            position: relative;
+            width: 38px;
+            height: 22px;
+            border-radius: var(--r-pill);
+            background: var(--slate);
+            cursor: pointer;
+            transition: background .15s;
+            flex: none;
+        }
+
+        .switch::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: var(--shadow-sm);
+            transition: left .15s;
+        }
+
+        .switch.on {
+            background: var(--primary);
+        }
+
+        .switch.on::after {
+            left: 18px;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 0;
+        }
+
+        .toggle-row .tx {
+            flex: 1;
+        }
+
+        .toggle-row .tx small {
+            display: block;
+            color: var(--muted);
+            font-size: 11.5px;
+        }
+
+        /* checkbox / radio (JavaFX CheckBox / RadioButton) */
+        .chk {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 12.5px;
+            padding: 5px 0;
+            cursor: pointer;
+        }
+
+        .chk input {
+            accent-color: var(--primary);
+            width: 15px;
+            height: 15px;
+        }
+
+        /* ============================================================ BADGES / PILLS  (styled Label) */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: var(--r-pill);
+            border: 1px solid transparent;
+        }
+
+        .b-ok {
+            background: var(--ok-bg);
+            color: var(--ok);
+            border-color: var(--ok-bd);
+        }
+
+        .b-warn {
+            background: var(--warn-bg);
+            color: var(--warn);
+            border-color: var(--warn-bd);
+        }
+
+        .b-err {
+            background: var(--err-bg);
+            color: var(--err);
+            border-color: var(--err-bd);
+        }
+
+        .b-info {
+            background: var(--info-bg);
+            color: var(--info);
+            border-color: var(--info-bd);
+        }
+
+        .b-run {
+            background: var(--info-bg);
+            color: var(--info);
+            border-color: var(--info-bd);
+        }
+
+        .b-neutral {
+            background: var(--surface-2);
+            color: var(--muted);
+            border-color: var(--border);
+        }
+
+        .b-sand {
+            background: var(--sand-soft);
+            color: #8a6d4e;
+            border-color: var(--sand-strong);
+        }
+
+        .b-dot::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            display: inline-block;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            background: var(--sand-soft);
+            border: 1px solid var(--sand-strong);
+            color: #7a6144;
+            padding: 3px 6px 3px 10px;
+            border-radius: var(--r-pill);
+        }
+
+        .chip .x {
+            cursor: pointer;
+            opacity: .6;
+            border-radius: 50%;
+            width: 15px;
+            height: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chip .x:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, .08);
+        }
+
+        /* ============================================================ TABLE  (JavaFX TableView) */
+        table.tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+        }
+
+        table.tbl th {
+            text-align: left;
+            font-weight: 600;
+            color: var(--muted);
+            background: var(--surface-2);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 11.5px;
+        }
+
+        table.tbl td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--divider);
+            vertical-align: middle;
+        }
+
+        table.tbl tr:hover td {
+            background: var(--surface-alt);
+        }
+
+        .row-selected td {
+            background: var(--selected) !important;
+        }
+
+        .row-error td {
+            box-shadow: inset 3px 0 0 var(--err);
+        }
+
+        .row-ok td {
+            box-shadow: inset 3px 0 0 var(--ok);
+        }
+
+        /* list rows (JavaFX ListView cell) */
+        .list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 11px 14px;
+            background: var(--surface);
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .list-item:hover {
+            border-color: var(--slate);
+            background: var(--surface-alt);
+        }
+
+        .list-item.sel {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-soft);
+        }
+
+        /* ============================================================ PROGRESS / SLIDER */
+        .bar {
+            height: 9px;
+            border-radius: var(--r-pill);
+            background: var(--surface-2);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .bar > span {
+            display: block;
+            height: 100%;
+            background: var(--primary);
+            border-radius: var(--r-pill);
+        }
+
+        .bar.indet > span {
+            width: 35%;
+            background: var(--info);
+            animation: indet 1.4s ease-in-out infinite;
+        }
+
+        @keyframes indet {
+            0% {
+                margin-left: -35%
+            }
+            100% {
+                margin-left: 100%
+            }
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+        }
+
+        /* ============================================================ TABS  (JavaFX TabPane) */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid var(--divider);
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            padding: 9px 15px;
+            font-size: 13px;
+            color: var(--muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        .tab:hover {
+            color: var(--text-strong);
+        }
+
+        .tab.on {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* ============================================================ STAT / KPI */
+        .stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            flex: 1;
+            min-width: 120px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 14px 16px;
+        }
+
+        .stat .n {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-strong);
+        }
+
+        .stat .l {
+            font-size: 11.5px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .stat.accent {
+            background: var(--primary-soft);
+            border-color: var(--sand-strong);
+        }
+
+        /* banners (JavaFX styled HBox) */
+        .banner {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            border-radius: var(--r);
+            padding: 11px 14px;
+            font-size: 12.5px;
+            border: 1px solid;
+        }
+
+        .banner .ico {
+            font-size: 15px;
+            line-height: 1.2;
+        }
+
+        .banner-warn {
+            background: var(--warn-bg);
+            border-color: var(--warn-bd);
+            color: #7a5a20;
+        }
+
+        .banner-err {
+            background: var(--err-bg);
+            border-color: var(--err-bd);
+            color: #7e3a32;
+        }
+
+        .banner-info {
+            background: var(--info-bg);
+            border-color: var(--info-bd);
+            color: #33505c;
+        }
+
+        :root[data-theme=dark] .banner-warn {
+            color: var(--warn);
+        }
+
+        :root[data-theme=dark] .banner-err {
+            color: var(--err);
+        }
+
+        :root[data-theme=dark] .banner-info {
+            color: var(--info);
+        }
+
+        /* compare panes (two JavaFX TextArea, scroll-synced) */
+        .compare {
+            display: flex;
+            gap: 12px;
+        }
+
+        .pane {
+            flex: 1;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            background: var(--surface);
+            min-height: 150px;
+        }
+
+        .pane .ph {
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: var(--muted);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--divider);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .pane .pb {
+            padding: 12px;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+
+        .pane.target .pb {
+            background: var(--surface-alt);
+        }
+
+        /* log */
+        .log {
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            font-size: 11.5px;
+            background: #26313a;
+            color: #cfd8dd;
+            border-radius: var(--r);
+            padding: 10px 12px;
+            height: 168px;
+            overflow: auto;
+        }
+
+        .log .g {
+            color: #8fca9a;
+        }
+
+        .log .y {
+            color: #e3c173;
+        }
+
+        .log .b {
+            color: #87b6d6;
+        }
+
+        .log .r {
+            color: #e0938a;
+        }
+
+        .log .m {
+            color: #c8a6c0;
+        }
+
+        /* empty state */
+        .empty {
+            text-align: center;
+            padding: 46px 20px;
+            color: var(--muted);
+        }
+
+        .empty .ico {
+            font-size: 34px;
+            opacity: .5;
+        }
+
+        .empty h3 {
+            margin: 12px 0 6px;
+            color: var(--text-strong);
+            font-size: 15px;
+        }
+
+        .empty p {
+            max-width: 360px;
+            margin: 0 auto 16px;
+            font-size: 12.5px;
+        }
+
+        /* dropzone */
+        .dropzone {
+            border: 2px dashed var(--sand-strong);
+            background: var(--sand-soft);
+            border-radius: var(--r-lg);
+            padding: 30px;
+            text-align: center;
+            color: #8a6d4e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* cover placeholder */
+        .cover {
+            width: 90px;
+            height: 132px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, var(--sand-strong), var(--cognac));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 10px;
+            flex: none;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            padding: 6px;
+        }
+
+        .kv {
+            display: flex;
+            gap: 10px;
+            font-size: 12.5px;
+            padding: 3px 0;
+        }
+
+        .kv .k {
+            color: var(--muted);
+            width: 150px;
+            flex: none;
+        }
+
+        /* tree (JavaFX TreeView) */
+        .tree {
+            font-size: 12.5px;
+        }
+
+        .tree .node {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 6px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .tree .node:hover {
+            background: var(--surface-alt);
+        }
+
+        .tree .node.child {
+            margin-left: 22px;
+            color: var(--muted);
+        }
+
+        .tree .tw {
+            color: var(--muted-2);
+            width: 12px;
+            display: inline-block;
+        }
+
+        /* ============================================================ DIALOG / MODAL  (JavaFX Dialog / Alert) */
+        .scrim {
+            position: fixed;
+            inset: 0;
+            background: rgba(30, 38, 42, .45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 20px;
+        }
+
+        .scrim.show {
+            display: flex;
+        }
+
+        .dialog {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            box-shadow: var(--shadow-lg);
+            width: 520px;
+            max-width: 100%;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dialog.wide {
+            width: 680px;
+        }
+
+        .dialog-h {
+            padding: 15px 18px;
+            border-bottom: 1px solid var(--divider);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dialog-h .di {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex: none;
+        }
+
+        .di.ok {
+            background: var(--ok-bg);
+            color: var(--ok);
+        }
+
+        .di.warn {
+            background: var(--warn-bg);
+            color: var(--warn);
+        }
+
+        .di.err {
+            background: var(--err-bg);
+            color: var(--err);
+        }
+
+        .di.info {
+            background: var(--info-bg);
+            color: var(--info);
+        }
+
+        .di.brand {
+            background: var(--primary-soft);
+            color: var(--primary);
+        }
+
+        .dialog-h h3 {
+            font-size: 15px;
+        }
+
+        .dialog-h .sub {
+            font-size: 11.5px;
+            color: var(--muted);
+        }
+
+        .dialog-b {
+            padding: 18px;
+            overflow-y: auto;
+        }
+
+        .dialog-f {
+            padding: 13px 18px;
+            border-top: 1px solid var(--divider);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            background: var(--surface-alt);
+        }
+
+        /* ============================================================ TOASTS  (ControlsFX Notifications) */
+        .toasts {
+            position: fixed;
+            top: 52px;
+            right: 18px;
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            width: 340px;
+        }
+
+        .toast {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left-width: 4px;
+            border-radius: var(--r);
+            box-shadow: var(--shadow);
+            padding: 11px 13px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            animation: tin .2s ease;
+        }
+
+        @keyframes tin {
+            from {
+                opacity: 0;
+                transform: translateX(12px)
+            }
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .toast .ti {
+            font-size: 16px;
+            line-height: 1.2;
+        }
+
+        .toast .tb {
+            flex: 1;
+        }
+
+        .toast .tt {
+            font-weight: 600;
+            font-size: 12.5px;
+            color: var(--text-strong);
+        }
+
+        .toast .td {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .toast .tx {
+            cursor: pointer;
+            color: var(--muted-2);
+        }
+
+        .toast.ok {
+            border-left-color: var(--ok);
+        }
+
+        .toast.warn {
+            border-left-color: var(--warn);
+        }
+
+        .toast.err {
+            border-left-color: var(--err);
+        }
+
+        .toast.info {
+            border-left-color: var(--info);
+        }
+
+        /* misc */
+        .divider {
+            height: 1px;
+            background: var(--divider);
+            margin: 16px 0;
+        }
+
+        .swatches {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .sw {
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            overflow: hidden;
+            width: 130px;
+        }
+
+        .sw .c {
+            height: 56px;
+        }
+
+        .sw .m {
+            padding: 7px 9px;
+            font-size: 11px;
+        }
+
+        .sw .m b {
+            display: block;
+            color: var(--text-strong);
+        }
+
+        .tag-note {
+            font-size: 11px;
+            color: var(--muted);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 2px 7px;
+            display: inline-block;
+        }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: var(--muted-2);
+            margin: 26px 0 10px;
+            font-weight: 700;
+        }
+
+        .tooltip-demo {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tt-bub {
+            background: var(--charcoal);
+            color: #fff;
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .step-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 26px;
+            border-top: 1px solid var(--divider);
+            padding-top: 16px;
+        }
+    </style>
+</head>
+<body>
+<div class="window">
+    <!-- TITLE BAR -->
+    <div class="titlebar">
+        <div class="left">
+            <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+            <span class="app">BookLoom</span>
+        </div>
+        <div class="right">
+            <button class="tbtn" onclick="toast('info','Resumed','Continuing “The Witcher” from chapter 7.')">↺ Resume
+            </button>
+            <button class="tbtn" id="themeBtn" onclick="toggleTheme()">◐ Dark</button>
+            <button class="tbtn" data-dialog="about">ⓘ About</button>
+        </div>
+    </div>
+
+    <div class="body">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="nav-brand">
+                <div class="logo">BL</div>
+                <div>
+                    <div class="t">BookLoom</div>
+                    <div class="s">offline translator</div>
+                </div>
+            </div>
+            <div class="nav-group">
+                <div class="nav-label">Workflow</div>
+                <div id="navWorkflow"></div>
+            </div>
+            <div class="nav-group">
+                <div class="nav-label">Application</div>
+                <div id="navApp"></div>
+            </div>
+            <div class="nav-group">
+                <div class="nav-label">Design reference</div>
+                <div id="navRef"></div>
+            </div>
+            <div class="nav-spacer"></div>
+            <div class="nav-foot"><span class="dot-ok"></span> Ollama · gemma4:26b · ready</div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="main">
+            <div class="toolbar">
+                <div class="crumbs" id="crumbs">Projects</div>
+                <div class="gap8" id="toolbarActions"></div>
+            </div>
+            <div class="content" id="content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL + TOASTS -->
+<div class="scrim" id="scrim" onclick="if(event.target===this)closeDialog()">
+    <div id="modalHost"></div>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+    /* ============================================================ NAV CONFIG */
+    const WORKFLOW = [
+        {id: 'projects', t: 'Projects', ico: '▤'},
+        {id: 'import', t: 'Import book', step: 1},
+        {id: 'brief', t: 'Book Brief', step: 2},
+        {id: 'structure', t: 'Structure', step: 3},
+        {id: 'glossary', t: 'Names & style', step: 4},
+        {id: 'translating', t: 'Translating', step: 5},
+        {id: 'review', t: 'Review queue', step: 6},
+        {id: 'export', t: 'Export', step: 7},
+    ];
+    const APPNAV = [{id: 'settings', t: 'Settings', ico: '⚙'}];
+    const REF = [{id: 'components', t: 'Component library', ico: '◈'}, {
+        id: 'dialogs',
+        t: 'Dialogs & alerts',
+        ico: '▭'
+    }, {id: 'toasts_ref', t: 'Notifications', ico: '◔'}];
+    const ORDER = WORKFLOW.map(x => x.id);
+    const DONE = new Set(['projects', 'import', 'brief', 'structure', 'glossary']); // demo: earlier steps complete
+
+    /* ============================================================ SCREENS */
+    const S = {};
+
+    S.projects = () => `
+<h2 class="page-h">Projects</h2>
+<p class="page-sub">Your translation projects. Everything runs locally — no account, no cloud.</p>
+<div class="gap8" style="margin-bottom:16px">
+  <button class="btn btn-primary" onclick="go('import')"><span class="ico">＋</span> New translation</button>
+  <button class="btn btn-secondary">Import project…</button>
+  <div style="flex:1"></div>
+  <input class="input" style="max-width:220px" placeholder="Search projects…">
+  <div class="seg"><span class="on">All</span><span>Active</span><span>Done</span></div>
+</div>
+<div class="list-item sel" onclick="go('export')">
+  <div class="gap8"><div class="cover" style="width:34px;height:48px;font-size:8px">FR</div>
+    <div><b>Frankenstein</b><div class="muted" style="font-size:12px">Mary Shelley · EPUB · 78k words</div></div></div>
+  <div class="gap8"><span class="badge b-ok b-dot">Done · 98.7% auto</span><button class="btn btn-secondary btn-sm">Open</button></div></div>
+<div class="list-item" onclick="go('translating')">
+  <div class="gap8"><div class="cover" style="width:34px;height:48px;font-size:8px">WI</div>
+    <div><b>The Witcher — The Last Wish</b><div class="muted" style="font-size:12px">UK → EN · EPUB · 96k words</div></div></div>
+  <div class="gap8"><span class="badge b-run b-dot">Translating · 62%</span><button class="btn btn-secondary btn-sm">Open</button></div></div>
+<div class="list-item" onclick="go('brief')">
+  <div class="gap8"><div class="cover" style="width:34px;height:48px;font-size:8px">KO</div>
+    <div><b>Kobzar</b><div class="muted" style="font-size:12px">Taras Shevchenko · EPUB · poetry</div></div></div>
+  <div class="gap8"><span class="badge b-sand b-dot">Draft</span><button class="btn btn-secondary btn-sm">Open</button></div></div>
+<div class="list-item">
+  <div class="gap8"><div class="cover" style="width:34px;height:48px;font-size:8px">LO</div>
+    <div><b>The Lord of the Rings</b><div class="muted" style="font-size:12px">J.R.R. Tolkien · FB2 · 10 MB</div></div></div>
+  <div class="gap8"><span class="badge b-err b-dot">Error · provider</span><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openDialog('err')">Details</button></div></div>
+<div class="divider"></div>
+<details><summary class="muted" style="cursor:pointer;font-size:12px">Show empty-state variant</summary>
+  <div class="empty"><div class="ico">▤</div><h3>No projects yet</h3><p>Import an EPUB or FB2 book to start your first translation. It stays entirely on your machine.</p>
+  <button class="btn btn-primary" onclick="go('import')">＋ New translation</button></div></details>`;
+
+    S.import = () => `
+<h2 class="page-h">Import a book</h2>
+<p class="page-sub">Drop a file or browse. Supported: EPUB, FB2 (.fb2 / .fb2.zip), Markdown, TXT.</p>
+<div class="gap8" style="margin-bottom:14px">
+  <span class="muted" style="font-size:12px">Preview state:</span>
+  <div class="seg" data-state="import">
+    <span class="on" onclick="setState('import','ok')">Detected OK</span>
+    <span onclick="setState('import','mismatch')">Language mismatch</span>
+    <span onclick="setState('import','drm')">DRM blocked</span>
+    <span onclick="setState('import','corrupt')">Unsupported</span>
+  </div>
+</div>
+<div class="dropzone" style="margin-bottom:16px">
+  <div style="font-size:26px">⬇</div><div><b>Drag a book here</b></div>
+  <div style="font-size:12px">or</div><button class="btn btn-secondary btn-sm">Browse files…</button>
+</div>
+<div id="importState">${importState.ok}</div>`;
+
+    S.brief = () => `
+<h2 class="page-h">Book Brief</h2>
+<p class="page-sub">This primes the translator's tone for the whole book. Most fields are auto-filled from the file — just review.</p>
+<div class="row">
+  <div class="col stack">
+    <div class="card"><div class="card-h"><h3>Languages</h3></div><div class="card-b">
+      <div class="field"><label class="fld">Source language (auto-detected)</label>
+        <select class="input"><option>English — detected ✓</option><option>Ukrainian</option><option>Russian</option><option>Other…</option></select></div>
+      <div class="field" style="margin-bottom:0"><label class="fld">Target language</label>
+        <select class="input"><option>Ukrainian</option><option>English</option><option>Polish</option><option>German</option></select></div>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Tone &amp; style</h3><span class="tag-note">primes system prompt</span></div><div class="card-b">
+      <div class="field"><label class="fld">Genre</label><input class="input" value="Gothic novel · classic literature"></div>
+      <div class="field"><label class="fld">Register</label>
+        <div class="seg"><span class="on">Formal / literary</span><span>Neutral</span><span>Casual</span></div></div>
+      <div class="field" style="margin-bottom:0"><label class="fld">Narrative voice / era notes</label>
+        <textarea class="input" rows="2">Early-19th-century literary English; first-person framing; elevated diction. Preserve period flavour.</textarea>
+        <div class="hint">Auto-drafted from metadata + a sample — edit freely.</div></div>
+    </div></div>
+  </div>
+  <div class="col stack">
+    <div class="card"><div class="card-h"><h3>Translation policies</h3></div><div class="card-b">
+      <div class="field"><label class="fld">Character &amp; place names</label>
+        <div class="seg"><span>Translate</span><span class="on">Transliterate</span><span>Keep original</span></div></div>
+      <div class="field"><label class="fld">Foreign-language passages</label>
+        <div class="seg"><span class="on">Keep as-is</span><span>Translate</span><span>Translate + note</span></div>
+        <div class="hint">Default keeps a foreigner sounding foreign (Elvish, Latin…).</div></div>
+      <div class="grid2">
+        <div class="field" style="margin-bottom:0"><label class="fld">Footnotes</label><div class="seg"><span class="on">Translate</span><span>Keep</span></div></div>
+        <div class="field" style="margin-bottom:0"><label class="fld">Units</label><div class="seg"><span class="on">Keep</span><span>Metric</span></div></div>
+      </div>
+      <div class="field" style="margin:14px 0 0"><label class="fld">Faithful ↔ natural balance</label>
+        <input type="range" min="0" max="100" value="55"><div class="hint">literal · <b>balanced</b> · free</div></div>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Also translate</h3></div><div class="card-b">
+      <div class="toggle-row" style="padding-top:0"><span class="switch on"></span><div class="tx">ToC / navigation labels</div></div>
+      <div class="toggle-row"><span class="switch on"></span><div class="tx">Image alt-text</div></div>
+      <div class="toggle-row"><span class="switch on"></span><div class="tx">Book metadata (title/author)</div></div>
+      <div class="toggle-row" style="padding-bottom:0"><span class="switch"></span><div class="tx">Frontmatter values<small>Copyright &amp; edition notes — off by default</small></div></div>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Quality vs speed</h3></div><div class="card-b">
+      <div class="seg warm"><span>Fast</span><span class="on">Balanced</span><span>Max quality</span></div>
+      <div class="hint">Balanced: paragraph chunks · LLM judge on · backward-consistency pass off.</div>
+      <div class="kv" style="margin-top:12px"><span class="k">Model</span><span>gemma4:26b · Ollama · <span class="badge b-ok">ready</span> <a href="#" onclick="go('settings');return false" style="color:var(--primary)">change</a></span></div>
+    </div></div>
+  </div>
+</div>
+<div class="step-actions"><button class="btn btn-ghost" onclick="go('import')">‹ Back</button><button class="btn btn-primary" onclick="go('structure')">Continue ›</button></div>`;
+
+    S.structure = () => `
+<h2 class="page-h">Structure found</h2>
+<p class="page-sub">The book is parsed into a tree. Only text is translated — images, fonts, styles, and IDs stay untouched.</p>
+<div class="row">
+  <div class="col"><div class="card"><div class="card-h"><h3>Reading order</h3><span class="tag-note">JavaFX TreeView</span></div><div class="card-b tree">
+    <div class="node"><span class="tw">▾</span> 📄 Front matter <span class="badge b-neutral" style="margin-left:auto">3</span></div>
+    <div class="node"><span class="tw">▾</span> 📖 Author's Introduction <span class="badge b-neutral" style="margin-left:auto">41</span></div>
+    <div class="node child">Letter 1 <span class="badge b-sand" style="margin-left:auto">quotes</span></div>
+    <div class="node child">Letter 2</div>
+    <div class="node"><span class="tw">▸</span> 📖 Chapter 1 <span class="badge b-neutral" style="margin-left:auto">66</span></div>
+    <div class="node"><span class="tw">▸</span> 📖 Chapter 2 <span class="badge b-neutral" style="margin-left:auto">58</span></div>
+    <div class="node muted"><span class="tw"></span> … 8 more chapters …</div>
+  </div></div></div>
+  <div class="col stack">
+    <div class="card pad">
+      <div class="kv"><span class="k">Translatable segments</span><b>1,240</b></div>
+      <div class="kv"><span class="k">Words</span><span>~78,000</span></div>
+      <div class="kv"><span class="k">Images (kept as-is)</span><span>7</span></div>
+      <div class="kv"><span class="k">Code blocks</span><span>0 <span class="badge b-neutral">preserved — never translated</span></span></div>
+      <div class="kv"><span class="k">Embedded fonts</span><span>0</span></div>
+      <div class="kv"><span class="k">Verse / poetry</span><span>none</span></div>
+      <div class="kv"><span class="k">Footnotes · tables</span><span>0 · 0</span></div>
+      <div class="kv"><span class="k">Inline formatting</span><span>italics, quotes → protected</span></div>
+    </div>
+    <div class="card pad">
+      <div class="chk" style="cursor:default">✅&nbsp; Round-trip test passed — structure &amp; text preserved</div>
+      <div class="chk" style="cursor:default">✅&nbsp; All image / font / link IDs preserved</div>
+      <div class="banner banner-warn" style="margin-top:10px"><span class="ico">⚠</span><div>2 paragraphs exceed the chunk budget → they'll be split by sentence and re-joined.</div></div>
+    </div>
+  </div>
+</div>
+<div class="step-actions"><button class="btn btn-ghost" onclick="go('brief')">‹ Back</button><button class="btn btn-primary" onclick="go('glossary')">Continue ›</button></div>`;
+
+    S.glossary = () => `
+<h2 class="page-h">Names &amp; style</h2>
+<p class="page-sub">A quick scan proposed consistent spellings for names &amp; terms. Lock or edit any, then start. Optional in automatic mode.</p>
+<div class="card"><div class="card-h"><h3>Glossary — proposed</h3><div class="gap8">
+  <button class="btn btn-ghost btn-sm" onclick="openDialog('addterm')">＋ Add term</button>
+  <button class="btn btn-ghost btn-sm">Import…</button></div></div>
+<table class="tbl">
+  <tr><th>Source term</th><th>Type</th><th style="width:34%">Target</th><th style="width:70px">Locked</th></tr>
+  <tr class="row-ok"><td>Frankenstein</td><td><span class="badge b-neutral">title</span></td><td><input class="input" value="Франкенштейн"></td><td><span class="switch on"></span></td></tr>
+  <tr><td>Victor</td><td><span class="badge b-neutral">character</span></td><td><input class="input" value="Віктор"></td><td><span class="switch on"></span></td></tr>
+  <tr><td>Elizabeth</td><td><span class="badge b-neutral">character</span></td><td><input class="input" value="Елізабет"></td><td><span class="switch on"></span></td></tr>
+  <tr><td>Geneva</td><td><span class="badge b-neutral">place</span></td><td><input class="input" value="Женева"></td><td><span class="switch on"></span></td></tr>
+  <tr><td>Ingolstadt</td><td><span class="badge b-neutral">place</span></td><td><input class="input" value="Інгольштадт"></td><td><span class="switch"></span></td></tr>
+</table></div>
+<div class="banner banner-info" style="margin-top:14px"><span class="ico">ℹ</span><div>Skip this and the app builds &amp; locks names on the fly as it translates.</div></div>
+<div class="step-actions"><button class="btn btn-ghost" onclick="go('structure')">‹ Back</button>
+  <button class="btn btn-primary btn-lg" onclick="go('translating');setTimeout(()=>toast('info','Translation started','Running unattended — you can close the window.'),300)">▶ Start translation</button></div>`;
+
+    S.translating = () => `
+<div class="between"><h2 class="page-h">Translating</h2>
+  <div class="seg" data-state="run">
+    <span class="on" onclick="setState('run','running')">Running</span>
+    <span onclick="setState('run','paused')">Paused</span>
+    <span onclick="setState('run','stopped')">Stopped</span>
+    <span onclick="setState('run','error')">Provider error</span>
+  </div></div>
+<p class="page-sub">Runs unattended — close the window and it resumes where it left off.</p>
+<div id="runState">${runState.running}</div>`;
+
+    S.review = () => `
+<h2 class="page-h">Review queue <span class="muted" style="font-size:14px;font-weight:400">(optional)</span></h2>
+<p class="page-sub">Only the few chunks the app wasn't confident about. Two texts side by side — accept, edit, or retry.</p>
+<div class="row">
+  <div class="col" style="max-width:280px"><div class="card"><div class="card-h"><h3>Flagged (3)</h3><span class="badge b-warn">3</span></div><div class="card-b">
+    <div class="list-item sel"><span>ch5 · p12</span><span class="badge b-warn">low score</span></div>
+    <div class="list-item"><span>ch7 · p40</span><span class="badge b-info">name</span></div>
+    <div class="list-item"><span>ch9 · p03</span><span class="badge b-err">wrong lang?</span></div>
+    <div class="divider"></div>
+    <div class="muted" style="font-size:11px;margin-bottom:6px">Filter</div>
+    <div class="gap8"><span class="badge b-neutral">all</span><span class="badge b-neutral">names</span><span class="badge b-neutral">omissions</span><span class="badge b-sand">foreign · kept</span></div>
+  </div></div></div>
+  <div class="col"><div class="card"><div class="card-h"><h3>ch5 · p12</h3><span class="badge b-warn b-dot">judge 0.58 — awkward phrasing</span></div><div class="card-b">
+    <div class="compare">
+      <div class="pane"><div class="ph"><span>Source · EN</span></div><div class="pb">A monster whom I myself had created and endued with life met me at midnight among the precipices of an inaccessible mountain.</div></div>
+      <div class="pane target"><div class="ph"><span>Ukrainian</span><span style="color:var(--primary)">editable</span></div>
+        <div class="pb" contenteditable="true" style="outline:none">Чудовисько, яке я сам створив і наділив життям, зустріло мене опівночі серед урвищ неприступної гори.</div></div>
+    </div>
+    <div class="gap8" style="margin-top:10px"><span class="tag-note">context ▾</span><span class="muted" style="font-size:11px">brief · glossary(2) · previous paragraph · summary</span></div>
+    <div class="gap8" style="margin-top:14px">
+      <button class="btn btn-primary btn-sm" onclick="toast('ok','Accepted','ch5 · p12 saved. 2 left.')">✓ Accept</button>
+      <button class="btn btn-secondary btn-sm">✎ Save edit</button>
+      <button class="btn btn-ghost btn-sm">↺ Revert to machine target</button>
+      <button class="btn btn-ghost btn-sm">↻ Retry</button>
+      <button class="btn btn-ghost btn-sm" onclick="openDialog('retry')">↻ Retry with note…</button>
+      <button class="btn btn-ghost btn-sm">⏭ Skip</button>
+    </div>
+    <div class="hint" style="margin-top:8px">Editing disables Accept until you Save or Revert.</div>
+  </div></div></div>
+</div>`;
+
+    S.export = () => `
+<h2 class="page-h">Translated book ready</h2>
+<p class="page-sub">Structure untouched — same chapters, images, fonts, links. Only the words changed.</p>
+<div class="stats" style="margin-bottom:18px">
+  <div class="stat accent"><div class="n">1,240</div><div class="l">segments translated</div></div>
+  <div class="stat"><div class="n">98.7%</div><div class="l">auto-accepted</div></div>
+  <div class="stat"><div class="n">16</div><div class="l">reviewed by you</div></div>
+  <div class="stat"><div class="n" style="color:var(--ok)">✓</div><div class="l">file validates</div></div>
+</div>
+<div class="row">
+  <div class="col"><div class="card"><div class="card-h"><h3>Export</h3></div><div class="card-b">
+    <div class="field"><label class="fld">Format</label><div class="input" style="background:var(--surface-2);cursor:default">EPUB — same as the original (export is format-preserving)</div><div class="hint">The book is always exported in its original format; converting to another format is out of scope.</div></div>
+    <div class="chk" style="cursor:default">✅&nbsp; EPUBCheck passed · mimetype-first, IDs &amp; fonts preserved</div>
+    <div class="chk" style="cursor:default">✅&nbsp; Language metadata updated (en → uk)</div>
+    <div class="field" style="margin:12px 0 0"><label class="fld">Save to</label>
+      <div class="input-group"><input class="input" value="~/Books/Translated/Frankenstein (UK).epub"><button class="btn btn-secondary">Browse…</button></div></div>
+    <div class="gap8" style="margin-top:12px"><button class="btn btn-primary" onclick="openDialog('exported')">⬇ Export book</button><button class="btn btn-secondary">Open folder</button></div>
+  </div></div></div>
+  <div class="col stack">
+    <div class="card pad"><h3 style="font-size:13.5px;margin-bottom:8px">Also export</h3>
+      <div class="chk"><input type="checkbox" checked> Glossary (names &amp; terms) — reusable for sequels</div>
+      <div class="chk"><input type="checkbox"> Bilingual copy (source + target side by side)</div>
+      <div class="chk"><input type="checkbox"> Report (flagged items, consistency notes)</div></div>
+    <div class="card pad"><h3 style="font-size:13.5px;margin-bottom:6px">Final consistency pass</h3>
+      <div class="toggle-row"><span class="switch"></span><div class="tx">Whole-book name sweep &amp; resolve later reveals<small>Slower · Max-quality</small></div></div></div>
+  </div>
+</div>`;
+
+    /* -------- SETTINGS (tabbed) -------- */
+    S.settings = () => `
+<h2 class="page-h">Settings</h2>
+<p class="page-sub">Everything is local. Nothing leaves your machine.</p>
+<div class="tabs" data-tabs="settings">
+  <span class="tab on" onclick="setTab('settings','providers')">Providers</span>
+  <span class="tab" onclick="setTab('settings','models')">Models</span>
+  <span class="tab" onclick="setTab('settings','generation')">Generation</span>
+  <span class="tab" onclick="setTab('settings','appearance')">Appearance</span>
+  <span class="tab" onclick="setTab('settings','behavior')">Automation</span>
+  <span class="tab" onclick="setTab('settings','storage')">Storage &amp; logs</span>
+</div>
+<div id="settingsTab">${settingsTab.providers}</div>`;
+
+    /* -------- COMPONENT LIBRARY -------- */
+    S.components = () => `
+<h2 class="page-h">Component library</h2>
+<p class="page-sub">Every widget the app uses, in the palette. Each maps to a real JavaFX control (noted in grey) so nothing here is un-buildable.</p>
+
+<div class="section-title">Palette</div>
+<div class="swatches">
+  ${sw('#3a4a52', 'Charcoal', 'text · dark surfaces')}
+  ${sw('#b2babd', 'Slate', 'borders · muted')}
+  ${sw('#e7d6c0', 'Sand Dollar', 'warm surfaces · selected')}
+  ${sw('#a58075', 'Cognac', 'primary action · brand')}
+</div>
+<div class="gap8" style="margin-top:10px">
+  <span class="badge b-ok">success</span><span class="badge b-warn">warning</span><span class="badge b-err">danger</span><span class="badge b-info">info</span>
+  <span class="muted" style="font-size:11px">— functional status colours, desaturated to fit the palette</span>
+</div>
+
+<div class="section-title">Buttons <span class="tag-note">JavaFX Button + styleClass</span></div>
+<div class="gap8">
+  <button class="btn btn-primary">Primary</button>
+  <button class="btn btn-secondary">Secondary</button>
+  <button class="btn btn-ghost">Ghost</button>
+  <button class="btn btn-danger">Danger</button>
+  <button class="btn btn-danger-outline">Danger outline</button>
+  <button class="btn btn-primary"><span class="ico">▶</span> With icon</button>
+  <button class="btn btn-primary" disabled><span class="spin"></span> Working…</button>
+  <button class="btn btn-secondary" disabled>Disabled</button>
+  <button class="btn btn-icon btn-secondary">⚙</button>
+  <button class="btn btn-primary btn-sm">Small</button>
+  <button class="btn btn-primary btn-lg">Large</button>
+</div>
+
+<div class="section-title">Inputs &amp; forms <span class="tag-note">TextField · ComboBox · TextArea · Slider · CheckBox · ToggleSwitch</span></div>
+<div class="row">
+  <div class="col card pad">
+    <div class="field"><label class="fld">Text field</label><input class="input" value="Frankenstein"></div>
+    <div class="field"><label class="fld">Dropdown (ComboBox)</label><select class="input"><option>Ukrainian</option><option>English</option></select></div>
+    <div class="field"><label class="fld">With button (input group)</label><div class="input-group"><input class="input" value="http://localhost:11434/v1"><button class="btn btn-secondary">Test</button></div></div>
+    <div class="field" style="margin-bottom:0"><label class="fld">Invalid field</label><input class="input err-field" value="not-a-url"><div class="field-err">⚠ Enter a valid http(s) URL.</div></div>
+  </div>
+  <div class="col card pad">
+    <div class="field"><label class="fld">Text area</label><textarea class="input" rows="3">Literary, period-appropriate tone…</textarea></div>
+    <div class="field"><label class="fld">Slider</label><input type="range" min="0" max="100" value="55"></div>
+    <div class="toggle-row"><span class="switch on"></span><div class="tx">Run LLM judge<small>Score every chunk</small></div></div>
+    <div class="chk"><input type="checkbox" checked> Keep foreign passages as-is</div>
+    <div class="chk"><input type="radio" name="rx" checked> Transliterate names</div>
+    <div class="chk"><input type="radio" name="rx"> Keep original</div>
+    <div style="margin-top:8px"><span class="muted" style="font-size:11px;margin-right:8px">Segmented</span><span class="seg"><span class="on">Fast</span><span>Balanced</span><span>Max</span></span></div>
+  </div>
+</div>
+
+<div class="section-title">Badges, chips &amp; status <span class="tag-note">styled Label</span></div>
+<div class="gap8">
+  <span class="badge b-ok b-dot">Done</span><span class="badge b-run b-dot">Translating</span><span class="badge b-sand b-dot">Draft</span>
+  <span class="badge b-warn b-dot">Flagged</span><span class="badge b-err b-dot">Error</span><span class="badge b-info b-dot">Queued</span>
+  <span class="badge b-neutral">Reviewed</span><span class="badge b-sand">foreign · kept</span>
+  <span class="chip">Frankenstein → Франкенштейн <span class="x">✕</span></span>
+  <span class="chip">Geneva → Женева <span class="x">✕</span></span>
+</div>
+
+<div class="section-title">Progress <span class="tag-note">ProgressBar</span></div>
+<div class="card pad">
+  <div class="bar"><span style="width:62%"></span></div>
+  <div class="bar indet" style="margin-top:10px"><span></span></div>
+  <div class="muted" style="font-size:11px;margin-top:6px">determinate 62% · indeterminate (parsing…)</div>
+</div>
+
+<div class="section-title">Table &amp; list <span class="tag-note">TableView · ListView</span></div>
+<div class="card"><table class="tbl">
+  <tr><th>Chunk</th><th>Status</th><th>Confidence</th><th>Model</th></tr>
+  <tr class="row-ok"><td>ch7 · p41</td><td><span class="badge b-ok">accepted</span></td><td>0.93</td><td>gemma4:26b</td></tr>
+  <tr class="row-selected"><td>ch5 · p12</td><td><span class="badge b-warn">flagged</span></td><td>0.58</td><td>gemma4:26b</td></tr>
+  <tr class="row-error"><td>ch9 · p03</td><td><span class="badge b-err">wrong lang</span></td><td>0.30</td><td>gemma4:26b</td></tr>
+</table></div>
+
+<div class="section-title">Banners <span class="tag-note">styled HBox</span></div>
+<div class="stack">
+  <div class="banner banner-info"><span class="ico">ℹ</span><div>Autosaved. You can safely close the app — translation resumes on reopen.</div></div>
+  <div class="banner banner-warn"><span class="ico">⚠</span><div>This file declares <b>English</b> but the text is <b>Ukrainian</b>. Using the detected language.</div></div>
+  <div class="banner banner-err"><span class="ico">⛔</span><div>Local model server is unreachable at <span class="mono">localhost:11434</span>. Translation paused.</div></div>
+</div>
+
+<div class="section-title">Tooltip &amp; empty state</div>
+<div class="gap8"><span class="tt-bub">Preserves every ⟦tag⟧ exactly</span> <span class="tag-note">JavaFX Tooltip</span></div>
+<div class="card" style="margin-top:10px"><div class="empty"><div class="ico">◔</div><h3>Nothing flagged</h3><p>Every chunk cleared the checks automatically. There's nothing to review.</p><button class="btn btn-secondary">Back to progress</button></div></div>
+
+<div class="section-title">Live dialogs &amp; toasts</div>
+<div class="gap8">
+  <button class="btn btn-secondary" data-dialog="provider">Provider dialog</button>
+  <button class="btn btn-secondary" data-dialog="addterm">Add term</button>
+  <button class="btn btn-secondary" data-dialog="confirmDelete">Confirm delete</button>
+  <button class="btn btn-secondary" data-dialog="quit">Unsaved changes</button>
+  <button class="btn btn-secondary" data-dialog="err">Error + details</button>
+  <button class="btn btn-secondary" onclick="toast('ok','Done','Book exported to ~/Books/Translated.')">Success toast</button>
+  <button class="btn btn-secondary" onclick="toast('warn','Slow provider','Model is responding slowly — still working.')">Warning toast</button>
+  <button class="btn btn-secondary" onclick="toast('err','Unreachable','Cannot reach the model server.')">Error toast</button>
+</div>`;
+
+    S.dialogs = () => `
+<h2 class="page-h">Dialogs &amp; alerts</h2>
+<p class="page-sub">All modal surfaces the app can raise. Click to preview each — all map to JavaFX <span class="mono">Dialog</span> / <span class="mono">Alert</span>.</p>
+<div class="row">
+${dlgCard('welcome', 'First-run welcome', 'Onboarding on first launch', 'brand', '◆')}
+${dlgCard('provider', 'Add / edit provider', 'Endpoint, auth, and the Test trio', 'brand', '🖧')}
+${dlgCard('addterm', 'Add glossary term', 'Source → target + type + lock', 'brand', '＋')}
+${dlgCard('retry', 'Retry with note', 'Re-translate a chunk with guidance', 'info', '↻')}
+${dlgCard('confirmDelete', 'Confirm delete', 'Destructive action confirmation', 'err', '🗑')}
+${dlgCard('quit', 'Unsaved changes', 'Save / discard / cancel on quit', 'warn', '⚠')}
+${dlgCard('err', 'Error with details', 'Typed error + expandable details', 'err', '⛔')}
+${dlgCard('exported', 'Export complete', 'Success + open folder', 'ok', '✓')}
+${dlgCard('bindUnavailable', 'Bound provider unavailable', 'Resume: confirm fallback', 'warn', '⚠')}
+${dlgCard('bindChanged', 'Provider/model changed', 'Resume: apply vs continue', 'brand', '⇄')}
+${dlgCard('about', 'About', 'Version + licenses', 'info', 'ⓘ')}
+</div>`;
+
+    S.toasts_ref = () => `
+<h2 class="page-h">Notifications</h2>
+<p class="page-sub">Transient toasts (auto-dismiss, top-right). In JavaFX: ControlsFX <span class="mono">Notifications</span> or a custom overlay pane.</p>
+<div class="row">
+  <div class="col card pad"><h3 style="font-size:13.5px">Triggers</h3>
+    <div class="stack" style="margin-top:10px">
+      <button class="btn btn-secondary" onclick="toast('ok','Translation complete','Frankenstein · 1,240 segments · 16 reviewed.')">✓ Success</button>
+      <button class="btn btn-secondary" onclick="toast('info','Autosaved','Progress saved at chapter 7.')">ℹ Info</button>
+      <button class="btn btn-secondary" onclick="toast('warn','Fell back to custom models','Discovery failed — using your model list.')">⚠ Warning</button>
+      <button class="btn btn-secondary" onclick="toast('err','Provider unreachable','localhost:11434 — check Ollama is running.')">⛔ Error</button>
+    </div>
+  </div>
+  <div class="col card pad"><h3 style="font-size:13.5px">Anatomy</h3>
+    <div class="toast ok" style="margin-top:10px;box-shadow:none"><div class="ti">✓</div><div class="tb"><div class="tt">Title — short outcome</div><div class="td">One line of detail. Auto-dismiss ~5s, or ✕.</div></div><div class="tx">✕</div></div>
+    <div class="hint" style="margin-top:10px">Left border colour = severity (ok/info/warn/err). Non-blocking; never used for anything requiring a decision — those are dialogs.</div>
+  </div>
+</div>`;
+
+    /* ============================================================ SUB-STATE TEMPLATES */
+    const importState = {
+        ok: `<div class="card"><div class="card-h"><h3>Detected file</h3><span class="badge b-ok b-dot">valid</span></div><div class="card-b"><div class="row" style="gap:20px">
+   <div class="cover">Frankenstein cover</div>
+   <div class="col" style="min-width:280px">
+     <div class="kv"><span class="k">File</span><span>Frankenstein — Mary Shelley.epub</span></div>
+     <div class="kv"><span class="k">Format</span><span>EPUB 2.0</span></div>
+     <div class="kv"><span class="k">Title · Author</span><span>Frankenstein · Mary Shelley</span></div>
+     <div class="kv"><span class="k">Declared language</span><span>English (en)</span></div>
+     <div class="kv"><span class="k">Detected language</span><span>English <span class="badge b-ok">matches</span></span></div>
+     <div class="kv"><span class="k">Chapters</span><span>11 · ~78,000 words</span></div>
+     <div class="kv"><span class="k">Images · fonts</span><span>7 · 0</span></div>
+     <div class="kv"><span class="k">DRM</span><span class="badge b-ok">none</span></div>
+   </div></div>
+   <div class="step-actions"><button class="btn btn-ghost" onclick="go('projects')">‹ Cancel</button><button class="btn btn-primary" onclick="go('brief')">Continue to Book Brief ›</button></div>
+ </div></div>`,
+        mismatch: `<div class="banner banner-warn" style="margin-bottom:14px"><span class="ico">⚠</span><div><b>Language mismatch.</b> The file declares <b>English</b>, but the text is detected as <b>Ukrainian</b>. The app will use the detected language — you can override below.</div></div>
+   <div class="card pad"><div class="row" style="gap:20px"><div class="cover" style="background:linear-gradient(135deg,#8fa0a6,#5b6f78)">The Witcher</div>
+   <div class="col"><div class="kv"><span class="k">File</span><span>Відьмак. Останнє бажання.epub</span></div>
+   <div class="kv"><span class="k">Declared language</span><span>English (en) <span class="badge b-warn">ignored</span></span></div>
+   <div class="kv"><span class="k">Detected language</span><span>Ukrainian (uk) <span class="badge b-ok">used</span></span></div>
+   <div class="field" style="margin-top:10px"><label class="fld">Source language override</label><select class="input"><option>Ukrainian — detected ✓</option><option>English (as declared)</option></select></div></div></div>
+   <div class="step-actions"><button class="btn btn-ghost" onclick="go('projects')">‹ Cancel</button><button class="btn btn-primary" onclick="go('brief')">Continue ›</button></div></div>`,
+        drm: `<div class="banner banner-err" style="margin-bottom:14px"><span class="ico">⛔</span><div><b>This book is DRM-protected.</b> Encrypted files can't be opened or translated. This isn't something the app can bypass.</div></div>
+   <div class="card pad"><div class="kv"><span class="k">File</span><span>Purchased_Novel.epub</span></div>
+   <div class="kv"><span class="k">Encryption</span><span class="badge b-err">Adobe ADEPT DRM</span></div>
+   <div class="kv"><span class="k">Status</span><span>Import blocked</span></div>
+   <div class="hint">Only DRM-free EPUB/FB2 files are supported.</div>
+   <div class="step-actions"><button class="btn btn-secondary" onclick="go('import')">Choose another file</button></div></div>`,
+        corrupt: `<div class="banner banner-err" style="margin-bottom:14px"><span class="ico">⛔</span><div><b>Couldn't read this file.</b> It looks malformed or isn't a supported format.</div></div>
+   <div class="card pad"><div class="kv"><span class="k">File</span><span>book.pdf</span></div>
+   <div class="kv"><span class="k">Detected type</span><span>PDF — <span class="badge b-neutral">not supported</span></span></div>
+   <div class="hint">Supported: EPUB, FB2 (.fb2/.fb2.zip), Markdown, TXT. PDF/DOCX are out of scope.</div>
+   <div class="step-actions"><button class="btn btn-secondary" onclick="go('import')">Choose another file</button></div></div>`,
+    };
+
+    const runState = {
+        running: `<div class="card pad" style="margin-bottom:14px">
+   <div class="bar"><span style="width:62%"></span></div>
+   <div class="between" style="font-size:12px;color:var(--muted);margin-top:6px"><span>62% · Chapter 7 of 11 · chunk 41/66</span><span>~1h 20m left · 24 tok/s</span></div></div>
+ <div class="stats" style="margin-bottom:14px">
+   <div class="stat"><div class="n">768</div><div class="l">auto-accepted</div></div>
+   <div class="stat"><div class="n">9</div><div class="l">repaired &amp; accepted</div></div>
+   <div class="stat"><div class="n" style="color:var(--warn)">3</div><div class="l">flagged</div></div>
+   <div class="stat"><div class="n">460</div><div class="l">remaining</div></div></div>
+ <div class="row">
+   <div class="col"><div class="card"><div class="card-h"><h3>Current chunk (live)</h3><span class="badge b-ok b-dot">judge 0.93</span></div><div class="card-b">
+     <div class="compare"><div class="pane"><div class="ph"><span>Source · EN</span></div><div class="pb">She had lost her mother, and the poor girl wept as she followed the coffin.</div></div>
+     <div class="pane target"><div class="ph"><span>Ukrainian</span></div><div class="pb">Вона втратила матір, і бідолашна дівчина плакала, ідучи за труною.</div></div></div>
+     <div class="gap8" style="margin-top:8px"><span class="badge b-ok">checks passed</span><span class="badge b-neutral">auto-accepted</span></div></div></div></div>
+   <div class="col"><div class="card"><div class="card-h"><h3>Activity log</h3></div><div class="card-b"><div class="log">
+<span class="g">[ok]</span> ch7/38 accepted (0.94)<br><span class="g">[ok]</span> ch7/39 accepted (0.91)<br>
+<span class="y">[fix]</span> ch7/40 name "Elizabeth" → locked spelling, re-accepted<br><span class="g">[ok]</span> ch7/41 accepted (0.93)<br>
+<span class="b">[mem]</span> glossary +1 ("Justine" → "Жустіна")<br><span class="m">[sum]</span> chapter 6 summary updated<br></div></div></div></div></div>
+ <div class="gap8" style="margin-top:14px"><button class="btn btn-secondary">⏸ Pause</button><button class="btn btn-ghost">⏹ Stop</button>
+   <button class="btn btn-ghost" onclick="go('review')">Review flagged (3)</button>
+   <div style="flex:1"></div><span class="muted" style="font-size:11.5px">99% completes automatically — only unsure chunks are flagged.</span></div>`,
+        paused: `<div class="banner banner-info" style="margin-bottom:14px"><span class="ico">⏸</span><div><b>Paused.</b> Progress is saved. Resume any time — it continues at chunk 41/66.</div></div>
+ <div class="card pad"><div class="bar"><span style="width:62%;background:var(--slate)"></span></div>
+   <div class="between" style="font-size:12px;color:var(--muted);margin-top:6px"><span>Paused at 62% · Chapter 7</span><span>777 done · 460 remaining</span></div>
+   <div class="gap8" style="margin-top:14px"><button class="btn btn-primary">▶ Resume</button><button class="btn btn-ghost">⏹ Stop &amp; keep progress</button><button class="btn btn-ghost" onclick="go('review')">Review flagged (3)</button></div></div>`,
+        stopped: `<div class="banner banner-info" style="margin-bottom:14px"><span class="ico">⏹</span><div><b>Run stopped — progress saved.</b> Resume any time — it re-enters at the first pending chunk; flagged chunks wait in the review queue.</div></div>
+ <div class="card pad"><div class="bar"><span style="width:62%;background:var(--slate)"></span></div>
+   <div class="between" style="font-size:12px;color:var(--muted);margin-top:6px"><span>Stopped at 62% · Chapter 7</span><span>777 done · 3 flagged · 460 remaining</span></div>
+   <div class="gap8" style="margin-top:14px"><button class="btn btn-primary">▶ Resume</button><button class="btn btn-ghost" onclick="go('projects')">Back to projects</button></div></div>`,
+        error: `<div class="banner banner-err" style="margin-bottom:14px"><span class="ico">⛔</span><div><b>Model server unreachable.</b> Lost connection to Ollama at <span class="mono">localhost:11434</span>. Translation auto-paused — no work lost.</div></div>
+ <div class="card pad"><div class="bar"><span style="width:62%;background:var(--err)"></span></div>
+   <div class="between" style="font-size:12px;color:var(--muted);margin-top:6px"><span>Stopped at 62% · chunk 41</span><span>last error: connection refused</span></div>
+   <div class="log" style="margin-top:12px;height:96px"><span class="r">[err]</span> POST /v1/chat/completions → connection refused (attempt 3/3)<br><span class="y">[retry]</span> backoff 8s… provider still down<br><span class="b">[info]</span> auto-paused; state persisted<br></div>
+   <div class="gap8" style="margin-top:14px"><button class="btn btn-primary">↻ Retry now</button><button class="btn btn-secondary" onclick="go('settings')">Open provider settings</button><button class="btn btn-ghost">⏸ Stay paused</button></div></div>`,
+    };
+
+    const settingsTab = {
+        providers: `<div class="row"><div class="col" style="max-width:300px"><div class="card"><div class="card-h"><h3>Providers</h3><button class="btn btn-ghost btn-sm" data-dialog="provider">＋ Add</button></div><div class="card-b">
+   <div class="list-item sel"><div><b>Ollama (local)</b><div class="muted" style="font-size:11.5px">localhost:11434</div></div><span class="badge b-ok b-dot">current</span></div>
+   <div class="list-item"><div><b>LM Studio</b><div class="muted" style="font-size:11.5px">localhost:1234</div></div><span class="badge b-neutral">idle</span></div>
+   <div class="list-item"><div><b>OpenAI</b><div class="muted" style="font-size:11.5px">api.openai.com</div></div><span class="badge b-warn">no key</span></div>
+ </div></div></div>
+ <div class="col"><div class="card"><div class="card-h"><h3>Ollama (local)</h3><div class="gap8"><button class="btn btn-ghost btn-sm">Edit</button><button class="btn btn-danger-outline btn-sm" data-dialog="confirmDelete">Delete</button></div></div><div class="card-b">
+   <div class="kv"><span class="k">Kind</span><span>Ollama · OpenAI-compatible</span></div>
+   <div class="kv"><span class="k">Endpoint</span><span class="mono">http://localhost:11434/v1</span></div>
+   <div class="kv"><span class="k">Auth</span><span>none</span></div>
+   <div class="kv"><span class="k">Models found</span><span>3 · gemma4:12b, qwen3.5:9b, ministral-3:8b</span></div>
+   <div class="divider"></div>
+   <div class="gap8"><button class="btn btn-secondary btn-sm">Test connection</button><button class="btn btn-secondary btn-sm">Test models</button><button class="btn btn-secondary btn-sm">Test inference</button></div>
+   <div class="gap8" style="margin-top:10px"><span class="badge b-ok b-dot">reachable 41ms</span><span class="badge b-ok b-dot">3 models</span><span class="badge b-ok b-dot">inference 1.2s</span></div>
+ </div></div></div></div>`,
+        models: `<div class="card pad" style="max-width:640px">
+   <div class="field"><label class="fld">Translator model</label><select class="input"><option>gemma4:12b (recommended)</option><option>qwen3.5:9b</option><option>ministral-3:8b</option></select><div class="hint">≥32k usable context · strong multilingual · reliable JSON. Candidate models — configure any compatible one.</div></div>
+   <div class="field"><label class="fld">Judge / helper model</label><select class="input"><option>same as translator</option><option>gemma4:12b</option><option>granite4:tiny-h</option></select></div>
+   <div class="field" style="margin-bottom:0"><label class="fld">Manual model ID</label><input class="input" placeholder="type a model id (used when the provider has no discovery endpoint)"><div class="hint">Discovery is a convenience; manual entry is always available. Two model slots only — translator and judge/helper.</div></div>
+ </div>`,
+        generation: `<div class="card pad" style="max-width:640px">
+   <div class="grid2">
+     <div class="field"><label class="fld">Context length (num_ctx)</label><input class="input" value="32768"></div>
+     <div class="field"><label class="fld">Temperature</label><input class="input" value="0.2"><div class="hint">Low for fidelity (recommended 0.2).</div></div>
+     <div class="field"><label class="fld">Chunk budget (cap, tokens)</label><input class="input" value="1200"></div>
+     <div class="field"><label class="fld">Preceding target blocks</label><input class="input" value="2"></div>
+   </div>
+   <div class="divider"></div>
+   <div class="toggle-row"><span class="switch on"></span><div class="tx">Run LLM judge on every chunk<small>Off in Fast mode</small></div></div>
+   <div class="toggle-row"><span class="switch on"></span><div class="tx">Auto-repair failing chunks<small>Up to 3 tries before flagging</small></div></div>
+   <div class="toggle-row"><span class="switch"></span><div class="tx">Pause on flagged chunks<small>Otherwise keep going, review later</small></div></div>
+   <div class="divider"></div>
+   <div class="grid2">
+     <div class="field" style="margin-bottom:0"><label class="fld">Manual τ override (advanced)</label><input class="input" placeholder="unset — owned by review mode"></div>
+     <div class="field" style="margin-bottom:0"><label class="fld">τ_judge override (advanced)</label><input class="input" placeholder="unset — defaults to τ"></div>
+   </div>
+   <div class="hint">τ is owned by the review-mode dial (Unattended/Assisted/Manual); these advanced overrides win only when set.</div>
+ </div>`,
+        appearance: `<div class="card pad" style="max-width:640px">
+   <div class="field"><label class="fld">Theme</label><div class="seg"><span class="on" onclick="setTheme('light')">Light</span><span onclick="setTheme('dark')">Dark</span><span>Match system</span></div>
+     <div class="hint">Dark mode uses the same palette (Charcoal base, Cognac/Sand accents) — JavaFX 25 reads the OS preference.</div></div>
+   <div class="field"><label class="fld">Accent</label><div class="gap8">
+     <span style="width:22px;height:22px;border-radius:6px;background:var(--cognac);border:1px solid var(--border);display:inline-block"></span> <span class="mono" style="font-size:12px">Cognac #a58075</span> <span class="tag-note">fixed</span></div></div>
+   <div class="field" style="margin-bottom:0"><label class="fld">Language (UI)</label><select class="input"><option>English</option><option>Українська</option></select><div class="hint">English or Ukrainian. Detected from your OS on first start; applies on change (restart if needed).</div></div>
+ </div>`,
+        behavior: `<div class="card pad" style="max-width:640px">
+   <div class="field"><label class="fld">Default review mode</label><div class="seg"><span class="on">Unattended</span><span>Assisted</span><span>Manual</span></div>
+     <div class="hint">Owns the trust threshold τ. Unattended flags only what fails checks.</div></div>
+   <div class="field"><label class="fld">Default quality dial</label><div class="seg warm"><span>Fast</span><span class="on">Balanced</span><span>Max</span></div>
+     <div class="hint">Owns mechanics only (chunk budget, judge, repairs) — never τ.</div></div>
+   <div class="field"><label class="fld">Foreign-passage policy</label><div class="seg"><span class="on">Keep as-is</span><span>Translate</span><span>Translate + note</span></div>
+     <div class="hint">Global default; per-book overridable in the Book Brief.</div></div>
+   <div class="toggle-row"><span class="switch"></span><div class="tx">Final consistency pass<small>Whole-book name sweep after translation · off by default</small></div></div>
+   <div class="toggle-row"><span class="switch on"></span><div class="tx">Resume interrupted translations on launch<small>Crash-safe checkpoints</small></div></div>
+ </div>`,
+        storage: `<div class="card pad" style="max-width:640px">
+   <div class="kv"><span class="k">Data folder</span><span class="mono" style="font-size:11.5px">~/Library/Application Support/BookLoom</span></div>
+   <div class="kv"><span class="k">Database</span><span>bookloom.db · 24 MB · SQLite (WAL)</span></div>
+   <div class="kv"><span class="k">Log folder</span><span class="mono" style="font-size:11.5px">~/Library/Logs/BookLoom</span></div>
+   <div class="kv"><span class="k">Model weights</span><span>managed by Ollama (external)</span></div>
+   <div class="divider"></div>
+   <div class="gap8"><button class="btn btn-secondary btn-sm">Open data folder</button><button class="btn btn-secondary btn-sm">Export logs</button><button class="btn btn-danger-outline btn-sm" data-dialog="confirmDelete">Clear cache…</button></div>
+ </div>`,
+    };
+
+    /* ============================================================ DIALOGS */
+    const DLG = {
+        welcome: `<div class="dialog"><div class="dialog-h"><div class="di brand">◆</div><div><h3>Welcome to BookLoom</h3><div class="sub">Private, offline book translation</div></div></div>
+   <div class="dialog-b"><p style="margin-top:0">Translate EPUB &amp; FB2 books with a local LLM. Nothing leaves your machine.</p>
+   <div class="stack">
+     <div class="banner banner-info"><span class="ico">①</span><div>Point the app at a local model server (Ollama or LM Studio).</div></div>
+     <div class="banner banner-info"><span class="ico">②</span><div>Import a book, set the tone, hit Start.</div></div>
+     <div class="banner banner-info"><span class="ico">③</span><div>It runs unattended — review only what it flags.</div></div>
+   </div></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Skip</button><button class="btn btn-primary" onclick="closeDialog();go('settings')">Set up a provider ›</button></div></div>`,
+        provider: `<div class="dialog wide"><div class="dialog-h"><div class="di brand">🖧</div><div><h3>Add provider</h3><div class="sub">Any OpenAI-compatible endpoint</div></div></div>
+   <div class="dialog-b"><div class="row">
+     <div class="col"><div class="field"><label class="fld">Preset</label><select class="input"><option>Ollama (local)</option><option>LM Studio</option><option>OpenAI</option><option>Custom…</option></select></div>
+       <div class="field"><label class="fld">Name</label><input class="input" value="Ollama (local)"></div>
+       <div class="field"><label class="fld">Endpoint</label><input class="input" value="http://localhost:11434/v1"></div></div>
+     <div class="col"><div class="field"><label class="fld">Auth</label><select class="input"><option>None</option><option>Bearer token</option><option>Api-Key header</option></select></div>
+       <div class="field"><label class="fld">API key (env var name)</label><input class="input" placeholder="e.g. OPENAI_API_KEY"><div class="hint">Only the variable name is stored — never the secret.</div></div>
+       <div class="field"><label class="fld">Model</label><select class="input"><option>gemma4:26b-a4b-it-qat</option></select></div></div>
+   </div>
+   <div class="divider"></div>
+   <div class="gap8"><button class="btn btn-secondary btn-sm">Test connection</button><button class="btn btn-secondary btn-sm">Test models</button><button class="btn btn-secondary btn-sm">Test inference</button></div>
+   <div class="gap8" style="margin-top:10px"><span class="badge b-ok b-dot">reachable 41ms</span><span class="badge b-ok b-dot">3 models found</span><span class="badge b-neutral">inference not run</span></div>
+   </div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-primary" onclick="closeDialog();toast('ok','Provider saved','Ollama (local) is now current.')">Save provider</button></div></div>`,
+        addterm: `<div class="dialog"><div class="dialog-h"><div class="di brand">＋</div><div><h3>Add glossary term</h3></div></div>
+   <div class="dialog-b"><div class="grid2"><div class="field"><label class="fld">Source term</label><input class="input" value="Justine"></div>
+   <div class="field"><label class="fld">Target</label><input class="input" value="Жустіна"></div></div>
+   <div class="grid2"><div class="field"><label class="fld">Type</label><select class="input"><option>character</option><option>place</option><option>term</option><option>title</option></select></div>
+   <div class="field"><label class="fld">Gender (for agreement)</label><select class="input"><option>female</option><option>male</option><option>n/a</option></select></div></div>
+   <div class="toggle-row"><span class="switch on"></span><div class="tx">Lock — force this exact spelling everywhere</div></div></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-primary" onclick="closeDialog();toast('ok','Term added','Justine → Жустіна (locked).')">Add term</button></div></div>`,
+        retry: `<div class="dialog"><div class="dialog-h"><div class="di info">↻</div><div><h3>Retry with note</h3><div class="sub">ch5 · p12</div></div></div>
+   <div class="dialog-b"><div class="field"><label class="fld">Guidance for the model (optional)</label><textarea class="input" rows="3" placeholder="e.g. keep it more formal; 'endued with life' → 'наділив життям'"></textarea></div>
+   <div class="chk"><input type="checkbox"> Lower temperature for this retry</div></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-primary" onclick="closeDialog();toast('info','Retrying…','Re-translating ch5 · p12 with your note.')">↻ Retry</button></div></div>`,
+        confirmDelete: `<div class="dialog"><div class="dialog-h"><div class="di err">🗑</div><div><h3>Delete provider?</h3></div></div>
+   <div class="dialog-b"><p style="margin:0">This removes <b>Ollama (local)</b> and its settings. Projects that used it will fall back to the next available provider. This can't be undone.</p></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-danger" onclick="closeDialog();toast('warn','Provider deleted','Current provider switched to LM Studio.')">Delete</button></div></div>`,
+        quit: `<div class="dialog"><div class="dialog-h"><div class="di warn">⚠</div><div><h3>Unsaved changes</h3></div></div>
+   <div class="dialog-b"><p style="margin:0">You edited the Book Brief. Save changes before leaving?</p></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-danger-outline" onclick="closeDialog()">Discard</button><button class="btn btn-primary" onclick="closeDialog();toast('ok','Saved','Book Brief updated.')">Save</button></div></div>`,
+        err: `<div class="dialog"><div class="dialog-h"><div class="di err">⛔</div><div><h3>Translation failed</h3><div class="sub">Provider unreachable</div></div></div>
+   <div class="dialog-b"><p style="margin-top:0">The app couldn't reach the model server at <span class="mono">localhost:11434</span>. Your progress is saved — nothing was lost.</p>
+   <p class="muted" style="font-size:12.5px">Make sure Ollama is running, then retry.</p>
+   <details><summary style="cursor:pointer;font-size:12px;color:var(--primary)">Technical details</summary>
+   <div class="log" style="margin-top:8px;height:90px"><span class="r">code:</span> PROVIDER_UNREACHABLE<br><span class="r">cause:</span> java.net.ConnectException: Connection refused<br><span class="r">endpoint:</span> POST /v1/chat/completions<br><span class="r">attempts:</span> 3 (backoff 0.5s → 8s)</div></details></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Close</button><button class="btn btn-secondary" onclick="closeDialog();go('settings')">Provider settings</button><button class="btn btn-primary" onclick="closeDialog();toast('info','Retrying…','Reconnecting to the model server.')">↻ Retry</button></div></div>`,
+        exported: `<div class="dialog"><div class="dialog-h"><div class="di ok">✓</div><div><h3>Export complete</h3></div></div>
+   <div class="dialog-b"><p style="margin-top:0"><b>Frankenstein (UK).epub</b> was written and validated.</p>
+   <div class="kv"><span class="k">Location</span><span class="mono" style="font-size:11.5px">~/Books/Translated/</span></div>
+   <div class="kv"><span class="k">Validation</span><span class="badge b-ok">EPUBCheck passed</span></div>
+   <div class="kv"><span class="k">Size</span><span>936 KB</span></div></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Close</button><button class="btn btn-secondary" onclick="closeDialog()">Open folder</button><button class="btn btn-primary" onclick="closeDialog()">Open book</button></div></div>`,
+        about: `<div class="dialog"><div class="dialog-h"><div class="di info">ⓘ</div><div><h3>BookLoom</h3><div class="sub">Version 0.1.0 · MIT license</div></div></div>
+   <div class="dialog-b"><p style="margin-top:0">Private, offline book translation with local LLMs. Java 25 · JavaFX 25.</p>
+   <div class="kv"><span class="k">Built with</span><span>OpenJFX, SQLite, JDOM2, jsoup, Jackson</span></div>
+   <div class="kv"><span class="k">Models</span><span>via Ollama / LM Studio (your machine)</span></div>
+   <div class="hint">No telemetry. No account. No cloud.</div></div>
+   <div class="dialog-f"><button class="btn btn-secondary" onclick="closeDialog()">Licenses</button><button class="btn btn-primary" onclick="closeDialog()">Close</button></div></div>`,
+        bindUnavailable: `<div class="dialog"><div class="dialog-h"><div class="di warn">⚠</div><div><h3>Bound provider unavailable</h3><div class="sub">Resuming “Frankenstein (UK)”</div></div></div>
+   <div class="dialog-b"><p style="margin-top:0">This project was translated with <b>Ollama · gemma4:26b-a4b-it-qat</b>, which isn't reachable right now. Continuing on a different model may change the translation's voice and consistency mid-book.</p>
+   <div class="kv"><span class="k">Project used</span><span class="mono" style="font-size:11.5px">Ollama · gemma4:26b-a4b-it-qat</span></div>
+   <div class="kv"><span class="k">Current default</span><span class="mono" style="font-size:11.5px">LM Studio · qwen2.5:14b-instruct</span></div>
+   <div class="hint">Nothing changes unless you confirm the fallback.</div></div>
+   <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Cancel</button><button class="btn btn-secondary" onclick="closeDialog();go('settings')">Fix provider</button><button class="btn btn-danger-outline" onclick="closeDialog();toast('warn','Using current default','Project rebound to LM Studio · qwen2.5:14b-instruct.')">Fall back to default</button></div></div>`,
+        bindChanged: `<div class="dialog"><div class="dialog-h"><div class="di brand">⇄</div><div><h3>Provider/model changed since last run</h3><div class="sub">Resuming “Frankenstein (UK)”</div></div></div>
+   <div class="dialog-b"><p style="margin-top:0">Your settings default now differs from what this project last used. Keep the project on its previous model for consistency, or apply the new one?</p>
+   <div class="kv"><span class="k">Previously used</span><span class="mono" style="font-size:11.5px">Ollama · gemma4:26b-a4b-it-qat</span></div>
+   <div class="kv"><span class="k">New default</span><span class="mono" style="font-size:11.5px">Ollama · gemma4:12b</span></div></div>
+   <div class="dialog-f"><button class="btn btn-secondary" onclick="closeDialog();toast('info','Applied new model','Project now uses gemma4:12b.')">Apply new</button><button class="btn btn-primary" onclick="closeDialog();toast('ok','Continuing','Kept gemma4:26b-a4b-it-qat for this project.')">Continue with previous</button></div></div>`,
+    };
+
+    /* ============================================================ HELPERS + ROUTER */
+    function sw(c, name, use) {
+        return `<div class="sw"><div class="c" style="background:${c}"></div><div class="m"><b>${name}</b><span class="mono">${c}</span><div class="muted" style="font-size:10px">${use}</div></div></div>`;
+    }
+
+    function dlgCard(id, t, d, tone, ico) {
+        return `<div class="col" style="min-width:220px;max-width:260px"><div class="card pad"><div class="gap8" style="margin-bottom:8px"><span class="di ${tone}" style="width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center">${ico}</span><b>${t}</b></div><div class="muted" style="font-size:12px;margin-bottom:10px">${d}</div><button class="btn btn-secondary btn-sm" data-dialog="${id}">Preview</button></div></div>`;
+    }
+
+    let stateStore = {import: 'ok', run: 'running'};
+    let tabStore = {settings: 'providers'};
+
+    function buildNav() {
+        document.getElementById('navWorkflow').innerHTML = WORKFLOW.map(n => navItem(n)).join('');
+        document.getElementById('navApp').innerHTML = APPNAV.map(n => navItem(n)).join('');
+        document.getElementById('navRef').innerHTML = REF.map(n => navItem(n)).join('');
+    }
+
+    function navItem(n) {
+        const left = n.step ? `<span class="step">${n.step}</span>` : `<span class="ico">${n.ico || '•'}</span>`;
+        const done = DONE.has(n.id) ? 'done' : '';
+        return `<div class="nav-item ${done}" data-id="${n.id}" onclick="go('${n.id}')">${left}<span>${n.t}</span></div>`;
+    }
+
+    function go(id) {
+        document.querySelectorAll('.nav-item').forEach(e => e.classList.toggle('active', e.dataset.id === id));
+        const meta = [...WORKFLOW, ...APPNAV, ...REF].find(x => x.id === id) || {t: id};
+        const idx = ORDER.indexOf(id);
+        const crumbRoot = WORKFLOW.some(x => x.id === id) ? 'Workflow' : (APPNAV.some(x => x.id === id) ? 'Application' : 'Design reference');
+        document.getElementById('crumbs').innerHTML = `${crumbRoot} <span style="opacity:.5">/</span> <b>${meta.t}</b>${idx >= 0 ? ` <span class="muted">· step ${idx + 1} of ${ORDER.length}</span>` : ''}`;
+        const html = (S[id] || (() => '<div class="empty">…</div>'))();
+        const nav = (idx >= 0) ? `<div class="step-actions" style="border:none;padding-top:8px">
+      <button class="btn btn-ghost" ${idx <= 0 ? 'disabled' : ''} onclick="${idx > 0 ? `go('${ORDER[idx - 1]}')` : ''}">‹ Back</button>
+      <button class="btn btn-secondary" ${idx >= ORDER.length - 1 ? 'disabled' : ''} onclick="${idx < ORDER.length - 1 ? `go('${ORDER[idx + 1]}')` : ''}">Next ›</button></div>` : '';
+        // brief/structure/glossary/import already include their own step actions
+        const skipNav = ['brief', 'structure', 'glossary', 'import'].includes(id);
+        document.getElementById('content').innerHTML = html + (skipNav ? '' : nav);
+        // toolbar contextual actions
+        const ta = document.getElementById('toolbarActions');
+        if (id === 'translating') ta.innerHTML = `<button class="btn btn-ghost btn-sm">⏸ Pause</button><button class="btn btn-secondary btn-sm" onclick="go('review')">Review (3)</button>`;
+        else if (id === 'projects') ta.innerHTML = `<button class="btn btn-primary btn-sm" onclick="go('import')">＋ New</button>`;
+        else ta.innerHTML = '';
+        document.getElementById('content').scrollTop = 0;
+    }
+
+    function setState(group, val) {
+        stateStore[group] = val;
+        document.querySelectorAll(`.seg[data-state="${group}"] span`).forEach((s, i) => {
+        });
+        event.target.closest('.seg').querySelectorAll('span').forEach(s => s.classList.remove('on'));
+        event.target.classList.add('on');
+        if (group === 'import') document.getElementById('importState').innerHTML = importState[val];
+        if (group === 'run') document.getElementById('runState').innerHTML = runState[val];
+    }
+
+    function setTab(group, val) {
+        tabStore[group] = val;
+        event.target.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+        event.target.classList.add('on');
+        if (group === 'settings') document.getElementById('settingsTab').innerHTML = settingsTab[val];
+    }
+
+    /* dialogs */
+    function openDialog(id) {
+        document.getElementById('modalHost').innerHTML = DLG[id] || '';
+        document.getElementById('scrim').classList.add('show');
+    }
+
+    function closeDialog() {
+        document.getElementById('scrim').classList.remove('show');
+        document.getElementById('modalHost').innerHTML = '';
+    }
+
+    /* toasts */
+    function toast(type, title, desc) {
+        const icons = {ok: '✓', info: 'ℹ', warn: '⚠', err: '⛔'};
+        const el = document.createElement('div');
+        el.className = 'toast ' + type;
+        el.innerHTML = `<div class="ti">${icons[type]}</div><div class="tb"><div class="tt">${title}</div><div class="td">${desc || ''}</div></div><div class="tx" onclick="this.parentNode.remove()">✕</div>`;
+        document.getElementById('toasts').appendChild(el);
+        setTimeout(() => el.remove(), 5200);
+    }
+
+    /* theme */
+    function toggleTheme() {
+        const r = document.documentElement;
+        const d = r.getAttribute('data-theme') === 'dark';
+        setTheme(d ? 'light' : 'dark');
+    }
+
+    function setTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        document.getElementById('themeBtn').textContent = (t === 'dark' ? '◑ Light' : '◐ Dark');
+    }
+
+    /* segmented toggles (visual) + chip removal + delegated dialog buttons */
+    document.addEventListener('click', e => {
+        const segSpan = e.target.closest('.seg span');
+        if (segSpan && !segSpan.getAttribute('onclick')) {
+            segSpan.closest('.seg').querySelectorAll('span').forEach(s => s.classList.remove('on'));
+            segSpan.classList.add('on');
+        }
+        const sw = e.target.closest('.switch');
+        if (sw) sw.classList.toggle('on');
+        const chipx = e.target.closest('.chip .x');
+        if (chipx) chipx.closest('.chip').remove();
+        const db = e.target.closest('[data-dialog]');
+        if (db) {
+            openDialog(db.getAttribute('data-dialog'));
+        }
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeDialog();
+    });
+
+    buildNav();
+    go('projects');
+</script>
+</body>
+</html>
