@@ -226,3 +226,48 @@ Java 25 (LTS) · JavaFX 25 (LTS) · Gradle (Kotlin DSL) + version catalog · Gui
 (Markdown) · `java.net.http` + Jackson (LLM HTTP/JSON) · Lingua + ICU4J (language detect / segmentation) · SLF4J +
 Logback · Spotless (Palantir) + Error Prone/NullAway + Checkstyle + SpotBugs + ArchUnit · Lefthook · JUnit 5 + AssertJ +
 Mockito + WireMock + TestFX/Monocle · jpackage (unsigned, per-OS). MIT license; permissive dependencies only.
+
+## Branching and Commit Rules
+
+* Never develop, modify files, or create commits directly on `main` or `master`.
+* Treat `main` and `master` as protected branches.
+
+### Starting Work
+
+1. If the current branch is `main` or `master`, create a parent feature branch:
+
+   ```text
+   feature/<short-description>
+   ```
+
+2. If already on an appropriate feature branch, use it as the parent feature branch. Do not create another top-level feature branch unnecessarily.
+
+3. Before making changes, create a dedicated task sub-branch from the parent feature branch:
+
+   ```text
+   feature/<short-description>/<task-description>
+   ```
+
+4. If already on the correct task sub-branch, continue working on it.
+
+### Commits
+
+* Commit changes only to task sub-branches.
+* Never commit directly to:
+
+    * `main`
+    * `master`
+    * the parent feature branch
+* Keep each task sub-branch limited to one coherent task or independently reviewable change.
+
+### Integrating Task Sub-Branches
+
+* After completing and validating a task, squash-merge its task sub-branch into the parent feature branch.
+* The resulting merge must add a single consolidated commit to the parent feature branch.
+* Do not mix unrelated task changes in the same squash merge.
+
+### Final Integration
+
+* Never merge the parent feature branch into `main` or `master`.
+* Leave the final review and merge into the default branch to the user.
+* Do not delete branches unless the user explicitly requests it.
