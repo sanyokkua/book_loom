@@ -1,6 +1,6 @@
 **Status:** Final **Owner:** architect **Audience:** architect, coder, reviewer **Last Updated:** 2026-07-18
 **Cross-references:** `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`,
-`docs/implementation_plan/02_STORY_FORMAT.md`, `docs/implementation_plan/03_TRACEABILITY.md`,
+`docs/implementation_plan/README.md`, `docs/adr/README.md`,
 `docs/specification/00_Foundation/05_SPEC_INDEX.md`
 
 # ADR Format
@@ -77,7 +77,7 @@ Chosen: **<Option X>**, because <the decisive reason tied to the drivers>.
 ## Links
 - **Design decisions:** DD-NN (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-NN-<slug>`)
 - **Spec clauses:** FR-…, NFR-… (resolve via `docs/specification/00_Foundation/05_SPEC_INDEX.md`)
-- **Stories:** STORY-NNN, STORY-MMM
+- **Changes:** <change-name>, or "none yet"
 - **Supersedes / superseded by:** ADR-KKKK / ADR-MMMM (if any)
 ```
 
@@ -95,8 +95,9 @@ proposed ──► accepted ──► superseded by ADR-MMMM
 | `superseded by ADR-MMMM` | Replaced by a newer ADR; kept for history. The new ADR sets `Supersedes:` to this one. |
 | `deprecated`             | No longer relevant and not replaced (the need went away).                              |
 
-Only `accepted` ADRs bind implementation. A story cites an ADR in its `adrs:` front-matter; `./gradlew traceCheck` fails
-if the cited `ADR-NNNN` has no file under `docs/adr/` (check #11 in `docs/implementation_plan/03_TRACEABILITY.md`).
+Only `accepted` ADRs bind implementation. An OpenSpec change cites an ADR from its `proposal.md` Impact section or its
+`design.md`; the reviewer confirms the cited `ADR-NNNN` has a file under `docs/adr/` and is `accepted`
+(`docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`). Nothing checks this mechanically.
 
 ## linking-rules {#linking-rules}
 
@@ -105,6 +106,6 @@ Every ADR closes the loop to the rest of the corpus:
 - **Link the DD-NN it refines or operationalizes.** If an ADR contradicts a `DD-`, that is a spec conflict — resolve it
   through a spec revision, not silently in the ADR.
 - **Cite the spec clauses** (`FR-…`, `NFR-…`) the decision serves, resolvable via the spec index.
-- **List the stories** that implement or depend on the decision. Those stories cite the ADR back in their `adrs:`
-  front-matter, making the link bidirectional.
+- **List the OpenSpec changes** that implement or depend on the decision. Those changes cite the ADR back from their
+  `proposal.md`/`design.md`, making the link bidirectional. Write "none yet" while none exist.
 - Keep every cross-reference in-repo and repo-relative. No external references.

@@ -7,7 +7,7 @@ The required test types are: **unit**; **persistence integration** (real temp SQ
 ## MUST
 
 - **MUST** write tests with **JUnit 5 + AssertJ** assertions and **Mockito 5** for collaborators. — Rationale: one consistent, fluent test stack.
-- **MUST** mark every proving test with its acceptance criterion on the **first line** as `// Proves: STORY-NNN-AC-N` (or in the method name/`@DisplayName`), so traceability can attribute it. — Rationale: `./gradlew traceCheck` maps AC → test with zero orphans; see `traceability-and-stories.md`.
+- **MUST** mark every covering test with `// Covers: FR-*` followed by a **one-line EARS restatement** of the obligation it proves, immediately above the test method (ADR-0016 R5) — for example `// Covers: FR-DOC-05 — IF the placeholder multiset of the target differs from the source, THEN the chunk fails as a validation error with no repair attempt.` Several tests may carry the same `FR-*` id when a dense FR decomposed into several requirements. — Rationale: the id is a permanent, greppable join key (the spec is frozen); the restatement is what makes the marker readable without opening the spec. See `spec-authoring.md`.
 - **MUST** name tests `method_state_expected` (e.g. `translateChunk_tagMismatch_returnsValidationError`). — Rationale: the name states the scenario and outcome.
 - **MUST** exercise the LLM at the **HTTP seam with WireMock** — mock the transport/endpoint, not the `Provider`/client class — stubbing **both** the OpenAI-compatible (`/v1/chat/completions`, `/v1/models`) and Ollama-native (`/api/chat`, `/api/tags`, `/api/show`) endpoints, so request shaping (nullable-param omission, `num_ctx` on Ollama options, reasoning low/off), response parsing (`<think>`-stripping/sanitization, tolerant parse, one repair retry, plain-text fallback), retry, `Retry-After`, and each HTTP→`ErrorCode` mapping are all covered. — Rationale: the real HTTP behaviour is what breaks; mock the wire, not our code.
 - **MUST** cover the document round-trip **golden** test per format — a no-op reassembly whose output is **canonical-equal** to the source: the test compares **canonicalized** forms (re-parse-equal / canonical-XML equal; EPUB decompressed canonical content + entry order + mimetype-first/STORED; **TXT exact bytes**), not raw bytes (DD-43) — and a **pipeline e2e** test that drives a small whole book through the engine against a stub/WireMock provider, asserting accepted/flagged outcomes and same-format export. — Rationale: fidelity and the whole-book flow are proven, not assumed.
@@ -33,11 +33,11 @@ The required test types are: **unit**; **persistence integration** (real temp SQ
 
 ## Reject if
 
-- A proving test has no `Proves: STORY-NNN-AC-N` marker, leaving a traceability orphan.
+- A covering test has no `// Covers: FR-*` marker, or carries the id with no one-line EARS restatement, or uses the retired `Proves: STORY-NNN-AC-N` form (ADR-0016).
 - The LLM is tested by mocking the `Provider`/client instead of the WireMock HTTP seam, or only one dialect is stubbed (both OpenAI-compatible and Ollama-native are required).
 - The class under test or pure domain logic is mocked.
 - A UI test needs a real display instead of Monocle headless.
 - Testcontainers (or any external DB) is introduced for SQLite tests, or persistence tests skip Flyway migrations.
-- A `liveLocal`, `promptEval`, or `visual` test runs in CI / `check`, is not env-gated (does not skip when no endpoint is configured), or is counted toward the coverage/traceability gate.
+- A `liveLocal`, `promptEval`, or `visual` test runs in CI / `check`, is not env-gated (does not skip when no endpoint is configured), or is counted toward the coverage gate.
 - A golden round-trip test asserts raw-byte equality for a structured format (EPUB/FB2/MD) instead of comparing canonicalized forms, or an accessibility check is made a blocking merge gate.
 - Core-module branch coverage drops below ~80% without justification, or `:ui` is added to the coverage gate.

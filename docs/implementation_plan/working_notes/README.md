@@ -10,16 +10,16 @@ of the specification or the story record.
 ## what-belongs-here {#what-belongs-here}
 
 - Investigation notes from reading the codebase or reproducing a problem.
-- Planning scratch before `/plan-phase-stories-creation` or `/plan-user-story-implementation` produces the real plan.
+- Planning scratch before `/opsx:explore` or `/opsx:propose` produces the real plan.
 - Temporary tables, command output, or reasoning kept for the duration of a session.
 
 ## what-does-not {#what-does-not}
 
 - **Not the spec.** The specification under `docs/specification/` is frozen and authoritative; nothing here overrides
   it.
-- **Not a story.** Implementable, testable work lives in `docs/stories/` in the story format.
+- **Not the built-behaviour ledger.** `openspec/specs/` is written by `openspec archive`; nothing here feeds it.
 - **Not an ADR.** Architecturally significant decisions go in `docs/adr/`.
-- **Not traceability.** `docs/traceability.yaml` is generated; nothing here feeds `traceCheck`.
+- **Not a change.** Implementable, testable work lives in `openspec/changes/<name>/`.
 
 ## rules {#rules}
 

@@ -1,6 +1,6 @@
 # Offline & Privacy
 
-Scope: all modules — a cross-cutting invariant. Spec: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. This is a Definition-of-Done gate for every story.
+Scope: all modules — a cross-cutting invariant. Spec: `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`. This is a Definition-of-Done gate for every change.
 
 ## MUST
 

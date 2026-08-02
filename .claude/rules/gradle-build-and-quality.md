@@ -12,7 +12,7 @@ Scope: build scripts and quality config — `**/build.gradle.kts`, `settings.gra
 - **MUST** run **Error Prone + NullAway** at compile time with JSpecify `@NullMarked` per package; CI fails on SECURITY and CORRECTNESS findings. — Rationale: null and correctness bugs caught before merge.
 - **MUST** run **Checkstyle**, **SpotBugs + FindSecBugs**, and the **ArchUnit** boundary tests as part of `check`. — Rationale: style, security, and layering are all gated.
 - **MUST** stage checks via **Lefthook**: pre-commit (<10s: `spotlessApply`, gitleaks, file-size guard), commit-msg (Conventional Commits), pre-push (<60s: unit tests excluding UI/TestFX). Heavy checks (full lint, headless TestFX, coverage, SCA) run in CI only. — Rationale: fast local loop, thorough CI.
-- **MUST** leave `./gradlew clean build check spotlessCheck` **green across the whole project** at the end of every story — build, format, lint, ArchUnit, and tests all passing, zero findings. **No "pre-existing failure" exemption:** a mechanical check that is red anywhere (even in untouched code) is fixed before the story is done, never carried forward or waved through. — Rationale: the gate is binary; a green build is a standing invariant, not a per-file courtesy (`06_DEFINITION_OF_DONE.md`).
+- **MUST** leave `./gradlew clean build check spotlessCheck` **green across the whole project** at the end of every change — build, format, lint, ArchUnit, and tests all passing, zero findings. **No "pre-existing failure" exemption:** a mechanical check that is red anywhere (even in untouched code) is fixed before the change is archived, never carried forward or waved through. — Rationale: the gate is binary; a green build is a standing invariant, not a per-file courtesy (`06_DEFINITION_OF_DONE.md`).
 
 ## SHOULD
 
@@ -27,6 +27,6 @@ Scope: build scripts and quality config — `**/build.gradle.kts`, `settings.gra
 - Dependency lockfiles are missing or stale after a resolution change.
 - A commit lands unformatted (`spotlessCheck` would fail) or CI lacks `spotlessCheck`.
 - Error Prone+NullAway, Checkstyle, SpotBugs+FindSecBugs, or ArchUnit is disabled/skipped anywhere.
-- A story is called done while any mechanical check is red, on the excuse that the failure was "pre-existing" or "not my code".
+- A change is called done while any mechanical check is red, on the excuse that the failure was "pre-existing" or "not my code".
 - A GPL/LGPL/AGPL/SSPL dependency is introduced, or a dependency outside the recorded allowlist (Apache-2.0/MIT/BSD + EPL-1.0/ICU/JDOM exceptions) lands without a licensing-doc update.
 - A build invokes a system `gradle` instead of `./gradlew`.

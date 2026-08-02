@@ -1,8 +1,9 @@
 ---
 phase: PHASE_07_CONSISTENCY
-# Machine-readable phase→clause manifest read by `./gradlew traceCheck` for the
-# phase-exit orphan-clause check (docs/implementation_plan/03_TRACEABILITY.md#orphan-clause-phase-exit).
-# These clauses must each be cited by a non-superseded story before this phase is an "implemented phase".
+# REFERENCE MATERIAL (ADR-0016 / ADR-0017). Phase files are no longer the execution order —
+# see docs/implementation_plan/07_ROADMAP.md (five stages) and CHANGE_BACKLOG.md. Nothing reads
+# this manifest mechanically; it is a checklist of the spec clauses this area must eventually
+# cover, useful when drafting the /opsx:propose input for a change in this area.
 phase_clauses:
   - docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#context-package
   - docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#phase-b-prep
@@ -61,7 +62,8 @@ PHASE_06 (context-package assembler F5, the running loop, persistence of segment
 
 ## Suggested stories / tasks
 
-_Backlog, refined by `/plan-phase-stories-creation`, not the source of truth._
+_Reference backlog of candidate tasks. NOT the source of truth and NOT a change: draw on it
+when drafting the `/opsx:propose` input for a change in this area (ADR-0016, ADR-0017)._
 
 | Candidate task                                                                                          | Target modules                                                                        | Cited spec clauses                                                                    |
 |---------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
@@ -83,4 +85,4 @@ _Backlog, refined by `/plan-phase-stories-creation`, not the source of truth._
   layer.
 - [ ] The context-package assembler injects only the glossary terms occurring in the chunk, at prompt edges.
 - [ ] Consistency across a multi-chapter fixture is measurably improved vs PHASE_06 (name/term stability test).
-- [ ] FX-free (ArchUnit green); `./gradlew test` and `./gradlew traceCheck` green; module inventory updated.
+- [ ] FX-free (ArchUnit green); `./gradlew test` green; module inventory updated.

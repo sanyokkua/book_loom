@@ -1,15 +1,14 @@
 **Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-07-18
 **Cross-references:** `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
-`docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/implementation_plan/02_STORY_FORMAT.md`,
-`docs/implementation_plan/03_TRACEABILITY.md`
+`docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/implementation_plan/README.md`,
+`docs/implementation_plan/06_DEFINITION_OF_DONE.md`
 
 # Module Inventory
 
-This is the **canonical, authoritative list of Gradle/JPMS modules and their package sub-paths**. Every story's
-`modules:` front-matter cites entries from this file, and `./gradlew traceCheck` fails when a story cites a module path
-that does not appear here (see `docs/implementation_plan/03_TRACEABILITY.md`). The module boundaries, allowed dependency
-edges, and ArchUnit rules that govern this inventory are defined in
-`docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`.
+This is the **canonical, authoritative list of Gradle/JPMS modules and their package sub-paths**. Every OpenSpec
+change's proposal and `tasks.md` cite entries from this file; a citation that does not appear here is a review failure
+(nothing checks it mechanically — ADR-0016). The module boundaries, allowed dependency edges, and ArchUnit rules that
+govern this inventory are defined in `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`.
 
 ## how-to-cite-a-module {#how-to-cite-a-module}
 
@@ -38,13 +37,16 @@ Examples: `:document/ua.bookloom.document.epub`, `:llm/ua.bookloom.llm.provider`
       documents. CI + on demand.
     - **UI** — TestFX + Monocle, headless. CI (excluded from `pre-push`).
     - **Arch** — ArchUnit boundary assertions.
-- A proving test's first line declares `// Proves: STORY-NNN-AC-N` (see `docs/implementation_plan/03_TRACEABILITY.md`).
+- A covering test carries `// Covers: FR-*` plus a one-line EARS restatement of the obligation it proves, immediately
+  above the test method (ADR-0016 R5).
 
 ## adding-a-module-note {#adding-a-module-note}
 
-**New modules and new package sub-paths are added to this file in the same story that introduces them.** A story that
-creates a package must (a) add the row here and (b) list it in that story's `modules:`. `traceCheck` rejects a story
-citing a module path absent from this inventory, so the inventory update and the code land together.
+**New modules and new package sub-paths are added to this file in the same change that introduces them.** A change
+that creates a package must (a) add the row here and (b) name it in its proposal's Impact section. Updating the
+inventory is an item in every change's final green-gate task group
+(`docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`), so the inventory update and the code land
+together.
 
 ## inventory {#inventory}
 
@@ -168,19 +170,19 @@ composition root, two-phase init, single-instance lock wiring.
 
 ## non-module-citable-targets {#non-module-citable-targets}
 
-Some stories (notably PHASE_00 scaffold work) touch **repository-level, non-Java build/tooling targets** that are not
-Gradle subprojects or Java packages but must still be citable in a story's `modules:` front-matter so `traceCheck`
-accepts them. These are the **only** allowed non-`:module/package` targets:
+Some changes (notably the Stage A infrastructure work) touch **repository-level, non-Java build/tooling targets**
+that are not Gradle subprojects or Java packages but must still be citable in a change's Impact section and task
+pointers. These are the **only** allowed non-`:module/package` targets:
 
 | Citable target | What it is                                                                                                                   | Typical citing work                                                                                      |
 |----------------|------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| `build-logic`  | The included build holding the precompiled convention plugins (`bookloom.*-conventions.gradle.kts`)                          | Toolchain/JPMS/lint/format/test conventions, the `trace`/`traceCheck` task wiring                        |
+| `build-logic`  | The included build holding the precompiled convention plugins (`bookloom.*-conventions.gradle.kts`)                          | Toolchain/JPMS/lint/format/test conventions, tag and coverage-gate wiring                               |
 | `arch-test`    | The shared ArchUnit source set that hosts the boundary tests across modules                                                  | ArchUnit boundary rules (`docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules`) |
 | `ci`           | The GitHub Actions workflow definitions (quality job, packaging matrix, release)                                             | CI pipeline, coverage/license/SCA gates, jpackage smoke                                                  |
 | `tooling`      | Repo-level tooling not compiled into a module: Lefthook hooks, gitleaks config, license policy file, icon-generation scripts | Git hooks, license allowlist file, `assets/icon/*.py`                                                    |
 
-A story may cite these verbatim (e.g. `modules: [build-logic, arch-test]`); `traceCheck` treats them as present. They
-carry no `ua.bookloom.*` package path because they contain no application module code.
+A change may cite these verbatim (e.g. `→ build-logic`, `→ arch-test`). They carry no `ua.bookloom.*` package path
+because they contain no application module code.
 
 ## lock-ownership {#lock-ownership}
 

@@ -20,7 +20,8 @@ review. Nothing leaves your machine.
 ## Repository layout
 
 ```
-CLAUDE.md                     Operating manual (read first)
+AGENTS.md                     Operating manual — the single source of truth (read first)
+CLAUDE.md                     Pointer to AGENTS.md; holds no rules of its own
 .claude/                      Claude Code config: rules, skills, agents, slash commands
 docs/
   specification/              FROZEN spec: requirements, architecture, decisions, mockup, diagrams
@@ -29,29 +30,42 @@ docs/
     mockups/ui-mockup.html      Binding UI source of truth
     diagrams/                   Pipeline diagrams (mermaid)
     assets/icon/                App icon: source + background-removal/derivation pipeline + per-OS .icns/.ico/.png
-  implementation_plan/        How to work with the spec: module inventory, story/ADR/traceability
-                              formats, definition of done, roadmap, and the phase backlogs
-  stories/                    Implementation stories (one per session) — created during the build
+  implementation_plan/        How to work with the spec: the operating manual, module inventory,
+                              ADR + scenario-pattern formats, definition of done, the five-stage
+                              roadmap, CHANGE_BACKLOG.md, and the phase files (reference material)
   adr/                        Architecture Decision Records (ADR-0001 … )
-  traceability.yaml           Generated spec→story→AC→test→module record
+openspec/
+  config.yaml                 Project context + the authoring rules that steer generated artifacts
+  changes/<name>/             THE UNIT OF WORK: proposal.md, design.md, specs/, tasks.md
+  specs/<capability>/         The ledger of what is actually BUILT — starts empty, grows on archive
+scripts/fr-coverage.sh        Advisory grep: frozen FR-* ids no shipped requirement claims yet
 ```
 
 ## How the build is driven
 
-The specification is frozen; work happens as **stories**, one per session, planned before any code is written:
+The specification is frozen; work happens as **OpenSpec changes**, one at a time, planned before any code is written
+(ADR-0016):
 
-1. Pick a phase from `docs/implementation_plan/07_ROADMAP.md`.
-2. `/plan-phase-stories-creation <PHASE>` → review → approve; the `architect` writes the story files.
-3. For each story: `/plan-user-story-implementation <STORY>` → review → approve; `coder` + `tester` implement, land
-   proving tests, and run `./gradlew trace && ./gradlew traceCheck`.
-4. A story is `done` only when the Definition of Done (`docs/implementation_plan/06_DEFINITION_OF_DONE.md`) is
-   satisfied.
+1. Pick the next entry from `docs/implementation_plan/CHANGE_BACKLOG.md`, respecting its stage
+   (`docs/implementation_plan/07_ROADMAP.md`).
+2. `/opsx:propose` → generates `proposal.md`, the delta `specs/`, `design.md` where warranted, and `tasks.md`.
+3. `openspec validate <change> --strict` → then `/opsx:apply`; `coder` + `tester` implement and land covering tests
+   marked `// Covers: FR-*` with a one-line EARS restatement.
+4. A change is archivable only when the Definition of Done (`docs/implementation_plan/06_DEFINITION_OF_DONE.md`) is
+   satisfied — including `./gradlew clean build check spotlessCheck` green project-wide. Then `/opsx:archive` folds its
+   requirements into `openspec/specs/`.
 
-See `CLAUDE.md` for the module map, invariants, and command list.
+Every artifact is written to be readable without opening another file: requirements in EARS with a plain-words
+`Source:` gloss, scenarios with concrete values, tasks as full sentences. See `AGENTS.md` for the module map,
+invariants, and command list, and ADR-0016 for the authoring standard.
 
 ## Status
 
-**Specification finalized (v1.0, 2026-07-18).** All 66 specification and implementation-plan documents are
-`Status: Final`; the 50-entry decision log, 15 accepted ADRs, the binding mockup, and the AI-agent configuration are
-reconciled and cross-verified. Source code is added phase by phase per the roadmap, starting with
-`/plan-phase-stories-creation PHASE_00_SCAFFOLD`.
+**Specification finalized (v1.0, 2026-07-18); delivery migrated to OpenSpec (2026-08-02).** The specification and
+implementation-plan documents are `Status: Final`; the 50-entry decision log, 17 accepted ADRs, the binding mockup, and
+the AI-agent configuration are reconciled and cross-verified.
+
+**No source code exists yet.** Delivery runs as 28 OpenSpec changes across five stages — infrastructure → document
+round-trip core ∥ UI component library → engine → composition → release (ADR-0017). Exactly one change is authored and
+ready: `bootstrap-gradle-and-quality-toolchain`, which stands up the Gradle multi-module build, the eight JPMS modules,
+and the full mechanical quality gate.

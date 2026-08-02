@@ -3,15 +3,19 @@
 ADRs are the durable record of architecturally significant decisions — the heavyweight companion to the lightweight
 decision log in `../specification/00_Foundation/04_DESIGN_DECISIONS.md` (the `DD-NN` entries). Each DD that is
 architecturally significant is backed by an ADR here; each ADR links back to its DD-NN, the spec clauses it governs, and
-(once they exist) the stories that apply it.
+(once they exist) the OpenSpec changes that apply it.
+
+Two ADRs are **process** decisions rather than DD-backed architecture: ADR-0016 (OpenSpec is the delivery-tracking
+system) and ADR-0017 (the delivery order). Both deviate from clauses in the frozen specification and name those clauses
+explicitly — read them before planning work.
 
 - **Format:** `ADR-NNNN-<slug>.md`, following `template.md` and `../implementation_plan/04_ADR_FORMAT.md`.
 - **Numbering:** four digits, monotonic, permanent. Never reuse a number.
 - **Status:** `proposed → accepted → superseded by ADR-MMMM | deprecated`. A superseded ADR is kept for history; the
   superseding ADR names it.
 - **When to write one:** an architecturally significant decision not already settled by the specification (a spec gap
-  surfaced during planning), or a change to a previously accepted decision. The `architect` agent (and the
-  `adr-authoring` skill) own authoring.
+  surfaced during planning), or a change to a previously accepted decision. The `adr-authoring` skill owns the format;
+  an OpenSpec change's `design.md` cites the governing ADR rather than restating it.
 
 ## Accepted ADRs
 
@@ -32,3 +36,6 @@ architecturally significant is backed by an ADR here; each ADR links back to its
 | ADR-0013 | Response-handling contract — JSON-first, tolerant, repair + text fallback             | DD-33               |
 | ADR-0014 | Lombok on services, records for data carriers (hybrid)                                | DD-05               |
 | ADR-0015 | Per-OS app paths resolved first, hand-rolled, dev/prod separation                     | DD-39               |
+| ADR-0016 | OpenSpec changes replace stories; generated traceability is never built               | process             |
+| ADR-0017 | Infrastructure-first delivery order; UI component library parallel with documents     | process             |
+| ADR-0018 | Canonical requirement-id form; owners for the three unmapped FR families              | process             |

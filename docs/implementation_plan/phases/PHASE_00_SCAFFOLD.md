@@ -1,8 +1,9 @@
 ---
 phase: PHASE_00_SCAFFOLD
-# Machine-readable phase→clause manifest read by `./gradlew traceCheck` for the
-# phase-exit orphan-clause check (docs/implementation_plan/03_TRACEABILITY.md#orphan-clause-phase-exit).
-# These clauses must each be cited by a non-superseded story before this phase is an "implemented phase".
+# REFERENCE MATERIAL (ADR-0016 / ADR-0017). Phase files are no longer the execution order —
+# see docs/implementation_plan/07_ROADMAP.md (five stages) and CHANGE_BACKLOG.md. Nothing reads
+# this manifest mechanically; it is a checklist of the spec clauses this area must eventually
+# cover, useful when drafting the /opsx:propose input for a change in this area.
 phase_clauses:
   - docs/specification/04_Build_and_Release/01_BUILD_AND_TOOLING.md#build-system
   - docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#tools
@@ -14,7 +15,6 @@ phase_clauses:
   - docs/specification/02_Architecture/09_ERROR_HANDLING.md#result-envelope
   - docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md#composition-root
   - docs/specification/02_Architecture/11_APP_ENVIRONMENT_AND_PATHS.md#resolution-mechanism
-  - docs/implementation_plan/03_TRACEABILITY.md#gradle-tasks
   - DD-03
   - DD-06
 ---
@@ -67,7 +67,6 @@ traceability tooling. When this phase closes, an empty-but-correct application l
 - **Version injection plumbing (DD-50):** root `version` from `-PappVersion` (default `dev`), the
   `generateVersionResource` task writing the `version.properties` classpath resource in `:app`, the `AppVersion` reader,
   and the single startup log line — so the About dialog (later phases) and the packaging smoke read one injected value.
-- `./gradlew trace` and `./gradlew traceCheck` tasks per `docs/implementation_plan/03_TRACEABILITY.md`.
 
 ## Out of scope
 
@@ -90,7 +89,8 @@ None. This is the first phase.
 
 ## Suggested stories / tasks
 
-_Backlog, refined by `/plan-phase-stories-creation`, not the source of truth._
+_Reference backlog of candidate tasks. NOT the source of truth and NOT a change: draw on it
+when drafting the `/opsx:propose` input for a change in this area (ADR-0016, ADR-0017)._
 
 | Candidate task                                                                                                                                                                                                                                       | Target modules                                      | Cited spec clauses                                                                                                                                             |
 |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -106,7 +106,6 @@ _Backlog, refined by `/plan-phase-stories-creation`, not the source of truth._
 | GitHub Actions CI: `check`, ArchUnit, coverage, license gate (`checkLicense`, distinct from OWASP SCA), SCA, jpackage launch-or-fail smoke                                                                                                           | `ci`                                                | `04_Build_and_Release/04_CI_CD.md#quality-job`, `05_Dependencies/03_LICENSING.md#license-gate-tool`, `04_Build_and_Release/02_QUALITY_GATES.md#jpackage-smoke` |
 | Packaging smoke: `:app:collectDist` + the committed per-OS script build an app-image on the current OS, launched headlessly (Xvfb/Monocle) and asserted to actually start                                                                            | `:app/ua.bookloom.app`, `tooling`, `ci`             | `04_Build_and_Release/03_PACKAGING_JPACKAGE.md#approach`, `#verification`, DD-24                                                                               |
 | Version injection: `-PappVersion` property (default `dev`) + `generateVersionResource` (into `processResources`, declared inputs) + `AppVersion` reader + startup log line                                                                           | `:app/ua.bookloom.app`, `build-logic`               | `04_Build_and_Release/01_BUILD_AND_TOOLING.md#version-injection`, DD-50, FR-UI-09                                                                              |
-| `./gradlew trace` (JavaParser over test sources → `Proves:`→FQN; parsed FR-ID index; canonical `(story,AC,test)` fingerprint) + `./gradlew traceCheck` (validate; phase-exit orphan check)                                                           | `build-logic`                                       | `docs/implementation_plan/03_TRACEABILITY.md#gradle-tasks`                                                                                                     |
 | ArchUnit + WireMock-isolation test proving the only outbound network call is **user-triggered provider communication (inference, model discovery, verification)** — no background/unsolicited traffic (offline invariant seed)                       | `arch-test`, `:llm/ua.bookloom.llm`                 | DD-01, FR-INFER-01, `03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline`                                                                                       |
 
 ## Phase exit checklist
@@ -125,6 +124,5 @@ _Backlog, refined by `/plan-phase-stories-creation`, not the source of truth._
   `com.github.jk1.dependency-license-report`, distinct from OWASP SCA) passes against the allowlist (Apache-2.0/MIT/BSD
   plus the recorded EPL-1.0/ICU/JDOM exceptions; `05_Dependencies/03_LICENSING.md`).
 - [ ] The packaging smoke (`:app:collectDist` + script) produces a launchable app-image on at least one OS.
-- [ ] `./gradlew trace` and `./gradlew traceCheck` run and pass on the seed stories.
 - [ ] An ArchUnit/WireMock test enforces the offline invariant (F9 established).
 - [ ] Module inventory (`docs/implementation_plan/01_MODULE_INVENTORY.md`) reflects every package created.

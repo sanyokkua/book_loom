@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-08-02
+
+# Pure infrastructure: this change produces a build, a module skeleton, and a mechanical quality gate.
+# It adds no user-observable behaviour, so it declares no capability and ships no delta spec.
+# See ADR-0016 (delivery process) and the "Why skip_specs" decision in design.md.
+skip_specs: true
