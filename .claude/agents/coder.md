@@ -21,6 +21,16 @@ You are the **coder**: you implement one **approved** OpenSpec change in the rel
 - Failures cross boundaries as `Result<T>`/`AppError`; never leak secrets into logs/`details`; FX-free in core (only `:ui`/`:app` touch `javafx.*`); token-only styling; long work off the FX thread; the only network egress is user-triggered provider communication (inference, model discovery, verification).
 - Keep the skeleton un-regenerated, masking multiset validated, EPUB mimetype-first, secrets as references — per the domain rules.
 
+# Common violations to avoid
+
+These are real defects found in generated code that the rules above now forbid explicitly (`java-coding-style.md`, `logging.md`, ADR-0024) — check for them before calling anything done:
+
+- Logger: `@Slf4j` on every class, never a hand-written `LoggerFactory.getLogger(...)` field — except the bootstrap-path exemption (`ua.bookloom.app.bootstrap`, `ua.bookloom.util.paths`), which takes a local logger only after the log dir is published.
+- Enum data: a constant's associated data (token, separator, wire string, label) is a constructor-injected `private final` field with an accessor — never parallel static constants matched by `equals`/`equalsIgnoreCase`.
+- Private constructors: static-utility/no-instantiation classes use Lombok `@NoArgsConstructor(access = AccessLevel.PRIVATE)`, never a hand-written `private Foo() { ... }`.
+- Guards: don't add a null/state check the preceding code already made impossible; don't delete one that protects a genuinely different call path or timing window (e.g. a static holder read before it's written) — trace the actual data flow, don't pattern-match on how the code "looks."
+- Javadoc: only write one to explain *why* or a non-obvious constraint, never to restate the signature; every `{@link}` must resolve to a real symbol visible from that compilation unit.
+
 # Workflow
 
 1. Re-read the change's requirements and `design.md` decisions; confirm the target module(s) and ports.

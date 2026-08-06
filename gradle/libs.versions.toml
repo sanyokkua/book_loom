@@ -1,0 +1,135 @@
+# BookLoom version catalog — the single source of truth for every dependency coordinate.
+#
+# No build script may contain an inline `group:artifact:version` string; each references `libs.<alias>`.
+# Every version is an exact pin (no `+`, no ranges) so resolution is identical on every machine
+# (docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
+#
+# Populated by change `bootstrap-gradle-and-quality-toolchain`. Runtime libraries the application itself needs
+# (sqlite-jdbc, Flyway, JDBI, jsoup, JDOM2, CommonMark, Jackson, Lingua, ICU4J, SLF4J/Logback, AtlantaFX,
+# Ikonli, ControlsFX) are NOT here yet — each arrives with the change that first uses it, at the narrowest
+# scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency.
+
+[versions]
+
+# --- Runtime ---------------------------------------------------------------------------------------------
+# Guice is needed now, not later: every service module's `module-info.java` already declares
+# `requires com.google.guice` + `opens … to com.google.guice` so the composition-root change needs no churn.
+guice = "7.0.0"
+# Guice 7.0.0 itself pins Guava 31.0.1-jre, which calls a terminally-deprecated sun.misc.Unsafe method and
+# warns on JDK 25. Pinned here so the constraint that upgrades it has a catalog-backed version.
+guava = "33.6.0-jre"
+# JavaFX 26, not the 25 LTS that DD-02/ADR-0001 chose. JavaFX 26 is the first release with a first-class
+# headless glass platform built into `javafx.graphics`; `org.testfx:openjfx-monocle` — which the frozen spec
+# names for every headless UI test — has no build past 21.0.2 and none for 22–25. See ADR-0019.
+javafx = "26.0.2"
+
+# --- Compiler-facing annotations and checks ---------------------------------------------------------------
+# Lombok < 1.18.40 does not compile on JDK 25.
+lombok = "1.18.46"
+jspecify = "1.0.1"
+# Error Prone 2.43.0 is the floor for JDK 25 (JDK 25 replaced javac's Flags.Flag with FlagsEnum, breaking
+# the API 2.42 and earlier compiled against).
+errorprone = "2.50.0"
+nullaway = "0.13.8"
+
+# --- Static-analysis tool versions -------------------------------------------------------------------------
+# Checkstyle 13.x requires Java 21+ to run.
+checkstyle = "13.9.0"
+# SpotBugs could not read class-file major 69 (Java 25) until 4.9.7 bumped BCEL to 6.11.0.
+spotbugs = "4.10.3"
+findsecbugs = "1.14.0"
+# Spotless 8.9.0's built-in Palantir default is only 2.80.0, so the formatter is pinned explicitly.
+# JDK 25 runtime fixes landed in palantir-java-format 2.71.0.
+palantirJavaFormat = "2.96.0"
+# Java 25 support became official in JaCoCo 0.8.14.
+jacoco = "0.8.15"
+
+# --- Logging -----------------------------------------------------------------------------------------------
+# The facade arrived with the toolchain change, ahead of any logging code, because the `bootstrap-no-static-logger`
+# ArchUnit rule needs a real `org.slf4j.Logger` to build its violation fixture against — a rule proven only against
+# a hand-rolled stub proves nothing about the type production code will actually hold.
+slf4j = "2.0.17"
+
+# The binding. Declared on `:app` ONLY (02_DEPENDENCY_POLICY.md#narrowest-scope): every other module logs through
+# the SLF4J facade and must not see a Logback type, which `api-is-framework-free` already enforces for `:api`.
+#
+# Its licence is **EPL-1.0**, not the Apache/MIT/BSD default family. That is a recorded, allowlisted exception
+# (`config/license/allowed-licenses.json`, matched by the module pattern `ch\.qos\.logback:.*`), so the licence
+# gate needs no policy edit — but it is exactly the case that gate exists to adjudicate, which is why task 7.4 runs
+# `checkLicense` explicitly rather than assuming.
+logback = "1.5.20"
+
+# --- Test ---------------------------------------------------------------------------------------------------
+# The JUnit 5 line (the frozen stack specifies JUnit 5; 6.x is a separate major).
+junit = "5.14.4"
+assertj = "3.27.7"
+mockito = "5.23.0"
+# `wiremock-jre8` / `wiremock-jre17` are retired; the plain `wiremock` artifact is current.
+wiremock = "3.13.2"
+testfx = "4.0.18"
+archunit = "1.4.2"
+
+# --- Gradle plugins ------------------------------------------------------------------------------------------
+javafxPlugin = "0.1.0"
+spotlessPlugin = "8.9.0"
+errorpronePlugin = "5.1.0"
+spotbugsPlugin = "6.5.9"
+licenseReportPlugin = "3.1.4"
+owaspPlugin = "12.2.2"
+
+[libraries]
+
+# --- Runtime ---------------------------------------------------------------------------------------------
+guice = { module = "com.google.inject:guice", version.ref = "guice" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+
+# --- Compiler-facing ----------------------------------------------------------------------------------------
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+
+# --- Logging facade -------------------------------------------------------------------------------------------
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# --- Static analysis ------------------------------------------------------------------------------------------
+findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
+palantir-java-format = { module = "com.palantir.javaformat:palantir-java-format", version.ref = "palantirJavaFormat" }
+
+# --- Test ------------------------------------------------------------------------------------------------------
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
+testfx-core = { module = "org.testfx:testfx-core", version.ref = "testfx" }
+testfx-junit5 = { module = "org.testfx:testfx-junit5", version.ref = "testfx" }
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+
+# --- Gradle plugin implementation artifacts -----------------------------------------------------------------
+# Consumed as ordinary dependencies by `build-logic` so its precompiled script plugins can apply them by id.
+plugin-javafx = { module = "org.openjfx:javafx-plugin", version.ref = "javafxPlugin" }
+plugin-spotless = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotlessPlugin" }
+plugin-errorprone = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorpronePlugin" }
+plugin-spotbugs = { module = "com.github.spotbugs.snom:spotbugs-gradle-plugin", version.ref = "spotbugsPlugin" }
+plugin-license-report = { module = "com.github.jk1:gradle-license-report", version.ref = "licenseReportPlugin" }
+plugin-owasp = { module = "org.owasp:dependency-check-gradle", version.ref = "owaspPlugin" }
+
+[bundles]
+
+# Applied to every module by `bookloom.test-conventions` so no change re-argues the assertion library.
+testing = [
+    "junit-jupiter",
+    "assertj-core",
+    "mockito-core",
+    "mockito-junit-jupiter",
+]
+
+[plugins]
+
+# Applied at the root/module level rather than through `build-logic`.
+license-report = { id = "com.github.jk1.dependency-license-report", version.ref = "licenseReportPlugin" }
+owasp-dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "owaspPlugin" }

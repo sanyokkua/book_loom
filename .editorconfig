@@ -1,0 +1,30 @@
+# Line endings and whitespace are fixed here so Spotless and Git never disagree.
+# Without this a Windows checkout produces CRLF that Spotless rewrites on every commit, generating churn
+# that makes real diffs unreadable.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+indent_size = 4
+
+[*.{json,yml,yaml,toml}]
+indent_size = 2
+
+[*.md]
+# Markdown uses trailing double-space for hard line breaks.
+trim_trailing_whitespace = false
+indent_size = 2
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[Makefile]
+indent_style = tab

@@ -33,7 +33,7 @@ resolution, and verification. It is FX-free and reaches the network only through
 
 - Do NOT let callers branch on provider kind or touch a concrete client. Everything goes
   through the `Provider` port + `ProviderFactory`. Two clients exist today
-  (Ollama-native, OpenAI-compatible); a future kind (Gemini/Codex) is a new
+  (Ollama-native, OpenAI-compatible); a future kind (Gemini/Claude) is a new
   implementation registered in the factory — NOT required in this scope.
 - Do NOT drive Ollama through the OpenAI-compatible `/v1/*` shim — use its native API so
   `num_ctx`, `keep_alive`, `format`, and `think` are honored.

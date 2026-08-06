@@ -1,0 +1,48 @@
+/*
+ * BookLoom theme — the single stylesheet FR-THEME-5 mandates.
+ *
+ * FR-THEME-5 fixes both the location and the count: theme CSS lives in the `:ui` module resources as ONE stylesheet
+ * declaring the role set once, with the value blocks applied on `.root`. The theming change extends this file; it
+ * must never add a second one beside it.
+ *
+ * The structure below is already the shape FR-THEME-2's light/dark swap needs — a role set resolved from a value
+ * block on `.root` — so that change adds a dark block and the remaining roles rather than restructuring what is
+ * here. What this file proves today is the MECHANISM: looked-up colors declared on `.root`, referenced by selector,
+ * attached at Scene level, with no hard-coded hex outside the `.root` block and no inline `setStyle` anywhere.
+ */
+
+.root {
+    /* --- Brand palette anchors (theme-independent, 01_Product/09_THEMING.md#palette) --------------------- */
+    -color-brand-charcoal: #3a4a52;
+    -color-brand-slate: #b2babd;
+    -color-brand-sand: #e7d6c0;
+    -color-brand-cognac: #a58075;
+
+    /* --- Role tokens: the light value block ------------------------------------------------------------- */
+    /*
+     * Named by ROLE, not by hue, so a palette change is a value swap rather than a rename across every selector.
+     * The dark block swaps these same names.
+     */
+    -color-bg: white;
+    -color-surface: -color-brand-sand;
+    -color-text: -color-brand-charcoal;
+    -color-border: -color-brand-slate;
+    -color-accent: -color-brand-cognac;
+
+    -fx-background-color: -color-bg;
+}
+
+/*
+ * The blank window's root region. Referencing tokens rather than values is the point of the exercise: every later
+ * screen inherits this pattern, and a single hard-coded hex here would be the precedent that erodes it.
+ */
+.app-shell {
+    -fx-background-color: -color-bg;
+    -fx-border-color: -color-border;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-shell .placeholder-label {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 14px;
+}

@@ -115,6 +115,13 @@ values (incl. surface, nav-*, status `-bg`/`-bd`, shadow, `focus`) are the token
   `docs/specification/01_Product/09_THEMING.md`,
   `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`,
   `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`.
+- Supporting skill files (this skill's own reference material): `css-control-patterns.md`
+  (layout-pane selection, the `Region` box model, CSS property/pseudo-class reference,
+  `derive()`/`ladder()` color functions, the layered-background depth trick, per-control
+  recipes on BookLoom's actual tokens, anti-patterns) and
+  `layout-motion-and-accessibility.md` (responsive/adaptive layout without JavaFX 26 media
+  queries, CSS transitions, accessibility techniques, and a pre-merge Design Audit
+  Checklist that supplements — not replaces — the P6 mockup-conformance check).
 
 ## Mandatory validation checklist
 
@@ -143,3 +150,9 @@ values (incl. surface, nav-*, status `-bg`/`-bd`, shadow, `focus`) are the token
 - Screen states are view state, not separate FXML — reuse one FXML with a state property.
 - A ViewModel that imports a `javafx.scene.*` node type defeats headless unit testing;
   keep it to `Property`/`ObservableList` and port calls.
+- Always pair `setVisible(false)` with `setManaged(false)`. `setVisible(false)` alone
+  hides the node but still reserves its layout space — the classic "invisible gap" bug.
+- Never set `-fx-focus-color: transparent` to quiet a focus ring — that nulls out the
+  `focus` token everywhere (`09_THEMING.md#token-catalog`). To remove only the outer glow,
+  target `-fx-faint-focus-color: transparent` on `.root` and keep `-fx-focus-color` styled
+  via the control's `:focused` pseudo-class instead.

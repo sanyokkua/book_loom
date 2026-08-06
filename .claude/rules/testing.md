@@ -16,6 +16,9 @@ The required test types are: **unit**; **persistence integration** (real temp SQ
 - **MUST** keep a **smoke** test that boots the app (injector + two-phase init against a temp DB) and the jpackage-image launch check in the packaging matrix. — Rationale: composition-root and packaging breakage are caught early.
 - **MUST** mock **only** I/O and non-determinism (network, clock, filesystem, randomness); never mock the class under test or pure domain logic. — Rationale: tests exercise real behaviour, not a mirror of the implementation.
 - **MUST** keep **JaCoCo branch coverage ~80% on core modules** (`:api/:util/:document/:llm/:pipeline/:persistence`); `:ui` is excluded from the coverage gate. — Rationale: core logic is thoroughly covered; UI is covered behaviourally by TestFX.
+- **MUST NOT** put control flow (`if`/`for`/`while`) inside a test method body — use `@ParameterizedTest` with `@ValueSource`/`@CsvSource`/`@NullAndEmptySource` instead. — Rationale: a test with branches is testing more than one thing under one name and can silently skip a case.
+- **MUST NOT** recompute the expected value using the same logic as the code under test (the anti-tautology rule) — assert against a hard-coded expected value, not a re-derivation. — Rationale: a re-derived expectation passes even when the shared logic is wrong; it proves nothing.
+- **MUST** give `@Disabled` a reason naming a ticket: `@Disabled("BOOK-123: flaky under Monocle headless")`. — Rationale: a disabled test with no ticket is a test nobody is coming back to fix.
 
 ## SHOULD
 
@@ -23,6 +26,8 @@ The required test types are: **unit**; **persistence integration** (real temp SQ
 - **SHOULD** use a real temp DB file or `:memory:` with **Flyway migrations applied** for persistence integration tests — **no Testcontainers** (SQLite is embedded). — Rationale: fast, hermetic DB tests that prove the real migration + DAO stack.
 - **SHOULD** keep the golden document round-trip tests (`document-roundtrip.md`) as the gate for each format. — Rationale: fidelity is proven per format.
 - **SHOULD** add a `liveLocal`-tagged case per provider-related feature (a client, prompt-template, or response-handling change), exercising real prompt building and request/response structures + sanitization for BOTH clients. — Rationale: live behaviour drifts in ways a mock cannot show.
+- **SHOULD** use JUnit 5's `@TempDir` for a filesystem-touching test, never a hand-rolled path under `/tmp` or the working directory. — Rationale: `@TempDir` is isolated and cleaned up automatically; a hand-rolled path risks collisions and leaks.
+- **SHOULD** assert an `Optional`-returning port with AssertJ's fluent chain, not `.get()`: `assertThat(result.value()).isPresent().hasValueSatisfying(v -> assertThat(v.status()).isEqualTo(ACCEPTED));`. — Rationale: a bare `.get()` throws an opaque `NoSuchElementException` on failure instead of a readable assertion message.
 
 ## Local-only (`liveLocal`)
 
@@ -41,3 +46,7 @@ The required test types are: **unit**; **persistence integration** (real temp SQ
 - A `liveLocal`, `promptEval`, or `visual` test runs in CI / `check`, is not env-gated (does not skip when no endpoint is configured), or is counted toward the coverage gate.
 - A golden round-trip test asserts raw-byte equality for a structured format (EPUB/FB2/MD) instead of comparing canonicalized forms, or an accessibility check is made a blocking merge gate.
 - Core-module branch coverage drops below ~80% without justification, or `:ui` is added to the coverage gate.
+- A test method contains `if`/`for`/`while` instead of parameterization.
+- An assertion recomputes its expected value with the same algorithm as production code.
+- `@Disabled` has no reason/ticket.
+- A filesystem test hardcodes a path instead of `@TempDir`.

@@ -1,0 +1,103 @@
+# Git hooks for BookLoom, managed by Lefthook.
+#
+# Spec: docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages
+# Design: openspec/changes/bootstrap-gradle-and-quality-toolchain/design.md#d8 (DD-25)
+#
+# Setup after a fresh clone — hooks are NOT active until you run this once:
+#
+#     lefthook install
+#
+# Escape hatches, deliberately documented rather than rediscovered under pressure:
+#
+#     git commit --no-verify      skip pre-commit and commit-msg
+#     git push   --no-verify      skip pre-push
+#     LEFTHOOK=0 git <cmd>        skip every lefthook hook for one command
+#
+# Bypassing is a decision, not a habit: whatever pre-push would have caught, the CI quality job catches on the
+# pull request instead — later, more publicly, and after you have already burned a CI slot.
+
+# ---------------------------------------------------------------------------------------------------------
+# pre-commit — budget < 10 s, auto-fixing, and runs NO tests.
+#
+# Committing is the most frequent operation in the loop, so this stage only does work that is either
+# instantaneous or that fixes the problem for you. Everything slow lives in pre-push and CI.
+# ---------------------------------------------------------------------------------------------------------
+pre-commit:
+  parallel: false # `format` rewrites files that `secrets` and `file-size` then read; keep the order.
+  jobs:
+    - name: format
+      # Formatting is mechanical and is fixed for you rather than reported at you (DD-25).
+      #
+      # Why the whole-project task rather than a file list: Spotless deprecated `-PspotlessFiles` in 4.3.0 as
+      # slow and error-prone, leaving only `spotlessIdeHook` (one Gradle invocation per file — far past the
+      # 10 s budget) and `ratchetFrom` (a branch diff, not the index). The staged-only guarantee that task 6.1
+      # actually needs is about *what joins the commit*, and that is enforced here at the git layer instead:
+      #
+      #   * `glob` means the job does not run at all unless a Java file is staged;
+      #   * lefthook hides unstaged changes for the duration of pre-commit, so Spotless formats index content
+      #     and a partially-staged file's unstaged hunks are restored afterwards (reverting the file outright
+      #     if the formatter touched the same lines) — a partial commit never absorbs work you held back;
+      #   * `stage_fixed` re-stages only these glob-filtered staged files, so formatting churn Spotless may
+      #     have applied to unrelated files in the working tree cannot silently join the commit.
+      #
+      # A warm no-op run of this task is ~0.7 s.
+      glob: "*.java"
+      run: ./gradlew spotlessApply
+      stage_fixed: true
+
+    - name: secrets
+      # A committed secret is unrecoverable — rewriting history does not un-publish a pushed blob, and the
+      # credential must be rotated regardless. Catching it before the commit object exists is the only cheap
+      # moment. Scans the staged diff only, so it is fast and cannot be tripped by unrelated working-tree junk.
+      # Also runs in CI over full history, per #what-fails-where.
+      run: gitleaks git --pre-commit --staged --redact --no-banner
+
+    - name: file-size
+      # Guards against a build output, heap dump, or downloaded model arriving via an over-broad `git add`.
+      # Git never forgets a blob. Threshold and rationale: tooling/hooks/file-size-guard.sh
+      run: sh tooling/hooks/file-size-guard.sh {staged_files}
+
+# ---------------------------------------------------------------------------------------------------------
+# commit-msg — Conventional Commits.
+#
+# The release tooling arriving in change 27 derives the changelog and version bump from the commit type and
+# the breaking-change marker, so an unparseable message is a release note that goes missing.
+# ---------------------------------------------------------------------------------------------------------
+commit-msg:
+  jobs:
+    - name: conventional-commit
+      run: sh tooling/hooks/conventional-commit.sh {1}
+
+# ---------------------------------------------------------------------------------------------------------
+# pre-push — the full mechanical gate.
+#
+# This runs EXACTLY the command the CI quality job runs: `./gradlew clean build check spotlessCheck`
+# (.github/workflows/ci.yml). Identical, not a faster subset — that identity is the whole point (design D8).
+# A green push therefore implies a green CI quality job for the same tree, and the only way to be surprised by
+# CI is for CI to run an *additional* gate (the license and SCA gates, which need network and are CI-only).
+#
+# The tempting optimisation — a hook-only "unit tests, skip TestFX" variant — is the one thing that would
+# break that implication, so it is deliberately not offered. This stage is slow; that cost buys the guarantee.
+# Push anyway with `git push --no-verify` and let CI be the gate instead.
+#
+# Why a `scripts:` entry rather than the `jobs:` form used above — this is load-bearing, not style:
+#
+# Lefthook filters every pre-push JOB against `{push_files}` and silently skips the job when that list comes
+# back empty, and it does come back empty for ordinary pushes (observed here: pushing an existing branch to a
+# remote that does not yet have it skipped the gate in 0.04 s and transferred the ref anyway). There is no
+# job-level opt-out in lefthook 2.x — `skip_empty` is not in the v2 schema, and overriding `files:` does not
+# help because the result is intersected with `{push_files}` regardless. SCRIPTS are not file-filtered, so
+# this is the only form that actually always runs.
+#
+# A gate that silently opts out is worse than no gate: the green push then proves nothing, and D8's
+# "green push implies green CI" claim would be false in precisely the case nobody thinks to check.
+# `tooling/hooks-test/pre-push-runs-when-push-files-is-empty.sh` is the regression check for this — and it is
+# a separate script on purpose, because the Checkstyle check pushes a new commit and so never reaches the
+# skip path at all.
+# ---------------------------------------------------------------------------------------------------------
+pre-push:
+  scripts:
+    "quality-gate.sh":
+      runner: sh
+    "agent-config-sync.sh":
+      runner: sh

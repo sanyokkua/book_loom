@@ -39,3 +39,9 @@ explicitly — read them before planning work.
 | ADR-0016 | OpenSpec changes replace stories; generated traceability is never built               | process             |
 | ADR-0017 | Infrastructure-first delivery order; UI component library parallel with documents     | process             |
 | ADR-0018 | Canonical requirement-id form; owners for the three unmapped FR families              | process             |
+| ADR-0019 | JavaFX 26 for its built-in headless platform (supersedes the JavaFX 25 pin)           | DD-02               |
+| ADR-0020 | Public Domain allowed on the license gate, scoped to `aopalliance` (Guice transitive) | process             |
+| ADR-0021 | The nine code directories live under `modules/`; project names are unchanged          | process             |
+| ADR-0022 | `ErrorCode.busy` covers the single-instance lock; the enum stays at fifteen constants | DD-14               |
+| ADR-0023 | Backend-complete milestone (stub-provider whole-book run) + five backlog interstitials | process             |
+| ADR-0024 | Lombok `@NoArgsConstructor(PRIVATE)` for static-utility classes (extends ADR-0014)    | DD-05               |

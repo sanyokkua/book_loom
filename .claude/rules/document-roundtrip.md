@@ -1,3 +1,8 @@
+---
+paths:
+  - "modules/document/**"
+---
+
 # Document Round-Trip Fidelity
 
 Scope: `:document` (`ua.bookloom.document..` — epub/fb2/md/txt/mask). Spec: `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`, `docs/specification/01_Product/03_DOCUMENT_FORMATS.md`. FX-free.

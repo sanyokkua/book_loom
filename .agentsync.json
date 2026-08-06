@@ -1,0 +1,11 @@
+{
+  "copilot": false,
+  "codex_skills_passthrough": [
+    "openspec-apply-change",
+    "openspec-archive-change",
+    "openspec-explore",
+    "openspec-propose",
+    "openspec-sync-specs",
+    "openspec-update-change"
+  ]
+}

@@ -1,3 +1,8 @@
+---
+paths:
+  - "modules/llm/**"
+---
+
 # LLM Provider Integration
 
 Scope: `:llm` (`ua.bookloom.llm..`). Spec: `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`. Transport is JDK `java.net.http.HttpClient`; JSON is Jackson over records. FX-free.

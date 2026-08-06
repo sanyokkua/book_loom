@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs / FindSecBugs exclusion filter.
+
+  Deliberately near-empty. An exclusion here is a decision that a whole class of security or correctness finding
+  will never be seen again, so each entry must name what it silences and why. "It was noisy" is not a reason —
+  the tool being noisy about a real pattern is the tool working.
+-->
+<FindBugsFilter>
+    <!-- `module-info` and `package-info` compile to synthetic classes carrying no executable code. SpotBugs
+         occasionally reports structural findings against them that have no source line to fix. -->
+    <Match>
+        <Class name="~.*\.module-info"/>
+    </Match>
+    <Match>
+        <Class name="~.*\.package-info"/>
+    </Match>
+</FindBugsFilter>

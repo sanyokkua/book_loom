@@ -61,6 +61,13 @@ diagrams already exist — reference them, never invent parallel copies.
 - Use `<br/>` only inside a quoted label for a line break; never a literal newline.
 - Edge labels follow the same rule: `A -->|"pass QA"| B`, not `A -->|pass->QA| B`.
 - Keep node ids simple (`ascii` letters/digits/underscore); put the human text in the label.
+- NEVER use a Mermaid reserved word as a node id — `end`, `class`, `subgraph`, `graph`,
+  `default` — rename it (`end` -> `endNode`, `class` -> `classNode`). This is a distinct
+  failure from the label-quoting rules above: it's the id itself, not the label text, that
+  breaks the parse.
+- A node id MUST NOT start with a digit (`step1`, not `1stStep`).
+- A `%%` comment MUST be on its own line. `A --> B %% comment` breaks the parse — Mermaid
+  has no trailing-comment syntax.
 
 ## Reference index
 
@@ -77,6 +84,9 @@ diagrams already exist — reference them, never invent parallel copies.
 - [ ] Every label with spaces/punctuation is double-quoted.
 - [ ] The file renders without a parse error (CLI or careful review).
 - [ ] Node ids are simple ascii; human text lives in labels.
+- [ ] No node id is a Mermaid reserved word (`end`, `class`, `subgraph`, `graph`, `default`)
+      or starts with a digit.
+- [ ] Every `%%` comment sits on its own line, never trailing an edge/node statement.
 - [ ] The diagram is self-contained — no out-of-repo names or decision history.
 - [ ] No duplicate of the two canonical pipeline diagrams was created.
 
@@ -89,3 +99,8 @@ diagrams already exist — reference them, never invent parallel copies.
   bare `>` — write `A --> B : "ratio below band"`.
 - Reintroducing a parallel pipeline diagram fragments the source of truth — cite the
   canonical files instead.
+- A node id that happens to be a Mermaid keyword (`end` is the classic one) or starts with
+  a digit fails the parse with no useful error pointing at the real cause — rename the id,
+  not the label.
+- A `%%` comment appended after an edge/node statement on the same line breaks the parse;
+  Mermaid comments are line-only.

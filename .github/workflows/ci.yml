@@ -1,0 +1,342 @@
+# CI — the merge gate.
+#
+# Spec: docs/specification/04_Build_and_Release/04_CI_CD.md#quality-job
+#       docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#ci-gates
+# Design: openspec/changes/bootstrap-gradle-and-quality-toolchain/design.md#d8
+#
+# This is one of the three workflows of `04_CI_CD.md`. `build.yml` (snapshot packaging on `master`) and
+# `release.yml` (tag -> GitHub Release) arrive with the packaging change; on a pull request, this quality job IS
+# the whole workflow — packaging deliberately does not run, keeping the merge gate fast.
+#
+# ---------------------------------------------------------------------------------------------------------------
+# The one invariant this file exists to preserve (design D8)
+# ---------------------------------------------------------------------------------------------------------------
+#
+# The "Quality gate" step below runs `./gradlew clean build check spotlessCheck` — character for character the
+# command in `.lefthook/pre-push/quality-gate.sh`. That identity is the whole point: a green push implies a green
+# CI quality job for the same tree, so CI is a confirmation rather than a source of surprises.
+#
+# CI is allowed to ADD gates. It is not allowed to run a weaker — or merely different — version of the shared one.
+# The extra gates here are the two that genuinely cannot live in a git hook, because each needs the network and
+# neither is deterministic across runs: the license report and the OWASP SCA scan. Everything else a reviewer
+# might be tempted to add "just in CI" belongs in `check`, where a contributor can run it before pushing.
+#
+# The temptations that would break D8, spelled out so they get argued rather than committed:
+#
+#   * adding `-PstrictLocks` (or any flag) to the gate command — the lock check is its own step below for exactly
+#     this reason;
+#   * splitting the gate into `./gradlew check` + `./gradlew spotlessCheck` as separate steps for nicer logs —
+#     different task graph, different up-to-date behaviour, no longer the same command;
+#   * dropping `clean` to speed the job up — then CI and pre-push disagree about incremental state.
+#
+# ---------------------------------------------------------------------------------------------------------------
+# What is deliberately NOT here
+# ---------------------------------------------------------------------------------------------------------------
+#
+# `./gradlew trace` / `./gradlew traceCheck`. Step 7 of `04_CI_CD.md#quality-job` calls for a traceability check;
+# ADR-0016 retires that tooling outright (no `docs/traceability.yaml`, no `trace` task, no `Proves:` markers) in
+# favour of OpenSpec, so the step is superseded and the tasks it would run are never built. Adding it would fail
+# the job on a task that does not exist. This paragraph is the record of that being a decision rather than an
+# omission (task 7.6).
+#
+# Also absent: `liveLocal`, `promptEval` and `visual`. They are excluded from `check` by the task graph itself
+# (`bookloom.test-conventions`, design D5) and need a real local model or a pinned display — not runner-reproducible.
+
+name: CI
+
+on:
+  # The merge gate proper.
+  pull_request:
+    branches: [master]
+
+  # Pushes to any branch except the default one, per the `04_CI_CD.md` trigger table: a contributor pushing a
+  # work-in-progress branch gets the gate before opening the PR. `master` is excluded because pushes there are
+  # `build.yml`'s job (quality + snapshot packaging), not this workflow's.
+  push:
+    branches-ignore: [master]
+
+# One in-flight run per ref. Pushing a fixup to a PR makes the previous run's verdict irrelevant the moment it
+# starts, and a 30-minute job that nobody will read still occupies a runner the next push needs.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The gate reads code and writes nothing. `create-release` in `release.yml` is the only job in the pipeline that
+# ever needs `contents: write` (`04_CI_CD.md#no-secrets`).
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-24.04
+
+    # A hung Gradle daemon or a UI test waiting on a display that never came up would otherwise burn the full
+    # six-hour default. This is a ceiling that fails, not a target.
+    #
+    # Sized for the SCA step's worst case rather than the typical run. The Gradle gate itself takes minutes
+    # (1m20s locally at this commit), but a run whose NVD cache misses entirely has to pull the full CVE corpus
+    # from the NVD API at the unauthenticated rate limit — roughly 150 paged requests at the 8s delay the build
+    # falls back to without an API key, so tens of minutes. That happens on the first run and after a cache
+    # eviction, not routinely. Cutting the timeout to fit the typical run would turn exactly the cold-cache case
+    # that `04_CI_CD.md#no-secrets` promises to support into a red merge gate.
+    timeout-minutes: 90
+
+    steps:
+      # Every action is pinned to a full commit SHA with the tag it corresponded to in the comment. A floating
+      # `@main` — or even a mutable `@v5` major tag — would make the merge gate itself unreproducible: the same
+      # commit could pass today and fail tomorrow because a third party moved a tag, and nothing in this
+      # repository would have changed. The comment is what makes the pin reviewable; the SHA is what makes it a
+      # pin (task 7.1).
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 25 (Temurin)
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: gradle
+          # Keyed on the wrapper, the version catalog and the committed lockfiles
+          # (`04_CI_CD.md#caching-reproducibility`). Those three files are precisely what determines the resolved
+          # graph, so the cache key changes when and only when the graph can have changed. Keying on `**/*.gradle*`
+          # — the action's default — would instead invalidate the whole dependency cache every time a comment in a
+          # build script moved.
+          cache-dependency-path: |
+            gradle/wrapper/gradle-wrapper.properties
+            gradle/libs.versions.toml
+            **/*.lockfile
+
+      # `04_CI_CD.md#quality-job` step 2. Worth being precise about what this does and does not do, because the
+      # spec predates ADR-0019: headless rendering for the TestFX suites comes from JavaFX 26's built-in headless
+      # glass platform (`glass.platform=Headless`, set in `bookloom.test-conventions`), NOT from Monocle — that
+      # artifact has no release past 21.0.2 and cannot run against a JavaFX 26 runtime at all.
+      #
+      # So the JavaFX tests do not need this display. What does need it is everything adjacent that assumes one
+      # exists: incidental AWT initialisation, native dialogs, a future test that reaches for a real toolkit. A
+      # virtual display costs a second and turns that whole class of failure — which reproduces on no
+      # developer machine — into a non-event.
+      - name: Start Xvfb
+        run: |
+          set -euo pipefail
+          command -v Xvfb >/dev/null 2>&1 || {
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends xvfb
+          }
+          Xvfb :99 -screen 0 1920x1080x24 &
+          # Poll for the X socket rather than sleeping a guessed interval: a fixed sleep is either too short on a
+          # loaded runner (flaky) or wasted on every run that did not need it.
+          for _ in $(seq 1 50); do
+            [ -e /tmp/.X11-unix/X99 ] && break
+            sleep 0.2
+          done
+          test -e /tmp/.X11-unix/X99 || { echo "::error::Xvfb failed to start on :99"; exit 1; }
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      # Task 7.4 — deliberately BEFORE the gate, so a lock-state problem fails in seconds instead of after a full
+      # compile and test run.
+      #
+      # Gradle has no command-line flag for the lock mode, so STRICT is opted into with `-PstrictLocks`
+      # (`bookloom.java-conventions`). What it buys over the default: DEFAULT mode already fails when a
+      # configuration's resolution contradicts its lock state — a bumped catalog version without regenerated
+      # lockfiles — but a configuration with NO lock state at all resolves freely and silently. Verified on this
+      # repository: with `modules/util/gradle.lockfile` removed, `verifyLocks` passes in DEFAULT mode and fails in STRICT
+      # with "Configuration ':util:annotationProcessor' is locked but does not have lock state".
+      #
+      # `build-logic` is a separate included build with its own resolution and its own lockfiles; without the
+      # second invocation the plugin versions that decide whether the quality gate even runs would be the only
+      # unverified part of the graph.
+      - name: Verify dependency lock state (strict)
+        run: |
+          ./gradlew --no-daemon -PstrictLocks verifyLocks
+          ./gradlew --no-daemon -p modules/build-logic -PstrictLocks verifyLocks
+
+      # THE shared gate. Identical to `.lefthook/pre-push/quality-gate.sh`. See the D8 block at the top of this
+      # file before changing so much as a flag here.
+      #
+      # Covers: Spotless, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, the eight ArchUnit boundary
+      # rules, the JaCoCo branch-coverage gate, every test tier that can run on a runner, and the `build-logic`
+      # functional tests that prove each of those fails red on a seeded canary.
+      - name: Quality gate
+        run: ./gradlew clean build check spotlessCheck
+
+      # Asserts AGENTS.md/CLAUDE.md and the .agents/.claude/.codex skill/agent mirrors are in sync — the
+      # same check .lefthook/pre-push/agent-config-sync.sh runs. Cheap, deterministic, and local-runnable, so
+      # unlike the license/SCA gates below it could live in the shared gate script — it is a separate step
+      # here only to keep quality-gate.sh's identity with the Quality gate step above exact (design D8).
+      - name: Agent config sync check
+        run: python3 scripts/sync-agent-files.py --check
+
+      # Task 7.3, gate 1 of 2 — "may we distribute this?". CI-only because it resolves the full graph against
+      # remote POM metadata. Fails on any runtime dependency whose license is not in
+      # `config/license/allowed-licenses.json` (`05_Dependencies/03_LICENSING.md#license-gate-tool`).
+      - name: License gate
+        run: ./gradlew checkLicense
+
+      # The NVD feed, cached across runs. This is the mechanism `04_CI_CD.md#no-secrets` names when it says CI
+      # "can run against a cached/mirrored feed, keeping forks buildable without it" — and it is what makes the
+      # no-API-key path viable rather than merely permitted: the multi-hundred-thousand-CVE first sync is paid
+      # once, and later runs do an incremental update.
+      #
+      # `restore-keys` matters more than the exact key here. A stale-but-close cache is enormously better than no
+      # cache: dependency-check updates it incrementally, so a week-old feed costs a short delta download while a
+      # cache miss costs the full unauthenticated sync.
+      #
+      # The path is the plugin's default data directory, confirmed by running `dependencyCheckAggregate` locally
+      # rather than read off the documentation: the run reported "NVD API has 372,644 records in this update" and
+      # populated `~/.gradle/dependency-check-data`. Note it sits beside, not inside, the module cache
+      # `setup-java`'s `cache: gradle` manages (`~/.gradle/caches`, `~/.gradle/wrapper`), so the two caches do not
+      # overlap or evict one another.
+      - name: Cache the NVD data directory
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: nvd-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            nvd-${{ runner.os }}-
+
+      # Task 7.3, gate 2 of 2 — "does this have a known CVE?". Fails on CVSS >= 7.0 in a shipped (runtime)
+      # dependency; configuration and the rationale for the threshold are in `build.gradle.kts`.
+      #
+      # `NVD_API_KEY` is the pipeline's ONLY optional secret (`04_CI_CD.md#no-secrets`); it grants no publish or
+      # signing capability. `secrets.NVD_API_KEY` expands to the empty string when it is not configured — which is
+      # the case for this repository — and the build treats blank as absent and raises the inter-request delay
+      # instead of failing. The no-secret path is therefore the DEFAULT path, exercised on every run here, not a
+      # fallback that only gets discovered when it breaks.
+      - name: SCA gate (OWASP dependency-check)
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: ./gradlew dependencyCheckAggregate
+
+      # Task 7.5 — a red UI test must be diagnosable from the PR page. The HTML reports carry the failure message
+      # and stack trace; the XML results carry the same thing in a form a test-report annotator can parse.
+      #
+      # `if: failure()` rather than `always()`: on a green run these are tens of megabytes of "everything passed",
+      # and an artifact nobody downloads still costs storage on every PR.
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-reports-${{ github.run_id }}
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
+            **/build/reports/checkstyle/**
+            **/build/reports/spotbugs/**
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # The two CI-only gates produce their own evidence, and neither failure is self-explanatory from the console:
+      # the license report names the offending coordinate but not its whole path into the graph, and a
+      # dependency-check failure line is a CVE id with no context. Uploading the reports is what makes those two
+      # steps actionable rather than merely red.
+      - name: Upload dependency gate reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-reports-${{ github.run_id }}
+          path: |
+            build/reports/dependency-license/**
+            build/reports/dependency-check-report.*
+          retention-days: 14
+          if-no-files-found: ignore
+
+  # --- Packaging matrix (task 6.5) --------------------------------------------------------------------------------
+  #
+  # jpackage CANNOT cross-compile: every artifact is built on its own OS, against that OS's JavaFX platform jars, and
+  # jlinks a runtime from the JDK doing the building. One leg per target is therefore the minimum honest matrix, not
+  # a redundancy (03_PACKAGING_JPACKAGE.md#no-cross-compile).
+  #
+  # **This job has never been observed running.** CI is not exercised until the application is feature-complete — the
+  # standing project decision recorded under change 1's task 7.7 — so this ships as DOCUMENTED DEBT: written from the
+  # spec's matrix, with the scripts themselves verified locally on macOS (app-image + dmg built, launch smoke passed
+  # against the real image). Anything below that has never been run is a claim, not evidence, and is labelled as such
+  # rather than presented as a working gate.
+  packaging:
+    name: Package (${{ matrix.target }})
+    needs: quality
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+
+    strategy:
+      # One red leg must not cancel the others: which platforms fail is the diagnosis, and `fail-fast` would throw
+      # most of it away.
+      fail-fast: false
+      matrix:
+        include:
+          - target: macos-aarch64
+            runner: macos-15
+            distribution: temurin
+            java-package: jdk
+            script: ./scripts/package-macos.sh
+          - target: macos-x86_64
+            runner: macos-15-intel
+            distribution: temurin
+            java-package: jdk
+            script: ./scripts/package-macos.sh
+          - target: linux-x86_64
+            runner: ubuntu-24.04
+            distribution: temurin
+            java-package: jdk
+            script: ./scripts/package-linux.sh
+          # Liberica "Full" (jdk+fx) on exactly the two legs where a plain JDK lacks the JavaFX jmods jpackage
+          # needs. A jpackage run without them fails fast, and the fix is always the JDK selection — never
+          # hand-copying jmods (EC-REL-4, 03_PACKAGING_JPACKAGE.md#jdk-and-javafx-runtime).
+          - target: linux-aarch64
+            runner: ubuntu-24.04-arm
+            distribution: liberica
+            java-package: jdk+fx
+            script: ./scripts/package-linux.sh
+          - target: windows-x86_64
+            runner: windows-2025
+            distribution: liberica
+            java-package: jdk+fx
+            script: scripts\package-windows.bat
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: ${{ matrix.distribution }}
+          java-version: 25
+          java-package: ${{ matrix.java-package }}
+          cache: gradle
+          cache-dependency-path: |
+            gradle/wrapper/gradle-wrapper.properties
+            gradle/libs.versions.toml
+            **/*.lockfile
+
+      # Gradle's only involvement in packaging: stage the app jar plus its full runtime classpath, including this
+      # platform's JavaFX jars, into modules/app/build/dist/libs (ADR-0021 supersedes the spec's app/build/...).
+      - name: Stage the packaging input
+        run: ./gradlew :app:collectDist
+
+      - name: Build the image
+        run: ${{ matrix.script }}
+
+      # The gate that matters. "The artifact exists" is not the claim — a green :app:run proves nothing about the
+      # module path, because it launches from the classpath where a missing `requires` cannot fail. Only the packaged
+      # image, on the module path against its own jlinked runtime, can show that the JPMS graph resolves.
+      #
+      # Headless via JavaFX 26's built-in platform (ADR-0019). The frozen spec names Monocle, but
+      # org.testfx:openjfx-monocle has no release past 21.0.2 and cannot run against a JavaFX 26 runtime at all, so
+      # the spec's literal flags would produce a smoke that fails everywhere.
+      #
+      # "Did not actually launch" is a HARD FAILURE, never a skip (02_QUALITY_GATES.md#jpackage-smoke).
+      - name: Launch smoke
+        if: runner.os != 'Windows'
+        run: ./scripts/launch-smoke.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bookloom-${{ matrix.target }}-${{ github.run_id }}
+          path: |
+            build/package/*.tar.gz
+            build/package/*.dmg
+            build/package/*.deb
+          retention-days: 14
+          if-no-files-found: warn

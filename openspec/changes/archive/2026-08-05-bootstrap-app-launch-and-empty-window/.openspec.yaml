@@ -1,0 +1,14 @@
+schema: spec-driven
+created: 2026-08-04
+
+# Pure infrastructure: this change stands up the startup path — paths resolution, logging, the version
+# resource, the error envelope, the composition root, the single-instance lock, packaging, and a blank
+# themed window. A user can open the window, be refused a second launch, and find a version string in a
+# log file — and nothing else: no book is imported, parsed, translated, reviewed or exported, because
+# none of those capabilities exist yet. The About dialog is NOT part of this change; DD-50's two
+# surfaces are the startup log line (here) and the About dialog (Stage D, with the UI).
+# What ships is the frame every later change hangs behaviour on, so it declares no capability and ships
+# no delta spec. The `Result`/`AppError`/`ErrorCode` envelope (seam F2) is a contract other changes will
+# populate, not a behaviour this one delivers.
+# See ADR-0016 (delivery process) and the "Why skip_specs" section in design.md.
+skip_specs: true

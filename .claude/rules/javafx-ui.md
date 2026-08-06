@@ -1,3 +1,9 @@
+---
+paths:
+  - "modules/ui/**"
+  - "modules/app/**"
+---
+
 # JavaFX UI
 
 Scope: `:ui` and `:app` (`**/ui/src/main/java/**`, FXML/CSS under `**/ui/src/main/resources/**`). Spec: `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`, `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`. Visual acceptance: `docs/specification/mockups/ui-mockup.html`.

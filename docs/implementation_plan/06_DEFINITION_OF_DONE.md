@@ -36,6 +36,20 @@ without opening this file. Keep the two in sync.
   FindSecBugs, ArchUnit, tests) fails anywhere — even in code the change did not write — the change is **not done**
   until it is fixed (as part of this change or a cited prerequisite one). A red gate is never carried forward or waved
   through. This clean-gate requirement is an **implicit requirement of every change**.
+
+  **Run `./gradlew :build-logic:clean` first when the gate is being run *as* the Definition-of-Done proof.**
+  `build-logic` is an included build, so the root `clean` does not reach it: `:build-logic:test` can report
+  `UP-TO-DATE` and serve its functional canaries — the tests that prove Spotless, NullAway, Checkstyle, FindSecBugs,
+  the license gate, dependency locking, and the coverage gate each fail *red* — straight from cache, while the build
+  still prints `BUILD SUCCESSFUL`. The tell is the task count: cite **`91 actionable tasks: 91 executed`**, not
+  `BUILD SUCCESSFUL` alone.
+- [ ] **The gate that counts is the LOCAL one, until the application is feature-complete.** Standing decision taken
+  2026-08-03 (recorded in archived change 1, task 7.7): BookLoom is built on local feature branches for the whole
+  build-out and GitHub Actions is not exercised until an end-of-project CI validation pass. So: never block a task on
+  a CI run link, and never claim a CI run that has not happened. The workflow files must still be **correct and
+  CI-ready** — authored, `actionlint`-clean, action versions pinned, and kept in step with the local scripts — that
+  part is not deferred. The CI-only gates (`checkLicense`, `dependencyCheckAggregate`) may be run locally by name when
+  a change touches dependencies; they are deliberately outside `check` because both need the network.
 - [ ] **`./gradlew test` green** (unit + integration; UI tests green where the change touches `:ui`).
 - [ ] **The test types the change implies are present and green** per
   `docs/specification/04_Build_and_Release/06_TESTING_STRATEGY.md`:

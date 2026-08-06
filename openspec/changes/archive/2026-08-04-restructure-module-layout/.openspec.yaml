@@ -1,0 +1,10 @@
+schema: spec-driven
+created: 2026-08-03
+
+# Pure build-tooling mechanics: this change relocates nine directories and repairs the build
+# configuration that pointed at their old paths. Not one line of application code changes, and
+# nothing a reader of the book-translation product can do, observe, or depend on is added,
+# removed, or altered. A directory layout is *how the system is built*, never *what the system
+# does*, so it declares no capability and ships no delta spec.
+# See ADR-0021 (the layout decision) and the "Why skip_specs" section in design.md.
+skip_specs: true

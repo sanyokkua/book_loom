@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  Checkstyle suppressions. Each entry names WHY the file is exempt, so an exemption is a decision on record
+  rather than an unexplained hole in the ruleset.
+-->
+<suppressions>
+    <!-- `module-info.java` is NOT listed here. Checkstyle's parser throws on a module declaration outright, and
+         a file that never parses never produces a violation to suppress — so it is excluded from the task's
+         source in `bookloom.java-conventions` instead. -->
+
+    <!-- `package-info.java` carries only the package javadoc and the `@NullMarked` marker. Java requires its
+         imports to sit BELOW the package declaration, which several import-ordering-adjacent checks read as
+         misplaced. -->
+    <suppress files="package-info\.java" checks="UnusedImports"/>
+
+    <!-- Test METHOD names, in test source sets only.
+
+         `.claude/rules/testing.md` mandates the `method_state_expected` form — `translateChunk_tagMismatch_
+         returnsValidationError` — because a test name has to state a scenario and an outcome, and camelCase runs
+         those three parts together into something unreadable at the exact moment a CI log is all anyone has.
+         `MethodName`'s `^[a-z][a-zA-Z0-9]*$` forbids the underscores that separate them.
+
+         Scoped to `src/test` and `src/archTest` rather than relaxed globally: production method names stay
+         camelCase-enforced, and the two rules stop contradicting each other without either being weakened where
+         it actually applies. Only `MethodName` is suppressed; every other check still runs on test sources. -->
+    <suppress files="[\\/]src[\\/](test|archTest)[\\/]java[\\/]" checks="MethodName"/>
+
+    <!-- The `LoggerFactory.getLogger(` ban (`BannedLoggerFactoryCall`, java-coding-style.md/logging.md) is a
+         `src/main/java` production-code rule only. `src/test`/`src/archTest` legitimately call it directly:
+         assertions on bootstrap logging output, and the ArchUnit `bootstrap-no-static-logger` violation fixtures
+         that must call it to model the very thing the rule forbids. -->
+    <suppress files="[\\/]src[\\/](test|archTest)[\\/]java[\\/]" id="BannedLoggerFactoryCall"/>
+
+    <!-- Bootstrap-path exemption for the same ban: `ua.bookloom.app.bootstrap` and `ua.bookloom.util.paths`
+         obtain a logger only after the log directory is published, via a direct (non-static, non-field)
+         LoggerFactory call — never a class-init-time field (ArchUnit `bootstrap-no-static-logger`,
+         DD-39/ADR-0015). -->
+    <suppress files="[\\/]ua[\\/]bookloom[\\/]app[\\/]bootstrap[\\/]" id="BannedLoggerFactoryCall"/>
+    <suppress files="[\\/]ua[\\/]bookloom[\\/]util[\\/]paths[\\/]" id="BannedLoggerFactoryCall"/>
+
+    <!-- Known debt, not fixed by this rule's introduction: BookLoomApplication hand-writes a manual logger field
+         instead of Lombok @Slf4j (java-coding-style.md, logging.md). This gate is added without retroactively
+         fixing pre-existing violations in application code — a deliberate scope line, not an oversight. Tracked
+         for cleanup in a follow-up task; remove this suppression when that task fixes the class. -->
+    <suppress files="BookLoomApplication\.java" id="BannedLoggerFactoryCall"/>
+</suppressions>

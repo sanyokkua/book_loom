@@ -1,3 +1,8 @@
+---
+paths:
+  - "modules/persistence/**"
+---
+
 # Persistence (SQLite)
 
 Scope: `:persistence` (`ua.bookloom.persistence..`). Spec: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`. Stack: `org.xerial:sqlite-jdbc` (WAL) + Flyway + JDBI 3. FX-free. Implements the repository ports.

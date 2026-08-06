@@ -1,3 +1,8 @@
+---
+paths:
+  - "modules/ui/src/main/resources/**/*.css"
+---
+
 # Theming Tokens
 
 Scope: `:ui` styling — `**/ui/src/main/resources/**/*.css`, theme setup in `:ui`. Spec: `docs/specification/01_Product/09_THEMING.md`. Visual source of truth: `docs/specification/mockups/ui-mockup.html`. See also `javafx-ui.md`.

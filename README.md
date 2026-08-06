@@ -38,7 +38,24 @@ openspec/
   config.yaml                 Project context + the authoring rules that steer generated artifacts
   changes/<name>/             THE UNIT OF WORK: proposal.md, design.md, specs/, tasks.md
   specs/<capability>/         The ledger of what is actually BUILT — starts empty, grows on archive
+modules/                      ALL the code lives here (ADR-0021) — the root stays prose + build config
+  api/                        Contracts: interfaces, records/DTOs, Result/AppError — the dependency floor
+  util/                       Per-OS paths, shared helpers
+  document/                   EPUB/FB2/Markdown/TXT parsing, masking, reassembly
+  llm/                        Provider port + Ollama-native and OpenAI-compatible clients
+  pipeline/                   Translation engine: chunking, QA, judge, repair
+  persistence/                SQLite + Flyway + JDBI; repository port implementations
+  ui/                         JavaFX views, controllers, theming (only ui/ and app/ see JavaFX)
+  app/                        Launcher, Application, Guice composition root, the arch-test suite
+  build-logic/                Gradle convention plugins (an included build, with its own test suite)
+                              Gradle project names are UNCHANGED by the move: still :api … :app, still
+                              ./gradlew :app:run. Only `-p modules/build-logic` gained a prefix.
 scripts/fr-coverage.sh        Advisory grep: frozen FR-* ids no shipped requirement claims yet
+lefthook.yml                  Git hook stages (see "Git hooks" below)
+.lefthook/pre-push/           The pre-push gate script
+tooling/
+  hooks/                      Helper scripts the hooks call: file-size guard, commit-message check
+  hooks-test/                 Scripted checks that the hooks do what they claim (run by hand, not by Gradle)
 ```
 
 ## How the build is driven
@@ -58,6 +75,47 @@ The specification is frozen; work happens as **OpenSpec changes**, one at a time
 Every artifact is written to be readable without opening another file: requirements in EARS with a plain-words
 `Source:` gloss, scenarios with concrete values, tasks as full sentences. See `AGENTS.md` for the module map,
 invariants, and command list, and ADR-0016 for the authoring standard.
+
+## Local setup
+
+The build needs nothing but a JDK — Gradle arrives through the committed wrapper, and the toolchain plugin
+provisions Java 25 on first run. Always invoke `./gradlew`, never a system `gradle`.
+
+```bash
+./gradlew build                        # compile + spotlessCheck + lint + test
+./gradlew clean build check spotlessCheck   # the full gate — what pre-push and CI both run
+```
+
+### Git hooks
+
+Hooks are managed by [Lefthook](https://lefthook.dev) and are **not active until you install them once per
+clone**. They also need `gitleaks` on the `PATH` for the secret scan:
+
+```bash
+brew install lefthook gitleaks   # macOS; see the tool docs for Linux/Windows
+lefthook install                 # writes .git/hooks — run once after cloning
+lefthook validate                # optional: check lefthook.yml parses
+```
+
+What each stage does, and why (`docs/specification/04_Build_and_Release/02_QUALITY_GATES.md#lefthook-stages`):
+
+| Stage | Runs | Budget |
+|---|---|---|
+| `pre-commit` | Spotless on staged Java (auto-fixes and re-stages), gitleaks on the staged diff, a 4 MB file-size guard | < 10 s, no tests |
+| `commit-msg` | Conventional Commits validation | instant |
+| `pre-push` | `./gradlew clean build check spotlessCheck` | slow — the full gate |
+
+Pre-push runs **exactly** the command the CI quality job runs, deliberately — no faster hook-only subset — so a
+green push implies a green CI quality job for the same tree. CI adds gates (license report, OWASP SCA); it never
+runs a weaker variant of a shared one.
+
+Every stage can be bypassed, and doing so is a legitimate decision rather than a trick to rediscover:
+
+```bash
+git commit --no-verify   # skip pre-commit + commit-msg
+git push --no-verify     # skip pre-push; CI becomes the gate instead
+LEFTHOOK=0 git <cmd>     # skip every lefthook hook for one command
+```
 
 ## Status
 

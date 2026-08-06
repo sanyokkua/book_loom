@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-08-03
 **Cross-references:** `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
 `docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/implementation_plan/README.md`,
 `docs/implementation_plan/06_DEFINITION_OF_DONE.md`
@@ -17,6 +17,12 @@ Examples: `:document/ua.bookloom.document.epub`, `:llm/ua.bookloom.llm.provider`
 `:persistence/ua.bookloom.persistence.dao`, `:ui/ua.bookloom.ui.screen`. A story that touches only a module root cites
 `:<module>/ua.bookloom.<module>`.
 
+**This convention is unaffected by where the directories physically sit.** The nine code directories moved under
+`modules/` (ADR-0021) — the sources for `:document` are at `modules/document/src/main/java/…` — but a citation names
+the **Gradle project**, not a filesystem path, and every Gradle project name is unchanged: `settings.gradle.kts`
+repoints each `projectDir` explicitly rather than nesting the project paths, so `:document` is still `:document` and
+not `:modules:document`. No citation anywhere in the corpus went stale.
+
 ## layers {#layers}
 
 | Layer         | Modules                             | Rule                                                                      |
@@ -30,7 +36,9 @@ Examples: `:document/ua.bookloom.document.epub`, `:llm/ua.bookloom.llm.provider`
 
 - **Source layout:** production code in `src/main/java/<package-path>`, tests in `src/test/java/<package-path>`
   mirroring the production package. UI tests live in `:ui/src/test/java/...`.
-- **ArchUnit** boundary tests live in a shared `arch-test` source set and run in CI and the fast `pre-push` subset.
+- **ArchUnit** boundary tests live in the shared `arch-test` source set — physically `:app/src/archTest/java`, because
+  `:app` is the only module whose compile classpath sees all eight modules at once. The `archTest` task is wired into
+  `:app:check`, so the rules run in the whole-project gate, in `pre-push`, and in CI (see `#as-built-baseline`).
 - **Test tiers:**
     - **Unit** — pure JVM, no I/O, Mockito/AssertJ. Runs in `pre-push`.
     - **Integration** — temp SQLite DB file or `:memory:`; WireMock for the LLM HTTP seam; golden-fixture round-trip for
@@ -47,6 +55,90 @@ that creates a package must (a) add the row here and (b) name it in its proposal
 inventory is an item in every change's final green-gate task group
 (`docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`), so the inventory update and the code land
 together.
+
+## as-built-baseline {#as-built-baseline}
+
+**The `#inventory` tables below are the planned, forward-looking map — the citation targets later changes point at.
+This section records what the `bootstrap-gradle-and-quality-toolchain` change actually created**, so a proposal can
+tell an existing package from one it must still author.
+
+**Eight subprojects exist and compile**, each a JPMS module named `ua.bookloom.<module>` with a hand-written
+`module-info.java` declaring only the edges `#layers` allows: `:api :util :document :llm :pipeline :persistence :ui
+:app`. A ninth requires an ADR. Only `:ui` and `:app` `requires javafx.*`.
+
+Each carries **exactly one placeholder public type**, named from this inventory rather than invented, plus a
+`@NullMarked` (JSpecify) `package-info.java` — enough to make the module non-empty so the toolchain has something to
+compile, lint, and check.
+
+**Six of the eight are still placeholders. Two are not**, as of the `bootstrap-app-launch-and-empty-window` change:
+
+| Module         | Package                     | Placeholder type                                          |
+|----------------|-----------------------------|-----------------------------------------------------------|
+| `:api`         | `ua.bookloom.api`           | **No longer a placeholder** — see below                   |
+| `:util`        | `ua.bookloom.util.paths`    | **No longer a placeholder** — see below                   |
+| `:document`    | `ua.bookloom.document`      | `DocumentModule` (Guice `AbstractModule`)                 |
+| `:llm`         | `ua.bookloom.llm`           | `LlmModule`                                               |
+| `:pipeline`    | `ua.bookloom.pipeline`      | `PipelineModule`                                          |
+| `:persistence` | `ua.bookloom.persistence`   | `PersistenceModule`                                       |
+| `:ui`          | `ua.bookloom.ui`            | `UiModule`                                                |
+| `:app`         | `ua.bookloom.app`           | `AppModule` (the composition root's own Guice module)     |
+
+**What `bootstrap-app-launch-and-empty-window` filled in.** The application now starts: a window opens, a second
+launch is refused, and a packaged image launches on the module path.
+
+| Module  | Package                          | What it now holds                                                                                                                                                                                             |
+|---------|----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `:api`  | `ua.bookloom.api`                | **Seam F2, complete**: `Result<T>`, `AppError`, the fifteen-constant `ErrorCode` (retryability derived on the enum), and `SafeDetails` — a record whose *component set* is the safe-details allowlist          |
+| `:util` | `ua.bookloom.util.paths`         | `AppPaths` (record), `AppPathsResolver`, `AppEnvironment` (dev/prod), `OsFamily`. Resolution is a pure function over injected `getEnv`/`getProperty`; `prepare` does the I/O                                    |
+| `:app`  | `ua.bookloom.app`                | `BookLoomApplication`, `AppModule` (real bindings), `AppLifecycle` (two-phase init, ordering **enforced**), `AppVersion`, `StartupContext`                                                                     |
+| `:app`  | **`ua.bookloom.app.bootstrap`**  | **New package, and a constraint rather than a folder**: `Launcher`, `SingleInstanceLock`, `LoggingBootstrap`, `StartupFailureDialog`. ArchUnit rule 8 scopes to it, so membership *is* the pre-logging declaration |
+| `:ui`   | `ua.bookloom.ui`                 | `Theme` (resolves the single stylesheet from inside the module, since JPMS encapsulates it), `AppShellView`, and `theme.css`                                                                                    |
+
+Note the `Launcher` row in `#inventory` below still reads `:app/ua.bookloom.app`; it lives in
+`ua.bookloom.app.bootstrap`, because the ArchUnit rule that forbids a static logger on the pre-logging path
+identifies that path by **package**, not by class name.
+
+Every other package row in `#inventory` is **still unwritten** — cite it freely as a target, but expect to create it.
+
+**`build-logic` is an included build** (`includeBuild("modules/build-logic")` in `settings.gradle.kts`
+`pluginManagement`),
+not a subproject. It holds five precompiled convention plugins — `bookloom.java-conventions`,
+`bookloom.spotless-conventions`, `bookloom.test-conventions`, `bookloom.javafx-conventions`, and the root-only
+license/lock wiring — and its own JUnit + `GradleRunner` **functional test suite** under
+`modules/build-logic/src/test/java/ua/bookloom/buildlogic/`, which seeds a deliberate violation per tool (unformatted source,
+a NullAway finding, a Checkstyle finding, a FindSecBugs finding, a GPL coordinate, an out-of-lock version, a coverage
+shortfall) and asserts each one fails the build. Being an included build has one practical consequence worth knowing:
+**the root `clean` does not reach it**, so `:build-logic:test` can report `UP-TO-DATE` across an otherwise-clean gate
+run. `./gradlew :build-logic:clean` first when the point of the run is to re-prove those canaries.
+
+**`arch-test` is a source set inside `:app`**, at `:app/src/archTest/java`, holding `ua.bookloom.archtest` (the eight
+rules, the rule suite, and the completeness meta-test) plus one deliberate **violation fixture per rule** under
+`ua.bookloom.<module>.archfixture`. The fixtures are compiled but excluded from the production-class set the rules
+analyse; `RuleViolationFixtureTest` asserts each rule catches its own fixture, so a rule that silently stopped
+matching fails the gate. `:app:archTest` is a dependency of `:app:check`.
+
+**The dependency-lock gate is `verifyLocks` + `-PstrictLocks`.** Gradle exposes no command-line flag for the lock
+mode, so STRICT is opted into with the `strictLocks` Gradle property, and `verifyLocks` resolves every lockable
+configuration without writing lock state. CI runs `./gradlew -PstrictLocks verifyLocks` (and the same for
+`-p modules/build-logic`) as its **own step before** the quality gate, deliberately not folded into
+`clean build check spotlessCheck` — the pre-push hook and the CI quality job must run that command byte-identically,
+so the lock check stays beside it rather than inside it. `verifyLocks` refuses to run under `--write-locks`.
+
+**The two dependency gates are outside `check`, deliberately, and both need the network.** `checkLicense` answers "may
+we distribute this?" from POMs on disk; `dependencyCheckAggregate` answers "does this have a known CVE?" against the
+NVD feed, whose answer changes without the dependency graph changing at all. Run them by name when a change touches
+dependencies. Two facts worth carrying forward:
+
+- **Transitive versions are raised by a `constraints` block in `bookloom.java-conventions`, never by declaring the
+  dependency.** Guava is the worked example: Guice pins `guava:31.0.1-jre` transitively, and the catalog's
+  `guava = "33.6.0-jre"` does nothing on its own — a catalog entry nothing references is dead. The constraint is what
+  makes the pin bind, and it keeps Guava transitive-only rather than putting it on every module's compile classpath.
+  Any catalog version added purely to raise a transitive needs a matching constraint, or it is decoration.
+- **SCA false positives are suppressed by CPE, risk acceptances by CVE.** `config/owasp/suppressions.xml` keeps the
+  two in separate sections with different rules — a mis-matched CPE produces an open-ended CVE list, so pinning
+  today's list lets tomorrow's through, and it carries no `until` because a wrong identifier does not expire.
+  `javafx-graphics` is the worked example: its bundled `com.sun.*` packages read as vendor evidence and match it
+  against OpenJDK itself. The correct `oracle:javafx` CPE is left live so a genuine JavaFX CVE still fails the gate.
 
 ## inventory {#inventory}
 
@@ -166,7 +258,8 @@ composition root, two-phase init, single-instance lock wiring.
 
 | Package path           | Layer        | Responsibility                                                                                                                                                                                                                                           | Test target · tier                                 |
 |------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------|
-| `:app/ua.bookloom.app` | Presentation | `Launcher`, `Application` subclass, Guice composition root, two-phase init, and the **process single-instance lock** — acquired pre-injector (`FileChannel.tryLock` on the `:util.paths`-resolved lock file) before the DB opens (see `#lock-ownership`) | `:app/src/test/java/ua/bookloom/app` · Integration |
+| `:app/ua.bookloom.app` | Presentation | `Application` subclass, Guice composition root, two-phase init, `AppVersion`, and the launcher→application startup handoff | `:app/src/test/java/ua/bookloom/app` · Integration |
+| `:app/ua.bookloom.app.bootstrap` | Presentation | Everything that runs **before logging exists**: `Launcher` (does not extend `Application`), the **process single-instance lock** — acquired pre-injector (`FileChannel.tryLock` on the `:util.paths`-resolved lock file) before the DB opens (see `#lock-ownership`) — the programmatic Logback configuration, and the pre-logging failure dialog. ArchUnit `bootstrap-no-static-logger` scopes to this package, so putting a class here **is** the declaration that it runs pre-logging | `:app/src/test/java/ua/bookloom/app/bootstrap` · Integration |
 
 ## non-module-citable-targets {#non-module-citable-targets}
 
@@ -176,10 +269,10 @@ pointers. These are the **only** allowed non-`:module/package` targets:
 
 | Citable target | What it is                                                                                                                   | Typical citing work                                                                                      |
 |----------------|------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| `build-logic`  | The included build holding the precompiled convention plugins (`bookloom.*-conventions.gradle.kts`)                          | Toolchain/JPMS/lint/format/test conventions, tag and coverage-gate wiring                               |
-| `arch-test`    | The shared ArchUnit source set that hosts the boundary tests across modules                                                  | ArchUnit boundary rules (`docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules`) |
+| `build-logic`  | The **included build** holding the precompiled convention plugins (`bookloom.*-conventions.gradle.kts`) and their `GradleRunner` functional tests | Toolchain/JPMS/lint/format/test conventions, tag, lock and coverage-gate wiring        |
+| `arch-test`    | The shared ArchUnit source set — physically `:app/src/archTest/java` — hosting the boundary rules and their violation fixtures | ArchUnit boundary rules (`docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules`) |
 | `ci`           | The GitHub Actions workflow definitions (quality job, packaging matrix, release)                                             | CI pipeline, coverage/license/SCA gates, jpackage smoke                                                  |
-| `tooling`      | Repo-level tooling not compiled into a module: Lefthook hooks, gitleaks config, license policy file, icon-generation scripts | Git hooks, license allowlist file, `assets/icon/*.py`                                                    |
+| `tooling`      | Repo-level tooling not compiled into a module: Lefthook hooks, gitleaks config, license policy file, OWASP suppressions (`config/owasp/suppressions.xml`), icon-generation scripts | Git hooks, license allowlist file, SCA suppressions, `assets/icon/*.py`                     |
 
 A change may cite these verbatim (e.g. `→ build-logic`, `→ arch-test`). They carry no `ua.bookloom.*` package path
 because they contain no application module code.

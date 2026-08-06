@@ -1,3 +1,8 @@
+---
+paths:
+  - "modules/**/src/main/java/**"
+---
+
 # Threading & Concurrency
 
 Scope: all modules; especially `:ui`, `:pipeline`, `:llm`. Spec: `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`. See also `javafx-ui.md`, `llm-provider-integration.md`.

@@ -1,3 +1,11 @@
+---
+paths:
+  - "openspec/**"
+  - "docs/adr/**"
+  - "docs/implementation_plan/**"
+  - "**/src/test/java/**"
+---
+
 # Spec & Change Authoring
 
 Scope: `openspec/**`, `docs/adr/**`, `docs/implementation_plan/**`, and the `Covers:` markers in
