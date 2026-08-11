@@ -70,7 +70,9 @@ Each carries **exactly one placeholder public type**, named from this inventory 
 `@NullMarked` (JSpecify) `package-info.java` — enough to make the module non-empty so the toolchain has something to
 compile, lint, and check.
 
-**Six of the eight are still placeholders. Two are not**, as of the `bootstrap-app-launch-and-empty-window` change:
+**This section is a chronological log, one block per archived change.** Each block records what that change created,
+so an earlier block is a dated snapshot, not a claim about today — read to the end for the current position. As of
+`bootstrap-app-launch-and-empty-window`, six of the eight were still placeholders and two were not:
 
 | Module         | Package                     | Placeholder type                                          |
 |----------------|-----------------------------|-----------------------------------------------------------|
@@ -94,9 +96,9 @@ launch is refused, and a packaged image launches on the module path.
 | `:app`  | **`ua.bookloom.app.bootstrap`**  | **New package, and a constraint rather than a folder**: `Launcher`, `SingleInstanceLock`, `LoggingBootstrap`, `StartupFailureDialog`. ArchUnit rule 8 scopes to it, so membership *is* the pre-logging declaration |
 | `:ui`   | `ua.bookloom.ui`                 | `Theme` (resolves the single stylesheet from inside the module, since JPMS encapsulates it), `AppShellView`, and `theme.css`                                                                                    |
 
-Note the `Launcher` row in `#inventory` below still reads `:app/ua.bookloom.app`; it lives in
-`ua.bookloom.app.bootstrap`, because the ArchUnit rule that forbids a static logger on the pre-logging path
-identifies that path by **package**, not by class name.
+`Launcher` lives in `ua.bookloom.app.bootstrap`, not `ua.bookloom.app`, because the ArchUnit rule that forbids a
+static logger on the pre-logging path identifies that path by **package**, not by class name. `#inventory`'s
+`### :app` section carries both rows and is correct as written.
 
 **What `add-document-skeleton-and-epub-roundtrip` filled in.** The first change with a real, user-observable
 capability: an EPUB survives being parsed apart and reassembled with nothing translated (`document-round-trip`,
@@ -136,6 +138,30 @@ publishes — the same permissive licence under its current SPDX name, which
 Test-side, `modules/document/src/test/java/ua/bookloom/document/fixture/` holds every fixture builder and the
 `FixtureCatalog` whose declared expectations gate them; `golden/` holds the per-format comparisons, the text-coverage
 measurement and the catalogue sweep. Neither is part of the shipped module surface, so neither is a row above.
+
+**What `fix-document-round-trip-corpus-defects` filled in.** The first change driven by measurement rather than by a
+backlog entry: a sweep over 214 real books wrote every one of them back out — 207 of 208 writable books survived a
+full text-replacement round trip byte-exactly across 626,276 segments — and found eight defects the twelve
+hand-authored fixtures could not. It added no package; it corrected behaviour inside the existing ones and made the
+sweep repeatable.
+
+| Module      | Package                      | What changed                                                                                                                                                                                                                                  |
+|-------------|------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `:document` | `ua.bookloom.document.epub`  | `XhtmlParser` normalizes a self-closed `<script/>`/`<style/>`/`<noscript/>` before parsing (ADR-0028) — twelve of 194 EPUBs previously imported with **zero segments and no error**; `PreformattedLineFeedRestorer` restores a `<pre>`'s leading line feed |
+| `:document` | `ua.bookloom.document.detect`| `CharsetLadder` gains `ForeignWordCoherence` so a Cyrillic single-byte encoding is no longer resolved as Western European, which decoded without error and produced mojibake                                                                  |
+| `:document` | `ua.bookloom.document.fb2`   | A malformed translated fragment (a bare `&` or `<` in target text) is classified `ErrorCode.validation` rather than escaping as an unclassified throwable                                                                                     |
+| `:document` | `ua.bookloom.document`       | `OpfParser` reads metadata from a legacy OEBPS-1.2 `<dc-metadata>` wrapper, which previously dropped title, author and language silently                                                                                                     |
+
+The corpus sweep itself is now a committed, environment-gated test excluded from CI and `check`; its findings —
+including the four it deliberately did **not** fix — are recorded in
+`docs/implementation_plan/notes-corpus-verification.md` and carried as decision debt in
+`CHANGE_BACKLOG.md#decision-debt`.
+
+**Where the code actually is, as of the sixth archived change.** `:api`, `:util`, `:document` and `:app` carry real
+production code. `:llm`, `:pipeline` and `:persistence` are still one-line Guice `AbstractModule` stubs, and `:ui`
+holds an app-shell placeholder with no FXML anywhere. Within `:document`, all four formats read **and** write, but
+**inline masking is absent**: `BlockSegmentWalker`, `MarkdownWalker` and `TxtReader` each emit `masked ==
+sourceInner` with an empty placeholder map, and `Segment.masked`/`Segment.placeholders` remain contract-only fields.
 
 Every other package row in `#inventory` is **still unwritten** — cite it freely as a target, but expect to create it.
 
@@ -328,8 +354,8 @@ There are two distinct locks, owned in different layers:
 - **DB-connection guard** — owned by `:persistence/ua.bookloom.persistence.lock`, guarding the SQLite connection/WAL
   discipline only.
 
-Stories about the single-instance lock cite `:app/ua.bookloom.app` and `:util/ua.bookloom.util.paths`, not
-`:persistence/ua.bookloom.persistence.lock`.
+A change touching the single-instance lock cites `:app/ua.bookloom.app.bootstrap` and `:util/ua.bookloom.util.paths`,
+not `:persistence/ua.bookloom.persistence.lock`.
 
 ## note-on-guice-modules {#note-on-guice-modules}
 

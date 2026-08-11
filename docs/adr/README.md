@@ -49,3 +49,5 @@ explicitly — read them before planning work.
 | ADR-0026 | DRM adjudicated by what is encrypted, not by the algorithm URI                        | EC-EPUB-1           |
 | ADR-0027 | A translatable block is recognised structurally, not by a tag whitelist               | DD-07               |
 | ADR-0028 | jsoup stays the EPUB XHTML parser, qualified by one pre-parse normalization           | DD-43, DD-49        |
+| ADR-0029 | Transcode the output document to UTF-8 when the source charset cannot hold the target | DD-43               |
+| ADR-0030 | Synthesize a missing EPUB `mimetype` entry on write rather than refusing the book      | DD-43               |

@@ -14,12 +14,16 @@ end-to-end with minimal human interaction.
 inventory in `gradle/libs.versions.toml`.
 
 **State.** The Gradle/JPMS module skeleton, quality toolchain, Lefthook hooks and CI are built and wired
-(`./gradlew`, all 9 `modules/*`, `lefthook.yml`, `.github/workflows/ci.yml` all exist and run). Stage A is
-complete: the EPUB round-trip shipped and four changes are archived. `:api`, `:util`, `:document` (EPUB
-only) and `:app` carry real code; `:llm`, `:pipeline`, `:persistence` are Guice-module stubs and `:ui` is an
-app-shell placeholder. CI never actually *executes* until the app is feature-complete — the local gate is
-authoritative until then (standing decision; a debt list of canaries proving the deferred gates is owed once,
-at the end). Current unit of work: `docs/implementation_plan/CHANGE_BACKLOG.md` + `openspec/changes/`.
+(`./gradlew`, all 9 `modules/*`, `lefthook.yml`, `.github/workflows/ci.yml` all exist and run). **Six changes are
+archived** (`openspec/changes/archive/`). Stage A is complete, and Stage B has shipped the round trip for **all four
+formats**: an EPUB, FB2, Markdown or TXT book is parsed to skeleton + segments and written back canonical-equal,
+verified against a 213-book local corpus. `:api`, `:util`, `:document` and `:app` carry real code; `:llm`,
+`:pipeline`, `:persistence` are Guice-module stubs and `:ui` is an app-shell placeholder. **Inline masking does not
+exist yet** — every segment ships `masked == sourceInner` with an empty placeholder map, and there is no `⟦gN⟧` code,
+no unmask and no multiset gate anywhere in `modules/`, so nothing can validate a translation; that is change 5, the
+next unit of work. CI never actually *executes* until the app is feature-complete — the local gate is authoritative
+until then (standing decision; a debt list of canaries proving the deferred gates is owed once, at the end). Current
+unit of work: `docs/implementation_plan/CHANGE_BACKLOG.md` + `openspec/changes/`.
 
 **The spec is the authority.** `docs/specification/` — frozen during implementation. Never invent behaviour;
 a genuine gap is a new ADR (`docs/adr/`), never a spec edit.
