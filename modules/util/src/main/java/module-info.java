@@ -8,7 +8,11 @@ module ua.bookloom.util {
     // Compile-time only: JSpecify supplies the `@NullMarked` package markers that switch
     // NullAway on. Nothing reflects on them at runtime (02_QUALITY_GATES.md#null-safety).
     requires static org.jspecify;
+    // Compile-time only: Lombok desugars `@NoArgsConstructor` on the `util.hash` static-utility class into an
+    // ordinary private constructor and leaves nothing behind at runtime (DD-05, ADR-0014, ADR-0024).
+    requires static lombok;
     requires ua.bookloom.api;
 
     exports ua.bookloom.util.paths;
+    exports ua.bookloom.util.hash;
 }

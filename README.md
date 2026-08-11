@@ -13,7 +13,7 @@ review. Nothing leaves your machine.
 - **Faithful:** structure-preserving round-trip — the translated book opens exactly like the original.
 - **Consistent:** a name/term glossary, translation memory, rolling summary, deterministic quality checks and an
   LLM-as-judge keep names, tone and formatting steady across a whole book.
-- **Cross-platform:** Java 25 + JavaFX 25; unsigned native packages for macOS (`.app`/`.dmg`), Windows (portable zip —
+- **Cross-platform:** Java 25 + JavaFX 26; unsigned native packages for macOS (`.app`/`.dmg`), Windows (portable zip —
   no installer), and Linux (tar.gz/`.deb`).
 - **MIT licensed.**
 
@@ -24,6 +24,7 @@ AGENTS.md                     Operating manual — the single source of truth (r
 CLAUDE.md                     Pointer to AGENTS.md; holds no rules of its own
 .claude/                      Claude Code config: rules, skills, agents, slash commands
 docs/
+  DEVELOPMENT.md              Human developer guide: prerequisites, build, run, debug, IDE, troubleshooting
   specification/              FROZEN spec: requirements, architecture, decisions, mockup, diagrams
     INDEX.md                    Start here for the spec map
     00_Foundation/ … 05_Dependencies/
@@ -78,13 +79,19 @@ invariants, and command list, and ADR-0016 for the authoring standard.
 
 ## Local setup
 
-The build needs nothing but a JDK — Gradle arrives through the committed wrapper, and the toolchain plugin
-provisions Java 25 on first run. Always invoke `./gradlew`, never a system `gradle`.
+**JDK 25 is required and you must install it yourself.** There is no toolchain auto-provisioning: the build declares
+no toolchain download repository, so a machine without a Java 25 installation fails at configuration time with
+`Cannot find a Java installation on your machine ... Toolchain download repositories have not been configured.`
+Gradle itself arrives through the committed wrapper — always invoke `./gradlew`, never a system `gradle`.
 
 ```bash
 ./gradlew build                        # compile + spotlessCheck + lint + test
 ./gradlew clean build check spotlessCheck   # the full gate — what pre-push and CI both run
+./gradlew :app:run                     # launch the app (1024x700 window)
 ```
+
+**New here? Read [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).** It covers prerequisites, the module map, running and
+debugging the app, the IDE run configuration, the test tiers, packaging, and the traps that cost the most time.
 
 ### Git hooks
 
@@ -120,10 +127,13 @@ LEFTHOOK=0 git <cmd>     # skip every lefthook hook for one command
 ## Status
 
 **Specification finalized (v1.0, 2026-07-18); delivery migrated to OpenSpec (2026-08-02).** The specification and
-implementation-plan documents are `Status: Final`; the 50-entry decision log, 17 accepted ADRs, the binding mockup, and
+implementation-plan documents are `Status: Final`; the 50-entry decision log, 24 accepted ADRs, the binding mockup, and
 the AI-agent configuration are reconciled and cross-verified.
 
-**No source code exists yet.** Delivery runs as 28 OpenSpec changes across five stages — infrastructure → document
-round-trip core ∥ UI component library → engine → composition → release (ADR-0017). Exactly one change is authored and
-ready: `bootstrap-gradle-and-quality-toolchain`, which stands up the Gradle multi-module build, the eight JPMS modules,
-and the full mechanical quality gate.
+**Stage A is complete and the EPUB round-trip has shipped.** Roughly 4,300 lines of production Java across 75 files
+live under `modules/`, and `./gradlew :app:run` opens a real window. Four OpenSpec changes are archived:
+`bootstrap-gradle-and-quality-toolchain`, `restructure-module-layout`, `bootstrap-app-launch-and-empty-window`, and
+`add-document-skeleton-and-epub-roundtrip`. `:api`, `:util`, `:document` (EPUB only) and `:app` carry real code;
+`:llm`, `:pipeline` and `:persistence` are Guice-module stubs, and `:ui` is an app-shell placeholder plus `theme.css`.
+Delivery runs as 28 OpenSpec changes across five stages — infrastructure → document round-trip core ∥ UI component
+library → engine → composition → release (ADR-0017).

@@ -13,7 +13,9 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 > comes**, against the codebase as it actually is at that moment rather than as it was imagined months earlier. The
 > "covers" column names the material a proposal should draw on; it is not a scope contract.
 
-Exactly one change has been authored: **change 1**, `bootstrap-gradle-and-quality-toolchain`.
+**Four changes are authored and archived.** Stage A is complete — `bootstrap-gradle-and-quality-toolchain`,
+`restructure-module-layout`, `bootstrap-app-launch-and-empty-window` — and Stage B has started with change 3,
+`add-document-skeleton-and-epub-roundtrip`. See `openspec/changes/archive/`. Everything below that remains unplanned.
 
 ## how-to-use-this {#how-to-use-this}
 
@@ -90,6 +92,92 @@ canonical-equal.
 
 Change 3 establishes **seam F1** (skeleton + ordered segment list; text nodes the only mutable slots). Change 5
 establishes the placeholder-multiset hard gate that no confidence score or judge verdict can override.
+
+**Change 4 additionally corrects three things change 3 shipped**, because it is the change that reopens that code:
+how a translatable block is recognised (ADR-0027 — a tag whitelist left 42 of 194 surveyed books importing
+essentially empty), how a translation is written back (ADR-0025 — writing into a single text node corrupts any block
+containing inline markup), and how DRM is adjudicated (ADR-0026 — 16 of those 194 books are refused although none
+carries content encryption). Change 4 also revises seam F1's anchor: `SkeletonAnchor` becomes a sealed interface over
+`NodeAnchor(nodePath, runIndex)` and `ByteSpanAnchor(start, end)`, since Markdown and TXT reassemble by splicing the
+original byte buffer rather than by mutating a tree.
+
+**Change 4 measured a fourth shipped-EPUB defect it deliberately did not fix.** Running the built importer over a
+216-book local corpus (change 4's task 12.8, a manual step that gates nothing) found **12 of 194 EPUBs still
+importing with zero segments** after structural block recognition — a different cause from the 42 ADR-0027 fixed.
+Those books self-close their script tag (`<script src="js/book.js"/>`), which is valid XHTML and unrepresentable in
+HTML: `<script>` is a raw-text element, so jsoup's HTML parser — chosen by change 3's design.md D4 precisely
+because real-world XHTML is HTML-shaped — cannot honour the XML self-closing form and swallows the entire rest of
+the document as script data. Confirmed against a minimal reproduction: the body has zero children with the tag
+present and two with it removed. Change 4 left it alone because no requirement of that change covers it and
+revising D4's parser handling deserves its own fixture, its own requirement and its own ADR note; the evidence and
+the reproduction are in `openspec/changes/archive/*-add-fb2-md-txt-roundtrip/notes-corpus-run.md`. **Whichever
+change takes it must add a fixture carrying that shape** — change 4's text-coverage assertion is what catches this
+class of failure, and it catches nothing the fixtures do not contain.
+
+**Change 5 additionally owns `EC-MD-2`'s second half** — translating the text nodes inside a Markdown raw-HTML
+block. Change 4 preserves such a block verbatim and emits no segment for it, which is the half that can be honoured
+without nesting a second parser inside the first; change 5 introduces exactly that mechanism for inline spans, so the
+remaining half belongs there rather than being rediscovered later.
+
+**`fix-document-round-trip-corpus-defects` narrows how FB2 *classifies* a malformed translated fragment (a bare
+`&` or `<` in target text) to `ErrorCode.validation` instead of `internal`, but does not change what happens to
+the character itself.** Deciding how such a literal should be *escaped* or *masked* is change 5's, per its own
+Non-Goals; the two must not be conflated later — one fixes error classification at the write boundary, the other
+fixes what the model is allowed to hand back in the first place.
+
+**`fix-document-round-trip-corpus-defects` deliberately left four findings unfixed, each real and each evidenced in
+`docs/implementation_plan/notes-corpus-verification.md`.** They are listed separately below rather than as one
+paragraph so each can be found on its own; leaving them unrecorded is how they get rediscovered from scratch.
+
+**Deferred finding — the reader accepts EPUBs the writer can never export.** `EpubReader` imposes no `mimetype`
+requirement; `EpubWriter` requires one, because DD-43 mandates mimetype-first-and-STORED on output.
+`aliceDynamic.epub` has 68 entries and none named `mimetype`, so it opens with 13 units and 866 segments and then
+refuses every write — including a zero-edit one — with `ErrorCode.validation`. The refusal is *correct*: the writer
+cannot fabricate a conformant container. The defect is the **asymmetry** — the app accepts a book for translation it
+can never deliver, and the user finds out only after translating. No requirement covers reader/writer acceptance
+parity, so this needs a product decision: fail fast at open, or synthesize a container entry on write.
+
+**Deferred finding — there is no `close()` or eviction seam on the open-document registries.** All four
+`Open*Registry` classes are `@Singleton` over a bare `ConcurrentHashMap` with no `remove`/`evict`/`close`, and
+`DocumentPort` exposes only `open` and `write`. Per open EPUB the registry retains every zip entry's *inflated*
+bytes plus a full jsoup DOM per spine document, for the process lifetime — so **every completed translation job will
+leak its book**, not merely multi-book browsing. Inert while `:pipeline` and `:persistence` are stubs, and cheapest
+to add before `:pipeline` has callers. No requirement covers document lifetime.
+
+**Deferred finding — `EpubWriter` mutates the registry-held tree in place.** `writeSegmentsBack` mutates
+`parsed.spineTreesByHandleId()`, the live tree in the registry rather than a copy, so a second `write()` on one
+document id works from the already-mutated tree. Latent in production today and no concurrent-open/write test exists
+either way — but it was *not* latent for the corpus verification, where it invalidated the first harness design and
+forced every write probe to open a fresh service and a fresh document. Advisory for `:pipeline`'s retry path.
+
+**Deferred finding — one 26,306-character segment, and 15 books over 5,000.** Verified as single genuine unbroken
+`<p>` elements, so `:document` is behaving correctly and splitting them would violate the skeleton invariant. The
+spec already anticipates it (`02_GLOSSARY.md`: "oversized single paragraphs are sentence-split only on overflow",
+FR-ALGO-02/DD-44) but `:pipeline` is a stub, so the safety net does not exist. Against the settings' 512-token
+minimum `num_ctx`, that one segment overflows by 15–20×. Belongs to the chunker, with this corpus as its proof case.
+
+**New finding from the same change's own harness — the four writers disagree on what to do with target text the
+resolved charset cannot represent, and nobody has decided which is right.** Found by the corpus verification, which
+sets every segment's target to a marker plus its own source text and so exercises exactly this. Measured:
+
+| format | behaviour on unrepresentable target text |
+|---|---|
+| TXT | **refuses** — `CorruptContainerException` → `ErrorCode.validation` (`TxtWriter.encode`) |
+| FB2 | **silently switches the whole document to UTF-8** and re-declares the encoding (`Fb2Writer.serialize`) |
+| Markdown | **silently substitutes `?`** and returns success |
+| EPUB | **silently substitutes `?`** — `tree.outerHtml().getBytes(charset)` replaces unmappable characters |
+
+Four formats, three policies, two of them silent. The corpus note records the TXT refusal as *correct* behaviour;
+against the other three that judgement has never been made. So this is not "`MarkdownWriter` is missing a guard" —
+adding `TxtWriter`'s guard there would cement one of three competing behaviours without a requirement to justify it,
+and leave EPUB corrupting silently regardless.
+
+`fix-document-round-trip-corpus-defects` deliberately left it alone for the same reason it left the reader/writer
+acceptance asymmetry alone: it needs a **product decision** — refuse, transcode the document to UTF-8, or mask the
+character — applied uniformly, then one requirement with a scenario per format. It is latent today because
+`:pipeline` is a stub and nothing but a test yet calls `write` with target text; it stops being latent the moment
+the first translation run exports a book whose source charset cannot hold the target language, which for a
+`windows-1252` source translated into Ukrainian is every single segment.
 
 **`add-metadata-units-and-language-detection` runs after change 5 and closes Stage B** (ADR-0023). It exists because
 changes 3 and 4 each defer something that no later change claimed. It **covers:** producing the metadata-unit segments

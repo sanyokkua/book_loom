@@ -98,6 +98,45 @@ Note the `Launcher` row in `#inventory` below still reads `:app/ua.bookloom.app`
 `ua.bookloom.app.bootstrap`, because the ArchUnit rule that forbids a static logger on the pre-logging path
 identifies that path by **package**, not by class name.
 
+**What `add-document-skeleton-and-epub-roundtrip` filled in.** The first change with a real, user-observable
+capability: an EPUB survives being parsed apart and reassembled with nothing translated (`document-round-trip`,
+EPUB only — FB2/Markdown/TXT extend it next).
+
+| Module      | Package                            | What it now holds                                                                                                                                                                                                                                                                     |
+|-------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `:api`      | `ua.bookloom.api.document`          | Seam F1, complete in shape: `BookFormat`, `SegmentKind`, `SegmentStatus`, `SkeletonAnchor`, `Segment`, `SkeletonHandle`, `Unit`, `Document` (records/enums only — `masked`/`placeholders`/`detectedSourceLang` ship empty, filled by later changes per design.md D2) and `DocumentPort` |
+| `:util`     | `ua.bookloom.util.hash`             | `HashUtil` — SHA-256 over raw bytes (document content hash) and over NFC-normalized text (per-segment `sourceHash`)                                                                                                                                                                  |
+| `:document` | `ua.bookloom.document`              | `DocumentService` (the `DocumentPort` impl and the module's port boundary — classifies every EPUB read/write failure into a typed `Result`/`AppError`), `DocumentModule` (now binds `DocumentPort` → `DocumentService`)                                                              |
+| `:document` | `ua.bookloom.document.model`        | `BlockSegmentWalker` (format-agnostic segment emission, reused by the next change's FB2/Markdown/TXT importers) and `SkeletonAnchors` (index-path anchor computation and write-back resolution) — seam F1's implementation                                                          |
+| `:document` | `ua.bookloom.document.epub`         | `EpubReader`/`EpubWriter` (container/OPF/spine/XHTML read via jsoup+JDOM2, DRM adjudicated first per design.md D7, `mimetype`-first/STORED repackaging), `OpenEpubRegistry` (in-memory parsed-tree registry keyed by document id, resolving each `SkeletonHandle` back to its real tree per design.md D1) |
+
+Adds jsoup and JDOM2 (both allowlisted licenses) to `:document` only. The golden round-trip test and its
+adversarial fixture (`modules/document/src/test/java/ua/bookloom/document/golden/`) are this change's own
+acceptance gate, not part of the shipped module surface, so they aren't listed as a row above.
+
+**What `add-fb2-md-txt-roundtrip` filled in.** The round trip now covers all four formats FR-IMPORT-01 promises,
+and `ua.bookloom.document` finally performs the format dispatch its `#inventory` row has always claimed.
+
+| Module      | Package                        | What it now holds                                                                                                                                                                                                                                                                        |
+|-------------|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `:api`      | `ua.bookloom.api.document`     | `SkeletonAnchor` is now a **sealed interface** over `NodeAnchor(nodePath, runIndex)` and `ByteSpanAnchor(start, end)` (ADR-0025); `Document` gains nullable `charset`/`hasBom`, unset for container formats                                                                             |
+| `:document` | `ua.bookloom.document`         | `DocumentService` now **dispatches**: `FormatResolver` resolves the format from the extension and confirms it against the leading bytes, and both `open` and `write` switch exhaustively over `BookFormat`                                                                              |
+| `:document` | `ua.bookloom.document.model`   | The shared structural walker (ADR-0027) over a `TreeNode` adapter with `JsoupTreeNode`/`Jdom2TreeNode` implementations, `BlockRuns`, `SegmentKinds`, run-scoped `SkeletonAnchors`, `BufferReassembler`, plus `ZipEntryReader`/`RawEntry`/`ZipEncryption`/`SecureXml` and the three shared exceptions, moved here so one bounded zip reader serves both container formats |
+| `:document` | **`ua.bookloom.document.detect`** | **New package**: `CharsetLadder` — byte-order mark, then in-band declaration, then ICU detection, then UTF-8                                                                                                                                                                          |
+| `:document` | **`ua.bookloom.document.fb2`**    | **New package**: `Fb2Reader`/`Fb2Writer`, `Fb2Encoding` (EC-FB2-2 adjudication over the document's prose), `Fb2Metadata`, `ParsedFb2`, `OpenFb2Registry`                                                                                                                              |
+| `:document` | **`ua.bookloom.document.md`**     | **New package**: `MarkdownReader`/`MarkdownWriter`, `MarkdownWalker`, `MarkdownSpans`, `Frontmatter`, `ParsedMarkdown`, `OpenMarkdownRegistry`                                                                                                                                        |
+| `:document` | **`ua.bookloom.document.txt`**    | **New package**: `TxtReader`/`TxtWriter`, `ParagraphScanner`, `OpenTxtRegistry`                                                                                                                                                                                                       |
+| `:document` | `ua.bookloom.document.epub`    | `DrmAdjudicator` rewritten to decide from the encrypted resource (ADR-0026) with `FontMediaTypes` and a top-level `ManifestItem`; the writer preserves each entry's original compression method                                                                                        |
+
+Adds commonmark-java, its GFM tables extension and ICU4J to `:document` only. ICU4J's licence is a **recorded
+exception** (`config/license/allowed-licenses.json`), extended here with the `Unicode-3.0` spelling ICU now
+publishes — the same permissive licence under its current SPDX name, which
+`05_Dependencies/03_LICENSING.md` anticipates as a normalization alias rather than a new exception.
+
+Test-side, `modules/document/src/test/java/ua/bookloom/document/fixture/` holds every fixture builder and the
+`FixtureCatalog` whose declared expectations gate them; `golden/` holds the per-format comparisons, the text-coverage
+measurement and the catalogue sweep. Neither is part of the shipped module surface, so neither is a row above.
+
 Every other package row in `#inventory` is **still unwritten** — cite it freely as a target, but expect to create it.
 
 **`build-logic` is an included build** (`includeBuild("modules/build-logic")` in `settings.gradle.kts`

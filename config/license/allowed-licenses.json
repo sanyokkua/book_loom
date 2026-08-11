@@ -11,6 +11,8 @@
 
     { "moduleLicense": "Unicode/ICU License", "moduleName": "com\\.ibm\\.icu:icu4j" },
     { "moduleLicense": "ICU License", "moduleName": "com\\.ibm\\.icu:icu4j" },
+    { "moduleLicense": "Unicode-3.0", "moduleName": "com\\.ibm\\.icu:icu4j" },
+    { "moduleLicense": "Unicode License v3", "moduleName": "com\\.ibm\\.icu:icu4j" },
 
     { "moduleLicense": "JDOM License", "moduleName": "org\\.jdom:jdom2" },
     { "moduleLicense": "Similar to Apache License but with the acknowledgment clause removed", "moduleName": "org\\.jdom:jdom2" },

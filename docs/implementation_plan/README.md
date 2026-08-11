@@ -51,7 +51,7 @@ it says, then cite it. The six rules (ADR-0016 R1–R6), enforced through `opens
 ## artifact-map {#artifact-map}
 
 | Artifact            | Location                                                      | Authority                                          | Edited by                                |
-|---------------------|---------------------------------------------------------------|-----------------------------------------------------|------------------------------------------|
+|---------------------|-----------------------------------------------------------------|-----------------------------------------------------|------------------------------------------|
 | Specification       | `docs/specification/`                                         | Binding, **frozen**                                 | Nobody during implementation             |
 | UI mockup           | `docs/specification/mockups/ui-mockup.html`                   | Binding visual source of truth                      | Nobody during implementation             |
 | ADRs                | `docs/adr/ADR-NNNN-<slug>.md`                                 | Binding decisions; carry deviations from the spec   | Whoever takes the decision               |
@@ -106,30 +106,34 @@ A new contributor or agent should read in this order:
 
 1. **`AGENTS.md`** (repo root) — the binding operating manual and architecture invariants, and the single source of
    truth for them. `CLAUDE.md` imports it and adds nothing.
-2. **`docs/specification/00_Foundation/01_VISION_AND_SCOPE.md`** — what the app is and is not.
-3. **`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`** — the locked `DD-NN` decisions.
-4. **`docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`** — the module boundaries and ArchUnit rules.
-5. **`docs/implementation_plan/README.md`** (this file) — the working model and the loop.
-6. **`docs/adr/ADR-0016`** and **`ADR-0017`** — why delivery works this way and in this order. Both deviate from clauses
+2. **`docs/DEVELOPMENT.md`** — how to actually build, run, debug and test the thing on your machine. Skip only if you
+   will never run the code.
+3. **`docs/specification/00_Foundation/01_VISION_AND_SCOPE.md`** — what the app is and is not.
+4. **`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`** — the locked `DD-NN` decisions.
+5. **`docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`** — the module boundaries and ArchUnit rules.
+6. **`docs/implementation_plan/README.md`** (this file) — the working model and the loop.
+7. **`docs/adr/ADR-0016`** and **`ADR-0017`** — why delivery works this way and in this order. Both deviate from clauses
    in the frozen spec; reading the spec's build/CI sections without them will mislead you.
-7. **`docs/implementation_plan/01_MODULE_INVENTORY.md`** — where code and tests live.
-8. **`05_ACCEPTANCE_CRITERIA_PATTERNS.md`** and **`06_DEFINITION_OF_DONE.md`** — how to author and prove a change.
-9. **`07_ROADMAP.md`** and **`CHANGE_BACKLOG.md`** — what to build next.
-10. The **cited spec clauses** for the change in hand (resolve via `docs/specification/00_Foundation/05_SPEC_INDEX.md`).
+8. **`docs/implementation_plan/01_MODULE_INVENTORY.md`** — where code and tests live.
+9. **`05_ACCEPTANCE_CRITERIA_PATTERNS.md`** and **`06_DEFINITION_OF_DONE.md`** — how to author and prove a change.
+10. **`07_ROADMAP.md`** and **`CHANGE_BACKLOG.md`** — what to build next.
+11. The **cited spec clauses** for the change in hand (resolve via `docs/specification/00_Foundation/05_SPEC_INDEX.md`).
 
 ## build-and-test-commands {#build-and-test-commands}
 
-All commands use the Gradle wrapper. Java 25, JavaFX 25, JPMS. **None of these exist yet** — they arrive with change 1,
-`bootstrap-gradle-and-quality-toolchain`.
+All commands use the Gradle wrapper. Java 25, JavaFX 26, JPMS. They all exist and run today. For the human-facing
+detail behind each — prerequisites, IDE setup, debugging, troubleshooting — see `docs/DEVELOPMENT.md`.
 
 | Command                                     | Purpose                                                                                              |
 |---------------------------------------------|--------------------------------------------------------------------------------------------------|
 | `./gradlew build`                           | Compile all modules, run tests, lint, ArchUnit.                                                    |
+| `./gradlew :app:run`                        | Launch the app (1024x700 window). Classpath launch, not module path.                               |
 | `./gradlew test`                            | Unit + integration tests (`liveLocal`/`promptEval`/`visual` tags excluded).                        |
-| `./gradlew :ui:test`                        | UI tests headless via TestFX + Monocle.                                                            |
+| `./gradlew :ui:test`                        | UI tests headless via TestFX on JavaFX 26's built-in `glass.platform=Headless` (ADR-0019; not Monocle). |
 | `./gradlew spotlessApply` / `spotlessCheck` | Apply / verify Palantir Java Format (120-col).                                                     |
 | `./gradlew check`                           | Full gate: tests, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, ArchUnit, coverage.  |
 | `./gradlew liveLocal`                       | Local-only provider tests against a real Ollama / LM Studio. Env-gated; never in CI.               |
+| `./gradlew :app:archTest`                   | The 8 ArchUnit boundary rules. Hosted in :app; wired into check.                                    |
 | `./gradlew :app:collectDist`                | Stage the app jar + runtime classpath for packaging.                                               |
 | `scripts/package-<os>`                      | (not Gradle) drive `jpackage` per OS — no cross-compile.                                           |
 | `bash scripts/fr-coverage.sh`               | Advisory: which frozen `FR-*` ids no shipped requirement claims yet.                               |

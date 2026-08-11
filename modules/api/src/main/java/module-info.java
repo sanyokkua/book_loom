@@ -11,4 +11,5 @@ module ua.bookloom.api {
     requires static org.jspecify;
 
     exports ua.bookloom.api;
+    exports ua.bookloom.api.document;
 }

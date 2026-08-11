@@ -21,15 +21,21 @@ fun lib(alias: String) = catalog.findLibrary(alias).orElseThrow()
 
 fun bundle(alias: String) = catalog.findBundle(alias).orElseThrow()
 
-// --- The three local-only tag sets (design D5) -------------------------------------------------------------------
+// --- The four local-only tag sets (design D5; `corpus` added by fix-document-round-trip-corpus-defects D6) ------
 //
 // `liveLocal` needs a real Ollama / LM Studio, `promptEval` needs a real model plus an embedding scorer, `visual`
-// needs a pinned rendering environment. None of the three can run on a CI runner, and all three are excluded from
-// coverage (`06_TESTING_STRATEGY.md#live-local`, `#prompt-evals`, `#visual-validation`, DD-35).
+// needs a pinned rendering environment, `corpus` needs a real, locally configured book corpus. None of the four
+// can run on a CI runner, and all four are excluded from coverage (`06_TESTING_STRATEGY.md#live-local`,
+// `#prompt-evals`, `#visual-validation`, DD-35, `fix-document-round-trip-corpus-defects` design.md D6).
 //
 // The task name and the tag name are deliberately identical: `./gradlew liveLocal` runs tag `liveLocal`. That is
 // what makes the mechanism inspectable — `./gradlew tasks` shows the whole partition.
-val localOnlyTags = listOf("liveLocal", "promptEval", "visual")
+val localOnlyTags = listOf("liveLocal", "promptEval", "visual", "corpus")
+
+// `corpus` alone reads its target from an environment variable Gradle does not treat as a task input, so a
+// second consecutive run would otherwise be reported `UP-TO-DATE` while printing `BUILD SUCCESSFUL` and doing
+// nothing (design.md D6, trap 1). The other three tagged tasks keep Gradle's normal up-to-date checking.
+val neverUpToDateTags = setOf("corpus")
 
 dependencies {
     // The BOM pins every `org.junit.*` coordinate from one version, so `junit-jupiter` and
@@ -64,7 +70,7 @@ dependencies {
 // today that is `:app`'s `archTest`, which must be subject to exactly the same tag exclusions as `test`. A rule
 // that only ever configured the default task would leave a second, unfiltered execution path open.
 tasks.withType<Test>().configureEach {
-    // The three tagged tasks are registered below and configure `includeTags` for their own tag. They must NOT
+    // The four tagged tasks are registered below and configure `includeTags` for their own tag. They must NOT
     // also receive the exclusions: both actions mutate the same `JUnitPlatformOptions`, exclusion beats inclusion
     // in JUnit's filter algebra, and `liveLocal` would then match nothing — forever, and silently.
     if (name !in localOnlyTags) {
@@ -108,7 +114,7 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-// --- The three local-only tasks (design D5) ----------------------------------------------------------------------
+// --- The four local-only tasks (design D5) -----------------------------------------------------------------------
 //
 // Each includes exactly its own tag and is NOT wired into `check`. They run the same `test` source set as the
 // default task — the partition is by tag, not by directory, so a `liveLocal` case sits next to the WireMock test
@@ -129,5 +135,13 @@ localOnlyTags.forEach { tag ->
         // Deliberately no `dependsOn`/`finalizedBy` onto `check`, and no JaCoCo verification: these tests prove
         // behaviour against a real server or a pinned display, which is not the kind of evidence a merge gate can
         // reproduce (`06_TESTING_STRATEGY.md#coverage-traceability`).
+
+        if (tag in neverUpToDateTags) {
+            // The evidence of a `corpus` run is its report file, never the exit code (design.md D6, trap 1): the
+            // configured corpus directory is read from an environment variable, which Gradle's up-to-date check
+            // never sees as a task input, so without this a second consecutive run would report `UP-TO-DATE` and
+            // silently verify nothing.
+            outputs.upToDateWhen { false }
+        }
     }
 }

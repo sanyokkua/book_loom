@@ -10,17 +10,22 @@ locally-run (Ollama/LM Studio) or OpenAI-compatible LLM, preserving structure/ID
 structure-and-text-preserving round trip, via a tiered draft → QA → judge → repair pipeline that runs
 end-to-end with minimal human interaction.
 
-**Stack.** Java 25 + JavaFX 25, Gradle (Kotlin DSL) + Guice DI, SQLite/JDBI/Flyway, JUnit5/TestFX — full
+**Stack.** Java 25 + JavaFX 26, Gradle (Kotlin DSL) + Guice DI, SQLite/JDBI/Flyway, JUnit5/TestFX — full
 inventory in `gradle/libs.versions.toml`.
 
 **State.** The Gradle/JPMS module skeleton, quality toolchain, Lefthook hooks and CI are built and wired
-(`./gradlew`, all 9 `modules/*`, `lefthook.yml`, `.github/workflows/ci.yml` all exist and run). Product
-features have not started. CI never actually *executes* until the app is feature-complete — the local gate is
+(`./gradlew`, all 9 `modules/*`, `lefthook.yml`, `.github/workflows/ci.yml` all exist and run). Stage A is
+complete: the EPUB round-trip shipped and four changes are archived. `:api`, `:util`, `:document` (EPUB
+only) and `:app` carry real code; `:llm`, `:pipeline`, `:persistence` are Guice-module stubs and `:ui` is an
+app-shell placeholder. CI never actually *executes* until the app is feature-complete — the local gate is
 authoritative until then (standing decision; a debt list of canaries proving the deferred gates is owed once,
 at the end). Current unit of work: `docs/implementation_plan/CHANGE_BACKLOG.md` + `openspec/changes/`.
 
 **The spec is the authority.** `docs/specification/` — frozen during implementation. Never invent behaviour;
 a genuine gap is a new ADR (`docs/adr/`), never a spec edit.
+
+**Humans start at `docs/DEVELOPMENT.md`.** Prerequisites, build, run, debug, IDE setup, test tiers, packaging and
+troubleshooting live there; this file stays the agent operating manual.
 
 ## The loop
 

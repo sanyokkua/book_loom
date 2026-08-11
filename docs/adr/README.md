@@ -45,3 +45,7 @@ explicitly — read them before planning work.
 | ADR-0022 | `ErrorCode.busy` covers the single-instance lock; the enum stays at fifteen constants | DD-14               |
 | ADR-0023 | Backend-complete milestone (stub-provider whole-book run) + five backlog interstitials | process             |
 | ADR-0024 | Lombok `@NoArgsConstructor(PRIVATE)` for static-utility classes (extends ADR-0014)    | DD-05               |
+| ADR-0025 | Reassembly replaces a segment run's inner content, not a single text node             | DD-07, DD-43        |
+| ADR-0026 | DRM adjudicated by what is encrypted, not by the algorithm URI                        | EC-EPUB-1           |
+| ADR-0027 | A translatable block is recognised structurally, not by a tag whitelist               | DD-07               |
+| ADR-0028 | jsoup stays the EPUB XHTML parser, qualified by one pre-parse normalization           | DD-43, DD-49        |

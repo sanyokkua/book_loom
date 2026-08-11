@@ -36,9 +36,14 @@ class TestConventionsFunctionalTest {
     private static final String LIVE_LOCAL = "fixture.alpha.LiveLocalTest";
     private static final String PROMPT_EVAL = "fixture.alpha.PromptEvalTest";
     private static final String VISUAL = "fixture.alpha.VisualTest";
+    private static final String CORPUS = "fixture.alpha.CorpusTest";
 
-    // Covers task 5.2: `check` runs the untagged tests and NONE of the tagged ones, and the three tagged tasks
-    // are not on its task graph at all — not merely up-to-date, not skipped: absent.
+    // Covers: FR-DOC-09 — WHEN the merge gate runs with a corpus directory configured, THEN the verification
+    // does not run.
+    //
+    // Also covers task 5.2 of bootstrap-gradle-and-quality-toolchain: `check` runs the untagged tests and NONE
+    // of the tagged ones, and the four tagged tasks are not on its task graph at all — not merely up-to-date,
+    // not skipped: absent.
     @Test
     void check_taggedTests_neverExecuteAndTheirTasksAreNotOnTheGraph(@TempDir Path projectDir) throws IOException {
         fixtureProject(projectDir);
@@ -52,10 +57,14 @@ class TestConventionsFunctionalTest {
         assertThat(result.task(":alpha:liveLocal")).isNull();
         assertThat(result.task(":alpha:promptEval")).isNull();
         assertThat(result.task(":alpha:visual")).isNull();
+        assertThat(result.task(":alpha:corpus")).isNull();
     }
 
-    // Covers task 5.2/5.3: each tagged task runs exactly its own tag — no leakage in either direction. The
-    // `includeTags`-vs-`excludeTags` collision this rules out would leave every one of them running zero tests.
+    // Covers: FR-DOC-09 — WHEN the merge gate runs with a corpus directory configured, THEN the verification
+    // does not run, and conversely the `corpus` task runs exactly the corpus-tagged tests and nothing else.
+    //
+    // Also covers tasks 5.2/5.3 of bootstrap-gradle-and-quality-toolchain: no leakage in either direction. The
+    // `includeTags`-vs-`excludeTags` collision this rules out would leave every task running zero tests.
     @Test
     void taggedTasks_eachRunOnlyTheirOwnTag(@TempDir Path projectDir) throws IOException {
         fixtureProject(projectDir);
@@ -68,6 +77,27 @@ class TestConventionsFunctionalTest {
 
         runner(projectDir, "visual").build();
         assertThat(executedTestClasses(projectDir, "visual")).containsExactly(VISUAL);
+
+        runner(projectDir, "corpus").build();
+        assertThat(executedTestClasses(projectDir, "corpus")).containsExactly(CORPUS);
+    }
+
+    // Covers: FR-DOC-09 — WHEN the verification is run a second time, THEN it executes again rather than being
+    // reported as up-to-date, so a run's evidence is its report rather than its exit code.
+    //
+    // design.md D6, trap 1: Gradle does not treat an environment variable as a task input, so without
+    // `outputs.upToDateWhen { false }` a second consecutive `corpus` run reports `UP-TO-DATE` and prints
+    // `BUILD SUCCESSFUL` while verifying nothing.
+    @Test
+    void corpusTask_secondConsecutiveRun_stillExecutesRatherThanReportingUpToDate(@TempDir Path projectDir)
+            throws IOException {
+        fixtureProject(projectDir);
+
+        BuildResult first = runner(projectDir, "corpus").build();
+        BuildResult second = runner(projectDir, "corpus").build();
+
+        assertThat(first.task(":alpha:corpus").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        assertThat(second.task(":alpha:corpus").getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
     }
 
     // Covers task 5.3: a tagged task on a module that carries none of that tag is a green no-op, not a failure.
@@ -136,6 +166,7 @@ class TestConventionsFunctionalTest {
                 "alpha/src/test/java/fixture/alpha/PromptEvalTest.java",
                 testClass("PromptEvalTest", "promptEval"));
         write(projectDir, "alpha/src/test/java/fixture/alpha/VisualTest.java", testClass("VisualTest", "visual"));
+        write(projectDir, "alpha/src/test/java/fixture/alpha/CorpusTest.java", testClass("CorpusTest", "corpus"));
     }
 
     private static void conventionModule(Path projectDir) throws IOException {

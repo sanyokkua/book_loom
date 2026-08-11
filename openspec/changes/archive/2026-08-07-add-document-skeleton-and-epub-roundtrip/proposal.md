@@ -24,7 +24,8 @@ regenerates structure on write — cannot be converted later without touching ev
 ## What Changes
 
 - **`:api` gains the document contracts — seam F1.** `Document`, `Unit`, `Segment`, `SegmentKind`, `BookFormat`, and
-  the `DocumentPort` interface. Records throughout, per DD-05 and the `records-first` rule that governs `..api..`.
+  the `DocumentPort` interface, in a new `ua.bookloom.api.document` sub-package. Records throughout, per DD-05 and
+  the `records-first` rule that governs `..api..`.
 - **`Segment` carries only what this change can populate.** `id`, `unit`, `order`, `kind`, `sourceInner`, `sourceHash`,
   `prevKey`/`nextKey`, `status`. The `masked` and `placeholders` fields belong to the shape but stay empty here —
   inline masking is change 5, and populating them would mean inventing a placeholder scheme this change cannot
@@ -71,11 +72,17 @@ None. `openspec/specs/` is empty — this is the first change in the project to 
 
 ## Impact
 
-- **`:api/ua.bookloom.api`** — `Document`, `Unit`, `Segment`, `SegmentKind`, `BookFormat` records/enums and the
-  `DocumentPort` interface. Framework-free as always: no jsoup type may appear here, since `api-is-framework-free`
-  bans parser libraries from `:api` and every consumer would otherwise inherit one.
-- **`:document/ua.bookloom.document`** — `DocumentService` implementing the port, plus an internal `epub` package for
-  container/OPF/XHTML handling. FX-free; depends only on `:api` and `:util`.
+- **`:api/ua.bookloom.api.document`** — `Document`, `Unit`, `Segment`, `SegmentKind`, `BookFormat` records/enums and
+  the `DocumentPort` interface, in the sub-package `01_MODULE_INVENTORY.md#module-api` already plans for the
+  document model — the module's existing `ua.bookloom.api` export stays the `Result`/`AppError`/`ErrorCode` floor
+  only. Framework-free as always: no jsoup type may appear here, since `api-is-framework-free` bans parser libraries
+  from `:api` and every consumer would otherwise inherit one.
+- **`:document/ua.bookloom.document`** — `DocumentService` implementing the port, dispatching to an internal
+  `document.model` package (seam F1's segment-emission and anchor write-back machinery, format-agnostic so change 4
+  reuses it for FB2/Markdown/TXT) and a `document.epub` package (container/OPF/XHTML/DRM handling), per
+  `01_MODULE_INVENTORY.md#module-document`. FX-free; depends only on `:api` and `:util`.
+- **`:util/ua.bookloom.util.hash`** — the SHA-256 document-content and per-segment hashing helper, per
+  `01_MODULE_INVENTORY.md#module-util` rather than duplicated inside `:document`.
 - **Error handling** — every port method returns `Result<T>`. A corrupt container, a missing OPF, or a malformed spine
   is `ErrorCode.validation` (EC-EPUB-2); a DRM refusal is its own typed outcome, not a crash. Note that a **filesystem
   path is not on the safe-details allowlist**, so it belongs on `AppError.cause`, never in `details` — the allowlist is

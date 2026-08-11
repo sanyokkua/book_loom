@@ -5,7 +5,7 @@
 # (docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
 #
 # Populated by change `bootstrap-gradle-and-quality-toolchain`. Runtime libraries the application itself needs
-# (sqlite-jdbc, Flyway, JDBI, jsoup, JDOM2, CommonMark, Jackson, Lingua, ICU4J, SLF4J/Logback, AtlantaFX,
+# (sqlite-jdbc, Flyway, JDBI, CommonMark, Jackson, Lingua, ICU4J, SLF4J/Logback, AtlantaFX,
 # Ikonli, ControlsFX) are NOT here yet — each arrives with the change that first uses it, at the narrowest
 # scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency.
 
@@ -59,6 +59,35 @@ slf4j = "2.0.17"
 # `checkLicense` explicitly rather than assuming.
 logback = "1.5.20"
 
+# --- Document parsing (EPUB) ------------------------------------------------------------------------------
+# Arrives with `add-document-skeleton-and-epub-roundtrip`, task 2.1. Two parsers because the specification
+# divides the work between them (design.md D4): jsoup for XHTML content bodies (HTML-shaped, an XML parser
+# rejects real-world markup), JDOM2 for strict XML (container.xml, the OPF, and FB2 in the next change).
+# Declared on `:document` only. jsoup ships a real JPMS module descriptor (module name `org.jsoup`, verified
+# from its multi-release `module-info.class`); JDOM2 ships an `Automatic-Module-Name: org.jdom2` manifest
+# entry — both confirmed against the actual 1.23.1/2.0.6.1 jars, not assumed.
+jsoup = "1.23.1"
+jdom2 = "2.0.6.1"
+
+# --- Document parsing (Markdown, charset detection) ---------------------------------------------------------
+# Arrives with `add-fb2-md-txt-roundtrip`, task 5.1. Declared on `:document` only.
+#
+# commonmark-java is used for ANALYSIS ONLY — its renderer is never invoked. The Markdown reader locates each
+# leaf block's byte span in the AST and export splices translated spans into a copy of the original bytes, so
+# nothing is ever re-rendered (design.md D4). The GFM tables extension is the ONLY extension added: tables are
+# block-level and change segmentation (36 tables across 7 of 8 surveyed documents), while strikethrough and
+# autolink are inline constructs that alter no block boundary and the surveyed corpus contains zero of either.
+# Licence: BSD-2-Clause, already in the default allowlisted family.
+commonmark = "0.24.0"
+
+# ICU4J, for charset detection on the import path (01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom). Large
+# for one function — roughly an order of magnitude bigger than every other library here — and accepted anyway:
+# the frozen spec mandates ICU detection, hand-rolled detection works on fixtures and fails on real books, and
+# `:pipeline`/`:ui` are already destined to use it. Its ICU License is a RECORDED EXCEPTION in
+# `config/license/allowed-licenses.json` (matched by `com\.ibm\.icu:icu4j`), not a default-family licence,
+# which is exactly the case the licence gate exists to adjudicate rather than assume.
+icu4j = "77.1"
+
 # --- Test ---------------------------------------------------------------------------------------------------
 # The JUnit 5 line (the frozen stack specifies JUnit 5; 6.x is a separate major).
 junit = "5.14.4"
@@ -96,6 +125,13 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 # --- Static analysis ------------------------------------------------------------------------------------------
 findsecbugs = { module = "com.h3xstream.findsecbugs:findsecbugs-plugin", version.ref = "findsecbugs" }
 palantir-java-format = { module = "com.palantir.javaformat:palantir-java-format", version.ref = "palantirJavaFormat" }
+
+# --- Document parsing (EPUB) ------------------------------------------------------------------------------------
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
+jdom2 = { module = "org.jdom:jdom2", version.ref = "jdom2" }
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 
 # --- Test ------------------------------------------------------------------------------------------------------
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }

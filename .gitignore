@@ -43,3 +43,6 @@ logs/
 *.rpm
 *.pkg
 jpackage/
+
+# Context Files
+.temporary_context/
