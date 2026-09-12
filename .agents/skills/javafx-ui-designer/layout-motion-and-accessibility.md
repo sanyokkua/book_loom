@@ -1,7 +1,7 @@
 # Layout, Motion & Accessibility
 
 Supporting reference for `javafx-ui-designer/SKILL.md`. Pinned platform: **JavaFX 26** (`org.openjfx:javafx-*:26.0.2`,
-ADR-0019 — supersedes the frozen spec's "JavaFX 25" mentions; every such mention elsewhere in `docs/specification/`
+ADR-0019 — supersedes the spec's "JavaFX 25" mentions; every such mention elsewhere in `docs/specification/`
 is read through that ADR). CSS `@media` feature queries were introduced in JavaFX 25 itself (viewport `width`/
 `height`/`aspect-ratio`/`orientation`/`display-mode`, plus the user-preference features `prefers-color-scheme`/
 `prefers-reduced-motion`/`prefers-reduced-data`/`prefers-reduced-transparency`), so they are fully available on

@@ -1,6 +1,6 @@
 # ADR-0016 — Track delivery with OpenSpec changes; retire stories and generated traceability
 
-**Status:** accepted **Date:** 2026-08-02 **Deciders:** architect
+**Status:** accepted; R5 (test markers) and R6 (coverage grep) superseded by ADR-0032 on 2026-09-11 **Date:** 2026-08-02 **Deciders:** architect
 
 ## Context and problem statement
 

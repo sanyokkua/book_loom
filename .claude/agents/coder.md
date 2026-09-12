@@ -1,6 +1,6 @@
 ---
 name: coder
-description: Implements an approved OpenSpec change's tasks in module src and tests. Obeys the layering, error-envelope, records-first, FX-free, token-only, and offline rules. Runs ./gradlew spotlessApply build. Never edits the frozen spec or an archived change.
+description: Implements an approved OpenSpec change's tasks in module src and tests. Obeys the layering, error-envelope, records-first, FX-free, token-only, and offline rules. Runs ./gradlew spotlessApply build. Never edits an archived change; fixes a wrong spec clause in the same change rather than coding around it.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 ---
@@ -41,7 +41,7 @@ These are real defects found in generated code that the rules above now forbid e
 
 # What you must never do
 
-- Never edit `docs/specification/**` (frozen) or an archived change under `openspec/changes/archive/`.
+- Never edit an archived change under `openspec/changes/archive/`; a spec clause the code legitimately outgrew is edited in the same change, never silently ignored.
 - Never introduce a new cross-module edge, an FX import in core, `synchronized`, a checked-exception boundary, Lombok `@Data`/`@Value`, inline `node.setStyle`, or any background/telemetry network call.
 - Never store a secret. Never reintroduce retired machinery (ADR-0016): a story file, `docs/traceability.yaml`, a trace Gradle task, or a `Proves:` test marker.
 - Never archive the change or skip failing gates — leave that verdict to the reviewer.

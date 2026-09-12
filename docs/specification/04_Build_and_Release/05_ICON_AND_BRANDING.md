@@ -7,7 +7,7 @@
 
 The normative description of the BookLoom app icon: the canonical source artwork, the deterministic pipeline that
 removes its backdrop, the single master every platform icon derives from, and how jpackage consumes the per-OS files.
-Owned by **PHASE_13** (`docs/implementation_plan/phases/PHASE_13_PACKAGING_RELEASE.md`); recorded in **DD-29 /
+Owned by the packaging change; recorded in **DD-29 /
 ADR-0011**.
 
 ## Table of Contents

@@ -2,7 +2,6 @@ package ua.bookloom.document.md;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -20,6 +19,7 @@ import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.util.hash.HashUtil;
 
 /**
@@ -60,7 +60,7 @@ final class MarkdownWalker {
         Objects.requireNonNull(root, "root");
         final List<Draft> drafts = new ArrayList<>();
         collect(root, text, drafts);
-        return finalizeSegments(drafts, bodyByteOffset, byteOffsets, unitId);
+        return finalizeSegments(drafts, text, bodyByteOffset, byteOffsets, unitId);
     }
 
     private static void collect(Node parent, String text, List<Draft> drafts) {
@@ -86,7 +86,7 @@ final class MarkdownWalker {
         if (trimmed == null) {
             return;
         }
-        drafts.add(new Draft(kind, trimmed[0], trimmed[1], text.substring(trimmed[0], trimmed[1])));
+        drafts.add(new Draft(kind, block, trimmed[0], trimmed[1], text.substring(trimmed[0], trimmed[1])));
     }
 
     private static boolean isExcluded(Node node) {
@@ -116,30 +116,31 @@ final class MarkdownWalker {
     }
 
     private static List<Segment> finalizeSegments(
-            List<Draft> drafts, int bodyByteOffset, int[] byteOffsets, String unitId) {
+            List<Draft> drafts, String text, int bodyByteOffset, int[] byteOffsets, String unitId) {
         final List<Segment> segments = new ArrayList<>(drafts.size());
         for (int order = 0; order < drafts.size(); order++) {
-            segments.add(toSegment(drafts, order, bodyByteOffset, byteOffsets, unitId));
+            segments.add(toSegment(drafts, order, text, bodyByteOffset, byteOffsets, unitId));
         }
         return segments;
     }
 
     private static Segment toSegment(
-            List<Draft> drafts, int order, int bodyByteOffset, int[] byteOffsets, String unitId) {
+            List<Draft> drafts, int order, String text, int bodyByteOffset, int[] byteOffsets, String unitId) {
         final Draft draft = drafts.get(order);
         final String id = unitId + ":" + order;
         final String prevKey = order > 0 ? unitId + ":" + (order - 1) : null;
         final String nextKey = order < drafts.size() - 1 ? unitId + ":" + (order + 1) : null;
         final ByteSpanAnchor anchor = new ByteSpanAnchor(
                 bodyByteOffset + byteOffsets[draft.charStart()], bodyByteOffset + byteOffsets[draft.charEnd()]);
+        final MaskedContent masked = MarkdownMasker.mask(draft.block(), text, draft.charStart(), draft.charEnd());
         return new Segment(
                 id,
                 unitId,
                 order,
                 draft.kind(),
                 draft.sourceInner(),
-                draft.sourceInner(),
-                Map.of(),
+                masked.masked(),
+                masked.placeholders(),
                 HashUtil.sha256OfNfcText(draft.sourceInner()),
                 prevKey,
                 nextKey,
@@ -149,5 +150,5 @@ final class MarkdownWalker {
                 INITIAL_CONFIDENCE);
     }
 
-    private record Draft(SegmentKind kind, int charStart, int charEnd, String sourceInner) {}
+    private record Draft(SegmentKind kind, Node block, int charStart, int charEnd, String sourceInner) {}
 }

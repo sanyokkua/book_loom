@@ -42,6 +42,13 @@ class TxtRoundTripTest {
     private static final String PRIMARY = "﻿One.\r\n\r\n\r\n\r\n    Two, indented.   \r\n\r\nThree.\r\n";
 
     /**
+     * A paragraph carrying a literal placeholder bracket pair — the one shape TXT masks at all (PlainTextMasker):
+     * each of {@code ⟦} and {@code ⟧} becomes its own atomic protected-span token. {@link #PRIMARY} above carries
+     * neither, so a "genuinely masked" claim proved only against it would be vacuous.
+     */
+    private static final String WITH_BRACKET = "One ⟦not a token⟧ two.\n";
+
+    /**
      * Enough Cyrillic prose for a statistical detector to work with. TXT carries no declaration, so detection is
      * the only signal there is — and a detector cannot identify a code page from thirteen bytes. A fixture that
      * short would be testing the limits of detection rather than the round trip it is written to prove.
@@ -86,7 +93,7 @@ class TxtRoundTripTest {
         return document.units().get(0).segments();
     }
 
-    // Covers: FR-DOC-TXT-1 — blank lines separate paragraphs, and one PARAGRAPH segment is emitted per paragraph
+    // blank lines separate paragraphs, and one PARAGRAPH segment is emitted per paragraph
     // in file order.
     @Test
     void read_blankLineSeparatedParagraphs_yieldOneSegmentEachInOrder() {
@@ -96,7 +103,7 @@ class TxtRoundTripTest {
         assertThat(segmentsOf(document)).extracting(Segment::kind).containsOnly(SegmentKind.PARAGRAPH);
     }
 
-    // Covers: FR-DOC-TXT-2 — a run of several blank lines yields no extra segment.
+    // a run of several blank lines yields no extra segment.
     @Test
     void read_runOfSeveralBlankLines_yieldsNoExtraSegment() {
         final Document document = open("One.\r\n\r\n\r\n\r\nTwo.\r\n", StandardCharsets.UTF_8, "notes.txt");
@@ -104,7 +111,7 @@ class TxtRoundTripTest {
         assertThat(segmentsOf(document)).hasSize(2);
     }
 
-    // Covers: FR-DOC-TXT-1 — a plain-text file is one unit named for the file, with the plain-text media type.
+    // a plain-text file is one unit named for the file, with the plain-text media type.
     @Test
     void read_plainTextFile_yieldsOneUnitNamedForTheFile() {
         final Unit unit = openPrimary().units().get(0);
@@ -115,7 +122,7 @@ class TxtRoundTripTest {
         assertThat(openPrimary().format()).isEqualTo(BookFormat.TXT);
     }
 
-    // Covers: FR-DOC-TXT-1 — a byte-order mark fixes the charset, is recorded, and sits outside every span.
+    // a byte-order mark fixes the charset, is recorded, and sits outside every span.
     @Test
     void read_byteOrderMark_isRecordedAndExcludedFromEverySpan() {
         final Document document = openPrimary();
@@ -127,7 +134,7 @@ class TxtRoundTripTest {
                         .isGreaterThanOrEqualTo(3));
     }
 
-    // Covers: FR-DOC-TXT-2 — indentation stays outside the segment's span, so it is copied through untouched.
+    // indentation stays outside the segment's span, so it is copied through untouched.
     @Test
     void read_indentedParagraph_leavesTheIndentationOutsideTheSpan() {
         assertThat(segmentsOf(openPrimary()))
@@ -135,7 +142,7 @@ class TxtRoundTripTest {
                 .containsExactly("One.", "Two, indented.", "Three.");
     }
 
-    // Covers: FR-DOC-TXT-3 — WHEN a file is reassembled with no segment carrying target text, THEN the output
+    // WHEN a file is reassembled with no segment carrying target text, THEN the output
     // bytes are identical to the source's, byte-order mark and line endings included.
     @Test
     void write_zeroEditRoundTrip_isByteIdenticalIncludingBomAndLineEndings() {
@@ -144,7 +151,21 @@ class TxtRoundTripTest {
         assertThat(bytesOf(output)).isEqualTo(PRIMARY.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Covers: FR-DOC-TXT-3 — only the translated paragraph's bytes change, and every byte before it is unchanged.
+    // WHEN a document is reassembled with no target text, the system SHALL produce output
+    // canonical-equal to the source for EPUB, FB2 and Markdown and byte-identical for TXT.
+    @Test
+    void write_zeroEditRoundTripOfBracketBearingParagraph_isByteIdenticalAndGenuinelyMasked() {
+        final Document document = open(WITH_BRACKET, StandardCharsets.UTF_8, "brackets.txt");
+
+        final Path output = writeOut(document, "uk");
+
+        assertThat(bytesOf(output)).isEqualTo(WITH_BRACKET.getBytes(StandardCharsets.UTF_8));
+        assertThat(segmentsOf(document))
+                .as("at least one segment was genuinely masked on the way through")
+                .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
+    }
+
+    // only the translated paragraph's bytes change, and every byte before it is unchanged.
     @Test
     void write_onlyTheTranslatedParagraph_changesItsOwnBytes() {
         final Document document = withTarget(open("One.\n\nTwo.\n", StandardCharsets.UTF_8, "notes.txt"), 1, "Два.");
@@ -154,14 +175,14 @@ class TxtRoundTripTest {
         assertThat(new String(bytesOf(output), StandardCharsets.UTF_8)).isEqualTo("One.\n\nДва.\n");
     }
 
-    // Covers: FR-DOC-07 — an export passed a target language is still byte-identical, because plain text has
+    // an export passed a target language is still byte-identical, because plain text has
     // nowhere to record one and inventing a place would add content the source never had.
     @Test
     void write_withATargetLanguage_addsNothingAndStaysByteIdentical() {
         assertThat(bytesOf(writeOut(openPrimary(), "uk"))).isEqualTo(PRIMARY.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Covers: FR-DOC-TXT-3 — IF a segment's target text contains a character the source encoding cannot
+    // IF a segment's target text contains a character the source encoding cannot
     // represent, THEN the export fails with a validation outcome and no output file is written.
     @Test
     void write_unrepresentableTargetCharacter_failsAndWritesNoFile() {
@@ -174,7 +195,7 @@ class TxtRoundTripTest {
         assertThat(Files.exists(destination)).isFalse();
     }
 
-    // Covers: FR-DOC-TXT-3 — a representable translation into the source's own encoding is written in it.
+    // a representable translation into the source's own encoding is written in it.
     @Test
     void write_representableTargetInASingleByteEncoding_isWrittenInThatEncoding() {
         final Document document = withTarget(open(CYRILLIC_PROSE, WINDOWS_1251, "notes.txt"), 1, "Три речення.");

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * {@code NodeAnchor}'s construction-time invariants.
  *
- * <p>No {@code // Covers: FR-*} marker: these are mechanical shape tests, not covering tests for a business
+ * <p>These are mechanical shape tests, not tests of a business
  * requirement — ADR-0025 is the rationale for the shape, and the obligations it carries are proven by the
  * write-back tests in {@code :document}.
  */

@@ -66,7 +66,8 @@ public final class EpubCanonicalAssert {
             Pattern.compile("<([a-zA-Z][a-zA-Z0-9-]*)\\b((?:\"[^\"]*\"|'[^']*'|[^\"'>])*?)/>");
 
     /**
-     * Asserts that {@code output} is canonical-equal to {@code source}: same entry order, {@code mimetype} first
+     * Asserts that {@code output} is canonical-equal to {@code source}: same entry order apart from where the source
+     * kept {@code mimetype} (a real book stores it third; the writer rightly moves it first), {@code mimetype} first
      * and STORED with identical content, every OPF entry canonical-XML-equal, every XHTML entry canonical-XHTML-
      * equal, and every other entry byte-for-byte identical (design.md D5).
      *
@@ -77,9 +78,17 @@ public final class EpubCanonicalAssert {
         final List<ZipEntrySnapshot> sourceEntries = readZip(source);
         final List<ZipEntrySnapshot> outputEntries = readZip(output);
 
-        assertThat(names(outputEntries)).as("entry order").containsExactlyElementsOf(names(sourceEntries));
+        assertThat(namesExceptMimetype(outputEntries))
+                .as("entry order, mimetype aside")
+                .containsExactlyElementsOf(namesExceptMimetype(sourceEntries));
         assertMimetypeFirstStoredAndExact(sourceEntries, outputEntries);
         assertRemainingEntriesCanonicalEqual(sourceEntries, outputEntries);
+    }
+
+    private static List<String> namesExceptMimetype(List<ZipEntrySnapshot> entries) {
+        return names(entries).stream()
+                .filter(name -> !MIMETYPE_ENTRY.equals(name))
+                .toList();
     }
 
     private static void assertMimetypeFirstStoredAndExact(

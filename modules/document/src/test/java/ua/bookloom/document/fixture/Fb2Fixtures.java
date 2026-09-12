@@ -109,6 +109,34 @@ public final class Fb2Fixtures {
             NO_LANGUAGE_XML.replace("<genre>prose</genre>", "<genre>prose</genre><lang></lang>");
 
     /**
+     * A single paragraph carrying every hazard a mask-then-restore identity cycle must survive together: a CDATA
+     * section, a namespaced note anchor, and a nested {@code <pre>} listing inside a text-owning {@code <div>} —
+     * the requirement <em>Restore a masked segment to its source content when nothing is translated</em>.
+     */
+    public static final String HAZARD_PARAGRAPH_XML = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0"
+                         xmlns:l="http://www.w3.org/1999/xlink">
+              <description><title-info>
+                  <genre>prose</genre><book-title>Sample</book-title><lang>uk</lang>
+              </title-info></description>
+              <body><section><p>Порівняй <![CDATA[a < b]]> тут, дивись <a l:href="#n1" type="note">1</a> і \
+            <div>ось лістинг: <pre>code();
+            line two</pre> кінець.</div> все.</p></section></body>
+            </FictionBook>
+            """;
+
+    /**
+     * Writes {@link #HAZARD_PARAGRAPH_XML} as a bare UTF-8 file.
+     *
+     * @param destination the file to write
+     * @return {@code destination}
+     */
+    public static Path hazardParagraph(Path destination) {
+        return writeFb2(destination, HAZARD_PARAGRAPH_XML, StandardCharsets.UTF_8);
+    }
+
+    /**
      * Writes {@link #PRIMARY_XML} as a bare {@code windows-1251} file.
      *
      * @param destination the file to write

@@ -1,6 +1,6 @@
 # ADR-0018 — Canonical requirement-id form, and owners for the three unmapped FR families
 
-**Status:** accepted **Date:** 2026-08-02 **Deciders:** architect
+**Status:** superseded by ADR-0032 (2026-09-11) **Date:** 2026-08-02 **Deciders:** architect
 
 ## Context and problem statement
 

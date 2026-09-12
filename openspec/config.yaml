@@ -13,18 +13,17 @@ context: |
 
   ## Authoritative documents
 
-  - `docs/specification/**` is a FROZEN CATALOG. It is read-only and must never be edited. It holds the
-    FR-*/NFR-*/DD-*/EC-* ids, the prompt catalog, the SQLite DDL, the theming palette, the mermaid
+  - `docs/specification/**` is the reference for requirements, architecture and decisions. It is editable:
+    when the shipped code legitimately differs from a clause, fix the clause in the same change. It holds
+    the FR-*/NFR-*/DD-*/EC-* ids, the prompt catalog, the SQLite DDL, the theming palette, the mermaid
     diagrams, and `docs/specification/mockups/ui-mockup.html` (the binding visual reference for every UI
-    screen, state, dialog, and the standalone "Component library" screen). Cite it; never change it.
+    screen, state, dialog, and the standalone "Component library" screen). Cite it by file and anchor.
   - `docs/adr/ADR-NNNN-*.md` holds architecture decisions. ADR-0016 governs this delivery process;
-    ADR-0017 governs the delivery order. A genuine gap in the frozen spec becomes a NEW ADR, never a
-    spec edit.
+    ADR-0017 governs the delivery order. A decision that is costly to reverse becomes an ADR; a clause
+    that is simply wrong is edited.
   - `docs/implementation_plan/CHANGE_BACKLOG.md` is the ordered change backlog (names and order only).
   - `docs/implementation_plan/01_MODULE_INVENTORY.md` is the canonical module/package map.
-  - `docs/implementation_plan/06_DEFINITION_OF_DONE.md` is the done-gate for every change.
-  - `docs/implementation_plan/phases/**` is retained REFERENCE material (task inventories per area). It is
-    no longer the execution order - read it for content, not for sequencing.
+  - `AGENTS.md` carries the Definition of Done: the gate green AND the change exercised in the running app.
 
   ## Stack
 
@@ -34,7 +33,7 @@ context: |
   (documents) + a CommonMark library (Markdown) - `java.net.http` + Jackson (LLM HTTP/JSON) - Lingua +
   ICU4J (language detect / segmentation) - SLF4J 2 + Logback 1.5 - Spotless (Palantir, 120 col) +
   Error Prone/NullAway (JSpecify `@NullMarked`) + Checkstyle + SpotBugs/FindSecBugs + ArchUnit - Lefthook -
-  JUnit 5 + AssertJ + Mockito 5 + WireMock + TestFX/Monocle - jpackage (unsigned, per-OS; Windows is a
+  JUnit 5 + AssertJ + WireMock + TestFX (JavaFX 26 built-in headless) - jpackage (unsigned, per-OS; Windows is a
   portable app-image zip, never an installer). MIT license; permissive dependencies only
   (Apache-2.0/MIT/BSD plus recorded EPL-1.0 / ICU / JDOM exceptions; GPL/LGPL/AGPL/SSPL banned).
 
@@ -99,22 +98,23 @@ context: |
 
   An `openspec/changes/<name>/` directory IS the unit of work. There are no story files and no generated
   traceability: `docs/stories/`, `docs/traceability.yaml`, `./gradlew trace` and `./gradlew traceCheck` do
-  not exist and must never be reintroduced. Tests carry `// Covers: FR-*` plus a one-line EARS restatement,
-  never a `Proves: STORY-NNN-AC-N` marker. Coverage is `scripts/fr-coverage.sh` (a grep), advisory only.
+  not exist and must never be reintroduced. A test's name and its one-line comment say what it proves;
+  there is no requirement-id marker and no coverage script (ADR-0032). The tests are the evidence.
 
   `openspec/specs/` starts EMPTY and grows: each change ADDs only what it actually implements, and
   `openspec archive` folds it in. So `openspec/specs/` always means "what is actually built", while
-  `docs/specification/` means "what is ultimately intended". The `FR-*` citation is the bridge between them.
+  `docs/specification/` means "what is ultimately intended". A `Source:` pointer to the spec file and anchor
+  is the bridge between them.
 
-  ## The authoring standard (R1-R6, from ADR-0016)
+  ## The authoring standard (R1-R4, from ADR-0016 as amended by ADR-0032)
 
   Every artifact must be understandable WITHOUT opening another file. IDs are citations, never payloads.
   A bare id such as `FR-DOC-04` or `DD-14` standing alone as the content of a requirement, a scenario, or a
   task is a defect. Restate what it says in plain words, then cite it.
 
-  ## Capabilities (16), mapped from the frozen FR areas
+  ## Capabilities (16), mapped from the FR areas
 
-  Use these exact kebab-case names so the FR-id join key holds:
+  Use these exact kebab-case names:
 
   | Capability             | FR area                        |
   |------------------------|--------------------------------|
@@ -141,9 +141,9 @@ context: |
   ## Requirement-id form (ADR-0018)
 
   Canonical: `FR-<AREA>-<NN>[<letter>]`, `NFR-<AREA>-<NN>`, `EC-<AREA>-<N>` — zero-padded to two
-  digits. Cite `FR-THEME-01`, not `FR-THEME-1`. The frozen spec writes four families unpadded
-  (`FR-THEME-1..10`, `FR-I18N-1..9`, `FR-A11Y-1..8`, and the `FR-NOTIF-3a..6c` refinements); the
-  spec is frozen so both spellings exist and tooling normalizes. A lettered suffix marks a
+  digits. Cite `FR-THEME-01`, not `FR-THEME-1`. The spec writes four families unpadded
+  (`FR-THEME-1..10`, `FR-I18N-1..9`, `FR-A11Y-1..8`, and the `FR-NOTIF-3a..6c` refinements), so
+  both spellings exist. A lettered suffix marks a
   sub-clause refining its parent (`FR-NOTIF-03a` refines `FR-NOTIF-03`) — cite the refinement,
   it is the concrete testable statement.
 
@@ -161,7 +161,7 @@ rules:
       the same nodes so the file re-opens identically" beats "`document-round-trip` NEW".
     - Use only the 16 capability names listed in the project context, and check `openspec/specs/` before
       calling one NEW - if the folder already exists it is a MODIFIED capability and needs a delta spec.
-    - Cite the frozen spec by FR-id AND anchor (for example `FR-DOC-04`
+    - Cite the spec by file and anchor, with the FR-id when one exists (for example `FR-DOC-04`
       (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`)) so the citation resolves. Never cite a story id -
       stories do not exist.
     - Under Impact, name the affected Gradle modules explicitly (`:api`, `:document`, `:ui`, ...) and any
@@ -177,23 +177,22 @@ rules:
     - R1 - Decompose a dense FR into several atomic EARS requirements rather than transcribing it. One
       requirement states one testable obligation. Several requirements may share the same `FR-*` citation,
       and that shared citation is what keeps coverage checkable across the split.
-    - "R2 - Every requirement MUST end with a `**Source:**` block before its scenarios, containing (a) the
-      `FR-*`/`NFR-*`/`DD-*` ids with their in-repo spec anchors, and (b) an `In plain words:` sentence
-      saying what the requirement means and why it matters. The citation locates; the gloss explains. A
-      Source block that is only ids is incomplete."
+    - "R2 - Every requirement ends with a `**Source:**` block before its scenarios: the spec file and
+      anchor it comes from, and an `In plain words:` sentence saying what the requirement means and why
+      it matters. The pointer locates; the gloss explains. A Source block that is only ids is incomplete."
     - R3 - Scenarios use concrete values, never abstractions. Not "invalid input" but the actual string;
       not "an error" but `ErrorCode.validation`; not "a large file" but a stated size. If you cannot name a
       concrete value, the requirement is still too vague.
     - "Every requirement needs at least one scenario, and scenario headings MUST use exactly four hashes
       (`#### Scenario: <name>`). Three hashes fail silently."
-    - Add a scenario for each ambiguity the frozen FR leaves open - the order-insensitivity of a "multiset",
+    - Add a scenario for each ambiguity the FR leaves open - the order-insensitivity of a "multiset",
       what happens on empty input, which side wins a conflict. Surfacing those is the point of the
       rephrasing pass, not overhead.
     - No class names, no library names, no method signatures, no step-by-step implementation. A spec is a
       behavior contract; if the implementation can change without changing observable behavior, it does not
       belong here - put it in `design.md`.
-    - Keep the frozen spec frozen. If the correct behavior genuinely differs from `docs/specification/**`,
-      stop and write an ADR - do not silently re-specify it here.
+    - When the correct behavior differs from `docs/specification/**`, fix that clause in the same change;
+      a decision that is costly to reverse gets an ADR. Do not re-specify the spec silently here.
     - New capabilities open with a `## Purpose` section of one or two real sentences (50+ characters)
       describing what the capability is for.
   design:
@@ -210,30 +209,29 @@ rules:
       approach, or the task breakdown must be resolved before tasks.md is written.
   tasks:
     - "R4 - Every checkbox is a full sentence stating WHAT changes and WHY it matters, then the owning
-      module and the spec pointer. Shape: `- [ ] 2.1 <what changes>. <why it matters / what breaks
-      otherwise>. -> :module - <spec-file>#<anchor>, DD-NN`. A bare id such as `- [ ] 2.1 FR-DOC-04` is a
-      defect: the reader must know what to do without opening another file."
+      module. Shape: `- [ ] 2.1 <what changes>. <why it matters / what breaks otherwise>. -> :module`.
+      A bare id such as `- [ ] 2.1 FR-DOC-04` is a defect: the reader must know what to do without opening
+      another file. A checkbox is a claim, never evidence - the test and the running app are."
     - Group tasks under `## <n>. <group name>` headings and order them by dependency. Keep each task small
       enough to finish in one session.
     - "The FINAL task group is always the green gate, and it always contains: `./gradlew clean build check
-      spotlessCheck` green across the WHOLE project with no pre-existing-failure exemption; the test types
-      this change implies per `06_DEFINITION_OF_DONE.md`; and `01_MODULE_INVENTORY.md` updated if a module
+      spotlessCheck` green across the WHOLE project with no pre-existing-failure exemption; the change's
+      user-visible behaviour exercised in the running app; and `01_MODULE_INVENTORY.md` updated if a module
       or package was added."
-    - "R5 - Where a task adds a test, say which marker it carries: `// Covers: FR-*` plus a one-line EARS
-      restatement of the obligation. The old `Proves: STORY-NNN-AC-N` convention is retired."
     - Name the test type explicitly where the change implies one - WireMock at the HTTP seam for BOTH
       dialects (Ollama-native `/api/*` and OpenAI-compatible `/v1/*`) on provider work; a canonical-equal
-      golden round-trip per format on document work; TestFX/Monocle widget + screen/state +
+      golden round-trip per format on document work; headless TestFX widget + screen/state +
       mockup-conformance on `:ui` work; real temp SQLite + Flyway on persistence work; EN/UK bundle parity
       on i18n work; a `liveLocal`-tagged case on provider work.
     - "Do not add tasks that reintroduce retired machinery: no `trace`/`traceCheck` Gradle task, no
-      `docs/traceability.yaml`, no story file, no `Proves:` marker."
+      `docs/traceability.yaml`, no story file, no `Proves:` marker, no `// Covers:` marker, no
+      requirement-id coverage script."
 
 operations:
   apply:
     guidance:
-      - Read `docs/implementation_plan/06_DEFINITION_OF_DONE.md` before starting and treat it as the exit
-        gate, not a formality.
+      - Read the Definition of Done in `AGENTS.md` before starting and treat it as the exit gate, not a
+        formality: the gate green AND the change exercised in the running app.
       - "The whole-project clean gate is an implicit requirement of EVERY change: `./gradlew clean build
         check spotlessCheck` must pass with zero findings across the whole project, not just touched code.
         There is no pre-existing-failure exemption - if any mechanical check is red anywhere, the change is
@@ -242,7 +240,7 @@ operations:
       - "Add the test types the change implies (provider -> WireMock for both dialects; document -> golden
         canonical-equal round trip; pipeline -> e2e against a stub provider; `:ui` -> TestFX widget +
         screen/state + mockup conformance; i18n -> EN/UK bundle parity; persistence -> real temp SQLite +
-        Flyway). Mark each with `// Covers: FR-*` and a one-line EARS restatement."
+        Flyway)."
       - Provider-related changes additionally add or update a `liveLocal`-tagged, env-gated test that skips
         cleanly when no local endpoint is configured. It never runs in CI.
       - ArchUnit boundary tests must be green - FX-free core, dependency direction, ports-not-concretes,
@@ -256,14 +254,12 @@ operations:
         references resolved at call time.
       - Update `docs/implementation_plan/01_MODULE_INVENTORY.md` if the change adds a module or package.
       - Cite any ADR the change relies on and make sure it exists under `docs/adr/` with status `accepted`.
-        A new architecturally significant decision means a new ADR - never an edit to
-        `docs/specification/**`, which is frozen.
+        A decision that is costly to reverse means a new ADR; a spec clause the code legitimately outgrew
+        is edited in the same change.
       - "Do not create story files, `docs/traceability.yaml`, a `trace`/`traceCheck` Gradle task, or
         `Proves:` markers. That machinery is retired by ADR-0016."
   archive:
     guidance:
       - Confirm every task in `tasks.md` is checked and the whole-project green gate actually passed before
         archiving - report the command output rather than asserting it.
-      - After archiving, run `bash scripts/fr-coverage.sh` and note which `FR-*` ids the newly folded-in
-        specs now cover. The output is advisory; a remaining gap is expected mid-build-out, not a failure.
       - Summarize what moved into `openspec/specs/` and which capability folders were created or changed.

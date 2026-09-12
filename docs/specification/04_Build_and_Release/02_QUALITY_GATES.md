@@ -20,8 +20,7 @@ build.
 | **SpotBugs + FindSecBugs**                                    | bug patterns + security anti-patterns                                                                                                                                    | CI                                             |
 | **ArchUnit**                                                  | module boundaries, FX-free core, ports-not-concretes, cycles                                                                                                             | `archTest`, CI + fast subset in pre-push       |
 | **JaCoCo**                                                    | coverage — **exact branch threshold, applied per-module, only to modules with production code** (see `#coverage-gate`)                                                   | CI report + threshold                          |
-| **License gate** (`com.github.jk1.dependency-license-report`) | every resolved runtime/bundled artifact's license is on the allowlist (`05_Dependencies/03_LICENSING.md#license-gate-tool`) — distinct from OWASP dependency-check (SCA) | CI (`checkLicense`)                            |
-| **OWASP dependency-check**                                    | known-vulnerability SCA over the resolved graph                                                                                                                          | CI                                             |
+| **License gate** (`com.github.jk1.dependency-license-report`) | every resolved runtime/bundled artifact's license is on the allowlist (`05_Dependencies/03_LICENSING.md#license-gate-tool`) | CI (`checkLicense`)                            |
 | **gitleaks**                                                  | committed secrets                                                                                                                                                        | pre-commit + CI                                |
 | **PIT** (optional)                                            | mutation testing on `document`/`pipeline`                                                                                                                                | opt-in                                         |
 
@@ -106,8 +105,7 @@ The CI quality job runs `spotlessCheck`, Error Prone + NullAway, Checkstyle, Spo
 the full test suite — every type in `#test-gate` (unit, persistence integration, provider integration via WireMock for
 both dialects, document golden round-trip, pipeline e2e, and the headless TestFX/Monocle UI
 widget/screen-state/conformance, i18n, and boot-smoke tests) — the JaCoCo per-module branch threshold
-(`#coverage-gate`), the license gate (`checkLicense`, `05_Dependencies/03_LICENSING.md#license-gate-tool`), OWASP
-dependency-check, and `traceCheck`. The jpackage-image smoke runs in the packaging matrix and must launch-or-fail
+(`#coverage-gate`) and the license gate (`checkLicense`, `05_Dependencies/03_LICENSING.md#license-gate-tool`). The jpackage-image smoke runs in the packaging matrix and must launch-or-fail
 (`#jpackage-smoke`). The `liveLocal` set is **excluded** (env-gated, local-only). See `04_CI_CD.md`.
 
 ## what-fails-where {#what-fails-where}
@@ -127,10 +125,8 @@ dependency-check, and `traceCheck`. The jpackage-image smoke runs in the packagi
 | SpotBugs/FindSecBugs high                                                 | —                  | —              | fails                                                     |
 | Coverage below per-module branch threshold (production-code modules only) | —                  | —              | fails (`#coverage-gate`)                                  |
 | Banned license (not on allowlist)                                         | —                  | —              | fails (`checkLicense`, `05_Dependencies/03_LICENSING.md`) |
-| Vulnerable dep above severity threshold                                   | —                  | —              | fails (OWASP dependency-check, `02_DEPENDENCY_POLICY.md`) |
-| Traceability orphan / stale record                                        | —                  | —              | fails (`traceCheck`)                                      |
 | `liveLocal` provider test                                                 | —                  | —              | not run (local-only, env-gated)                           |
 
-The Definition of Done (per story) requires the full CI-equivalent set green plus `traceCheck` with zero orphans before
+The Definition of Done requires the full CI-equivalent set green and the change exercised in the running app before
 merge. For a provider-related story, the DoD additionally expects a `liveLocal` case to have been added and exercised
 locally against a real Ollama/LM Studio, even though it does not run in CI.

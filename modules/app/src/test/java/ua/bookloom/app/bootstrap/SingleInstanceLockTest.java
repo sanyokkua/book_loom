@@ -28,7 +28,7 @@ class SingleInstanceLockTest {
         return Objects.requireNonNull(result.error(), "error");
     }
 
-    // Covers: FR-PERSIST-04 — The system SHALL enforce a single-instance lock held on `bookloom.lock` in the data
+    // The system SHALL enforce a single-instance lock held on `bookloom.lock` in the data
     // directory, so a second launch is refused while the first holds it.
     @Test
     void acquire_lockAlreadyHeld_isRefusedAsBusy() {
@@ -54,7 +54,7 @@ class SingleInstanceLockTest {
      * <em>before touching anything</em>. A second process that created or opened the database on its way to being
      * refused would have already done the damage the lock exists to prevent.
      */
-    // Covers: FR-PERSIST-04 — WHEN a second instance is refused, the system SHALL NOT open or create the database.
+    // WHEN a second instance is refused, the system SHALL NOT open or create the database.
     @Test
     void acquire_lockAlreadyHeld_neverCreatesTheDatabaseFile() {
         final AppPaths paths = AppPaths.of(dataDir, dataDir.resolve("logs"));
@@ -90,7 +90,7 @@ class SingleInstanceLockTest {
      * proved against the resolver; what this adds is that two distinct lock files really can be held at the same
      * time, which is what makes running both builds simultaneously safe rather than merely intended.
      */
-    // Covers: FR-PERSIST-06 — WHERE a development and a production build run at once, the system SHALL let both
+    // WHERE a development and a production build run at once, the system SHALL let both
     // acquire their own lock, because the folders — and therefore the lock files — are separate.
     @Test
     void acquire_twoDistinctDataDirectories_bothSucceedSimultaneously() throws Exception {

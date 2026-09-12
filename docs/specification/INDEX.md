@@ -1,11 +1,12 @@
 **Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-07-18
-**Cross-references:** `../implementation_plan/README.md`, `mockups/ui-mockup.html`
+**Cross-references:** `../Architecture.md`, `mockups/ui-mockup.html`
 
 # Specification Index — BookLoom
 
-This is the map of the **frozen specification**. Everything under `docs/specification/` is read-only during
-implementation: it is the binding source of requirements, architecture, and decisions. Implementation happens as stories
-under `../stories/` (see `../implementation_plan/README.md`). The UI source of truth is `mockups/ui-mockup.html`.
+This is the map of the specification: the reference for requirements, architecture and decisions. It is **not
+frozen** — when the shipped code legitimately differs from a clause, fix the clause in the same change rather than
+recording the difference somewhere else. An ADR (`../adr/`) records a decision that is costly to reverse, not a patch to
+a document. The UI source of truth is `mockups/ui-mockup.html`.
 
 Requirement identifiers used throughout: `FR-<AREA>-NN` (functional), `NFR-<AREA>-NN` (non-functional), `DD-NN` (design
 decision), `ADR-NNNN` (decision record, in `../adr/`), `EC-<AREA>-N` (edge case). Stories cite spec clauses as

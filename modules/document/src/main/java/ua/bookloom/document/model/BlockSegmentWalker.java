@@ -2,7 +2,6 @@ package ua.bookloom.document.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.AccessLevel;
@@ -11,6 +10,7 @@ import ua.bookloom.api.document.NodeAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.util.hash.HashUtil;
 
 /**
@@ -34,10 +34,16 @@ import ua.bookloom.util.hash.HashUtil;
  *
  * <p>Exclusions are checked before the text test, never after: {@code <pre>} (with its subtree) and a block-level
  * {@code <math>} yield no segment however much text they own (DD-49). The structural rule widens what counts as a
- * block, so an exclusion checked second would turn every {@code <pre>} into a segment.
+ * block, so an exclusion checked second would turn every {@code <pre>} into a segment. In XHTML only, a block whose
+ * sole child is a {@code <code>} span is excluded the same way (D11): the block owns no direct text of its own, so
+ * the structural rule would otherwise descend into the span and hand the model a bare identifier. FictionBook uses
+ * {@code code} for an ordinary prose style, so the exclusion does not apply there — a code span sitting inside a
+ * text-owning block is still in the run and still masked, in both dialects.
  *
- * <p>Every segment this change produces is {@link SegmentStatus#PENDING}, unmasked — {@code masked} equals
- * {@code sourceInner} and {@code placeholders} is empty — and never translated.
+ * <p>Every segment this change produces is {@link SegmentStatus#PENDING} and never translated. Its {@code masked}
+ * and {@code placeholders} are real, though: each run is masked by {@link TreeMasker} in the same pass that
+ * computes {@code sourceInner}, so a segment ships with every protected span already replaced by a {@code ⟦gN⟧}
+ * token (ADR-0031).
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
@@ -48,21 +54,32 @@ public final class BlockSegmentWalker {
 
     private static final double INITIAL_CONFIDENCE = 0.0;
 
-    /** Blocks whose text is never translatable, whatever they contain (DD-49). */
+    /** Blocks whose text is never translatable, whatever they contain, in every dialect (DD-49). */
     private static final Set<String> EXCLUDED_TAGS = Set.of("pre", "math");
+
+    /**
+     * Blocks excluded only in XHTML (D11). FictionBook uses {@code code} as an ordinary prose style — a paragraph
+     * written entirely in it is real text a reader reads — so the exclusion cannot be format-agnostic the way
+     * {@link #EXCLUDED_TAGS} is.
+     */
+    private static final Set<String> EXCLUDED_TAGS_XHTML = Set.of("code");
 
     /**
      * Walks {@code root} in document order and emits one segment per translatable run.
      *
      * @param root the unit's walk root — an EPUB spine document's {@code <body>} or an FB2 {@code <body>}
      * @param unitId the owning unit's id, used as each segment's id prefix ({@code {unitId}:{ordinal}})
+     * @param dialect which tree-shaped format {@code root} was parsed from — passed explicitly because the
+     *     named-atomic element set and the nested-{@code <pre>} line-feed rule (D2, D11) both differ by format,
+     *     and every call site already knows which one it is
      * @return the unit's segments in document order; empty if it has no translatable block
      */
-    public static List<Segment> walk(TreeNode root, String unitId) {
+    public static List<Segment> walk(TreeNode root, String unitId, TreeDialect dialect) {
         Objects.requireNonNull(root, "root");
         Objects.requireNonNull(unitId, "unitId");
+        Objects.requireNonNull(dialect, "dialect");
         final List<Draft> drafts = new ArrayList<>();
-        collect(root, new ArrayList<>(), new ArrayList<>(), drafts);
+        collect(root, new ArrayList<>(), new ArrayList<>(), drafts, dialect);
         return finalizeSegments(drafts, unitId);
     }
 
@@ -71,7 +88,8 @@ public final class BlockSegmentWalker {
      * enclosing tag names. Non-element children are stepped over rather than descended into: they carry no
      * position in the path and cannot contain a block.
      */
-    private static void collect(TreeNode parent, List<Integer> path, List<String> ancestors, List<Draft> drafts) {
+    private static void collect(
+            TreeNode parent, List<Integer> path, List<String> ancestors, List<Draft> drafts, TreeDialect dialect) {
         int elementIndex = 0;
         for (final TreeNode child : parent.childNodes()) {
             final String tag = child.tagName();
@@ -80,24 +98,44 @@ public final class BlockSegmentWalker {
             }
             final int index = elementIndex;
             elementIndex++;
-            if (EXCLUDED_TAGS.contains(tag)) {
+            // Matched on the local name, because a prefixed <m:math> is still block-level MathML: measured, jsoup
+            // reports tagName() as `m:math` for the form real EPUB2 and DAISY-derived books write, and matching the
+            // qualified name would descend into it and make a mathematical identifier a segment.
+            if (isExcluded(localNameOf(tag), dialect)) {
                 continue;
             }
             path.add(index);
-            descendOrEmit(child, tag, path, ancestors, drafts);
+            descendOrEmit(child, tag, path, ancestors, drafts, dialect);
             path.removeLast();
         }
     }
 
     private static void descendOrEmit(
-            TreeNode block, String tag, List<Integer> path, List<String> ancestors, List<Draft> drafts) {
+            TreeNode block,
+            String tag,
+            List<Integer> path,
+            List<String> ancestors,
+            List<Draft> drafts,
+            TreeDialect dialect) {
         if (ownsDirectText(block)) {
-            emitRuns(block, SegmentKinds.of(tag, ancestors), path, drafts);
+            emitRuns(block, SegmentKinds.of(tag, ancestors), path, drafts, dialect);
             return;
         }
         ancestors.add(tag);
-        collect(block, path, ancestors, drafts);
+        collect(block, path, ancestors, drafts, dialect);
         ancestors.removeLast();
+    }
+
+    /** Whether {@code localName} is excluded from segmentation for {@code dialect} (D11: {@code code} is XHTML-only). */
+    private static boolean isExcluded(String localName, TreeDialect dialect) {
+        return EXCLUDED_TAGS.contains(localName)
+                || (dialect == TreeDialect.XHTML && EXCLUDED_TAGS_XHTML.contains(localName));
+    }
+
+    /** The element name without its namespace prefix — see the exclusion check above for why it is needed. */
+    private static String localNameOf(String tagName) {
+        final int colon = tagName.lastIndexOf(':');
+        return colon < 0 ? tagName : tagName.substring(colon + 1);
     }
 
     /** Whether {@code element} carries non-whitespace character data as its own child, not a descendant's. */
@@ -114,15 +152,24 @@ public final class BlockSegmentWalker {
      * Emits one draft per run of {@code block} that carries translatable text. A run holding only markup — the
      * empty range between two adjacent {@code <br/>}, or an image-only stretch — yields nothing, while still
      * consuming its run index so that a later run's recorded index is the one reassembly will resolve.
+     *
+     * <p>"Translatable" is {@link TreeMasker#translatableText}, not all the character data under the run: a
+     * named-atomic span's interior is text a reader sees but the model never does, because masking replaces the
+     * whole span with one token. Measured before this was narrowed, {@code <p>Hi<br/><code>x</code></p>} emitted a
+     * second segment whose entire masked form was {@code ⟦g0⟧} — a model call that can only hand the token back,
+     * and one more chance for the placeholder gate to reject a chunk. D11's code-only exclusion covers the same
+     * shape one level up, at the block, and cannot see a run.
      */
-    private static void emitRuns(TreeNode block, SegmentKind kind, List<Integer> path, List<Draft> drafts) {
+    private static void emitRuns(
+            TreeNode block, SegmentKind kind, List<Integer> path, List<Draft> drafts, TreeDialect dialect) {
         final List<TreeNode> children = block.childNodes();
         for (final BlockRuns.Run run : BlockRuns.split(block)) {
             final List<TreeNode> runNodes = children.subList(run.fromInclusive(), run.toExclusive());
-            if (visibleText(runNodes).isBlank()) {
+            if (TreeMasker.translatableText(runNodes, dialect).isBlank()) {
                 continue;
             }
-            drafts.add(new Draft(kind, List.copyOf(path), run.index(), markupOf(runNodes)));
+            drafts.add(new Draft(
+                    kind, List.copyOf(path), run.index(), markupOf(runNodes), TreeMasker.mask(runNodes, dialect)));
         }
     }
 
@@ -132,20 +179,6 @@ public final class BlockSegmentWalker {
             markup.append(node.markup());
         }
         return markup.toString();
-    }
-
-    /** All character data under {@code nodes}, at any depth — what "empty once markup is disregarded" means. */
-    private static String visibleText(List<TreeNode> nodes) {
-        final StringBuilder text = new StringBuilder();
-        appendVisibleText(nodes, text);
-        return text.toString();
-    }
-
-    private static void appendVisibleText(List<TreeNode> nodes, StringBuilder text) {
-        for (final TreeNode node : nodes) {
-            text.append(node.ownText());
-            appendVisibleText(node.childNodes(), text);
-        }
     }
 
     private static List<Segment> finalizeSegments(List<Draft> drafts, String unitId) {
@@ -162,14 +195,15 @@ public final class BlockSegmentWalker {
         final String prevKey = order > 0 ? unitId + ":" + (order - 1) : null;
         final String nextKey = order < drafts.size() - 1 ? unitId + ":" + (order + 1) : null;
         final String sourceInner = draft.sourceInner();
+        final MaskedContent masked = draft.masked();
         return new Segment(
                 id,
                 unitId,
                 order,
                 draft.kind(),
                 sourceInner,
-                sourceInner,
-                Map.of(),
+                masked.masked(),
+                masked.placeholders(),
                 HashUtil.sha256OfNfcText(sourceInner),
                 prevKey,
                 nextKey,
@@ -179,5 +213,6 @@ public final class BlockSegmentWalker {
                 INITIAL_CONFIDENCE);
     }
 
-    private record Draft(SegmentKind kind, List<Integer> nodePath, int runIndex, String sourceInner) {}
+    private record Draft(
+            SegmentKind kind, List<Integer> nodePath, int runIndex, String sourceInner, MaskedContent masked) {}
 }

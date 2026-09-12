@@ -2,32 +2,12 @@ package ua.bookloom.document.txt;
 
 import com.google.inject.Singleton;
 import java.nio.charset.Charset;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import ua.bookloom.document.model.OpenDocumentRegistry;
 
-/**
- * The open-plain-text-document registry, matching the other formats': in-memory only, so an open document does
- * not survive a process restart.
- */
+/** The open-plain-text-document registry: what {@link TxtReader} parsed, held until {@link TxtWriter} needs it. */
 @Singleton
-public final class OpenTxtRegistry {
-
-    private final Map<String, ParsedTxt> byDocumentId = new ConcurrentHashMap<>();
-
-    /** Guice constructs this directly; there is nothing to inject. */
-    public OpenTxtRegistry() {
-        // No dependencies.
-    }
-
-    void put(String documentId, ParsedTxt parsed) {
-        byDocumentId.put(Objects.requireNonNull(documentId, "documentId"), Objects.requireNonNull(parsed, "parsed"));
-    }
-
-    Optional<ParsedTxt> find(String documentId) {
-        return Optional.ofNullable(byDocumentId.get(Objects.requireNonNull(documentId, "documentId")));
-    }
+public final class OpenTxtRegistry extends OpenDocumentRegistry<OpenTxtRegistry.ParsedTxt> {
 
     /**
      * The open document's state: the original bytes, never mutated, plus the encoding they were read with.

@@ -24,7 +24,7 @@ a locally-run LLM. Use this skill to find the right place fast and load the righ
 
 - Do NOT use this to author a change — `/opsx:propose` and the
   `openspec-change-authoring` skill own that.
-- Do NOT edit `docs/specification/` — it is frozen.
+- Do NOT rewrite `docs/specification/` wholesale — fix the clause the code outgrew, in the same change.
 
 ## Module map (dependencies point inward; only `:ui`/`:app` require javafx.*)
 
@@ -48,20 +48,20 @@ ports, never concrete `..Impl`/`..Dao`/`..Service` in another module.
 
 | Location | Contents |
 |---|---|
-| `docs/specification/` | FROZEN spec: `00_Foundation` (vision, glossary, personas, `04_DESIGN_DECISIONS.md` DD-01..DD-49, `05_SPEC_INDEX.md`, `06_IMPLEMENTATION_STAGES.md`), `01_Product` (incl. `12_PROMPT_CATALOG.md` — every model prompt, and `10_I18N_AND_ACCESSIBILITY.md`), `02_Architecture` (incl. `11_APP_ENVIRONMENT_AND_PATHS.md` — per-OS dirs, dev-vs-prod, startup order, `bookloom.lock`), `03_NonFunctional`, `04_Build_and_Release` (incl. `05_ICON_AND_BRANDING.md` and `06_TESTING_STRATEGY.md` — the full test taxonomy + CI-vs-local split), `05_Dependencies` |
+| `docs/specification/` | The spec (editable): `00_Foundation` (vision, glossary, personas, `04_DESIGN_DECISIONS.md` DD-01..DD-49, `05_SPEC_INDEX.md`, `06_IMPLEMENTATION_STAGES.md`), `01_Product` (incl. `12_PROMPT_CATALOG.md` — every model prompt, and `10_I18N_AND_ACCESSIBILITY.md`), `02_Architecture` (incl. `11_APP_ENVIRONMENT_AND_PATHS.md` — per-OS dirs, dev-vs-prod, startup order, `bookloom.lock`), `03_NonFunctional`, `04_Build_and_Release` (incl. `05_ICON_AND_BRANDING.md` and `06_TESTING_STRATEGY.md` — the full test taxonomy + CI-vs-local split), `05_Dependencies` |
 | `docs/specification/mockups/ui-mockup.html` | Binding UI visual source of truth (P6) |
 | `docs/specification/diagrams/` | Canonical `pipeline.mermaid`, `chunk-translate-loop.mermaid` |
-| `docs/implementation_plan/` | `README.md` (the operating manual), `CHANGE_BACKLOG.md` (the ordered backlog), `01_MODULE_INVENTORY.md`, `04_ADR_FORMAT.md`, `05_ACCEPTANCE_CRITERIA_PATTERNS.md` (P1-P6 scenario patterns), `06_DEFINITION_OF_DONE.md`, `07_ROADMAP.md` (five stages), `phases/PHASE_NN_*.md` (REFERENCE material, not the execution order) |
+| `docs/implementation_plan/` | `CHANGE_BACKLOG.md` (the ordered backlog), `01_MODULE_INVENTORY.md` (as-built log), `04_ADR_FORMAT.md`, `07_ROADMAP.md` (five stages), `notes-corpus-verification.md` (corpus evidence) |
+| `docs/Architecture.md`, `docs/DEVELOPMENT.md` | What is built and how to verify it; how to build, run, test, package |
 | `openspec/changes/<name>/` | THE UNIT OF WORK: `proposal.md`, `design.md`, `specs/<capability>/spec.md`, `tasks.md` |
 | `openspec/specs/<capability>/` | The ledger of what is actually BUILT; starts empty, grown by `openspec archive` |
-| `openspec/config.yaml` | Project context + the R1-R6 rules that steer artifact generation |
-| `docs/adr/` | `ADR-NNNN-<slug>.md` (currently ADR-0001..ADR-0017; next free number 0018). ADR-0016 governs delivery tracking, ADR-0017 the delivery order — read both before planning work |
+| `openspec/config.yaml` | Project context + the R1-R4 rules that steer artifact generation |
+| `docs/adr/` | `ADR-NNNN-<slug>.md` (currently ADR-0001..ADR-0032; next free number 0033). ADR-0016 governs delivery tracking, ADR-0017 the delivery order — read both before planning work |
 
 ## Commands
 
 - Build/format: `./gradlew build`, `./gradlew spotlessApply`, `./gradlew spotlessCheck`.
-- Test: `./gradlew test` (full, incl. headless TestFX/Monocle; the `liveLocal`/`promptEval`/`visual` tagged sets are local-only, excluded from CI/`check`).
-- FR coverage: `bash scripts/fr-coverage.sh` — advisory grep listing frozen `FR-*` ids no shipped requirement claims yet. Never a gate.
+- Test: `./gradlew test` (full, incl. headless TestFX on JavaFX 26's built-in platform; the `liveLocal`/`promptEval`/`visual` tagged sets are local-only, excluded from CI/`check`).
 - OpenSpec: `openspec list`, `openspec validate <change> --strict`, `openspec status --change <name>`, `openspec show <item>`.
 
 None of the `./gradlew` tasks exist yet — they arrive with change 1,
@@ -85,7 +85,7 @@ canonical-equal round trip (DD-43) · offline (the only outbound calls are user-
 communication — inference, model discovery, verification — to the configured provider) ·
 credentials-as-reference (never store the secret) · single-flight `InferenceGate` ·
 records-first · token-only theming · `Result`/`AppError` envelope everywhere · every
-requirement has a covering test marked `// Covers: FR-*` plus a one-line EARS restatement ·
+requirement has a covering test whose name and comment say what it proves ·
 the whole-project clean gate (`./gradlew clean build check spotlessCheck` green, no
 pre-existing-failure exemption).
 
@@ -106,12 +106,11 @@ pre-existing-failure exemption).
 
 ## Gotchas
 
-- `docs/specification/` is FROZEN — never edit it to fit code; raise a gap instead.
+- `docs/specification/` is editable — when the code legitimately differs, fix the clause in the same change.
 - A cross-module call to a concrete impl (not the `:api` port) fails ArchUnit
   `ports-not-concretes`.
 - New modules require updating the module inventory and the layering doc's ArchUnit setup.
 - `openspec/specs/**` is written by `openspec archive` — never hand-edit it.
-- `docs/implementation_plan/phases/**` is reference material, NOT the execution order. The
-  order is `07_ROADMAP.md` (five stages) + `CHANGE_BACKLOG.md` (ADR-0017).
+- The order of work is `07_ROADMAP.md` (five stages) + `CHANGE_BACKLOG.md` (ADR-0017).
 - Story files, `docs/traceability.yaml`, the trace Gradle tasks, and `Proves:` markers are
   retired by ADR-0016 — never reintroduce them.

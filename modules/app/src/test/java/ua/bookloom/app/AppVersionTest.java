@@ -25,7 +25,7 @@ class AppVersionTest {
         return AppVersion.read(new ByteArrayInputStream(contents.getBytes(StandardCharsets.UTF_8)));
     }
 
-    // Covers: FR-UI-09 (partly — the startup log line only; the About dialog arrives with the UI) — WHERE a build
+    // WHERE a build
     // carries no injected version, the system SHALL report `dev`.
     @Test
     void current_thisBuild_reportsDev() {
@@ -39,7 +39,7 @@ class AppVersionTest {
      * The suffix is the part that gets lost. A reader that split on {@code .} or parsed to a numeric triple would
      * turn {@code 1.2.0-rc1} into {@code 1.2.0} and publish a release candidate labelled as the release.
      */
-    // Covers: FR-UI-09 (partly — the startup log line only) — WHEN a version is injected, the system SHALL report
+    // WHEN a version is injected, the system SHALL report
     // it in full, including any pre-release suffix.
     @ParameterizedTest
     @ValueSource(strings = {"1.2.0-rc1", "1.2.0", "2.0.0-SNAPSHOT", "0.1.0-alpha.3+build.7"})

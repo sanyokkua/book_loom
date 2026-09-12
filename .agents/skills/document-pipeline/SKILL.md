@@ -54,8 +54,8 @@ from `:api`.
      the spine is preserved verbatim — EXCEPT the EPUB3 nav / EPUB2 NCX ToC labels, which
      are carved out of the out-of-spine rule and translatable via the Book-Brief
      "Also translate" group (DD-47).
-   - **FB2:** parse as one XML document (JDOM2) preserving comments, CDATA, entities, and
-     declared encoding; support `.fb2.zip`; keep base64 `binary` images unchanged; handle
+   - **FB2:** parse as one XML document (JDOM2 via `SecureXml`) preserving comments, CDATA and
+     declared encoding, expanding entities offline (book header or the bundled list); support `.fb2.zip`; keep base64 `binary` images unchanged; handle
      `poem`/`stanza`/`v` verse and `body name="notes"` footnotes.
    - **Markdown:** parse to an AST (CommonMark); translate prose text nodes only; mask
      inline code and URLs; fenced/indented code blocks are non-translatable blocks excluded
@@ -69,8 +69,9 @@ from `:api`.
    the foreign-passage policy (default keep-as-is, DD-26).
 3. **Refuse DRM.** Detect encryption (`META-INF/encryption.xml` or vendor DRM in EPUB;
    container encryption in FB2) and refuse with a DRM-blocked state — no partial import
-   (EC-EPUB-1, EC-DRM-1). Reject malformed/corrupt files (missing OPF/spine, XML-decl vs
-   bytes mismatch) with a clear reason; no partial import.
+   (EC-EPUB-1, EC-DRM-1). Reject malformed/corrupt files (missing container/OPF/spine declaration,
+   XML-decl vs bytes mismatch, no spine file present) with a clear reason. A spine item whose file is
+   absent is skipped with one warning — readers show what exists (EC-EPUB-2).
 4. **Mask inline content.** Replace inline markup, locked glossary terms, URLs, and
    **selective numerals** — standalone/typographic numerals and numerals inside locked
    terms; prose numerals stay translatable so they inflect/localize — with `⟦gN⟧`

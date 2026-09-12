@@ -38,6 +38,21 @@ final class CorpusDocuments {
         return tuples;
     }
 
+    /**
+     * The tuples without the anchor: a translation that changes text length legitimately moves every following
+     * {@code ByteSpanAnchor} in a TXT or Markdown book, so the mutation probe compares identity and kind only —
+     * the zero-edit idempotence probe keeps {@link #tuplesOf}, where the anchors must not move.
+     */
+    static List<String> tuplesWithoutAnchorOf(Document document) {
+        final List<String> tuples = new ArrayList<>();
+        for (final Unit unit : document.units()) {
+            for (final Segment segment : unit.segments()) {
+                tuples.add(unit.order() + "|" + segment.id() + "|" + segment.kind());
+            }
+        }
+        return tuples;
+    }
+
     static Map<String, String> sourceById(Document document) {
         final Map<String, String> byId = new LinkedHashMap<>();
         for (final Segment segment : segmentsOf(document)) {

@@ -188,5 +188,5 @@ setRowFactory(tv -> new TableRow<>() {
 - An 8px spacing/density token scale — `theming-tokens.md` already states a SHOULD to add **no** density/spacing
   tokens for v1.
 - A typography-scale token set (`-fx-font-size-xs`…`3xl`) or a border-radius token scale — both would add token
-  roles beyond the frozen `09_THEMING.md#token-catalog`, which needs a spec/ADR decision, not a skill file, to
+  roles beyond `09_THEMING.md#token-catalog`, which needs a spec edit or an ADR, not a skill file, to
   introduce.

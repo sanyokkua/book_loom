@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * The resolved-paths record's invariants.
  *
- * <p>Mechanical: no {@code // Covers: FR-*} marker. These assert the type's construction rules, not a product
+ * <p>Mechanical: these assert the type's construction rules, not a product
  * requirement — the requirements about <em>where</em> the paths point are covered by {@link AppPathsResolverTest}.
  */
 class AppPathsTest {

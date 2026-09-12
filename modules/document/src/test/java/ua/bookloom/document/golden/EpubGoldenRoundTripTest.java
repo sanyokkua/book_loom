@@ -14,9 +14,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.document.DocumentService;
 import ua.bookloom.document.DocumentServices;
 import ua.bookloom.document.fixture.EpubFixtures;
+import ua.bookloom.document.fixture.EpubHazardFixtures;
 import ua.bookloom.document.fixture.FixtureCatalog;
 
 /**
@@ -32,7 +34,7 @@ class EpubGoldenRoundTripTest {
     @TempDir
     private Path tempDir;
 
-    // Covers: FR-DOC-09 — a fixture EPUB parsed and reassembled with zero segment edits is canonical-equal to the
+    // a fixture EPUB parsed and reassembled with zero segment edits is canonical-equal to the
     // source: text entries compared by decompressed canonical content, entry order preserved, mimetype first and
     // STORED, and unchanged binary entries compared by decompressed bytes.
     @Test
@@ -54,7 +56,34 @@ class EpubGoldenRoundTripTest {
         EpubCanonicalAssert.assertCanonicalEqual(fixture, output);
     }
 
-    // Covers: FR-DOC-03 — WHEN each EPUB fixture registered in the fixture catalogue is reassembled with zero
+    // WHEN a document is reassembled with no target text, the system SHALL produce output
+    // canonical-equal to the source for EPUB, FB2 and Markdown and byte-identical for TXT.
+    //
+    // The primary fixture above carries no inline markup at all, so a "the zero-edit output is unaffected by
+    // masking" claim proved only against it would be vacuously true for a document that never produced a
+    // placeholder. This fixture (task 9.3's hand-picked hazard paragraph) does carry inline markup, a comment and
+    // a protected code span, so its segment's placeholder map is provably non-empty before the same claim is made.
+    @Test
+    void write_hazardParagraphZeroEditRoundTrip_isCanonicalEqualAndGenuinelyMasked() {
+        final Path fixture = EpubHazardFixtures.hazardParagraph(tempDir.resolve("hazard.epub"));
+        final DocumentService service = newService();
+
+        final Result<Document> openResult = service.open(fixture);
+        assertThat(openResult.isOk()).isTrue();
+        final Document document = Objects.requireNonNull(openResult.data(), "data");
+
+        final Result<Path> writeResult = service.write(
+                document, tempDir.resolve("hazard-output.epub"), Objects.requireNonNull(document.declaredLang()));
+        assertThat(writeResult.isOk()).isTrue();
+        final Path output = Objects.requireNonNull(writeResult.data(), "data");
+
+        EpubCanonicalAssert.assertCanonicalEqual(fixture, output);
+        assertThat(allSegmentsOf(document))
+                .as("at least one segment was genuinely masked on the way through")
+                .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
+    }
+
+    // WHEN each EPUB fixture registered in the fixture catalogue is reassembled with zero
     // segment edits and that output is reassembled again with zero segment edits, THEN for every one of them the
     // second output is canonical-equal to the first.
     @ParameterizedTest(name = "{0}")
@@ -72,7 +101,7 @@ class EpubGoldenRoundTripTest {
         EpubCanonicalAssert.assertCanonicalEqual(firstOutput, secondOutput);
     }
 
-    // Covers: FR-DOC-03 — IF an element in the source is written in XML self-closing form and its HTML content
+    // IF an element in the source is written in XML self-closing form and its HTML content
     // model is not empty, THEN the system SHALL NOT emit an additional copy of that element, SHALL NOT move a
     // sibling element inside it, and SHALL NOT duplicate its id attribute: a self-closed indexterm anchor before a
     // section boundary does not duplicate its id or absorb the following heading.
@@ -93,7 +122,7 @@ class EpubGoldenRoundTripTest {
         }
     }
 
-    // Covers: FR-DOC-03 — a self-closed inline element does not swallow the element after it: exactly one element
+    // a self-closed inline element does not swallow the element after it: exactly one element
     // carries its id, and the paragraph that follows it is not a descendant of it.
     @Test
     void write_selfClosedInlineSpan_doesNotSwallowTheFollowingParagraph() {
@@ -110,7 +139,7 @@ class EpubGoldenRoundTripTest {
                 .isFalse();
     }
 
-    // Covers: FR-DOC-03 — a paragraph wrapping a division does not gain a phantom sibling: writing it, then
+    // a paragraph wrapping a division does not gain a phantom sibling: writing it, then
     // writing that output again with zero segment edits, produces a second output canonical-equal to the first,
     // even though the un-nesting a <div> forces inside a <p> is invisible to a comparator that re-parses both
     // sides through the same rule (design.md D2a).
@@ -124,7 +153,7 @@ class EpubGoldenRoundTripTest {
         EpubCanonicalAssert.assertCanonicalEqual(firstOutput, secondOutput);
     }
 
-    // Covers: FR-DOC-09 — reassembly without target changes is canonical-equal to the source: a <pre> whose
+    // reassembly without target changes is canonical-equal to the source: a <pre> whose
     // content does not begin with a line break gains none on a zero-edit write.
     @Test
     void write_preWithNoLeadingLineFeed_reparsesWithNoLeadingLineFeed() {
@@ -134,7 +163,7 @@ class EpubGoldenRoundTripTest {
         assertThat(preWholeTextOf(output)).isEqualTo("code here");
     }
 
-    // Covers: FR-DOC-09 — reassembly without target changes is canonical-equal to the source: a <pre> beginning
+    // reassembly without target changes is canonical-equal to the source: a <pre> beginning
     // with two carriage-return-line-feed pairs still begins with exactly those two pairs after re-parsing.
     @Test
     void write_preWithTwoLeadingCrLfPairs_reparsesUnchanged() {
@@ -144,7 +173,7 @@ class EpubGoldenRoundTripTest {
         assertThat(preWholeTextOf(output)).isEqualTo("\r\n\r\nX");
     }
 
-    // Covers: FR-DOC-09 — reassembly without target changes is canonical-equal to the source: an empty <pre></pre>
+    // reassembly without target changes is canonical-equal to the source: an empty <pre></pre>
     // reassembles without failing and the golden round-trip comparison passes.
     @Test
     void write_preEmpty_reassemblesWithoutFailingAndGoldenPasses() {
@@ -154,7 +183,7 @@ class EpubGoldenRoundTripTest {
         EpubCanonicalAssert.assertCanonicalEqual(fixture, output);
     }
 
-    // Covers: FR-DOC-09 — reassembly without target changes is canonical-equal to the source: a poem's <pre>
+    // reassembly without target changes is canonical-equal to the source: a poem's <pre>
     // beginning with two line breaks still begins with two line breaks in the reassembled output.
     //
     // Asserted against the output's own raw markup (ZipText, independent of jsoup) rather than a re-parsed DOM:
@@ -174,7 +203,7 @@ class EpubGoldenRoundTripTest {
                 .contains("<pre class=\"poem\">\n\n        \u201cSpeak roughly to your little boy,</pre>");
     }
 
-    // Covers: FR-DOC-09 — reassembly without target changes is canonical-equal to the source: a <pre> beginning
+    // reassembly without target changes is canonical-equal to the source: a <pre> beginning
     // with a single line break passes the golden round-trip comparison unchanged.
     @Test
     void write_preWithOneLeadingLineFeed_goldenPasses() {
@@ -182,6 +211,18 @@ class EpubGoldenRoundTripTest {
         final Path output = writeZeroEdit(newService(), fixture, tempDir.resolve("output.epub"));
 
         EpubCanonicalAssert.assertCanonicalEqual(fixture, output);
+    }
+
+    // IF an XHTML block's only translatable content is an inline code span,
+    // THEN the system SHALL produce no segment for it and preserve it through the skeleton alone.
+    @Test
+    void write_codeOnlyParagraph_survivesZeroEditRoundTripVerbatim() {
+        final Path fixture = EpubFixtures.codeOnlyParagraph(tempDir.resolve("fixture.epub"));
+        final Path output = writeZeroEdit(newService(), fixture, tempDir.resolve("output.epub"));
+
+        final String contentDocument =
+                ZipText.contentDocumentsOf(output).getFirst().text();
+        assertThat(contentDocument).contains("<p><code>List.of()</code></p>");
     }
 
     private static String preWholeTextOf(Path epub) {
@@ -197,6 +238,10 @@ class EpubGoldenRoundTripTest {
         return FixtureCatalog.all().stream()
                 .filter(fixture -> fixture.format() == BookFormat.EPUB)
                 .toList();
+    }
+
+    private static List<Segment> allSegmentsOf(Document document) {
+        return document.units().stream().flatMap(u -> u.segments().stream()).toList();
     }
 
     private static org.jsoup.nodes.Document firstContentDocumentOf(Path epub) {

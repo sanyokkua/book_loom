@@ -1,6 +1,6 @@
 **Status:** Final **Owner:** architect **Audience:** architect, coder, reviewer **Last Updated:** 2026-07-18
 **Cross-references:** `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`,
-`docs/implementation_plan/README.md`, `docs/adr/README.md`,
+`docs/adr/README.md`,
 `docs/specification/00_Foundation/05_SPEC_INDEX.md`
 
 # ADR Format
@@ -96,8 +96,8 @@ proposed ──► accepted ──► superseded by ADR-MMMM
 | `deprecated`             | No longer relevant and not replaced (the need went away).                              |
 
 Only `accepted` ADRs bind implementation. An OpenSpec change cites an ADR from its `proposal.md` Impact section or its
-`design.md`; the reviewer confirms the cited `ADR-NNNN` has a file under `docs/adr/` and is `accepted`
-(`docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`). Nothing checks this mechanically.
+`design.md`; the reviewer confirms the cited `ADR-NNNN` has a file under `docs/adr/` and is `accepted`.
+Nothing checks this mechanically.
 
 ## linking-rules {#linking-rules}
 

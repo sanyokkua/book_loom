@@ -37,7 +37,7 @@ class CharsetLadderTest {
         return withBom;
     }
 
-    // Covers: FR-DOC-TXT-1 — WHEN a file begins with a byte-order mark, THEN that mark fixes the charset and its
+    // WHEN a file begins with a byte-order mark, THEN that mark fixes the charset and its
     // presence is recorded so export can re-emit it exactly as found.
     @Test
     void resolve_utf8ByteOrderMark_fixesTheCharsetAndIsRecorded() {
@@ -48,7 +48,7 @@ class CharsetLadderTest {
         assertThat(resolution.bomLength()).isEqualTo(3);
     }
 
-    // Covers: FR-DOC-TXT-1 — a byte-order mark outranks a contradicting in-band declaration, because a mark is a
+    // a byte-order mark outranks a contradicting in-band declaration, because a mark is a
     // fact about the bytes and a declaration is only a claim about them.
     @Test
     void resolve_bomAndContradictingDeclaration_takesTheBom() {
@@ -57,7 +57,7 @@ class CharsetLadderTest {
         assertThat(resolution.charset()).isEqualTo(StandardCharsets.UTF_8);
     }
 
-    // Covers: FR-DOC-FB2-3 — WHEN a file declares its own encoding and carries no byte-order mark, THEN the
+    // WHEN a file declares its own encoding and carries no byte-order mark, THEN the
     // declaration outranks detection.
     @Test
     void resolve_declarationWithoutBom_outranksDetection() {
@@ -69,7 +69,7 @@ class CharsetLadderTest {
         assertThat(resolution.bomLength()).isZero();
     }
 
-    // Covers: FR-DOC-TXT-1 — an undeclared, unmarked file falls through to detection and records the detected
+    // an undeclared, unmarked file falls through to detection and records the detected
     // charset rather than defaulting to UTF-8.
     @Test
     void resolve_undeclaredCyrillicBytes_fallsThroughToDetection() {
@@ -78,7 +78,7 @@ class CharsetLadderTest {
         assertThat(resolution.charset()).isEqualTo(WINDOWS_1251);
     }
 
-    // Covers: FR-DOC-TXT-1 — WHERE detection is reached and the bytes decode without error under more than one
+    // WHERE detection is reached and the bytes decode without error under more than one
     // single-byte encoding, THEN the system prefers the encoding whose decoded text is coherent in a known
     // script: 2,000 characters of ASCII French prose followed by a small windows-1251 Cyrillic region resolves
     // to windows-1251, not the Western European encoding a whole-file statistical score would otherwise pick.
@@ -92,7 +92,7 @@ class CharsetLadderTest {
         assertThat(resolution.charset()).isEqualTo(WINDOWS_1251);
     }
 
-    // Covers: FR-DOC-TXT-1 — the coherence preference must not drag a file with no foreign-word run away from
+    // the coherence preference must not drag a file with no foreign-word run away from
     // its correct Western European encoding: French prose whose only non-ASCII bytes are accented letters
     // sitting inside otherwise-ASCII words, plus windows-1252-only smart-punctuation bytes, still resolves to
     // windows-1252.
@@ -113,7 +113,7 @@ class CharsetLadderTest {
      * such a file — with a small windows-1251 Cyrillic region. Detecting over the foreign-word runs themselves,
      * rather than re-ranking the whole-file list, is what still resolves this to windows-1251.
      */
-    // Covers: FR-DOC-TXT-1 — WHERE detection is reached and the bytes decode without error under more than one
+    // WHERE detection is reached and the bytes decode without error under more than one
     // single-byte encoding, THEN the system prefers the encoding whose decoded text is coherent in a known
     // script, even when the file also carries non-distinguishing windows-1252 smart-punctuation bytes.
     @Test
@@ -126,7 +126,7 @@ class CharsetLadderTest {
         assertThat(resolution.charset()).isEqualTo(WINDOWS_1251);
     }
 
-    // Covers: FR-DOC-TXT-1 — WHEN detection is inconclusive, THEN the resolution falls back to UTF-8.
+    // WHEN detection is inconclusive, THEN the resolution falls back to UTF-8.
     @Test
     void resolve_bytesDetectionCannotJudge_fallsBackToUtf8() {
         assertThat(CharsetLadder.resolve(new byte[0]).charset()).isEqualTo(StandardCharsets.UTF_8);
@@ -209,7 +209,7 @@ class CharsetLadderTest {
         assertThat(CharsetLadder.resolve(bigEndian).charset()).isEqualTo(StandardCharsets.UTF_16BE);
     }
 
-    // Covers: FR-DOC-TXT-1 — IF a file with no byte-order mark is detected as UTF-8, THEN the single-byte
+    // IF a file with no byte-order mark is detected as UTF-8, THEN the single-byte
     // coherence preference does not fire and the resolved charset stays UTF-8.
     //
     // The regression this pins: a UTF-8 multi-byte sequence IS, byte for byte, a run of two or more consecutive

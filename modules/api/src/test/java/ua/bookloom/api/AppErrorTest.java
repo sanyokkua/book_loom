@@ -12,7 +12,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 /**
  * {@code AppError}'s invariants and the retryability derivation.
  *
- * <p>No {@code // Covers: FR-*} marker: as with {@link ResultTest}, the error type's shape is architecture (DD-14,
+ * <p>Shape tests: as with {@link ResultTest}, the error type's shape is architecture (DD-14,
  * {@code 09_ERROR_HANDLING.md#app-error}) rather than a functional requirement.
  */
 class AppErrorTest {

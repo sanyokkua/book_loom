@@ -30,14 +30,14 @@ fully reproducible; an unexpected transitive change fails the build until the lo
 ## renovate {#renovate}
 
 **Renovate** proposes dependency and catalog updates as pull requests on a schedule. Updates flow through the normal
-quality job (`04_Build_and_Release/04_CI_CD.md`) — a bump is merged only if formatting, lint, ArchUnit, tests, coverage,
-SCA, and the license gate all pass. No auto-merge of majors; security patches are prioritized.
+quality job (`04_Build_and_Release/04_CI_CD.md`) — a bump is merged only if formatting, lint, ArchUnit, tests, coverage
+and the license gate all pass. No auto-merge of majors; security patches are prioritized.
 
 ## owasp-dependency-check {#owasp-dependency-check}
 
-**OWASP dependency-check** runs in CI as software-composition analysis: it scans the resolved graph against
-known-vulnerability databases and **fails the build** above the configured severity threshold. A flagged dependency must
-be upgraded, replaced, or explicitly risk-accepted with justification before merge.
+**Not run.** A known-vulnerability scan was part of the original plan and was dropped on 2026-09-11: the NVD sync
+took 30+ minutes per CI run and the app is a single-user, offline tool. Transitive versions with known problems are
+still raised by `constraints {}` in `bookloom.java-conventions` (Guava is the worked example).
 
 ## narrowest-scope {#narrowest-scope}
 
@@ -51,5 +51,4 @@ be upgraded, replaced, or explicitly risk-accepted with justification before mer
 ## adding-a-dependency {#adding-a-dependency}
 
 A new dependency requires: (1) a permissive license passing the gate (`03_LICENSING.md`), (2) a catalog entry with an
-exact pin, (3) declaration in the single owning module at the narrowest scope, (4) a regenerated committed lockfile, (5)
-green SCA. Introducing it in code without these steps fails CI.
+exact pin, (3) declaration in the single owning module at the narrowest scope, (4) a regenerated committed lockfile. Introducing it in code without these steps fails CI.

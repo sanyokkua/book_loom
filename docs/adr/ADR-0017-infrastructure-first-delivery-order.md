@@ -117,7 +117,7 @@ Negative:
 
 Neutral:
 
-- `docs/implementation_plan/phases/**` is retained as reference material feeding future proposals; it is no longer the
+- `docs/implementation_plan/phases/**` was retained as reference material (and deleted on 2026-09-11 as unused); it is no longer the
   execution order. `07_ROADMAP.md` is rewritten to these five stages and keeps the `#stage-exit-invariants` and
   `#forward-compatibility-seams` tables intact.
 - 28 changes against 14 phases is roughly one change per coherent deliverable slice — finer than a phase, coarser than

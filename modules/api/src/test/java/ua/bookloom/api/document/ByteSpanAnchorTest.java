@@ -8,8 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * {@code ByteSpanAnchor}'s construction-time invariants — mechanical shape tests, no {@code // Covers: FR-*}
- * marker.
+ * {@code ByteSpanAnchor}'s construction-time invariants — mechanical shape tests.
  */
 class ByteSpanAnchorTest {
 

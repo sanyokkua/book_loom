@@ -76,7 +76,7 @@ class SourceSpanProbeTest {
         return null;
     }
 
-    // Covers: FR-DOC-MD-4 — a table cell reports a source span that lands on its own text, so cells can be
+    // a table cell reports a source span that lands on its own text, so cells can be
     // addressed by byte span without scanning the row for delimiters.
     @Test
     void parse_tableCell_reportsASourceSpanCoveringItsOwnText() {

@@ -1,7 +1,6 @@
 **Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-08-03
 **Cross-references:** `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
-`docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/implementation_plan/README.md`,
-`docs/implementation_plan/06_DEFINITION_OF_DONE.md`
+`docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/Architecture.md`
 
 # Module Inventory
 
@@ -26,7 +25,7 @@ not `:modules:document`. No citation anywhere in the corpus went stale.
 ## layers {#layers}
 
 | Layer         | Modules                             | Rule                                                                      |
-|---------------|-------------------------------------|---------------------------------------------------------------------------|
+|---------------|--------------------------------------|-----------------------------------------------------------------------------|
 | Foundation    | `:api`, `:util`                     | No internal deps except `:util → :api`. Framework-free. FX-free.          |
 | Services      | `:document`, `:llm`, `:persistence` | Depend only on `:api`, `:util`. FX-free. Implement `:api` ports.          |
 | Orchestration | `:pipeline`                         | Depends on `:document`, `:llm`, `:persistence`, `:api`, `:util`. FX-free. |
@@ -43,17 +42,16 @@ not `:modules:document`. No citation anywhere in the corpus went stale.
     - **Unit** — pure JVM, no I/O, Mockito/AssertJ. Runs in `pre-push`.
     - **Integration** — temp SQLite DB file or `:memory:`; WireMock for the LLM HTTP seam; golden-fixture round-trip for
       documents. CI + on demand.
-    - **UI** — TestFX + Monocle, headless. CI (excluded from `pre-push`).
+    - **UI** — TestFX on JavaFX 26's built-in headless platform (ADR-0019). Runs in `check`, so in pre-push and CI.
     - **Arch** — ArchUnit boundary assertions.
-- A covering test carries `// Covers: FR-*` plus a one-line EARS restatement of the obligation it proves, immediately
-  above the test method (ADR-0016 R5).
+- A covering test is named `method_state_expected`; a one-line comment says what it proves when the name is not
+  enough. No requirement-id markers (ADR-0032).
 
 ## adding-a-module-note {#adding-a-module-note}
 
 **New modules and new package sub-paths are added to this file in the same change that introduces them.** A change
 that creates a package must (a) add the row here and (b) name it in its proposal's Impact section. Updating the
-inventory is an item in every change's final green-gate task group
-(`docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`), so the inventory update and the code land
+inventory is an item in every change's final green-gate task group, so the inventory update and the code land
 together.
 
 ## as-built-baseline {#as-built-baseline}
@@ -79,17 +77,17 @@ so an earlier block is a dated snapshot, not a claim about today — read to the
 | `:api`         | `ua.bookloom.api`           | **No longer a placeholder** — see below                   |
 | `:util`        | `ua.bookloom.util.paths`    | **No longer a placeholder** — see below                   |
 | `:document`    | `ua.bookloom.document`      | `DocumentModule` (Guice `AbstractModule`)                 |
-| `:llm`         | `ua.bookloom.llm`           | `LlmModule`                                               |
-| `:pipeline`    | `ua.bookloom.pipeline`      | `PipelineModule`                                          |
-| `:persistence` | `ua.bookloom.persistence`   | `PersistenceModule`                                       |
-| `:ui`          | `ua.bookloom.ui`            | `UiModule`                                                |
-| `:app`         | `ua.bookloom.app`           | `AppModule` (the composition root's own Guice module)     |
+| `:llm`         | `ua.bookloom.llm`           | `LlmModule`                                                |
+| `:pipeline`    | `ua.bookloom.pipeline`      | `PipelineModule`                                           |
+| `:persistence` | `ua.bookloom.persistence`   | `PersistenceModule`                                        |
+| `:ui`          | `ua.bookloom.ui`            | `UiModule`                                                  |
+| `:app`         | `ua.bookloom.app`           | `AppModule` (the composition root's own Guice module)      |
 
 **What `bootstrap-app-launch-and-empty-window` filled in.** The application now starts: a window opens, a second
 launch is refused, and a packaged image launches on the module path.
 
 | Module  | Package                          | What it now holds                                                                                                                                                                                             |
-|---------|----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|---------|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `:api`  | `ua.bookloom.api`                | **Seam F2, complete**: `Result<T>`, `AppError`, the fifteen-constant `ErrorCode` (retryability derived on the enum), and `SafeDetails` — a record whose *component set* is the safe-details allowlist          |
 | `:util` | `ua.bookloom.util.paths`         | `AppPaths` (record), `AppPathsResolver`, `AppEnvironment` (dev/prod), `OsFamily`. Resolution is a pure function over injected `getEnv`/`getProperty`; `prepare` does the I/O                                    |
 | `:app`  | `ua.bookloom.app`                | `BookLoomApplication`, `AppModule` (real bindings), `AppLifecycle` (two-phase init, ordering **enforced**), `AppVersion`, `StartupContext`                                                                     |
@@ -105,8 +103,8 @@ capability: an EPUB survives being parsed apart and reassembled with nothing tra
 EPUB only — FB2/Markdown/TXT extend it next).
 
 | Module      | Package                            | What it now holds                                                                                                                                                                                                                                                                     |
-|-------------|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `:api`      | `ua.bookloom.api.document`          | Seam F1, complete in shape: `BookFormat`, `SegmentKind`, `SegmentStatus`, `SkeletonAnchor`, `Segment`, `SkeletonHandle`, `Unit`, `Document` (records/enums only — `masked`/`placeholders`/`detectedSourceLang` ship empty, filled by later changes per design.md D2) and `DocumentPort` |
+|-------------|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `:api`      | `ua.bookloom.api.document`          | Seam F1, complete in shape: `BookFormat`, `SegmentKind`, `SegmentStatus`, `SkeletonAnchor`, `Segment`, `SkeletonHandle`, `Unit`, `Document` (records/enums only — `masked`/`placeholders` shipped empty here and were filled in by change 5's masker; `detectedSourceLang` still ships empty, filled by a later change per design.md D2) and `DocumentPort` |
 | `:util`     | `ua.bookloom.util.hash`             | `HashUtil` — SHA-256 over raw bytes (document content hash) and over NFC-normalized text (per-segment `sourceHash`)                                                                                                                                                                  |
 | `:document` | `ua.bookloom.document`              | `DocumentService` (the `DocumentPort` impl and the module's port boundary — classifies every EPUB read/write failure into a typed `Result`/`AppError`), `DocumentModule` (now binds `DocumentPort` → `DocumentService`)                                                              |
 | `:document` | `ua.bookloom.document.model`        | `BlockSegmentWalker` (format-agnostic segment emission, reused by the next change's FB2/Markdown/TXT importers) and `SkeletonAnchors` (index-path anchor computation and write-back resolution) — seam F1's implementation                                                          |
@@ -120,7 +118,7 @@ acceptance gate, not part of the shipped module surface, so they aren't listed a
 and `ua.bookloom.document` finally performs the format dispatch its `#inventory` row has always claimed.
 
 | Module      | Package                        | What it now holds                                                                                                                                                                                                                                                                        |
-|-------------|--------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `:api`      | `ua.bookloom.api.document`     | `SkeletonAnchor` is now a **sealed interface** over `NodeAnchor(nodePath, runIndex)` and `ByteSpanAnchor(start, end)` (ADR-0025); `Document` gains nullable `charset`/`hasBom`, unset for container formats                                                                             |
 | `:document` | `ua.bookloom.document`         | `DocumentService` now **dispatches**: `FormatResolver` resolves the format from the extension and confirms it against the leading bytes, and both `open` and `write` switch exhaustively over `BookFormat`                                                                              |
 | `:document` | `ua.bookloom.document.model`   | The shared structural walker (ADR-0027) over a `TreeNode` adapter with `JsoupTreeNode`/`Jdom2TreeNode` implementations, `BlockRuns`, `SegmentKinds`, run-scoped `SkeletonAnchors`, `BufferReassembler`, plus `ZipEntryReader`/`RawEntry`/`ZipEncryption`/`SecureXml` and the three shared exceptions, moved here so one bounded zip reader serves both container formats |
@@ -146,7 +144,7 @@ hand-authored fixtures could not. It added no package; it corrected behaviour in
 sweep repeatable.
 
 | Module      | Package                      | What changed                                                                                                                                                                                                                                  |
-|-------------|------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-------------|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `:document` | `ua.bookloom.document.epub`  | `XhtmlParser` normalizes a self-closed `<script/>`/`<style/>`/`<noscript/>` before parsing (ADR-0028) — twelve of 194 EPUBs previously imported with **zero segments and no error**; `PreformattedLineFeedRestorer` restores a `<pre>`'s leading line feed |
 | `:document` | `ua.bookloom.document.detect`| `CharsetLadder` gains `ForeignWordCoherence` so a Cyrillic single-byte encoding is no longer resolved as Western European, which decoded without error and produced mojibake                                                                  |
 | `:document` | `ua.bookloom.document.fb2`   | A malformed translated fragment (a bare `&` or `<` in target text) is classified `ErrorCode.validation` rather than escaping as an unclassified throwable                                                                                     |
@@ -157,11 +155,24 @@ including the four it deliberately did **not** fix — are recorded in
 `docs/implementation_plan/notes-corpus-verification.md` and carried as decision debt in
 `CHANGE_BACKLOG.md#decision-debt`.
 
-**Where the code actually is, as of the sixth archived change.** `:api`, `:util`, `:document` and `:app` carry real
-production code. `:llm`, `:pipeline` and `:persistence` are still one-line Guice `AbstractModule` stubs, and `:ui`
-holds an app-shell placeholder with no FXML anywhere. Within `:document`, all four formats read **and** write, but
-**inline masking is absent**: `BlockSegmentWalker`, `MarkdownWalker` and `TxtReader` each emit `masked ==
-sourceInner` with an empty placeholder map, and `Segment.masked`/`Segment.placeholders` remain contract-only fields.
+**What `add-inline-masking-and-placeholder-gate` filled in (archived 2026-09-11).** `ua.bookloom.document.mask`
+(`Placeholders`, `MaskWriter`, `PlaceholderGate`, `Unmasker`, `MarkupEscape`, `FragmentRange`, `RestoredContent`),
+`TreeMasker` in `.model`, `MarkdownMasker`/`MarkdownEscaper`/`MarkdownStructureCheck` in `.md`, `PlainTextMasker`,
+and `DocumentPort.unmask`. Follow-ups on the same day: `OpenDocumentRegistry<T>` in `.model` replaces the four
+per-format registries and adds `close(id)`; `EpubWriter` synthesizes a missing `mimetype` (ADR-0030); `Fb2Writer`
+echoes the source's line-ending style. The readable map of all of this is `docs/Architecture.md`.
+
+**Where the code actually is, as of the seventh archived change.** `:api`, `:util`, `:document` and `:app` carry real production code. `:llm`, `:pipeline`
+and `:persistence` are still one-line Guice `AbstractModule` stubs, and `:ui` holds an app-shell placeholder with no
+FXML anywhere. Within `:document`, all four formats read **and** write, and **inline masking is now real**:
+`BlockSegmentWalker`'s tree-format masking (`TreeMasker`, in `.model`), Markdown's masking (`MarkdownMasker`, in
+`.md`) and `TxtReader` each populate a real `masked` form and an ordered `placeholders` map, and
+`ua.bookloom.document.mask` holds the format-agnostic `⟦gN⟧` grammar, the mask-time invariant check, the
+placeholder-multiset gate and the restore pass. `DocumentPort.unmask` runs that gate before restoring a translated
+segment; a multiset mismatch is `ErrorCode.validation` with no repair attempt. **`ua.bookloom.document.mask` is real
+but `module-info.java` never names it in an `opens`/`exports` clause, and that is correct, not an oversight**: it
+holds only static-utility classes and records, no injectable service, so Guice needs no reflective `opens` on it,
+and it is consumed only from inside `:document`, so it needs no `exports` either.
 
 Every other package row in `#inventory` is **still unwritten** — cite it freely as a target, but expect to create it.
 
@@ -189,21 +200,15 @@ configuration without writing lock state. CI runs `./gradlew -PstrictLocks verif
 `clean build check spotlessCheck` — the pre-push hook and the CI quality job must run that command byte-identically,
 so the lock check stays beside it rather than inside it. `verifyLocks` refuses to run under `--write-locks`.
 
-**The two dependency gates are outside `check`, deliberately, and both need the network.** `checkLicense` answers "may
-we distribute this?" from POMs on disk; `dependencyCheckAggregate` answers "does this have a known CVE?" against the
-NVD feed, whose answer changes without the dependency graph changing at all. Run them by name when a change touches
-dependencies. Two facts worth carrying forward:
+**The license gate is outside `check`, deliberately, because it needs the network.** `checkLicense` answers "may we
+distribute this?" from POMs on disk; run it by name when a change touches dependencies. (The OWASP SCA gate that sat
+beside it was dropped on 2026-09-11.) One fact worth carrying forward:
 
 - **Transitive versions are raised by a `constraints` block in `bookloom.java-conventions`, never by declaring the
   dependency.** Guava is the worked example: Guice pins `guava:31.0.1-jre` transitively, and the catalog's
   `guava = "33.6.0-jre"` does nothing on its own — a catalog entry nothing references is dead. The constraint is what
   makes the pin bind, and it keeps Guava transitive-only rather than putting it on every module's compile classpath.
   Any catalog version added purely to raise a transitive needs a matching constraint, or it is decoration.
-- **SCA false positives are suppressed by CPE, risk acceptances by CVE.** `config/owasp/suppressions.xml` keeps the
-  two in separate sections with different rules — a mis-matched CPE produces an open-ended CVE list, so pinning
-  today's list lets tomorrow's through, and it carries no `until` because a wrong identifier does not expire.
-  `javafx-graphics` is the worked example: its bundled `com.sun.*` packages read as vendor evidence and match it
-  against OpenJDK itself. The correct `oracle:javafx` CPE is left live so a genuine JavaFX CVE still fails the gate.
 
 ## inventory {#inventory}
 
@@ -213,7 +218,7 @@ Contracts only: ports, records/DTOs, enums, the `Result<T>` envelope, `AppError`
 imports no other internal module.
 
 | Package path                       | Layer      | Responsibility                                                                                                         | Test target · tier                                      |
-|------------------------------------|------------|------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------|
+|------------------------------------|------------|--------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | `:api/ua.bookloom.api`             | Foundation | `Result<T>`, `AppError`, `ErrorCode`, safe-details allowlist                                                           | `:api/src/test/java/ua/bookloom/api` · Unit             |
 | `:api/ua.bookloom.api.document`    | Foundation | `DocumentPort`, `Segment`, `Unit`, skeleton DTOs                                                                       | `:api/src/test/java/ua/bookloom/api/document` · Unit    |
 | `:api/ua.bookloom.api.llm`         | Foundation | `Provider`, `ProviderProfile`, `ProviderFactory`, `ChatRequest`/`ChatResponse`                                         | `:api/src/test/java/ua/bookloom/api/llm` · Unit         |
@@ -225,7 +230,7 @@ imports no other internal module.
 Small stateless helpers. Depends only on `:api`.
 
 | Package path                   | Layer      | Responsibility                                                                                                                                                                                                                                  | Test target · tier                                  |
-|--------------------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+|----------------------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
 | `:util/ua.bookloom.util.text`  | Foundation | Text normalization, whitespace, placeholder helpers                                                                                                                                                                                             | `:util/src/test/java/ua/bookloom/util/text` · Unit  |
 | `:util/ua.bookloom.util.paths` | Foundation | **App-paths resolver** — per-OS data/log/config dir resolution, dev/prod `-Dev` separation via `isDev`, first-run creation, and the process **single-instance lock-file path**. Runs pre-injector, before logging and SQLite (DD-39, ADR-0015). | `:util/src/test/java/ua/bookloom/util/paths` · Unit |
 | `:util/ua.bookloom.util.io`    | Foundation | Atomic file writes, temp files, low-level IO helpers (not path resolution — see `util.paths`)                                                                                                                                                   | `:util/src/test/java/ua/bookloom/util/io` · Unit    |
@@ -238,7 +243,7 @@ Parse EPUB/FB2/MD/TXT into skeleton+segment, inline masking, unmask+validate, re
 fidelity. FX-free. Implements `DocumentPort`.
 
 | Package path                            | Layer    | Responsibility                                                 | Test target · tier                                                         |
-|-----------------------------------------|----------|----------------------------------------------------------------|----------------------------------------------------------------------------|
+|-------------------------------------------|----------|--------------------------------------------------------------------|--------------------------------------------------------------------------------|
 | `:document/ua.bookloom.document`        | Services | `DocumentService` (impl of `DocumentPort`), format dispatch    | `:document/src/test/java/ua/bookloom/document` · Integration               |
 | `:document/ua.bookloom.document.model`  | Services | Skeleton, segment list, `Unit` structures (seam F1)            | `:document/src/test/java/ua/bookloom/document/model` · Unit                |
 | `:document/ua.bookloom.document.epub`   | Services | EPUB 2/3 read/write, mimetype-first repackage                  | `:document/src/test/java/ua/bookloom/document/epub` · Integration (golden) |
@@ -248,13 +253,24 @@ fidelity. FX-free. Implements `DocumentPort`.
 | `:document/ua.bookloom.document.mask`   | Services | Inline masking `⟦gN⟧`, unmask, placeholder-multiset validation | `:document/src/test/java/ua/bookloom/document/mask` · Unit                 |
 | `:document/ua.bookloom.document.detect` | Services | DRM detection, source-language detection (Lingua)              | `:document/src/test/java/ua/bookloom/document/detect` · Unit               |
 
+**`ua.bookloom.document.mask` is real, not planned** (`add-inline-masking-and-placeholder-gate`, change 5): it holds
+the format-agnostic `⟦gN⟧` grammar (`Placeholders`), the mask accumulator (`MaskWriter`), the masked-content record,
+the mask-time invariant check, the placeholder-multiset gate (`PlaceholderGate`), the restore pass (`Unmasker`) and
+the markup escaper (`MarkupEscape`). Two siblings implement the per-format masking rather than living inside `.mask`
+itself — `TreeMasker` in `.model` (EPUB and FB2, which share the `TreeNode` adapter `BlockSegmentWalker` already
+walks) and `MarkdownMasker`/`MarkdownEscaper`/`MarkdownStructureCheck` in `.md` (Markdown, beside `MarkdownWalker`)
+— a deliberate deviation from the change's own design.md D10: a masker in `.mask` walking `TreeNode` would make
+`.model` and `.mask` mutually dependent and force the one format-agnostic package to depend on jsoup, JDOM2 and
+commonmark all at once. Plain-text masking (`TxtReader`'s target has no inline markup to protect beyond a literal
+`⟦`/`⟧`) is handled by a small `PlainTextMasker` that does live in `.mask`, since it needs none of those parsers.
+
 ### :llm {#module-llm}
 
 Provider abstraction with two client implementations (Ollama-native + OpenAI-compatible), model discovery, inference,
 response handling, `InferenceGate`, retry, HTTP→typed error mapping, three-stage + preflight verification. FX-free.
 
 | Package path                     | Layer    | Responsibility                                                                                                                                                                                                                   | Test target · tier                                                                  |
-|----------------------------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+|------------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
 | `:llm/ua.bookloom.llm`           | Services | `InferenceService`, module facade                                                                                                                                                                                                | `:llm/src/test/java/ua/bookloom/llm` · Integration (WireMock)                       |
 | `:llm/ua.bookloom.llm.provider`  | Services | `Provider` port, `ProviderProfile` per-kind data, `ProviderFactory` (kind → client)                                                                                                                                              | `:llm/src/test/java/ua/bookloom/llm/provider` · Unit                                |
 | `:llm/ua.bookloom.llm.client`    | Services | The two client impls: `OllamaClient` (native `/api/*`, `options`) + `OpenAiCompatibleClient` (`/v1/*`); shared response handling (structured-output request, reasoning/fence strip, tolerant parse, repair retry, text fallback) | `:llm/src/test/java/ua/bookloom/llm/client` · Integration (WireMock, both dialects) |
@@ -272,7 +288,7 @@ context-aware TM, rolling summary, deferred-resolution + backward revision, prom
 Implements `TranslationEngine`.
 
 | Package path                              | Layer         | Responsibility                                                     | Test target · tier                                                            |
-|-------------------------------------------|---------------|--------------------------------------------------------------------|-------------------------------------------------------------------------------|
+|----------------------------------------------|---------------|------------------------------------------------------------------------|-------------------------------------------------------------------------------|
 | `:pipeline/ua.bookloom.pipeline`          | Orchestration | `TranslationEngineImpl`, job lifecycle                             | `:pipeline/src/test/java/ua/bookloom/pipeline` · Integration                  |
 | `:pipeline/ua.bookloom.pipeline.chunk`    | Orchestration | Paragraph-grouped chunking, sentence-split overflow (ICU4J)        | `:pipeline/src/test/java/ua/bookloom/pipeline/chunk` · Unit                   |
 | `:pipeline/ua.bookloom.pipeline.context`  | Orchestration | Context-package assembler (seam F5), edge placement                | `:pipeline/src/test/java/ua/bookloom/pipeline/context` · Unit                 |
@@ -291,7 +307,7 @@ SQLite (Flyway, JDBI DAOs), settings KV, project/segment/glossary/TM/summary sto
 single-instance lock. FX-free. Implements repository ports.
 
 | Package path                                      | Layer    | Responsibility                                                                                                                                                                          | Test target · tier                                                                      |
-|---------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+|------------------------------------------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
 | `:persistence/ua.bookloom.persistence`            | Services | Module facade, DB bootstrap, connection/WAL config                                                                                                                                      | `:persistence/src/test/java/ua/bookloom/persistence` · Integration (temp DB)            |
 | `:persistence/ua.bookloom.persistence.migration`  | Services | Flyway migrations, schema versioning                                                                                                                                                    | `:persistence/src/test/java/ua/bookloom/persistence/migration` · Integration (temp DB)  |
 | `:persistence/ua.bookloom.persistence.dao`        | Services | JDBI DAOs implementing repository ports                                                                                                                                                 | `:persistence/src/test/java/ua/bookloom/persistence/dao` · Integration (temp DB)        |
@@ -306,7 +322,7 @@ JavaFX presentation: launcher glue, FXML views + controllers, viewmodels, observ
 screens/dialogs/notifications, theming, i18n. With `:app`, the only module that `requires javafx.*`.
 
 | Package path                | Layer        | Responsibility                                                                                                                                   | Test target · tier                                      |
-|-----------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------|
+|--------------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
 | `:ui/ua.bookloom.ui`        | Presentation | UI module facade, navigation host                                                                                                                | `:ui/src/test/java/ua/bookloom/ui` · UI (TestFX)        |
 | `:ui/ua.bookloom.ui.view`   | Presentation | FXML controllers (opened to `javafx.fxml`, Guice)                                                                                                | `:ui/src/test/java/ua/bookloom/ui/view` · UI (TestFX)   |
 | `:ui/ua.bookloom.ui.screen` | Presentation | Screen controllers: Projects, Import, Book Brief, Structure, Names & Style, Translating, Review, Export, Settings                                | `:ui/src/test/java/ua/bookloom/ui/screen` · UI (TestFX) |
@@ -322,7 +338,7 @@ screens/dialogs/notifications, theming, i18n. With `:app`, the only module that 
 composition root, two-phase init, single-instance lock wiring.
 
 | Package path           | Layer        | Responsibility                                                                                                                                                                                                                                           | Test target · tier                                 |
-|------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------|
+|--------------------------|--------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|
 | `:app/ua.bookloom.app` | Presentation | `Application` subclass, Guice composition root, two-phase init, `AppVersion`, and the launcher→application startup handoff | `:app/src/test/java/ua/bookloom/app` · Integration |
 | `:app/ua.bookloom.app.bootstrap` | Presentation | Everything that runs **before logging exists**: `Launcher` (does not extend `Application`), the **process single-instance lock** — acquired pre-injector (`FileChannel.tryLock` on the `:util.paths`-resolved lock file) before the DB opens (see `#lock-ownership`) — the programmatic Logback configuration, and the pre-logging failure dialog. ArchUnit `bootstrap-no-static-logger` scopes to this package, so putting a class here **is** the declaration that it runs pre-logging | `:app/src/test/java/ua/bookloom/app/bootstrap` · Integration |
 
@@ -333,7 +349,7 @@ that are not Gradle subprojects or Java packages but must still be citable in a 
 pointers. These are the **only** allowed non-`:module/package` targets:
 
 | Citable target | What it is                                                                                                                   | Typical citing work                                                                                      |
-|----------------|------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+|----------------|--------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
 | `build-logic`  | The **included build** holding the precompiled convention plugins (`bookloom.*-conventions.gradle.kts`) and their `GradleRunner` functional tests | Toolchain/JPMS/lint/format/test conventions, tag, lock and coverage-gate wiring        |
 | `arch-test`    | The shared ArchUnit source set — physically `:app/src/archTest/java` — hosting the boundary rules and their violation fixtures | ArchUnit boundary rules (`docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules`) |
 | `ci`           | The GitHub Actions workflow definitions (quality job, packaging matrix, release)                                             | CI pipeline, coverage/license/SCA gates, jpackage smoke                                                  |

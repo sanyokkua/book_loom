@@ -51,7 +51,7 @@ class FormatGoldenRoundTripTest {
         return new RoundTrip(source, Objects.requireNonNull(written.data()), document, targetLanguage);
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture FB2 book is parsed and reassembled with no segment receiving target
+    // WHEN a fixture FB2 book is parsed and reassembled with no segment receiving target
     // text, THEN re-parsing the output yields a canonical form equal to the source's, its declared encoding value
     // equals the source's, and every binary payload is character-for-character identical.
     @Test
@@ -62,9 +62,14 @@ class FormatGoldenRoundTripTest {
         assertThat(TextCoverage.of(result.source(), result.document().format(), result.document()))
                 .as("FB2 text coverage")
                 .isGreaterThanOrEqualTo(0.95);
+        // WHEN a document is reassembled with no target text, the system SHALL produce output
+        // canonical-equal to the source for EPUB, FB2 and Markdown and byte-identical for TXT.
+        assertThat(allSegmentsOf(result.document()))
+                .as("at least one FB2 segment was genuinely masked on the way through")
+                .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
     }
 
-    // Covers: FR-DOC-FB2-7 — WHERE the source's title information declares no language element, THEN the output
+    // WHERE the source's title information declares no language element, THEN the output
     // SHALL carry one declaring the target language, and the golden comparison SHALL treat that single added
     // element as expected rather than as a difference.
     @Test
@@ -76,7 +81,7 @@ class FormatGoldenRoundTripTest {
         assertThat(new String(bytesOf(result.output()), StandardCharsets.UTF_8)).contains("<lang>uk</lang>");
     }
 
-    // Covers: FR-DOC-FB2-7 — WHEN a fixture FB2 book whose <title-info> contains <lang></lang> is parsed and
+    // WHEN a fixture FB2 book whose <title-info> contains <lang></lang> is parsed and
     // reassembled with no segment receiving target text and target language uk, THEN the golden test passes and
     // the output's <title-info> contains <lang>uk</lang> — the empty element is replaced, not treated as absent.
     @Test
@@ -88,7 +93,7 @@ class FormatGoldenRoundTripTest {
         assertThat(new String(bytesOf(result.output()), StandardCharsets.UTF_8)).contains("<lang>uk</lang>");
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture Markdown book is reassembled with zero segment edits, THEN re-parsing
+    // WHEN a fixture Markdown book is reassembled with zero segment edits, THEN re-parsing
     // the output yields a tree equal to the source's in node types, order, nesting and literal text.
     @Test
     void golden_markdown_isReParseEqual() {
@@ -98,9 +103,14 @@ class FormatGoldenRoundTripTest {
         assertThat(TextCoverage.of(result.source(), result.document().format(), result.document()))
                 .as("Markdown text coverage")
                 .isGreaterThanOrEqualTo(0.90);
+        // WHEN a document is reassembled with no target text, the system SHALL produce output
+        // canonical-equal to the source for EPUB, FB2 and Markdown and byte-identical for TXT.
+        assertThat(allSegmentsOf(result.document()))
+                .as("at least one Markdown segment was genuinely masked on the way through")
+                .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture TXT book with a byte-order mark and CRLF endings is reassembled with
+    // WHEN a fixture TXT book with a byte-order mark and CRLF endings is reassembled with
     // zero segment edits, THEN the output bytes are identical to the source's, mark and line endings included.
     @Test
     void golden_txt_isByteIdentical() {
@@ -118,7 +128,7 @@ class FormatGoldenRoundTripTest {
      * whole document to UTF-8. It is asserted against a re-parsed canonical tree instead — the structure must
      * survive even though the bytes and the declaration must not.
      */
-    // Covers: EC-FB2-1 — a document that legitimately switches encoding still round-trips its structure.
+    // a document that legitimately switches encoding still round-trips its structure.
     @Test
     void golden_fb2WithAnEncodingSwitch_keepsItsStructureWhileItsDeclarationChanges() {
         final Path source = Fb2Fixtures.primary(tempDir.resolve("book.fb2"));
@@ -172,6 +182,10 @@ class FormatGoldenRoundTripTest {
                 document.contentHash(),
                 java.util.Map.copyOf(document.metadata()),
                 units);
+    }
+
+    private static List<Segment> allSegmentsOf(Document document) {
+        return document.units().stream().flatMap(u -> u.segments().stream()).toList();
     }
 
     private static byte[] bytesOf(Path file) {

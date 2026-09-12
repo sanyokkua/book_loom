@@ -20,20 +20,20 @@ review. Nothing leaves your machine.
 ## Repository layout
 
 ```
-AGENTS.md                     Operating manual — the single source of truth (read first)
+AGENTS.md                     Operating manual for agents (read first)
+docs/Architecture.md          What is built, what is not, and how to verify each claim
 CLAUDE.md                     Pointer to AGENTS.md; holds no rules of its own
 .claude/                      Claude Code config: rules, skills, agents, slash commands
 docs/
   DEVELOPMENT.md              Human developer guide: prerequisites, build, run, debug, IDE, troubleshooting
-  specification/              FROZEN spec: requirements, architecture, decisions, mockup, diagrams
+  specification/              The spec: requirements, architecture, decisions, mockup, diagrams (editable)
     INDEX.md                    Start here for the spec map
     00_Foundation/ … 05_Dependencies/
     mockups/ui-mockup.html      Binding UI source of truth
     diagrams/                   Pipeline diagrams (mermaid)
     assets/icon/                App icon: source + background-removal/derivation pipeline + per-OS .icns/.ico/.png
-  implementation_plan/        How to work with the spec: the operating manual, module inventory,
-                              ADR + scenario-pattern formats, definition of done, the five-stage
-                              roadmap, CHANGE_BACKLOG.md, and the phase files (reference material)
+  implementation_plan/        CHANGE_BACKLOG.md (order of work), 01_MODULE_INVENTORY.md (as-built log),
+                              07_ROADMAP.md, notes-corpus-verification.md, 04_ADR_FORMAT.md
   adr/                        Architecture Decision Records (ADR-0001 … )
 openspec/
   config.yaml                 Project context + the authoring rules that steer generated artifacts
@@ -43,39 +43,25 @@ modules/                      ALL the code lives here (ADR-0021) — the root st
   api/                        Contracts: interfaces, records/DTOs, Result/AppError — the dependency floor
   util/                       Per-OS paths, shared helpers
   document/                   EPUB/FB2/Markdown/TXT parsing, masking, reassembly
-  llm/                        Provider port + Ollama-native and OpenAI-compatible clients
-  pipeline/                   Translation engine: chunking, QA, judge, repair
-  persistence/                SQLite + Flyway + JDBI; repository port implementations
-  ui/                         JavaFX views, controllers, theming (only ui/ and app/ see JavaFX)
+  llm/                        (planned) provider port + Ollama-native and OpenAI-compatible clients — empty today
+  pipeline/                   (planned) translation engine: chunking, QA, judge, repair — empty today
+  persistence/                (planned) SQLite + Flyway + JDBI — empty today
+  ui/                         JavaFX theming and an empty app shell (only ui/ and app/ see JavaFX)
   app/                        Launcher, Application, Guice composition root, the arch-test suite
-  build-logic/                Gradle convention plugins (an included build, with its own test suite)
+  build-logic/                Gradle convention plugins (an included build)
                               Gradle project names are UNCHANGED by the move: still :api … :app, still
                               ./gradlew :app:run. Only `-p modules/build-logic` gained a prefix.
-scripts/fr-coverage.sh        Advisory grep: frozen FR-* ids no shipped requirement claims yet
 lefthook.yml                  Git hook stages (see "Git hooks" below)
 .lefthook/pre-push/           The pre-push gate script
-tooling/
-  hooks/                      Helper scripts the hooks call: file-size guard, commit-message check
-  hooks-test/                 Scripted checks that the hooks do what they claim (run by hand, not by Gradle)
+tooling/hooks/                Helper scripts the hooks call: file-size guard, commit-message check
 ```
 
-## How the build is driven
+## How work is planned
 
-The specification is frozen; work happens as **OpenSpec changes**, one at a time, planned before any code is written
-(ADR-0016):
-
-1. Pick the next entry from `docs/implementation_plan/CHANGE_BACKLOG.md`, respecting its stage
-   (`docs/implementation_plan/07_ROADMAP.md`).
-2. `/opsx:propose` → generates `proposal.md`, the delta `specs/`, `design.md` where warranted, and `tasks.md`.
-3. `openspec validate <change> --strict` → then `/opsx:apply`; `coder` + `tester` implement and land covering tests
-   marked `// Covers: FR-*` with a one-line EARS restatement.
-4. A change is archivable only when the Definition of Done (`docs/implementation_plan/06_DEFINITION_OF_DONE.md`) is
-   satisfied — including `./gradlew clean build check spotlessCheck` green project-wide. Then `/opsx:archive` folds its
-   requirements into `openspec/specs/`.
-
-Every artifact is written to be readable without opening another file: requirements in EARS with a plain-words
-`Source:` gloss, scenarios with concrete values, tasks as full sentences. See `AGENTS.md` for the module map,
-invariants, and command list, and ADR-0016 for the authoring standard.
+`AGENTS.md` is the operating manual. In short: a change is one short brief (an OpenSpec proposal under `openspec/`
+when the owner wants one), an acceptance test seen red before the implementation, a green gate, and the change
+exercised in the running app. The specification is a reference that is edited when the code legitimately differs from
+it; `docs/adr/` records the decisions that are costly to reverse.
 
 ## Local setup
 
@@ -113,7 +99,7 @@ What each stage does, and why (`docs/specification/04_Build_and_Release/02_QUALI
 | `pre-push` | `./gradlew clean build check spotlessCheck` | slow — the full gate |
 
 Pre-push runs **exactly** the command the CI quality job runs, deliberately — no faster hook-only subset — so a
-green push implies a green CI quality job for the same tree. CI adds gates (license report, OWASP SCA); it never
+green push implies a green CI quality job for the same tree. CI adds one gate (the license report); it never
 runs a weaker variant of a shared one.
 
 Every stage can be bypassed, and doing so is a legitimate decision rather than a trick to rediscover:
@@ -126,14 +112,9 @@ LEFTHOOK=0 git <cmd>     # skip every lefthook hook for one command
 
 ## Status
 
-**Specification finalized (v1.0, 2026-07-18); delivery migrated to OpenSpec (2026-08-02).** The specification and
-implementation-plan documents are `Status: Final`; the 50-entry decision log, 24 accepted ADRs, the binding mockup, and
-the AI-agent configuration are reconciled and cross-verified.
-
-**Stage A is complete and the EPUB round-trip has shipped.** Roughly 4,300 lines of production Java across 75 files
-live under `modules/`, and `./gradlew :app:run` opens a real window. Four OpenSpec changes are archived:
-`bootstrap-gradle-and-quality-toolchain`, `restructure-module-layout`, `bootstrap-app-launch-and-empty-window`, and
-`add-document-skeleton-and-epub-roundtrip`. `:api`, `:util`, `:document` (EPUB only) and `:app` carry real code;
-`:llm`, `:pipeline` and `:persistence` are Guice-module stubs, and `:ui` is an app-shell placeholder plus `theme.css`.
-Delivery runs as 28 OpenSpec changes across five stages — infrastructure → document round-trip core ∥ UI component
-library → engine → composition → release (ADR-0017).
+**Document engine shipped; translation not yet.** `:api`, `:util`, `:document` and `:app` carry real code: an EPUB,
+FB2, Markdown or TXT book is parsed into a skeleton plus segments, every segment is masked to `⟦gN⟧` placeholders,
+and a translated segment is restored behind a placeholder-multiset hard gate — verified canonical-equal on a 216-book
+local corpus. `./gradlew :app:run` opens a themed, empty window. `:llm`, `:pipeline` and `:persistence` are Guice
+stubs and `:ui` is a placeholder; no book has been translated end to end yet. The next unit of work is the walking
+skeleton: one EPUB through one local model to a translated EPUB, from the UI.

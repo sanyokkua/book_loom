@@ -26,14 +26,14 @@ class BufferReassemblerTest {
         return new String(BufferReassembler.splice(SOURCE, List.of(replacements)), StandardCharsets.UTF_8);
     }
 
-    // Covers: FR-DOC-TXT-3 — WHEN a document is reassembled with no segment carrying target text, THEN the output
+    // WHEN a document is reassembled with no segment carrying target text, THEN the output
     // bytes are identical to the source's.
     @Test
     void splice_noReplacements_reproducesTheSourceBytes() {
         assertThat(BufferReassembler.splice(SOURCE, List.of())).isEqualTo(SOURCE);
     }
 
-    // Covers: FR-DOC-TXT-3 — WHEN only one segment is written back, THEN only that paragraph's bytes change and
+    // WHEN only one segment is written back, THEN only that paragraph's bytes change and
     // every byte before it is untouched.
     @Test
     void splice_secondParagraphOnly_leavesEveryEarlierByteAlone() {
@@ -45,7 +45,7 @@ class BufferReassemblerTest {
      * carry target text, and only if the mechanism recomputes spans after each write or mutates the source
      * buffer.
      */
-    // Covers: FR-DOC-TXT-3 — WHEN two segments are written back and the first grows, THEN the second segment's
+    // WHEN two segments are written back and the first grows, THEN the second segment's
     // byte span is unchanged from the value computed at parse time and its text still lands correctly.
     @Test
     void splice_twoWritesWhereTheFirstGrows_leavesTheSecondSpanValid() {
@@ -58,7 +58,7 @@ class BufferReassemblerTest {
         assertThat(secondSpanAtParseTime).isEqualTo(new ByteSpanAnchor(8, 13));
     }
 
-    // Covers: FR-DOC-TXT-3 — replacements supplied out of order are still applied in one ascending pass.
+    // replacements supplied out of order are still applied in one ascending pass.
     @Test
     void splice_replacementsSuppliedOutOfOrder_areAppliedAscending() {
         assertThat(spliced(at(8, 13, "Два."), at(0, 6, "Один."))).isEqualTo("Один.\n\nДва.\n");

@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
  */
 class HashUtilTest {
 
-    // Covers: FR-IMPORT-08 — the system SHALL compute a SHA-256 hash over the imported source file.
+    // the system SHALL compute a SHA-256 hash over the imported source file.
     @Test
     void sha256Hex_knownBytes_matchesKnownDigest() {
         final String hex = HashUtil.sha256Hex("abc".getBytes(StandardCharsets.UTF_8));
@@ -32,7 +32,7 @@ class HashUtilTest {
                 .isNotEqualTo(HashUtil.sha256Hex("b".getBytes(StandardCharsets.UTF_8)));
     }
 
-    // Covers: FR-IMPORT-08 — a separate SHA-256 hash is computed over each segment's pre-mask inner content.
+    // a separate SHA-256 hash is computed over each segment's pre-mask inner content.
     @Test
     void sha256OfNfcText_decomposedAndPrecomposedForms_hashIdentically() {
         final String precomposed = "é"; // é

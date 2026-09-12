@@ -20,6 +20,8 @@ import org.jspecify.annotations.Nullable;
  *     preserved encoding is echoed as written rather than as this JVM would normalise it; {@code null} when the
  *     source declared none
  * @param bodiesByHandleId each {@code <body>} element, keyed by its unit's {@code SkeletonHandle} id
+ * @param crlfLineEndings whether the source bytes used {@code \r\n} line endings, so the writer emits the same
+ *     style instead of JDOM's default — an LF book must not come back with every line ending doubled
  */
 record ParsedFb2(
         org.jdom2.Document document,
@@ -27,7 +29,8 @@ record ParsedFb2(
         @Nullable String zipMemberName,
         Charset charset,
         @Nullable String declaredEncodingName,
-        Map<String, Element> bodiesByHandleId) {
+        Map<String, Element> bodiesByHandleId,
+        boolean crlfLineEndings) {
 
     ParsedFb2 {
         Objects.requireNonNull(document, "document");

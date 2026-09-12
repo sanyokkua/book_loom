@@ -24,7 +24,7 @@ class EpubRefusalFixturesTest {
     @TempDir
     private Path tempDir;
 
-    // Covers: EC-EPUB-1 — content encryption in META-INF/encryption.xml refuses the whole book: ErrorCode.validation
+    // content encryption in META-INF/encryption.xml refuses the whole book: ErrorCode.validation
     // with no Document returned.
     @Test
     void open_contentEncryptedFixture_returnsValidationErrorWithNoDocument() {
@@ -37,7 +37,7 @@ class EpubRefusalFixturesTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Covers: FR-DOC-EPUB-7 — an EPUB whose encryption.xml declares only the known IDPF font-obfuscation algorithm
+    // an EPUB whose encryption.xml declares only the known IDPF font-obfuscation algorithm
     // is processed normally rather than refused.
     @Test
     void open_fontObfuscationOnlyFixture_returnsOkWithAtLeastOneSegment() {
@@ -51,7 +51,7 @@ class EpubRefusalFixturesTest {
         assertThat(document.units().get(0).segments()).isNotEmpty();
     }
 
-    // Covers: EC-EPUB-2 — an archive whose container.xml points at an OPF path the archive does not contain is a
+    // an archive whose container.xml points at an OPF path the archive does not contain is a
     // validation failure.
     @Test
     void open_missingOpfFixture_returnsValidationError() {
@@ -63,7 +63,7 @@ class EpubRefusalFixturesTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Covers: EC-EPUB-2 — a file that is not a zip archive at all is a validation failure.
+    // a file that is not a zip archive at all is a validation failure.
     @Test
     void open_notAZipFixture_returnsValidationError() {
         final Path notAZip = RefusalFixtures.notAZip(tempDir.resolve("book.epub"));

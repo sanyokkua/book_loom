@@ -16,7 +16,7 @@ Scope: `:ui` and `:app` (`**/ui/src/main/java/**`, FXML/CSS under `**/ui/src/mai
 - **MUST** run all long/blocking work (translation jobs, provider verification, I/O) in a JavaFX `Task`/`Service` on an injected daemon executor, off the FX Application Thread. — Rationale: the FXAT must never block; see `threading-concurrency.md`.
 - **MUST NOT** read or mutate the scene graph (nodes, properties, `ObservableList`s bound to controls) off the FX Application Thread. Bridge every update through `Platform.runLater`/the state mirror. — Rationale: JavaFX controls are not thread-safe; off-thread mutation corrupts or crashes the UI.
 - **MUST** style with **token-only CSS applied at the `Scene` level** (looked-up colors on `.root`); never `node.setStyle("...")` inline. — Rationale: theming stays centralized and swappable; see `theming-tokens.md`.
-- **MUST** bind visual acceptance of every screen/state/dialog to `docs/specification/mockups/ui-mockup.html` (P6 pattern) and back it with a TestFX/Monocle assertion where practical. — Rationale: the mockup is the binding UI source of truth.
+- **MUST** bind visual acceptance of every screen/state/dialog to `docs/specification/mockups/ui-mockup.html` (P6 pattern) and back it with a headless TestFX assertion where practical. — Rationale: the mockup is the binding UI source of truth.
 
 ## SHOULD
 

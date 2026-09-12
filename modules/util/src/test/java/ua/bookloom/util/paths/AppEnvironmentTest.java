@@ -19,7 +19,7 @@ class AppEnvironmentTest {
         return AppEnvironment.resolve(env::get, properties::get);
     }
 
-    // Covers: FR-PERSIST-06 — WHERE no build stamp identifies the run as packaged, the system SHALL resolve to the
+    // WHERE no build stamp identifies the run as packaged, the system SHALL resolve to the
     // development environment, so an un-stamped run cannot reach production data.
     @Test
     void resolve_noSignalsAtAll_isDev() {

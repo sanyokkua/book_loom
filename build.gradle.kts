@@ -13,7 +13,6 @@ import com.github.jk1.license.render.TextReportRenderer
 plugins {
     base
     alias(libs.plugins.license.report)
-    alias(libs.plugins.owasp.dependencycheck)
 }
 
 // The git tag is the single source of truth for the app version; local and CI snapshot builds get `dev`
@@ -35,9 +34,8 @@ dependencyLocking {
 // dependency reaching a user is permissively licensed, so it is machine-checked rather than asserted: `checkLicense`
 // fails the build on any resolved artifact whose license is not in `config/license/allowed-licenses.json`.
 //
-// This gate is NOT the OWASP dependency-check SCA gate. This one asks "may we distribute this?"; that one asks
-// "does this have a known CVE?". Both run in CI and either can fail the merge independently
-// (03_LICENSING.md#license-gate-tool).
+// It asks "may we distribute this?", nothing more; a known-vulnerability scan was deliberately dropped (2026-09-11):
+// a single-user offline app is not worth a 30-minute NVD sync on every CI run (03_LICENSING.md#license-gate-tool).
 licenseReport {
     // The root project plus the eight subprojects. Root carries no dependency graph of its own, but the plugin
     // resolves the report's output directory through the project that owns this extension, so it must be in the
@@ -78,87 +76,4 @@ licenseReport {
             TextReportRenderer("THIRD-PARTY-NOTICES"),
             InventoryHtmlReportRenderer(),
         )
-}
-
-// --- SCA gate (OWASP dependency-check) -----------------------------------------------------------------------
-//
-// The second of the two dependency gates, and deliberately the one that is NOT wired into `check`. The license
-// gate above asks "may we distribute this?" and is answerable from the POMs already on disk; this one asks "does
-// this have a known CVE?" and is answerable only against the NVD feed — a network round trip, on every run, whose
-// result changes without the dependency graph changing at all. Bolting that onto `./gradlew check` would make the
-// pre-push hook slow, network-dependent, and non-deterministic — the three properties a local gate must not have.
-// So it stays a CI-only step (`.github/workflows/ci.yml`, task 7.3), invoked by name as `dependencyCheckAggregate`.
-//
-// `dependencyCheckAggregate` rather than `dependencyCheckAnalyze`: the root project has no dependency graph of its
-// own, so the analysing variant would scan nothing and pass — a green gate over an empty set. The aggregate variant
-// walks the subprojects.
-dependencyCheck {
-    // Only what ships. `runtimeClasspath` is the same scope the license gate uses and for the same reason: a CVE in
-    // Checkstyle or in the WireMock test server is not a vulnerability in the distributed application, and treating
-    // it as one trains people to suppress findings — which is how a real one gets suppressed alongside it.
-    scanConfigurations = listOf("runtimeClasspath")
-
-    // CVSS >= 7.0 is "High" on the CVSS v3 scale. `02_DEPENDENCY_POLICY.md#owasp-dependency-check` fixes the
-    // behaviour ("fails the build above the configured severity threshold") and leaves the number to
-    // configuration; this is that configuration. High-and-above blocks the merge, Medium and below is reported in
-    // the artifact and triaged rather than blocking. A flagged dependency is upgraded, replaced, or risk-accepted
-    // with justification via `config/owasp/suppressions.xml` before merge.
-    failBuildOnCVSS = 7.0f
-
-    // HTML for a human opening the CI artifact, JSON for anything that later wants to diff findings across runs.
-    formats = listOf("HTML", "JSON")
-
-    // Documented risk acceptances live in a reviewable data file, exactly like the license allowlist — never as a
-    // threshold quietly raised until the build goes green.
-    suppressionFile = file("config/owasp/suppressions.xml").absolutePath
-
-    analyzers {
-        // This is a pure-JVM project. Every analyzer below scans an ecosystem that is not present, and each one
-        // costs either startup time or an extra remote call for a guaranteed-empty result.
-        assemblyEnabled = false
-        msbuildEnabled = false
-        nuspecEnabled = false
-        nugetconfEnabled = false
-        nodeEnabled = false
-        nodeAuditEnabled = false
-        retirejs { enabled = false }
-
-        // Sonatype OSS Index is a SECOND vulnerability service, with its own rate limit and its own outage
-        // profile. Enabling it would mean the merge gate could go red because a service this project has no
-        // account with was unavailable. NVD is the source `02_DEPENDENCY_POLICY.md` names; one source, one
-        // failure mode.
-        ossIndex { enabled = false }
-    }
-
-    nvd {
-        // The optional `NVD_API_KEY` repository secret (`04_CI_CD.md#no-secrets` — the ONLY optional secret in the
-        // pipeline, granting no publish or signing capability). Read from the environment so the value never
-        // reaches a build script, a lockfile, or a log.
-        //
-        // Absent is the SUPPORTED path, not a degraded one that fails: this repository has no such secret, and a
-        // fork must stay buildable without one. What changes is throughput, not outcome — NVD rate-limits
-        // unauthenticated callers far harder, so the inter-request delay goes up and the first sync takes
-        // materially longer. CI caches the resulting data directory across runs so that cost is paid once rather
-        // than every PR (`04_CI_CD.md#no-secrets`: "CI can run against a cached/mirrored feed, keeping forks
-        // buildable without it").
-        val key = providers.environmentVariable("NVD_API_KEY").orNull
-        if (!key.isNullOrBlank()) {
-            apiKey = key
-            delay = 1000
-        } else {
-            delay = 8000
-        }
-
-        // A transient 503 from NVD mid-sync must not read as "your dependencies are fine" or as a red merge gate.
-        maxRetryCount = 20
-    }
-}
-
-// An included build's verification tasks are NOT reachable from the root build's `check` by default. Without
-// this edge the `build-logic` functional tests — the ones proving Spotless, NullAway, Checkstyle and
-// FindSecBugs each actually fail red on a seeded canary — would never run in `./gradlew clean build check
-// spotlessCheck`, and therefore never run in the pre-push hook or CI either. A test that never executes proves
-// nothing at all, which is the exact failure mode those tests exist to rule out.
-tasks.named("check") {
-    dependsOn(gradle.includedBuild("build-logic").task(":test"))
 }

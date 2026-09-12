@@ -27,7 +27,7 @@ class ZipEntryReaderLimitsTest {
 
     private static final ZipEntryReader.Limits TINY_LIMITS = new ZipEntryReader.Limits(3, 64, 10);
 
-    // Covers: FR-IMPORT-05 — WHEN an archive expands beyond the configured total-size limit, THEN it is refused
+    // WHEN an archive expands beyond the configured total-size limit, THEN it is refused
     // rather than exhausting memory, and no content is returned.
     @Test
     void readAll_expansionBeyondTheTotalSizeLimit_isRefused() {
@@ -38,7 +38,7 @@ class ZipEntryReaderLimitsTest {
                 .hasMessageContaining("limit");
     }
 
-    // Covers: FR-IMPORT-05 — WHEN an archive declares more entries than the configured limit, THEN it is refused.
+    // WHEN an archive declares more entries than the configured limit, THEN it is refused.
     @Test
     void readAll_entryCountBeyondTheLimit_isRefused() {
         final byte[] archive = zipOf(entry("a", "1"), entry("b", "2"), entry("c", "3"), entry("d", "4"));
@@ -52,7 +52,7 @@ class ZipEntryReaderLimitsTest {
      * Proves the production limits are actually wired, not merely defined — a limit only a test-supplied value
      * ever reaches would leave the real entry point unguarded.
      */
-    // Covers: FR-IMPORT-05 — a decompression bomb arriving through the ordinary entry point is refused rather
+    // a decompression bomb arriving through the ordinary entry point is refused rather
     // than exhausting memory.
     @Test
     void readAll_decompressionBomb_isRefusedUnderTheProductionLimits() {
@@ -63,7 +63,7 @@ class ZipEntryReaderLimitsTest {
                 .hasMessageContaining("ratio");
     }
 
-    // Covers: FR-IMPORT-05 — an implausible entry count is refused through the ordinary entry point too.
+    // an implausible entry count is refused through the ordinary entry point too.
     @Test
     void readAll_implausibleEntryCount_isRefusedUnderTheProductionLimits() {
         assertThatThrownBy(() -> ZipEntryReader.readAll(manyEmptyEntries()))
@@ -71,7 +71,7 @@ class ZipEntryReaderLimitsTest {
                 .hasMessageContaining("entries");
     }
 
-    // Covers: FR-IMPORT-05 — IF a container's entry names cannot be decoded as UTF-8, THEN the container is
+    // IF a container's entry names cannot be decoded as UTF-8, THEN the container is
     // re-read in the zip format's historical default code page rather than reported as corrupt.
     @Test
     void readAll_legacyEncodedEntryName_isReadRatherThanRefused() {

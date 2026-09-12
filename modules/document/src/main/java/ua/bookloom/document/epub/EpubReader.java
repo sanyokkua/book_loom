@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
@@ -22,6 +23,7 @@ import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
 import ua.bookloom.document.model.JsoupTreeNode;
 import ua.bookloom.document.model.RawEntry;
+import ua.bookloom.document.model.TreeDialect;
 import ua.bookloom.document.model.ZipEntryReader;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -35,6 +37,7 @@ import ua.bookloom.util.hash.HashUtil;
  * recognition"), which lets this class's own tests assert the thrown exception directly rather than unwrapping a
  * {@code Result} that has no real {@code AppError} classification yet.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class EpubReader {
 
@@ -108,32 +111,50 @@ public final class EpubReader {
         return entry;
     }
 
+    /**
+     * Reads the spine documents that exist, in spine order. A spine item whose file is absent from the archive is
+     * skipped rather than refused: authoring tools leave dangling itemrefs behind (one real book lists twenty
+     * pages and ships nine), and every reader shows what is there. Unit orders stay dense over the units built.
+     * Only a spine with <em>no</em> present document refuses — there is nothing to translate.
+     */
     private static UnitsResult readUnits(ParsedOpf opf, Map<String, RawEntry> byName) {
         final List<Unit> units = new ArrayList<>();
         final Map<String, org.jsoup.nodes.Document> trees = new LinkedHashMap<>();
         final String opfDir = OpfPaths.parentOf(opf.opfPath());
-        int order = 0;
+        int skipped = 0;
         for (final SpineItem item : opf.spineItems()) {
-            addUnit(byName, opfDir, item, order, units, trees);
-            order++;
+            final String href = OpfPaths.resolve(opfDir, item.href());
+            final RawEntry entry = byName.get(href);
+            if (entry == null) {
+                skipped++;
+                continue;
+            }
+            addUnit(entry, href, item, units.size(), units, trees);
+        }
+        if (units.isEmpty()) {
+            throw new CorruptContainerException("No spine document is present in the archive");
+        }
+        if (skipped > 0) {
+            log.warn(
+                    "Skipped {} spine item(s) whose file is missing from the archive; reading the {} present",
+                    skipped,
+                    units.size());
         }
         return new UnitsResult(units, trees);
     }
 
     private static void addUnit(
-            Map<String, RawEntry> byName,
-            String opfDir,
+            RawEntry entry,
+            String href,
             SpineItem item,
             int order,
             List<Unit> units,
             Map<String, org.jsoup.nodes.Document> trees) {
-        final String href = OpfPaths.resolve(opfDir, item.href());
-        final RawEntry entry = requireEntry(byName, href, "spine document");
         final org.jsoup.nodes.Document doc = XhtmlParser.parse(entry.content(), href);
         final String handleId = UUID.randomUUID().toString();
         trees.put(handleId, doc);
         final Element body = doc.body();
-        final List<Segment> segments = BlockSegmentWalker.walk(JsoupTreeNode.of(body), href);
+        final List<Segment> segments = BlockSegmentWalker.walk(JsoupTreeNode.of(body), href, TreeDialect.XHTML);
         units.add(new Unit(href, order, href, item.mediaType(), new SkeletonHandle(handleId), segments));
     }
 

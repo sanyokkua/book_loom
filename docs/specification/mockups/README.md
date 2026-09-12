@@ -5,8 +5,7 @@ self-contained, clickable, low-fidelity-but-complete prototype: open it in any b
 
 Where the written specification and the mockup ever appear to diverge on a *visual or interaction* detail, **the mockup
 wins** and the spec clause is corrected. Where they diverge on *behaviour or data*, the functional spec
-(`../01_Product/`) wins. UI stories cite the mockup as their visual acceptance reference using acceptance-criteria
-pattern **P6** (see `../../implementation_plan/05_ACCEPTANCE_CRITERIA_PATTERNS.md`).
+(`../01_Product/`) wins. UI changes cite the mockup as their visual acceptance reference.
 
 **How "binding" is enforced.** The binding contract is tiered: **structure, design tokens, and geometry** (widget
 presence/hierarchy, token values, spacing/radii/size relationships) are **CI-gated** — a mismatch fails the build.

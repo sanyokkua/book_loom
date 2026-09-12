@@ -35,6 +35,8 @@ sealed interface CorpusOpenOutcome {
      * @param emptyOrDuplicateIdSegmentCount the count of segments whose {@code sourceInner} is empty, plus
      *     segments whose id repeats an earlier segment's id
      * @param elapsedMs wall-clock time the open call took
+     * @param textCoverage the proportion of the source's translatable visible text the segments reach
+     *     ({@link TextCoverage#of}), {@code 1.0} when the book carries no translatable text
      */
     record Opened(
             String format,
@@ -49,6 +51,7 @@ sealed interface CorpusOpenOutcome {
             int p95SegmentLength,
             int maxSegmentLength,
             int emptyOrDuplicateIdSegmentCount,
-            long elapsedMs)
+            long elapsedMs,
+            double textCoverage)
             implements CorpusOpenOutcome {}
 }

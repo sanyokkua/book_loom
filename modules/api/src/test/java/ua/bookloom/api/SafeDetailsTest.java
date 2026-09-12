@@ -23,12 +23,19 @@ import org.junit.jupiter.api.Test;
 class SafeDetailsTest {
 
     /** The allowlist, written out rather than read from the type, so the type cannot define its own correctness. */
-    private static final List<String> ALLOWLIST =
-            List.of("httpStatus", "endpointHost", "modelName", "timeoutMillis", "attempt", "qaFindings");
+    private static final List<String> ALLOWLIST = List.of(
+            "httpStatus",
+            "endpointHost",
+            "modelName",
+            "timeoutMillis",
+            "attempt",
+            "qaFindings",
+            "expectedPlaceholders",
+            "observedPlaceholders");
 
-    // Covers: FR-NOTIF-04 (partly — construction only) — WHEN a failure carries technical detail, the system SHALL
+    // WHEN a failure carries technical detail, the system SHALL
     // populate AppError.details only from the allowlisted fields: HTTP status, endpoint host, model name, timeout,
-    // attempt count and QA finding names.
+    // attempt count, QA finding names and the expected/observed placeholder multisets (ADR-0031).
     @Test
     void render_everyAllowlistedField_rendersAllOfThem() {
         final String details = SafeDetails.empty()
@@ -38,14 +45,16 @@ class SafeDetailsTest {
                 .withTimeout(Duration.ofSeconds(30))
                 .withAttempt(2, 3)
                 .withQaFindings(List.of("tagMismatch", "lengthRatio"))
+                .withPlaceholderMultiset(List.of("⟦g0⟧", "⟦g1⟧"), List.of("⟦g0⟧"))
                 .render();
 
         assertThat(details)
                 .isEqualTo("httpStatus=429, endpointHost=localhost, model=llama3.1:8b, timeoutMs=30000, "
-                        + "attempt=2/3, qaFindings=tagMismatch,lengthRatio");
+                        + "attempt=2/3, qaFindings=tagMismatch,lengthRatio, "
+                        + "expectedPlaceholders=⟦g0⟧ ⟦g1⟧, observedPlaceholders=⟦g0⟧");
     }
 
-    // Covers: FR-NOTIF-04 (partly — construction only) — IF a value would carry a credential, THEN the system SHALL
+    // IF a value would carry a credential, THEN the system SHALL
     // NOT place it in AppError.details: only the endpoint's host is kept, never the user-info or query string that
     // carries a token.
     @Test
@@ -67,7 +76,7 @@ class SafeDetailsTest {
      * {@code withMessage(e.getMessage())} and {@code withBody(response)} are not merely discouraged, they do not
      * exist to be called.
      */
-    // Covers: FR-NOTIF-04 (partly — construction only) — The system SHALL NOT admit an arbitrary exception message
+    // The system SHALL NOT admit an arbitrary exception message
     // or response body into AppError.details; only allowlisted typed fields have an entry point.
     @Test
     void type_componentsAndMethods_admitNothingOutsideTheAllowlist() {
@@ -125,6 +134,95 @@ class SafeDetailsTest {
     @Test
     void withQaFindings_emptyList_addsNoField() {
         assertThat(SafeDetails.empty().withQaFindings(List.of()).render()).isNull();
+    }
+
+    // WHEN the multiset comparison fails, the system SHALL name every token of the expected
+    // multiset without truncating it, SHALL bound the model-derived observed multiset by token count and
+    // per-token length and state what it omitted, and SHALL carry no book text.
+    @Test
+    void withPlaceholderMultiset_fortyExpectedTokens_rendersEveryTokenUntruncated() {
+        final List<String> expected =
+                IntStream.range(0, 40).mapToObj(index -> "⟦g" + index + "⟧").toList();
+
+        final String details = SafeDetails.empty()
+                .withPlaceholderMultiset(expected, List.of("⟦g0⟧"))
+                .render();
+
+        assertThat(details).contains("⟦g39⟧");
+        assertThat(details).doesNotContain("…");
+    }
+
+    // WHEN the multiset comparison fails, the system SHALL name every token of the expected
+    // multiset without truncating it, SHALL bound the model-derived observed multiset by token count and
+    // per-token length and state what it omitted, and SHALL carry no book text.
+    @Test
+    void withPlaceholderMultiset_emptyObservedAgainstNonEmptyExpected_stillRendersAnEmptyObservedField() {
+        final String details = SafeDetails.empty()
+                .withPlaceholderMultiset(List.of("⟦g0⟧", "⟦g1⟧"), List.of())
+                .render();
+
+        assertThat(details).isEqualTo("expectedPlaceholders=⟦g0⟧ ⟦g1⟧, observedPlaceholders=");
+    }
+
+    // WHEN the multiset comparison fails, the system SHALL name every token of the expected
+    // multiset without truncating it, SHALL bound the model-derived observed multiset by token count and
+    // per-token length and state what it omitted, and SHALL carry no book text.
+    @Test
+    void withPlaceholderMultiset_bothListsEmpty_addsNoField() {
+        assertThat(SafeDetails.empty()
+                        .withPlaceholderMultiset(List.of(), List.of())
+                        .render())
+                .isNull();
+    }
+
+    // WHEN the multiset comparison fails, the system SHALL render the observed tokens in a
+    // form a caller can read back token by token — bounded, because that side is provider output rather than this
+    // system's own.
+    // The token grammar's digit run is unbounded, so one degenerate token measured 200,003 characters and rendered
+    // a 200-KB error dialog and a 200-KB log line to match. Per-token length is capped and the cut is marked.
+    @Test
+    void withPlaceholderMultiset_singleOverlongObservedToken_isCappedWithAnEllipsis() {
+        final String details = SafeDetails.empty()
+                .withPlaceholderMultiset(List.of("⟦g0⟧"), List.of("⟦g123456789012345678901234567890⟧"))
+                .render();
+
+        assertThat(details).isEqualTo("expectedPlaceholders=⟦g0⟧, observedPlaceholders=⟦g12345678901234…");
+    }
+
+    // WHEN the multiset comparison fails, the system SHALL render the observed tokens in a
+    // form a caller can read back token by token — bounded, because that side is provider output rather than this
+    // system's own.
+    // Volume is the other half of the same unboundedness: 50,000 observed tokens rendered 438,937 characters. The
+    // overflow is stated rather than dropped in silence, so a reader can tell a bounded render from a short list.
+    @Test
+    void withPlaceholderMultiset_moreObservedTokensThanTheCap_statesTheOverflow() {
+        final List<String> observed =
+                IntStream.range(0, 200).mapToObj(index -> "⟦g" + index + "⟧").toList();
+
+        final String details = SafeDetails.empty()
+                .withPlaceholderMultiset(List.of("⟦g0⟧"), observed)
+                .render();
+
+        assertThat(details).contains("⟦g63⟧").contains("+136 more").doesNotContain("⟦g64⟧");
+    }
+
+    // WHEN the multiset comparison fails, the system SHALL name every token of the expected
+    // multiset without truncating it, however the observed side is bounded.
+    // The two sides have different origins and must keep different treatment: the repair tier asks the model to
+    // restore exactly the expected list, so bounding that side would produce a prompt that asks for part of the
+    // formatting and silently drops the rest.
+    @Test
+    void withPlaceholderMultiset_boundedObservedSide_leavesTheExpectedSideInFull() {
+        final List<String> expected =
+                IntStream.range(0, 40).mapToObj(index -> "⟦g" + index + "⟧").toList();
+        final List<String> observed =
+                IntStream.range(0, 200).mapToObj(index -> "⟦g" + index + "⟧").toList();
+
+        final String details =
+                SafeDetails.empty().withPlaceholderMultiset(expected, observed).render();
+
+        assertThat(details).startsWith("expectedPlaceholders=⟦g0⟧ ⟦g1⟧ ⟦g2⟧ ");
+        assertThat(details).contains("⟦g39⟧, observedPlaceholders=");
     }
 
     // Immutability is what makes a partially-built value safe to share: one caller adding a field must not change

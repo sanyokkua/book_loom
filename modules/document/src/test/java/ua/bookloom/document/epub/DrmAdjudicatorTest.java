@@ -54,7 +54,7 @@ class DrmAdjudicatorTest {
         assertThatCode(() -> DrmAdjudicator.adjudicate(null, opfWith())).doesNotThrowAnyException();
     }
 
-    // Covers: FR-DOC-EPUB-7 — IF every encrypted resource resolves to a manifest item with a font media type,
+    // IF every encrypted resource resolves to a manifest item with a font media type,
     // THEN the book is processed normally whatever encryption algorithm is named.
     @ParameterizedTest
     @ValueSource(
@@ -71,7 +71,7 @@ class DrmAdjudicatorTest {
                 .doesNotThrowAnyException();
     }
 
-    // Covers: EC-FONT-1 — a font declared under an alternative media type is still recognised as a font, because
+    // a font declared under an alternative media type is still recognised as a font, because
     // the corpus's fonts split across three distinct media types and no single one is sufficient.
     @ParameterizedTest
     @ValueSource(
@@ -90,7 +90,7 @@ class DrmAdjudicatorTest {
                 .doesNotThrowAnyException();
     }
 
-    // Covers: EC-EPUB-1 — IF the encryption manifest declares an encrypted resource that is not a font, THEN the
+    // IF the encryption manifest declares an encrypted resource that is not a font, THEN the
     // whole book is refused as protected and no part of it is imported.
     @Test
     void adjudicate_contentDocumentEncrypted_isRefused() {
@@ -102,7 +102,7 @@ class DrmAdjudicatorTest {
                 .hasMessageContaining("content rather than a font");
     }
 
-    // Covers: EC-EPUB-1 — IF an encrypted resource is absent from the package manifest, THEN the book is refused
+    // IF an encrypted resource is absent from the package manifest, THEN the book is refused
     // rather than partially imported, because an unresolvable cipher reference is not something to guess about.
     @Test
     void adjudicate_encryptedResourceMissingFromTheManifest_isRefused() {
@@ -118,7 +118,7 @@ class DrmAdjudicatorTest {
      * The two-path-base rule. The cipher URI is container-root-relative and the manifest href is OPF-relative;
      * 102 of 194 corpus books have a non-root OPF, so resolving both the same way mis-resolves the majority.
      */
-    // Covers: EC-EPUB-1 — WHEN a cipher reference names a container-root path and the manifest declares the same
+    // WHEN a cipher reference names a container-root path and the manifest declares the same
     // resource relative to a non-root OPF, THEN the two resolve to the same resource and the book is allowed.
     @Test
     void adjudicate_nonRootOpf_resolvesCipherAgainstTheContainerRootAndHrefAgainstTheOpfDirectory() {

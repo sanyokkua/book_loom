@@ -40,7 +40,7 @@ class EpubWriterTest {
             </container>
             """;
 
-    // Covers: FR-DOC-EPUB-3 — on export the system SHALL write mimetype first and STORED, and SHALL preserve the
+    // on export the system SHALL write mimetype first and STORED, and SHALL preserve the
     // order of the remaining entries.
     @Test
     void write_zeroEditRoundTrip_mimetypeIsFirstAndStored_andEntryOrderIsPreserved() {
@@ -71,7 +71,7 @@ class EpubWriterTest {
      * 1,950. DD-43 licenses re-compressing an entry that was <em>already</em> compressed, not converting a stored
      * one into a compressed one, and the shipped writer DEFLATEd everything.
      */
-    // Covers: FR-DOC-EPUB-3 — WHEN an EPUB is reassembled, THEN each entry keeps its own original compression
+    // WHEN an EPUB is reassembled, THEN each entry keeps its own original compression
     // method: a STORED image stays STORED and a DEFLATED stylesheet stays DEFLATED.
     @Test
     void write_zeroEditRoundTrip_preservesEachEntrysOriginalCompressionMethod() {
@@ -110,7 +110,7 @@ class EpubWriterTest {
                 .orElseThrow(() -> new AssertionError("no entry named " + name));
     }
 
-    // Covers: EC-EPUB-4 — a duplicate id survives a zero-edit round trip rather than being corrected.
+    // a duplicate id survives a zero-edit round trip rather than being corrected.
     @Test
     void write_zeroEditRoundTrip_duplicateIdSurvivesUnrewritten() {
         final Path epub = tempDir.resolve("book.epub");
@@ -130,7 +130,7 @@ class EpubWriterTest {
         assertThat(parsed.select("[id=note1]")).hasSize(2);
     }
 
-    // Covers: FR-DOC-EPUB-4 — an embedded font is carried through byte-for-byte on the write side.
+    // an embedded font is carried through byte-for-byte on the write side.
     @Test
     void write_zeroEditRoundTrip_embeddedFontRoundTripsByteForByte() {
         final Path epub = tempDir.resolve("book.epub");
@@ -150,7 +150,7 @@ class EpubWriterTest {
         assertThat(contentOf(output, "OEBPS/fonts/serif.otf")).isEqualTo(fontBytes);
     }
 
-    // Covers: EC-EPUB-3 — an out-of-spine resource (here, a stylesheet) is carried through unchanged on write.
+    // an out-of-spine resource (here, a stylesheet) is carried through unchanged on write.
     @Test
     void write_zeroEditRoundTrip_outOfSpineStylesheetSurvivesByteForByte() {
         final Path epub = tempDir.resolve("book.epub");
@@ -170,7 +170,7 @@ class EpubWriterTest {
         assertThat(contentOf(output, "OEBPS/styles.css")).isEqualTo(css.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Covers: FR-DOC-EPUB-6 — on export the first dc:language is replaced and any further entry is left alone.
+    // on export the first dc:language is replaced and any further entry is left alone.
     @Test
     void write_twoDeclaredLanguages_replacesOnlyTheFirst() {
         final Path epub = tempDir.resolve("book.epub");
@@ -188,7 +188,7 @@ class EpubWriterTest {
         assertThat(dcLanguagesOf(output)).containsExactly("uk", "la");
     }
 
-    // Covers: FR-DOC-EPUB-6 — a missing dc:language declaration is added with the target language on export.
+    // a missing dc:language declaration is added with the target language on export.
     @Test
     void write_noDeclaredLanguage_addsExactlyOneWithTargetLanguage() {
         final Path epub = tempDir.resolve("book.epub");
@@ -206,7 +206,7 @@ class EpubWriterTest {
         assertThat(dcLanguagesOf(output)).containsExactly("uk");
     }
 
-    // Covers: DD-07 — writing back an earlier segment does not invalidate a later segment's anchor: no anchor is
+    // writing back an earlier segment does not invalidate a later segment's anchor: no anchor is
     // recomputed between the two writes.
     @Test
     void write_earlierSegmentGrowsLonger_laterSegmentStillLandsInItsOwnElement() {

@@ -46,7 +46,7 @@ class LoggingBootstrapTest {
         return Files.exists(logFile) ? Files.readAllLines(logFile) : List.of();
     }
 
-    // Covers: FR-PERSIST-03 — The system SHALL write logs under the per-OS log directory it resolved, not a default
+    // The system SHALL write logs under the per-OS log directory it resolved, not a default
     // location chosen before that directory was known.
     @Test
     void configure_resolvedLogDir_writesThereRatherThanADefaultLocation() throws IOException {
@@ -77,7 +77,7 @@ class LoggingBootstrapTest {
      * step 2, and there is no logger until step 5 — so the fact travels as data and is spoken for here. Without
      * this, the detection would be dead: flagged, carried, and silently dropped.
      */
-    // Covers: FR-PERSIST-03 — IF the resolved data directory is on a network filesystem, THEN the system SHALL warn
+    // IF the resolved data directory is on a network filesystem, THEN the system SHALL warn
     // at startup, because SQLite WAL locking is unreliable on network shares.
     @Test
     void warnIfOnNetworkFilesystem_flaggedPaths_writesItsOwnWarningLine() throws IOException {

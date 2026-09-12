@@ -30,8 +30,9 @@ import ua.bookloom.document.DocumentServices;
  * <p><strong>Records, does not assert.</strong> Every comparator here throws {@link AssertionError} on mismatch;
  * this class always catches it and turns it into a recorded outcome, because a run that stops at the first bad
  * book cannot answer "did anything regress" (design.md D6). The per-book stat gathering ({@link CorpusOpenStats}),
- * the mutation/marker-strip check ({@link CorpusMutation}) and the shared {@link Document} flattening helpers
- * ({@link CorpusDocuments}) live in their own files so this one stays inside the 400-line house limit.
+ * the mutation/marker-strip check ({@link CorpusMutation}), the mask-then-restore probe ({@link CorpusMaskProbe})
+ * and the shared {@link Document} flattening helpers ({@link CorpusDocuments}) live in their own files so this
+ * one stays inside the 400-line house limit.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -137,13 +138,15 @@ final class CorpusSweep {
         final CorpusFixedPointOutcome fixedPoint = probeFixedPoint(identity, p0.format(), workDir);
         final CorpusMutationOutcome mutation = probeMutation(book, p0, workDir);
         final CorpusIdempotenceOutcome idempotence = probeIdempotence(identity, p0);
+        final CorpusMaskOutcome mask = probeMask(p0);
         return new CorpusBookOutcome(
                 identityOf(book, corpusDir),
-                CorpusOpenStats.openedOutcomeOf(p0, elapsedMs(start)),
+                CorpusOpenStats.openedOutcomeOf(book, p0, elapsedMs(start)),
                 identity.outcome(),
                 fixedPoint,
                 mutation,
                 idempotence,
+                mask,
                 new CorpusResourceOutcome(elapsedMs(start), sizeOf(book)));
     }
 
@@ -155,6 +158,7 @@ final class CorpusSweep {
                 new CorpusFixedPointOutcome.NotAttempted(),
                 new CorpusMutationOutcome.NotAttempted(),
                 new CorpusIdempotenceOutcome.NotAttempted(),
+                new CorpusMaskOutcome.NotAttempted(),
                 new CorpusResourceOutcome(elapsedMs, sizeOf(book)));
     }
 
@@ -243,6 +247,19 @@ final class CorpusSweep {
         return new CorpusIdempotenceOutcome.Completed(
                 CorpusDocuments.tuplesOf(back).equals(CorpusDocuments.tuplesOf(p0)),
                 CorpusDocuments.sourceById(back).equals(CorpusDocuments.sourceById(p0)));
+    }
+
+    // --- Mask-then-restore probe (task 10.1) -------------------------------------------------------------------
+
+    /**
+     * Gives every segment of {@code p0} its own masked form back as its own target and restores it — the
+     * requirement <em>Verify the round trip against a local real-book corpus on demand</em>'s
+     * "restores every segment from its own masked form" clause. {@code unmask} needs no document registry, so
+     * this probe operates directly on {@code p0} rather than re-opening the book the way the write-based probes
+     * must (trap 5 does not apply here).
+     */
+    private static CorpusMaskOutcome probeMask(Document p0) {
+        return CorpusMaskProbe.run(DocumentServices.newService(), p0);
     }
 
     // --- Shared helpers ---------------------------------------------------------------------------------------

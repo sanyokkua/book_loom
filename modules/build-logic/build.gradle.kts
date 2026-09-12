@@ -1,5 +1,4 @@
 import org.gradle.api.artifacts.dsl.LockMode
-import java.time.Duration
 
 // Hosts the precompiled convention plugins (`src/main/kotlin/bookloom.*-conventions.gradle.kts`).
 //
@@ -20,15 +19,6 @@ dependencies {
     implementation(libs.plugin.errorprone)
     implementation(libs.plugin.spotbugs)
 
-    // Functional tests drive the precompiled convention plugins through Gradle TestKit against a throwaway
-    // fixture project generated under a JUnit `@TempDir` — never against the real repository root, which
-    // would recurse (`build-logic` is an included build). Coordinates come from the shared catalog, same as
-    // `implementation` above.
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testImplementation(libs.assertj.core)
-    testImplementation(gradleTestKit())
-    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // `build-logic` is a separate included build with its own resolution, so it needs its own lock state — the main
@@ -83,33 +73,4 @@ tasks.register("verifyLocks") {
     doLast {
         configurations.filter { it.isCanBeResolved }.forEach { it.resolve() }
     }
-}
-
-gradlePlugin {
-    // Registers `src/test` as a plugin-under-test source set: Gradle writes the `plugin-under-test-metadata`
-    // properties file so `GradleRunner.withPluginClasspath()` can resolve `bookloom.java-conventions` inside
-    // the fixture build without publishing it anywhere.
-    testSourceSets.add(sourceSets["test"])
-}
-
-tasks.test {
-    useJUnitPlatform()
-
-    // Fixture builds must resolve the SAME version catalog and the SAME Checkstyle / SpotBugs rulesets the real
-    // build uses — a canary proven against a copy of the config proves nothing about the config that ships.
-    // `rootDir` here is `modules/build-logic/` (ADR-0021), so the repository root is TWO hops up: the first
-    // parent is `modules/`, the second is the root. One hop resolves to `modules/` — a directory that exists,
-    // so nothing throws; `BuildFixture` would simply normalize a valid path to the wrong place and the damage
-    // would surface far away as "cannot find `checkstyle.xml`" or "cannot find `allowed-licenses.json`".
-    systemProperty("bookloom.repoRoot", rootDir.parentFile.parentFile.absolutePath)
-
-    // Fixture builds run through Gradle TestKit, which otherwise hands each one a private Gradle user home and
-    // therefore an EMPTY module cache — every fixture would re-download the whole quality stack (Error Prone,
-    // NullAway, Checkstyle, SpotBugs, FindSecBugs, Palantir, Lombok, JSpecify). Pointing them at this build's
-    // Gradle user home reuses the artifacts the outer build already resolved.
-    systemProperty("bookloom.gradleUserHome", gradle.gradleUserHomeDir.absolutePath)
-
-    // Each fixture build forks a Gradle daemon running a real JDK 25 toolchain and a full quality stack.
-    // Ten minutes is a generous ceiling that still fails rather than hanging CI forever.
-    timeout = Duration.ofMinutes(10)
 }

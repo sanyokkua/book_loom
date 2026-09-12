@@ -21,6 +21,7 @@ final class CorpusJson {
                 .rawField("fixedPoint", jsonOf(outcome.fixedPoint()))
                 .rawField("mutation", jsonOf(outcome.mutation()))
                 .rawField("idempotence", jsonOf(outcome.idempotence()))
+                .rawField("mask", jsonOf(outcome.mask()))
                 .rawField("resource", jsonOf(outcome.resource()))
                 .build();
     }
@@ -52,6 +53,7 @@ final class CorpusJson {
                 .field("maxSegmentLength", opened.maxSegmentLength())
                 .field("emptyOrDuplicateIdSegmentCount", opened.emptyOrDuplicateIdSegmentCount())
                 .field("elapsedMs", opened.elapsedMs())
+                .rawField("textCoverage", Double.toString(opened.textCoverage()))
                 .build();
     }
 
@@ -157,6 +159,28 @@ final class CorpusJson {
         };
     }
 
+    private static String jsonOf(CorpusMaskOutcome mask) {
+        return switch (mask) {
+            case CorpusMaskOutcome.NotAttempted ignored ->
+                new JsonWriter().field("status", "notAttempted").build();
+            case CorpusMaskOutcome.Completed completed -> jsonOfMaskCompleted(completed);
+        };
+    }
+
+    private static String jsonOfMaskCompleted(CorpusMaskOutcome.Completed completed) {
+        return new JsonWriter()
+                .field("status", "completed")
+                .field("segmentCount", completed.segmentCount())
+                .field("totalPlaceholders", completed.totalPlaceholders())
+                .field("maxPlaceholdersInOneSegment", completed.maxPlaceholdersInOneSegment())
+                .field("segmentsWithPlaceholders", completed.segmentsWithPlaceholders())
+                .field("ok", completed.ok())
+                .field("mismatchCount", completed.mismatchCount())
+                .field("skippedCodeOnlyBlocks", completed.skippedCodeOnlyBlocks())
+                .field("failureMessage", completed.failureMessage())
+                .build();
+    }
+
     private static String jsonOf(CorpusResourceOutcome resource) {
         return new JsonWriter()
                 .field("wallClockMs", resource.wallClockMs())
@@ -186,6 +210,12 @@ final class CorpusJson {
         JsonWriter field(String key, int value) {
             appendKey(key);
             text.append(value);
+            return this;
+        }
+
+        JsonWriter field(String key, @Nullable Integer value) {
+            appendKey(key);
+            text.append(value == null ? "null" : value.toString());
             return this;
         }
 

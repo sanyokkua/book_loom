@@ -14,6 +14,7 @@ import java.util.Objects;
  * @param fixedPoint the P2 probe's outcome
  * @param mutation the P3 probe's outcome
  * @param idempotence the P4 probe's outcome
+ * @param mask the mask-then-restore probe's outcome (task 10.1)
  * @param resource the P5 probe's outcome
  */
 record CorpusBookOutcome(
@@ -23,6 +24,7 @@ record CorpusBookOutcome(
         CorpusFixedPointOutcome fixedPoint,
         CorpusMutationOutcome mutation,
         CorpusIdempotenceOutcome idempotence,
+        CorpusMaskOutcome mask,
         CorpusResourceOutcome resource) {
 
     CorpusBookOutcome {
@@ -32,6 +34,7 @@ record CorpusBookOutcome(
         Objects.requireNonNull(fixedPoint, "fixedPoint");
         Objects.requireNonNull(mutation, "mutation");
         Objects.requireNonNull(idempotence, "idempotence");
+        Objects.requireNonNull(mask, "mask");
         Objects.requireNonNull(resource, "resource");
     }
 }

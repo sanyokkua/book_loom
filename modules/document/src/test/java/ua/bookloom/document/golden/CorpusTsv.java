@@ -29,8 +29,19 @@ final class CorpusTsv {
                 idempotenceStatusOf(outcome.idempotence()),
                 idempotenceTuplesMatchOf(outcome.idempotence()),
                 idempotenceSourceMatchOf(outcome.idempotence()),
+                maskStatusOf(outcome.mask()),
+                maskOkOf(outcome.mask()),
+                maskTotalPlaceholdersOf(outcome.mask()),
+                maskMaxPlaceholdersOf(outcome.mask()),
+                maskSegmentsWithPlaceholdersOf(outcome.mask()),
+                maskSkippedCodeOnlyBlocksOf(outcome.mask()),
                 Long.toString(outcome.resource().wallClockMs()),
-                Long.toString(outcome.resource().sourceFileSizeBytes()));
+                Long.toString(outcome.resource().sourceFileSizeBytes()),
+                textCoverageOf(outcome.open()));
+    }
+
+    private static String textCoverageOf(CorpusOpenOutcome open) {
+        return open instanceof CorpusOpenOutcome.Opened opened ? String.format("%.4f", opened.textCoverage()) : "-";
     }
 
     private static String openStatusOf(CorpusOpenOutcome open) {
@@ -129,6 +140,46 @@ final class CorpusTsv {
         return idempotence instanceof CorpusIdempotenceOutcome.Completed completed
                 ? Boolean.toString(completed.sourceTextMatchOpen())
                 : "-";
+    }
+
+    private static String maskStatusOf(CorpusMaskOutcome mask) {
+        return switch (mask) {
+            case CorpusMaskOutcome.NotAttempted ignored -> "notAttempted";
+            case CorpusMaskOutcome.Completed ignored -> "completed";
+        };
+    }
+
+    private static String maskOkOf(CorpusMaskOutcome mask) {
+        return mask instanceof CorpusMaskOutcome.Completed completed ? Boolean.toString(completed.ok()) : "-";
+    }
+
+    private static String maskTotalPlaceholdersOf(CorpusMaskOutcome mask) {
+        return mask instanceof CorpusMaskOutcome.Completed completed
+                ? Integer.toString(completed.totalPlaceholders())
+                : "-";
+    }
+
+    private static String maskMaxPlaceholdersOf(CorpusMaskOutcome mask) {
+        return mask instanceof CorpusMaskOutcome.Completed completed
+                ? Integer.toString(completed.maxPlaceholdersInOneSegment())
+                : "-";
+    }
+
+    private static String maskSegmentsWithPlaceholdersOf(CorpusMaskOutcome mask) {
+        return mask instanceof CorpusMaskOutcome.Completed completed
+                ? Integer.toString(completed.segmentsWithPlaceholders())
+                : "-";
+    }
+
+    /** {@code "notMeasured"} distinguishes "this run does not compute the count" from a genuine {@code 0} — see
+     * {@link CorpusMaskProbe}'s class Javadoc for why the harness does not re-derive it. */
+    private static String maskSkippedCodeOnlyBlocksOf(CorpusMaskOutcome mask) {
+        if (!(mask instanceof CorpusMaskOutcome.Completed completed)) {
+            return "-";
+        }
+        return completed.skippedCodeOnlyBlocks() == null
+                ? "notMeasured"
+                : completed.skippedCodeOnlyBlocks().toString();
     }
 
     private static String cell(String value) {

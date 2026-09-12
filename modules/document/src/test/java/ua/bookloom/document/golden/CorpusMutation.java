@@ -29,7 +29,8 @@ final class CorpusMutation {
         final boolean countsMatch = back.units().size() == p0.units().size()
                 && CorpusDocuments.segmentsOf(back).size()
                         == CorpusDocuments.segmentsOf(p0).size();
-        final boolean tuplesMatch = CorpusDocuments.tuplesOf(back).equals(CorpusDocuments.tuplesOf(p0));
+        final boolean tuplesMatch =
+                CorpusDocuments.tuplesWithoutAnchorOf(back).equals(CorpusDocuments.tuplesWithoutAnchorOf(p0));
         final MarkerStrip strip = markerStripOf(beforeMutation, back);
         return new CorpusMutationOutcome.Completed(
                 back.units().size(),

@@ -2,8 +2,7 @@
 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
 `docs/adr/ADR-0023-backend-complete-milestone-and-backlog-interstitials.md`,
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/implementation_plan/CHANGE_BACKLOG.md`,
-`docs/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md`, `docs/implementation_plan/README.md`,
-`docs/implementation_plan/phases/`
+`docs/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md`
 
 # Roadmap
 
@@ -17,9 +16,8 @@ turn comes.
 concerns parked inside changes named for screens, and repaired the sequence: every service a screen calls exists and
 runs before Stage D opens. See `#backend-complete-milestone`.
 
-**This supersedes the fourteen-phase order.** `docs/implementation_plan/phases/PHASE_NN_*.md` is retained as **reference
-material** — the per-area task inventories in those files feed future proposals — but it is no longer the execution
-sequence. See ADR-0017 for the two deviations from
+**This supersedes the fourteen-phase order.** The phase files were retired on 2026-09-11; this roadmap and
+`CHANGE_BACKLOG.md` are the sequence. See ADR-0017 for the two deviations from
 `docs/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md#staged-delivery` and why they were taken.
 
 ## stages {#stages}
@@ -53,16 +51,15 @@ Beyond the invariants below, each stage has a concrete, demonstrable exit:
 
 Every stage must exit with: the offline invariant (F9) intact; the **whole-project clean gate** green —
 `./gradlew clean build check spotlessCheck` passes with zero findings across the whole project, not just touched code
-(Spotless/Checkstyle/Error Prone+NullAway/SpotBugs; no "pre-existing" exemption,
-`docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-change-checklist`); ArchUnit boundary tests green (FX-free core
+(Spotless/Checkstyle/Error Prone+NullAway/SpotBugs; no "pre-existing" exemption); ArchUnit boundary tests green (FX-free core
 preserved); and `./gradlew test` green. Stages that touch document handling must keep the round-trip golden test green —
 a **structure-and-text-preserving (canonical-equal)** comparison of canonicalized output to canonicalized source, not
 raw bytes (TXT excepted: exact bytes) (DD-43); stages that touch the UI must match the mockup visual reference (P6).
 
 These are the invariants from
 `docs/specification/00_Foundation/06_IMPLEMENTATION_STAGES.md#stage-exit-invariants`, unchanged except that the
-`./gradlew traceCheck` clause is **struck by ADR-0016** — that tooling is never built. In its place, run
-`bash scripts/fr-coverage.sh` at each stage boundary and read the output; it is advisory, never a gate.
+`./gradlew traceCheck` clause is **struck by ADR-0016** — that tooling is never built, and no id-coverage script
+replaces it (ADR-0032): the stage's behaviour is proven by its tests and by running the app.
 
 ## forward-compatibility-seams {#forward-compatibility-seams}
 
@@ -134,7 +131,7 @@ After this gate is green, a Stage D change adds a surface and a binding — neve
   that would be retrofitted later. Change 28 only completes the Ukrainian bundle to parity.
 - **The UI component library is built against the mockup, not against screens.** Stage B′ builds widget-level controls
   from the mockup's own "Component library" screen. Screen composition is Stage D — after the engine — exactly as the
-  frozen staging specified.
+  staging specified.
 - **The prompt layer is one owned change, and evals ride their features on top of it.** ADR-0023 adds
   `add-prompt-catalog-and-output-contract` between changes 12 and 13: it owns
   `:pipeline/ua.bookloom.pipeline.prompt` — the nine templates of `01_Product/12_PROMPT_CATALOG.md`, the

@@ -17,9 +17,8 @@ diagrams already exist — reference them, never invent parallel copies.
 
 ## When to use
 
-- Adding a new diagram to `docs/specification/diagrams/` for a spec section — note
-  `docs/specification/` is frozen for normal story work, so a new spec diagram lands only
-  as part of a lead-approved spec change; diagrams elsewhere (e.g. in a story or note)
+- Adding a new diagram to `docs/specification/diagrams/` for a spec section — the spec is
+  editable, but a new diagram there should accompany the change that needs it; diagrams elsewhere (e.g. in a note)
   follow the same syntax rules.
 - Fixing a diagram that fails to render (parse/escaping error).
 - Validating a `.mermaid` file's syntax before committing.
@@ -32,7 +31,7 @@ diagrams already exist — reference them, never invent parallel copies.
   them from prose instead.
 - Do NOT embed a diagram's meaning only in the diagram — the spec text is authoritative;
   the diagram illustrates it.
-- Do NOT edit frozen spec prose to fit a diagram.
+- Do NOT edit spec prose merely to fit a diagram.
 
 ## Workflow
 

@@ -89,7 +89,7 @@ class GoldenComparisonMetaTest {
                 .writeTo(tempDir.resolve(name));
     }
 
-    // Covers: FR-DOC-09 — WHEN a reassembled FB2 differs from its source only in attribute quoting or the spelling
+    // WHEN a reassembled FB2 differs from its source only in attribute quoting or the spelling
     // of a character reference, THEN the golden comparison still passes.
     @Test
     void fb2Comparison_quotingAndEntitySpellingOnly_isAbsorbed() {
@@ -100,7 +100,7 @@ class GoldenComparisonMetaTest {
                 .doesNotThrowAnyException();
     }
 
-    // Covers: FR-DOC-09 — the FB2 comparison catches a lost element, so its tolerance of quoting is a deliberate
+    // the FB2 comparison catches a lost element, so its tolerance of quoting is a deliberate
     // narrowing rather than an inability to fail.
     @Test
     void fb2Comparison_lostElement_isCaught() {
@@ -111,7 +111,7 @@ class GoldenComparisonMetaTest {
                 .isInstanceOf(AssertionError.class);
     }
 
-    // Covers: FR-DOC-09 — the FB2 comparison catches a rewritten binary payload, which a canonical writer free to
+    // the FB2 comparison catches a rewritten binary payload, which a canonical writer free to
     // re-wrap long text could otherwise change without the structural comparison noticing.
     @Test
     void fb2Comparison_reWrappedBinaryPayload_isCaught() {
@@ -148,7 +148,7 @@ class GoldenComparisonMetaTest {
                 """.formatted(body));
     }
 
-    // Covers: FR-DOC-FB2-7 — WHERE the source's title information declares no language element, THEN the golden
+    // WHERE the source's title information declares no language element, THEN the golden
     // comparison treats the single added target-language element as expected rather than as a difference.
     @Test
     void fb2Comparison_addedLanguageOnly_isAbsorbedWhenSourceDeclaredNone() {
@@ -166,7 +166,7 @@ class GoldenComparisonMetaTest {
                 .doesNotThrowAnyException();
     }
 
-    // Covers: FR-DOC-FB2-7 — WHEN a fixture FB2 book whose <title-info> contains no <lang> element is reassembled
+    // WHEN a fixture FB2 book whose <title-info> contains no <lang> element is reassembled
     // with no segment receiving target text, and the output both gains <lang>uk</lang> and drops one <p> element
     // present in the source, THEN the golden test fails.
     @Test
@@ -185,7 +185,7 @@ class GoldenComparisonMetaTest {
                 .isInstanceOf(AssertionError.class);
     }
 
-    // Covers: FR-DOC-09 — WHEN a reassembled Markdown drops a reference-link definition present in the source,
+    // WHEN a reassembled Markdown drops a reference-link definition present in the source,
     // THEN the golden comparison fails.
     @Test
     void markdownComparison_lostReferenceLinkDefinition_isCaught() {
@@ -195,7 +195,7 @@ class GoldenComparisonMetaTest {
                 .isNotEqualTo(MarkdownAstAssert.structureOf(MARKDOWN_WITH_REFERENCE));
     }
 
-    // Covers: FR-DOC-09 — the Markdown comparison distinguishes trees by structure rather than by object identity,
+    // the Markdown comparison distinguishes trees by structure rather than by object identity,
     // so it can fail at all; an equality check on two syntax trees never would.
     @Test
     void markdownComparison_changedTableAlignment_isCaught() {
@@ -206,14 +206,14 @@ class GoldenComparisonMetaTest {
                 .isNotEqualTo(MarkdownAstAssert.structureOf(leftAligned));
     }
 
-    // Covers: FR-DOC-09 — a fenced block's info string is part of the compared structure, so losing it fails.
+    // a fenced block's info string is part of the compared structure, so losing it fails.
     @Test
     void markdownComparison_lostFenceInfoString_isCaught() {
         assertThat(MarkdownAstAssert.structureOf("```\nint x = 1;\n```\n"))
                 .isNotEqualTo(MarkdownAstAssert.structureOf("```java\nint x = 1;\n```\n"));
     }
 
-    // Covers: FR-DOC-09 — two identical documents do compare equal, so the assertions above are not passing
+    // two identical documents do compare equal, so the assertions above are not passing
     // merely because the serialization is unstable.
     @Test
     void markdownComparison_identicalDocuments_compareEqual() {
@@ -221,7 +221,7 @@ class GoldenComparisonMetaTest {
                 .isEqualTo(MarkdownAstAssert.structureOf(MARKDOWN_WITH_REFERENCE));
     }
 
-    // Covers: FR-DOC-01 — WHEN a source content document holding <script src="js/book.js"/> is reassembled with
+    // WHEN a source content document holding <script src="js/book.js"/> is reassembled with
     // zero segment edits and the output holds <script src="js/book.js"></script>, THEN the EPUB golden round-trip
     // comparison passes, because both sides are normalized identically before comparison.
     @Test
@@ -242,7 +242,49 @@ class GoldenComparisonMetaTest {
                 .doesNotThrowAnyException();
     }
 
-    // Covers: FR-DOC-01 — WHEN a source content document holding <script src="js/book.js"/> and two <p> elements
+    /**
+     * One real book stores {@code mimetype} as its third entry; the writer rightly moves it first, and the
+     * comparator must not read that as a reordered book.
+     */
+    // WHEN the source archive holds mimetype somewhere other than first and the output holds it first with every
+    // other entry in the source's order, THEN the EPUB golden round-trip comparison passes.
+    @Test
+    void epubComparison_mimetypeNotFirstInSource_isAbsorbed() {
+        final Path source = new EpubZipBuilder()
+                .entry("OEBPS/chapter.xhtml", SELF_CLOSED_SCRIPT_CONTENT_DOCUMENT)
+                .entry("OEBPS/styles.css", "body {}")
+                .entry("mimetype", "application/epub+zip", ZipEntry.STORED)
+                .writeTo(tempDir.resolve("late-mimetype-source.epub"));
+        final Path output = new EpubZipBuilder()
+                .entry("mimetype", "application/epub+zip", ZipEntry.STORED)
+                .entry("OEBPS/chapter.xhtml", SELF_CLOSED_SCRIPT_CONTENT_DOCUMENT)
+                .entry("OEBPS/styles.css", "body {}")
+                .writeTo(tempDir.resolve("late-mimetype-output.epub"));
+
+        assertThatCode(() -> EpubCanonicalAssert.assertCanonicalEqual(source, output))
+                .doesNotThrowAnyException();
+    }
+
+    // WHEN the output holds the same entries as the source but two content entries swapped, THEN the EPUB golden
+    // round-trip comparison fails — the mimetype carve-out does not loosen the order of anything else.
+    @Test
+    void epubComparison_contentEntriesReordered_isCaught() {
+        final Path source = new EpubZipBuilder()
+                .entry("mimetype", "application/epub+zip", ZipEntry.STORED)
+                .entry("OEBPS/chapter.xhtml", SELF_CLOSED_SCRIPT_CONTENT_DOCUMENT)
+                .entry("OEBPS/styles.css", "body {}")
+                .writeTo(tempDir.resolve("ordered-source.epub"));
+        final Path reordered = new EpubZipBuilder()
+                .entry("mimetype", "application/epub+zip", ZipEntry.STORED)
+                .entry("OEBPS/styles.css", "body {}")
+                .entry("OEBPS/chapter.xhtml", SELF_CLOSED_SCRIPT_CONTENT_DOCUMENT)
+                .writeTo(tempDir.resolve("reordered-output.epub"));
+
+        assertThatThrownBy(() -> EpubCanonicalAssert.assertCanonicalEqual(source, reordered))
+                .isInstanceOf(AssertionError.class);
+    }
+
+    // WHEN a source content document holding <script src="js/book.js"/> and two <p> elements
     // is compared against an output holding <script src="js/book.js"></script> and only one of those <p>
     // elements, THEN the EPUB golden round-trip comparison fails.
     @Test
@@ -260,5 +302,89 @@ class GoldenComparisonMetaTest {
 
         assertThatThrownBy(() -> EpubCanonicalAssert.assertCanonicalEqual(source, damaged))
                 .isInstanceOf(AssertionError.class);
+    }
+
+    // WHEN a segment's masked form is supplied back as its own target, the system SHALL produce
+    // restored content equal to its source content for TXT and Markdown and canonical-equal for EPUB and FB2.
+    // The mask-then-restore comparator absorbs the one difference restoring legitimately produces: sourceInner is
+    // serialized by a writer that stamps every in-scope namespace inline, while a composed opening tag carries only
+    // what the element itself introduces. Measured on the shipped FB2 fixture's note anchor, the two differ as
+    // strings and re-parse identically.
+    @Test
+    void maskRestoreFb2Comparison_inlineNamespaceStampingOnly_isAbsorbed() {
+        final String stamped = "<a xmlns=\"http://www.gribuser.ru/xml/fictionbook/2.0\""
+                + " xmlns:l=\"http://www.w3.org/1999/xlink\" l:href=\"#n1\" type=\"note\">1</a>.";
+        final String composed = "<a l:href=\"#n1\" type=\"note\">1</a>.";
+
+        assertThatCode(() -> MaskRestoreCanonicalAssert.assertFb2FragmentCanonicalEqual(stamped, composed, "anchor"))
+                .doesNotThrowAnyException();
+    }
+
+    // WHEN a segment's masked form is supplied back as its own target, the system SHALL produce
+    // restored content equal to its source content for TXT and Markdown and canonical-equal for EPUB and FB2.
+    // The counterpart of the case above, and the reason it is a deliberate narrowing rather than an inability to
+    // fail: ignoring namespace declarations must not also ignore a dropped element or a changed attribute value.
+    @Test
+    void maskRestoreFb2Comparison_droppedElement_isCaught() {
+        final String source = "<a l:href=\"#n1\" type=\"note\">1</a> tail.";
+        final String damaged = " tail.";
+
+        assertThatThrownBy(() -> MaskRestoreCanonicalAssert.assertFb2FragmentCanonicalEqual(source, damaged, "anchor"))
+                .isInstanceOf(AssertionError.class);
+    }
+
+    // WHEN a segment's masked form is supplied back as its own target, the system SHALL produce
+    // restored content equal to its source content for TXT and Markdown and canonical-equal for EPUB and FB2.
+    @Test
+    void maskRestoreFb2Comparison_changedAttributeValue_isCaught() {
+        final String source = "<a l:href=\"#n1\" type=\"note\">1</a>";
+        final String damaged = "<a l:href=\"#n2\" type=\"note\">1</a>";
+
+        assertThatThrownBy(() -> MaskRestoreCanonicalAssert.assertFb2FragmentCanonicalEqual(source, damaged, "anchor"))
+                .isInstanceOf(AssertionError.class);
+    }
+
+    // WHEN a segment's masked form is supplied back as its own target, the system SHALL produce
+    // restored content equal to its source content for TXT and Markdown and canonical-equal for EPUB and FB2.
+    @Test
+    void maskRestoreEpubComparison_droppedInlineElement_isCaught() {
+        assertThatThrownBy(() -> MaskRestoreCanonicalAssert.assertEpubFragmentCanonicalEqual(
+                        "He opened the <em>old</em> door.", "He opened the old door.", "paragraph"))
+                .isInstanceOf(AssertionError.class);
+    }
+
+    // WHEN a segment's masked form is supplied back as its own target, the system SHALL produce
+    // restored content equal to its source content for TXT and Markdown and canonical-equal for EPUB and FB2.
+    // The mask-then-restore comparator absorbs namespace stamping but must NOT absorb a whitespace-only change.
+    // design.md's risk list promises exactly this: the FB2 golden cannot catch a masking whitespace defect because
+    // it collapses whitespace before comparing, and this check is the stated mitigation, so it must not collapse.
+    @Test
+    void maskRestoreFb2Comparison_interiorWhitespaceChange_isCaught() {
+        assertThatThrownBy(() ->
+                        MaskRestoreCanonicalAssert.assertFb2FragmentCanonicalEqual("one two", "one  two", "segment"))
+                .isInstanceOf(AssertionError.class);
+    }
+
+    // WHEN a segment's masked form is supplied back as its own target, the system SHALL produce
+    // restored content equal to its source content for TXT and Markdown and canonical-equal for EPUB and FB2.
+    @Test
+    void maskRestoreFb2Comparison_lostLineFeedInsideAListing_isCaught() {
+        assertThatThrownBy(() -> MaskRestoreCanonicalAssert.assertFb2FragmentCanonicalEqual(
+                        "<pre>a\n\nb</pre>", "<pre>a\nb</pre>", "segment"))
+                .isInstanceOf(AssertionError.class);
+    }
+
+    // WHEN a segment's masked form is supplied back as its own target, the system SHALL produce
+    // restored content equal to its source content for TXT and Markdown and canonical-equal for EPUB and FB2.
+    // The one whitespace difference this comparator CANNOT see, recorded so nobody assumes otherwise: XML parsing
+    // normalizes a carriage-return/line-feed pair to a bare line feed before any comparator runs (XML 1.0 §2.11),
+    // so a \r\n-for-\n regression is invisible here however exact the text comparison is. That is why the
+    // line-separator fix this change made to Jdom2TreeNode#markup is pinned by a direct assertion on the captured
+    // fragment in NestedProtectedBlockMaskingTest instead.
+    @Test
+    void maskRestoreFb2Comparison_carriageReturnForLineFeed_isNormalizedByTheParserAndCannotBeCaught() {
+        assertThatCode(() -> MaskRestoreCanonicalAssert.assertFb2FragmentCanonicalEqual(
+                        "<pre>a\nb</pre>", "<pre>a\r\nb</pre>", "segment"))
+                .doesNotThrowAnyException();
     }
 }

@@ -6,7 +6,7 @@
 # Implementation Stages and Forward-Compatibility Constraints
 
 This document defines the staged delivery order and the forward-compatibility seams that must exist early so later
-phases bolt on cleanly. The detailed phase files live under `docs/implementation_plan/phases/`; this document is the
+phases bolt on cleanly. The order of work is `docs/implementation_plan/CHANGE_BACKLOG.md`; this document is the
 specification-side view of staging and the binding list of seams.
 
 ## forward-compatibility-seams {#forward-compatibility-seams}
@@ -66,9 +66,8 @@ intact for the next.
 
 Every stage must exit with: the offline invariant (F9) intact; the **whole-project clean gate** green —
 `./gradlew clean build check spotlessCheck` passes with zero findings across the whole project, not just touched code
-(Spotless/Checkstyle/Error Prone+NullAway/SpotBugs; no "pre-existing" exemption —
-`docs/implementation_plan/06_DEFINITION_OF_DONE.md#per-story-checklist`); ArchUnit boundary tests green (FX-free core
-preserved); `./gradlew test` green; and `./gradlew traceCheck` passing with zero orphans. Stages that touch document
+(Spotless/Checkstyle/Error Prone+NullAway/SpotBugs; no "pre-existing" exemption); ArchUnit boundary tests green
+(FX-free core preserved); `./gradlew test` green; and the stage's user-visible behaviour exercised in the running app. Stages that touch document
 handling must keep the round-trip golden test green — a **structure-and-text-preserving (canonical-equal)** comparison
 of canonicalized output to canonicalized source, not raw bytes (TXT excepted: exact bytes) (DD-43); stages that touch
 the UI must match the mockup visual reference (P6).

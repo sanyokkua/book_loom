@@ -1,5 +1,6 @@
 package ua.bookloom.document.golden;
 
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,7 @@ import ua.bookloom.api.document.Segment;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class CorpusOpenStats {
 
-    static CorpusOpenOutcome.Opened openedOutcomeOf(Document document, long elapsedMs) {
+    static CorpusOpenOutcome.Opened openedOutcomeOf(Path source, Document document, long elapsedMs) {
         final List<Segment> segments = CorpusDocuments.segmentsOf(document);
         final List<Integer> lengths =
                 segments.stream().map(s -> s.sourceInner().length()).sorted().toList();
@@ -33,7 +34,8 @@ final class CorpusOpenStats {
                 percentile(lengths, 0.95),
                 percentile(lengths, 1.0),
                 emptyOrDuplicateIdCountOf(segments),
-                elapsedMs);
+                elapsedMs,
+                TextCoverage.of(source, document.format(), document));
     }
 
     private static Map<String, Integer> kindHistogramOf(List<Segment> segments) {

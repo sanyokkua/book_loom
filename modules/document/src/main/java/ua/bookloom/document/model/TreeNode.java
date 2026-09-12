@@ -16,6 +16,16 @@ import org.jspecify.annotations.Nullable;
 public interface TreeNode {
 
     /**
+     * What kind of node this is, tested before its name or its children — the classification order the masking
+     * walk ({@link TreeMasker}) depends on (ADR-0031, design.md D2). Both adapters return {@code List.of()} from
+     * {@link #childNodes()} for every non-element, so "has no children" is true of a comment and a text node too;
+     * only {@link #type()} tells them apart from an empty element.
+     *
+     * @return this node's {@link TreeNodeType}; never null
+     */
+    TreeNodeType type();
+
+    /**
      * This node's element name, lower-cased.
      *
      * @return the lower-cased element name, or {@code null} when this node is not an element (character data, a
@@ -61,4 +71,21 @@ public interface TreeNode {
      *     text so that restored inline elements stay elements
      */
     void replaceChildren(int fromInclusive, int toExclusive, String replacementMarkup);
+
+    /**
+     * This element's composed opening tag — as the underlying parser records it, not necessarily as the source
+     * spelled it (attribute name case and quoting are normalized by the parser before this is ever called).
+     *
+     * @return the opening tag, e.g. {@code "<a href=\"ch2.xhtml#top\" id=\"x1\">"}; never null
+     * @throws IllegalStateException if this node is not an element
+     */
+    String openMarkup();
+
+    /**
+     * This element's closing tag.
+     *
+     * @return the closing tag, e.g. {@code "</a>"}; never null
+     * @throws IllegalStateException if this node is not an element
+     */
+    String closeMarkup();
 }

@@ -51,3 +51,4 @@ explicitly — read them before planning work.
 | ADR-0028 | jsoup stays the EPUB XHTML parser, qualified by one pre-parse normalization           | DD-43, DD-49        |
 | ADR-0029 | Transcode the output document to UTF-8 when the source charset cannot hold the target | DD-43               |
 | ADR-0030 | Synthesize a missing EPUB `mimetype` entry on write rather than refusing the book      | DD-43               |
+| ADR-0031 | Mask to character data and compose the restored fragment, rather than substituting into a markup string | DD-07, DD-19, DD-43, DD-45, DD-49 |

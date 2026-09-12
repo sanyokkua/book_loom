@@ -89,8 +89,7 @@ dependencies {
     // Two reasons the floor matters, and the second is why this is not optional:
     //   * 31.0.1-jre calls a terminally-deprecated `sun.misc.Unsafe` method and warns on JDK 25.
     //   * 31.0.1-jre carries CVE-2023-2976 (CVSS 7.1) — `FileBackedOutputStream` creates files in the shared
-    //     default temp directory, readable by other local users. Fixed in 32.0.1. The SCA gate fails the build
-    //     on anything >= 7.0, so without this constraint `dependencyCheckAggregate` is red on the real graph.
+    //     default temp directory, readable by other local users. Fixed in 32.0.1.
     //
     // Declared in the shared convention rather than per module because all six Guice consumers inherit it here,
     // and a constraint that covers five of six modules is not a floor.

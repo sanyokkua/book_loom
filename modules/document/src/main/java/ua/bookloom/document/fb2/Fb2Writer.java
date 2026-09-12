@@ -12,12 +12,15 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
 import org.jdom2.Element;
 import org.jdom2.output.Format;
+import org.jdom2.output.LineSeparator;
 import org.jdom2.output.XMLOutputter;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
@@ -69,17 +72,26 @@ public final class Fb2Writer {
     /**
      * Writes every accepted segment's target content back before anything is serialized, so no write can perturb
      * resolving a later segment's anchor.
+     *
+     * <p>A unit's writes are handed over as one batch rather than applied one at a time, because a translation
+     * that legitimately reorders inline markup can move a line break to a block's top level and change how that
+     * block splits into runs — see {@link SkeletonAnchors} for the measured case.
      */
     private static void writeSegmentsBack(Document document, ParsedFb2 parsed) {
         for (final Unit unit : document.units()) {
-            final Element body = bodyFor(parsed, unit);
-            for (final Segment segment : unit.segments()) {
-                final String targetInner = segment.targetInner();
-                if (targetInner != null) {
-                    SkeletonAnchors.writeBack(Jdom2TreeNode.of(body), segment.anchor(), targetInner);
-                }
+            SkeletonAnchors.writeBackAll(Jdom2TreeNode.of(bodyFor(parsed, unit)), pendingWrites(unit));
+        }
+    }
+
+    private static List<SkeletonAnchors.PendingWrite> pendingWrites(Unit unit) {
+        final List<SkeletonAnchors.PendingWrite> writes = new ArrayList<>();
+        for (final Segment segment : unit.segments()) {
+            final String targetInner = segment.targetInner();
+            if (targetInner != null) {
+                writes.add(new SkeletonAnchors.PendingWrite(segment.anchor(), targetInner));
             }
         }
+        return writes;
     }
 
     private static Element bodyFor(ParsedFb2 parsed, Unit unit) {
@@ -111,8 +123,11 @@ public final class Fb2Writer {
      * Serializes and decides the encoding in one step, because the decision is a property of the serialized text.
      */
     private static Serialized serialize(ParsedFb2 parsed) {
-        final XMLOutputter outputter = new XMLOutputter(Format.getRawFormat());
-        final String xml = outputter.outputString(parsed.document());
+        // Raw format is not "the bytes as read": its line separator defaults to \r\n (decision debt D11), so an
+        // LF source would come back with every line ending doubled. Echo the style the source used.
+        final Format format = Format.getRawFormat();
+        format.setLineSeparator(parsed.crlfLineEndings() ? LineSeparator.CRNL : LineSeparator.NL);
+        final String xml = new XMLOutputter(format).outputString(parsed.document());
         final Charset declared = parsed.charset();
         if (isRepresentable(xml, declared)) {
             return new Serialized(xml, declared, encodingNameToDeclare(parsed, declared));

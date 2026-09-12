@@ -23,10 +23,10 @@ class BlockSegmentWalkerTest {
     private static final String UNIT_HREF = "unit.xhtml";
 
     private static List<Segment> walk(String bodyHtml) {
-        return BlockSegmentWalker.walk(JsoupTreeNode.of(Jsoup.parse(bodyHtml).body()), UNIT_HREF);
+        return BlockSegmentWalker.walk(JsoupTreeNode.of(Jsoup.parse(bodyHtml).body()), UNIT_HREF, TreeDialect.XHTML);
     }
 
-    // Covers: FR-DOC-01 — a segment is emitted per translatable block element, carrying its kind.
+    // a segment is emitted per translatable block element, carrying its kind.
     @Test
     void walk_headingParagraphAndListItem_areDistinguishedByKind() {
         final List<Segment> segments = walk("<h1>Chapter One</h1><p>Prose.</p><ul><li>An item</li></ul>");
@@ -36,7 +36,7 @@ class BlockSegmentWalkerTest {
                 .containsExactly(SegmentKind.HEADING, SegmentKind.PARAGRAPH, SegmentKind.LIST_ITEM);
     }
 
-    // Covers: FR-DOC-01 — a chapter with three paragraphs yields three ordered segments with matching ids.
+    // a chapter with three paragraphs yields three ordered segments with matching ids.
     @Test
     void walk_threeParagraphs_yieldsOrderedSegmentsWithIdShape() {
         final List<Segment> segments = walk("<p>One.</p><p>Two.</p><p>Three.</p>");
@@ -45,7 +45,7 @@ class BlockSegmentWalkerTest {
         assertThat(segments).extracting(Segment::order).containsExactly(0, 1, 2);
     }
 
-    // Covers: FR-DOC-01 — segments know their document-order neighbours, null at the ends.
+    // segments know their document-order neighbours, null at the ends.
     @Test
     void walk_threeParagraphs_wireDocumentOrderNeighboursWithNullAtEnds() {
         final List<Segment> segments = walk("<p>One.</p><p>Two.</p><p>Three.</p>");
@@ -56,7 +56,7 @@ class BlockSegmentWalkerTest {
         assertThat(segments.get(2).nextKey()).isNull();
     }
 
-    // Covers: FR-DOC-01 — WHEN an element owns direct non-whitespace text, THEN it is segmented whatever its tag,
+    // WHEN an element owns direct non-whitespace text, THEN it is segmented whatever its tag,
     // so a div carrying prose yields a segment even in a document with no <p> at all.
     @Test
     void walk_divCarryingProse_isSegmented() {
@@ -67,7 +67,7 @@ class BlockSegmentWalkerTest {
         assertThat(segments.get(0).kind()).isEqualTo(SegmentKind.PARAGRAPH);
     }
 
-    // Covers: FR-DOC-01 — IF an element owns no direct text, THEN it is descended into rather than segmented, so a
+    // IF an element owns no direct text, THEN it is descended into rather than segmented, so a
     // wrapper contributes no segment of its own.
     @Test
     void walk_wrapperDiv_isDescendedIntoNotSegmented() {
@@ -77,7 +77,7 @@ class BlockSegmentWalkerTest {
         assertThat(segments.get(0).sourceInner()).isEqualTo("Prose.");
     }
 
-    // Covers: FR-DOC-01 — the tag name decides only the segment's kind, never whether it is a segment.
+    // the tag name decides only the segment's kind, never whether it is a segment.
     @ParameterizedTest
     @CsvSource({
         "'<h2>Chapter One</h2>', HEADING",
@@ -92,7 +92,7 @@ class BlockSegmentWalkerTest {
         assertThat(segments).singleElement().extracting(Segment::kind).isEqualTo(expected);
     }
 
-    // Covers: DD-49 — IF a block is excluded, THEN it yields no segment even though it owns text.
+    // IF a block is excluded, THEN it yields no segment even though it owns text.
     @Test
     void walk_codeListing_yieldsNoSegment_andNeighboursSkipOverIt() {
         final List<Segment> segments = walk("<p>Before.</p><pre><code>int x = 1;</code></pre><p>After.</p>");
@@ -103,20 +103,20 @@ class BlockSegmentWalkerTest {
         assertThat(segments.get(1).prevKey()).isEqualTo(segments.get(0).id());
     }
 
-    // Covers: DD-49 — a block-level MathML <math> element produces no segment.
+    // a block-level MathML <math> element produces no segment.
     @Test
     void walk_blockLevelMath_yieldsNoSegment() {
         final org.jsoup.nodes.Document doc =
                 Jsoup.parse("<body><p>Before.</p><math><mi>x</mi></math><p>After.</p></body>", "", Parser.xmlParser());
         final Element body = Objects.requireNonNull(doc.selectFirst("body"));
 
-        final List<Segment> segments = BlockSegmentWalker.walk(JsoupTreeNode.of(body), UNIT_HREF);
+        final List<Segment> segments = BlockSegmentWalker.walk(JsoupTreeNode.of(body), UNIT_HREF, TreeDialect.XHTML);
 
         assertThat(segments).hasSize(2);
         assertThat(segments).noneMatch(s -> s.sourceInner().contains("<mi>"));
     }
 
-    // Covers: EC-IMG-1 — a block whose content is empty once markup is disregarded yields no segment, so an
+    // a block whose content is empty once markup is disregarded yields no segment, so an
     // image-only paragraph costs no model call.
     @Test
     void walk_imageOnlyParagraph_yieldsNoSegment() {
@@ -126,13 +126,13 @@ class BlockSegmentWalkerTest {
         assertThat(segments).extracting(Segment::sourceInner).containsExactly("One.", "Two.");
     }
 
-    // Covers: EC-IMG-1 — a spacer paragraph holding only a line break yields no segment.
+    // a spacer paragraph holding only a line break yields no segment.
     @Test
     void walk_spacerParagraph_yieldsNoSegment() {
         assertThat(walk("<p><br/></p>")).isEmpty();
     }
 
-    // Covers: FR-DOC-01 — a block mixing text and an image is still one segment, because it owns text.
+    // a block mixing text and an image is still one segment, because it owns text.
     @Test
     void walk_paragraphMixingTextAndImage_isStillOneSegment() {
         final List<Segment> segments = walk("<p>See <img src=\"fig1.png\"/> here.</p>");
@@ -141,7 +141,7 @@ class BlockSegmentWalkerTest {
         assertThat(segments.get(0).sourceInner()).contains("See ", "fig1.png", " here.");
     }
 
-    // Covers: FR-DOC-08 — WHERE a segment-bearing block contains line breaks, one segment per maximal run is
+    // WHERE a segment-bearing block contains line breaks, one segment per maximal run is
     // emitted in document order, and the break elements stay in the skeleton.
     @Test
     void walk_threeRuns_yieldThreeSegmentsWithAscendingRunIndices() {
@@ -158,7 +158,7 @@ class BlockSegmentWalkerTest {
                 .containsExactly(0, 1, 2);
     }
 
-    // Covers: FR-DOC-08 — an empty run between two adjacent line breaks yields no segment, while the runs that do
+    // an empty run between two adjacent line breaks yields no segment, while the runs that do
     // carry text keep the positional index reassembly will resolve.
     @Test
     void walk_emptyRunBetweenAdjacentBreaks_yieldsNoSegment() {
@@ -170,7 +170,7 @@ class BlockSegmentWalkerTest {
                 .containsExactly(0, 2);
     }
 
-    // Covers: FR-DOC-08 — a block containing no line break has exactly one run, carrying run index zero.
+    // a block containing no line break has exactly one run, carrying run index zero.
     @Test
     void walk_ordinaryParagraph_carriesRunIndexZero() {
         final List<Segment> segments = walk("<p>Prose with no line break.</p>");
@@ -179,7 +179,7 @@ class BlockSegmentWalkerTest {
         assertThat(((NodeAnchor) segments.get(0).anchor()).runIndex()).isZero();
     }
 
-    // Covers: FR-DOC-01 — no segment carries a kind this change cannot produce, in particular no metadata-unit
+    // no segment carries a kind this change cannot produce, in particular no metadata-unit
     // kind and none of FOOTNOTE, CAPTION or TITLE.
     @Test
     void walk_mixedDocument_emitsOnlyBodyKindsThisChangeProduces() {
@@ -207,7 +207,7 @@ class BlockSegmentWalkerTest {
                         SegmentKind.PARAGRAPH);
     }
 
-    // Covers: DD-07 — parsing adds no element to the skeleton and no element gains an attribute absent from the
+    // parsing adds no element to the skeleton and no element gains an attribute absent from the
     // source.
     @Test
     void walk_doesNotMutateTheParsedTree() {
@@ -215,7 +215,7 @@ class BlockSegmentWalkerTest {
                 Jsoup.parse("<p id=\"p1\" class=\"first\">One.</p><p>Two.</p>").body();
         final int elementsBefore = body.getAllElements().size();
 
-        BlockSegmentWalker.walk(JsoupTreeNode.of(body), UNIT_HREF);
+        BlockSegmentWalker.walk(JsoupTreeNode.of(body), UNIT_HREF, TreeDialect.XHTML);
 
         assertThat(body.getAllElements()).hasSize(elementsBefore);
         final Element pOne = Objects.requireNonNull(body.selectFirst("#p1"));
@@ -235,7 +235,7 @@ class BlockSegmentWalkerTest {
         assertThat(segments.get(0).sourceInner()).isEqualTo("Nested.");
     }
 
-    // Covers: FR-DOC-01 — a paragraph whose prose sits under inline wrappers is still reached, because the walk
+    // a paragraph whose prose sits under inline wrappers is still reached, because the walk
     // descends past every element that owns no direct text of its own.
     @Test
     void walk_proseWrappedInSpanAndItalic_isStillSegmented() {

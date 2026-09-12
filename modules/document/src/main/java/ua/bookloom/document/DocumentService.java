@@ -12,16 +12,24 @@ import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.document.epub.EpubReader;
 import ua.bookloom.document.epub.EpubWriter;
 import ua.bookloom.document.fb2.Fb2Reader;
 import ua.bookloom.document.fb2.Fb2Writer;
+import ua.bookloom.document.mask.GateOutcome;
+import ua.bookloom.document.mask.PlaceholderGate;
+import ua.bookloom.document.mask.RestoredContent;
+import ua.bookloom.document.mask.Unmasker;
+import ua.bookloom.document.md.MarkdownEscaper;
 import ua.bookloom.document.md.MarkdownReader;
+import ua.bookloom.document.md.MarkdownStructureCheck;
 import ua.bookloom.document.md.MarkdownWriter;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DocumentNotOpenException;
 import ua.bookloom.document.model.DrmRefusedException;
 import ua.bookloom.document.model.MalformedFragmentException;
+import ua.bookloom.document.model.XmlCharacters;
 import ua.bookloom.document.txt.TxtReader;
 import ua.bookloom.document.txt.TxtWriter;
 
@@ -105,6 +113,100 @@ public final class DocumentService implements DocumentPort {
             case MARKDOWN -> markdownWriter.write(document, destination, targetLanguage);
             case TXT -> txtWriter.write(document, destination, targetLanguage);
         };
+    }
+
+    @Override
+    public Result<String> unmask(BookFormat format, Segment segment, String translatedMasked) {
+        Objects.requireNonNull(format, "format");
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(translatedMasked, "translatedMasked");
+        try {
+            final GateOutcome outcome = PlaceholderGate.compare(segment.masked(), translatedMasked);
+            if (!outcome.matches()) {
+                return Result.err(gateError(outcome));
+            }
+            final RestoredContent restored = Unmasker.restore(format, segment, translatedMasked);
+            return switch (format) {
+                case MARKDOWN -> restoreMarkdown(segment, restored);
+                case EPUB, FB2 -> restoreTree(restored);
+                case TXT -> Result.ok(restored.text());
+            };
+        } catch (Throwable t) {
+            return Result.err(internalError(t));
+        }
+    }
+
+    /**
+     * The tree-format tail of restore: refuse content carrying a character XML 1.0 cannot represent, so the
+     * segment fails here rather than in the writer. {@link XmlCharacters} carries the measured reason — FB2 threw
+     * from {@link #write} and aborted the whole export, EPUB dropped the character silently — and both formats now
+     * fail identically, at the one segment responsible.
+     */
+    private Result<String> restoreTree(RestoredContent restored) {
+        if (XmlCharacters.hasUnwritableCharacter(restored.text())) {
+            return Result.err(unwritableCharacterError());
+        }
+        return Result.ok(restored.text());
+    }
+
+    private AppError unwritableCharacterError() {
+        log.warn("Refused a restored segment carrying a character that no XML document can represent");
+        return AppError.of(
+                ErrorCode.validation,
+                "This translation could not be restored",
+                "The translated text contains a character that cannot be stored in a book of this format — a"
+                        + " control character or an incomplete symbol. Nothing was restored, and the rest of the"
+                        + " book is unaffected.",
+                SafeDetails.empty().render(),
+                null);
+    }
+
+    /**
+     * The Markdown-only tail of restore: escape any construct the model's text introduced that the source did not
+     * contain, then verify the escaped text still parses to the same construct multiset as the segment's own
+     * source text — the requirements <em>Escape model-introduced Markdown punctuation when restoring</em> and
+     * <em>Verify that a restored Markdown segment keeps its structure</em>. Reached only from {@link #unmask};
+     * {@link #write} never calls {@link #unmask} — reassembly writes target text straight into the skeleton — so
+     * the zero-edit write path never reaches this guard, on any format, and must not be made to.
+     */
+    private Result<String> restoreMarkdown(Segment segment, RestoredContent restored) {
+        final String escaped = MarkdownEscaper.escapeModelIntroduced(
+                restored.text(), restored.fragmentRanges(), segment.sourceInner(), segment.kind());
+        if (!MarkdownStructureCheck.matches(segment.sourceInner(), escaped, segment.kind())) {
+            return Result.err(structureError());
+        }
+        return Result.ok(escaped);
+    }
+
+    private AppError structureError() {
+        log.warn("Refused a restored Markdown segment whose structure no longer matches its source");
+        return AppError.of(
+                ErrorCode.validation,
+                "This translation could not be restored",
+                "Restoring this translated passage would change the book's Markdown formatting — a heading, list,"
+                        + " emphasis or other structure the original did not have, or the loss of one it did.",
+                SafeDetails.empty().render(),
+                null);
+    }
+
+    /**
+     * Builds the rendered details once and logs <em>that</em>, rather than the raw token lists. The observed list
+     * is scanned out of a provider response, so its size and its tokens' lengths are the model's choice, not the
+     * system's; {@link SafeDetails#withPlaceholderMultiset} is where that side is bounded, and logging its output
+     * is what keeps the same bound on the log line.
+     */
+    private AppError gateError(GateOutcome outcome) {
+        final String details = SafeDetails.empty()
+                .withPlaceholderMultiset(outcome.expected(), outcome.observed())
+                .render();
+        log.warn("Refused a translated segment whose placeholder multiset does not match its masked form: {}", details);
+        return AppError.of(
+                ErrorCode.validation,
+                "This translation could not be restored",
+                "The translated text's formatting placeholders do not match the original segment's — one or more"
+                        + " were dropped, duplicated, or invented. Nothing was restored.",
+                details,
+                null);
     }
 
     private AppError drmError(DrmRefusedException e) {

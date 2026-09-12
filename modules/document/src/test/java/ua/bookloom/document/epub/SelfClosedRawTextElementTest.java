@@ -30,7 +30,7 @@ class SelfClosedRawTextElementTest {
     @TempDir
     private Path tempDir;
 
-    // Covers: FR-DOC-01 — WHEN a content document whose <head> contains <script src="js/book.js"/> and whose
+    // WHEN a content document whose <head> contains <script src="js/book.js"/> and whose
     // <body> contains two <p> elements of prose is parsed, THEN both paragraphs become segments.
     @Test
     void read_selfClosedScriptInHead_bothParagraphsBecomeSegments() {
@@ -41,7 +41,7 @@ class SelfClosedRawTextElementTest {
         assertThat(sourceTextsOf(document)).containsExactly("Prose one.", "Prose two.");
     }
 
-    // Covers: FR-DOC-01 — WHEN a content document whose <head> contains <style/> and whose <body> contains one
+    // WHEN a content document whose <head> contains <style/> and whose <body> contains one
     // <p> of prose is parsed, THEN that paragraph becomes a segment.
     @Test
     void read_selfClosedStyleInHead_theParagraphBecomesASegment() {
@@ -52,7 +52,7 @@ class SelfClosedRawTextElementTest {
         assertThat(sourceTextsOf(document)).containsExactly("Prose one.");
     }
 
-    // Covers: FR-DOC-01 — WHEN a content document whose <head> contains <script src="js/book.js"></script> and
+    // WHEN a content document whose <head> contains <script src="js/book.js"></script> and
     // whose <body> contains two <p> elements is parsed, THEN both paragraphs become segments.
     @Test
     void read_pairedScriptInHead_bothParagraphsBecomeSegments() {
@@ -63,7 +63,7 @@ class SelfClosedRawTextElementTest {
         assertThat(sourceTextsOf(document)).containsExactly("Prose one.", "Prose two.");
     }
 
-    // Covers: FR-DOC-01 — WHEN a content document whose <body> contains one <p> of prose, then <script
+    // WHEN a content document whose <body> contains one <p> of prose, then <script
     // src="js/book.js"/>, then a second <p> of prose is parsed, THEN both paragraphs become segments.
     @Test
     void read_selfClosedScriptInBody_bothSiblingParagraphsBecomeSegments() {
@@ -74,7 +74,7 @@ class SelfClosedRawTextElementTest {
         assertThat(sourceTextsOf(document)).containsExactly("First paragraph.", "Second paragraph.");
     }
 
-    // Covers: FR-DOC-01 — WHEN a content document whose <body> contains a <pre><code> listing whose text is the
+    // WHEN a content document whose <body> contains a <pre><code> listing whose text is the
     // literal <script src="x.js"/>, followed by one <p> of prose, is parsed and reassembled with zero segment
     // edits, THEN the listing's text in the output is still the literal <script src="x.js"/>, AND the paragraph
     // becomes a segment.

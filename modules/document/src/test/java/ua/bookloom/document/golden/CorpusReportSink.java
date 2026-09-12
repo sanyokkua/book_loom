@@ -25,7 +25,9 @@ final class CorpusReportSink implements AutoCloseable {
     private static final String TSV_HEADER =
             "file\topen\tunits\tsegments\tidentity\tidentityCanonical\tfixedPoint\tfixedPointCanonical\t"
                     + "mutation\tmutationCountsMatch\tmutationTuplesMatch\tmutationMarkerClean\t"
-                    + "idempotence\tidempotenceTuplesMatch\tidempotenceSourceMatch\twallClockMs\tfileSizeBytes";
+                    + "idempotence\tidempotenceTuplesMatch\tidempotenceSourceMatch\t"
+                    + "mask\tmaskOk\tmaskTotalPlaceholders\tmaskMaxPlaceholders\tmaskSegmentsWithPlaceholders\t"
+                    + "maskSkippedCodeOnlyBlocks\twallClockMs\tfileSizeBytes\ttextCoverage";
 
     private final BufferedWriter jsonl;
     private final BufferedWriter tsv;

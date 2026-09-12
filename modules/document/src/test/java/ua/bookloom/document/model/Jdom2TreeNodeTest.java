@@ -56,10 +56,10 @@ class Jdom2TreeNodeTest {
     }
 
     private static List<Segment> walk(Element body) {
-        return BlockSegmentWalker.walk(Jdom2TreeNode.of(body), "book.fb2#0");
+        return BlockSegmentWalker.walk(Jdom2TreeNode.of(body), "book.fb2#0", TreeDialect.FICTION_BOOK);
     }
 
-    // Covers: FR-DOC-FB2-5 — WHEN an FB2 body is parsed, THEN each block element yields a segment carrying the
+    // WHEN an FB2 body is parsed, THEN each block element yields a segment carrying the
     // kind matching that element, with a section title's paragraph and a subtitle both HEADING.
     @Test
     void walk_fb2Body_mapsEachBlockToItsKind() {
@@ -72,7 +72,7 @@ class Jdom2TreeNodeTest {
         assertThat(kindOf(segments, "A")).isEqualTo(SegmentKind.TABLE_CELL);
     }
 
-    // Covers: EC-VERSE-1 — a poem's verse lines are each their own segment rather than one stanza-sized segment.
+    // a poem's verse lines are each their own segment rather than one stanza-sized segment.
     @Test
     void walk_poemStanza_yieldsOneSegmentPerVerseLine() {
         final List<Segment> segments = walk(body());
@@ -83,26 +83,26 @@ class Jdom2TreeNodeTest {
                 .containsExactly("Рядок один", "Рядок два");
     }
 
-    // Covers: FR-DOC-FB2-5 — a container element such as <cite> is descended into to reach the blocks inside it.
+    // a container element such as <cite> is descended into to reach the blocks inside it.
     @Test
     void walk_citeContainer_isDescendedIntoToReachItsParagraph() {
         assertThat(walk(body())).extracting(Segment::sourceInner).contains("Цитата.");
     }
 
-    // Covers: FR-DOC-FB2-5 — a vertical-space element carries no words and yields no segment.
+    // a vertical-space element carries no words and yields no segment.
     @Test
     void walk_emptyLineElement_yieldsNoSegment() {
         assertThat(walk(body())).noneMatch(s -> s.sourceInner().contains("empty-line"));
     }
 
-    // Covers: FR-DOC-08 — text carried after a line break inside an FB2 paragraph is not lost; each run becomes
+    // text carried after a line break inside an FB2 paragraph is not lost; each run becomes
     // its own segment.
     @Test
     void walk_lineBreakInsideParagraph_splitsIntoTwoSegments() {
         assertThat(walk(body())).extracting(Segment::sourceInner).contains("Пролог", "Хвіст комети");
     }
 
-    // Covers: FR-DOC-03 — a translation containing inline markup is written back into the FB2 tree as markup, in
+    // a translation containing inline markup is written back into the FB2 tree as markup, in
     // the book's own namespace, rather than escaped into text.
     @Test
     void writeBack_inlineMarkup_landsAsElementsInTheBooksNamespace() {
@@ -120,7 +120,7 @@ class Jdom2TreeNodeTest {
         assertThat(xml).doesNotContain("&lt;emphasis&gt;");
     }
 
-    // Covers: FR-DOC-FB2-1 — a comment between block elements survives a write-back into a neighbouring block.
+    // a comment between block elements survives a write-back into a neighbouring block.
     @Test
     void writeBack_leavesTheCommentBetweenBlocksInPlace() {
         final Element body = body();

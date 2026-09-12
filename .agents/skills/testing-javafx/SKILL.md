@@ -5,9 +5,8 @@ description: >-
   provider-WireMock both dialects, golden round-trip, pipeline e2e, UI widget/screen/state,
   UI-matches-mockup conformance, i18n, smoke, and the local-only liveLocal / promptEval /
   visual tagged sets), using JUnit 5
-  + AssertJ + Mockito, WireMock for the LLM HTTP seam, TestFX + Monocle (headless) for UI,
-  the `// Covers: FR-*` marker convention with its one-line EARS restatement, coverage
-  targets, and running `./gradlew test`. Covers what to test where and keeping the offline
+  + AssertJ, WireMock for the LLM HTTP seam, TestFX on JavaFX 26's built-in headless platform for UI, the
+  test-naming convention, coverage targets, and running `./gradlew test`. Covers what to test where and keeping the offline
   invariant.
 allowed-tools: Read, Write, Bash, Glob, Grep
 ---
@@ -15,15 +14,15 @@ allowed-tools: Read, Write, Bash, Glob, Grep
 # Testing (JavaFX + core)
 
 Tests prove requirements and hold the architecture invariants. Every requirement in an
-OpenSpec change's `specs/**/spec.md` has a passing test that names the `FR-*` id it covers
-and restates the obligation in one line (ADR-0016 R5).
+OpenSpec change's `specs/**/spec.md` has a passing test whose name and one-line comment say
+what it proves; the test was observed red before the implementation (ADR-0032).
 
 ## When to use
 
 - Writing unit, integration, UI, or ArchUnit tests for a change's requirements.
-- Mocking the LLM HTTP seam with WireMock, or a port with Mockito.
+- Mocking the LLM HTTP seam with WireMock.
 - Writing a headless TestFX control-state or screenshot assertion.
-- Adding `// Covers: FR-*` markers and running `./gradlew test`.
+- Running `./gradlew test` and the whole-project gate.
 
 ## When NOT to use
 
@@ -34,8 +33,8 @@ and restates the obligation in one line (ADR-0016 R5).
 - Do NOT put JavaFX/TestFX in a core-module test — only `:ui` (and `:app`) touch FX.
 - Do NOT assert on private internals when the requirement is a public contract (P3) —
   assert the `Result` envelope and `ErrorCode`.
-- Do NOT write a test that covers a requirement without a `// Covers: FR-*` marker and its
-  one-line EARS restatement. Do NOT use the retired `Proves: STORY-NNN-AC-N` form.
+- Do NOT mock the boundary a test exists to prove; mock only I/O and non-determinism. Do NOT
+  add `// Covers: FR-*` or `Proves:` markers — both are retired (ADR-0032).
 
 ## Test tiers
 
@@ -47,9 +46,9 @@ and restates the obligation in one line (ADR-0016 R5).
 | Pipeline e2e | small whole book through the engine | JUnit 5, stub/WireMock provider |
 | ArchUnit | module boundaries, FX-free core, ports-not-concretes, cycles | ArchUnit (`archTest` source set) |
 | Golden | per-format document round-trip canonical equality (DD-43; TXT exact bytes) | JUnit 5 over fixtures |
-| UI widget | one control's state + bindings | TestFX + Monocle (headless) |
-| UI screen/state | each screen's enumerated states/dialogs | TestFX + Monocle (headless) |
-| UI conformance | matches the mockup: structure, palette tokens, coverage checklist (P6) | TestFX + Monocle (headless) |
+| UI widget | one control's state + bindings | TestFX, built-in headless platform |
+| UI screen/state | each screen's enumerated states/dialogs | TestFX, built-in headless platform |
+| UI conformance | matches the mockup: structure, palette tokens, coverage checklist (P6) | TestFX, built-in headless platform |
 | i18n | EN default + UK bundle completeness, locale selection, DB switch | JUnit 5 over resource bundles |
 | Smoke | app boots (injector + two-phase init); jpackage image launches | JUnit 5 (boot), packaging matrix |
 | Live-local (`liveLocal`) | real prompt/request/response vs real servers | JUnit 5, real Ollama + LM Studio (env-gated, NOT CI) |
@@ -63,17 +62,14 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 1. **Pick the tier from the scenario pattern.** P1 Given/When/Then and P2 state transition ->
    unit/integration; P3 contract -> assert the `Result`/`ErrorCode` shape; P4 rendering ->
    TestFX control-state; P5 guard/negative -> pair with an `EC-` id; P6 visual reference ->
-   TestFX/Monocle screenshot matching the mockup screen/state/theme.
-2. **Mark the covering test.** Put `// Covers: FR-*` immediately above the test method,
-   followed by a **one-line EARS restatement** of the obligation — e.g.
-   `// Covers: FR-DOC-05 — IF the placeholder multiset of the target differs from the`
-   `//         source, THEN the chunk fails as a validation error with no repair attempt.`
-   The id is the greppable join key (the spec is frozen, so `FR-*` ids are permanent); the
-   restatement is what makes the marker readable. One outcome per test. For an edge case,
-   name it alongside: `// Covers: FR-IMPORT-03, EC-DRM-1 — …`. Several tests may share one
-   `FR-*` id when a dense FR decomposed into several requirements.
-3. **Unit test with mocks.** Inject mocked `:api` ports via constructor; assert with
-   AssertJ. ViewModels are unit-testable without a scene graph (they hold no FX nodes).
+   TestFX screenshot matching the mockup screen/state/theme.
+2. **Name the test and say what it proves.** `method_state_expected`, plus — when the name is
+   not enough — one plain-language comment line above the method:
+   `// IF the placeholder multiset of the target differs from the source, THEN the chunk`
+   `// fails as a validation error with no repair attempt.` One outcome per test. Write it
+   first and see it fail.
+3. **Unit test against real collaborators.** Inject real `:api` implementations or hand-written
+   fakes via constructor; assert with AssertJ. ViewModels are unit-testable without a scene graph (they hold no FX nodes).
 4. **Mock the LLM with WireMock — BOTH dialects.** Stub the OpenAI-compatible endpoints
    (`/v1/chat/completions`, `/v1/models`) AND the Ollama-native endpoints (`/api/chat`,
    `/api/tags`, `/api/show`) to exercise: request shape per dialect (nullable-param omission,
@@ -98,7 +94,7 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
    (both branches exercised deterministically), a flagged residual reaching Review,
    checkpoint/resume restoring mid-run state (re-entering at the **first PENDING** segment;
    FLAGGED is terminal-for-run), and same-original-format export, canonical-equal.
-8. **Test UI headless — widget, screen/state, and conformance.** TestFX + Monocle.
+8. **Test UI headless — widget, screen/state, and conformance.** TestFX on the built-in headless platform.
    - **Widget:** assert one control's state and its viewmodel binding (P4); assert long work
      marshals state via the mirror's `Platform.runLater` wrapping.
    - **Screen/state:** drive the viewmodel/navigator into each enumerated state from
@@ -143,17 +139,16 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
     `api-is-framework-free`, `records-first`, `bootstrap-no-static-logger`. A failing
     ArchUnit test fails the build.
 13. **Run the gate.** `./gradlew test` green, then the whole-project clean gate
-    `./gradlew clean build check spotlessCheck` with no pre-existing-failure exemption. At a
-    stage boundary, `bash scripts/fr-coverage.sh` reports which frozen `FR-*` ids no shipped
-    requirement claims yet — advisory, never a gate.
+    `./gradlew clean build check spotlessCheck` with no pre-existing-failure exemption, then
+    run the app and exercise the change by hand.
 
-## TestFX + Monocle headless setup
+## TestFX headless setup
 
 - UI tests only touch FX in `:ui` (and `:app`); core-module tests stay FX-free.
-- Run headless (no display server) by setting the Monocle system properties on the test JVM:
-  `-Dtestfx.robot=glass -Dglass.platform=Monocle -Dmonocle.platform=Headless`
-  (plus `-Dprism.order=sw -Djava.awt.headless=true`). Set these in the JavaFX/test convention
-  plugin so CI and local runs match; a missing property hangs the UI test.
+- Headless (no display server) is JavaFX 26's built-in glass platform, not Monocle (which has no build past
+  21.0.2 — ADR-0019): `-Dglass.platform=Headless -Dprism.order=sw -Djava.awt.headless=true`, set by
+  `bookloom.test-conventions` on every `Test` task so CI and local runs match. Do not set `testfx.headless`;
+  it makes TestFX try to install Monocle.
 - Start the FX toolkit once per suite (a TestFX `ApplicationTest` or a shared `@BeforeAll`
   toolkit init); construct controllers through the Guice controller factory so viewmodels/
   ports are injected as in production.
@@ -171,12 +166,11 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 
 ## Running
 
-- `./gradlew test` — full automated suite including headless TestFX/Monocle (CI runs the same);
+- `./gradlew test` — full automated suite including headless TestFX (CI runs the same);
   excludes `liveLocal`, `promptEval`, and `visual`.
 - pre-push runs unit tests excluding UI/TestFX + the fast ArchUnit subset (< 60s).
 - `./gradlew liveLocal` — the local-only live-provider set against a real Ollama + LM Studio;
   env-gated, skips when unconfigured, NOT part of `check`/CI.
-- `bash scripts/fr-coverage.sh` — advisory FR-coverage grep; never a build gate.
 
 ## Reference index
 
@@ -189,9 +183,9 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 
 ## Mandatory validation checklist
 
-- [ ] Every requirement has a passing test carrying `// Covers: FR-*` plus a one-line EARS
-      restatement of the obligation.
-- [ ] Every `EC-` id the change touches appears in some covering test's marker.
+- [ ] Every requirement has a passing test whose name and comment say what it proves, and
+      that test was red before the implementation.
+- [ ] Every edge case the change touches has a test.
 - [ ] The correct tier is used for each scenario pattern (P1..P6).
 - [ ] LLM interactions use WireMock only, stubbing BOTH the OpenAI-compatible and Ollama-native
       endpoints; response handling (`<think>`-strip, tolerant parse, repair, text fallback) is
@@ -200,7 +194,7 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 - [ ] Document golden round-trip (per format, canonical-equal; TXT exact bytes) and a
       pipeline e2e (accepted/flagged + first-PENDING resume + same-format export) exist.
 - [ ] Core-module tests are FX-free; UI widget, screen/state, and mockup-conformance tests are
-      TestFX + Monocle headless, with palette-token/looked-up-colour and coverage-checklist
+      TestFX headless, with palette-token/looked-up-colour and coverage-checklist
       assertions.
 - [ ] i18n: `messages_en` + `messages_uk` key sets identical, OS-locale first-start selection,
       `ui.language` DB switch.
@@ -214,13 +208,9 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 
 ## Gotchas
 
-- A marker with only the `FR-*` id and no EARS restatement is incomplete — the restatement
-  is what makes it readable without opening the spec.
-- Nothing mechanically enforces the marker: no build task binds tests to requirements
-  (ADR-0016). Review and `scripts/fr-coverage.sh` are the only checks, so a missing marker
-  fails silently. Add it when you write the test, not later.
-- TestFX on CI needs Monocle headless (`-Dtestfx.robot=glass -Dglass.platform=Monocle
-  -Dmonocle.platform=Headless`); a missing property hangs the UI test.
+- A test that passed on its first run proved nothing: observe it red first.
+- Headless UI tests need `-Dglass.platform=Headless -Dprism.order=sw -Djava.awt.headless=true`, which
+  `bookloom.test-conventions` sets on every `Test` task; a hand-rolled test task without them wants a display.
 - Assert typed errors by `ErrorCode`, not by message text — messages are not contract.
 - Retry tests must assert NON-retryable codes (`auth`, `modelNotFound`, `contextWindow`,
   `validation`, `emptyCompletion`) are NOT retried, and retryable ones are.

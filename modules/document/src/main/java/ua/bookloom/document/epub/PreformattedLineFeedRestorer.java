@@ -12,9 +12,9 @@ import org.jsoup.nodes.TextNode;
  * Restores the one leading U+000A the HTML parser discards immediately after a preformatted block's start tag —
  * the serialization-time counterpart the HTML serialization spec requires and jsoup 1.23.1 does not implement
  * (task 6.1, DD-49; the measurement is recorded in {@code docs/implementation_plan/notes-corpus-verification.md},
- * finding F2). Left unrestored, a
- * {@code pre}/{@code textarea}/{@code listing} block whose content begins with two or more line breaks loses one
- * every time the document is written, silently deleting a line from inside a poem or verse block on every export.
+ * finding F2). Left unrestored, a {@code pre} or {@code listing} block whose content begins with two or more line
+ * breaks loses one every time the document is written, silently deleting a line from inside a poem or verse block
+ * on every export.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
@@ -23,8 +23,21 @@ import org.jsoup.nodes.TextNode;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class PreformattedLineFeedRestorer {
 
-    /** The HTML serialization spec's newline-suppressing element names, verbatim (task 6.1). */
-    private static final String RESTORABLE_TAG_SELECTOR = "pre, textarea, listing";
+    /**
+     * The elements whose leading line feed is actually restored — <strong>deliberately narrower</strong> than the
+     * HTML serialization spec's newline-suppressing set, which also lists {@code textarea}.
+     *
+     * <p>Restoring is only correct where the parser <em>discarded</em> something, and jsoup 1.23.1's parser is
+     * asymmetric with its own serializer here. Measured on the fixture {@code <textarea>\n\nx</textarea>}: the
+     * parsed first text node still holds both line feeds, while {@code <pre>\n\nx</pre>} and
+     * {@code <listing>\n\nx</listing>} come back holding one. Restoring {@code textarea} therefore handed it back a
+     * line feed it never lost, and it grew by one on <em>every</em> write, without bound — measured over four
+     * successive zero-edit writes of the same document as 3, 4, 5, then 6 line feeds where the source wrote 2.
+     *
+     * <p>Do not "complete" this set from the spec: the spec governs serialization, and this class exists only to
+     * compensate for a parse-time loss.
+     */
+    private static final String RESTORABLE_TAG_SELECTOR = "pre, listing";
 
     /**
      * Returns a tree fit to serialize. {@code tree} may be the live object a caller's registry holds — it is
@@ -49,7 +62,7 @@ final class PreformattedLineFeedRestorer {
     }
 
     /**
-     * @param element a {@code pre}/{@code textarea}/{@code listing} element
+     * @param element a {@code pre} or {@code listing} element
      * @return {@code true} if it has a first child that is a text node whose content begins with a bare
      *     U+000A — the exact character the parser discards. A block with no first child at all (an empty
      *     {@code <pre></pre>}) is never reached into, and a block beginning with a carriage-return-line-feed

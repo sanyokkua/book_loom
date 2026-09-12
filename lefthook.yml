@@ -91,9 +91,6 @@ commit-msg:
 #
 # A gate that silently opts out is worse than no gate: the green push then proves nothing, and D8's
 # "green push implies green CI" claim would be false in precisely the case nobody thinks to check.
-# `tooling/hooks-test/pre-push-runs-when-push-files-is-empty.sh` is the regression check for this — and it is
-# a separate script on purpose, because the Checkstyle check pushes a new commit and so never reaches the
-# skip path at all.
 # ---------------------------------------------------------------------------------------------------------
 pre-push:
   scripts:

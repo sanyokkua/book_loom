@@ -1,5 +1,144 @@
 # Corpus verification of the document round trip — consolidated findings
 
+## Sweep — `Books_Examples`, 216 books, 2026-09-12
+
+The owner's own collection (197 EPUB, 9 FB2, 9 TXT, 1 Markdown, 367 MB; several books in three formats). First run,
+before any change: open 215/216, identity 214/215 canonical-equal, fixed point 215/215, mutation marker-strip
+215/215, mutation tuples 205/215, idempotence 215/215, mask probe 215/215; 2 min 39 s. FB2/TXT twins of the same
+book produce identical segment counts; every non-EPUB file is UTF-8 without BOM; no book yields zero segments.
+
+Three findings, two of them in the harness:
+
+1. `Тарас Шевченко - Наймичка.epub` was refused as corrupt: its spine lists `page0003…page0020` and the archive
+   ships only the odd-numbered files (an authoring-tool leftover). Apple Books shows the complete poem from the nine
+   files present. **Fixed in the product**: a spine item whose file is absent is skipped with one warning line;
+   only a spine with no present file refuses (`EpubReaderTest`).
+2. `4. Software Architecture. The Hard Parts.epub` stores `mimetype` as its third zip entry; the writer rightly
+   moves it first, and the comparator read that as a reordered book. **Fixed in the harness**: the entry-order
+   comparison ignores where the source kept `mimetype` (`GoldenComparisonMetaTest` proves a real reorder is still
+   caught).
+3. Every TXT and Markdown book failed the mutation probe's tuple check because the tuples carried byte-span anchors,
+   which a length-changing translation legitimately moves. **Fixed in the harness**: the mutation probe compares
+   identity and kind; the zero-edit idempotence probe still compares anchors.
+
+After the fixes: open 216/216, identity 216/216, fixed point 216/216, mutation tuples and marker-strip 216/216,
+idempotence 216/216, mask probe 216/216. Observed, not fixed: declared languages `ua`, `EN`, `en-US` (debt D17);
+largest segment 26,306 characters and 248 placeholders in one segment (chunker inputs, D5).
+
+**Element coverage (same day).** A tag census over the 7,438 EPUB content documents and the 9 FB2 files found no
+text-owning element inside a body that the structural rule does not handle (`p` 410k, `div` 170k, `span` 63k, `a`,
+`li`, `h1`–`h6`, `dt`/`dd`, `td`/`th`, `caption`, `blockquote`, FB2 `p`/`v`/`subtitle`/`emphasis`); the never-entered
+set (`pre`, `code`, `math`, `svg`) matches what the books contain. The sweep now records `textCoverage` per book
+(`TextCoverage.of`, words of visible body text reached by segments): min 0.9808, median 1.0000, mean 0.9997 over
+216 books; no book below 0.98. The two lowest (Sherlock Holmes 0.9808, Alice 0.9836) are a counting artefact, not
+a gap — their paragraphs are built from adjacent `<span>`s with no whitespace between them, so the helper's word
+split differs on each boundary; the paragraphs themselves are segments (verified by locating the sample sentence
+in one). What the walker never reaches is everything outside a body: NCX labels (11,997 across the 197 EPUBs),
+EPUB 3 nav documents (20), page `<title>`s (7,450), OPF `dc:title`/`dc:description` (197/106), FB2 `annotation`
+(6 books) and `book-title` (9), `img@alt` (1) — the planned metadata-units change.
+
+## Corpus run — `add-inline-masking-and-placeholder-gate`, 2026-08-12
+
+> **Second re-run addendum — after the four-reviewer audit's fixes.** Four independent reviewers audited the change
+> with clean context once its own gate was already green, and found four behaviour defects: a Markdown link whose
+> label wraps across a line made the **whole book unopenable** (`ErrorCode.internal`, from an empty source-span list
+> on a `SoftLineBreak`); a numbered heading could never be translated (54 of 2,065 corpus Markdown segments across
+> four books); a model-introduced hard line break could never be neutralised; and the escaper wrote a **visible
+> stray backslash** into the book for an indented-code case. All four are fixed. The corpus was re-run afterwards
+> and **not one number below moved** — 213 books, 212 opened, 212/212 passing the mask probe, 300,253 placeholders
+> across 787,781 segments. Worth stating plainly: the corpus was green for all four defects. Its eight Markdown
+> books simply do not contain a line-wrapped link label, and a structured fuzz over `open()` found that one in
+> 20,000 cases. A corpus proves the shapes it contains.
+
+> **Re-run addendum, same day.** The mask-then-restore comparator was subsequently made **whitespace-exact** — it
+> had been collapsing whitespace exactly as `Fb2CanonicalAssert` does, which would have inherited the very blind
+> spot this check exists to cover. The corpus was re-run against the stricter comparator and **not one number below
+> moved**: 212 of 212 openable books still pass, and the placeholder totals are identical. So nothing on the restore
+> path legitimately normalizes whitespace. One difference stays invisible regardless: XML 1.0 §2.11 makes the parser
+> fold a carriage-return/line-feed pair to a bare line feed before any comparator runs, so a `\r\n`-for-`\n`
+> regression is caught only by the direct assertion on a captured fragment, never by this comparison.
+
+Re-measured with the same committed harness against the same 213-book corpus:
+`BOOKLOOM_CORPUS_DIR=<abs path> BOOKLOOM_CORPUS_REPORT_DIR=<abs path> ./gradlew :document:corpus --rerun-tasks`,
+2m 59s wall-clock.
+
+**Every shipped probe matches the previous baseline exactly — nothing regressed:**
+
+| probe | this run | previous baseline |
+|---|---|---|
+| open | 212 ok / 1 refused | 212 ok / 1 refused |
+| books yielding zero segments | 0 | 0 |
+| zero-edit identity, canonical-equal | 211 | 211 |
+| fixed point (write twice), canonical-equal | 211 | 211 |
+| mutation marker-strip clean | 208 | 208 |
+| idempotence | 211 of 211 | 211 of 211 |
+
+The single refusal is `Тарас Шевченко - Наймичка.epub`, the genuinely corrupt book this note already documents.
+
+### The new probe: mask, supply the masked form back as its own target, restore, compare canonically
+
+212 of 212 openable books pass, 0 failures. Every book that opens can have every segment masked and
+the masked text handed straight back as its own translated target, restored through `unmask`, and
+compare canonically equal to what masking started from.
+
+### Placeholder statistics
+
+This is the number change 12's chunker needs, and the reason DD-49 asked for it:
+
+- total placeholders across the corpus: **300,253**
+- segments: **787,781**
+- segments carrying at least one placeholder: **90,425 (11.5%)**
+- placeholders per segment overall: **0.38**
+- per book: min 0, median 120, mean 1,416, max 66,011
+- largest count in any one segment: median per book 6, **max 1,015**
+- 7 books contain a segment with 100 or more placeholders; the worst are
+  `EasyCroatian_ENG_BOOK_release_45b.epub` (1,015), `3. Designing Data-Intensive Applications` (228),
+  `7. Fundamentals of Software Architecture` (194), `Alices Adventures in Wonderland.epub` (149),
+  `aliceDynamic.epub` (149), `J_R_R_Tolkien-02-The_Lord_of_the_Rings.fb2` (128)
+- heaviest books by total: `EasyCroatian_ENG_BOOK_release_45b.epub` 66,011 across 16,035 segments;
+  `Біблія.epub` 54,232 across 32,300; `Designing Data-Intensive Applications` 34,062 across 7,014
+
+**What this means, stated plainly.** DD-49 warned that a naive masking scheme would explode the placeholder
+multiset a chunk has to carry (DD-49). Measured, it does not — 0.38 placeholders per segment on average, and
+only about one segment in nine carries any at all. The number that matters to the chunker is not the average
+but the worst single segment, **1,015 placeholders**, which is what its "never split a masked tag pair"
+obligation has to survive.
+
+### Two defects the run found, both fixed in the same change
+
+1. **A Markdown segment could fail its own identity restore.** Four of the eight real Markdown books
+   failed, 23 / 13 / 11 / 7 segments each. Cause: a heading whose content is `1. What BMAD is` — the
+   content range excludes the `## ` marker — parses standalone as an ordered list. The escaper decided a
+   construct was model-introduced purely from whether its delimiters fell outside a restored fragment's
+   range, so with no placeholders at all it escaped the list marker to `1\. What BMAD is`, and the
+   structure check then compared `[OrderedList, ListItem, Paragraph]` against `[Paragraph]` and failed.
+   That violates the requirement's own scenario "A segment restored unchanged always passes", and the
+   escaping requirement's wording that only a construct "the source did not contain" may be escaped.
+   Fixed by making attributability depend on the source's own construct multiset: a round stops as soon
+   as the candidate already agrees with the source, and only a construct type genuinely in excess is ever
+   escaped.
+2. **A test-harness limitation, not a product defect.** The mask-then-restore comparator wrapped an FB2
+   fragment in a synthetic element declaring `xmlns:l`, but real FictionBook files declare the XLink
+   prefix as either `l` or `xlink` — `Jdom2TreeNode`'s own Javadoc says so — and `Rowling J.K.. Harry
+   Potter et la Coupe de Feu.fb2` uses `xlink:href`, so the comparator could not parse a fragment
+   production restores correctly. Production's wrapper takes `getNamespacesInScope()` and never had the
+   problem. The comparator now declares every prefix the fragment actually uses.
+
+### One usability finding worth recording for the next reader
+
+The command as written in `tasks.md`, `BOOKLOOM_CORPUS_DIR=.temporary_context/Book_Examples
+./gradlew :document:corpus`, **does not work** — Gradle runs the test with the module directory as its
+working directory, so a relative path resolves to `modules/document/.temporary_context/...` and the run
+aborts with "Configured BOOKLOOM_CORPUS_DIR does not exist". An absolute path is required. Setting
+`BOOKLOOM_CORPUS_REPORT_DIR` is also worth doing: unset, the report goes to an unnamed temp directory and
+cannot be diffed against a later run.
+
+**Also record:** `skippedCodeOnlyBlocks` is reported as `notMeasured`, never as `0`. Task 4.4 made XHTML
+blocks whose only translatable content is an inline code span yield no segment, but the walker does not
+report a count and reproducing its predicate in the harness would be a second copy of intricate production
+logic that nothing would notice drifting — so the field ships unpopulated and honest rather than silently
+zero.
+
 ## Post-fix re-run — `fix-document-round-trip-corpus-defects`, 2026-08-11
 
 Re-measured with the committed harness (`./gradlew :document:corpus`, `@Tag("corpus")`), which now replaces the
@@ -494,3 +633,46 @@ filename-derived segment-id collision that reported `stripMismatchCount` of 1194
 758/758 on Markdown — a total, unanimous failure on books whose segmentation is in fact perfectly
 stable. The tell was an **asymmetry**: EPUB looked believable while three other formats looked
 catastrophic.
+
+## Round-two re-run — after the second independent audit's eleven fixes
+
+Re-run on the full 213-book corpus after the second audit's fix commits (`2847595`, `f004c59`,
+`7cd5c33`) and their covering tests (`20efcb0`), with an absolute `BOOKLOOM_CORPUS_DIR` and
+`--rerun-tasks`. `BUILD SUCCESSFUL in 2m 52s`, `16 actionable tasks: 16 executed`.
+
+**Read `maxPlaceholdersInOneSegment` as a maximum, not a total.** It is reported per book, so summing the column
+across 213 books yields 3,598 — a number that is not a segment, not a book, and not a bound on anything. The true
+figure is the maximum of the per-book maxima. This footnote exists because the summed value was written into an
+earlier draft of this table and had to be corrected before it became a baseline someone compared against.
+
+| Statistic | Round one | Round two | |
+|---|---|---|---|
+| Books opened / refused | 212 / 1 | 212 / 1 | unchanged |
+| Segments | 787,781 | 787,781 | unchanged |
+| Placeholders | 300,253 | 300,253 | unchanged |
+| Segments carrying at least one placeholder | 90,425 | 90,425 | unchanged |
+| Most placeholders in one segment | 1,015 | 1,015 | unchanged (`EasyCroatian_ENG_BOOK_release_45b.epub`) |
+| Mask-then-restore ok | 212 / 212 | 212 / 212 | unchanged |
+| Mask mismatches | 0 | 0 | unchanged |
+| `fixedPoint.canonicalEqual` | true on all attempted | true on 211, 2 not attempted | unchanged |
+
+The one refused book is still `Художня література/Українська класика/Тарас Шевченко - Наймичка.epub`
+(`ErrorCode.validation`); the two books not attempting a fixed-point comparison are that one and
+`aliceDynamic.epub`, whose write failure is pre-existing and byte-identical across both runs.
+
+**Read the "unchanged" column carefully — it is evidence of no regression, and it is *not* evidence
+that the round-two fixes fire.** Segment and placeholder counts did not move by one, so no book in
+this corpus contains an FB2 inline `<math>`/`<svg>` (which round two made atomic, and which would
+have *reduced* the placeholder count), nor a run whose only content is a named-atomic span (which
+round two stopped emitting as a segment, and which would have *reduced* the segment count). Both
+fixes are proven by the in-code regression tests in `Fb2ForeignContentMaskingTest` and
+`NamedAtomicRunSegmentationTest`, not by this sweep. The same holds for every other round-two fix
+except the Markdown escaper's: those defects need a *translated* target, and this sweep only ever
+performs identity restores, so it cannot reach them at all. What the sweep proves is that eleven
+fixes touching the masker, both tree adapters, the write path and the error envelope changed nothing
+about how 213 real books parse, mask and round-trip.
+
+**`fixedPoint.rawBytesEqual` differs run-to-run in both directions and must never be treated as a
+baseline** — 43 books differed on that field alone between two consecutive runs of the *same* code,
+while `canonicalEqual` held everywhere. DD-43 makes canonical, not raw, the contract; this field is
+diagnostic only.

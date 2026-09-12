@@ -54,7 +54,7 @@ class ParseDeterminismTest {
             </body></html>
             """;
 
-    // Covers: FR-IMPORT-08 — WHEN the same source bytes are parsed twice, THEN both parses produce the same unit
+    // WHEN the same source bytes are parsed twice, THEN both parses produce the same unit
     // ids in the same order and every segment's id, order and anchor is identical between them.
     @Test
     void read_sameBytesParsedTwice_yieldIdenticalIdsOrderAndAnchors() {

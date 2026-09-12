@@ -70,7 +70,7 @@ class AppPathsResolverTest {
 
     // ===== The per-OS matrix, production =========================================================================
 
-    // Covers: FR-PERSIST-03 — The system SHALL place the database under the per-OS application data directory and
+    // The system SHALL place the database under the per-OS application data directory and
     // the logs under the per-OS log directory.
     @Test
     void layout_windowsProduction_usesLocalAppDataWithALogsChild() {
@@ -81,7 +81,7 @@ class AppPathsResolverTest {
         assertThat(resolved.logDir()).isEqualTo("C:\\Users\\ok\\AppData\\Local\\BookLoom\\logs");
     }
 
-    // Covers: FR-PERSIST-03 — The system SHALL place the database under the per-OS application data directory and
+    // The system SHALL place the database under the per-OS application data directory and
     // the logs under the per-OS log directory.
     @Test
     void layout_macOsProduction_separatesApplicationSupportFromLibraryLogs() {
@@ -93,7 +93,7 @@ class AppPathsResolverTest {
                 .isEqualTo("/Users/ok/Library/Logs/BookLoom");
     }
 
-    // Covers: FR-PERSIST-03 — The system SHALL place the database under the per-OS application data directory and
+    // The system SHALL place the database under the per-OS application data directory and
     // the logs under the per-OS log directory.
     @Test
     void layout_linuxProduction_usesXdgDataForDataAndXdgStateForLogs() {
@@ -117,7 +117,7 @@ class AppPathsResolverTest {
 
     // ===== The dev/production split (EC-ENV-4) ===================================================================
 
-    // Covers: FR-PERSIST-06 — WHERE the run is a development build, the system SHALL resolve every path under a
+    // WHERE the run is a development build, the system SHALL resolve every path under a
     // separate `-Dev`/`-dev` sibling folder so production data is never read or written.
     @Test
     void layout_windowsDevelopment_usesTheDevSiblingFolder() {
@@ -127,7 +127,7 @@ class AppPathsResolverTest {
         assertThat(resolved.dataDir()).isEqualTo("C:\\Users\\ok\\AppData\\Local\\BookLoom-Dev");
     }
 
-    // Covers: FR-PERSIST-06 — WHERE the run is a development build, the system SHALL resolve every path under a
+    // WHERE the run is a development build, the system SHALL resolve every path under a
     // separate `-Dev`/`-dev` sibling folder so production data is never read or written.
     @Test
     void layout_macOsDevelopment_usesTheDevSiblingForBothDataAndLogs() {
@@ -137,7 +137,7 @@ class AppPathsResolverTest {
         assertThat(resolved.logDir()).isEqualTo("/Users/ok/Library/Logs/BookLoom-Dev");
     }
 
-    // Covers: FR-PERSIST-06 — WHERE the run is a development build, the system SHALL resolve every path under a
+    // WHERE the run is a development build, the system SHALL resolve every path under a
     // separate `-Dev`/`-dev` sibling folder so production data is never read or written.
     @Test
     void layout_linuxDevelopment_usesTheLowercaseDevSibling() {
@@ -152,7 +152,7 @@ class AppPathsResolverTest {
      * hold different lock files and can therefore run at the same time. Asserting "the names differ" would be weaker
      * — it is the <em>lock path</em> divergence that makes simultaneous runs safe.
      */
-    // Covers: FR-PERSIST-06 — WHERE a development and a production build run at once, the system SHALL keep their
+    // WHERE a development and a production build run at once, the system SHALL keep their
     // data folders — and therefore their single-instance locks — entirely separate.
     @Test
     void layout_devAndProduction_resolveToDisjointFolders() {
@@ -176,7 +176,7 @@ class AppPathsResolverTest {
 
     // ===== EC-ENV-1 — blank or relative XDG values ===============================================================
 
-    // Covers: FR-PERSIST-03 — IF an XDG base-directory variable is blank or relative, THEN the system SHALL ignore
+    // IF an XDG base-directory variable is blank or relative, THEN the system SHALL ignore
     // it and use the ~/.local fallback rather than resolving against the working directory.
     @ParameterizedTest
     @ValueSource(strings = {"", "   ", "relative/path", "./data", "~/data"})
@@ -191,7 +191,7 @@ class AppPathsResolverTest {
 
     // ===== EC-ENV-6 — the Windows fallback chain =================================================================
 
-    // Covers: FR-PERSIST-03 — IF %LOCALAPPDATA% is unset, THEN the system SHALL fall back to %USERPROFILE%\AppData\
+    // IF %LOCALAPPDATA% is unset, THEN the system SHALL fall back to %USERPROFILE%\AppData\
     // Local and then to user.home\AppData\Local rather than failing to resolve.
     @Test
     void layout_windowsLocalAppDataUnset_fallsBackToUserProfile() {
@@ -201,7 +201,7 @@ class AppPathsResolverTest {
         assertThat(resolved.dataDir()).isEqualTo("C:\\Users\\ok\\AppData\\Local\\BookLoom");
     }
 
-    // Covers: FR-PERSIST-03 — IF %LOCALAPPDATA% is unset, THEN the system SHALL fall back to %USERPROFILE%\AppData\
+    // IF %LOCALAPPDATA% is unset, THEN the system SHALL fall back to %USERPROFILE%\AppData\
     // Local and then to user.home\AppData\Local rather than failing to resolve.
     @Test
     void layout_windowsLocalAppDataAndUserProfileUnset_fallsBackToUserHome() {
@@ -230,7 +230,7 @@ class AppPathsResolverTest {
 
     // ===== EC-ENV-7 — no usable home =============================================================================
 
-    // Covers: FR-PERSIST-03 — IF no usable home directory exists on any platform, THEN the system SHALL return a
+    // IF no usable home directory exists on any platform, THEN the system SHALL return a
     // validation failure and refuse to start rather than writing to the working directory.
     @ParameterizedTest
     @ValueSource(strings = {MACOS, LINUX, WINDOWS})
@@ -257,7 +257,7 @@ class AppPathsResolverTest {
 
     // ===== EC-ENV-9 — the BOOKLOOM_DATA_DIR override =============================================================
 
-    // Covers: FR-PERSIST-03 — WHEN BOOKLOOM_DATA_DIR is set to an absolute path, the system SHALL use it verbatim as
+    // WHEN BOOKLOOM_DATA_DIR is set to an absolute path, the system SHALL use it verbatim as
     // the data directory and derive the log directory beneath it.
     @Test
     void layout_absoluteOverride_takesItVerbatimAndDerivesLogsBeneathIt() {
@@ -281,7 +281,7 @@ class AppPathsResolverTest {
         assertThat(resolved.dataDir()).isEqualTo("/tmp/bookloom-smoke");
     }
 
-    // Covers: FR-PERSIST-03 — IF BOOKLOOM_DATA_DIR is blank or relative, THEN the system SHALL ignore it and apply
+    // IF BOOKLOOM_DATA_DIR is blank or relative, THEN the system SHALL ignore it and apply
     // normal per-OS resolution.
     @ParameterizedTest
     @ValueSource(strings = {"", "   ", "books", "./books", "../books"})
@@ -320,7 +320,7 @@ class AppPathsResolverTest {
             assertThat(paths.logDir()).isEqualTo(paths.dataDir().resolve("logs"));
         }
 
-        // Covers: FR-PERSIST-03 — WHEN the data or log directory does not exist on first run, the system SHALL
+        // WHEN the data or log directory does not exist on first run, the system SHALL
         // create it idempotently before use.
         @Test
         void prepare_firstRun_createsBothDirectoriesAndIsIdempotent() {
@@ -336,7 +336,7 @@ class AppPathsResolverTest {
                     .isTrue();
         }
 
-        // Covers: FR-PERSIST-03 — IF the data or log directory cannot be created, THEN the system SHALL return a
+        // IF the data or log directory cannot be created, THEN the system SHALL return a
         // validation failure rather than starting without a usable data directory.
         @Test
         void prepare_directoryCannotBeCreated_isAValidationFailure() throws IOException {

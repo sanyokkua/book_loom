@@ -304,6 +304,30 @@ public final class EpubFixtures {
                 """);
     }
 
+    /** A block whose only translatable content is an inline code span (D11); it yields no segment (spec scenario). */
+    public static Path codeOnlyParagraph(Path destination) {
+        return book(destination, """
+                <p>Before.</p>
+                <p><code>List.of()</code></p>
+                <p>After.</p>
+                """);
+    }
+
+    /**
+     * A {@code <pre><code>} listing and a code-only paragraph (D11), amid prose that alone reaches every word, plus
+     * a paragraph whose code span sits inside prose it owns rather than standing alone — that span's text must
+     * stay on both sides of the coverage ratio (CoverageExclusionTest's "still inside the measurement" case).
+     */
+    public static Path codeExclusionsAmongProse(Path destination) {
+        return book(destination, """
+                <p>Alpha bravo charlie.</p>
+                <pre><code>int x = 1;</code></pre>
+                <p><code>List.of()</code></p>
+                <p>Call <code>Xray.now()</code> first.</p>
+                <p>Delta echo foxtrot.</p>
+                """);
+    }
+
     private static Path book(Path destination, String bodyContent) {
         return book(destination, "", bodyContent);
     }

@@ -39,6 +39,12 @@ import ua.bookloom.api.document.SegmentKind;
  * that is not hypothetical: the shape that corrupts a translation containing inline markup had a place in no
  * fixture and no test, which is why the defect reached a release with the gate green. Registering a fixture here
  * is what gates it — the sweep picks it up with no further test being written.
+ *
+ * <p><strong>{@code expectedPlaceholderCount} is counted against the masking rules, not against what the walker
+ * finds.</strong> A segment's <em>block</em> is the element the descent reaches once it owns direct text of its own
+ * (ADR-0027); a purely-structural wrapper above it — {@code <span>}, {@code <i>} with no sibling text — sits
+ * outside the segment and contributes no token. A masker that silently stopped emitting tokens would still pass
+ * every identity check trivially — mask nothing, restore nothing, compare equal — which is what this column catches.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
@@ -71,6 +77,9 @@ public final class FixtureCatalog {
      * @param fileName the name to write the fixture under; the extension is what format resolution reads
      * @param builder writes the fixture to the given path and returns it
      * @param expectedSegmentCount how many segments this fixture must yield, counted by hand from its source
+     * @param expectedPlaceholderCount the total number of placeholder tokens across every one of this fixture's
+     *     segments, counted by hand against the masking rules described at the class level — never copied from a
+     *     measurement, for the same reason {@code expectedSegmentCount} is not
      * @param expectedKinds every kind this fixture must produce, and no other
      * @param coverageFloor the proportion of the fixture's visible text its segments must cover, with the
      *     excluded-block budget stated in each case below; derived from the corrected {@code TextCoverage}
@@ -82,6 +91,7 @@ public final class FixtureCatalog {
             String fileName,
             UnaryOperator<Path> builder,
             int expectedSegmentCount,
+            int expectedPlaceholderCount,
             Set<SegmentKind> expectedKinds,
             double coverageFloor,
             Comparison comparison) {
@@ -112,6 +122,13 @@ public final class FixtureCatalog {
      */
     private static final int FB2_PRIMARY_SEGMENTS = 19;
 
+    /**
+     * Every other segment is plain text. The CDATA paragraph {@code <p><![CDATA[a < b]]></p>} is one atomic
+     * protected span (1); {@code <emphasis>абзац</emphasis>} is a non-protected element with a text child, open
+     * and close (2); the note-reference {@code <a l:href="#n1" type="note">1</a>} is the same shape (2). Total 5.
+     */
+    private static final int FB2_PRIMARY_PLACEHOLDERS = 5;
+
     private static final Set<SegmentKind> FB2_KINDS =
             Set.of(SegmentKind.PARAGRAPH, SegmentKind.HEADING, SegmentKind.VERSE_LINE, SegmentKind.TABLE_CELL);
 
@@ -125,6 +142,12 @@ public final class FixtureCatalog {
      */
     private static final int MARKDOWN_PRIMARY_SEGMENTS = 16;
 
+    /**
+     * Every segment but one is plain text. The prose segment's {@code _emphasis_} (2) and reference link
+     * {@code [ref][r]} (2) total 4; the hard-break paragraph's line break is 1 more. Total 5.
+     */
+    private static final int MARKDOWN_PRIMARY_PLACEHOLDERS = 5;
+
     private static final Set<SegmentKind> MARKDOWN_KINDS =
             Set.of(SegmentKind.PARAGRAPH, SegmentKind.HEADING, SegmentKind.LIST_ITEM, SegmentKind.TABLE_CELL);
     private static final Set<SegmentKind> PARAGRAPHS_AND_HEADINGS = Set.of(SegmentKind.PARAGRAPH, SegmentKind.HEADING);
@@ -132,8 +155,25 @@ public final class FixtureCatalog {
     /** {@link MarkdownFixtures#MARKUP_DENSE}: a heading plus three heavily inline-marked paragraphs. */
     private static final int MARKDOWN_MARKUP_DENSE_SEGMENTS = 4;
 
+    /**
+     * The heading's strong emphasis is 2. Paragraph one: bold(2)+italic(2)+coded(1)+link(2)=7. Paragraph two:
+     * Every(2)+one(2)+two(2)+three(1)+four nested strong-in-emphasis(2+2)+five link(2)+six(1)+seven(2)+eight(2)=18.
+     * Paragraph three: inline code(1)+strong emphasis(2)+regular emphasis(2)+final link(2)=7. Total 2+7+18+7=34.
+     */
+    private static final int MARKDOWN_MARKUP_DENSE_PLACEHOLDERS = 34;
+
     /** {@link TxtFixtures#WINDOWS_1251}: three Cyrillic paragraphs. */
     private static final int TXT_WINDOWS_1251_SEGMENTS = 3;
+
+    /**
+     * {@link Fb2Fixtures#hazardParagraph}: the {@code <p>} owns direct text, so it is the block. CDATA is 1, the
+     * note anchor {@code <a>} is 2, the text-owning {@code <div>} wrapping the nested {@code <pre>} is 2, and the
+     * {@code <pre>} itself is 1 (not excluded — it sits inside an already-found block, not standalone). Total 6.
+     */
+    private static final int HAZARD_PARAGRAPH_PLACEHOLDERS_FB2 = 6;
+
+    /** {@link EpubHazardFixtures#hazardParagraph}: {@code <b>}(2)+{@code <i>}(2)+comment(1)+{@code <code>}(1)=6. */
+    private static final int HAZARD_PARAGRAPH_PLACEHOLDERS_EPUB = 6;
 
     /**
      * Every fixture the sweep exercises.
@@ -148,35 +188,59 @@ public final class FixtureCatalog {
 
     /**
      * The EPUB family. Each fixture's rationale lives on the builder that writes it; the numbers here are the
-     * independent statement of what it must produce, counted by hand from that builder's markup.
+     * independent statement of what it must produce, counted by hand from that builder's markup. Split across two
+     * helpers to stay within the method-length limit rather than growing one list past it.
      */
     private static List<Case> epubCases() {
+        final List<Case> cases = new java.util.ArrayList<>(epubCasesPartOne());
+        cases.addAll(epubCasesPartTwo());
+        return List.copyOf(cases);
+    }
+
+    private static List<Case> epubCasesPartOne() {
         return List.of(
-                epub("epub/div-paragraphs", EpubFixtures::divParagraphs, 4, PARAGRAPHS_AND_HEADINGS),
-                epub("epub/spacer-paragraphs", EpubFixtures::spacerParagraphs, 3, PARAGRAPHS),
-                epub("epub/br-runs", EpubFixtures::brRuns, 4, PARAGRAPHS),
-                epub("epub/inline-markup", EpubFixtures::inlineMarkup, 3, PARAGRAPHS),
-                epub("epub/stored-entries", EpubFixtures::storedEntries, 2, PARAGRAPHS),
-                epub("epub/font-obfuscated", EpubFixtures::fontObfuscated, 2, PARAGRAPHS),
-                epub("epub/combination", EpubFixtures::combination, 6, PARAGRAPHS),
-                epub("epub/head-self-closed-script", EpubFixtures::headSelfClosedScript, 2, PARAGRAPHS),
-                epub("epub/head-self-closed-style", EpubFixtures::headSelfClosedStyle, 1, PARAGRAPHS),
-                epub("epub/head-self-closed-noscript", EpubFixtures::headSelfClosedNoscript, 1, PARAGRAPHS),
-                epub("epub/head-paired-script", EpubFixtures::headPairedScript, 2, PARAGRAPHS),
-                epub("epub/body-self-closed-script", EpubFixtures::bodySelfClosedScript, 2, PARAGRAPHS),
-                epub("epub/script-literal-in-code-listing", EpubFixtures::scriptLiteralInCodeListing, 1, PARAGRAPHS),
-                epub("epub/paragraph-wrapping-division", EpubFixtures::paragraphWrappingDivision, 0, Set.of()),
+                epub("epub/div-paragraphs", EpubFixtures::divParagraphs, 4, 0, PARAGRAPHS_AND_HEADINGS),
+                epub("epub/spacer-paragraphs", EpubFixtures::spacerParagraphs, 3, 0, PARAGRAPHS),
+                epub("epub/br-runs", EpubFixtures::brRuns, 4, 0, PARAGRAPHS),
+                // Every paragraph here is <p><span><i>text</i></span></p>: <p> and <span> own no direct text, so
+                // the descent (ADR-0027) lands the block on <i>, and the span/i wrapper never enters the segment.
+                epub("epub/inline-markup", EpubFixtures::inlineMarkup, 3, 0, PARAGRAPHS),
+                epub("epub/stored-entries", EpubFixtures::storedEntries, 2, 0, PARAGRAPHS),
+                epub("epub/font-obfuscated", EpubFixtures::fontObfuscated, 2, 0, PARAGRAPHS),
+                // The wrapped-prose div is the same wrapper shape as inline-markup above (0 tokens); the rest are
+                // plain divs, br-split runs, an image-only paragraph (no segment) and an excluded <pre><code>.
+                epub("epub/combination", EpubFixtures::combination, 6, 0, PARAGRAPHS),
+                epub("epub/head-self-closed-script", EpubFixtures::headSelfClosedScript, 2, 0, PARAGRAPHS),
+                epub("epub/head-self-closed-style", EpubFixtures::headSelfClosedStyle, 1, 0, PARAGRAPHS),
+                epub("epub/head-self-closed-noscript", EpubFixtures::headSelfClosedNoscript, 1, 0, PARAGRAPHS),
+                epub("epub/head-paired-script", EpubFixtures::headPairedScript, 2, 0, PARAGRAPHS));
+    }
+
+    private static List<Case> epubCasesPartTwo() {
+        return List.of(
+                epub("epub/body-self-closed-script", EpubFixtures::bodySelfClosedScript, 2, 0, PARAGRAPHS),
+                epub("epub/script-literal-in-code-listing", EpubFixtures::scriptLiteralInCodeListing, 1, 0, PARAGRAPHS),
+                epub("epub/paragraph-wrapping-division", EpubFixtures::paragraphWrappingDivision, 0, 0, Set.of()),
+                // <p> owns direct text "text "; the self-closed, childless <a/> is one atomic protected span.
                 epub(
                         "epub/self-closed-indexterm-anchor",
                         EpubFixtures::selfClosedIndextermAnchor,
                         2,
+                        1,
                         PARAGRAPHS_AND_HEADINGS),
-                epub("epub/self-closed-inline-span", EpubFixtures::selfClosedInlineSpan, 2, PARAGRAPHS),
-                epub("epub/pre-two-leading-line-feeds", EpubFixtures::preTwoLeadingLineFeeds, 1, PARAGRAPHS),
-                epub("epub/pre-no-leading-line-feed", EpubFixtures::preNoLeadingLineFeed, 1, PARAGRAPHS),
-                epub("epub/pre-two-leading-crlf-pairs", EpubFixtures::preTwoLeadingCrLfPairs, 1, PARAGRAPHS),
-                epub("epub/pre-empty", EpubFixtures::preEmpty, 1, PARAGRAPHS),
-                epub("epub/pre-one-leading-line-feed", EpubFixtures::preOneLeadingLineFeed, 1, PARAGRAPHS));
+                // <p> owns direct text "Before "/" after"; the self-closed, childless <span/> is one atomic token.
+                epub("epub/self-closed-inline-span", EpubFixtures::selfClosedInlineSpan, 2, 1, PARAGRAPHS),
+                epub("epub/pre-two-leading-line-feeds", EpubFixtures::preTwoLeadingLineFeeds, 1, 0, PARAGRAPHS),
+                epub("epub/pre-no-leading-line-feed", EpubFixtures::preNoLeadingLineFeed, 1, 0, PARAGRAPHS),
+                epub("epub/pre-two-leading-crlf-pairs", EpubFixtures::preTwoLeadingCrLfPairs, 1, 0, PARAGRAPHS),
+                epub("epub/pre-empty", EpubFixtures::preEmpty, 1, 0, PARAGRAPHS),
+                epub("epub/pre-one-leading-line-feed", EpubFixtures::preOneLeadingLineFeed, 1, 0, PARAGRAPHS),
+                epub(
+                        "epub/hazard-paragraph",
+                        EpubHazardFixtures::hazardParagraph,
+                        1,
+                        HAZARD_PARAGRAPH_PLACEHOLDERS_EPUB,
+                        PARAGRAPHS));
     }
 
     /** FB2, Markdown and TXT — the three formats this change adds. */
@@ -195,7 +259,17 @@ public final class FixtureCatalog {
                 fb2("fb2/primary-windows-1251", "book.fb2", Fb2Fixtures::primary),
                 fb2("fb2/primary-zipped", "book.fb2.zip", Fb2Fixtures::primaryZipped),
                 fb2Minimal("fb2/no-language", "no-lang.fb2", Fb2Fixtures::noLanguage),
-                fb2Minimal("fb2/empty-language", "empty-lang.fb2", Fb2Fixtures::emptyLanguage));
+                fb2Minimal("fb2/empty-language", "empty-lang.fb2", Fb2Fixtures::emptyLanguage),
+                new Case(
+                        "fb2/hazard-paragraph",
+                        BookFormat.FB2,
+                        "hazard.fb2",
+                        Fb2Fixtures::hazardParagraph,
+                        1,
+                        HAZARD_PARAGRAPH_PLACEHOLDERS_FB2,
+                        PARAGRAPHS,
+                        0.99,
+                        Comparison.FB2_CANONICAL));
     }
 
     private static List<Case> markdownAndTxtCases() {
@@ -211,14 +285,16 @@ public final class FixtureCatalog {
                         "chapter.md",
                         MarkdownFixtures::primary,
                         MARKDOWN_PRIMARY_SEGMENTS,
+                        MARKDOWN_PRIMARY_PLACEHOLDERS,
                         MARKDOWN_KINDS,
                         0.95),
-                markdown("md/only-a-fence", "code.md", MarkdownFixtures::onlyAFence, 0, Set.of(), 0.0),
+                markdown("md/only-a-fence", "code.md", MarkdownFixtures::onlyAFence, 0, 0, Set.of(), 0.0),
                 markdown(
                         "md/markup-dense",
                         "markup-dense.md",
                         MarkdownFixtures::markupDense,
                         MARKDOWN_MARKUP_DENSE_SEGMENTS,
+                        MARKDOWN_MARKUP_DENSE_PLACEHOLDERS,
                         PARAGRAPHS_AND_HEADINGS,
                         0.99));
     }
@@ -231,6 +307,7 @@ public final class FixtureCatalog {
                         "notes.txt",
                         TxtFixtures::primary,
                         3,
+                        0,
                         PARAGRAPHS,
                         0.99,
                         Comparison.TXT_BYTES),
@@ -240,6 +317,7 @@ public final class FixtureCatalog {
                         "windows-1251.txt",
                         TxtFixtures::windows1251,
                         TXT_WINDOWS_1251_SEGMENTS,
+                        0,
                         PARAGRAPHS,
                         0.99,
                         Comparison.TXT_BYTES));
@@ -251,10 +329,19 @@ public final class FixtureCatalog {
             String fileName,
             UnaryOperator<Path> builder,
             int segments,
+            int placeholders,
             Set<SegmentKind> kinds,
             double coverageFloor) {
         return new Case(
-                name, BookFormat.MARKDOWN, fileName, builder, segments, kinds, coverageFloor, Comparison.MARKDOWN_AST);
+                name,
+                BookFormat.MARKDOWN,
+                fileName,
+                builder,
+                segments,
+                placeholders,
+                kinds,
+                coverageFloor,
+                Comparison.MARKDOWN_AST);
     }
 
     /**
@@ -262,8 +349,18 @@ public final class FixtureCatalog {
      * inside a {@code <pre>} listing, which the measurement excludes from its denominator, so anything below
      * "essentially all of it" means a block was missed.
      */
-    private static Case epub(String name, UnaryOperator<Path> builder, int segments, Set<SegmentKind> kinds) {
-        return new Case(name, BookFormat.EPUB, "book.epub", builder, segments, kinds, 0.99, Comparison.EPUB_CANONICAL);
+    private static Case epub(
+            String name, UnaryOperator<Path> builder, int segments, int placeholders, Set<SegmentKind> kinds) {
+        return new Case(
+                name,
+                BookFormat.EPUB,
+                "book.epub",
+                builder,
+                segments,
+                placeholders,
+                kinds,
+                0.99,
+                Comparison.EPUB_CANONICAL);
     }
 
     /**
@@ -277,6 +374,7 @@ public final class FixtureCatalog {
                 fileName,
                 builder,
                 FB2_PRIMARY_SEGMENTS,
+                FB2_PRIMARY_PLACEHOLDERS,
                 FB2_KINDS,
                 0.95,
                 Comparison.FB2_CANONICAL);
@@ -293,6 +391,7 @@ public final class FixtureCatalog {
                 fileName,
                 builder,
                 FB2_MINIMAL_LANGUAGE_SEGMENTS,
+                0,
                 PARAGRAPHS,
                 0.99,
                 Comparison.FB2_CANONICAL);

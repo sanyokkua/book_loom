@@ -25,8 +25,8 @@ import ua.bookloom.api.document.Segment;
 class SegmentExtentOverlapTest {
 
     private static List<NodeAnchor> anchorsOf(String bodyHtml) {
-        final List<Segment> segments =
-                BlockSegmentWalker.walk(JsoupTreeNode.of(Jsoup.parse(bodyHtml).body()), "unit.xhtml");
+        final List<Segment> segments = BlockSegmentWalker.walk(
+                JsoupTreeNode.of(Jsoup.parse(bodyHtml).body()), "unit.xhtml", TreeDialect.XHTML);
         final List<NodeAnchor> anchors = new ArrayList<>(segments.size());
         for (final Segment segment : segments) {
             anchors.add((NodeAnchor) segment.anchor());
@@ -34,7 +34,7 @@ class SegmentExtentOverlapTest {
         return anchors;
     }
 
-    // Covers: FR-DOC-01 — WHEN a document is parsed, THEN no segment's extent contains another segment's, so the
+    // WHEN a document is parsed, THEN no segment's extent contains another segment's, so the
     // same text is never emitted twice.
     @ParameterizedTest
     @ValueSource(
@@ -86,7 +86,7 @@ class SegmentExtentOverlapTest {
                 && innerPath.subList(0, outerPath.size()).equals(outerPath);
     }
 
-    // Covers: FR-DOC-01 — a wrapper and the block it wraps never both produce a segment.
+    // a wrapper and the block it wraps never both produce a segment.
     @Test
     void walk_wrapperAndChild_doNotBothProduceASegment() {
         assertThat(anchorsOf("<div class=\"wrap\"><div class=\"paragraph\">Prose.</div></div>"))

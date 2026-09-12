@@ -41,11 +41,8 @@ The gate is enforced by a **dedicated license-report/allowed-license plugin —
 normalization/aliases for the EPL-1.0, ICU, and JDOM strings). Its `checkLicense` task **fails the build** on any
 resolved runtime/bundled artifact whose license is not on the allowlist.
 
-This license gate is **distinct from OWASP dependency-check**: the license plugin verifies *license compliance* against
-the allowlist, whereas OWASP dependency-check (`02_DEPENDENCY_POLICY.md#owasp-dependency-check`) is software-composition
-analysis for *known vulnerabilities*. Both run in CI (`04_Build_and_Release/02_QUALITY_GATES.md`,
-`04_Build_and_Release/04_CI_CD.md`) and either can fail the merge gate independently. The same plugin also emits the
-`THIRD-PARTY-NOTICES` artifact (`#notices`).
+This license gate checks *license compliance* only. There is no known-vulnerability scan in the pipeline (dropped
+2026-09-11: a single-user offline app does not justify a per-run NVD sync).
 
 ## per-dependency-licenses {#per-dependency-licenses}
 

@@ -48,7 +48,33 @@ class Fb2WriterTest {
         }
     }
 
-    // Covers: FR-DOC-FB2-3 — WHEN every character of the output is representable in the encoding the source
+    /**
+     * JDOM's raw format defaults to {@code \r\n}, so an LF book came back with every line ending doubled — an XML
+     * parser normalizes it away on re-import, which is exactly why nothing noticed (decision debt D11).
+     */
+    // WHEN the source file uses bare line feeds, THEN the written file contains no carriage return at all.
+    @Test
+    void write_lineFeedSource_keepsBareLineFeeds() {
+        final Path output = writeOut(openPrimary(), "uk");
+
+        assertThat(bytesOf(output)).doesNotContain((byte) '\r');
+    }
+
+    // WHEN the source file uses CRLF line endings, THEN the written file keeps CRLF and introduces no bare LF.
+    @Test
+    void write_crlfSource_keepsCrlfLineEndings() {
+        final Path file = Fb2Fixtures.writeFb2(
+                tempDir.resolve("crlf.fb2"), Fb2Fixtures.PRIMARY_XML.replace("\n", "\r\n"), Fb2Fixtures.WINDOWS_1251);
+        final Document document = new Fb2Reader(registry).read(file);
+
+        final Path output = writeOut(document, "uk");
+
+        final String text = new String(bytesOf(output), Fb2Fixtures.WINDOWS_1251);
+        assertThat(text).contains("\r\n");
+        assertThat(text.replace("\r\n", "")).doesNotContain("\n");
+    }
+
+    // WHEN every character of the output is representable in the encoding the source
     // declared, THEN the output is written in that encoding and declares it.
     @Test
     void write_representableTranslation_keepsTheDeclaredEncoding() {
@@ -67,7 +93,7 @@ class Fb2WriterTest {
      * which is why the decision is taken over the real serialized output rather than guessed from the target
      * language.
      */
-    // Covers: EC-FB2-1 — IF one segment's target text contains a character the declared encoding cannot
+    // IF one segment's target text contains a character the declared encoding cannot
     // represent, THEN the whole document is written in UTF-8 with a rewritten declaration.
     @Test
     void write_oneUnrepresentableCharacter_switchesTheWholeDocumentToUtf8() {
@@ -82,7 +108,7 @@ class Fb2WriterTest {
         assertThat(asUtf8).doesNotContain("windows-1251");
     }
 
-    // Covers: FR-DOC-FB2-7 — WHEN a book is exported, THEN title-info's <lang> carries the target language and
+    // WHEN a book is exported, THEN title-info's <lang> carries the target language and
     // <src-lang> is left exactly as it was, because it is the only remaining record of what the book was
     // translated from.
     @Test
@@ -95,7 +121,7 @@ class Fb2WriterTest {
         assertThat(xml).doesNotContain("<lang>uk</lang>");
     }
 
-    // Covers: FR-DOC-FB2-7 — WHEN title-info declares no language at all, THEN exactly one <lang> is added.
+    // WHEN title-info declares no language at all, THEN exactly one <lang> is added.
     @Test
     void write_missingLang_addsExactlyOne() {
         final String withoutLang = Fb2Fixtures.PRIMARY_XML.replace("<lang>uk</lang>", "");
@@ -109,7 +135,7 @@ class Fb2WriterTest {
         assertThat(xml).contains("<lang>uk</lang>");
     }
 
-    // Covers: FR-DOC-FB2-2 — WHERE the source was a .fb2.zip, the output is a zip archive whose single entry
+    // WHERE the source was a .fb2.zip, the output is a zip archive whose single entry
     // carries the member name the source used.
     @Test
     void write_bookImportedAsZip_reEmitsAZipWithTheSameMemberName() {
@@ -122,7 +148,7 @@ class Fb2WriterTest {
         assertThat(zipEntryNamesOf(output)).containsExactly("roman.fb2");
     }
 
-    // Covers: FR-DOC-FB2-1 — a comment, a CDATA section and a namespace prefix all survive a zero-edit round
+    // a comment, a CDATA section and a namespace prefix all survive a zero-edit round
     // trip, because nothing here rebuilds the tree.
     @Test
     void write_zeroEditRoundTrip_preservesCommentCdataAndNamespacePrefix() {
@@ -134,7 +160,7 @@ class Fb2WriterTest {
         assertThat(xml).contains("l:href=\"#n1\"");
     }
 
-    // Covers: FR-DOC-FB2-4 — a <binary> element's base64 payload is character-for-character identical after a
+    // a <binary> element's base64 payload is character-for-character identical after a
     // round trip, never re-wrapped or re-encoded.
     @Test
     void write_zeroEditRoundTrip_preservesTheBinaryPayloadExactly() {
@@ -144,7 +170,7 @@ class Fb2WriterTest {
         assertThat(xml).contains(payloadOf(Fb2Fixtures.PRIMARY_XML));
     }
 
-    // Covers: EC-FB2-3 — a note's element id and the cross-reference pointing at it survive unchanged.
+    // a note's element id and the cross-reference pointing at it survive unchanged.
     @Test
     void write_zeroEditRoundTrip_preservesNoteIdAndItsCrossReference() {
         final Path output = writeOut(openPrimary(), "uk");

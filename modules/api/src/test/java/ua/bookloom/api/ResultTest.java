@@ -10,9 +10,8 @@ import org.junit.jupiter.api.Test;
 /**
  * The {@code Result} envelope's invariants.
  *
- * <p>No {@code // Covers: FR-*} marker on these: the envelope's shape is architecture — DD-14 and
- * {@code 02_Architecture/09_ERROR_HANDLING.md#result-envelope} — and has no functional requirement anywhere in the
- * frozen specification. Citing an invented id would be worse than citing none.
+ * <p>Shape tests: the envelope's shape is architecture — DD-14 and
+ * {@code 02_Architecture/09_ERROR_HANDLING.md#result-envelope} — not a functional requirement.
  */
 class ResultTest {
 

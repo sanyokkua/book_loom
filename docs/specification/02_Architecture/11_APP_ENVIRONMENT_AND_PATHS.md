@@ -9,7 +9,7 @@
 How BookLoom resolves the per-OS folders that hold the SQLite database and the logs, how a **development** build is kept
 separate from a **production** build so they never collide, and the exact startup order in which this happens. This is
 **foundational**: logging needs the log directory and SQLite needs the data directory, so path resolution must run
-before either. Owned by **PHASE_00** (`docs/implementation_plan/phases/PHASE_00_SCAFFOLD.md`); recorded in **DD-39 /
+before either. Owned by the scaffold change; recorded in **DD-39 /
 ADR-0015**.
 
 ## Table of Contents

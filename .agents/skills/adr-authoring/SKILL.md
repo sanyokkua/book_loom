@@ -2,7 +2,7 @@
 name: adr-authoring
 description: >-
   Use when a decision is architecturally significant and NOT already settled by the
-  frozen specification, and you must record it as an ADR under `docs/adr/`. Covers the
+  specification, and you must record it as an ADR under `docs/adr/`. Covers the
   ADR template and headings, `ADR-NNNN` numbering, the proposed -> accepted ->
   superseded/deprecated status lifecycle, and linking an ADR to design decisions
   (DD-NN), spec clauses, and stories.
@@ -18,7 +18,7 @@ lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS
 ## When to use
 
 - A decision is architecturally significant (affects module boundaries, a public port, a
-  data format, an external seam, cross-cutting behaviour) AND the frozen specification does
+  data format, an external seam, cross-cutting behaviour) AND the specification does
   not already settle it.
 - Elaborating a design decision (`DD-NN`) that the spec marked as needing a heavy record.
 - Superseding an existing ADR because a newer decision replaces it.
@@ -30,7 +30,8 @@ lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS
   are settled facts — cite them, do not re-litigate them.
 - Do NOT use an ADR for routine implementation choices with no cross-module impact — those
   belong in the story's Design-constraints section.
-- Do NOT edit `docs/specification/` — the spec is frozen. An ADR lives only in `docs/adr/`.
+- Do NOT use an ADR to patch a wrong spec clause — edit the clause. An ADR records a decision
+  that is costly to reverse, and names what would falsify it.
 - Do NOT rewrite an `accepted` ADR's decision after the fact — supersede it with a new one.
 
 ## Workflow
@@ -56,9 +57,8 @@ lightweight `DD-NN` log in `docs/specification/00_Foundation/04_DESIGN_DECISIONS
 4. **Set the initial status** to `proposed`. When the decision is ratified, change it to
    `accepted`. When a later ADR replaces it, set `superseded by ADR-MMMM` here and add
    `**Supersedes:** ADR-NNNN` in the new ADR.
-5. **Backlink.** If the ADR realizes or refines a `DD-NN`, do NOT add `**ADR:** ADR-NNNN`
-   to that DD entry (the spec is frozen) — instead ensure the ADR's `## Links` cites the
-   DD, and any story driving the decision lists it in its `adrs[]` front-matter.
+5. **Backlink.** If the ADR realizes or refines a `DD-NN`, cite the DD in the ADR's
+   `## Links` and add the ADR pointer to that DD entry.
 
 ## Reference index
 

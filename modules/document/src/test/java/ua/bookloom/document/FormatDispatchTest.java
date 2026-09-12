@@ -63,7 +63,7 @@ class FormatDispatchTest {
         return java.util.Objects.requireNonNull(result.error());
     }
 
-    // Covers: FR-IMPORT-01 — WHEN a FictionBook file is opened, THEN it is parsed as FB2 and the result is not a
+    // WHEN a FictionBook file is opened, THEN it is parsed as FB2 and the result is not a
     // failure about an invalid EPUB container.
     @Test
     void open_fictionBookFile_parsesAsFb2RatherThanFailingAsAnInvalidEpub() {
@@ -72,7 +72,7 @@ class FormatDispatchTest {
         assertThat(okDocument(result).format()).isEqualTo(BookFormat.FB2);
     }
 
-    // Covers: FR-IMPORT-01 — plain text and Markdown are distinguished by extension alone, because every valid
+    // plain text and Markdown are distinguished by extension alone, because every valid
     // TXT file is also valid Markdown and nothing in the bytes separates them.
     @Test
     void open_byteIdenticalTxtAndMd_resolveToDifferentFormats() {
@@ -85,7 +85,7 @@ class FormatDispatchTest {
         assertThat(asMarkdown.format()).isEqualTo(BookFormat.MARKDOWN);
     }
 
-    // Covers: FR-IMPORT-01 — a zipped FictionBook is distinguished from an EPUB by its name, though both begin
+    // a zipped FictionBook is distinguished from an EPUB by its name, though both begin
     // with the same zip signature.
     @Test
     void open_zippedFictionBook_reportsFb2WhileAnEpubWithTheSameMagicReportsEpub() {
@@ -95,7 +95,7 @@ class FormatDispatchTest {
                 .isEqualTo(BookFormat.FB2);
     }
 
-    // Covers: FR-IMPORT-05 — an unrecognised extension is refused with a validation failure and no document.
+    // an unrecognised extension is refused with a validation failure and no document.
     @Test
     void open_unrecognisedExtension_isRefused() {
         final Result<Document> result = DocumentServices.newService().open(write("book.pdf", "%PDF-1.7\n"));
@@ -104,7 +104,7 @@ class FormatDispatchTest {
         assertThat(result.data()).isNull();
     }
 
-    // Covers: FR-IMPORT-05 — a zipped text bundle is not a supported format, however plausible its contents.
+    // a zipped text bundle is not a supported format, however plausible its contents.
     @Test
     void open_zippedTextBundle_isRefused() {
         final Path bundle = zipOf("book.txt.zip", "book.txt", AMBIGUOUS_TEXT);
@@ -112,7 +112,7 @@ class FormatDispatchTest {
         assertThat(errorOf(DocumentServices.newService().open(bundle)).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Covers: FR-IMPORT-05 — a directory whose name ends in a supported extension is refused as not a file, and
+    // a directory whose name ends in a supported extension is refused as not a file, and
     // the failure does not describe the input as an invalid EPUB.
     @Test
     void open_directoryNamedLikeABook_isRefusedWithoutMentioningEpub() {
@@ -130,7 +130,7 @@ class FormatDispatchTest {
         assertThat(error.title()).doesNotContainIgnoringCase("epub");
     }
 
-    // Covers: FR-IMPORT-05 — an extension contradicted by the content is refused rather than parsed as whatever
+    // an extension contradicted by the content is refused rather than parsed as whatever
     // the bytes happen to be.
     @Test
     void open_fb2ExtensionOverZipContent_isRefused() {
@@ -139,7 +139,7 @@ class FormatDispatchTest {
         assertThat(errorOf(DocumentServices.newService().open(misnamed)).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Covers: FR-DOC-TXT-1 — a container format records no document-level charset, while a text format records
+    // a container format records no document-level charset, while a text format records
     // the one it was read with.
     @Test
     void open_containerAndTextFormats_differOnWhetherTheyRecordACharset() {
@@ -154,7 +154,7 @@ class FormatDispatchTest {
      * of two entry points guards neither — an attacker picks the extension. Both readers call the same
      * production-limits reader, but that is an argument; this is the assertion.
      */
-    // Covers: FR-IMPORT-05 — WHEN a .fb2.zip whose entry expands implausibly is opened, THEN the result carries
+    // WHEN a .fb2.zip whose entry expands implausibly is opened, THEN the result carries
     // ErrorCode.validation and no document is returned.
     @Test
     void open_oversizedZippedFictionBook_isRefusedLikeAnOversizedEpub() {
@@ -166,7 +166,7 @@ class FormatDispatchTest {
         assertThat(result.data()).isNull();
     }
 
-    // Covers: FR-IMPORT-05 — the same archive under the .epub extension is refused identically, which is what
+    // the same archive under the .epub extension is refused identically, which is what
     // "these limits apply to every zip container" means in practice.
     @Test
     void open_oversizedEpub_isRefusedTheSameWay() {

@@ -36,7 +36,7 @@ class EpubReaderTest {
             </ncx>
             """;
 
-    // Covers: FR-DOC-EPUB-1 — the system SHALL process content documents in the order the spine declares, not
+    // the system SHALL process content documents in the order the spine declares, not
     // the order the zip entries happen to appear in.
     @Test
     void read_spineOrderDiffersFromZipOrder_followsSpineOrder() {
@@ -55,7 +55,7 @@ class EpubReaderTest {
         assertThat(document.units()).extracting(Unit::order).containsExactly(0, 1);
     }
 
-    // Covers: FR-DOC-EPUB-2 — WHEN an EPUB 2 book carrying an NCX and no nav document is parsed, THEN parsing
+    // WHEN an EPUB 2 book carrying an NCX and no nav document is parsed, THEN parsing
     // succeeds and its spine documents are read in declared order.
     @Test
     void read_epub2WithNcxAndNoNav_parsesSuccessfully_inSpineOrder() {
@@ -75,7 +75,7 @@ class EpubReaderTest {
         assertThat(document.format()).isEqualTo(ua.bookloom.api.document.BookFormat.EPUB);
     }
 
-    // Covers: FR-IMPORT-08 — the system SHALL compute a SHA-256 hash over the imported source file and carry it
+    // the system SHALL compute a SHA-256 hash over the imported source file and carry it
     // on the parsed document; the same file parsed twice SHALL yield the same hash.
     @Test
     void read_sameFileParsedTwice_reportsIdenticalContentHash() {
@@ -121,7 +121,7 @@ class EpubReaderTest {
         assertThat(document.declaredLang()).isEqualTo("en");
     }
 
-    // Covers: FR-IMPORT-07 — WHERE an EPUB package nests its Dublin Core metadata elements inside a legacy
+    // WHERE an EPUB package nests its Dublin Core metadata elements inside a legacy
     // wrapper element rather than placing them directly under the metadata element, the system SHALL read them
     // from that nested location.
     @Test
@@ -164,6 +164,68 @@ class EpubReaderTest {
                   </spine>
                 </package>
                 """;
+    }
+
+    /**
+     * Sigil and friends leave itemrefs whose files were deleted; Apple Books shows what exists. One real book in
+     * the owner's collection ships only the odd-numbered pages its spine lists, and every reader opens it.
+     */
+    // WHEN a spine item names a file the archive does not contain, THEN that item is skipped and the remaining
+    // spine documents are read in spine order with dense unit orders.
+    @Test
+    void read_spineItemMissingFromArchive_skipsItAndReadsTheRest() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", opfWithSpine("c01", "c02", "c03"))
+                .entry("OEBPS/c01.xhtml", chapter("Chapter One"))
+                .entry("OEBPS/c03.xhtml", chapter("Chapter Three"))
+                .writeTo(epub);
+
+        final Document document = newReader().read(epub);
+
+        assertThat(document.units()).extracting(Unit::href).containsExactly("OEBPS/c01.xhtml", "OEBPS/c03.xhtml");
+        assertThat(document.units()).extracting(Unit::order).containsExactly(0, 1);
+    }
+
+    // IF no spine item's file exists in the archive at all, THEN the book is refused as corrupt — there is nothing
+    // to translate.
+    @Test
+    void read_everySpineItemMissingFromArchive_isACorruptContainerFailure() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", opfWithSpine("c01", "c02"))
+                .writeTo(epub);
+
+        assertThatThrownBy(() -> newReader().read(epub)).isInstanceOf(CorruptContainerException.class);
+    }
+
+    private static String opfWithSpine(String... ids) {
+        final StringBuilder manifest = new StringBuilder();
+        final StringBuilder spine = new StringBuilder();
+        for (final String id : ids) {
+            manifest.append(
+                    "<item id=\"%s\" href=\"%s.xhtml\" media-type=\"application/xhtml+xml\"/>\n".formatted(id, id));
+            spine.append("<itemref idref=\"%s\"/>\n".formatted(id));
+        }
+        return """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid">
+                  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                    <dc:title>Test Book</dc:title>
+                    <dc:language>en</dc:language>
+                  </metadata>
+                  <manifest>
+                    %s
+                  </manifest>
+                  <spine>
+                    %s
+                  </spine>
+                </package>
+                """.formatted(manifest, spine);
     }
 
     private static EpubReader newReader() {

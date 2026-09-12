@@ -60,7 +60,7 @@ class OpfParserTest {
         assertThat(opf.author()).isNull();
     }
 
-    // Covers: FR-IMPORT-07 — WHERE an EPUB package nests its Dublin Core metadata elements inside a legacy
+    // WHERE an EPUB package nests its Dublin Core metadata elements inside a legacy
     // wrapper element rather than placing them directly under the metadata element, the system SHALL read them
     // from that nested location.
     @Test
@@ -94,7 +94,7 @@ class OpfParserTest {
         assertThat(opf.author()).isEqualTo("Lewis Carroll");
     }
 
-    // Covers: FR-IMPORT-07 — the system SHALL record the book's title by reading the location each format
+    // the system SHALL record the book's title by reading the location each format
     // provides for it, preferring a direct declaration over one nested in a legacy wrapper where both are
     // present.
     @Test

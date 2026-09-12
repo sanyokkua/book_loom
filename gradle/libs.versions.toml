@@ -104,7 +104,6 @@ spotlessPlugin = "8.9.0"
 errorpronePlugin = "5.1.0"
 spotbugsPlugin = "6.5.9"
 licenseReportPlugin = "3.1.4"
-owaspPlugin = "12.2.2"
 
 [libraries]
 
@@ -152,7 +151,6 @@ plugin-spotless = { module = "com.diffplug.spotless:spotless-plugin-gradle", ver
 plugin-errorprone = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorpronePlugin" }
 plugin-spotbugs = { module = "com.github.spotbugs.snom:spotbugs-gradle-plugin", version.ref = "spotbugsPlugin" }
 plugin-license-report = { module = "com.github.jk1:gradle-license-report", version.ref = "licenseReportPlugin" }
-plugin-owasp = { module = "org.owasp:dependency-check-gradle", version.ref = "owaspPlugin" }
 
 [bundles]
 
@@ -168,4 +166,3 @@ testing = [
 
 # Applied at the root/module level rather than through `build-logic`.
 license-report = { id = "com.github.jk1.dependency-license-report", version.ref = "licenseReportPlugin" }
-owasp-dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "owaspPlugin" }

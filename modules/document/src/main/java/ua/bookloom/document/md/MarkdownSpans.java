@@ -11,7 +11,12 @@ import org.commonmark.node.SourceSpan;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Turns a CommonMark block into the byte span of the text a translation may replace.
+ * Turns a CommonMark block into the byte span of the text a translation may replace, and holds the package's
+ * shared source-span arithmetic — the span accessors, the span-carrying-child lookups and the hard-line-break
+ * trailing-space derivation that {@link MarkdownMasker}, {@link MarkdownEscaper} and {@link HardLineBreakDeletion}
+ * all need. They live here in one copy because they existed as three hand-copied ones that had already drifted
+ * apart: two of them asked a span-less node for its first span and threw {@code ArrayIndexOutOfBoundsException},
+ * the third guarded against it.
  *
  * <p><strong>The span is the union of the block's inline spans, not the block's own.</strong> A block's own span
  * includes its marker — a heading's span starts at the {@code #}, a table cell's includes the padding spaces
@@ -21,6 +26,11 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The span is then trimmed of whitespace at both ends, so a hard line break — two trailing spaces, of which the
  * surveyed corpus has nine genuine instances — stays outside the replaced range and survives translation.
+ *
+ * <p><strong>Which nodes can report no span at all.</strong> Measured over 400,000 parses on this project's pinned
+ * commonmark 0.24.0, the only node types that ever report an empty source-span list are {@code HardLineBreak} (the
+ * two-trailing-spaces spelling only), {@code SoftLineBreak}, {@code TableCell} and {@code Paragraph}. Every
+ * span-less guard in this package exists for one of those four; a guard anywhere else would be dead code.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
@@ -28,6 +38,115 @@ import org.jspecify.annotations.Nullable;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class MarkdownSpans {
+
+    /** The only character CommonMark accepts two or more of to spell a hard line break as trailing whitespace. */
+    private static final char TRAILING_SPACE = ' ';
+
+    /**
+     * The input index {@code node}'s first source span starts at.
+     *
+     * @param node a node the caller has already established carries at least one source span — see this class's
+     *     Javadoc for the four types that can report none
+     * @return the character offset the node begins at
+     */
+    static int firstSpanStart(Node node) {
+        return node.getSourceSpans().get(0).getInputIndex();
+    }
+
+    /**
+     * The input index one past the end of {@code node}'s last source span.
+     *
+     * @param node a node the caller has already established carries at least one source span
+     * @return the exclusive character offset the node ends at
+     */
+    static int lastSpanEnd(Node node) {
+        final List<SourceSpan> spans = node.getSourceSpans();
+        final SourceSpan last = spans.get(spans.size() - 1);
+        return last.getInputIndex() + last.getLength();
+    }
+
+    /**
+     * The first child carrying a source span, or {@code null} when no child carries one.
+     *
+     * <p>Not simply {@link Node#getFirstChild()}: measured on commonmark 0.24.0, a {@code SoftLineBreak} always
+     * reports an <strong>empty</strong> span list, and so does the two-trailing-spaces spelling of a hard line
+     * break. Either can sit at the edge of a paired construct — an ordinary Markdown link whose label is wrapped
+     * across a line, {@code [label\n](url)}, ends in one — and asking it for a span index threw
+     * {@code ArrayIndexOutOfBoundsException} out of {@link #firstSpanStart(Node)}, which the port reported as
+     * {@code ErrorCode.internal} and which made the whole book impossible to open.
+     *
+     * <p>The delimiter derivation needs the first and last child that actually occupy source, so a span-less child
+     * at either edge is stepped over and its characters fall inside the delimiter fragment instead — lossless,
+     * because the fragment is restored verbatim.
+     *
+     * @param node the paired construct whose children are searched
+     * @return the first child with at least one source span, or {@code null} if none has one
+     */
+    static @Nullable Node firstSpannedChild(Node node) {
+        for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+            if (!child.getSourceSpans().isEmpty()) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The last child carrying a source span, or {@code null} when no child carries one — the closing-delimiter
+     * counterpart of {@link #firstSpannedChild(Node)}, and span-less for the same measured reasons.
+     *
+     * @param node the paired construct whose children are searched
+     * @return the last child with at least one source span, or {@code null} if none has one
+     */
+    static @Nullable Node lastSpannedChild(Node node) {
+        Node found = null;
+        for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+            if (!child.getSourceSpans().isEmpty()) {
+                found = child;
+            }
+        }
+        return found;
+    }
+
+    /**
+     * The range of trailing spaces at the end of {@code precedingText}'s last source span — the characters that
+     * spell a hard line break the {@code HardLineBreak} node itself carries no span for.
+     *
+     * <p><strong>An earlier draft specified "that node's span end minus its literal length", and that formula is
+     * wrong — do not restore it.</strong> Measured against this project's pinned commonmark 0.24.0, a {@code Text}
+     * node's literal has already been un-escaped and un-referenced, so its length differs from the span's whenever
+     * the text contains a backslash escape or a character reference — and the arithmetic is wrong a second way
+     * besides, because the literal occupies the span's head, not its tail: for source {@code A \* B  } the span is
+     * {@code [0,8)} and the literal is {@code A * B} (length 5), so {@code span-end - literal-length} yields
+     * {@code [3,8)} = {@code "* B  "}, not the two trailing spaces. The correct derivation reads the raw substring
+     * the preceding node's <em>last</em> source span covers and strips its trailing spaces — a tab never appears
+     * here, because CommonMark requires two or more literal spaces for this spelling; a single space plus a tab
+     * parses as a soft line break instead.
+     *
+     * @param precedingText the node immediately before the span-less hard line break
+     * @param text the text the spans index
+     * @return the half-open range of trailing spaces, empty when the span ends in none, or {@code null} when
+     *     {@code precedingText} carries no source span to derive it from
+     */
+    static int @Nullable [] trailingSpacesRange(Node precedingText, String text) {
+        final List<SourceSpan> spans = precedingText.getSourceSpans();
+        if (spans.isEmpty()) {
+            return null;
+        }
+        final SourceSpan lastSpan = spans.get(spans.size() - 1);
+        final int start = lastSpan.getInputIndex();
+        final int end = start + lastSpan.getLength();
+        final int spaces = trailingSpaceCount(text, start, end);
+        return new int[] {end - spaces, end};
+    }
+
+    private static int trailingSpaceCount(String text, int start, int end) {
+        int count = 0;
+        while (end - count - 1 >= start && text.charAt(end - count - 1) == TRAILING_SPACE) {
+            count++;
+        }
+        return count;
+    }
 
     /**
      * The character range of {@code block}'s content within the body text.

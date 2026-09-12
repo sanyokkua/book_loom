@@ -5,8 +5,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +33,7 @@ import ua.bookloom.document.model.SkeletonAnchors;
 /**
  * Reassembles an EPUB previously opened by {@link EpubReader} and repackages it — the write side of seam F1 for
  * EPUB (task group 3). Writes accepted segments' target text back into the exact skeleton node each was parsed
- * from ({@link ua.bookloom.document.model.SkeletonAnchors#writeBack}), sets the target language, and re-zips with
+ * from ({@link ua.bookloom.document.model.SkeletonAnchors#writeBackAll}), sets the target language, and re-zips with
  * {@code mimetype} first and STORED (FR-DOC-EPUB-3, FR-DOC-06, FR-DOC-EPUB-6).
  *
  * <p>Throws rather than returning a {@code Result}, matching {@link EpubReader}: a later change's
@@ -41,6 +43,7 @@ import ua.bookloom.document.model.SkeletonAnchors;
 public final class EpubWriter {
 
     private static final String MIMETYPE_ENTRY_NAME = "mimetype";
+    private static final String MIMETYPE_CONTENT = "application/epub+zip";
     private static final Namespace OPF_NS = Namespace.getNamespace("http://www.idpf.org/2007/opf");
     private static final Namespace DC_NS = Namespace.getNamespace("http://purl.org/dc/elements/1.1/");
 
@@ -54,8 +57,7 @@ public final class EpubWriter {
      * @param targetLanguage the language to declare in the written book (for example an ISO 639-1 code)
      * @return {@code destination}
      * @throws DocumentNotOpenException if {@code document}'s id was never registered by {@link EpubReader#read}
-     * @throws CorruptContainerException if the registered state has no {@code mimetype} entry or the OPF has no
-     *     {@code <metadata>} element to set the language in
+     * @throws CorruptContainerException if the OPF has no {@code <metadata>} element to set the language in
      */
     public Path write(Document document, Path destination, String targetLanguage) {
         Objects.requireNonNull(document, "document");
@@ -74,17 +76,27 @@ public final class EpubWriter {
      * Writes every accepted segment's target text back into its own unit's tree before anything is serialized.
      * All writes happen before repackaging starts so that an earlier write's changed text length can never
      * perturb resolving a later segment's anchor (task 3.2, DD-07, design.md D3).
+     *
+     * <p>A unit's writes are handed over as one batch rather than applied one at a time, because a translation
+     * that legitimately reorders inline markup can move a line break to a block's top level and change how that
+     * block splits into runs — see {@link SkeletonAnchors} for the measured case.
      */
     private static void writeSegmentsBack(Document document, ParsedEpub parsed) {
         for (final Unit unit : document.units()) {
             final org.jsoup.nodes.Document tree = treeFor(parsed, unit);
-            for (final Segment segment : unit.segments()) {
-                final String targetInner = segment.targetInner();
-                if (targetInner != null) {
-                    SkeletonAnchors.writeBack(JsoupTreeNode.of(tree.body()), segment.anchor(), targetInner);
-                }
+            SkeletonAnchors.writeBackAll(JsoupTreeNode.of(tree.body()), pendingWrites(unit));
+        }
+    }
+
+    private static List<SkeletonAnchors.PendingWrite> pendingWrites(Unit unit) {
+        final List<SkeletonAnchors.PendingWrite> writes = new ArrayList<>();
+        for (final Segment segment : unit.segments()) {
+            final String targetInner = segment.targetInner();
+            if (targetInner != null) {
+                writes.add(new SkeletonAnchors.PendingWrite(segment.anchor(), targetInner));
             }
         }
+        return writes;
     }
 
     private static org.jsoup.nodes.Document treeFor(ParsedEpub parsed, Unit unit) {
@@ -122,20 +134,26 @@ public final class EpubWriter {
     private static void repackage(ParsedEpub parsed, Document document, Path destination) {
         try (OutputStream out = Files.newOutputStream(destination);
                 ZipOutputStream zip = new ZipOutputStream(out)) {
-            writeStored(zip, requireMimetype(parsed));
+            writeStored(zip, mimetypeEntry(parsed));
             writeRemainingEntries(zip, parsed, document);
         } catch (IOException e) {
             throw new UncheckedIOException("Unable to write EPUB output", e);
         }
     }
 
-    private static RawEntry requireMimetype(ParsedEpub parsed) {
+    /**
+     * The source's own {@code mimetype} entry, reused verbatim — or, when the container never had one, the entry
+     * OCF fixes completely (name, content, position, STORED), so nothing is invented and a readable book that
+     * some readers reject is exported as one they accept (ADR-0030).
+     */
+    private static RawEntry mimetypeEntry(ParsedEpub parsed) {
         for (final RawEntry entry : parsed.rawEntries()) {
             if (MIMETYPE_ENTRY_NAME.equals(entry.name())) {
                 return entry;
             }
         }
-        throw new CorruptContainerException("EPUB has no mimetype entry");
+        return new RawEntry(
+                MIMETYPE_ENTRY_NAME, 0, ZipEntry.STORED, MIMETYPE_CONTENT.getBytes(StandardCharsets.US_ASCII));
     }
 
     private static void writeStored(ZipOutputStream zip, RawEntry entry) throws IOException {

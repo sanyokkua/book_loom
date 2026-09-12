@@ -78,7 +78,7 @@ over the FX-free core, driven by an observable state mirror. The mockup at
    counts/sizes/durations/dates format via `NumberFormat`/`java.time` for the **injectable
    `Locale` provider**'s locale; no user text concatenated into layout; the Appearance tab
    selects app language independent of the translation target.
-10. **Prove it with TestFX.** Add a TestFX + Monocle (headless) control-state assertion
+10. **Prove it with TestFX.** Add a headless TestFX control-state assertion
     (P4) and, where practical, a screenshot matching the mockup screen/state/theme (P6).
 
 ## Control mapping (mockup -> JavaFX)
@@ -135,7 +135,7 @@ values (incl. surface, nav-*, status `-bg`/`-bd`, shadow, `focus`) are the token
 - [ ] Labels use the typed message-key registry; plural/gender strings are ICU patterns
       (DD-48); no concatenated user strings.
 - [ ] New view has a `ViewNames` constant and is reachable via the `Navigator`.
-- [ ] TestFX (Monocle headless) P4 control-state assertion, plus P6 screenshot where
+- [ ] Headless TestFX P4 control-state assertion, plus P6 screenshot where
       practical; ArchUnit `fx-free-core` still green.
 
 ## Gotchas

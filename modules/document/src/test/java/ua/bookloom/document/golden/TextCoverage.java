@@ -125,13 +125,23 @@ final class TextCoverage {
     }
 
     /**
-     * The source's translatable text, decoded and stripped per format.
+     * The source's translatable text, decoded and stripped per format — the ratio's denominator.
      *
+     * <p>Package-visible rather than private so a test can assert the denominator <em>directly</em>. Inferring it
+     * from the ratio does not work for a text that must be present on both sides: if a regression dropped such a
+     * block from the denominator, its words would leave {@code translatable} as well as staying reached, and the
+     * ratio would remain exactly {@code 1.0} — the test would pass straight through the defect. That asymmetry
+     * with the excluded-text tests, where a leak into the denominator genuinely does move the ratio, is easy to
+     * miss on review.
+     *
+     * @param source the fixture file as written
+     * @param format the format it was parsed as
      * @param charset the charset {@link Document#charset()} resolved for this document, or {@code null} for a
      *     container format that records none; only the TXT branch consults it — every other format resolves its
      *     own encoding independently (EPUB per content document, FB2 from its declaration)
+     * @return the source's translatable text; never null
      */
-    private static String translatableTextOf(Path source, BookFormat format, @Nullable String charset) {
+    static String translatableTextOf(Path source, BookFormat format, @Nullable String charset) {
         return switch (format) {
             case EPUB -> epubText(source);
             case FB2 -> fb2Text(source);
@@ -141,17 +151,51 @@ final class TextCoverage {
     }
 
     /**
-     * Every spine document's body text with {@code <pre>} and block {@code <math>} removed — the exclusions
-     * DD-49 names, and the only text a correct importer is allowed not to reach.
+     * Every spine document's body text with {@code <pre>}, block {@code <math>} and a code-only block removed —
+     * the exclusions DD-49 and D11 name, and the only text a correct importer is allowed not to reach.
+     *
+     * <p>{@code pre, math} is removed first; {@link #removeCodeOnlyBlocks(org.jsoup.nodes.Element)} then walks
+     * what remains, so a {@code <code>} that was already inside a removed {@code <pre>} is never considered twice.
      */
     private static String epubText(Path source) {
         final StringBuilder text = new StringBuilder();
         for (final ZipText entry : ZipText.contentDocumentsOf(source)) {
             final org.jsoup.nodes.Document parsed = Jsoup.parse(entry.text());
             parsed.select("pre, math").remove();
+            removeCodeOnlyBlocks(parsed.body());
             text.append(parsed.body().text()).append(' ');
         }
         return text.toString();
+    }
+
+    /**
+     * Removes, per block, exactly the elements the walker now excludes under D11: a block with a {@code <code>}
+     * descendant whose text is blank once every {@code <code>} descendant is disregarded. A {@code <code>} span
+     * sitting inside prose text stays in the denominator whole — {@code List.of()} included — because the walker
+     * still segments that block and masks the span, so it belongs on both sides of the coverage ratio.
+     *
+     * <p>{@code select("*:has(code)")} matches {@code root} itself when {@code root} carries a {@code code}
+     * descendant, which is never a real fixture's whole body but is guarded against anyway: {@code root} is the
+     * walk's own starting point, never a segment-bearing block. {@link org.jsoup.nodes.Element#remove()} detaches
+     * an already-detached descendant harmlessly, so a wrapper that qualifies alongside its code-only child is
+     * removed twice with no ill effect — the second call is a no-op.
+     */
+    // ReferenceEquality: intentional — this checks whether the visited node *is* the walk's own starting element,
+    // not whether some other element happens to carry equal content.
+    @SuppressWarnings("ReferenceEquality")
+    private static void removeCodeOnlyBlocks(org.jsoup.nodes.Element root) {
+        for (final org.jsoup.nodes.Element element : root.select("*:has(code)")) {
+            if (element != root && isCodeOnly(element)) {
+                element.remove();
+            }
+        }
+    }
+
+    /** Whether {@code element}'s text, with every {@code <code>} descendant disregarded, is blank. */
+    private static boolean isCodeOnly(org.jsoup.nodes.Element element) {
+        final org.jsoup.nodes.Element clone = element.clone();
+        clone.select("code").remove();
+        return clone.text().isBlank();
     }
 
     /**

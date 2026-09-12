@@ -11,7 +11,7 @@ The canonical BookLoom icon source and its deterministic processing pipeline. No
 | `process_icon.py`            | **Step 1 — deterministic background removal.** Crops the tile out of the dark backdrop, makes everything outside the tile's rounded-rect silhouette transparent, and exports the 1024×1024 RGBA master `appicon.png`. Re-runnable at any time; same input → same output. |
 | `appicon.png`                | **The single master** every per-OS icon is derived from (1024×1024, RGBA, fully transparent corners). Committed output of `process_icon.py`. No platform icon is ever hand-forked from a different source.                                                               |
 | `generate_platform_icons.py` | **Step 2 — per-OS derivation.** From `appicon.png` produces `dist/macos/` (`BookLoom.iconset` + `BookLoom.icns`), `dist/windows/BookLoom.ico`, and `dist/linux/` (`BookLoom.png` + the freedesktop `hicolor` set).                                                       |
-| `dist/`                      | Generated per-OS icons. Regenerated from `appicon.png`; not hand-edited.                                                                                                                                                                                                 |
+| `dist/`                      | Generated per-OS icons, **committed** because `jpackage` (and CI's packaging job) reads them from a clean checkout. Regenerated from `appicon.png`; not hand-edited. The `macos/BookLoom.iconset/` intermediate is git-ignored.                                                                                                                                                                                                 |
 
 ## Reproducing the assets
 

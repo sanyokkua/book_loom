@@ -39,10 +39,16 @@ public final class MarkdownReader {
     private final OpenMarkdownRegistry registry;
 
     /**
-     * The parser, built per read. {@link Parser} is documented as thread-safe and could be shared, but building it
+     * The parser, built per call. {@link Parser} is documented as thread-safe and could be shared, but building it
      * costs nothing next to reading a book and a per-call instance removes the question entirely.
+     *
+     * <p>Package-private rather than private: {@link MarkdownEscaper} and {@link MarkdownStructureCheck} parse a
+     * restored segment's text with this exact same configuration — same extensions, same source-span mode — so a
+     * second, independently-maintained builder call can never drift from this one (the requirements <em>Escape
+     * model-introduced Markdown punctuation when restoring</em> and <em>Verify that a restored Markdown segment
+     * keeps its structure</em>).
      */
-    private static Parser parser() {
+    static Parser parser() {
         return Parser.builder()
                 .extensions(List.of(TablesExtension.create()))
                 .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)

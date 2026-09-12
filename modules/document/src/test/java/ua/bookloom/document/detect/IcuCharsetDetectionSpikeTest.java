@@ -45,7 +45,7 @@ class IcuCharsetDetectionSpikeTest {
             Дождь шёл третий день подряд, и город казался серым насквозь.\r
             """;
 
-    // Covers: FR-DOC-TXT-1 — WHEN a plain-text file carries no byte-order mark and no declaration, THEN the
+    // WHEN a plain-text file carries no byte-order mark and no declaration, THEN the
     // encoding resolved from its bytes is the one it was actually written in rather than a Latin fallback.
     @Test
     void detect_windows1251CyrillicWithCrlf_isIdentifiedAsWindows1251() {

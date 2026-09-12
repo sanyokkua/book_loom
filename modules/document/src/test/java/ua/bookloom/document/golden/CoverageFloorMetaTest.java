@@ -47,7 +47,7 @@ class CoverageFloorMetaTest {
                 .toList();
     }
 
-    // Covers: FR-DOC-09 — WHEN each fixture's coverage is measured and compared against the floor that fixture
+    // WHEN each fixture's coverage is measured and compared against the floor that fixture
     // declares, THEN for every fixture the measured coverage is at or above its declared floor.
     @ParameterizedTest(name = "{0}")
     @MethodSource("everyFixture")
@@ -55,8 +55,8 @@ class CoverageFloorMetaTest {
         assertThat(measuredCoverageOf(fixture)).isGreaterThanOrEqualTo(fixture.coverageFloor());
     }
 
-    // Covers: FR-DOC-09 — AND the declared floor is no more than 0.02 below the measured coverage, so a floor
-    // cannot silently absorb a real regression.
+    // AND the declared floor is no more than 0.02 below the measured coverage, so a
+    // floor cannot silently absorb a real regression.
     @ParameterizedTest(name = "{0}")
     @MethodSource("fixturesWithAMeasuredFloor")
     void everyMeasuredFixture_declaredFloorIsWithinSlackOfMeasuredCoverage(FixtureCatalog.Case fixture) {

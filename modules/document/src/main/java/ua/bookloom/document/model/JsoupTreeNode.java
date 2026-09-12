@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.CDataNode;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
@@ -29,6 +30,25 @@ public final class JsoupTreeNode implements TreeNode {
      */
     public static TreeNode of(Node node) {
         return new JsoupTreeNode(node);
+    }
+
+    /**
+     * Tests {@link CDataNode} before {@link TextNode}, because jsoup's {@code CDataNode} is itself a
+     * {@code TextNode} subclass — the reverse order would report a CDATA section as {@link TreeNodeType#TEXT} and
+     * let it be decoded and re-escaped on restore (ADR-0031, design.md D2).
+     */
+    @Override
+    public TreeNodeType type() {
+        if (node instanceof CDataNode) {
+            return TreeNodeType.CDATA;
+        }
+        if (node instanceof TextNode) {
+            return TreeNodeType.TEXT;
+        }
+        if (node instanceof Element) {
+            return TreeNodeType.ELEMENT;
+        }
+        return TreeNodeType.OTHER;
     }
 
     @Override
@@ -76,5 +96,26 @@ public final class JsoupTreeNode implements TreeNode {
         for (final Node old : doomed) {
             old.remove();
         }
+    }
+
+    /**
+     * Composed from {@link Element#tagName()} and {@link org.jsoup.nodes.Attributes#html()} rather than sliced out
+     * of {@link Node#outerHtml()}: subtracting inner markup from outer markup is string surgery that breaks on the
+     * self-closing forms ADR-0028 already had to repair.
+     */
+    @Override
+    public String openMarkup() {
+        if (!(node instanceof Element element)) {
+            throw new IllegalStateException("Only an element has an opening tag");
+        }
+        return "<" + element.tagName() + element.attributes().html() + ">";
+    }
+
+    @Override
+    public String closeMarkup() {
+        if (!(node instanceof Element element)) {
+            throw new IllegalStateException("Only an element has a closing tag");
+        }
+        return "</" + element.tagName() + ">";
     }
 }

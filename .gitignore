@@ -3,6 +3,9 @@ build/
 out/
 bin/
 dist/
+# The per-OS app icons jpackage needs are generated once and committed; the macOS iconset is an intermediate.
+!docs/specification/assets/icon/dist/
+docs/specification/assets/icon/dist/macos/BookLoom.iconset/
 
 # Gradle
 .gradle/

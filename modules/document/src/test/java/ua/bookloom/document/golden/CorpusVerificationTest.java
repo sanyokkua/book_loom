@@ -18,6 +18,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.opentest4j.TestAbortedException;
 import ua.bookloom.api.document.BookFormat;
 
 /**
@@ -39,7 +40,7 @@ class CorpusVerificationTest {
     private static final String CORPUS_DIR_ENV = "BOOKLOOM_CORPUS_DIR";
     private static final String REPORT_DIR_ENV = "BOOKLOOM_CORPUS_REPORT_DIR";
 
-    // Covers: FR-DOC-09 — WHEN the merge gate runs with a corpus directory configured, THEN the verification does
+    // WHEN the merge gate runs with a corpus directory configured, THEN the verification does
     // not run, because it is excluded from `check` by its own tag.
     //
     // `@Tag` sits on this ONE method rather than on the class. It is the only test here that needs a real corpus;
@@ -64,13 +65,29 @@ class CorpusVerificationTest {
         assertThat(reportDir.resolve(CorpusReportSink.SUMMARY_FILE_NAME)).exists();
     }
 
-    // Covers: FR-DOC-09 — WHEN the standard test task runs with no corpus directory configured, THEN the
+    // WHEN the standard test task runs with no corpus directory configured, THEN the
     // verification is reported as skipped and the build succeeds.
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {"   "})
     void resolveCorpusDir_noCorpusDirectoryConfigured_resolvesToEmpty(@Nullable String envValue) {
         assertThat(resolveCorpusDir(envValue)).isEmpty();
+    }
+
+    // WHILE no corpus directory is configured, the system SHALL skip the verification and
+    // leave the build green.
+    //
+    // Task 10.1's mask probe adds no second way for the verification to run — `CorpusSweep#verifyCorpus`, its
+    // only caller, is reached from `verify_localCorpusConfigured_recordsEveryBooksOutcome` above only past
+    // exactly this `Assumptions.assumeTrue` guard. This proves the guard itself: given the resolver's own
+    // "unconfigured" result, it aborts (a JUnit "skipped" outcome, not a failure) rather than merely returning
+    // false, which is what keeps a checkout with no corpus configured green rather than merely non-erroring.
+    @Test
+    void assumeTrue_corpusDirNotResolved_abortsRatherThanFailingSoTheSweepNeverRuns() {
+        final Optional<Path> corpusDir = resolveCorpusDir(null);
+
+        assertThatThrownBy(() -> Assumptions.assumeTrue(corpusDir.isPresent(), "no corpus configured"))
+                .isInstanceOf(TestAbortedException.class);
     }
 
     // Covers trap 2 (design.md D6): the test JVM's working directory is the module, not the repository root, so a
@@ -86,7 +103,7 @@ class CorpusVerificationTest {
                 .hasMessageContaining(resolved);
     }
 
-    // Covers: FR-DOC-09 — WHEN the verification runs over a corpus in which one book fails to open, THEN that
+    // WHEN the verification runs over a corpus in which one book fails to open, THEN that
     // book's failure is recorded with its error code, AND every other book in the corpus is still processed and
     // recorded.
     @Test
@@ -111,7 +128,7 @@ class CorpusVerificationTest {
                 .satisfies(outcome -> assertThat(outcome.open()).isInstanceOf(CorpusOpenOutcome.Opened.class));
     }
 
-    // Covers: FR-DOC-09 — WHEN the verification runs with a corpus directory that exists and contains no book
+    // WHEN the verification runs with a corpus directory that exists and contains no book
     // files, THEN the run completes, records zero books processed, and the build succeeds.
     @Test
     void verifyCorpus_emptyCorpusDirectory_recordsZeroBooksAndSucceeds(@TempDir Path tempDir) throws IOException {
@@ -125,7 +142,7 @@ class CorpusVerificationTest {
         assertThat(reportDir.resolve(CorpusReportSink.JSONL_FILE_NAME)).exists();
     }
 
-    // Covers: FR-DOC-09 — WHEN the verification runs over a corpus containing a book that opens and writes
+    // WHEN the verification runs over a corpus containing a book that opens and writes
     // without error, but whose zero-edit output is not structurally equal to the source, THEN that book's outcome
     // is recorded as failed, distinctly from a book that round-tripped faithfully.
     @Test

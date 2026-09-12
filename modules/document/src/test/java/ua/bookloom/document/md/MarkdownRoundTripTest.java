@@ -57,7 +57,7 @@ class MarkdownRoundTripTest {
         }
     }
 
-    // Covers: FR-DOC-MD-1 — headings, paragraphs and list items are distinguished by kind.
+    // headings, paragraphs and list items are distinguished by kind.
     @Test
     void read_headingsParagraphsAndListItems_areDistinguishedByKind() {
         final List<Segment> segments = segmentsOf(openPrimary());
@@ -69,7 +69,7 @@ class MarkdownRoundTripTest {
         assertThat(kindOf(segments, "Quoted prose.")).isEqualTo(SegmentKind.PARAGRAPH);
     }
 
-    // Covers: FR-DOC-MD-1 — a list item containing a fenced code block yields segments only for its prose, and no
+    // a list item containing a fenced code block yields segments only for its prose, and no
     // segment's extent includes the fence.
     @Test
     void read_listItemContainingAFence_yieldsSegmentsOnlyForItsProse() {
@@ -78,7 +78,7 @@ class MarkdownRoundTripTest {
                 .noneSatisfy(inner -> assertThat(inner).contains("echo hi"));
     }
 
-    // Covers: FR-DOC-MD-1 — a table's six cells are segments and neither the table nor a row is.
+    // a table's six cells are segments and neither the table nor a row is.
     @Test
     void read_table_yieldsOneSegmentPerCellAndNoneForTheTable() {
         assertThat(segmentsOf(openPrimary()))
@@ -87,7 +87,7 @@ class MarkdownRoundTripTest {
                 .containsExactly("Left", "Center", "Right", "a1", "b1", "c1");
     }
 
-    // Covers: FR-DOC-MD-2 — Markdown-looking content inside a fence yields no segment.
+    // Markdown-looking content inside a fence yields no segment.
     @Test
     void read_markdownLookingContentInsideAFence_yieldsNoSegment() {
         assertThat(innersOf(openPrimary()))
@@ -96,21 +96,21 @@ class MarkdownRoundTripTest {
                 .noneSatisfy(inner -> assertThat(inner).contains("int x = 1;"));
     }
 
-    // Covers: FR-DOC-MD-2 — an indented code block yields no segment either.
+    // an indented code block yields no segment either.
     @Test
     void read_indentedCodeBlock_yieldsNoSegment() {
         assertThat(innersOf(openPrimary()))
                 .noneSatisfy(inner -> assertThat(inner).contains("indented code block"));
     }
 
-    // Covers: EC-MD-2 — a raw HTML block yields no segment.
+    // a raw HTML block yields no segment.
     @Test
     void read_rawHtmlBlock_yieldsNoSegment() {
         assertThat(innersOf(openPrimary()))
                 .noneSatisfy(inner -> assertThat(inner).contains("class=\"note\""));
     }
 
-    // Covers: FR-DOC-MD-3 — frontmatter yields no segment for any key or value it contains.
+    // frontmatter yields no segment for any key or value it contains.
     @Test
     void read_frontmatter_yieldsNoSegmentForItsKeysOrValues() {
         assertThat(innersOf(openPrimary()))
@@ -118,7 +118,7 @@ class MarkdownRoundTripTest {
         assertThat(innersOf(openPrimary())).doesNotContain("The Book");
     }
 
-    // Covers: FR-IMPORT-07 — the frontmatter's title and lang reach the metadata map and declaredLang.
+    // the frontmatter's title and lang reach the metadata map and declaredLang.
     @Test
     void read_frontmatter_populatesDeclaredLangAndTitle() {
         final Document document = openPrimary();
@@ -127,7 +127,7 @@ class MarkdownRoundTripTest {
         assertThat(document.metadata()).containsEntry("title", "The Book");
     }
 
-    // Covers: EC-MD-3 — a `---` line later in the file is a thematic break, not frontmatter, so the paragraphs
+    // a `---` line later in the file is a thematic break, not frontmatter, so the paragraphs
     // around it are ordinary prose.
     @Test
     void read_thematicBreakLaterInTheFile_isNotTreatedAsFrontmatter() {
@@ -137,7 +137,7 @@ class MarkdownRoundTripTest {
         assertThat(innersOf(document)).contains("Prose one.", "Prose two.");
     }
 
-    // Covers: FR-DOC-MD-1 — the unit's id, href and media type identify a single-unit format.
+    // the unit's id, href and media type identify a single-unit format.
     @Test
     void read_markdownFile_yieldsOneUnitNamedForTheFile() {
         final Unit unit = openPrimary().units().get(0);
@@ -148,7 +148,7 @@ class MarkdownRoundTripTest {
         assertThat(openPrimary().format()).isEqualTo(BookFormat.MARKDOWN);
     }
 
-    // Covers: FR-DOC-MD-2 — a document that is entirely one fenced block yields zero segments and still
+    // a document that is entirely one fenced block yields zero segments and still
     // reassembles.
     @Test
     void read_documentThatIsEntirelyOneFence_yieldsNoSegmentsAndStillRoundTrips() {
@@ -158,7 +158,7 @@ class MarkdownRoundTripTest {
         assertThat(textOf(writeOut(document, "uk"))).isEqualTo(MarkdownFixtures.ONLY_A_FENCE);
     }
 
-    // Covers: FR-DOC-MD-4 — WHEN a Markdown file is reassembled with no segment carrying target text, THEN the
+    // WHEN a Markdown file is reassembled with no segment carrying target text, THEN the
     // output bytes are identical to the source's.
     @Test
     void write_zeroEditRoundTrip_isByteIdentical() {
@@ -169,13 +169,13 @@ class MarkdownRoundTripTest {
         assertThat(textOf(output)).isEqualTo(MarkdownFixtures.PRIMARY);
     }
 
-    // Covers: FR-DOC-MD-4 — a file whose last byte is not a newline still has no trailing newline afterwards.
+    // a file whose last byte is not a newline still has no trailing newline afterwards.
     @Test
     void write_fileWithoutATrailingNewline_stillHasNone() {
         assertThat(textOf(writeOut(openPrimary(), "uk"))).doesNotEndWith("\n");
     }
 
-    // Covers: FR-DOC-MD-4 — emphasis spelling outside a translated span is untouched, because nothing outside a
+    // emphasis spelling outside a translated span is untouched, because nothing outside a
     // replaced span is ever re-rendered.
     @Test
     void write_translatingOneParagraph_leavesAnotherParagraphsEmphasisSpellingAlone() {
@@ -187,7 +187,7 @@ class MarkdownRoundTripTest {
         assertThat(output).contains("Цитата.");
     }
 
-    // Covers: FR-DOC-MD-4 — WHEN a paragraph ending with two trailing spaces followed by a newline is written
+    // WHEN a paragraph ending with two trailing spaces followed by a newline is written
     // back, THEN the output paragraph still ends with two trailing spaces followed by a newline, because the
     // replaced range is trimmed of the whitespace that carries the break.
     @Test
@@ -200,13 +200,13 @@ class MarkdownRoundTripTest {
         assertThat(output).contains("Абзац, останній рядок якого закінчується.  \n");
     }
 
-    // Covers: FR-DOC-MD-4 — an interior hard line break survives a zero-edit round trip untouched.
+    // an interior hard line break survives a zero-edit round trip untouched.
     @Test
     void write_zeroEditRoundTrip_preservesAnInteriorHardLineBreak() {
         assertThat(textOf(writeOut(openPrimary(), "uk"))).contains("hard break  \nand continuing");
     }
 
-    // Covers: FR-DOC-MD-2 — the fenced block keeps its info string and content after a round trip.
+    // the fenced block keeps its info string and content after a round trip.
     @Test
     void write_zeroEditRoundTrip_keepsTheFenceInfoStringAndContent() {
         final String output = textOf(writeOut(openPrimary(), "uk"));
@@ -215,7 +215,7 @@ class MarkdownRoundTripTest {
         assertThat(output).contains("```bash\n  echo hi");
     }
 
-    // Covers: FR-DOC-07 — WHERE the exported format has no language field, the content is left unchanged rather
+    // WHERE the exported format has no language field, the content is left unchanged rather
     // than gaining an invented one.
     @Test
     void write_targetLanguage_addsNoFrontmatterBlockAndNoLangKey() {

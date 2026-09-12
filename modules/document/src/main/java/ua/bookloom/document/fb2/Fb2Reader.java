@@ -29,6 +29,7 @@ import ua.bookloom.document.model.DrmRefusedException;
 import ua.bookloom.document.model.Jdom2TreeNode;
 import ua.bookloom.document.model.RawEntry;
 import ua.bookloom.document.model.SecureXml;
+import ua.bookloom.document.model.TreeDialect;
 import ua.bookloom.document.model.ZipEncryption;
 import ua.bookloom.document.model.ZipEntryReader;
 import ua.bookloom.util.hash.HashUtil;
@@ -98,6 +99,15 @@ public final class Fb2Reader {
         throw new CorruptContainerException("The archive contains no FictionBook member");
     }
 
+    private static boolean hasCrLf(byte[] bytes) {
+        for (int i = 1; i < bytes.length; i++) {
+            if (bytes[i] == '\n' && bytes[i - 1] == '\r') {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static byte[] readAllBytes(Path source) {
         try {
             return Files.readAllBytes(source);
@@ -135,7 +145,8 @@ public final class Fb2Reader {
                         source.zipMemberName(),
                         resolution.charset(),
                         declaredEncodingName,
-                        units.bodiesByHandleId()));
+                        units.bodiesByHandleId(),
+                        hasCrLf(source.bytes())));
         return new Document(
                 documentId,
                 BookFormat.FB2,
@@ -190,7 +201,8 @@ public final class Fb2Reader {
         final String unitId = sourceName + "#" + order;
         final String handleId = UUID.randomUUID().toString();
         bodies.put(handleId, body);
-        final List<Segment> segments = BlockSegmentWalker.walk(Jdom2TreeNode.of(body), unitId);
+        final List<Segment> segments =
+                BlockSegmentWalker.walk(Jdom2TreeNode.of(body), unitId, TreeDialect.FICTION_BOOK);
         units.add(new Unit(unitId, order, sourceName, FB2_MEDIA_TYPE, new SkeletonHandle(handleId), segments));
     }
 

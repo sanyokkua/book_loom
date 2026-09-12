@@ -29,14 +29,14 @@ class SkeletonAnchorsTest {
     }
 
     private static List<Segment> walk(Element body) {
-        return BlockSegmentWalker.walk(JsoupTreeNode.of(body), UNIT_HREF);
+        return BlockSegmentWalker.walk(JsoupTreeNode.of(body), UNIT_HREF, TreeDialect.XHTML);
     }
 
     private static Element requireElement(Element body, String selector) {
         return Objects.requireNonNull(body.selectFirst(selector), selector);
     }
 
-    // Covers: FR-DOC-03 — WHEN a segment's target content contains inline markup, THEN it is written back as
+    // WHEN a segment's target content contains inline markup, THEN it is written back as
     // markup, is not escaped, and does not sit beside the original inline children it replaced.
     @Test
     void writeBack_targetContainingInlineMarkup_replacesTheRunAsMarkup() {
@@ -51,7 +51,7 @@ class SkeletonAnchorsTest {
         assertThat(output).doesNotContain("world");
     }
 
-    // Covers: FR-DOC-03 — WHEN only one run of a multi-run block is written back, THEN the other runs and every
+    // WHEN only one run of a multi-run block is written back, THEN the other runs and every
     // line-break element between them are left exactly as they were.
     @Test
     void writeBack_secondRunOnly_leavesTheOtherRunsAndBothBreaksIntact() {
@@ -65,7 +65,7 @@ class SkeletonAnchorsTest {
         assertThat(div.select("br")).hasSize(2);
     }
 
-    // Covers: FR-DOC-03 — WHEN a segment is reassembled, THEN the element it was parsed from keeps every
+    // WHEN a segment is reassembled, THEN the element it was parsed from keeps every
     // attribute it declared.
     @Test
     void writeBack_doesNotDisturbTheBlockElementsOwnAttributes() {
@@ -80,7 +80,7 @@ class SkeletonAnchorsTest {
         assertThat(paragraph.text()).isEqualTo("Текст.");
     }
 
-    // Covers: DD-07 — WHEN an earlier segment receives target text longer than its source, THEN a later segment's
+    // WHEN an earlier segment receives target text longer than its source, THEN a later segment's
     // anchor still resolves to the element it was parsed from, with no anchor recomputed between the two writes.
     @Test
     void writeBack_longerEarlierTarget_doesNotInvalidateALaterAnchor() {
@@ -96,7 +96,7 @@ class SkeletonAnchorsTest {
         assertThat(body.select("p").get(1).text()).isEqualTo("Two.");
     }
 
-    // Covers: FR-DOC-03 — a comment between two block elements survives reassembly, in the same position.
+    // a comment between two block elements survives reassembly, in the same position.
     @Test
     void writeBack_leavesACommentBetweenBlocksInPlace() {
         final Element body = bodyOf("<p>Before.</p><!-- a comment --><p>After.</p>");

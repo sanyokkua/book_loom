@@ -42,7 +42,7 @@ class EpubGoldenTrapsTest {
     @TempDir
     private Path tempDir;
 
-    // Covers: FR-DOC-EPUB-3 — on export mimetype is written first and STORED.
+    // on export mimetype is written first and STORED.
     @Test
     void write_primaryFixture_mimetypeIsFirstAndStored() {
         final RoundTrip roundTrip = roundTrip();
@@ -53,7 +53,7 @@ class EpubGoldenTrapsTest {
         assertThat(written.get(0).method()).isEqualTo(ZipEntry.STORED);
     }
 
-    // Covers: EC-EPUB-4 — the duplicate id="note1" elements both survive a zero-edit round trip, unrewritten.
+    // the duplicate id="note1" elements both survive a zero-edit round trip, unrewritten.
     @Test
     void write_primaryFixture_duplicateIdSurvivesUnrewritten() {
         final RoundTrip roundTrip = roundTrip();
@@ -63,7 +63,7 @@ class EpubGoldenTrapsTest {
         assertThat(chapterOne.select("[id=note1]")).hasSize(2);
     }
 
-    // Covers: DD-49 — the <pre><code> listing's exact text survives, and no segment produced by parsing contains
+    // the <pre><code> listing's exact text survives, and no segment produced by parsing contains
     // its code text (excluded from segmentation entirely).
     @Test
     void write_primaryFixture_codeListingSurvivesVerbatimAndProducesNoSegment() {
@@ -76,7 +76,7 @@ class EpubGoldenTrapsTest {
         assertThat(allSourceInner(roundTrip.document())).noneMatch(inner -> inner.contains("int x = 1;"));
     }
 
-    // Covers: EC-EPUB-3 — the out-of-spine stylesheet's bytes survive byte-for-byte.
+    // the out-of-spine stylesheet's bytes survive byte-for-byte.
     @Test
     void write_primaryFixture_outOfSpineStylesheetSurvivesByteForByte() {
         final RoundTrip roundTrip = roundTrip();
@@ -86,7 +86,7 @@ class EpubGoldenTrapsTest {
         assertThat(css).isEqualTo(PrimaryFixtureEpub.STYLESHEET_CONTENT.getBytes(StandardCharsets.UTF_8));
     }
 
-    // Covers: FR-DOC-EPUB-4 — the embedded font's bytes survive byte-for-byte.
+    // the embedded font's bytes survive byte-for-byte.
     @Test
     void write_primaryFixture_embeddedFontSurvivesByteForByte() {
         final RoundTrip roundTrip = roundTrip();
@@ -96,7 +96,7 @@ class EpubGoldenTrapsTest {
         assertThat(font).isEqualTo(PrimaryFixtureEpub.fontBytes());
     }
 
-    // Covers: FR-DOC-03 — WHEN a document containing an XML comment between two block elements is reassembled,
+    // WHEN a document containing an XML comment between two block elements is reassembled,
     // THEN the comment is present in the output, between the same two elements.
     @Test
     void write_primaryFixture_commentSurvivesInPosition() {
@@ -110,7 +110,7 @@ class EpubGoldenTrapsTest {
         assertThat(chapterOne.indexOf("After.")).isGreaterThan(commentIndex);
     }
 
-    // Covers: FR-DOC-03 — WHEN a document containing <p id="ch01-p07" class="first">Text.</p> is parsed and
+    // WHEN a document containing <p id="ch01-p07" class="first">Text.</p> is parsed and
     // reassembled with zero edits, THEN the output element still carries id="ch01-p07" and class="first" — the
     // skeleton's attributes survive reassembly, not merely its id (EC-EPUB-4's own test already covers duplicate
     // ids specifically).
@@ -124,7 +124,7 @@ class EpubGoldenTrapsTest {
         assertThat(Objects.requireNonNull(paragraph, "ch01-p07").attr("class")).isEqualTo("first");
     }
 
-    // Covers: FR-DOC-EPUB-1 — spine order, not zip order, drives the parsed document's unit order (the fixture's
+    // spine order, not zip order, drives the parsed document's unit order (the fixture's
     // zip entries physically place c02.xhtml before c01.xhtml; the OPF spine declares c01 then c02).
     @Test
     void read_primaryFixture_followsSpineOrderNotZipOrder() {

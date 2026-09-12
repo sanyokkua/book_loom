@@ -4,7 +4,7 @@
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`,
 `docs/adr/ADR-0030-synthesize-a-missing-epub-mimetype-entry-on-write.md`, `docs/implementation_plan/07_ROADMAP.md`,
 `docs/implementation_plan/notes-corpus-verification.md`,
-`docs/implementation_plan/README.md#end-to-end-flow`, `openspec/config.yaml`
+`openspec/config.yaml`
 
 # Change Backlog
 
@@ -17,8 +17,11 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 
 ## where-this-stands {#where-this-stands}
 
-**Six changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is two of
-four**, with change 5 the next eligible entry.
+**Seven changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three of
+four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11). The owner's stated next
+unit of work is the walking skeleton (one EPUB through one local model to a translated EPUB, from the UI — see
+`docs/Architecture.md` §9); the interstitial `settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 when
+D2 and D11 were fixed directly.
 
 | Archived | Change | What it shipped |
 |---|---|---|
@@ -28,21 +31,38 @@ four**, with change 5 the next eligible entry.
 | 2026-08-07 | 3 · `add-document-skeleton-and-epub-roundtrip` | Seam F1 and the EPUB round trip — `document-round-trip` created |
 | 2026-08-09 | 4 · `add-fb2-md-txt-roundtrip` | FB2, Markdown and TXT round trips; ADR-0025/0026/0027 |
 | 2026-08-11 | — · `fix-document-round-trip-corpus-defects` | Eight defects found by a 214-book write-back sweep; ADR-0028; the sweep made repeatable |
+| 2026-09-11 | 5 · `add-inline-masking-and-placeholder-gate` | `⟦gN⟧` masking for all four formats, `DocumentPort.unmask` behind the placeholder-multiset gate, Markdown escape + structure check; ADR-0031 |
 
 **Honest completion figures**, so nobody reads the table above as more progress than it is:
 
 | Metric | Value |
 |---|---|
 | Capabilities with a built-behaviour spec | **1 of 16** (`document-round-trip`) |
-| `FR-*` ids with a covering `// Covers:` test | **~36 of 136** |
+| Tests | **616** across the four real modules; the test's name and its one-line comment say what it proves — requirement-id markers were retired on 2026-09-11 (ADR-0032) |
 | Modules carrying real production logic | **4 of 8** (`:api`, `:util`, `:document`, `:app`) |
 | Stages complete | **A only**, of A · B · B′ · C · D · E |
 
-**One thing no entry below said out loud: inline masking does not exist.** `BlockSegmentWalker`, `MarkdownWalker` and
-`TxtReader` each emit every segment with `masked == sourceInner` and an empty placeholder map — `BlockSegmentWalker`'s
-own Javadoc concedes it. There is no `⟦gN⟧` code, no unmask and no tag-multiset gate anywhere in `modules/`;
-`Segment.masked` and `Segment.placeholders` are contract-only fields. That is what change 5 is for, and it is why no
-chunk can be validated until change 5 lands.
+**Inline masking now exists — the previous edition of this section said it did not.**
+`add-inline-masking-and-placeholder-gate` (change 5) added `ua.bookloom.document.mask`: the `⟦gN⟧` token grammar
+(`Placeholders`), the mask accumulator (`MaskWriter`), the masked-content record, the mask-time invariant check, the
+placeholder-multiset gate (`PlaceholderGate`), the restore pass (`Unmasker`), the markup escaper (`MarkupEscape`)
+and the plain-text masker. `TreeMasker` (tree-format masking) lives beside `BlockSegmentWalker` in `.model`, and the
+Markdown masker/escaper/structure check (`MarkdownMasker`, `MarkdownEscaper`, `MarkdownStructureCheck`) live beside
+`MarkdownWalker` in `.md` — a deliberate deviation from the change's own design.md D10, because a masker in `.mask`
+walking `TreeNode` would make `.model` and `.mask` mutually dependent and force the one format-agnostic package to
+depend on jsoup, JDOM2 and commonmark at once. Every segment in all four formats now carries a real `masked` form
+and an ordered token→fragment map; `DocumentPort` gained `unmask(BookFormat, Segment, String)`, which compares the
+placeholder multiset as a hard gate before restoring anything and fails as `ErrorCode.validation`, with no repair
+attempt, on any mismatch (`FR-DOC-05`). Measured against the 213-book corpus: 300,253 placeholders across 787,781
+segments (0.38 per segment, 11.5% of segments carrying any at all, worst single segment 1,015), and every openable
+book restores every segment from its own masked form. What the gate does **not** close is recorded below as
+decision debt D7–D9 — a swapped or concatenated placeholder pair still satisfies the multiset, and the flat
+token→fragment map carries no pairing information; both stay open by design until `add-chunking-and-context-
+assembly` (change 12). D10 was in that list and is not any more: a **second** independent audit of change 5,
+run with clean context after its first audit's fixes were green, measured that a pipe in a translated cell
+collapses a four-cell row into one paragraph, and change 5 now refuses it. That audit is also why this section
+should be read with the eight further defects it found in mind — three of which the *first* audit's own fixes
+had introduced.
 
 Everything below the archived rows remains unplanned.
 
@@ -54,11 +74,11 @@ Everything below the archived rows remains unplanned.
    numbers alone. In practice delivery is **strictly serial, one change in flight**, even where ADR-0017 permits
    parallelism (see Stage B′).
 2. Run `/opsx:propose` for it. Read the generated artifacts critically — `openspec/config.yaml` steers them toward the
-   R1–R6 standard, it does not guarantee them.
-3. `openspec validate <change> --strict`, then `/opsx:apply`, then the Definition of Done, then `/opsx:archive`.
-4. At each stage boundary, run `bash scripts/fr-coverage.sh`. Advisory only.
+   R1–R4 standard, it does not guarantee them.
+3. `openspec validate <change> --strict`, then `/opsx:apply`, then the gate and the app run by hand, then
+   `/opsx:archive`.
 
-Capability names must come from the 16-name map in `openspec/config.yaml` so the `FR-*` join key holds exactly. **NEW**
+Capability names must come from the 16-name map in `openspec/config.yaml`. **NEW**
 means the change creates `openspec/specs/<capability>/`; **MOD** means it adds to or changes an existing one; check
 `openspec/specs/` before deciding which.
 
@@ -145,8 +165,9 @@ it back**, canonical-equal. **Two of four are archived**; changes 3 and 4 shippe
 | 3 | `add-document-skeleton-and-epub-roundtrip` | `document-round-trip` **NEW** | ✅ archived |
 | 4 | `add-fb2-md-txt-roundtrip` | `document-round-trip` MOD | ✅ archived |
 | — | `fix-document-round-trip-corpus-defects` | `document-round-trip` MOD | ✅ archived |
-| 5 | `add-inline-masking-and-placeholder-gate` | `document-round-trip` MOD | ▶ **next** |
+| 5 | `add-inline-masking-and-placeholder-gate` | `document-round-trip` MOD | ✅ archived 2026-09-11 |
 | — | `settle-writer-policy-and-document-lifetime` | `document-round-trip` MOD | proposed — `#decision-debt` |
+| — | `translate-markdown-raw-html-blocks` | `document-round-trip` MOD | unplanned — recorded below |
 | — | `add-metadata-units-and-language-detection` | `document-round-trip` MOD · `book-import` **NEW** | closes Stage B |
 
 Change 3 establishes **seam F1** (skeleton + ordered segment list; text nodes the only mutable slots). Change 5
@@ -173,17 +194,32 @@ the reproduction are in `openspec/changes/archive/*-add-fb2-md-txt-roundtrip/not
 change takes it must add a fixture carrying that shape** — change 4's text-coverage assertion is what catches this
 class of failure, and it catches nothing the fixtures do not contain.
 
-**Change 5 additionally owns `EC-MD-2`'s second half** — translating the text nodes inside a Markdown raw-HTML
-block. Change 4 preserves such a block verbatim and emits no segment for it, which is the half that can be honoured
-without nesting a second parser inside the first; change 5 introduces exactly that mechanism for inline spans, so the
-remaining half belongs there rather than being rediscovered later.
+**This section previously assigned change 5 `EC-MD-2`'s second half** — translating the text nodes inside a
+Markdown raw-HTML block — on the premise that "change 5 introduces exactly that mechanism" for inline spans. **That
+premise is false, and change 5's own proposal found it false while building the thing.** `BlockSegmentWalker` emits
+a `NodeAnchor` and a re-serialized `sourceInner`; Markdown reassembles by splicing bytes at a `ByteSpanAnchor`.
+Nothing change 5 builds carries over: honouring the second half needs a second walker that understands raw-HTML
+content rather than a tree node, a character-to-byte offset bridge back onto Markdown's byte-span anchoring, pinned
+output settings for the nested jsoup parse so re-serialization is deterministic, a rewrite of the two requirements
+change 4 already shipped for raw-HTML preservation, and a recalibrated text-coverage floor for every Markdown
+fixture that carries a raw-HTML block. That is a change of its own, not a corner of change 5. Until it lands, the
+shipped requirement *Preserve embedded raw HTML in Markdown without segmenting it* stays true and untouched.
+
+**`translate-markdown-raw-html-blocks` runs after `settle-writer-policy-and-document-lifetime`.** It **covers:**
+exactly the second half of `EC-MD-2` named above — a second walker, the offset bridge, the pinned nested-parse
+settings, the requirement rewrite and the fixture-floor recalibration this section just described. It takes **no
+number** for the same reason every other interstitial does.
 
 ### decision-debt {#decision-debt}
 
-**`fix-document-round-trip-corpus-defects` deliberately left five findings unfixed.** Each is real, each is evidenced
-in `docs/implementation_plan/notes-corpus-verification.md`, and each is listed separately below rather than as one
-paragraph so it can be found on its own; leaving them unrecorded is how they get rediscovered from scratch. What this
-section adds is an **owner for every one** — previously they were named and assigned to nobody.
+**`fix-document-round-trip-corpus-defects` deliberately left five findings unfixed — D1 through D5.** Each is real,
+each is evidenced in `docs/implementation_plan/notes-corpus-verification.md`, and each is listed separately below
+rather than as one paragraph so it can be found on its own; leaving them unrecorded is how they get rediscovered from
+scratch. **D6 is not one of those five** — it surfaced later, while building `add-inline-masking-and-placeholder-gate`
+(change 5), and is recorded here for the same reason rather than folded into the earlier change's count. **D7
+through D10 surfaced later still**, while writing change 5's design and non-goals. What this section adds is an
+**owner for every one** — previously D1–D5 were named and assigned to nobody, and each finding since is assigned the
+moment it is found.
 
 | # | Finding | Status | Owner |
 |---|---|---|---|
@@ -192,6 +228,18 @@ section adds is an **owner for every one** — previously they were named and as
 | D3 | No `close()` or eviction seam on the four `Open*Registry` singletons | Open — needs an `:api` change | `settle-writer-policy-and-document-lifetime` |
 | D4 | `EpubWriter` mutates the registry-held tree in place | Open — fix, or document as a contract | `settle-writer-policy-and-document-lifetime` |
 | D5 | One 26,306-character segment; 15 books over 5,000 | Open **by design** — the safety net belongs to the chunker | change 12 · `add-chunking-and-context-assembly` |
+| D6 | An FB2 entity reference is emitted twice: the skipped reference plus the characters it expands to | Open — the one-line fix is a no-op; expanding entities changes how the offline invariant is enforced | `settle-writer-policy-and-document-lifetime` |
+| D7 | A model that returns a masked pair's tokens swapped or concatenated satisfies the placeholder-multiset gate and restores to broken or empty markup | Open **by design** — `FR-DOC-05` specifies a multiset comparison, order-insensitive by definition | change 12 · `add-chunking-and-context-assembly` |
+| D8 | The flat token→fragment map does not say which two tokens are partners in a masked pair | Open **by design** — the chunker's "never split a pair" obligation needs pairing information this change does not expose | change 12 · `add-chunking-and-context-assembly` |
+| D9 | A Markdown shortcut reference link (`[t]`) whose translated label matches no definition silently becomes literal text on the next parse | Open — reachable only once translation runs | Unowned — needs a change |
+| D10 | A `\|` written into a translated Markdown table cell splits its row on the next parse | **Resolved** in change 5's round-2 audit — an unescaped pipe the source did not have is now `validation` | change 5 |
+| D11 | `Fb2Writer` re-serializes every line feed in an FB2 document as `\r\n` | Open — the adapter half is fixed; the document-write half is a writer-policy decision | `settle-writer-policy-and-document-lifetime` |
+| D12 | `SafeDetails.withPlaceholderMultiset` bypasses the length cap, and a model controls how many tokens it renders | **Resolved** in change 5's round-2 audit — the model-derived side is bounded by count and per-token length, overflow stated | change 5 |
+| D13 | `RestoredContent.fragmentRanges` is a `List<int[]>`: the "defensively copies" Javadoc is untrue of the arrays, and `equals`/`hashCode` compare by identity | Open — safety currently rests on one undocumented private copy | next `:document` change |
+| D14 | `DocumentService.unmask` routes on a ternary where an exhaustive `switch` is the mechanism two Javadocs promise | **Resolved** in change 5's round-2 audit — replaced by an exhaustive `switch` over all four `BookFormat` constants | change 5 |
+| D15 | Markdown emits segments whose masked form is exactly one token — 46 code-only table cells corpus-wide | Open — wasted model calls, not corruption | `translate-markdown-raw-html-blocks` |
+| D16 | The Markdown structure check is per-segment, so document-level block structure is unguarded | Open — measured, one book re-opened with 28 segments where it had 31 | `add-chunking-and-context-assembly` (change 12) |
+| D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | Open — found by the 2026-09-12 `Books_Examples` sweep; owned by `add-metadata-units-and-language-detection` |
 
 **D1 — the four writers disagree on unrepresentable target text.** Found by the corpus verification, which sets every
 segment's target to a marker plus its own source text and so exercises exactly this. Measured:
@@ -216,7 +264,7 @@ FR-DOC-FB2-3 already mandates for FB2. The ADR tabulates the four frozen-spec cl
 entries and none named `mimetype`, so it opens with 13 units and 836 segments and then refuses every write —
 including a zero-edit one — with `ErrorCode.validation`. The refusal is *correct*; the defect is the **asymmetry**,
 because the app accepts a book for translation it can never deliver and the user finds out only after translating.
-**Settled by ADR-0030: synthesize the entry on write.** OCF fixes it completely — name `mimetype`, content
+**Settled by ADR-0030: synthesize the entry on write.** **Implemented 2026-09-11** — `EpubWriter.mimetypeEntry` synthesizes it; `EpubWriterTest` covers a source with no `mimetype`. OCF fixes it completely — name `mimetype`, content
 `application/epub+zip`, first position, STORED — so nothing is invented, and the export is strictly more conformant
 than the source. Costs one narrow carve-out in the EPUB golden's entry-by-entry comparison.
 
@@ -240,6 +288,138 @@ but `:pipeline` is a stub, so the safety net does not exist. Against the setting
 one segment overflows by 15–20×. **Stays with the chunker at change 12**, with this corpus as its proof case — moving
 it earlier would put a chunking decision inside a document change.
 
+**D6 — an FB2 entity reference is emitted twice.** **Resolved 2026-09-12** — entities are expanded on read (book header or the bundled standard list, never fetched); `Fb2EntityExpansionTest` covers the internal, custom, external-DTD and `file:` cases. Found while building change 5. With entity expansion left off (as
+`SecureXml` requires for the offline invariant), the XML parser reports both the skipped reference and the characters
+it expands to, so `<p>A&nbsp;B</p>` round-trips to `<p>A&nbsp;&#xa0;B</p>` — one non-breaking space in, two out, on
+every write. Two things make it non-trivial rather than a one-line fix. First, the obvious fix is a **no-op**:
+`setExpandEntities(b)` writes the same `external-general-entities` feature key the next line of `SecureXml` sets to
+`false`, so calling it changes nothing the parser actually does. Second, the configuration that does expand entities
+requires dropping that flag in favour of an `EntityResolver`, which changes how the offline invariant is enforced and
+additionally drops the document's internal subset. Latent only because no fixture in the repo declares an entity
+subset; the corpus carries 10,377 references, so every one of them would double on the next write once a fixture
+does.
+
+**D7 — a model can reorder a masked pair and still pass the gate.** The placeholder-multiset gate compares counts,
+not positions: a model that returns `⟦g1⟧old⟦g0⟧` for a source that masked as `⟦g0⟧old⟦g1⟧` has the same multiset
+and restores as `</em>old<em>`, and a model that concatenates the two tokens instead of separating them (`⟦g0⟧⟦g1⟧`
+where the source held text between them) also passes and restores to an empty `<em></em>`, deleting the words.
+Neither is a bug in the gate — the frozen spec's placeholder-multiset requirement (`FR-DOC-05`) is order-insensitive
+by definition — it is a hole the gate does not close. Open **by design**: closing it needs the chunker's own
+machinery, so it stays with `add-chunking-and-context-assembly` (change 12).
+
+**What that entry understated, measured against the corpus during change 5's review: the two tree formats behave
+differently, and the more common one is the unsafe one.** `Jsoup.parseBodyFragment` silently repairs a malformed
+fragment, while `Jdom2TreeNode.parseFragment` refuses it — so the *identical* model output is applied on EPUB and
+rejected on FB2 with `ErrorCode.validation`. Swapping only the first two tokens of every segment, the write succeeds
+on every EPUB tried and fails on every FB2 one; with the token sequence reversed outright, one EPUB re-opened with
+**4,733 segments where it had 5,096**, having reported success. So the failure mode on 193 of the 213 corpus books is
+not "restores to broken markup a reader would notice" but "silently drops content and reports success". Change 12
+owns the fix; whoever takes it should know the EPUB write path currently has no structural guard of its own behind
+the placeholder gate.
+
+**D8 — the flat token→fragment map does not say which two tokens are partners.** `add-chunking-and-context-assembly`'s
+own obligation — never split a masked opening/closing pair across a chunk boundary (`DD-19`,
+`02_Architecture/05_PIPELINE_ENGINE.md`) — needs to know which token closes which, and `Segment.placeholders` is a
+flat map from token to fragment with no pairing information; for Markdown, both fragments of an emphasis pair are the
+literal `*`, so pairing cannot even be inferred from the fragment text. Open **by design**: exposing pair membership
+is the job of the change that needs it, not this one.
+
+**D9 — a Markdown shortcut reference link can silently become literal text.** `[t][r]` and `[t][]` mask as a pair and
+restore correctly, but a *shortcut* reference `[t]` masks to `[` and `]`, and if the translated label no longer
+matches any definition, the restored text parses as plain text rather than as a link on its next parse. The
+structure check does not catch it, because both the source and the restored target are parsed standalone, and in
+that context neither one's shortcut reference resolves either — so the construct-type multiset agrees on both sides.
+Masking neither causes nor worsens this; translating the label text is what makes it reachable. Unowned — needs a
+change.
+
+**D10 — a `|` written into a translated Markdown table cell splits its row. RESOLVED in change 5's round-2 audit.**
+A pipe character delimits table columns; if a translated cell's text contains one the source cell did not, the next
+parse reads it as an extra column boundary instead of as cell content. Both gates passed regardless: the
+placeholder-multiset gate has nothing to say about table syntax, and the structure check's construct-type multiset
+does not change, because a cell's text parses the same way with or without the pipe when read standalone. It was
+recorded here as unowned on the reasoning that translation is what makes it reachable — but two independent
+reviewers rediscovered it from scratch in change 5's second audit, one of them measuring the consequence: a
+four-cell row collapsing into a single paragraph, four translatable cells becoming one. Change 5 fixes it as one
+half of a containment test it needed anyway for headings and cells (a line terminator ends the enclosing block for
+either kind; an unescaped pipe opens a new column in a cell), so an unescaped pipe the source did not have is now
+`ErrorCode.validation` and a pipe the model correctly escaped as `\|` still succeeds. **The lesson worth keeping:
+a defect whose consequence is unmeasured is systematically under-prioritised.** This one was filed as a syntax
+curiosity and is in fact table destruction.
+
+**D11 — `Fb2Writer` re-serializes every line feed as `\r\n`.** **Resolved 2026-09-11** — the writer now echoes the source's line-ending style (`ParsedFb2.crlfLineEndings`); `Fb2WriterTest` covers an LF and a CRLF source. Found while building
+`add-inline-masking-and-placeholder-gate`. `Format.getRawFormat()` does not mean "emit the bytes as they were
+read": measured on JDOM2 2.0.6.1 its line separator defaults to `\r\n`, so a text node holding one line feed
+re-serializes with two characters where the source had one, and `Fb2Writer` serializes the whole document with it.
+No test catches it, because `Fb2CanonicalAssert.canonicalize` whitespace-collapses text before comparing — the same
+blind spot change 5's own design.md Risks section already names for masking whitespace defects. **The adapter half
+is fixed in change 5**, which pins `LineSeparator.NL` in `Jdom2TreeNode.markup()`, because that call feeds a
+segment's `sourceInner`, the `sourceHash` taken over it, and every atomic protected span's mapped fragment — all
+three of which change 5 makes load-bearing and one of which its own requirement calls the *exact* source fragment.
+**The document-write half is deliberately left here**, because changing the bytes of every exported FB2 file is a
+writer-policy decision of exactly the kind D1 and D2 already are, and it belongs with them rather than inside a
+masking change. It is not a correctness defect in the XML sense — a parser normalizes `\r\n` to `\n` on the way
+back in — which is precisely why it has gone unnoticed and why it needs a deliberate decision rather than a
+drive-by fix.
+
+**D12–D16 came from a four-reviewer audit of change 5, run with clean context after its own gate was green.** That
+audit found four behaviour defects, all fixed in change 5 itself — a link label wrapped across a line making a book
+unopenable, a numbered heading that could never be translated, a hard line break that could never be neutralised,
+and a stray backslash written into a book. D12–D16 are what it found and change 5 deliberately did **not** fix,
+recorded here so none of them is rediscovered from scratch.
+
+**D17 — declared language codes arrive unnormalized.** Found by the 2026-09-12 `Books_Examples` sweep (216 books):
+one EPUB declares `ua` (not a valid code; the book is Ukrainian, `uk`), one FB2 declares `EN`, two EPUBs `en-US`.
+Nothing normalizes these yet; the language-handling change owns case-folding, region-tag handling and the `ua`→`uk`
+alias. Recorded, not fixed. The same sweep fixed one product defect (a spine item whose file is absent is now skipped,
+not refused) and two harness artefacts — see `notes-corpus-verification.md`.
+
+**D12's first half is RESOLVED in change 5's round-2 audit; its second half stands.** `SafeDetails` deliberately
+lifted its 120-character cap so a forty-placeholder segment's report is not truncated — but the *observed* multiset
+comes from the model, so its cardinality is unbounded, and `AppError.details` is rendered into a dialog and written
+to a log file. The bound that was lifted is the character cap; the volume bound was never replaced. Measured in the
+second audit, one degenerate token — the grammar `⟦g(\d+)⟧` has an unbounded digit run — rendered a 200 KB
+`details` and a 200 KB log line. Change 5 now bounds the observed side by count and per-token length, states the
+overflow rather than silently dropping, and logs the bounded rendering; the expected side keeps its cap lift. The
+second half stands: `RestoredContent`
+promises in its Javadoc that it "defensively copies" its ranges, which `List.copyOf` does for the list and not for
+the `int[]` elements inside it; nothing corrupts today only because `MarkdownEscaper` rebuilds every array before
+mutating it, in an undocumented private helper that reads as redundant. A reader tidying that helper away
+reintroduces silent range drift with no compile error and no failing test. Both belong to whoever next opens
+`:document` rather than to change 12: `unmask` returns a `String`, so `RestoredContent` never crosses the module
+edge and a `:pipeline` change would never open the file.
+
+**D17–D18 came from change 5's *second* audit**, run with clean context after the first audit's fixes were green.
+That audit found eight book-corrupting defects — three of them created by the first audit's own fixes, which is the
+finding that matters most about how this codebase is reviewed. All eight are fixed in change 5. D17 and D18 are
+what it found and change 5 deliberately did **not** fix.
+
+**D17 — a Markdown link label ending in a span-less child derives the wrong closing delimiter.**
+`MarkdownEscaper.pairedGroup` takes a paired construct's closing position as its last *spanned* child's end. For an
+ordinary link that is exactly the `]`. When a soft or hard line break trails the label — `[foo  \n](u)`, a label
+wrapped across a line — the last spanned child is the text before the break, whose end is the line feed at index 6,
+while the `]` sits at 7. Measured, the old code inserted a backslash before the line feed, manufacturing a hard
+line break that a later round then deleted; it reached a plausible-looking output by luck. Change 5's escapability
+guard now refuses that position, so the construct survives to be reported as `ErrorCode.validation` — an honest
+failure rather than a corruption, but the derivation is still wrong and such a link can no longer be accepted at
+all. Whoever next opens the escaper should derive a link's closing delimiter from the destination's start rather
+than from the label's last spanned child.
+
+**D18 — an FB2 block whose only content is a CDATA section is counted as translated but never translated.**
+`TreeMasker` masks a CDATA section atomically, for escaping fidelity rather than untranslatability (ADR-0031 D2).
+So `<p><![CDATA[a < b]]></p>` produces a segment whose masked form is nothing but `⟦g0⟧`: the prose inside the
+CDATA is never handed to a model, while the FB2 text-coverage metric counts those characters as reached. The
+coverage floor therefore over-reports on any FB2 book using CDATA for prose. Found while narrowing change 5's
+"a run with nothing translatable is not a segment" rule — that rule is scoped to named-atomic elements precisely so
+it does *not* silently drop these blocks, which is the right call for a masking change and leaves the metric wrong.
+Belongs with whichever change next owns the coverage metric.
+
+**Two test-strength findings that are not decision debt but should not be lost either.** `FixtureSweepTest`'s
+`sourceHash` assertion recomputes the expected value with production's own `HashUtil` call, which the
+anti-tautology rule in `testing.md` forbids; and `PrimaryFixtureEpub`, the richest EPUB fixture in the tree, is not
+registered in `FixtureCatalog`, so it never reaches the mask-then-restore identity sweep — against that
+catalogue's own stated rule that registering a fixture there is what gates it. Both belong to whichever change next
+opens `:document`'s test tree.
+
 **Why D1–D4 are one change and not four.** They are the same question wearing four faces — *what is `:document`'s
 contract with `:pipeline`?* — and all four get cheaper the earlier they land and markedly more expensive once
 `:pipeline` has real callers. D3 in particular is an `:api` change, and `DocumentPort` today has exactly two methods
@@ -248,8 +428,14 @@ and one caller. Hence `settle-writer-policy-and-document-lifetime`, below.
 **`settle-writer-policy-and-document-lifetime` runs after change 5.** It **covers:** D1's uniform transcode-to-UTF-8
 across all four writers with a scenario per format, and the golden carve-out ADR-0029 names; D2's synthesized
 `mimetype` entry and the narrow EPUB-golden carve-out ADR-0030 names; D3's document-lifetime seam on `DocumentPort`
-and eviction on the four registries; and D4's copy-on-write so a re-write of one document id starts from the parsed
-tree rather than the mutated one. It takes **no number** for the same reason every other interstitial does.
+and eviction on the four registries; D4's copy-on-write so a re-write of one document id starts from the parsed
+tree rather than the mutated one — **which change 5's round-2 audit gave sharper teeth**: now that a block's runs
+are split once per write rather than per segment, an ordinary second write is idempotent, but a second write of a
+translation that *reordered* a run-splitting element would mis-aim exactly as the defect that fix closed did,
+because the first write leaves the block split differently than the parse did; and **D6's doubled entity reference**, which lands here because expanding an
+entity means substituting an `EntityResolver` for the `external-general-entities` flag — a change to how the
+offline invariant is enforced, and so a writer-policy decision of exactly the kind D1 and D2 already are. It takes
+**no number** for the same reason every other interstitial does.
 
 **`fix-document-round-trip-corpus-defects` narrows how FB2 *classifies* a malformed translated fragment (a bare `&`
 or `<` in target text) to `ErrorCode.validation` instead of `internal`, but does not change what happens to the
@@ -261,11 +447,18 @@ model is allowed to hand back in the first place.
 after `settle-writer-policy-and-document-lifetime`. It exists because
 changes 3 and 4 each defer something that no later change claimed. It **covers:** producing the metadata-unit segments
 whose kinds change 3 ships in the enum but never emits — `METADATA_TITLE`, `METADATA_AUTHOR`, `FRONTMATTER_VALUE`,
-`ALT`, `NAV_LABEL` (DD-47, `02_Architecture/03_DOCUMENT_MODEL.md`); carving the EPUB nav document and NCX out of the
+`ALT`, `NAV_LABEL` (DD-47, `02_Architecture/03_DOCUMENT_MODEL.md`) — measured on the owner's 216-book corpus on 2026-09-12
+this is 11,997 NCX labels across all 197 EPUBs, 20 EPUB 3 nav documents, 7,450 page `<title>`s, 197 `dc:title`s,
+106 `dc:description`s, 6 FB2 annotations and one `img@alt`; carving the EPUB nav document and NCX out of the
 "out-of-spine = verbatim" rule so their ToC labels become segments (FR-DOC-EPUB-8); and **source-language detection
 with Lingua** in `:document/ua.bookloom.document.detect`, populating `Document.detectedSourceLang` and surfacing the
-declared-vs-detected mismatch state (FR-IMPORT-03, EC-LANG-*). Detection lands in Stage B rather than Stage D because
-the deterministic QA gate's target-language check needs Lingua at change 14
+declared-vs-detected mismatch state (FR-IMPORT-03, EC-LANG-*). It also inherits two `FR-DOC-04` masking categories
+change 5 left to it: masking a detected **foreign-language inline run** as a protected keep-as-is placeholder so the
+surrounding prose still translates (`EC-FOREIGN-3`), which needs the same Lingua detection this change already
+builds; and masking the **metadata-unit segments** themselves — they mask exactly like any other segment's run once
+they exist, and this is the change that makes them exist. Both land in `document-round-trip` riding along with this
+change's own `document-round-trip` MOD row, whichever change schedules them. Detection lands in Stage B rather than
+Stage D because the deterministic QA gate's target-language check needs Lingua at change 14
 (`02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`) — leaving it in a screen change would mean building it twice.
 
 ---
@@ -362,6 +555,20 @@ templates of `01_Product/12_PROMPT_CATALOG.md`, the variable-expansion mechanism
 `#output-contract`, and the **`promptEval` harness** (production prompt builder + real local model + embedding scorer,
 env-gated and excluded from `check`) that DD-40 requires and that change 1 created only the Gradle task for. It comes
 *after* 12 because a prompt builder consumes the context package (seam F5).
+
+**Change 15 additionally owns four inline-masking categories `add-inline-masking-and-placeholder-gate` (change 5)
+left unowned** — categories the frozen mask-protected-spans-before-translation requirement covers (`FR-DOC-04`,
+`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`) that change 5 does not implement. It **covers:** masking a
+**locked glossary term**, which needs a populated glossary that exists only once this change ships, together with
+the rule that a locked term embedded inside a longer word is masked only for its matched span, never the whole word
+(`EC-INLINE-3`); **standalone and typographic numerals**, deferred because the frozen spec never draws the line
+between a standalone/typographic numeral and a prose one, and this is the first change with a Book Brief to read a
+unit policy from; and **bare URLs in running prose**, deferred because recognising one is lexical pattern-matching
+(trailing punctuation, parenthesised URLs, internationalised domains) rather than the structural walk change 5
+performs — a *linked* URL is already protected there, since an `<a href>`'s attributes ride inside its opening token
+and a Markdown autolink masks atomically. Each lands in `document-round-trip` whichever change schedules it, this
+one included: change 15's own capability row above is `translation-pipeline` MOD · `glossary` **NEW**, and the
+masking work rides along as a `document-round-trip` MOD.
 
 **`add-project-lifecycle-and-orchestration` runs after change 16** (ADR-0023). It is the FX-free layer between the
 engine and the screens, previously parked inside changes 19 and 23. It **covers:** the import service (open → detect →
@@ -477,8 +684,7 @@ The 16 capabilities, mapped from the frozen FR areas so the `FR-*` join key hold
 | `settings`             | fr-settings                    | change 24     |
 | `notifications`        | fr-notif                       | change 25     |
 
-Introducing a capability outside this list requires an ADR first — the map exists so `scripts/fr-coverage.sh` means
-something.
+Introducing a capability outside this list requires an ADR first — the map keeps capability names stable.
 
 **ADR-0018 amendments.** `FR-THEME-01..10` (`01_Product/09_THEMING.md`) belongs to `theming`, and `FR-I18N-01..09`
 (`01_Product/10_I18N_AND_ACCESSIBILITY.md`) belongs to `localization` — 19 requirements the original sixteen-area map

@@ -30,8 +30,8 @@ the wrapper + lockfiles + version catalog):
 5. JaCoCo coverage threshold — exact 80% branch, per-module, production-code modules only
    (`02_QUALITY_GATES.md#coverage-gate`).
 6. **License gate** — `./gradlew checkLicense` (`com.github.jk1.dependency-license-report` against the allowed-license
-   policy, `05_Dependencies/03_LICENSING.md#license-gate-tool`), distinct from **OWASP dependency-check** (SCA). Either
-   failing fails the job.
+   policy, `05_Dependencies/03_LICENSING.md#license-gate-tool`). Failing it fails the job. There is no
+   known-vulnerability (SCA) step: dropped 2026-09-11, a per-run NVD sync is not worth it for a single-user offline app.
 7. `./gradlew traceCheck` — traceability: zero orphans, fresh record.
 
 Any failing step fails the job (`02_QUALITY_GATES.md#what-fails-where`). In `ci.yml` this job **is** the whole
@@ -86,9 +86,7 @@ A red quality job or any red packaging leg blocks `create-release` — a tag wit
 ## no-secrets {#no-secrets}
 
 The pipeline uses **no signing or publish secrets** — no certificates, no notarization credentials, no tokens beyond the
-built-in `GITHUB_TOKEN` (used only by `create-release`). The **only** optional repository secret is an `NVD_API_KEY`,
-used solely by OWASP dependency-check to fetch the vulnerability feed at a higher rate limit; it grants no publish or
-signing capability and is not required (CI can run against a cached/mirrored feed, keeping forks buildable without it).
+built-in `GITHUB_TOKEN` (used only by `create-release`). No optional secrets exist.
 No step contacts a third-party service with credentials, and the app ships with no embedded keys
 (`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`).
 

@@ -38,7 +38,7 @@ class CoverageGateTest {
                 DocumentServices.newService().open(fixture).data());
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture whose paragraphs are div elements is parsed with structural block
+    // WHEN a fixture whose paragraphs are div elements is parsed with structural block
     // recognition, THEN the coverage assertion reports a coverage above 0.95 and passes.
     @Test
     void coverage_divParagraphFixtureParsedStructurally_isAboveTheFloor() {
@@ -49,7 +49,7 @@ class CoverageGateTest {
         assertThat(TextCoverage.of(fixture, BookFormat.EPUB, document)).isGreaterThan(0.95);
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture's prose is not segmented, THEN the coverage assertion fails, reporting a
+    // WHEN a fixture's prose is not segmented, THEN the coverage assertion fails, reporting a
     // coverage close to 0 — which is what a tag-whitelist walker would produce on this shape.
     @Test
     void coverage_sameFixtureWithNoSegments_isCloseToZero() {
@@ -61,7 +61,7 @@ class CoverageGateTest {
         assertThat(coverage).isLessThan(0.05);
     }
 
-    // Covers: FR-DOC-09 — an excluded code listing does not count against coverage, so a fixture carrying one
+    // an excluded code listing does not count against coverage, so a fixture carrying one
     // still passes its floor.
     @Test
     void coverage_fixtureCarryingAnExcludedListing_stillPassesItsFloor() {
@@ -72,7 +72,7 @@ class CoverageGateTest {
         assertThat(TextCoverage.of(fixture, BookFormat.EPUB, document)).isGreaterThan(0.95);
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture Markdown file whose every block is segmented contains the inline spans
+    // WHEN a fixture Markdown file whose every block is segmented contains the inline spans
     // **bold** and `code`, THEN the coverage assertion reports a coverage above 0.95.
     @Test
     void coverage_markdownFixtureCarryingHeavyInlineSyntax_isAboveTheFloor() {
@@ -83,7 +83,7 @@ class CoverageGateTest {
         assertThat(TextCoverage.of(fixture, BookFormat.MARKDOWN, document)).isGreaterThan(0.95);
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture TXT file encoded in windows-1251 whose every paragraph is segmented is
+    // WHEN a fixture TXT file encoded in windows-1251 whose every paragraph is segmented is
     // measured, THEN the coverage assertion reports a coverage above 0.99.
     @Test
     void coverage_windows1251TxtFixture_isAboveTheFloor() {
@@ -94,7 +94,7 @@ class CoverageGateTest {
         assertThat(TextCoverage.of(fixture, BookFormat.TXT, document)).isGreaterThan(0.99);
     }
 
-    // Covers: FR-DOC-09 — WHEN a fixture EPUB paragraph whose content is <b>bold</b> text is segmented and
+    // WHEN a fixture EPUB paragraph whose content is <b>bold</b> text is segmented and
     // measured, THEN the coverage assertion reports a coverage above 0.95.
     @Test
     void coverage_epubBoldInlineFixture_isAboveTheFloor() {

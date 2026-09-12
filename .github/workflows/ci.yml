@@ -17,9 +17,10 @@
 # CI quality job for the same tree, so CI is a confirmation rather than a source of surprises.
 #
 # CI is allowed to ADD gates. It is not allowed to run a weaker — or merely different — version of the shared one.
-# The extra gates here are the two that genuinely cannot live in a git hook, because each needs the network and
-# neither is deterministic across runs: the license report and the OWASP SCA scan. Everything else a reviewer
-# might be tempted to add "just in CI" belongs in `check`, where a contributor can run it before pushing.
+# The one extra gate here is the license report, which needs the network and so cannot live in a git hook.
+# Everything else a reviewer might be tempted to add "just in CI" belongs in `check`, where a contributor can run
+# it before pushing. (An OWASP dependency-check step used to follow it; dropped 2026-09-11 — a 30-minute NVD sync
+# per run is not worth it for a single-user offline app.)
 #
 # The temptations that would break D8, spelled out so they get argued rather than committed:
 #
@@ -29,17 +30,7 @@
 #     different task graph, different up-to-date behaviour, no longer the same command;
 #   * dropping `clean` to speed the job up — then CI and pre-push disagree about incremental state.
 #
-# ---------------------------------------------------------------------------------------------------------------
-# What is deliberately NOT here
-# ---------------------------------------------------------------------------------------------------------------
-#
-# `./gradlew trace` / `./gradlew traceCheck`. Step 7 of `04_CI_CD.md#quality-job` calls for a traceability check;
-# ADR-0016 retires that tooling outright (no `docs/traceability.yaml`, no `trace` task, no `Proves:` markers) in
-# favour of OpenSpec, so the step is superseded and the tasks it would run are never built. Adding it would fail
-# the job on a task that does not exist. This paragraph is the record of that being a decision rather than an
-# omission (task 7.6).
-#
-# Also absent: `liveLocal`, `promptEval` and `visual`. They are excluded from `check` by the task graph itself
+# Absent by design: `liveLocal`, `promptEval`, `visual` and `corpus`. They are excluded from `check` by the task graph itself
 # (`bookloom.test-conventions`, design D5) and need a real local model or a pinned display — not runner-reproducible.
 
 name: CI
@@ -72,15 +63,8 @@ jobs:
     runs-on: ubuntu-24.04
 
     # A hung Gradle daemon or a UI test waiting on a display that never came up would otherwise burn the full
-    # six-hour default. This is a ceiling that fails, not a target.
-    #
-    # Sized for the SCA step's worst case rather than the typical run. The Gradle gate itself takes minutes
-    # (1m20s locally at this commit), but a run whose NVD cache misses entirely has to pull the full CVE corpus
-    # from the NVD API at the unauthenticated rate limit — roughly 150 paged requests at the 8s delay the build
-    # falls back to without an API key, so tens of minutes. That happens on the first run and after a cache
-    # eviction, not routinely. Cutting the timeout to fit the typical run would turn exactly the cold-cache case
-    # that `04_CI_CD.md#no-secrets` promises to support into a red merge gate.
-    timeout-minutes: 90
+    # six-hour default. This is a ceiling that fails, not a target: the whole job takes a few minutes.
+    timeout-minutes: 30
 
     steps:
       # Every action is pinned to a full commit SHA with the tag it corresponded to in the comment. A floating
@@ -162,51 +146,16 @@ jobs:
 
       # Asserts AGENTS.md/CLAUDE.md and the .agents/.claude/.codex skill/agent mirrors are in sync — the
       # same check .lefthook/pre-push/agent-config-sync.sh runs. Cheap, deterministic, and local-runnable, so
-      # unlike the license/SCA gates below it could live in the shared gate script — it is a separate step
+      # unlike the license gate below it could live in the shared gate script — it is a separate step
       # here only to keep quality-gate.sh's identity with the Quality gate step above exact (design D8).
       - name: Agent config sync check
         run: python3 scripts/sync-agent-files.py --check
 
-      # Task 7.3, gate 1 of 2 — "may we distribute this?". CI-only because it resolves the full graph against
+      # "May we distribute this?" — CI-only because it resolves the full graph against
       # remote POM metadata. Fails on any runtime dependency whose license is not in
       # `config/license/allowed-licenses.json` (`05_Dependencies/03_LICENSING.md#license-gate-tool`).
       - name: License gate
         run: ./gradlew checkLicense
-
-      # The NVD feed, cached across runs. This is the mechanism `04_CI_CD.md#no-secrets` names when it says CI
-      # "can run against a cached/mirrored feed, keeping forks buildable without it" — and it is what makes the
-      # no-API-key path viable rather than merely permitted: the multi-hundred-thousand-CVE first sync is paid
-      # once, and later runs do an incremental update.
-      #
-      # `restore-keys` matters more than the exact key here. A stale-but-close cache is enormously better than no
-      # cache: dependency-check updates it incrementally, so a week-old feed costs a short delta download while a
-      # cache miss costs the full unauthenticated sync.
-      #
-      # The path is the plugin's default data directory, confirmed by running `dependencyCheckAggregate` locally
-      # rather than read off the documentation: the run reported "NVD API has 372,644 records in this update" and
-      # populated `~/.gradle/dependency-check-data`. Note it sits beside, not inside, the module cache
-      # `setup-java`'s `cache: gradle` manages (`~/.gradle/caches`, `~/.gradle/wrapper`), so the two caches do not
-      # overlap or evict one another.
-      - name: Cache the NVD data directory
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.gradle/dependency-check-data
-          key: nvd-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            nvd-${{ runner.os }}-
-
-      # Task 7.3, gate 2 of 2 — "does this have a known CVE?". Fails on CVSS >= 7.0 in a shipped (runtime)
-      # dependency; configuration and the rationale for the threshold are in `build.gradle.kts`.
-      #
-      # `NVD_API_KEY` is the pipeline's ONLY optional secret (`04_CI_CD.md#no-secrets`); it grants no publish or
-      # signing capability. `secrets.NVD_API_KEY` expands to the empty string when it is not configured — which is
-      # the case for this repository — and the build treats blank as absent and raises the inter-request delay
-      # instead of failing. The no-secret path is therefore the DEFAULT path, exercised on every run here, not a
-      # fallback that only gets discovered when it breaks.
-      - name: SCA gate (OWASP dependency-check)
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: ./gradlew dependencyCheckAggregate
 
       # Task 7.5 — a red UI test must be diagnosable from the PR page. The HTML reports carry the failure message
       # and stack trace; the XML results carry the same thing in a form a test-report annotator can parse.
@@ -226,18 +175,14 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-      # The two CI-only gates produce their own evidence, and neither failure is self-explanatory from the console:
-      # the license report names the offending coordinate but not its whole path into the graph, and a
-      # dependency-check failure line is a CVE id with no context. Uploading the reports is what makes those two
-      # steps actionable rather than merely red.
-      - name: Upload dependency gate reports
+      # A license-gate failure names the offending coordinate but not its whole path into the graph; the report
+      # is what makes the step actionable rather than merely red.
+      - name: Upload license gate reports
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dependency-reports-${{ github.run_id }}
-          path: |
-            build/reports/dependency-license/**
-            build/reports/dependency-check-report.*
+          path: build/reports/dependency-license/**
           retention-days: 14
           if-no-files-found: ignore
 
@@ -326,6 +271,27 @@ jobs:
       # the spec's literal flags would produce a smoke that fails everywhere.
       #
       # "Did not actually launch" is a HARD FAILURE, never a skip (02_QUALITY_GATES.md#jpackage-smoke).
+      #
+      # The Linux runner has no display and the packaged launcher starts the real GTK toolkit (the jpackage
+      # launcher does not pass `-J` options through, so the smoke's headless flag never reaches the JVM there);
+      # without a virtual display the image dies with "Unable to open DISPLAY" — observed on the first run that
+      # got this far. Same Xvfb recipe as the quality job.
+      - name: Start Xvfb
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          command -v Xvfb >/dev/null 2>&1 || {
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends xvfb
+          }
+          Xvfb :99 -screen 0 1920x1080x24 &
+          for _ in $(seq 1 50); do
+            [ -e /tmp/.X11-unix/X99 ] && break
+            sleep 0.2
+          done
+          test -e /tmp/.X11-unix/X99 || { echo "::error::Xvfb failed to start on :99"; exit 1; }
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
       - name: Launch smoke
         if: runner.os != 'Windows'
         run: ./scripts/launch-smoke.sh

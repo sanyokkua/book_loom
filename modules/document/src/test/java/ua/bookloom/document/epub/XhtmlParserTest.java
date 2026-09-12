@@ -39,7 +39,7 @@ class XhtmlParserTest {
         assertThat(doc.outputSettings().charset()).isEqualTo(StandardCharsets.UTF_8);
     }
 
-    // Covers: FR-DOC-EPUB-5 — output settings are pinned so whitespace is not normalized on serialization.
+    // output settings are pinned so whitespace is not normalized on serialization.
     @Test
     void parse_outputSettings_arePinnedForAFaithfulRoundTrip() {
         final String xml = "<html><body><p>Text.</p></body></html>";

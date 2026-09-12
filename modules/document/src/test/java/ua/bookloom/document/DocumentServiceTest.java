@@ -82,7 +82,7 @@ class DocumentServiceTest {
     @TempDir
     private Path tempDir;
 
-    // Covers: EC-EPUB-2 — a file that is not a zip archive at all returns ErrorCode.validation with no partial
+    // a file that is not a zip archive at all returns ErrorCode.validation with no partial
     // import.
     @Test
     void open_nonZipFile_returnsValidationErrorWithNoPartialDocument() {
@@ -96,7 +96,7 @@ class DocumentServiceTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Covers: FR-DOC-EPUB-7 — content encryption (or an unrecognised algorithm) refuses the whole book, with a
+    // content encryption (or an unrecognised algorithm) refuses the whole book, with a
     // title/message distinguishable from a corrupt-file failure.
     @Test
     void open_drmProtectedBook_returnsValidationErrorDistinctFromCorruptFile() {
@@ -124,7 +124,7 @@ class DocumentServiceTest {
         assertThat(drmError.message()).isNotEqualTo(corruptError.message());
     }
 
-    // Covers: DD-14 — a document failure's details never carries the source file's path; the original exception
+    // a document failure's details never carries the source file's path; the original exception
     // is available on cause instead.
     @Test
     void open_parseFailure_carriesNoFilesystemPathInDetails() {
@@ -152,7 +152,7 @@ class DocumentServiceTest {
         assertThatNullPointerException().isThrownBy(() -> newService().write(null, tempDir.resolve("out.epub"), "uk"));
     }
 
-    // Covers: DD-14 — WHEN parsing fails with an unforeseen runtime exception, THEN the caller receives a failed
+    // WHEN parsing fails with an unforeseen runtime exception, THEN the caller receives a failed
     // result carrying ErrorCode.internal, the original exception is available on cause, and no exception
     // propagates out of the port method. write() exercises this through DocumentNotOpenException, the boundary's
     // other ErrorCode.internal producer alongside the catch-all Throwable clause.
@@ -170,7 +170,7 @@ class DocumentServiceTest {
         assertThat(error.cause()).isNotNull();
     }
 
-    // Covers: FR-DOC-03 — IF target text supplied for a segment cannot be parsed as FB2's inline markup — a bare
+    // IF target text supplied for a segment cannot be parsed as FB2's inline markup — a bare
     // `&` that does not open a valid entity — THEN the caller receives a failed result carrying
     // ErrorCode.validation, and no exception propagates out of the port method.
     @Test
@@ -189,7 +189,7 @@ class DocumentServiceTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Covers: FR-DOC-03 — IF target text supplied for a segment cannot be parsed as FB2's inline markup — a bare
+    // IF target text supplied for a segment cannot be parsed as FB2's inline markup — a bare
     // `<` that does not open a valid element — THEN the caller receives a failed result carrying
     // ErrorCode.validation.
     @Test
@@ -205,7 +205,7 @@ class DocumentServiceTest {
         assertThat(errorOf(written).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Covers: FR-DOC-03 — an unrelated failure (a destination whose parent directory does not exist) during an
+    // an unrelated failure (a destination whose parent directory does not exist) during an
     // FB2 write whose every segment carries well-formed target text is still classified ErrorCode.internal, and
     // no exception propagates out of the port method — proving the fix narrows classification rather than
     // reclassifying every write failure as validation.

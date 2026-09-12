@@ -54,8 +54,7 @@ No Testcontainers — SQLite is embedded; tests use a temp DB file or `:memory:`
 | **SpotBugs + FindSecBugs**                     | bug + security patterns                                                                                                                                             |
 | **ArchUnit**                                   | module-boundary enforcement (`02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules`)                                                                           |
 | **Spotless + Palantir Java Format**            | formatting (120-col)                                                                                                                                                |
-| **`com.github.jk1.dependency-license-report`** | license-compliance gate against the allowed-license policy file + `THIRD-PARTY-NOTICES` (distinct from OWASP dependency-check; `03_LICENSING.md#license-gate-tool`) |
-| **OWASP dependency-check**                     | known-vulnerability SCA over the resolved graph (`02_DEPENDENCY_POLICY.md#owasp-dependency-check`)                                                                  |
+| **`com.github.jk1.dependency-license-report`** | license-compliance gate against the allowed-license policy file + `THIRD-PARTY-NOTICES` (`03_LICENSING.md#license-gate-tool`) |
 
 ## ownership-note {#ownership-note}
 

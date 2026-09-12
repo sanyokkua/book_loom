@@ -6,8 +6,11 @@
 # Privacy and Offline
 
 Privacy is the product promise and the top-ranked quality attribute (`01_QUALITY_ATTRIBUTES.md#priorities`). Everything
-stays on the user's machine; the only outbound traffic is the user's own **user-triggered provider communication** —
-inference, model discovery, and verification — with the provider they configured.
+stays on the user's machine; the expected outbound traffic is the user's own **user-triggered provider communication** —
+inference, model discovery, and verification — with the provider they configured. Opening, translating and exporting a
+book never require the network. Any other network use must be optional, safe (nothing a document names is fetched — a
+DOCTYPE is answered from a bundled entity list), and must degrade without an error when the network or the resource is
+unavailable.
 
 ## offline-invariant {#offline-invariant}
 

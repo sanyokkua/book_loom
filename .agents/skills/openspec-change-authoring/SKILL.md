@@ -3,18 +3,17 @@ name: openspec-change-authoring
 description: >-
   Use when authoring or reviewing an OpenSpec change under `openspec/changes/` for
   BookLoom — writing EARS requirements with a `Source:` block, concrete scenarios,
-  sentence-level `tasks.md` checkboxes, and `// Covers: FR-*` test markers. Covers the
-  R1-R6 authoring standard (ADR-0016), when to set `skip_specs: true`, the 16 capability
-  names, when a `design.md` is warranted, the propose -> validate -> apply -> archive
-  loop, and the advisory `scripts/fr-coverage.sh` grep. Replaces the retired
-  story-and-traceability workflow.
+  and sentence-level `tasks.md` checkboxes. Covers the R1-R4 authoring standard (ADR-0016 as
+  amended by ADR-0032), when to set `skip_specs: true`, the 16 capability names, when a
+  `design.md` is warranted, and the propose -> validate -> apply -> archive loop. Replaces
+  the retired story-and-traceability workflow.
 allowed-tools: Read, Write, Bash, Glob, Grep
 ---
 
 # OpenSpec Change Authoring
 
 An `openspec/changes/<name>/` directory is the unit of tracked work (ADR-0016). The
-specification under `docs/specification/` is frozen; a change translates frozen `FR-*`
+specification under `docs/specification/` is the reference; a change translates its `FR-*`
 clauses into EARS requirements, concrete scenarios, and an implementation checklist.
 
 **The one rule everything else serves:** every artifact must be readable **without opening
@@ -26,13 +25,12 @@ as the content of a requirement, a scenario, or a task is a defect.
 - Authoring a new change (usually via `/opsx:propose`, then reviewing what it generated).
 - Reviewing or revising a change's `proposal.md`, `specs/**`, `design.md`, or `tasks.md`.
 - Deciding whether a change needs a `design.md` at all, or should set `skip_specs: true`.
-- Writing or reviewing the `// Covers: FR-*` marker on a test.
-- Checking FR coverage at a stage boundary.
 
 ## When NOT to use
 
-- Do NOT edit `docs/specification/**` — it is frozen. A genuine gap or deviation is a **new
-  ADR** under `docs/adr/` (use the `adr-authoring` skill), never a spec edit.
+- Do NOT record a spec deviation somewhere else: when the shipped code legitimately differs
+  from a clause, fix the clause in the same change. A decision that is costly to reverse is a
+  **new ADR** under `docs/adr/` (use the `adr-authoring` skill).
 - Do NOT hand-edit `openspec/specs/**` — it is written by `openspec archive`. The exception
   is fixing a leftover `TBD` Purpose placeholder.
 - Do NOT reopen an archived change; follow-up work is a new change.
@@ -74,10 +72,9 @@ Two halves, both required: the ids **with real in-repo anchors**, and an
 
 Not "invalid input" → `⟦g1⟧⟦g2⟧` vs `⟦g1⟧`. Not "an error" → `ErrorCode.validation`. Not
 "a large file" → a stated size. `#### Scenario:` uses **exactly four hashes** — three fail
-silently in OpenSpec's parser. Every requirement needs at least one scenario. Choose a
-pattern P1–P6 from `docs/implementation_plan/05_ACCEPTANCE_CRITERIA_PATTERNS.md`.
+silently in OpenSpec's parser. Every requirement needs at least one scenario.
 
-Add a scenario for each ambiguity the frozen FR leaves open. Worked example:
+Add a scenario for each ambiguity the FR leaves open. Worked example:
 
 ```markdown
 ### Requirement: Placeholder multiset is a hard gate
@@ -111,25 +108,24 @@ order-insensitive. Surfacing those is the point of the rephrasing pass.
 <spec-file>#<anchor>, DD-NN`
 
 The **final task group is always the green gate**: `./gradlew clean build check
-spotlessCheck` green project-wide with no pre-existing-failure exemption, the implied test
-types, and `01_MODULE_INVENTORY.md` updated if a module or package was added.
+spotlessCheck` green project-wide with no pre-existing-failure exemption, the change's
+user-visible behaviour exercised in the running app, and `01_MODULE_INVENTORY.md` updated if a
+module or package was added.
 
-## R5 — Test markers restate the obligation
+## Tests are the evidence
+
+A test is named `method_state_expected` and, when the name is not enough, carries a one-line
+plain-language comment saying what it proves:
 
 ```java
-// Covers: FR-DOC-05 — IF the placeholder multiset of the target differs from the source,
-//         THEN the chunk fails as a validation error with no repair attempt.
+// IF the placeholder multiset of the target differs from the source, THEN the chunk fails as a
+// validation error with no repair attempt.
 @Test
 void validateChunk_placeholderMissingFromTarget_returnsValidationError() { … }
 ```
 
-For an edge case, name it alongside: `// Covers: FR-IMPORT-03, EC-DRM-1 — …`.
-
-## R6 — Coverage is a grep
-
-`bash scripts/fr-coverage.sh` lists frozen `FR-*` ids no shipped requirement claims yet.
-**Advisory only**, run at stage boundaries. Gaps mid-build-out are correct:
-`openspec/specs/` tracks what is *built*, `docs/specification/` what is *intended*.
+There is no requirement-id marker and no coverage script (ADR-0032): a checkbox or an id
+count is a claim, the red-then-green test and the running app are the evidence.
 
 ## Capabilities and `skip_specs`
 
@@ -155,11 +151,11 @@ artifact where class names, library names, and module paths belong.
 ## Reference index
 
 - `openspec/config.yaml` — the rules that steer generation, plus project context.
-- `docs/adr/ADR-0016-openspec-delivery-tracking.md` — R1–R6 and the superseded spec clauses.
+- `docs/adr/ADR-0016-openspec-delivery-tracking.md` — R1–R4 and the superseded spec clauses;
+  `ADR-0032-tests-are-the-evidence.md` — why there are no test markers or coverage script.
 - `docs/adr/ADR-0017-infrastructure-first-delivery-order.md` — the five stages.
 - `docs/implementation_plan/CHANGE_BACKLOG.md` — the ordered backlog and capability map.
-- `docs/implementation_plan/05_ACCEPTANCE_CRITERIA_PATTERNS.md` — P1–P6 scenario patterns.
-- `docs/implementation_plan/06_DEFINITION_OF_DONE.md` — the archive gate.
+- `AGENTS.md` — the Definition of Done.
 - `docs/specification/00_Foundation/05_SPEC_INDEX.md` — resolve any `FR-*`/`NFR-*`/`DD-*`.
 
 ## Mandatory validation checklist
@@ -187,5 +183,4 @@ artifact where class names, library names, and module paths belong.
   main spec directly.
 - **A `Source:` block that is only ids is incomplete** — it is exactly the anti-pattern the
   standard exists to prevent.
-- **Invented capability names break `scripts/fr-coverage.sh`'s meaning.** The 16-name map
-  exists so the FR-id join key holds exactly.
+- **Invented capability names fragment the ledger.** Use the 16-name map.

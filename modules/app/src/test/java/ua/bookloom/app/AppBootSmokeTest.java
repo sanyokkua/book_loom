@@ -23,7 +23,7 @@ import ua.bookloom.util.paths.AppPaths;
  * when Guice reflects, and only during startup. Nothing short of building the injector and showing a stage can
  * distinguish "compiles" from "runs".
  *
- * <p>Infrastructure: no {@code // Covers: FR-*} marker. It proves an integration, not a product requirement.
+ * <p>Infrastructure: it proves an integration, not a product requirement.
  *
  * <p>It runs against a temp directory rather than the developer's real one for a reason that would otherwise bite
  * intermittently: the real data directory may hold a lock belonging to an actually-running BookLoom, and a smoke

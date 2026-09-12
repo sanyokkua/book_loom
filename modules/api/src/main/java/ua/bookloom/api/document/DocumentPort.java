@@ -32,4 +32,27 @@ public interface DocumentPort {
      * @return the path written, or a failed result
      */
     Result<Path> write(Document document, Path destination, String targetLanguage);
+
+    /**
+     * Restores {@code segment}'s placeholders into {@code translatedMasked}, after first validating that its
+     * placeholder multiset matches {@code segment}'s masked form. Implemented by {@code :document}'s masking
+     * machinery; exposed here so {@code :pipeline} — which may not depend on {@code :document}
+     * (`architecture-layering.md`) — has a seam to call unmask through.
+     *
+     * <p>{@code format} is required because the escaping rule applied to the text between tokens, and the
+     * structural check performed on the result, both differ by format, and {@link Segment} itself carries no format
+     * — its {@link SkeletonAnchor} distinguishes a tree-shaped anchor from a buffer-shaped one, but not EPUB from
+     * FB2, nor Markdown from TXT.
+     *
+     * <p>A multiset mismatch or a format-specific structure-check failure is {@code ErrorCode.validation} — the
+     * frozen rule calls this "a hard gate", not a translation defect the caller can appeal. An unexpected failure
+     * is {@code ErrorCode.internal}. No exception crosses this method.
+     *
+     * @param format the segment's book format, needed only to select the escaping/structure rule
+     * @param segment the segment whose placeholder map supplies each token's mapped fragment
+     * @param translatedMasked the translated text to validate and restore
+     * @return the restored content, or a failed result carrying {@code ErrorCode.validation} when the placeholder
+     *     multiset does not match — nothing is restored and {@code translatedMasked} is left unaltered
+     */
+    Result<String> unmask(BookFormat format, Segment segment, String translatedMasked);
 }

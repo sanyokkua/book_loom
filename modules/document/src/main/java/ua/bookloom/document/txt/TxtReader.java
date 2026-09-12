@@ -20,6 +20,8 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
+import ua.bookloom.document.mask.MaskedContent;
+import ua.bookloom.document.mask.PlainTextMasker;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -82,14 +84,15 @@ public final class TxtReader {
             List<ByteSpanAnchor> paragraphs, int order, byte[] fileBytes, Charset charset, String unitId) {
         final ByteSpanAnchor span = paragraphs.get(order);
         final String sourceInner = new String(fileBytes, span.startInclusive(), span.length(), charset);
+        final MaskedContent masked = PlainTextMasker.mask(sourceInner);
         return new Segment(
                 unitId + ":" + order,
                 unitId,
                 order,
                 SegmentKind.PARAGRAPH,
                 sourceInner,
-                sourceInner,
-                Map.of(),
+                masked.masked(),
+                masked.placeholders(),
                 HashUtil.sha256OfNfcText(sourceInner),
                 order > 0 ? unitId + ":" + (order - 1) : null,
                 order < paragraphs.size() - 1 ? unitId + ":" + (order + 1) : null,

@@ -28,7 +28,7 @@ class PreformattedLineFeedRestorationTest {
     @TempDir
     private Path tempDir;
 
-    // Covers: FR-DOC-09 — reassembly without target changes is canonical-equal to the source: writing the same
+    // reassembly without target changes is canonical-equal to the source: writing the same
     // open document twice does not compound the restored leading line feed onto itself.
     @Test
     void write_samePoemDocumentTwice_producesByteIdenticalOutputBothTimes() {
