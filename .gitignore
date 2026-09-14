@@ -49,3 +49,4 @@ jpackage/
 
 # Context Files
 .temporary_context/
+.serena/
