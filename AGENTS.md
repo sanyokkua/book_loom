@@ -65,6 +65,7 @@ Edges point downward only; `:pipeline` sees the three services, services see onl
 | Credentials are a reference (env-var/keychain), never a persisted secret | advisory |
 | Single-flight inference through one `InferenceGate` | advisory |
 | Scene graph touched only on the FX Application Thread | advisory |
+| Diagnostic logging at every level — INFO lifecycle, DEBUG each working method's parameters and each branch taken, TRACE values and book text; `BOOKLOOM_LOG_LEVEL` raises it; never a secret (`.claude/rules/logging.md`) | advisory |
 | Never mock the boundary a test exists to prove; mock only I/O and non-determinism (no Mockito today) | advisory |
 
 ## How work is planned

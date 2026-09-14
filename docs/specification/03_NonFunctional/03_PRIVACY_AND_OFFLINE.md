@@ -38,7 +38,7 @@ Definition-of-Done gate "no new background/unsolicited network calls."
 |-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | NFR-PRIV-05 | API credentials are stored **only as a reference** (env-var name or OS-keychain id), never as plaintext, in any table, config file, or export (`02_Architecture/04_LLM_INTEGRATION.md#credentials-as-reference`, `06_DATA_MODEL_SQLITE.md#secret-references`). |
 | NFR-PRIV-06 | Secrets are resolved at request time, used for that call, and never logged. MDC is cleared in `finally`; parameterized logging never interpolates a secret.                                                                                                    |
-| NFR-PRIV-07 | `AppError.details` is built from a **safe-details allowlist** (`09_ERROR_HANDLING.md#safe-details-allowlist`); no secret, `Authorization` header, or raw body ever reaches the UI or logs.                                                                     |
+| NFR-PRIV-07 | `AppError.details` is built from a **safe-details allowlist** (`09_ERROR_HANDLING.md#safe-details-allowlist`); no secret or `Authorization` header ever reaches the UI or the logs, and no raw body reaches the UI. Raw request and response bodies and book text may reach only the local log file, at `TRACE`. |
 
 ## outbound-scope {#outbound-scope}
 
