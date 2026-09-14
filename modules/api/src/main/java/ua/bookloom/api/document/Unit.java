@@ -33,4 +33,15 @@ public record Unit(
         }
         segments = List.copyOf(segments);
     }
+
+    /**
+     * Returns a unit with a replacement segment list while preserving its identity and skeleton.
+     *
+     * @param segments the non-null replacement segments in document order
+     * @return a new unit with the supplied segments
+     */
+    public Unit withSegments(final List<Segment> segments) {
+        Objects.requireNonNull(segments, "segments");
+        return new Unit(id, order, href, mediaType, skeleton, segments);
+    }
 }

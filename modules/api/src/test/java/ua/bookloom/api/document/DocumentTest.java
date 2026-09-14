@@ -32,6 +32,37 @@ class DocumentTest {
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
+    @Test
+    void withUnits_newList_changesOnlyUnits() {
+        final Unit originalUnit =
+                new Unit("unit", 0, "unit.md", "text/markdown", new SkeletonHandle("skeleton-1"), List.of());
+        final Document original = new Document(
+                "book-1",
+                BookFormat.MARKDOWN,
+                "en",
+                "en",
+                "UTF-8",
+                false,
+                "hash",
+                Map.of("title", "Book"),
+                List.of(originalUnit));
+
+        final Unit replacement =
+                new Unit("unit-2", 0, "unit-2.md", "text/markdown", new SkeletonHandle("skeleton-2"), List.of());
+        final Document updated = original.withUnits(List.of(replacement));
+
+        assertThat(updated.id()).isEqualTo(original.id());
+        assertThat(updated.format()).isEqualTo(original.format());
+        assertThat(updated.declaredLang()).isEqualTo(original.declaredLang());
+        assertThat(updated.detectedSourceLang()).isEqualTo(original.detectedSourceLang());
+        assertThat(updated.charset()).isEqualTo(original.charset());
+        assertThat(updated.hasBom()).isEqualTo(original.hasBom());
+        assertThat(updated.contentHash()).isEqualTo(original.contentHash());
+        assertThat(updated.metadata()).isEqualTo(original.metadata());
+        assertThat(updated.units()).containsExactly(replacement);
+        assertThat(original.units()).containsExactly(originalUnit);
+    }
+
     /**
      * A container format leaves both encoding components unset, and the record must carry that through rather
      * than substituting a default — an invented {@code UTF-8} here would be indistinguishable from a real one.

@@ -10,11 +10,10 @@ import org.jspecify.annotations.Nullable;
  * The translatable inner content of a single block-level element, plus everything needed to translate it, judge
  * it, and write it back to the exact node it came from ({@code 02_Architecture/03_DOCUMENT_MODEL.md#data-model}).
  *
- * <p><strong>What is not populated yet.</strong> Nothing translates a segment, so every segment a reader produces
- * is {@link SegmentStatus#PENDING} with {@code confidence == 0.0} and {@code targetInner == null}. Those three
- * fields ship in the shape so the pipeline fills them later rather than changing a record several modules already
- * compile against. {@code masked} and {@code placeholders} were in that list until inline masking landed and are
- * not any more — they carry real values for all four formats.
+ * <p><strong>What the document parser does not populate.</strong> Every segment a reader produces is
+ * {@link SegmentStatus#PENDING} with {@code confidence == 0.0} and {@code targetInner == null}. The pipeline advances
+ * those translation fields through {@link #withDecision}, while {@code masked} and {@code placeholders} carry real
+ * values for all four formats.
  *
  * @param id the stable segment id, shaped {@code {unitId}:{ordinal}} (the shape is not enforced here — see
  *     {@code :document})
@@ -35,11 +34,12 @@ import org.jspecify.annotations.Nullable;
  * @param nextKey the document-order next segment's id, or {@code null} at the end of the unit
  * @param anchor where this segment's source text lives in its unit's immutable skeleton — a {@link NodeAnchor}
  *     into a parsed tree, or a {@link ByteSpanAnchor} into the original byte buffer
- * @param targetInner the translated inner content after unmask, or {@code null} until translated; always
- *     {@code null} in this change, since nothing is ever translated here
- * @param status this segment's position in the status machine; always {@link SegmentStatus#PENDING} in this change
- * @param confidence the QA/judge confidence in {@code [0,1]}; always {@code 0.0} in this change, since no real
- *     score is ever produced here
+ * @param targetInner the translated inner content after unmask, or {@code null} until translated; changed together
+ *     with {@code status} by {@link #withDecision}
+ * @param status this segment's position in the status machine; parsers produce {@link SegmentStatus#PENDING}, and
+ *     later pipeline stages may advance it
+ * @param confidence the QA/judge confidence in {@code [0,1]}; parsers produce {@code 0.0} until a quality stage fills
+ *     it
  */
 public record Segment(
         String id,
@@ -82,5 +82,31 @@ public record Segment(
             throw new IllegalArgumentException("confidence must be within [0,1], but was " + confidence);
         }
         placeholders = Collections.unmodifiableMap(new LinkedHashMap<>(placeholders));
+    }
+
+    /**
+     * Returns a segment with only its translation decision changed, preserving its source and skeleton identity.
+     *
+     * @param status the non-null new status
+     * @param targetInner the translated inner content, or null when no translation is retained
+     * @return a new segment with the requested decision
+     */
+    public Segment withDecision(final SegmentStatus status, @Nullable final String targetInner) {
+        Objects.requireNonNull(status, "status");
+        return new Segment(
+                id,
+                unit,
+                order,
+                kind,
+                sourceInner,
+                masked,
+                placeholders,
+                sourceHash,
+                prevKey,
+                nextKey,
+                anchor,
+                targetInner,
+                status,
+                confidence);
     }
 }

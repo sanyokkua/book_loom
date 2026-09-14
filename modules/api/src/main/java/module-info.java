@@ -12,4 +12,6 @@ module ua.bookloom.api {
 
     exports ua.bookloom.api;
     exports ua.bookloom.api.document;
+    exports ua.bookloom.api.llm;
+    exports ua.bookloom.api.pipeline;
 }

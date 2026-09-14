@@ -22,7 +22,7 @@ context. These rules apply to every task:
 
 ## 1. Contracts and document lifetime
 
-- [ ] 1.1 Add the `:api` contracts that the engine, the model and the command line share, the file suffixes on `BookFormat`, and copy-with methods on the document records. Every other module compiles against these types, so they come first, and no other module changes in this task. → `:api`
+- [x] 1.1 Add the `:api` contracts that the engine, the model and the command line share, the file suffixes on `BookFormat`, and copy-with methods on the document records. Every other module compiles against these types, so they come first, and no other module changes in this task. → `:api`
   - **Read:** design.md D1 and D2 (the code blocks, "Events and report types" and "Document-side changes");
     ADR-0033; `modules/api/src/main/java/module-info.java`;
     `modules/api/src/main/java/ua/bookloom/api/{Result,AppError,ErrorCode}.java`;
