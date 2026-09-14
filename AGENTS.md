@@ -15,8 +15,9 @@ Flyway planned. Full inventory: `gradle/libs.versions.toml`.
 Real: `:api` (`Result`/`AppError`, document model, `DocumentPort`), `:util`, `:document` (four-format round trip,
 inline masking to `⟦gN⟧`, unmask behind a placeholder-multiset hard gate — verified on the owner's 216-book local corpus) and
 `:app` (boot, logging, single-instance lock, DI, an empty themed window). Empty: `:llm`, `:pipeline`, `:persistence`;
-`:ui` is a placeholder. **No book has been translated yet.** Next: the walking skeleton — one EPUB through one local
-model to a translated EPUB, started from the UI — before any breadth (theming, persistence, QA, glossary).
+`:ui` is a placeholder. **No book has been translated yet.** Next: `openspec/changes/add-translation-engine-and-cli` —
+one book of any format through the whole pipeline from the command line with a pseudo model, applied task by task —
+then real LLM clients and the UI, before any breadth (theming, persistence, QA, glossary).
 
 ## Commands
 
