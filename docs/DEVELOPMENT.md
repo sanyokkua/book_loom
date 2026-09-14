@@ -268,6 +268,17 @@ lefthook validate                   # optional: does lefthook.yml parse
 Pre-push runs **exactly** the CI quality command, so a green push implies a green CI quality job. Escape hatches
 (`git push --no-verify`, `LEFTHOOK=0`) exist and are a decision, not a habit; agents may not use them.
 
+**OpenSpec agent files** are the `openspec-*` skills in `.agents/skills/` and the `/opsx:*` commands in
+`.claude/commands/opsx/`. The OpenSpec CLI generates them; never edit them by hand. Claude and Codex share one copy of
+each skill: Codex reads `.agents/skills/` directly, and Claude reads it through the `.claude/skills` symlink. That copy
+is the Codex rendering, whose references work in both tools.
+
+```bash
+OPENSPEC_TELEMETRY=0 openspec config profile core           # once per machine: propose, explore, apply, update, sync, archive
+OPENSPEC_TELEMETRY=0 openspec update                        # after upgrading the CLI: npm install -g @fission-ai/openspec@latest
+OPENSPEC_TELEMETRY=0 openspec init --tools claude,codex     # first set-up; codex comes last so its rendering is the one kept
+```
+
 **CI** (`.github/workflows/ci.yml`, on every push and pull request): a *quality* job (lock verification, the gate,
 the agent-file sync check, the licence gate — about 4 minutes) and a five-leg *packaging* matrix (macOS x86_64 and
 aarch64, Linux x86_64 and aarch64, Windows) that builds each image and, on POSIX, launch-smokes it — about 8 minutes

@@ -230,8 +230,8 @@ rules:
 operations:
   apply:
     guidance:
-      - Read the Definition of Done in `AGENTS.md` before starting and treat it as the exit gate, not a
-        formality: the gate green AND the change exercised in the running app.
+      - "Read the Definition of Done in `AGENTS.md` before starting and treat it as the exit gate, not a
+        formality: the gate green AND the change exercised in the running app."
       - "The whole-project clean gate is an implicit requirement of EVERY change: `./gradlew clean build
         check spotlessCheck` must pass with zero findings across the whole project, not just touched code.
         There is no pre-existing-failure exemption - if any mechanical check is red anywhere, the change is
