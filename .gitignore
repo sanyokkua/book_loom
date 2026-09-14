@@ -50,3 +50,6 @@ jpackage/
 # Context Files
 .temporary_context/
 .serena/
+
+# Isolated agent worktrees
+.worktrees/
