@@ -44,7 +44,7 @@ context. These rules apply to every task:
   - **Rules:** `api-is-framework-free` and `records-first` in `.claude/rules/architecture-layering.md`: an `..api..`
     package holds only records, interfaces and enums.
   - **Done when:** `./gradlew :api:build` and `./gradlew :app:archTest` are green.
-- [ ] 1.2 Add `close(Document)` to `DocumentPort`, implemented in `DocumentService` through each format's reader, make `FormatResolver` read its suffixes from `BookFormat`, correct the port's Javadoc, and log every port call. Without a release every translated book stays in memory until the app quits (backlog D3), and without these lines nobody can see which book a job opened, wrote or released. → `:document`
+- [x] 1.2 Add `close(Document)` to `DocumentPort`, implemented in `DocumentService` through each format's reader, make `FormatResolver` read its suffixes from `BookFormat`, correct the port's Javadoc, and log every port call. Without a release every translated book stays in memory until the app quits (backlog D3), and without these lines nobody can see which book a job opened, wrote or released. → `:document`
   - **Read:** `specs/document-round-trip/spec.md` "Release an opened book"; design.md D6 and D8;
     `modules/api/src/main/java/ua/bookloom/api/document/DocumentPort.java`;
     `modules/document/src/main/java/ua/bookloom/document/{DocumentService,FormatResolver}.java`;

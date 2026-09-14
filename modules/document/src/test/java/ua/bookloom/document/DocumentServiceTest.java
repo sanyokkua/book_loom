@@ -3,21 +3,17 @@ package ua.bookloom.document;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatNullPointerException;
+import static ua.bookloom.document.DocumentServiceTestFiles.entries;
+import static ua.bookloom.document.DocumentServiceTestFiles.writeBytes;
+import static ua.bookloom.document.DocumentServiceTestFiles.zip;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppError;
@@ -225,11 +221,91 @@ class DocumentServiceTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
     }
 
+    // WHEN a TXT book is released twice, THEN the first release reports that it was open and the second reports
+    // that its registry entry was already gone.
+    @Test
+    void close_openTxtDocument_reportsWhetherTheDocumentWasOpen() {
+        final DocumentService service = newService();
+        final Path source = tempDir.resolve("book.txt");
+        writeBytes(source, "Plain text.".getBytes(StandardCharsets.UTF_8));
+        final Document opened = openFixture(service, source);
+
+        final Result<Boolean> firstClose = service.close(opened);
+        final Result<Boolean> secondClose = service.close(opened);
+
+        assertThat(firstClose.data()).isTrue();
+        assertThat(secondClose.data()).isFalse();
+    }
+
+    // WHEN an EPUB book is released, THEN the reader drops its parsed container from the registry.
+    @Test
+    void close_openEpubDocument_reportsThatTheDocumentWasOpen() {
+        final DocumentService service = newService();
+        final Path source = tempDir.resolve("book.epub");
+        zip(
+                source,
+                entries(
+                        "mimetype", "application/epub+zip",
+                        "META-INF/container.xml", CONTAINER_XML,
+                        "OEBPS/content.opf", OPF,
+                        "OEBPS/c01.xhtml", CHAPTER));
+        final Document opened = openFixture(service, source);
+
+        final Result<Boolean> closed = service.close(opened);
+
+        assertThat(closed.data()).isTrue();
+    }
+
+    // WHEN an FB2 book is released, THEN the reader drops its parsed XML tree from the registry.
+    @Test
+    void close_openFb2Document_reportsThatTheDocumentWasOpen() {
+        final DocumentService service = newService();
+        final Document opened = openFb2Fixture(service);
+
+        final Result<Boolean> closed = service.close(opened);
+
+        assertThat(closed.data()).isTrue();
+    }
+
+    // WHEN a Markdown book is released, THEN the reader drops its source bytes from the registry.
+    @Test
+    void close_openMarkdownDocument_reportsThatTheDocumentWasOpen() {
+        final DocumentService service = newService();
+        final Path source = tempDir.resolve("book.md");
+        writeBytes(source, "# Heading\n\nProse.".getBytes(StandardCharsets.UTF_8));
+        final Document opened = openFixture(service, source);
+
+        final Result<Boolean> closed = service.close(opened);
+
+        assertThat(closed.data()).isTrue();
+    }
+
+    // IF a released Markdown book is written, THEN the port reports ErrorCode.internal and creates no destination.
+    @Test
+    void write_closedMarkdownDocument_returnsInternalErrorAndCreatesNoDestination() {
+        final DocumentService service = newService();
+        final Path source = tempDir.resolve("Book.md");
+        final Path destination = tempDir.resolve("Book.uk.md");
+        writeBytes(source, "# Heading\n\nProse.".getBytes(StandardCharsets.UTF_8));
+        final Document opened = openFixture(service, source);
+        service.close(opened);
+
+        final Result<Path> written = service.write(opened, destination, "uk");
+
+        assertThat(written.isErr()).isTrue();
+        assertThat(errorOf(written).code()).isEqualTo(ErrorCode.internal);
+        assertThat(destination).doesNotExist();
+    }
+
     private Document openFb2Fixture(DocumentService service) {
         final Path source = Fb2Fixtures.primary(tempDir.resolve("book.fb2"));
+        return openFixture(service, source);
+    }
+
+    private static Document openFixture(DocumentService service, Path source) {
         final Result<Document> opened = service.open(source);
         assertThat(opened.isOk())
-                .withFailMessage("FB2 fixture did not open: %s", opened.error())
+                .withFailMessage("fixture did not open: %s", opened.error())
                 .isTrue();
         return Objects.requireNonNull(opened.data(), "data");
     }
@@ -313,34 +389,5 @@ class DocumentServiceTest {
 
     private static DocumentService newService() {
         return DocumentServices.newService();
-    }
-
-    private static Map<String, String> entries(String... namesAndContents) {
-        final Map<String, String> entries = new LinkedHashMap<>();
-        for (int i = 0; i < namesAndContents.length; i += 2) {
-            entries.put(namesAndContents[i], namesAndContents[i + 1]);
-        }
-        return entries;
-    }
-
-    private static void zip(Path file, Map<String, String> entries) {
-        try (OutputStream out = Files.newOutputStream(file);
-                ZipOutputStream zip = new ZipOutputStream(out)) {
-            for (final Map.Entry<String, String> entry : entries.entrySet()) {
-                zip.putNextEntry(new ZipEntry(entry.getKey()));
-                zip.write(entry.getValue().getBytes(StandardCharsets.UTF_8));
-                zip.closeEntry();
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private static void writeBytes(Path file, byte[] content) {
-        try {
-            Files.write(file, content);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
     }
 }
