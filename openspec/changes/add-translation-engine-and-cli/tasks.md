@@ -76,7 +76,7 @@ context. These rules apply to every task:
 
 ## 2. Pseudo model
 
-- [ ] 2.1 Add the pseudo model and the chat-model factory to `:llm`, and bind the factory in `LlmModule`. The command line must get its model the way a configured provider will be selected later, and a book in capitals is easy to recognise while every real step around the model runs. → `:llm`
+- [x] 2.1 Add the pseudo model and the chat-model factory to `:llm`, and bind the factory in `LlmModule`. The command line must get its model the way a configured provider will be selected later, and a book in capitals is easy to recognise while every real step around the model runs. → `:llm`
   - **Read:** `specs/inference/spec.md` (both requirements); design.md D1 and D8; ADR-0033;
     `modules/llm/src/main/java/module-info.java`; `modules/llm/src/main/java/ua/bookloom/llm/LlmModule.java`;
     `modules/llm/build.gradle.kts`.

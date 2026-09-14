@@ -1,6 +1,7 @@
 package ua.bookloom.llm;
 
 import com.google.inject.AbstractModule;
+import ua.bookloom.api.llm.ChatModelFactory;
 
 /**
  * Guice bindings owned by {@code :llm} — the {@code Provider} port, {@code ProviderFactory}, the inference gate and
@@ -17,6 +18,6 @@ public final class LlmModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        // No bindings yet.
+        bind(ChatModelFactory.class).to(ChatModelFactoryImpl.class);
     }
 }

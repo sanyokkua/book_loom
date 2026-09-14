@@ -16,6 +16,7 @@ module ua.bookloom.llm {
     requires ua.bookloom.util;
     requires java.net.http;
     requires com.google.guice;
+    requires org.slf4j;
 
     exports ua.bookloom.llm;
 

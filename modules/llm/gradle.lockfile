@@ -3,6 +3,8 @@
 # This file is expected to be part of source control.
 # To regenerate this file, run: ./gradlew :llm:dependencies --write-locks
 aopalliance:aopalliance:1.0=compileClasspath,runtimeClasspath,testCompileClasspath,testRuntimeClasspath
+ch.qos.logback:logback-classic:1.5.20=testRuntimeClasspath
+ch.qos.logback:logback-core:1.5.20=testRuntimeClasspath
 com.ethlo.time:itu:1.14.0=testCompileClasspath,testRuntimeClasspath
 com.fasterxml.jackson.core:jackson-annotations:2.20=testCompileClasspath,testRuntimeClasspath
 com.fasterxml.jackson.core:jackson-core:2.20.1=testCompileClasspath,testRuntimeClasspath
@@ -139,7 +141,7 @@ org.ow2.asm:asm:9.10.1=jacocoAnt,spotbugs
 org.pcollections:pcollections:4.0.1=annotationProcessor,testAnnotationProcessor
 org.projectlombok:lombok:1.18.46=annotationProcessor,compileClasspath,testAnnotationProcessor,testCompileClasspath
 org.reflections:reflections:0.10.2=checkstyle
-org.slf4j:slf4j-api:2.0.17=spotbugsSlf4j,testCompileClasspath,testRuntimeClasspath
+org.slf4j:slf4j-api:2.0.17=compileClasspath,runtimeClasspath,spotbugsSlf4j,testCompileClasspath,testRuntimeClasspath
 org.slf4j:slf4j-api:2.0.18=spotbugs
 org.slf4j:slf4j-simple:2.0.17=spotbugsSlf4j
 org.slf4j:slf4j-simple:2.0.18=checkstyle
