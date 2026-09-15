@@ -59,6 +59,15 @@ class ChatModelFactoryImplTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
     }
 
+    // An empty model id is refused like a blank one, never taken to mean "use a default model".
+    @Test
+    void create_emptyModelId_returnsValidationError() {
+        final Result<ChatModel> result = FACTORY.create(new ModelSelection("pseudo", ""));
+
+        assertThat(result.data()).isNull();
+        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+    }
+
     // Protected document placeholders and entity references survive the pseudo translation byte-for-byte.
     @Test
     void chat_placeholderAndEntityReferences_preservesReferencesWhileUppercasingText() {

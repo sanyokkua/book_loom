@@ -64,8 +64,13 @@ class TranslationJobCancellationTest {
 
         assertThat(report(await(run)))
                 .extracting(
-                        JobReport::end, JobReport::accepted, JobReport::flagged, JobReport::written, JobReport::error)
-                .containsExactly(JobState.CANCELLED, 1, 0, null, null);
+                        JobReport::end,
+                        JobReport::segments,
+                        JobReport::accepted,
+                        JobReport::flagged,
+                        JobReport::written,
+                        JobReport::error)
+                .containsExactly(JobState.CANCELLED, 3, 1, 0, null, null);
         assertThat(events).noneMatch(Resumed.class::isInstance);
         assertThat(Files.exists(tempDir.resolve("Book.uk.md"))).isFalse();
         shutdown(workers);

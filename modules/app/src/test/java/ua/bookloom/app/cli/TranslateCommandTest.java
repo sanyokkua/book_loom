@@ -6,11 +6,12 @@ import com.google.inject.Guice;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -88,6 +89,8 @@ class TranslateCommandTest {
                 .contains("This file could not be read as a book")
                 .doesNotContain("ZipException")
                 .doesNotContain("java.");
+        assertThat(tempDir.resolve("Book.uk.epub")).doesNotExist();
+        assertThat(tempDir.resolve(".Book.uk.epub")).doesNotExist();
     }
 
     // WHEN the arguments are invalid, THEN the command prints the parser's reason and then the usage, exits with 2 and
@@ -110,7 +113,7 @@ class TranslateCommandTest {
     void run_invalidArguments_printUsageExitTwoAndCreatesNoOutput(String invalidCase) throws IOException {
         final List<String> arguments = argumentsFor(invalidCase);
         final TranslateCommand command = command();
-        final Set<Path> before = children();
+        final Map<Path, String> before = children();
         final ByteArrayOutputStream console = new ByteArrayOutputStream();
 
         final int exit = command.run(arguments, printStream(console));
@@ -120,7 +123,7 @@ class TranslateCommandTest {
                 .containsExactly(
                         "Invalid command arguments: " + invalidReason(invalidCase),
                         "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite]");
-        assertThat(children()).containsExactlyInAnyOrderElementsOf(before);
+        assertThat(children()).isEqualTo(before);
     }
 
     private TranslateCommand command() throws IOException {
@@ -186,9 +189,18 @@ class TranslateCommandTest {
         return destination;
     }
 
-    private Set<Path> children() throws IOException {
+    /** Maps each entry of the temporary folder to its content, so a changed file counts, not only a new one. */
+    private Map<Path, String> children() throws IOException {
         try (Stream<Path> paths = Files.list(tempDir)) {
-            return paths.collect(Collectors.toSet());
+            return paths.collect(Collectors.toMap(path -> path, TranslateCommandTest::contentOf));
+        }
+    }
+
+    private static String contentOf(Path path) {
+        try {
+            return Files.isDirectory(path) ? "<directory>" : Files.readString(path, StandardCharsets.ISO_8859_1);
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
         }
     }
 

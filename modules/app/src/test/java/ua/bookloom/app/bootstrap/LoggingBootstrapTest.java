@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -183,6 +184,40 @@ class LoggingBootstrapTest {
 
         assertThat(logLines(logDir.resolve("bookloom.log")))
                 .anyMatch(line -> line.contains("rejected log level value=LOUD"));
+    }
+
+    // A lowercase level name from the environment reaches the bootstrap as TRACE and switches TRACE lines on.
+    @Test
+    void configure_lowercaseTraceFromEnvironment_writesTraceLines() throws IOException {
+        final Path logDir = Files.createDirectory(tempDir.resolve("logs"));
+        final ResolvedLogLevel resolved = LoggingLevelResolver.resolve(
+                Map.of("BOOKLOOM_LOG_LEVEL", "trace")::get, Map.<String, String>of()::get, AppEnvironment.PROD);
+
+        LoggingBootstrap.configure(logDir, false, resolved);
+        LoggerFactory.getLogger("ua.bookloom.test").trace("lowercase trace canary");
+
+        assertThat(logLines(logDir.resolve("bookloom.log"))).anyMatch(line -> line.contains("lowercase trace canary"));
+    }
+
+    // An unknown level in an installed app falls back to INFO and says so in exactly one WARN line naming the value.
+    @Test
+    void configure_unknownLevelInInstalledApp_fallsBackToInfoWithOneWarning() throws IOException {
+        final Path logDir = Files.createDirectory(tempDir.resolve("logs"));
+        final ResolvedLogLevel resolved = LoggingLevelResolver.resolve(
+                Map.of("BOOKLOOM_LOG_LEVEL", "LOUD")::get, Map.<String, String>of()::get, AppEnvironment.PROD);
+
+        LoggingBootstrap.configure(logDir, false, resolved);
+        final Logger logger = LoggerFactory.getLogger("ua.bookloom.test");
+        logger.info("info canary");
+        logger.debug("debug canary");
+
+        final List<String> lines = logLines(logDir.resolve("bookloom.log"));
+        assertThat(lines).anyMatch(line -> line.contains("info canary"));
+        assertThat(lines).noneMatch(line -> line.contains("debug canary"));
+        assertThat(lines)
+                .filteredOn(line -> line.contains("rejected log level value=LOUD"))
+                .singleElement()
+                .satisfies(line -> assertThat(line).contains(" WARN "));
     }
 
     private static ResolvedLogLevel resolved(Level level) {

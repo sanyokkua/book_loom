@@ -297,7 +297,7 @@ context. These rules apply to every task:
   - **Log:** unchanged; the WARN line naming the reason stays.
   - **Done when:** `./gradlew :app:build` is green, and `./gradlew -q :app:translate --args="'<a small .md book>'"`
     prints only its report line.
-- [ ] 5.3 Close the test gaps the scenario audit found, where a regression in a real decision would still pass, or would hang the gate instead of failing it. A test that cannot fail, or never runs, proves nothing. → `:pipeline`, `:app`, `:llm`
+- [x] 5.3 Close the test gaps the scenario audit found, where a regression in a real decision would still pass, or would hang the gate instead of failing it. A test that cannot fail, or never runs, proves nothing. → `:pipeline`, `:app`, `:llm`
   - **Read:** this change's `specs/*/spec.md`;
     `modules/pipeline/src/test/java/ua/bookloom/pipeline/{TranslationJobTestSupport,ScriptedChatModel,TestBooks,DiagnosticsTranslationJobTest}.java`;
     `.claude/rules/testing.md`.

@@ -93,7 +93,9 @@ class TranslationJobRecoveryTest {
         assertThat(pause.progress())
                 .extracting(p -> p.accepted(), p -> p.flagged(), p -> p.pending())
                 .containsExactly(1, 0, 2);
-        assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
+        assertThat(report(await(run)))
+                .extracting(JobReport::end, JobReport::accepted, JobReport::flagged)
+                .containsExactly(JobState.COMPLETED, 3, 0);
         assertThat(model.requests())
                 .extracting(request -> request.messages().get(1).content())
                 .containsExactly("One.", "Two.", "Two.", "Three.");
@@ -164,6 +166,30 @@ class TranslationJobRecoveryTest {
         assertThat(model.requests()).hasSize(2);
         assertThat(completed.end()).isEqualTo(JobState.COMPLETED);
         assertThat(Files.readString(destination)).isEqualTo("ONE.\n\nTWO.");
+        shutdown(workers);
+    }
+
+    // Publishing a partial book before the failed export is retried would leave a destination while the job waits.
+    @Test
+    void pauseAt_exportError_leavesNoDestinationWhilePaused() throws Exception {
+        final Path source = markdown("One.");
+        final Path output = Files.createDirectory(tempDir.resolve("output"));
+        final Path destination = output.resolve("Book.uk.md");
+        final TranslationJobImpl translation = job(documents(), source, destination, replies("ONE."));
+        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
+        final List<JobEvent> events = new ArrayList<>();
+        translation.subscribe(event -> deleteOutputOnExportStart(output, pauses, events, event));
+        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
+        final ExecutorService workers = executor();
+
+        final Future<Result<JobReport>> run = workers.submit(translation::run);
+        awaitPaused(pauses);
+        final boolean destinationWhilePaused = Files.exists(destination);
+        translation.cancel();
+
+        assertThat(destinationWhilePaused).isFalse();
+        assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
+        assertThat(destination).doesNotExist();
         shutdown(workers);
     }
 

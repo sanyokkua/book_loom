@@ -91,6 +91,19 @@ class TranslationJobEventsTest {
                 .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 3), tuple(JobStage.EXPORT, 0, 1, 3, 0, 0));
     }
 
+    // Building the Finished event from other counts than the returned report would let a screen show one outcome while
+    // the caller acts on another.
+    @Test
+    void finished_event_carriesTheReportRunReturns() {
+        final TranslationJobImpl translation = markdownJob(replies("ONE."), "One.");
+        final List<JobEvent> events = new ArrayList<>();
+        translation.subscribe(events::add);
+
+        final Result<JobReport> result = translation.run();
+
+        assertThat(events.getLast()).isEqualTo(new ua.bookloom.api.pipeline.Finished(report(result)));
+    }
+
     // Installing the terminal state after Finished would make this callback observe RUNNING instead.
     @Test
     void finished_callback_observesTerminalState() {

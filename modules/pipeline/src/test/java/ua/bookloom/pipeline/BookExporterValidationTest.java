@@ -143,6 +143,7 @@ class BookExporterValidationTest {
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
         assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(port.writtenDocuments()).isEmpty();
         assertThat(port.openedDocuments()).singleElement().satisfies(document -> {
             assertThat(port.closedDocuments()).containsExactly(document);
             assertThat(documents.close(document).data()).isFalse();

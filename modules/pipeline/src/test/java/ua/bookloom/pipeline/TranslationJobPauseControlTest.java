@@ -23,6 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -198,6 +199,7 @@ class TranslationJobPauseControlTest {
 
     // Leaving pause armed after export begins would add a Paused event during this stage callback.
     @Test
+    @Timeout(10)
     void pause_afterExportStageStarts_isIgnored() {
         final TranslationJobImpl translation = markdownJob(replies("ONE."), "One.");
         final List<JobEvent> events = new ArrayList<>();

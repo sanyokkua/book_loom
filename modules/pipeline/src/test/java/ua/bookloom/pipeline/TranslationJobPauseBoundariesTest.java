@@ -21,6 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -100,6 +101,7 @@ class TranslationJobPauseBoundariesTest {
 
     // Failing to clear a NEW-state pause request would emit an unexpected pause on this run.
     @Test
+    @Timeout(10)
     void resume_preRunPauseRequest_clearsIt() {
         final TranslationJobImpl translation = markdownJob(replies("ONE."), "One.");
         final List<JobEvent> events = new java.util.ArrayList<>();
@@ -252,6 +254,7 @@ class TranslationJobPauseBoundariesTest {
 
     // Introducing an implicit pause with an empty pause-point set would add a Paused event here.
     @Test
+    @Timeout(10)
     void pauseAt_none_neverPauses() {
         final ScriptedChatModel model = replies("ONE.", "TWO.", "THREE.");
         final TranslationJobImpl translation = markdownJob(model, "One.\n\nTwo.\n\nThree.");

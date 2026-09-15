@@ -206,6 +206,7 @@ class TranslateLauncherTest {
         assertThat(logLines)
                 .anyMatch(line -> atLevel(line, "INFO") && line.contains("Translation job ended state=COMPLETED"));
         assertThat(logLines).noneMatch(line -> line.contains("DEBUG"));
+        assertThat(logLines).noneMatch(line -> line.contains(" TRACE "));
         assertThat(logLines).noneMatch(line -> line.contains("He opened"));
     }
 

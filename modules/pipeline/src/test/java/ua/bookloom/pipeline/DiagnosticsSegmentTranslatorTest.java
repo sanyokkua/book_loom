@@ -2,6 +2,8 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.google.inject.Guice;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -12,8 +14,8 @@ import java.util.Arrays;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
@@ -74,16 +76,17 @@ class DiagnosticsSegmentTranslatorTest {
                 .isEqualTo(1);
     }
 
-    // At TRACE the exact prompt, raw reply, whitespace-restored value and unmask input/output are diagnosable.
+    // At TRACE the exact prompt, raw reply, whitespace-restored value and unmask input/output are diagnosable; the test
+    // raises the level itself, so the gate, which runs at DEBUG, still proves book text stays at TRACE.
     @Test
-    @EnabledIfEnvironmentVariable(named = "BOOKLOOM_LOG_LEVEL", matches = "TRACE")
     void translate_traceEnabled_logsBookTextOnlyAtTrace() {
         final String source = "  Sensitive manuscript sentence.  ";
         final String reply = "SENSITIVE MANUSCRIPT SENTENCE.";
         final Segment segment = txtSegment(source);
         final long offset = testLogSize();
 
-        new SegmentTranslator(documents, response(reply), BookFormat.TXT, "uk", "en").translate(segment);
+        atTraceLevel(
+                () -> new SegmentTranslator(documents, response(reply), BookFormat.TXT, "uk", "en").translate(segment));
 
         final String log = testLogSince(offset);
         assertThat(log)
@@ -92,6 +95,18 @@ class DiagnosticsSegmentTranslatorTest {
                 .contains("Segment reply restored=  SENSITIVE MANUSCRIPT SENTENCE.  ")
                 .contains("Segment unmask input=  SENSITIVE MANUSCRIPT SENTENCE.  ");
         assertSensitiveTextOnlyAtTrace(log, "Sensitive manuscript sentence.", "SENSITIVE MANUSCRIPT SENTENCE.");
+    }
+
+    /** Raises the {@code ua.bookloom} loggers to TRACE for one action, then restores the configured level. */
+    private static void atTraceLevel(final Runnable action) {
+        final Logger bookloom = (Logger) LoggerFactory.getLogger("ua.bookloom");
+        final Level configured = bookloom.getLevel();
+        bookloom.setLevel(Level.TRACE);
+        try {
+            action.run();
+        } finally {
+            bookloom.setLevel(configured);
+        }
     }
 
     private Segment markdownSegment() {
