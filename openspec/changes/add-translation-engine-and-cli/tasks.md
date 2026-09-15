@@ -359,7 +359,7 @@ context. These rules apply to every task:
       readers, writers and maskers.
   - **Done when:** every edited citation resolves to a heading or `{#anchor}` in its file, and
     `OPENSPEC_TELEMETRY=0 openspec validate add-translation-engine-and-cli --strict` is clean.
-- [ ] 6.2 Write `docs/next_features.md` with every gap the review of this change found and left for later, so none is forgotten when real models and the translation screen arrive. Most are `:document` behaviour a real translation would expose, such as an untranslated table of contents or XHTML files that still declare `xml:lang="en"`. → docs
+- [x] 6.2 Write `docs/next_features.md` with every gap the review of this change found and left for later, so none is forgotten when real models and the translation screen arrive. Most are `:document` behaviour a real translation would expose, such as an untranslated table of contents or XHTML files that still declare `xml:lang="en"`. → docs
   - **Read:** `docs/implementation_plan/CHANGE_BACKLOG.md` (`#decision-debt`, and the row and scope of
     `add-metadata-units-and-language-detection`); DD-47 in `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`;
     `docs/adr/ADR-0028-xhtml-self-closed-raw-text-repair.md`;

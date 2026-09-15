@@ -225,7 +225,7 @@ moment it is found.
 |---|---|---|---|
 | D1 | The four writers disagree on target text the resolved charset cannot represent | **Settled** — transcode the document to UTF-8 (**ADR-0029**) | `settle-writer-policy-and-document-lifetime` |
 | D2 | The reader accepts EPUBs the writer can never export | **Settled** — synthesize the `mimetype` entry on write (**ADR-0030**) | `settle-writer-policy-and-document-lifetime` |
-| D3 | No `close()` or eviction seam on the four `Open*Registry` singletons | Open — needs an `:api` change | `settle-writer-policy-and-document-lifetime` |
+| D3 | No `close()` or eviction seam on the four `Open*Registry` singletons | **Resolved** in `add-translation-engine-and-cli` — `DocumentPort.close(Document)` releases an opened book through its reader's registry | `add-translation-engine-and-cli` |
 | D4 | `EpubWriter` mutates the registry-held tree in place | Open — fix, or document as a contract | `settle-writer-policy-and-document-lifetime` |
 | D5 | One 26,306-character segment; 15 books over 5,000 | Open **by design** — the safety net belongs to the chunker | change 12 · `add-chunking-and-context-assembly` |
 | D6 | An FB2 entity reference is emitted twice: the skipped reference plus the characters it expands to | Open — the one-line fix is a no-op; expanding entities changes how the offline invariant is enforced | `settle-writer-policy-and-document-lifetime` |
@@ -240,6 +240,11 @@ moment it is found.
 | D15 | Markdown emits segments whose masked form is exactly one token — 46 code-only table cells corpus-wide | Open — wasted model calls, not corruption | `translate-markdown-raw-html-blocks` |
 | D16 | The Markdown structure check is per-segment, so document-level block structure is unguarded | Open — measured, one book re-opened with 28 segments where it had 31 | `add-chunking-and-context-assembly` (change 12) |
 | D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | Open — found by the 2026-09-12 `Books_Examples` sweep; owned by `add-metadata-units-and-language-detection` |
+| D18 | `:document` logs only at its port boundary: its readers, writers and maskers write no DEBUG or TRACE lines | Open — left out of `add-translation-engine-and-cli` by design (its design.md, Non-Goals) | Unowned — the next `:document` change |
+
+**The review of `add-translation-engine-and-cli` found more gaps** — EPUB language metadata, serialization details, the
+command line and what the translation screen will need. They are recorded, each with a reproduction, in
+`docs/next_features.md`; the ones already owned in this table (D1, D7, D8) are cross-referenced there, not repeated.
 
 **D1 — the four writers disagree on unrepresentable target text.** Found by the corpus verification, which sets every
 segment's target to a marker plus its own source text and so exercises exactly this. Measured:
