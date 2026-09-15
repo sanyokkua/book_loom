@@ -104,7 +104,7 @@ context. These rules apply to every task:
 
 ## 3. Translation engine
 
-- [ ] 3.1 Add the `:pipeline` test scaffolding and `SegmentTranslator`, which builds the prompt, restores the segment's whitespace and makes every reply decision of design.md D4 through the real `DocumentPort.unmask`. Every accept, flag and stop decision of a job is made here, so a wrong row corrupts or loses a paragraph. → `:pipeline`
+- [x] 3.1 Add the `:pipeline` test scaffolding and `SegmentTranslator`, which builds the prompt, restores the segment's whitespace and makes every reply decision of design.md D4 through the real `DocumentPort.unmask`. Every accept, flag and stop decision of a job is made here, so a wrong row corrupts or loses a paragraph. → `:pipeline`
   - **Read:** `specs/translation-pipeline/spec.md` "Send each pending segment to the model in document order",
     "Accept a translation whose markup restores", "Flag a segment the model could not translate, and continue" and
     "Stop the job on any other failure"; design.md D2, D4 and D8; `modules/pipeline/build.gradle.kts`;
