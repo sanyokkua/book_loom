@@ -133,7 +133,7 @@ context. These rules apply to every task:
   - **Done when:** `./gradlew :pipeline:build` is green, and
     `BOOKLOOM_LOG_LEVEL=TRACE ./gradlew :pipeline:test --tests '*SegmentTranslatorTest' --rerun` shows the decision,
     warning and message lines in `modules/pipeline/build/test-logs/test.log`.
-- [ ] 3.2 Add `BookExporter`, which re-opens the source, applies the job's decisions, writes a hidden temporary file, re-opens it to compare segment counts, and only then moves it onto the destination. Writers change the opened tree, so this is what makes a retried export safe and keeps a broken book from replacing a good one. → `:pipeline`
+- [x] 3.2 Add `BookExporter`, which re-opens the source, applies the job's decisions, writes a hidden temporary file, re-opens it to compare segment counts, and only then moves it onto the destination. Writers change the opened tree, so this is what makes a retried export safe and keeps a broken book from replacing a good one. → `:pipeline`
   - **Read:** `specs/export/spec.md` (both requirements); design.md D5 and D8;
     `docs/specification/02_Architecture/11_APP_ENVIRONMENT_AND_PATHS.md#lock-and-atomic`; `open`, `write` and `close`
     in `modules/api/src/main/java/ua/bookloom/api/document/DocumentPort.java`.

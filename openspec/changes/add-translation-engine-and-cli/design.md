@@ -205,6 +205,16 @@ in the wrong place.
 
 **Not `Files.createTempFile`:** its owner-only permissions would survive the move.
 
+**Fixed-name collision guard:** before opening, writing or deleting the fixed temporary path, export rejects it with
+`ErrorCode.validation` when its absolute path equals the source or destination, when existing entries refer to the same
+file, when filesystem resolution shows an absent prospective temporary file would name the same endpoint, or when a
+symbolic link occupies the temporary entry. Alias comparison follows existing symbolic-link chains and canonicalizes
+an existing parent before comparing an absent leaf; filesystem link and `..` semantics are applied in resolution
+order. The symbolic-link refusal deliberately includes dangling links: following a link from
+`.<destination file name>` could otherwise create or overwrite the source or destination before validation. Missing
+paths and link cycles that cannot resolve to the temporary path are left for the normal write or move error path. The
+guard leaves the source, destination and colliding path untouched.
+
 ### D6: `close` per format (`01_MODULE_INVENTORY.md#module-document`)
 
 Each reader gains `close(String documentId)`, which calls its registry's existing `OpenDocumentRegistry.close` and
