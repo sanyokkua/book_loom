@@ -201,7 +201,7 @@ context. These rules apply to every task:
 
 ## 4. Command line
 
-- [ ] 4.1 Share one set of Guice modules between the desktop app and the command line, and add the log-level switch and the job id in the log pattern to `LoggingBootstrap`. The desktop app and the command line must never wire different graphs, and DEBUG and TRACE lines are useless while the level is fixed at INFO. → `:app`
+- [x] 4.1 Share one set of Guice modules between the desktop app and the command line, and add the log-level switch and the job id in the log pattern to `LoggingBootstrap`. The desktop app and the command line must never wire different graphs, and DEBUG and TRACE lines are useless while the level is fixed at INFO. → `:app`
   - **Read:** `specs/translation-pipeline/spec.md` "Choose the log level for a run"; design.md D7 and D8;
     `modules/app/src/main/java/ua/bookloom/app/{BookLoomApplication,AppModule,StartupContext,AppLifecycle}.java`;
     `modules/app/src/main/java/ua/bookloom/app/bootstrap/{Launcher,LoggingBootstrap}.java`;

@@ -31,7 +31,8 @@ public final class LoggingBootstrap {
 
     private static final String LOG_FILE_NAME = "bookloom.log";
     private static final String ARCHIVE_PATTERN = "bookloom.%d{yyyy-MM-dd}.%i.log";
-    private static final String PATTERN = "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n";
+    private static final String PATTERN =
+            "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [job=%X{job}] [%thread] %logger{36} - %msg%n";
 
     private static final String MAX_FILE_SIZE = "10MB";
     private static final String TOTAL_SIZE_CAP = "200MB";
@@ -51,12 +52,14 @@ public final class LoggingBootstrap {
      * @param logDir the resolved, already-created log directory
      * @param devConsole whether to add a console appender as well; useful from an IDE or Gradle, noise in a
      *     packaged application whose stdout nobody sees
+     * @param resolvedLevel immutable level metadata resolved before application startup
      * @return {@code true} when the real Logback binding was configured, {@code false} when the SLF4J provider did
      *     not resolve at all — in which case logging is a no-op and the startup line the boot smoke asserts will be
      *     missing, which is precisely how that smoke detects an unresolved JPMS service binding
      */
-    public static boolean configure(Path logDir, boolean devConsole) {
+    public static boolean configure(Path logDir, boolean devConsole, ResolvedLogLevel resolvedLevel) {
         Objects.requireNonNull(logDir, "logDir");
+        Objects.requireNonNull(resolvedLevel, "resolvedLevel");
 
         final ILoggerFactory factory = LoggerFactory.getILoggerFactory();
         if (!(factory instanceof LoggerContext context)) {
@@ -71,12 +74,33 @@ public final class LoggingBootstrap {
         final RollingFileAppender<ILoggingEvent> fileAppender = fileAppender(context, logDir, encoder);
 
         final ch.qos.logback.classic.Logger root = context.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
-        root.setLevel(Level.INFO);
+        root.setLevel(Level.WARN);
         root.addAppender(fileAppender);
+        context.getLogger("ua.bookloom").setLevel(toLogbackLevel(resolvedLevel.level()));
         if (devConsole) {
             root.addAppender(consoleAppender(context, encoder));
         }
+        final ch.qos.logback.classic.Logger bootstrapLogger = context.getLogger(LoggingBootstrap.class);
+        bootstrapLogger.setLevel(Level.INFO);
+        bootstrapLogger.info("logging configured level={} source={}", resolvedLevel.level(), resolvedLevel.source());
+        resolvedLevel.rejectedValue().ifPresent(value -> bootstrapLogger.warn("rejected log level value={}", value));
         return true;
+    }
+
+    private static Level toLogbackLevel(org.slf4j.event.Level level) {
+        if (level == org.slf4j.event.Level.TRACE) {
+            return Level.TRACE;
+        }
+        if (level == org.slf4j.event.Level.DEBUG) {
+            return Level.DEBUG;
+        }
+        if (level == org.slf4j.event.Level.INFO) {
+            return Level.INFO;
+        }
+        if (level == org.slf4j.event.Level.WARN) {
+            return Level.WARN;
+        }
+        return Level.ERROR;
     }
 
     private static PatternLayoutEncoder encoder(LoggerContext context) {

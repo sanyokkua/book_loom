@@ -10,6 +10,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.api.FxToolkit;
+import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
@@ -84,5 +86,7 @@ class AppBootSmokeTest {
                         .getInstance(com.google.inject.Key.get(
                                 ExecutorService.class, com.google.inject.name.Names.named(AppModule.IO_EXECUTOR))))
                 .isNotNull();
+        assertThat(app.injector().getInstance(TranslationEngine.class)).isNotNull();
+        assertThat(app.injector().getInstance(ChatModelFactory.class)).isNotNull();
     }
 }
