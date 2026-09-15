@@ -3,8 +3,6 @@ package ua.bookloom.app.bootstrap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -19,6 +17,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.app.AppLifecycle;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.cli.TranslateCommand;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 import ua.bookloom.util.paths.AppPathsResolver;
@@ -29,8 +28,6 @@ import ua.bookloom.util.paths.AppPathsResolver;
 public final class TranslateLauncher {
 
     private static final int EXIT_FAILURE = 1;
-    private static final String COMMAND_CLASS_NAME = "ua.bookloom.app.cli.TranslateCommand";
-    private static final String COMMAND_METHOD_NAME = "run";
 
     /** Starts the command-line process and delegates its status to the operating system. */
     public static void main(String[] args) {
@@ -108,7 +105,7 @@ public final class TranslateLauncher {
             final AppLifecycle lifecycle = new AppLifecycle();
             lifecycle.phaseOne(injector);
             lifecycle.phaseTwo(injector);
-            final int exit = invokeCommand(injector, args, out);
+            final int exit = injector.getInstance(TranslateCommand.class).run(args, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
         } catch (Throwable cause) {
@@ -117,22 +114,6 @@ public final class TranslateLauncher {
             final int exit = printError(error, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
-        }
-    }
-
-    private static int invokeCommand(Injector injector, List<String> args, PrintStream out) {
-        try {
-            final Class<?> commandClass = Class.forName(COMMAND_CLASS_NAME);
-            final Object command = injector.getInstance(commandClass);
-            final Method run = commandClass.getDeclaredMethod(COMMAND_METHOD_NAME, List.class, PrintStream.class);
-            if (!run.trySetAccessible()) {
-                throw new IllegalStateException("the command package is not accessible to the launcher");
-            }
-            return (Integer) run.invoke(command, args, out);
-        } catch (InvocationTargetException exception) {
-            throw new IllegalStateException("the translate command failed unexpectedly", exception.getCause());
-        } catch (ReflectiveOperationException exception) {
-            throw new IllegalStateException("the translate command could not be looked up", exception);
         }
     }
 

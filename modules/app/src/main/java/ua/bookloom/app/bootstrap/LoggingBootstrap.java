@@ -83,8 +83,15 @@ public final class LoggingBootstrap {
         final ch.qos.logback.classic.Logger bootstrapLogger = context.getLogger(LoggingBootstrap.class);
         bootstrapLogger.setLevel(Level.INFO);
         bootstrapLogger.info("logging configured level={} source={}", resolvedLevel.level(), resolvedLevel.source());
-        resolvedLevel.rejectedValue().ifPresent(value -> bootstrapLogger.warn("rejected log level value={}", value));
+        warnIfRejected(bootstrapLogger, resolvedLevel);
         return true;
+    }
+
+    private static void warnIfRejected(ch.qos.logback.classic.Logger logger, ResolvedLogLevel resolvedLevel) {
+        final String rejectedValue = resolvedLevel.rejectedValue();
+        if (rejectedValue != null) {
+            logger.warn("rejected log level value={}", rejectedValue);
+        }
     }
 
     private static Level toLogbackLevel(org.slf4j.event.Level level) {

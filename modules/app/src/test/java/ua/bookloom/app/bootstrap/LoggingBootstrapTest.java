@@ -177,8 +177,7 @@ class LoggingBootstrapTest {
     @Test
     void configure_rejectedLevel_writesOneWarningWithTheRejectedValue() throws IOException {
         final Path logDir = Files.createDirectory(tempDir.resolve("logs"));
-        final ResolvedLogLevel rejected =
-                new ResolvedLogLevel(Level.DEBUG, ResolvedLogLevel.Source.DEFAULT, java.util.Optional.of("LOUD"));
+        final ResolvedLogLevel rejected = new ResolvedLogLevel(Level.DEBUG, ResolvedLogLevel.Source.DEFAULT, "LOUD");
 
         LoggingBootstrap.configure(logDir, false, rejected);
 
@@ -187,6 +186,6 @@ class LoggingBootstrapTest {
     }
 
     private static ResolvedLogLevel resolved(Level level) {
-        return new ResolvedLogLevel(level, ResolvedLogLevel.Source.DEFAULT, java.util.Optional.empty());
+        return new ResolvedLogLevel(level, ResolvedLogLevel.Source.DEFAULT, null);
     }
 }

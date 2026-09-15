@@ -276,7 +276,7 @@ context. These rules apply to every task:
   - **Log:** DEBUG with both containers and the check's outcome, and WARN for the refusal naming the check
     `same-container`, like the other request checks.
   - **Done when:** `./gradlew :pipeline:build` is green.
-- [ ] 5.2 Make the command line print why it refused its arguments, keep JDK warnings off its console, call the command without reflection, and bring the log-level types in line with the coding rules. The owner's first real run failed on a path containing spaces and printed only the usage line, and every run printed four JVM warnings before its report. → `:app`
+- [x] 5.2 Make the command line print why it refused its arguments, keep JDK warnings off its console, call the command without reflection, and bring the log-level types in line with the coding rules. The owner's first real run failed on a path containing spaces and printed only the usage line, and every run printed four JVM warnings before its report. → `:app`
   - **Read:** `specs/translation-pipeline/spec.md` "Translate one book from the command line" and "Report
     command-line failures with exit codes"; design.md D7 and D8;
     `modules/app/src/main/java/ua/bookloom/app/cli/TranslateCommand.java`;

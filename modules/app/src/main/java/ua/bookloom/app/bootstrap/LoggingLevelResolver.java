@@ -2,21 +2,22 @@ package ua.bookloom.app.bootstrap;
 
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Function;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.event.Level;
 import ua.bookloom.util.paths.AppEnvironment;
 
 /** Purely resolves the application log level from injected environment and property lookups. */
+// Checkstyle parses source text before Lombok's annotation processor creates the private constructor,
+// so suppress only its source-level utility-constructor false positive.
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LoggingLevelResolver {
 
     private static final String ENVIRONMENT_LEVEL = "BOOKLOOM_LOG_LEVEL";
     private static final String PROPERTY_LEVEL = "bookloom.log.level";
-
-    private LoggingLevelResolver() {
-        // Static resolver only.
-    }
 
     /** Resolves the first configured level, or the environment-specific default. */
     public static ResolvedLogLevel resolve(
@@ -44,13 +45,13 @@ public final class LoggingLevelResolver {
             String value, ResolvedLogLevel.Source source, AppEnvironment environment) {
         final Level level = parse(value);
         if (level != null) {
-            return new ResolvedLogLevel(level, source, Optional.empty());
+            return new ResolvedLogLevel(level, source, null);
         }
-        return new ResolvedLogLevel(defaultFor(environment), ResolvedLogLevel.Source.DEFAULT, Optional.of(value));
+        return new ResolvedLogLevel(defaultFor(environment), ResolvedLogLevel.Source.DEFAULT, value);
     }
 
     private static ResolvedLogLevel defaultLevel(AppEnvironment environment) {
-        return new ResolvedLogLevel(defaultFor(environment), ResolvedLogLevel.Source.DEFAULT, Optional.empty());
+        return new ResolvedLogLevel(defaultFor(environment), ResolvedLogLevel.Source.DEFAULT, null);
     }
 
     private static Level defaultFor(AppEnvironment environment) {

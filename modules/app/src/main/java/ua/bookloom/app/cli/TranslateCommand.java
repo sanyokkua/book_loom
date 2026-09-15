@@ -28,7 +28,7 @@ import ua.bookloom.api.pipeline.TranslationRequest;
 /** Parses and executes the one-book translation command behind the public launcher. */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
-final class TranslateCommand {
+public final class TranslateCommand {
 
     private static final String DEFAULT_TARGET_LANGUAGE = "uk";
     private static final String PSEUDO_PROVIDER = "pseudo";
@@ -40,7 +40,7 @@ final class TranslateCommand {
     private final ChatModelFactory models;
 
     /** Runs one parsed command and reports only its user-facing result to the supplied stream. */
-    int run(List<String> args, PrintStream out) {
+    public int run(List<String> args, PrintStream out) {
         Objects.requireNonNull(args, "args");
         Objects.requireNonNull(out, "out");
         log.info("translate command arguments={}", args);
@@ -109,6 +109,7 @@ final class TranslateCommand {
     private int usageFailure(Result<ParsedArguments> parsed, PrintStream out) {
         final AppError error = errorOf(parsed);
         log.warn("Rejected translate command arguments reason={}", error.message());
+        out.println(error.title() + ": " + error.message());
         out.println(USAGE);
         return 2;
     }

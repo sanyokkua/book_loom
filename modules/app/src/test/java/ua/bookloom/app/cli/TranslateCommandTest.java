@@ -90,12 +90,15 @@ class TranslateCommandTest {
                 .doesNotContain("java.");
     }
 
+    // WHEN the arguments are invalid, THEN the command prints the parser's reason and then the usage, exits with 2 and
+    // writes nothing; without the reason, a book path a shell split at its spaces looks like any other mistake.
     @ParameterizedTest(name = "{0}")
     @ValueSource(
             strings = {
                 "unknown-option",
                 "folder",
                 "missing-path",
+                "nonexistent-path",
                 "unsupported-type",
                 "invalid-target",
                 "invalid-source",
@@ -113,8 +116,10 @@ class TranslateCommandTest {
         final int exit = command.run(arguments, printStream(console));
 
         assertThat(exit).isEqualTo(2);
-        assertThat(consoleText(console))
-                .contains("Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite]");
+        assertThat(consoleText(console).lines())
+                .containsExactly(
+                        "Invalid command arguments: " + invalidReason(invalidCase),
+                        "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite]");
         assertThat(children()).containsExactlyInAnyOrderElementsOf(before);
     }
 
@@ -143,6 +148,23 @@ class TranslateCommandTest {
                 List.of(
                         source.toString(),
                         writeMarkdown(tempDir.resolve("Other.md")).toString());
+            case "nonexistent-path" -> List.of(tempDir.resolve("Missing.md").toString());
+            default -> throw new IllegalArgumentException("unknown test case: " + invalidCase);
+        };
+    }
+
+    private static String invalidReason(String invalidCase) {
+        return switch (invalidCase) {
+            case "unknown-option" -> "unknown option";
+            case "folder", "nonexistent-path" -> "book path is not a regular file";
+            case "missing-path" -> "book path is missing";
+            case "unsupported-type" -> "book type is not supported";
+            case "invalid-target" -> "target language is invalid";
+            case "invalid-source" -> "source language is invalid";
+            case "missing-target" -> "--to needs a language";
+            case "duplicate-target" -> "--to was repeated";
+            case "duplicate-overwrite" -> "--overwrite was repeated";
+            case "extra-book" -> "more than one book path";
             default -> throw new IllegalArgumentException("unknown test case: " + invalidCase);
         };
     }

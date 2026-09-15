@@ -209,8 +209,8 @@ class TranslateLauncherTest {
         assertThat(logLines).noneMatch(line -> line.contains("He opened"));
     }
 
-    // WHEN an invalid parser branch is selected, THEN DEBUG and WARN explain the reason while console output stays
-    // usage-only.
+    // WHEN an invalid parser branch is selected, THEN DEBUG and WARN explain the reason, and the console shows only the
+    // reason and the usage.
     @ParameterizedTest(name = "{0}")
     @ValueSource(
             strings = {
@@ -222,7 +222,8 @@ class TranslateLauncherTest {
                 "unsupported-type",
                 "invalid-target",
                 "invalid-source",
-                "missing-path"
+                "missing-path",
+                "nonexistent-path"
             })
     void run_invalidArguments_logsParserReasonAndKeepsConsoleUserFacing(String invalidCase) throws IOException {
         final Path dataDir = tempDir.resolve("invalid-" + invalidCase);
@@ -236,7 +237,9 @@ class TranslateLauncherTest {
         final String reason = invalidReason(invalidCase);
 
         assertThat(exit).isEqualTo(2);
-        assertThat(consoleText(console)).isEqualTo(USAGE + System.lineSeparator());
+        assertThat(consoleText(console))
+                .isEqualTo("Invalid command arguments: " + reason + System.lineSeparator() + USAGE
+                        + System.lineSeparator());
         assertThat(logLines)
                 .anyMatch(line -> atLevel(line, "DEBUG") && line.contains("translate parser entry arguments="));
         assertThat(logLines)
@@ -272,6 +275,7 @@ class TranslateLauncherTest {
             case "invalid-target" -> List.of(source.toString(), "--to", "../x");
             case "invalid-source" -> List.of(source.toString(), "--from", "../x");
             case "missing-path" -> List.of();
+            case "nonexistent-path" -> List.of(tempDir.resolve("Missing.md").toString());
             default -> throw new IllegalArgumentException("unknown test case: " + invalidCase);
         };
     }
@@ -282,7 +286,7 @@ class TranslateLauncherTest {
             case "missing-target" -> "--to needs a language";
             case "duplicate-target" -> "--to was repeated";
             case "duplicate-overwrite" -> "--overwrite was repeated";
-            case "folder" -> "book path is not a regular file";
+            case "folder", "nonexistent-path" -> "book path is not a regular file";
             case "unsupported-type" -> "book type is not supported";
             case "invalid-target" -> "target language is invalid";
             case "invalid-source" -> "source language is invalid";

@@ -25,7 +25,7 @@ class LoggingLevelResolverTest {
 
         assertThat(resolved.level()).isEqualTo(expectedLevel);
         assertThat(resolved.source()).isEqualTo(expectedSource);
-        assertThat(resolved.rejectedValue()).isEmpty();
+        assertThat(resolved.rejectedValue()).isNull();
     }
 
     private static Stream<Arguments> precedenceCases() {
@@ -58,7 +58,7 @@ class LoggingLevelResolverTest {
 
         assertThat(resolved.level()).isEqualTo(expectedLevel);
         assertThat(resolved.source()).isEqualTo(ResolvedLogLevel.Source.DEFAULT);
-        assertThat(resolved.rejectedValue()).contains(rejectedValue);
+        assertThat(resolved.rejectedValue()).isEqualTo(rejectedValue);
     }
 
     private static Stream<Arguments> invalidCases() {
