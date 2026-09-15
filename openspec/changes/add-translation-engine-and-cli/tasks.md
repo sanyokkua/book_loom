@@ -260,7 +260,7 @@ context. These rules apply to every task:
 
 ## 5. Review fixes
 
-- [ ] 5.1 Refuse, before any model call, a job whose FB2 source and destination differ in container (`.fb2.zip` against `.fb2`), and give `JobPauseLogger` its Lombok-generated private constructor. The writer re-emits the source's container, so such a job translated the whole book and only then failed at export with "This file could not be opened". → `:pipeline`
+- [x] 5.1 Refuse, before any model call, a job whose FB2 source and destination differ in container (`.fb2.zip` against `.fb2`), and give `JobPauseLogger` its Lombok-generated private constructor. The writer re-emits the source's container, so such a job translated the whole book and only then failed at export with "This file could not be opened". → `:pipeline`
   - **Read:** `specs/translation-pipeline/spec.md` "Refuse a job that cannot start"; design.md D2 ("Checks");
     `checkFormats` in `modules/pipeline/src/main/java/ua/bookloom/pipeline/TranslationEngineImpl.java`; `writeBytes`
     in `modules/document/src/main/java/ua/bookloom/document/fb2/Fb2Writer.java`; `confirmAgainstContent` in

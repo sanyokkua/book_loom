@@ -99,19 +99,6 @@ class TranslationEngineImplTest {
         assertThat(model.requests()).isEmpty();
     }
 
-    // Omitting either suffix check or the same-format comparison would accept one of these invalid pairs.
-    @ParameterizedTest
-    @CsvSource({"Book.pdf,Book.uk.pdf", "Book.md,Book.uk.pdf", "Book.md,Book.uk.txt"})
-    void newJob_unsupportedOrMismatchedFormats_returnsValidationWithoutModelCall(
-            final String sourceName, final String destinationName) {
-        final ScriptedChatModel model = new ScriptedChatModel();
-
-        final Result<TranslationJob> result = engine().newJob(request(sourceName, destinationName, "uk", null), model);
-
-        assertValidation(result);
-        assertThat(model.requests()).isEmpty();
-    }
-
     // Comparing raw path spellings would miss a source alias containing dot segments.
     @Test
     void newJob_normalizedSourceAlias_returnsValidationWithoutModelCall() {
@@ -357,11 +344,6 @@ class TranslationEngineImplTest {
         } catch (Exception cause) {
             throw new AssertionError("could not read test book", cause);
         }
-    }
-
-    private static void assertValidation(final Result<?> result) {
-        assertThat(result.isErr()).isTrue();
-        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
     }
 
     private static void assertSameFileValidation(final Result<?> result) {

@@ -28,6 +28,7 @@ import ua.bookloom.api.pipeline.TranslationRequest;
 public final class TranslationEngineImpl implements TranslationEngine {
 
     private static final Pattern LANGUAGE_CODE = Pattern.compile("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$");
+    private static final String ZIPPED_FB2_SUFFIX = ".fb2.zip";
 
     private final DocumentPort documents;
 
@@ -85,7 +86,27 @@ public final class TranslationEngineImpl implements TranslationEngine {
         }
         final boolean same = source.equals(destination);
         log.debug("Translation request check=same-format outcome={}", outcome(same));
-        return same ? Result.ok(Boolean.TRUE) : rejected("same-format", mismatchedFormatError());
+        return same ? checkContainers(request) : rejected("same-format", mismatchedFormatError());
+    }
+
+    private Result<Boolean> checkContainers(final TranslationRequest request) {
+        final boolean sourceZipped = isZippedFb2(request.source());
+        final boolean destinationZipped = isZippedFb2(request.destination());
+        final boolean same = sourceZipped == destinationZipped;
+        log.debug(
+                "Translation request check=same-container sourceZippedFb2={} destinationZippedFb2={} outcome={}",
+                sourceZipped,
+                destinationZipped,
+                outcome(same));
+        return same ? Result.ok(Boolean.TRUE) : rejected("same-container", mismatchedFormatError());
+    }
+
+    /** FB2 export re-emits the source's container, so a zipped and a plain FB2 name are different file types. */
+    private static boolean isZippedFb2(final Path path) {
+        final String name =
+                Objects.requireNonNull(path.getFileName(), "file name").toString();
+        final int start = name.length() - ZIPPED_FB2_SUFFIX.length();
+        return start >= 0 && name.regionMatches(true, start, ZIPPED_FB2_SUFFIX, 0, ZIPPED_FB2_SUFFIX.length());
     }
 
     private Result<Boolean> checkIdentity(final TranslationRequest request) {
