@@ -57,6 +57,17 @@ val runApp =
         javaLauncher = javaToolchains.launcherFor(java.toolchain)
     }
 
+val translateApp =
+    tasks.register<JavaExec>("translate") {
+        description = "Translates one book from the command line."
+        group = ApplicationPlugin.APPLICATION_GROUP
+
+        mainClass = "ua.bookloom.app.bootstrap.TranslateLauncher"
+        classpath = sourceSets.main.get().runtimeClasspath
+        javaLauncher = javaToolchains.launcherFor(java.toolchain)
+        workingDir = rootDir
+    }
+
 // --- The build-generated version resource (DD-50) ---------------------------------------------------------------
 //
 // A classpath RESOURCE rather than the jar manifest's `Implementation-Version`, and that is the load-bearing part:

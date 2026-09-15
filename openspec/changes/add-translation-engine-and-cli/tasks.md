@@ -226,7 +226,7 @@ context. These rules apply to every task:
     path holds a static logger.
   - **Done when:** `./gradlew :app:build` is green, and `./gradlew :app:run` still opens the window and writes the
     configuration line to the dev log folder (on macOS `~/Library/Logs/BookLoom-Dev/bookloom.log`).
-- [ ] 4.2 Add `bootstrap.TranslateLauncher`, `cli.TranslateCommand` and the Gradle `translate` task, logging every argument, decision and exit code. This is how a real book gets translated, and explained, before any screen exists. → `:app`
+- [x] 4.2 Add `bootstrap.TranslateLauncher`, `cli.TranslateCommand` and the Gradle `translate` task, logging every argument, decision and exit code. This is how a real book gets translated, and explained, before any screen exists. → `:app`
   - **Read:** `specs/translation-pipeline/spec.md` "Translate one book from the command line", "Report command-line
     failures with exit codes" and "Write a diagnostic log of every run"; design.md D7 and D8;
     `modules/app/src/main/java/ua/bookloom/app/bootstrap/{Launcher,SingleInstanceLock}.java`;
