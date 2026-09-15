@@ -178,7 +178,7 @@ context. These rules apply to every task:
   - **Rules:** `.claude/rules/threading-concurrency.md`.
   - **Done when:** `./gradlew :pipeline:build` is green, and a TRACE run of the pause tests shows the state transitions
     in order in `modules/pipeline/build/test-logs/test.log`.
-- [ ] 3.4 Add `TranslationEngineImpl` with its request checks, bind it in `PipelineModule`, and prove the whole job end to end on generated books in every format. This joins the parts into the one entry point the command line and the future screen call. → `:pipeline`
+- [x] 3.4 Add `TranslationEngineImpl` with its request checks, bind it in `PipelineModule`, and prove the whole job end to end on generated books in every format. This joins the parts into the one entry point the command line and the future screen call. → `:pipeline`
   - **Read:** `specs/translation-pipeline/spec.md` "Refuse a job that cannot start"; `specs/export/spec.md`;
     design.md D2 ("Checks") and D8; `modules/pipeline/src/main/java/ua/bookloom/pipeline/PipelineModule.java`;
     `modules/document/src/main/java/ua/bookloom/document/DocumentModule.java`.
