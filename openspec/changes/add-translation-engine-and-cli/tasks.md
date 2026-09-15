@@ -411,9 +411,9 @@ context. These rules apply to every task:
     `SegmentTranslator` and `BookExporter`; `#module-app`: `CoreModules`, `bootstrap.TranslateLauncher` and
     `ua.bookloom.app.cli`; and the as-built status.
   - **Done when:** every row names a package or class that exists.
-- [ ] 7.2 Run `./gradlew clean build check spotlessCheck` and `./gradlew -PstrictLocks verifyLocks` and get both green across the whole project, with no pre-existing-failure exemption, including the ArchUnit rules and the 0.80 branch-coverage gate that now applies to `:llm` and `:pipeline`. A change is not done while any check anywhere is red. → all modules
+- [x] 7.2 Run `./gradlew clean build check spotlessCheck` and `./gradlew -PstrictLocks verifyLocks` and get both green across the whole project, with no pre-existing-failure exemption, including the ArchUnit rules and the 0.80 branch-coverage gate that now applies to `:llm` and `:pipeline`. A change is not done while any check anywhere is red. → all modules
   - **Done when:** both commands pass, and the gate's tail is pasted as evidence.
-- [ ] 7.3 Translate one real EPUB, FB2, Markdown and TXT book from `.temporary_context/Books_Examples` with `./gradlew -q :app:translate --args="'<book>'"`, open each result in a reader, and follow one segment through the log of a TRACE run. A result that opens correctly, and a log that explains every flag and failure, are the evidence the feature works; a ticked checkbox is not. → `:app`
+- [x] 7.3 Translate one real EPUB, FB2, Markdown and TXT book from `.temporary_context/Books_Examples` with `./gradlew -q :app:translate --args="'<book>'"`, open each result in a reader, and follow one segment through the log of a TRACE run. A result that opens correctly, and a log that explains every flag and failure, are the evidence the feature works; a ticked checkbox is not. → `:app`
   - **Do:** run one of the books with `BOOKLOOM_LOG_LEVEL=TRACE`, and follow one segment from its prompt to its
     decision in `bookloom.log` in the dev log folder (on macOS `~/Library/Logs/BookLoom-Dev/`).
   - **Expect:** the text in capitals, with formatting, images and structure intact, and a console that shows only the
