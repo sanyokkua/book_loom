@@ -3,7 +3,7 @@
     <file>build/test-logs/test.log</file>
     <append>true</append>
     <encoder>
-      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [job=%X{job} segment=%X{segment}] %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
 

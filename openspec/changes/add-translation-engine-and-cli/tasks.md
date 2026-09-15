@@ -156,7 +156,7 @@ context. These rules apply to every task:
     changed source, a count mismatch and an atomic-move fallback.
   - **Done when:** `./gradlew :pipeline:build` is green, and the step lines appear at DEBUG in
     `modules/pipeline/build/test-logs/test.log`.
-- [ ] 3.3 Add `TranslationJobImpl`: the job's states and boundaries, the four pause points with one pause per boundary, pause-point changes, pause and cancel before `run()`, cancellation including an interrupt while paused, ordered events on the job's thread, and the job's lifecycle logging with its MDC. A screen will drive pause, resume and cancel from another thread, so a wrong wait, or a lock held while an event is sent, hangs the app. → `:pipeline`
+- [x] 3.3 Add `TranslationJobImpl`: the job's states and boundaries, the four pause points with one pause per boundary, pause-point changes, pause and cancel before `run()`, cancellation including an interrupt while paused, ordered events on the job's thread, and the job's lifecycle logging with its MDC. A screen will drive pause, resume and cancel from another thread, so a wrong wait, or a lock held while an event is sent, hangs the app. → `:pipeline`
   - **Read:** `specs/resume/spec.md` (every requirement); `specs/translation-pipeline/spec.md` "Stop the job on any
     other failure" and "Report progress and the outcome"; design.md D2, D3 and D8; ADR-0033;
     `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`.
