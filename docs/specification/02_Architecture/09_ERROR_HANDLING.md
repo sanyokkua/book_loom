@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-15
 **Cross-references:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`,
 `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`,
 `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`
@@ -96,8 +96,19 @@ typed inputs, not from string-concatenating arbitrary exception messages, so sec
 
 Long operations return **partial results** rather than all-or-nothing. A translation run that hits an unrecoverable
 provider error mid-book returns the accepted segments so far plus the terminal `AppError`; export remains available for
-what completed. A chunk that fails after `N` repair tries is `FLAGGED`, not fatal — the run continues. The engine's
-return shape carries `{completed, flagged, error?}` so the UI can show "X of Y done, Z flagged, stopped because …".
+what completed. A segment the model could not translate — the reply itself carries an error, or comes back empty or
+truncated — is `FLAGGED`, not fatal; the run continues to the next segment (`ua.bookloom.pipeline.SegmentTranslator`,
+built by `add-translation-engine-and-cli`).
+
+The engine's return shape is the built `JobReport` (`ua.bookloom.api.pipeline`):
+`JobReport(format, end, segments, accepted, flagged, flaggedSegments, written, error)`. `end` is always a **terminal**
+`JobState` (`COMPLETED`/`CANCELLED`/`FAILED`); `written` is set only when `end` is `COMPLETED`; `error` is set only
+when `end` is `FAILED` — one value lets the UI show "X of Y done, Z flagged, stopped because …" without inspecting a
+separate `Result`. A **cancelled** run is not itself an error: `TranslationJob.run()` still returns
+`Result.ok(JobReport)`, with `end` equal to `CANCELLED` and no `error`
+(`08_THREADING_CONCURRENCY.md#cancellation`) — a genuine boundary failure (the source book will not open, or the
+destination exists without overwrite) is instead returned as `Result.err(AppError)` directly, before any report is
+built.
 
 ## ui-surfacing {#ui-surfacing}
 

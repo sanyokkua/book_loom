@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-08-03
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-09-15
 **Cross-references:** `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
 `docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`, `docs/Architecture.md`
 
@@ -103,7 +103,7 @@ capability: an EPUB survives being parsed apart and reassembled with nothing tra
 EPUB only — FB2/Markdown/TXT extend it next).
 
 | Module      | Package                            | What it now holds                                                                                                                                                                                                                                                                     |
-|-------------|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-------------|--------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `:api`      | `ua.bookloom.api.document`          | Seam F1, complete in shape: `BookFormat`, `SegmentKind`, `SegmentStatus`, `SkeletonAnchor`, `Segment`, `SkeletonHandle`, `Unit`, `Document` (records/enums only — `masked`/`placeholders` shipped empty here and were filled in by change 5's masker; `detectedSourceLang` still ships empty, filled by a later change per design.md D2) and `DocumentPort` |
 | `:util`     | `ua.bookloom.util.hash`             | `HashUtil` — SHA-256 over raw bytes (document content hash) and over NFC-normalized text (per-segment `sourceHash`)                                                                                                                                                                  |
 | `:document` | `ua.bookloom.document`              | `DocumentService` (the `DocumentPort` impl and the module's port boundary — classifies every EPUB read/write failure into a typed `Result`/`AppError`), `DocumentModule` (now binds `DocumentPort` → `DocumentService`)                                                              |
@@ -118,7 +118,7 @@ acceptance gate, not part of the shipped module surface, so they aren't listed a
 and `ua.bookloom.document` finally performs the format dispatch its `#inventory` row has always claimed.
 
 | Module      | Package                        | What it now holds                                                                                                                                                                                                                                                                        |
-|-------------|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `:api`      | `ua.bookloom.api.document`     | `SkeletonAnchor` is now a **sealed interface** over `NodeAnchor(nodePath, runIndex)` and `ByteSpanAnchor(start, end)` (ADR-0025); `Document` gains nullable `charset`/`hasBom`, unset for container formats                                                                             |
 | `:document` | `ua.bookloom.document`         | `DocumentService` now **dispatches**: `FormatResolver` resolves the format from the extension and confirms it against the leading bytes, and both `open` and `write` switch exhaustively over `BookFormat`                                                                              |
 | `:document` | `ua.bookloom.document.model`   | The shared structural walker (ADR-0027) over a `TreeNode` adapter with `JsoupTreeNode`/`Jdom2TreeNode` implementations, `BlockRuns`, `SegmentKinds`, run-scoped `SkeletonAnchors`, `BufferReassembler`, plus `ZipEntryReader`/`RawEntry`/`ZipEncryption`/`SecureXml` and the three shared exceptions, moved here so one bounded zip reader serves both container formats |
@@ -162,8 +162,32 @@ and `DocumentPort.unmask`. Follow-ups on the same day: `OpenDocumentRegistry<T>`
 per-format registries and adds `close(id)`; `EpubWriter` synthesizes a missing `mimetype` (ADR-0030); `Fb2Writer`
 echoes the source's line-ending style. The readable map of all of this is `docs/Architecture.md`.
 
-**Where the code actually is, as of the seventh archived change.** `:api`, `:util`, `:document` and `:app` carry real production code. `:llm`, `:pipeline`
-and `:persistence` are still one-line Guice `AbstractModule` stubs, and `:ui` holds an app-shell placeholder with no
+**What `add-translation-engine-and-cli` filled in (code-complete and gate-green, pending archive).** The first
+change to translate a book, end to end, with a chat model — a deterministic offline `pseudo` model standing in for
+a real one — and to give `:llm` and `:pipeline` real production code.
+
+| Module      | Package                    | What it now holds                                                                                                                                                                                                                                                     |
+|-------------|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `:api`      | `ua.bookloom.api.llm`      | **New, real**: `ChatModel`, `ChatRequest`, `ChatMessage`, `ChatRole`, `ChatResponse`, `FinishReason`, `ChatModelFactory`, `ModelSelection` — the engine-facing seam ADR-0033 fixes in front of the still-future `Provider`/`ProviderFactory`                            |
+| `:api`      | `ua.bookloom.api.pipeline` | **New, real**: `TranslationEngine`, `TranslationRequest`, `TranslationJob`, `JobListener`, `Subscription`, `JobState`, `JobStage`, `PausePoint`, `PauseReason`, the sealed `JobEvent` and its records (`StageStarted`, `SegmentDecided`, `Paused`, `Resumed`, `Finished`), `JobProgress`, `JobReport`, `FlaggedSegment` |
+| `:api`      | `ua.bookloom.api.document` | `BookFormat` gains its file suffixes (longest first), `ofFileName(String)` and `matchedSuffix(String)`; `Segment.withDecision`, `Unit.withSegments` and `Document.withUnits` copy-with methods; `DocumentPort` gains `close(Document)`                                  |
+| `:document` | `ua.bookloom.document`     | `DocumentService.close`, switching on `document.format()` inside the same boundary `try/catch` as `open`/`write`/`unmask`, released through each reader's registry                                                                                                     |
+| `:llm`      | `ua.bookloom.llm`          | `ChatModelFactoryImpl` — resolves the provider id `pseudo`, `ErrorCode.validation` for any other provider id or a blank model id                                                                                                                                       |
+| `:llm`      | **`ua.bookloom.llm.pseudo`** | **New package, neither exported nor opened**: `PseudoChatModel` — upper-cases the last user message, keeps `⟦gN⟧` tokens and character references unchanged, finishes `STOP`                                                                                          |
+| `:pipeline` | `ua.bookloom.pipeline`     | The public `TranslationEngineImpl` (request checks: language pattern, matching `BookFormat`, matching FB2 container, distinct destination); the package-private `TranslationJobImpl` (pause/resume/cancel at segment/section/stage/error boundaries), `SegmentTranslator` (prompt + reply decision) and `BookExporter` (reopen-validate-move) |
+| `:app`      | `ua.bookloom.app`          | `CoreModules` — the Guice graph (`AppModule`, `DocumentModule`, `LlmModule`, `PersistenceModule`, `PipelineModule`) the desktop app and the command line share                                                                                                          |
+| `:app`      | `ua.bookloom.app.bootstrap` | `TranslateLauncher` — repeats `Launcher`'s pre-injector steps (paths, single-instance lock, logging) without starting JavaFX; `LoggingLevelResolver`/`ResolvedLogLevel` — the `BOOKLOOM_LOG_LEVEL`/`bookloom.log.level` resolver `LoggingBootstrap` now uses            |
+| `:app`      | **`ua.bookloom.app.cli`**  | **New package, opened to Guice, not exported**: `TranslateCommand` — parses `<book> [--to <lang>] [--from <lang>] [--overwrite]`, runs one job with `ModelSelection("pseudo", "uppercase")` and no pause points, and reports exit 0/1/2                                |
+
+Also: the `translate` `JavaExec` task in `modules/app/build.gradle.kts`, with `workingDir = rootDir` and the system
+property `guice_bytecode_gen_option=DISABLED` (Guice 7.0.0 otherwise reaches `sun.misc.Unsafe`, which JDK 25 reports
+on the console of every run). No new third-party dependency: `:llm` and `:pipeline` add `slf4j-api`, and
+`:document`/`:llm`/`:pipeline` add `logback-classic` to their test runtime only, both already in the version
+catalog (ADR-0033, this change's design.md).
+
+**Where the code actually is, as of the seventh archived change plus `add-translation-engine-and-cli` (code-complete,
+pending archive).** `:api`, `:util`, `:document`, `:llm`, `:pipeline` and `:app` carry real production code.
+`:persistence` is still a one-line Guice `AbstractModule` stub, and `:ui` holds an app-shell placeholder with no
 FXML anywhere. Within `:document`, all four formats read **and** write, and **inline masking is now real**:
 `BlockSegmentWalker`'s tree-format masking (`TreeMasker`, in `.model`), Markdown's masking (`MarkdownMasker`, in
 `.md`) and `TxtReader` each populate a real `masked` form and an ordered `placeholders` map, and
@@ -172,7 +196,10 @@ placeholder-multiset gate and the restore pass. `DocumentPort.unmask` runs that 
 segment; a multiset mismatch is `ErrorCode.validation` with no repair attempt. **`ua.bookloom.document.mask` is real
 but `module-info.java` never names it in an `opens`/`exports` clause, and that is correct, not an oversight**: it
 holds only static-utility classes and records, no injectable service, so Guice needs no reflective `opens` on it,
-and it is consumed only from inside `:document`, so it needs no `exports` either.
+and it is consumed only from inside `:document`, so it needs no `exports` either. Within `:llm` and `:pipeline`, the
+chat-model contract and the translation engine, job and export are real, as the table above describes, and a book
+of any of the four formats can be translated end to end from `./gradlew :app:translate`; the real provider clients,
+the inference gate, retry, chunking, QA, the judge, glossary and persistence are not.
 
 Every other package row in `#inventory` is **still unwritten** — cite it freely as a target, but expect to create it.
 
@@ -221,8 +248,8 @@ imports no other internal module.
 |------------------------------------|------------|--------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------|
 | `:api/ua.bookloom.api`             | Foundation | `Result<T>`, `AppError`, `ErrorCode`, safe-details allowlist                                                           | `:api/src/test/java/ua/bookloom/api` · Unit             |
 | `:api/ua.bookloom.api.document`    | Foundation | `DocumentPort`, `Segment`, `Unit`, skeleton DTOs                                                                       | `:api/src/test/java/ua/bookloom/api/document` · Unit    |
-| `:api/ua.bookloom.api.llm`         | Foundation | `Provider`, `ProviderProfile`, `ProviderFactory`, `ChatRequest`/`ChatResponse`                                         | `:api/src/test/java/ua/bookloom/api/llm` · Unit         |
-| `:api/ua.bookloom.api.pipeline`    | Foundation | `TranslationEngine`, `JobHandle`, `QualityDial`, segment-status enum                                                   | `:api/src/test/java/ua/bookloom/api/pipeline` · Unit    |
+| `:api/ua.bookloom.api.llm`         | Foundation | **Real** (`add-translation-engine-and-cli`): `ChatModel`, `ChatRequest`, `ChatMessage`, `ChatRole`, `ChatResponse`, `FinishReason`, `ChatModelFactory`, `ModelSelection`. Still planned under the same package, one owner rather than two: `Provider`, `ProviderProfile`, `ProviderFactory` | `:api/src/test/java/ua/bookloom/api/llm` · Unit         |
+| `:api/ua.bookloom.api.pipeline`    | Foundation | **Real** (`add-translation-engine-and-cli`): `TranslationEngine`, `TranslationRequest`, `TranslationJob`, `JobListener`, `Subscription`, `JobState`, `JobStage`, `PausePoint`, `PauseReason`, the sealed `JobEvent` and its records, `JobProgress`, `JobReport`, `FlaggedSegment` — no separate `JobHandle`; `TranslationJob` is both the run and its own handle. Still planned: `QualityDial` | `:api/src/test/java/ua/bookloom/api/pipeline` · Unit    |
 | `:api/ua.bookloom.api.persistence` | Foundation | Repository ports: `ProjectRepository`, `SegmentRepository`, `GlossaryRepository`, `TmRepository`, `SettingsRepository` | `:api/src/test/java/ua/bookloom/api/persistence` · Unit |
 
 ### :util {#module-util}
@@ -230,7 +257,7 @@ imports no other internal module.
 Small stateless helpers. Depends only on `:api`.
 
 | Package path                   | Layer      | Responsibility                                                                                                                                                                                                                                  | Test target · tier                                  |
-|----------------------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+|----------------------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|
 | `:util/ua.bookloom.util.text`  | Foundation | Text normalization, whitespace, placeholder helpers                                                                                                                                                                                             | `:util/src/test/java/ua/bookloom/util/text` · Unit  |
 | `:util/ua.bookloom.util.paths` | Foundation | **App-paths resolver** — per-OS data/log/config dir resolution, dev/prod `-Dev` separation via `isDev`, first-run creation, and the process **single-instance lock-file path**. Runs pre-injector, before logging and SQLite (DD-39, ADR-0015). | `:util/src/test/java/ua/bookloom/util/paths` · Unit |
 | `:util/ua.bookloom.util.io`    | Foundation | Atomic file writes, temp files, low-level IO helpers (not path resolution — see `util.paths`)                                                                                                                                                   | `:util/src/test/java/ua/bookloom/util/io` · Unit    |
@@ -244,7 +271,7 @@ fidelity. FX-free. Implements `DocumentPort`.
 
 | Package path                            | Layer    | Responsibility                                                 | Test target · tier                                                         |
 |-------------------------------------------|----------|--------------------------------------------------------------------|--------------------------------------------------------------------------------|
-| `:document/ua.bookloom.document`        | Services | `DocumentService` (impl of `DocumentPort`), format dispatch    | `:document/src/test/java/ua/bookloom/document` · Integration               |
+| `:document/ua.bookloom.document`        | Services | `DocumentService` (impl of `DocumentPort`), format dispatch, `close` released through each reader's registry (`add-translation-engine-and-cli`) | `:document/src/test/java/ua/bookloom/document` · Integration               |
 | `:document/ua.bookloom.document.model`  | Services | Skeleton, segment list, `Unit` structures (seam F1)            | `:document/src/test/java/ua/bookloom/document/model` · Unit                |
 | `:document/ua.bookloom.document.epub`   | Services | EPUB 2/3 read/write, mimetype-first repackage                  | `:document/src/test/java/ua/bookloom/document/epub` · Integration (golden) |
 | `:document/ua.bookloom.document.fb2`    | Services | FB2 / `.fb2.zip` read/write, encoding preservation             | `:document/src/test/java/ua/bookloom/document/fb2` · Integration (golden)  |
@@ -270,8 +297,9 @@ Provider abstraction with two client implementations (Ollama-native + OpenAI-com
 response handling, `InferenceGate`, retry, HTTP→typed error mapping, three-stage + preflight verification. FX-free.
 
 | Package path                     | Layer    | Responsibility                                                                                                                                                                                                                   | Test target · tier                                                                  |
-|------------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
-| `:llm/ua.bookloom.llm`           | Services | `InferenceService`, module facade                                                                                                                                                                                                | `:llm/src/test/java/ua/bookloom/llm` · Integration (WireMock)                       |
+|------------------------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| `:llm/ua.bookloom.llm`           | Services | **Real** (`add-translation-engine-and-cli`): `LlmModule` (binds `ChatModelFactory`), `ChatModelFactoryImpl` (resolves the provider id `pseudo`, `ErrorCode.validation` otherwise). Still planned: `InferenceService`, `ProviderFactoryImpl` | `:llm/src/test/java/ua/bookloom/llm` · Unit today; Integration (WireMock) once a real client lands |
+| `:llm/ua.bookloom.llm.pseudo`    | Services | **Real, not planned** (`add-translation-engine-and-cli`): `PseudoChatModel` — deterministic, offline, upper-cases the last user message, keeps `⟦gN⟧` tokens and character references unchanged, finishes `STOP`. Neither exported nor opened — see below | `:llm/src/test/java/ua/bookloom/llm` (`ChatModelFactoryImplTest`) · Unit            |
 | `:llm/ua.bookloom.llm.provider`  | Services | `Provider` port, `ProviderProfile` per-kind data, `ProviderFactory` (kind → client)                                                                                                                                              | `:llm/src/test/java/ua/bookloom/llm/provider` · Unit                                |
 | `:llm/ua.bookloom.llm.client`    | Services | The two client impls: `OllamaClient` (native `/api/*`, `options`) + `OpenAiCompatibleClient` (`/v1/*`); shared response handling (structured-output request, reasoning/fence strip, tolerant parse, repair retry, text fallback) | `:llm/src/test/java/ua/bookloom/llm/client` · Integration (WireMock, both dialects) |
 | `:llm/ua.bookloom.llm.discovery` | Services | Model discovery (`supportsModelDiscovery`) + first-class manual model-ID entry; translator/judge slots                                                                                                                           | `:llm/src/test/java/ua/bookloom/llm/discovery` · Integration (WireMock)             |
@@ -281,6 +309,12 @@ response handling, `InferenceGate`, retry, HTTP→typed error mapping, three-sta
 | `:llm/ua.bookloom.llm.error`     | Services | HTTP/transport → typed `AppError`/`ErrorCode` mapping                                                                                                                                                                            | `:llm/src/test/java/ua/bookloom/llm/error` · Unit                                   |
 | `:llm/ua.bookloom.llm.dto`       | Services | Jackson JSON records for both dialects (opened to Jackson only; `@JsonInclude(NON_NULL)`, tolerant)                                                                                                                              | `:llm/src/test/java/ua/bookloom/llm/dto` · Unit                                     |
 
+**`ua.bookloom.llm.pseudo` is real, and its non-membership in `module-info.java`'s `exports`/`opens` is deliberate**,
+the same pattern `ua.bookloom.document.mask` uses above: `PseudoChatModel` is a plain, no-collaborator class, so
+Guice needs no reflective `opens` on it, and `ChatModelFactoryImpl` — in the exported base package — is the only
+thing that constructs one. JPMS itself, not just the `ports-not-concretes` ArchUnit rule, is what stops `:pipeline`
+from naming the concrete class; callers use `ChatModel`/`ChatModelFactory` in `:api.llm` instead.
+
 ### :pipeline {#module-pipeline}
 
 The translation engine: chunking, context assembly, tiered translate→QA→judge→self-heal loop, name/term dictionary,
@@ -289,7 +323,7 @@ Implements `TranslationEngine`.
 
 | Package path                              | Layer         | Responsibility                                                     | Test target · tier                                                            |
 |----------------------------------------------|---------------|------------------------------------------------------------------------|-------------------------------------------------------------------------------|
-| `:pipeline/ua.bookloom.pipeline`          | Orchestration | `TranslationEngineImpl`, job lifecycle                             | `:pipeline/src/test/java/ua/bookloom/pipeline` · Integration                  |
+| `:pipeline/ua.bookloom.pipeline`          | Orchestration | **Real** (`add-translation-engine-and-cli`): the public `TranslationEngineImpl` (request checks); the package-private `TranslationJobImpl` (the pausable job), `SegmentTranslator` (prompt + reply decision) and `BookExporter` (reopen-validate-move) — the only package `:pipeline` opens to Guice | `:pipeline/src/test/java/ua/bookloom/pipeline` · Integration                  |
 | `:pipeline/ua.bookloom.pipeline.chunk`    | Orchestration | Paragraph-grouped chunking, sentence-split overflow (ICU4J)        | `:pipeline/src/test/java/ua/bookloom/pipeline/chunk` · Unit                   |
 | `:pipeline/ua.bookloom.pipeline.context`  | Orchestration | Context-package assembler (seam F5), edge placement                | `:pipeline/src/test/java/ua/bookloom/pipeline/context` · Unit                 |
 | `:pipeline/ua.bookloom.pipeline.prompt`   | Orchestration | Prompt building, JSON-array draft request/parse                    | `:pipeline/src/test/java/ua/bookloom/pipeline/prompt` · Unit                  |
@@ -322,7 +356,7 @@ JavaFX presentation: launcher glue, FXML views + controllers, viewmodels, observ
 screens/dialogs/notifications, theming, i18n. With `:app`, the only module that `requires javafx.*`.
 
 | Package path                | Layer        | Responsibility                                                                                                                                   | Test target · tier                                      |
-|--------------------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
+|--------------------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
 | `:ui/ua.bookloom.ui`        | Presentation | UI module facade, navigation host                                                                                                                | `:ui/src/test/java/ua/bookloom/ui` · UI (TestFX)        |
 | `:ui/ua.bookloom.ui.view`   | Presentation | FXML controllers (opened to `javafx.fxml`, Guice)                                                                                                | `:ui/src/test/java/ua/bookloom/ui/view` · UI (TestFX)   |
 | `:ui/ua.bookloom.ui.screen` | Presentation | Screen controllers: Projects, Import, Book Brief, Structure, Names & Style, Translating, Review, Export, Settings                                | `:ui/src/test/java/ua/bookloom/ui/screen` · UI (TestFX) |
@@ -338,9 +372,10 @@ screens/dialogs/notifications, theming, i18n. With `:app`, the only module that 
 composition root, two-phase init, single-instance lock wiring.
 
 | Package path           | Layer        | Responsibility                                                                                                                                                                                                                                           | Test target · tier                                 |
-|--------------------------|--------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|
-| `:app/ua.bookloom.app` | Presentation | `Application` subclass, Guice composition root, two-phase init, `AppVersion`, and the launcher→application startup handoff | `:app/src/test/java/ua/bookloom/app` · Integration |
-| `:app/ua.bookloom.app.bootstrap` | Presentation | Everything that runs **before logging exists**: `Launcher` (does not extend `Application`), the **process single-instance lock** — acquired pre-injector (`FileChannel.tryLock` on the `:util.paths`-resolved lock file) before the DB opens (see `#lock-ownership`) — the programmatic Logback configuration, and the pre-logging failure dialog. ArchUnit `bootstrap-no-static-logger` scopes to this package, so putting a class here **is** the declaration that it runs pre-logging | `:app/src/test/java/ua/bookloom/app/bootstrap` · Integration |
+|--------------------------|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|
+| `:app/ua.bookloom.app` | Presentation | `Application` subclass, Guice composition root, two-phase init, `AppVersion`, the launcher→application startup handoff, and **`CoreModules`** (`add-translation-engine-and-cli`) — the Guice graph (`AppModule`, `DocumentModule`, `LlmModule`, `PersistenceModule`, `PipelineModule`) `BookLoomApplication` and `TranslateLauncher` share, so the desktop app and the command line never wire different graphs | `:app/src/test/java/ua/bookloom/app` · Integration |
+| `:app/ua.bookloom.app.bootstrap` | Presentation | Everything that runs **before logging exists**: `Launcher` (does not extend `Application`), **`TranslateLauncher`** (`add-translation-engine-and-cli`; repeats `Launcher`'s pre-injector steps without starting JavaFX, for `./gradlew :app:translate`), the **process single-instance lock** — acquired pre-injector (`FileChannel.tryLock` on the `:util.paths`-resolved lock file) before the DB opens (see `#lock-ownership`) — the programmatic Logback configuration (`LoggingBootstrap`, plus the pure `LoggingLevelResolver`/`ResolvedLogLevel` the `BOOKLOOM_LOG_LEVEL`/`bookloom.log.level` switch uses), and the pre-logging failure dialog. ArchUnit `bootstrap-no-static-logger` scopes to this package, so putting a class here **is** the declaration that it holds no static logger | `:app/src/test/java/ua/bookloom/app/bootstrap` · Integration |
+| `:app/ua.bookloom.app.cli` | Presentation | **New package, `add-translation-engine-and-cli`, opened to Guice, not exported**: `TranslateCommand` — parses `<book> [--to <lang>] [--from <lang>] [--overwrite]`, runs one `TranslationJob` with `ModelSelection("pseudo", "uppercase")` and no pause points enabled, and reports exit 0/1/2 | `:app/src/test/java/ua/bookloom/app/cli` · Integration |
 
 ## non-module-citable-targets {#non-module-citable-targets}
 

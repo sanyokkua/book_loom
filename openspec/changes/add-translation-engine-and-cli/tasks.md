@@ -328,7 +328,7 @@ context. These rules apply to every task:
 
 ## 6. Documentation
 
-- [ ] 6.1 Update the specification clauses this change outgrows and the project documents that describe the code. Stale docs send the next reader down the wrong path. → docs
+- [x] 6.1 Update the specification clauses this change outgrows and the project documents that describe the code. Stale docs send the next reader down the wrong path. → docs
   - **Read:** design.md; ADR-0033; the code as built.
   - **Change, specification:**
     - `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`: `TranslationJob` instead of
@@ -402,7 +402,7 @@ context. These rules apply to every task:
 
 ## 7. Gate
 
-- [ ] 7.1 Update `docs/implementation_plan/01_MODULE_INVENTORY.md` with the new packages in `:api` and `:app` and the new classes in `:llm` and `:pipeline`, so the module map matches the code. → docs
+- [x] 7.1 Update `docs/implementation_plan/01_MODULE_INVENTORY.md` with the new packages in `:api` and `:app` and the new classes in `:llm` and `:pipeline`, so the module map matches the code. → docs
   - **Read:** `docs/implementation_plan/01_MODULE_INVENTORY.md` `#module-api`, `#module-llm`, `#module-pipeline`,
     `#module-app` and its as-built status section.
   - **Change:** `#module-api`: `ua.bookloom.api.llm` and `ua.bookloom.api.pipeline` as real, keeping

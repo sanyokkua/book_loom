@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-09-15
 **Cross-references:** `docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md`,
 `docs/specification/02_Architecture/09_ERROR_HANDLING.md`, `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md`
 
@@ -38,14 +38,16 @@ module ua.bookloom.api {
     requires static org.jspecify;        // annotations only
     exports ua.bookloom.api;            // Result, AppError, ErrorCode
     exports ua.bookloom.api.document;   // DocumentPort, Segment, Unit records
-    exports ua.bookloom.api.llm;        // Provider, ChatRequest/Response, ProviderProfile
-    exports ua.bookloom.api.pipeline;   // TranslationEngine, JobHandle, QualityDial
+    exports ua.bookloom.api.llm;        // built: ChatModel, ChatRequest/Response, ChatModelFactory, ModelSelection — Provider/ProviderProfile follow with the real clients (04_LLM_INTEGRATION.md#chat-contracts)
+    exports ua.bookloom.api.pipeline;   // built: TranslationEngine, TranslationJob, JobEvent, JobProgress, JobReport — QualityDial follows with the quality dial
     exports ua.bookloom.api.persistence;// repositories: ProjectRepo, SegmentRepo, ...
 }
 ```
 
-**Ports declared here, implemented elsewhere:** `DocumentPort` (→ `:document`), `Provider`/`ProviderFactory` (→ `:llm`),
-`TranslationEngine` (→ `:pipeline`), the repository interfaces (→ `:persistence`).
+**Ports declared here, implemented elsewhere:** `DocumentPort` (→ `:document`), `ChatModelFactory` (→ `:llm`; today
+`ChatModelFactoryImpl` resolves only the built-in offline `pseudo` provider — `Provider`/`ProviderFactory` follow with
+the real clients, `04_LLM_INTEGRATION.md#provider-architecture`), `TranslationEngine` (→ `:pipeline`), the repository
+interfaces (→ `:persistence`).
 
 ### util {#module-util}
 
@@ -90,19 +92,29 @@ module ua.bookloom.document {
 inference (`ChatRequest`/`ChatResponse`), `InferenceGate`, retry, HTTP→typed `AppError` mapping, three-stage
 verification. FX-free.
 
+**Built so far** (`add-translation-engine-and-cli`, ADR-0033): the engine-facing `ChatModel`/`ChatModelFactory`
+contract lives in `:api.llm`; `ua.bookloom.llm.ChatModelFactoryImpl` resolves the provider id `pseudo` to
+`ua.bookloom.llm.pseudo.PseudoChatModel` — a deterministic, offline model that upper-cases the last user message and
+finishes `STOP` — and any other provider id, or a blank model id, to `ErrorCode.validation`. `ua.bookloom.llm.pseudo`
+is deliberately **neither exported nor opened**, so JPMS (not just `ports-not-concretes`) stops `:pipeline` from
+naming the concrete class. Everything below this point — the `Provider` port, real clients, discovery, the gate,
+retry, HTTP mapping and verification — is not built yet.
+
 ```
 module ua.bookloom.llm {
     requires ua.bookloom.api;
     requires ua.bookloom.util;
-    requires java.net.http;                 // JDK HttpClient
-    requires com.fasterxml.jackson.databind;
-    requires com.fasterxml.jackson.datatype.jsr310;
+    requires java.net.http;                 // JDK HttpClient — required since DD-01, unused until a real client lands
+    requires org.slf4j;                     // ChatModelFactoryImpl and PseudoChatModel both log
     requires com.google.guice;              // this module owns a Guice Module (constructor injection)
-    exports ua.bookloom.llm;               // InferenceService, ProviderFactory
-    opens ua.bookloom.llm.dto to com.fasterxml.jackson.databind; // JSON records
+    exports ua.bookloom.llm;               // ChatModelFactoryImpl
     opens ua.bookloom.llm to com.google.guice; // Guice reflects on the impl for injection
+    // ua.bookloom.llm.pseudo is neither exported nor opened (see above)
 }
 ```
+
+Jackson, the `dto` package and `com.fasterxml.jackson.datatype.jsr310` arrive with the real HTTP clients
+(`04_LLM_INTEGRATION.md#client-construction`); there is no wire format to serialize yet.
 
 ### pipeline {#module-pipeline}
 
@@ -110,21 +122,30 @@ module ua.bookloom.llm {
 name/term dictionary, context-aware TM, rolling summary, deferred-resolution + backward revision, prompt builder,
 quality dial. FX-free. Implements `TranslationEngine`.
 
+**Built so far** (`add-translation-engine-and-cli`, ADR-0033): the public `TranslationEngineImpl` (request checks —
+language pattern, matching `BookFormat`, matching FB2 container, a destination that is not the source — before
+creating a job); the package-private `TranslationJobImpl` (pause/resume/cancel at the segment, section, stage and
+error boundaries, `08_THREADING_CONCURRENCY.md#cancellation`), `SegmentTranslator` (prompt building and the
+accept/flag/stop decision) and `BookExporter` (reopen-validate-move). Chunking, context assembly, QA, the judge,
+dictionaries, TM, the rolling summary and revision are not built yet.
+
 ```
 module ua.bookloom.pipeline {
     requires ua.bookloom.api;
     requires ua.bookloom.util;
-    requires ua.bookloom.document;   // for reassembly hand-off (via port at api where possible)
+    requires ua.bookloom.document;
     requires ua.bookloom.llm;
     requires ua.bookloom.persistence;
-    requires com.ibm.icu;             // ICU4J BreakIterator (sentence split on overflow)
-    requires com.github.pemistahl.lingua; // language detection
-    requires com.google.guice;        // this module owns a Guice Module (constructor injection)
-    exports ua.bookloom.pipeline;    // TranslationEngineImpl
-    provides ua.bookloom.api.pipeline.TranslationEngine with ua.bookloom.pipeline.TranslationEngineImpl;
-    opens ua.bookloom.pipeline to com.google.guice; // Guice reflects on the impl for injection
+    requires org.slf4j;                // TranslationEngineImpl, TranslationJobImpl, SegmentTranslator, BookExporter log
+    requires com.google.guice;         // this module owns a Guice Module (constructor injection)
+    exports ua.bookloom.pipeline;     // TranslationEngineImpl only — the job, translator and exporter stay package-private
+    opens ua.bookloom.pipeline to com.google.guice; // Guice reflects on TranslationEngineImpl for injection
 }
 ```
+
+`com.ibm.icu` (sentence-split overflow) and `com.github.pemistahl.lingua` (language detection) arrive with chunking
+(change 12); there is no `provides ua.bookloom.api.pipeline.TranslationEngine with ...` clause yet — Guice, not
+`ServiceLoader`, resolves the binding today.
 
 ### persistence {#module-persistence}
 

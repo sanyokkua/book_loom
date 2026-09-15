@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** anyone picking up the next unit of work **Last Updated:**
-2026-08-11 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
+2026-09-15 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
 `docs/adr/ADR-0023-backend-complete-milestone-and-backlog-interstitials.md`,
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`,
 `docs/adr/ADR-0030-synthesize-a-missing-epub-mimetype-entry-on-write.md`, `docs/implementation_plan/07_ROADMAP.md`,
@@ -17,11 +17,12 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 
 ## where-this-stands {#where-this-stands}
 
-**Seven changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three of
-four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11). The owner's stated next
-unit of work is the walking skeleton (one EPUB through one local model to a translated EPUB, from the UI — see
-`docs/Architecture.md` §9); the interstitial `settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 when
-D2 and D11 were fixed directly.
+**Seven changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
+of four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11).
+`add-translation-engine-and-cli` is code-complete and gate-green, pending archive: it delivered the walking skeleton
+the owner named as the next unit of work — a book of any of the four formats through the whole pipeline from the
+command line with a deterministic pseudo model (`docs/Architecture.md` §9) — making `:llm` and `:pipeline` real. The
+interstitial `settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 when D2 and D11 were fixed directly.
 
 | Archived | Change | What it shipped |
 |---|---|---|
@@ -37,9 +38,9 @@ D2 and D11 were fixed directly.
 
 | Metric | Value |
 |---|---|
-| Capabilities with a built-behaviour spec | **1 of 16** (`document-round-trip`) |
-| Tests | **616** across the four real modules; the test's name and its one-line comment say what it proves — requirement-id markers were retired on 2026-09-11 (ADR-0032) |
-| Modules carrying real production logic | **4 of 8** (`:api`, `:util`, `:document`, `:app`) |
+| Capabilities with a built-behaviour spec | **1 of 16** (`document-round-trip`) — `add-translation-engine-and-cli`'s `inference`/`translation-pipeline`/`resume`/`export` specs live under its own `openspec/changes/` directory until it is archived |
+| Tests | **616** at the last archive (2026-09-11), across the four then-real modules; `add-translation-engine-and-cli` (built, pending archive) adds a full suite across `:llm`, `:pipeline` and `:app` on top of that — the test's name and its one-line comment say what it proves, requirement-id markers were retired on 2026-09-11 (ADR-0032) |
+| Modules carrying real production logic | **6 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:app`) — `add-translation-engine-and-cli` made the last two real; not yet archived |
 | Stages complete | **A only**, of A · B · B′ · C · D · E |
 
 **Inline masking now exists — the previous edition of this section said it did not.**
@@ -57,12 +58,12 @@ attempt, on any mismatch (`FR-DOC-05`). Measured against the 213-book corpus: 30
 segments (0.38 per segment, 11.5% of segments carrying any at all, worst single segment 1,015), and every openable
 book restores every segment from its own masked form. What the gate does **not** close is recorded below as
 decision debt D7–D9 — a swapped or concatenated placeholder pair still satisfies the multiset, and the flat
-token→fragment map carries no pairing information; both stay open by design until `add-chunking-and-context-
-assembly` (change 12). D10 was in that list and is not any more: a **second** independent audit of change 5,
-run with clean context after its first audit's fixes were green, measured that a pipe in a translated cell
-collapses a four-cell row into one paragraph, and change 5 now refuses it. That audit is also why this section
-should be read with the eight further defects it found in mind — three of which the *first* audit's own fixes
-had introduced.
+token→fragment map carries no pairing information; both stay open by design until
+`add-chunking-and-context-assembly` (change 12). D10 was in that list and is not any more: a **second** independent
+audit of change 5, run with clean context after its first audit's fixes were green, measured that a pipe in a
+translated cell collapses a four-cell row into one paragraph, and change 5 now refuses it. That audit is also why
+this section should be read with the eight further defects it found in mind — three of which the *first* audit's
+own fixes had introduced.
 
 Everything below the archived rows remains unplanned.
 
@@ -497,7 +498,7 @@ work is ever split across people.
 **`add-api-contract-floor-and-stubs` runs after change 2 and heads Stage B′**, in parallel with change 3 (ADR-0023).
 Without it Stage B′ is parallel only on paper: a control library has no port to build against until Stage C is well
 under way, because today every port arrives with the change that implements it. It **covers** every `:api` contract
-change 3 does not own — `Project`, `BookBrief`, `QualityDial`, `ReviewMode`, `JobHandle`, `TranslationEngine`
+change 3 does not own — `Project`, `BookBrief`, `QualityDial`, `ReviewMode`, `TranslationEngine`
 (`02_Architecture/02_MODULES_AND_LAYERING.md:42`, which no backlog entry previously claimed), the repository ports
 (`06_DATA_MODEL_SQLITE.md#tables`), and `Provider`/`ProviderProfile`/`ProviderFactory`/`ChatRequest`/`ChatResponse`
 (`04_LLM_INTEGRATION.md`) — plus **in-memory stub implementations** shipped as `:api` test fixtures so any module's
@@ -537,17 +538,25 @@ also the largest stage by some distance: **twelve changes, and all three stub mo
 | # | Change | Capability |
 |---|---|---|
 | 8 | `add-local-storage` | `local-storage` **NEW** |
-| 9 | `add-resume-checkpoints` | `resume` **NEW** |
+| 9 | `add-resume-checkpoints` | `resume` MOD |
 | 10 | `add-llm-provider-abstraction` | `llm-provider` **NEW** |
-| 11 | `add-inference-gate-and-response-contract` | `inference` **NEW** |
-| 12 | `add-chunking-and-context-assembly` | `translation-pipeline` **NEW** |
+| 11 | `add-inference-gate-and-response-contract` | `inference` MOD |
+| 12 | `add-chunking-and-context-assembly` | `translation-pipeline` MOD |
 | — | `add-prompt-catalog-and-output-contract` | `translation-pipeline` MOD |
 | 13 | `add-translation-draft-loop` | `translation-pipeline` MOD |
 | 14 | `add-deterministic-qa-gate` | `quality-gates` **NEW** |
 | 15 | `add-consistency-stack` | `translation-pipeline` MOD · `glossary` **NEW** |
 | 16 | `add-judge-and-self-heal` | `quality-gates` MOD |
-| — | `add-project-lifecycle-and-orchestration` | `book-import` MOD · `book-brief` **NEW** · `export` **NEW** · `translation-pipeline` MOD |
+| — | `add-project-lifecycle-and-orchestration` | `book-import` MOD · `book-brief` **NEW** · `export` MOD · `translation-pipeline` MOD |
 | — | `add-stub-provider-whole-book-e2e` | *(skip_specs)* |
+
+**`add-translation-engine-and-cli` ran ahead of this stage's planned order**, mirroring how Stage A/B's interstitials
+run outside the numbered sequence, and is why four of the rows above read MOD rather than the NEW the original plan
+expected. Built directly against the code as it stood, it created `inference`, `translation-pipeline`, `resume` and
+`export` itself: a `ChatModel`/`ChatModelFactory` contract bound once per job plus the offline `pseudo` provider
+(`:llm`), and a pausable `TranslationEngine`/`TranslationJob` that translates a book segment by segment and exports
+it only after the written file re-opens with the source's segment count (`:pipeline`) — driven today from
+`./gradlew :app:translate` (ADR-0033). It takes no number of its own, the same way every other interstitial does not.
 
 Seams established here: **F6/F7** (checkpoints, settings KV) by 8–9; **F3** (provider abstraction) by 10; **F4**
 (single-flight gate) by 11; **F5** (context-package assembler) by 12.
@@ -576,13 +585,16 @@ one included: change 15's own capability row above is `translation-pipeline` MOD
 masking work rides along as a `document-round-trip` MOD.
 
 **`add-project-lifecycle-and-orchestration` runs after change 16** (ADR-0023). It is the FX-free layer between the
-engine and the screens, previously parked inside changes 19 and 23. It **covers:** the import service (open → detect →
-hash → persist project, units and segments; FR-IMPORT-01/04/05/08); the `Project` and **Book Brief** model and its
-`projects.brief_json` persistence (FR-BRIEF-01..07 — 31 requirements, the second-largest FR area); the job lifecycle in
-`:pipeline/ua.bookloom.pipeline` (`TranslationEngineImpl`, `JobHandle`, start/pause/resume/cancel); and the export
-service — apply accepted targets, `DocumentPort.write`, **validate the artifact is well-formed before finalizing**
-(FR-EXPORT-03), side exports (FR-EXPORT-05) and the final consistency-pass toggle (FR-EXPORT-06). Changes 19, 21 and 23
-shrink to the screens their names describe.
+engine and the screens, previously parked inside changes 19 and 23. **Its job-lifecycle and export-validation scope
+shrank once `add-translation-engine-and-cli` shipped ahead of it**: `TranslationEngine`/`TranslationJob`
+(`:pipeline/ua.bookloom.pipeline` — the public `TranslationEngineImpl` and the package-private `TranslationJobImpl`,
+not `JobHandle`) with start/pause/resume/cancel, and `BookExporter`'s reopen-and-compare-segment-count check before
+publishing (FR-EXPORT-03), are both real already. What remains here: the import service (open → detect → hash →
+persist project, units and segments; FR-IMPORT-01/04/05/08); the `Project` and **Book Brief** model and its
+`projects.brief_json` persistence (FR-BRIEF-01..07 — 31 requirements, the second-largest FR area); binding a
+persisted project and its settings to a real `TranslationJob` run; and the rest of the export service — side exports
+(FR-EXPORT-05) and the final consistency-pass toggle (FR-EXPORT-06). Changes 19, 21 and 23 shrink to the screens
+their names describe.
 
 ### backend-complete-milestone {#backend-complete-milestone}
 
@@ -675,17 +687,17 @@ The 16 capabilities, mapped from the frozen FR areas so the `FR-*` join key hold
 | `theming`              | fr-ui (FR-UI-05) + fr-theme    | change 6      |
 | `app-shell`            | fr-ui (FR-UI-01..04, FR-UI-09) | change 7 or 17|
 | `local-storage`        | fr-persist                     | change 8      |
-| `resume`               | fr-resume                      | change 9      |
+| `resume`               | fr-resume                      | `add-translation-engine-and-cli` |
 | `llm-provider`         | fr-prov, fr-model              | change 10     |
-| `inference`            | fr-infer                       | change 11     |
-| `translation-pipeline` | fr-algo                        | change 12     |
+| `inference`            | fr-infer                       | `add-translation-engine-and-cli` |
+| `translation-pipeline` | fr-algo                        | `add-translation-engine-and-cli` |
 | `quality-gates`        | fr-qa                          | change 14     |
 | `glossary`             | fr-gloss                       | change 15     |
 | `localization`         | fr-ui (FR-UI-06/08) + fr-i18n  | change 18     |
 | `book-import`          | fr-import                      | `add-metadata-units-and-language-detection` (Stage B) |
 | `book-brief`           | fr-brief                       | `add-project-lifecycle-and-orchestration` (Stage C)   |
 | `review-queue`         | fr-review                      | change 22     |
-| `export`               | fr-export                      | `add-project-lifecycle-and-orchestration` (Stage C)   |
+| `export`               | fr-export                      | `add-translation-engine-and-cli` |
 | `settings`             | fr-settings                    | change 24     |
 | `notifications`        | fr-notif                       | change 25     |
 

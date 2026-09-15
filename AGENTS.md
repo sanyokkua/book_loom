@@ -14,10 +14,12 @@ Flyway planned. Full inventory: `gradle/libs.versions.toml`.
 
 Real: `:api` (`Result`/`AppError`, document model, `DocumentPort`), `:util`, `:document` (four-format round trip,
 inline masking to `⟦gN⟧`, unmask behind a placeholder-multiset hard gate — verified on the owner's 216-book local corpus) and
-`:app` (boot, logging, single-instance lock, DI, an empty themed window). Empty: `:llm`, `:pipeline`, `:persistence`;
-`:ui` is a placeholder. **No book has been translated yet.** Next: `openspec/changes/add-translation-engine-and-cli` —
-one book of any format through the whole pipeline from the command line with a pseudo model, applied task by task —
-then real LLM clients and the UI, before any breadth (theming, persistence, QA, glossary).
+`:app` (boot, logging, single-instance lock, DI, an empty themed window). `:llm` (chat-model contract, factory,
+pseudo model) and `:pipeline` (translation engine, pausable job, checked export) are now real too, and a book of any
+of the four formats goes through the whole pipeline from the command line with the pseudo model. Empty:
+`:persistence`; `:ui` is a placeholder. Still missing are real LLM clients, the UI and persistence. Next come real
+LLM clients (Ollama-native and OpenAI-compatible), then the UI, before any breadth (theming, persistence, QA,
+glossary).
 
 ## Commands
 
