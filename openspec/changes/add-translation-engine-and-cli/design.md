@@ -119,6 +119,9 @@ interface TranslationJob {
 - `newJob` checks the request in memory and returns `ErrorCode.validation` when:
   - the target language, or a given source language, does not match `^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$`;
   - `BookFormat.ofFileName` finds no format for the source, or a different one for the destination;
+  - exactly one of the two names ends in `.fb2.zip`: `Fb2Writer` writes an FB2 book back in the container it came in,
+    and `FormatResolver` refuses a ZIP under a plain `.fb2` name, or plain XML under `.fb2.zip`, so the job would fail
+    only after translating the whole book;
   - the destination is the source: `Files.isSameFile` when the destination exists, otherwise equal normalized absolute
     paths.
 - `run()` refuses before any model call when the destination exists and overwrite is off, when the source does not
@@ -241,15 +244,22 @@ the readers, and `OpenEpubRegistry` is package-private.
   bootstrap path, the class declares no static logger (`bootstrap-no-static-logger`).
 - **`ua.bookloom.app.cli.TranslateCommand.run(List<String> args, PrintStream out)`** returns 0, 1 or 2.
   - Guice builds it (`@RequiredArgsConstructor(onConstructor_ = {@Inject})`) with `TranslationEngine` and
-    `ChatModelFactory`. `module-info` opens `ua.bookloom.app.cli` to `com.google.guice` and does not export it.
+    `ChatModelFactory`. The class and `run` are public, and `module-info` opens `ua.bookloom.app.cli` to
+    `com.google.guice` and does not export it. `TranslateLauncher` calls it directly: `bootstrap-no-static-logger`
+    checks only the static loggers of the bootstrap classes themselves, not the classes they call.
   - It gets its model with `ModelSelection("pseudo", "uppercase")`.
+  - On exit 2 it prints the reason, then the usage line, so a shell that split a book path containing spaces into two
+    arguments shows on the console.
   - Checkstyle bans only `LoggerFactory.getLogger(`, and nothing bans `System.out`. The report is the command's output,
     not logging.
 - **Gradle `translate`** is a `JavaExec` task set up like `run` (`mainClass`, `classpath`, `javaLauncher`), with
   `workingDir = rootDir`, so relative paths resolve from the repository root.
   - Gradle fails the task on any non-zero exit code. The exit codes are therefore tested on `TranslateCommand` and
     `TranslateLauncher`.
-  - The docs use `./gradlew -q :app:translate`.
+  - It sets the system property `guice_bytecode_gen_option` to `DISABLED`. Guice 7.0.0 otherwise defines classes
+    through `sun.misc.Unsafe`, and JDK 25 prints four WARNING lines on the console of every run. BookLoom uses no
+    Guice AOP, so constructing through reflection loses nothing.
+  - The docs use `./gradlew -q :app:translate`, quoting a book path that contains spaces inside `--args`.
 
 ### D8: logging — diagnostics are a requirement
 

@@ -76,4 +76,5 @@ run and explicit pause/resume (`FR-ALGO-01`, `FR-RESUME-03`, `01_Product/01_FUNC
     `02_Architecture/09_ERROR_HANDLING.md#partial-results`, `02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`
     and `02_Architecture/10_DI_AND_LIFECYCLE.md#guice-modules`;
   - `docs/Architecture.md`, `docs/DEVELOPMENT.md`, `AGENTS.md`, `docs/implementation_plan/CHANGE_BACKLOG.md` and
-    `docs/implementation_plan/01_MODULE_INVENTORY.md`.
+    `docs/implementation_plan/01_MODULE_INVENTORY.md`;
+  - a new `docs/next_features.md`, recording the gaps this change's review found and left for later.

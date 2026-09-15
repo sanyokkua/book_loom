@@ -184,7 +184,8 @@ anything. The failure is `ErrorCode.validation`, or whatever error opening the b
 - the target language, or a source language the request gives, is not a language code: two or three letters,
   optionally followed by subtags of two to eight letters or digits, each after a hyphen, such as `uk`, `en-US` or
   `zh-Hant`;
-- the destination's file type differs from the source's;
+- the destination's file type differs from the source's; a zipped FB2 book (`.fb2.zip`) and a plain one (`.fb2`) are
+  different file types, while `.md` and `.markdown` are both Markdown;
 - the destination is the source file;
 - the destination already exists and overwrite is off;
 - the source book cannot be opened;
@@ -194,11 +195,17 @@ anything. The failure is `ErrorCode.validation`, or whatever error opening the b
 `02_Architecture/09_ERROR_HANDLING.md#boundary-discipline`.
 In plain words: a job that cannot finish should fail before it costs a single model call. The target language becomes
 part of the output file name, so a value like `../x` must never get that far, and a translation must never be written
-over the book it was made from.
+over the book it was made from. An FB2 book is written back in the container it came in, so a zipped book given a
+plain name would fail its own re-open check only after the whole book was translated.
 
 #### Scenario: A path-like language code is refused
 
 - **WHEN** a job is requested with the target language `../x`
+- **THEN** the result is `ErrorCode.validation` and the model is never called
+
+#### Scenario: A zipped FB2 book is not written under a plain FB2 name
+
+- **WHEN** a job from `Book.fb2.zip` to `Book.uk.fb2` is requested
 - **THEN** the result is `ErrorCode.validation` and the model is never called
 
 #### Scenario: A destination that is the source is refused
@@ -247,8 +254,8 @@ command line drives exactly the job the translation screen will drive.
 
 ### Requirement: Report command-line failures with exit codes
 
-IF the arguments are invalid, THEN the translate command SHALL print its usage and exit with code 2 without writing
-anything. Invalid arguments are:
+IF the arguments are invalid, THEN the translate command SHALL print the reason, then its usage, and exit with code 2
+without writing anything. Invalid arguments are:
 
 - an unknown option;
 - no book path, or a path that does not exist;
@@ -264,11 +271,18 @@ existing output file unchanged. The error's technical details SHALL go only to t
 In plain words: a script can tell a usage mistake (2) from a book that did not make it (1), and a person reads the same
 short title and message a screen would show. The command line and the desktop app share one data folder and its lock,
 so they never run at the same time. The desktop app treats a second launch as a refusal and exits with 0; the command
-line exits with 1, because a script needs to know that nothing was written.
+line exits with 1, because a script needs to know that nothing was written. A shell that splits a book path containing
+spaces into two arguments is a common mistake, and only the reason line shows it.
 
 #### Scenario: An unknown option
 
 - **WHEN** the command runs with `Book.md --bogus`
+- **THEN** it prints `Invalid command arguments: unknown option` and then its usage
+- **AND** it exits with code 2 and writes no file
+
+#### Scenario: A book path that does not exist
+
+- **WHEN** the command runs with `Missing.md`, which does not exist
 - **THEN** it exits with code 2 and writes no file
 
 #### Scenario: A folder is not a book

@@ -258,9 +258,77 @@ context. These rules apply to every task:
     `BOOKLOOM_LOG_LEVEL=TRACE ./gradlew -q :app:translate --args="<a small .md book>"` writes the translated book
     beside it and its log lines to the dev log folder.
 
-## 5. Documentation
+## 5. Review fixes
 
-- [ ] 5.1 Update the specification clauses this change outgrows and the project documents that describe the code. Stale docs send the next reader down the wrong path. → docs
+- [ ] 5.1 Refuse, before any model call, a job whose FB2 source and destination differ in container (`.fb2.zip` against `.fb2`), and give `JobPauseLogger` its Lombok-generated private constructor. The writer re-emits the source's container, so such a job translated the whole book and only then failed at export with "This file could not be opened". → `:pipeline`
+  - **Read:** `specs/translation-pipeline/spec.md` "Refuse a job that cannot start"; design.md D2 ("Checks");
+    `checkFormats` in `modules/pipeline/src/main/java/ua/bookloom/pipeline/TranslationEngineImpl.java`; `writeBytes`
+    in `modules/document/src/main/java/ua/bookloom/document/fb2/Fb2Writer.java`; `confirmAgainstContent` in
+    `modules/document/src/main/java/ua/bookloom/document/FormatResolver.java`;
+    `modules/pipeline/src/main/java/ua/bookloom/pipeline/ExportPathAliases.java`, whose constructor annotation and
+    Checkstyle suppression `JobPauseLogger` copies (ADR-0024).
+  - **Change:** `checkFormats` also returns `ErrorCode.validation` when exactly one of the two file names ends in
+    `.fb2.zip`, in any letter case; `.md` and `.markdown` stay interchangeable. `JobPauseLogger` drops its
+    hand-written constructor for `@NoArgsConstructor(access = AccessLevel.PRIVATE)`.
+  - **Test first:** in `TranslationEngineImplTest`, a `@ParameterizedTest` over `Book.fb2.zip` to `Book.uk.fb2` and
+    `Book.fb2` to `Book.uk.fb2.zip`, each `ErrorCode.validation` with no model call, and `Book.markdown` to
+    `Book.uk.md` still returning a job.
+  - **Log:** DEBUG with both containers and the check's outcome, and WARN for the refusal naming the check
+    `same-container`, like the other request checks.
+  - **Done when:** `./gradlew :pipeline:build` is green.
+- [ ] 5.2 Make the command line print why it refused its arguments, keep JDK warnings off its console, call the command without reflection, and bring the log-level types in line with the coding rules. The owner's first real run failed on a path containing spaces and printed only the usage line, and every run printed four JVM warnings before its report. → `:app`
+  - **Read:** `specs/translation-pipeline/spec.md` "Translate one book from the command line" and "Report
+    command-line failures with exit codes"; design.md D7 and D8;
+    `modules/app/src/main/java/ua/bookloom/app/cli/TranslateCommand.java`;
+    `modules/app/src/main/java/ua/bookloom/app/bootstrap/{TranslateLauncher,LoggingBootstrap,LoggingLevelResolver,ResolvedLogLevel}.java`;
+    the `translate` task in `modules/app/build.gradle.kts`; rule 8 in
+    `modules/app/src/archTest/java/ua/bookloom/archtest/ArchitectureRules.java`; `.claude/rules/java-coding-style.md`.
+  - **Change:** on exit 2 the command prints `Invalid command arguments: <reason>`, then the usage line.
+    `TranslateCommand` and its `run` become public in their unexported package, and `TranslateLauncher` calls
+    `injector.getInstance(TranslateCommand.class).run(args, out)` instead of finding the class and method by name.
+    `ResolvedLogLevel.rejectedValue` becomes a `@Nullable String` component instead of an `Optional<String>`.
+    `LoggingLevelResolver` drops its hand-written constructor for `@NoArgsConstructor(access = AccessLevel.PRIVATE)`.
+    The `translate` task sets the system property `guice_bytecode_gen_option` to `DISABLED`, so Guice never reaches
+    `sun.misc.Unsafe`, which JDK 25 reports on the console; BookLoom uses no Guice AOP.
+  - **Test first:** `TranslateCommandTest.run_invalidArguments_printUsageExitTwoAndCreatesNoOutput` and
+    `TranslateLauncherTest.run_invalidArguments_logsParserReasonAndKeepsConsoleUserFacing` expect exactly the reason
+    line and the usage line, and gain the case `Missing.md`, a book path that does not exist.
+    `LoggingLevelResolverTest` and `LoggingBootstrapTest` follow the nullable component.
+  - **Log:** unchanged; the WARN line naming the reason stays.
+  - **Done when:** `./gradlew :app:build` is green, and `./gradlew -q :app:translate --args="'<a small .md book>'"`
+    prints only its report line.
+- [ ] 5.3 Close the test gaps the scenario audit found, where a regression in a real decision would still pass, or would hang the gate instead of failing it. A test that cannot fail, or never runs, proves nothing. → `:pipeline`, `:app`, `:llm`
+  - **Read:** this change's `specs/*/spec.md`;
+    `modules/pipeline/src/test/java/ua/bookloom/pipeline/{TranslationJobTestSupport,ScriptedChatModel,TestBooks,DiagnosticsTranslationJobTest}.java`;
+    `.claude/rules/testing.md`.
+  - **Change, tests only** (production code changes only for a defect a new test finds):
+    - through a real job: a requested source language `de` beats a declared `en`, and a book that declares no
+      language names no source language (`TranslationJobImpl.sourceLanguage` has no test);
+    - `DiagnosticsSegmentTranslatorTest.translate_traceEnabled_logsBookTextOnlyAtTrace` raises the level itself, with
+      the `ListAppender` approach of `DiagnosticsTranslationJobTest`, instead of running only when
+      `BOOKLOOM_LOG_LEVEL=TRACE` is set;
+    - `@Timeout` on the tests that call `run()` on the test thread and would wait forever on a regression: the pause
+      during export and the pre-run resume in `TranslationJobPauseControlTest`, and no pause points in
+      `TranslationJobPauseBoundariesTest`; the timeout interrupts the thread, which the job treats as a cancellation;
+    - one parameterized job test: a missing token, a whitespace reply with finish STOP, finish LENGTH, and the model
+      errors `validation`, `emptyCompletion` and `contextWindow` each flag the first of two segments, and the second
+      is still sent and ACCEPTED;
+    - stop codes in the report: a thrown model call ends Failed with `ErrorCode.internal`; an `unmask` returning
+      `internal` for the first segment ends Failed with that segment PENDING; an export failure with pause on error
+      off ends Failed carrying the write error;
+    - command line: an INFO run writes no TRACE line; a corrupt EPUB writes no file; "creates no output" compares
+      file contents, not only names; the strings `trace` and `LOUD` go through `LoggingLevelResolver` into
+      `LoggingBootstrap`, and `LOUD` writes exactly one WARN line;
+    - smaller assertions: an empty model id `""` is refused; the `Finished` event carries the report `run()` returns;
+      while the export-failure pause lasts, the destination does not exist; a changed source makes no write call;
+      the resent segment is ACCEPTED; a cancel while paused leaves 2 pending.
+  - **Log:** none beyond what the tests read.
+  - **Done when:** `./gradlew :pipeline:build :app:build :llm:build` is green, and the test reports show no test
+    skipped under the default log level.
+
+## 6. Documentation
+
+- [ ] 6.1 Update the specification clauses this change outgrows and the project documents that describe the code. Stale docs send the next reader down the wrong path. → docs
   - **Read:** design.md; ADR-0033; the code as built.
   - **Change, specification:**
     - `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md#cancellation`: `TranslationJob` instead of
@@ -281,7 +349,9 @@ context. These rules apply to every task:
       §5 (the command line and the log-level switch), §6, §7 and §9.
     - `docs/DEVELOPMENT.md`: §3 (`:llm` and `:pipeline` are no longer empty) and §5 (`./gradlew -q :app:translate`,
       its exit codes beside the desktop app's, `BOOKLOOM_LOG_LEVEL`, the app log folder and
-      `modules/<module>/build/test-logs/test.log`).
+      `modules/<module>/build/test-logs/test.log`; how to quote a book path that contains spaces inside `--args`, as
+      in `--args="'/path/with spaces/Book.epub' --to uk"`; and that the DEBUG default of a development run writes
+      about 37 lines per segment, so a large book runs with `BOOKLOOM_LOG_LEVEL=INFO`).
     - `AGENTS.md`: the where-it-stands paragraph.
     - `docs/implementation_plan/CHANGE_BACKLOG.md`: `#where-this-stands`; the Stage C rows for `inference`,
       `translation-pipeline`, `resume` and `export` change from NEW to MOD, noting that the job lifecycle and
@@ -289,10 +359,50 @@ context. These rules apply to every task:
       readers, writers and maskers.
   - **Done when:** every edited citation resolves to a heading or `{#anchor}` in its file, and
     `OPENSPEC_TELEMETRY=0 openspec validate add-translation-engine-and-cli --strict` is clean.
+- [ ] 6.2 Write `docs/next_features.md` with every gap the review of this change found and left for later, so none is forgotten when real models and the translation screen arrive. Most are `:document` behaviour a real translation would expose, such as an untranslated table of contents or XHTML files that still declare `xml:lang="en"`. → docs
+  - **Read:** `docs/implementation_plan/CHANGE_BACKLOG.md` (`#decision-debt`, and the row and scope of
+    `add-metadata-units-and-language-detection`); DD-47 in `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`;
+    `docs/adr/ADR-0028-xhtml-self-closed-raw-text-repair.md`;
+    `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`;
+    `docs/implementation_plan/notes-corpus-verification.md`.
+  - **Change:** one entry per gap: what is wrong, the owning module and spec clause, how to reproduce it (the book,
+    the command and what to inspect), the evidence the review measured, and a suggested fix. A gap already planned
+    elsewhere points to its backlog item instead of repeating its design. A one-line pointer to the file goes into
+    `CHANGE_BACKLOG.md#decision-debt`. The gaps:
+    - EPUB language metadata past the first `dc:language` keeps the source language:
+      `<meta property="dcterms:language">`, `<package xml:lang>`, and `xml:lang` or `lang` on XHTML roots (all 117
+      content files of `pg2760-images.epub`);
+    - the OPF is re-serialized with an added XML declaration and CRLF line ends, and always declares UTF-8 (JDOM2's raw
+      format in `EpubWriter`);
+    - an XHTML attribute value holding `&#10;` is written with a literal newline, which reads back as a space
+      (`data-pdf-bookmark` in `ch04.html` of *Building Microservices*);
+    - an XHTML file's XML declaration becomes a comment (`<!--?xml … encoding='utf-8'?-->`), which loses the declared
+      encoding of a file that is not UTF-8;
+    - an FB2 byte-order mark is not written back (from reading `Fb2Reader` and `Fb2Writer`), against
+      `03_DOCUMENT_FORMATS.md`;
+    - a TXT export refused by its charset reports "This file could not be opened", and ADR-0029's transcoding is not
+      built yet;
+    - ADR-0029 and the backlog say EPUB writes `?` for an unencodable character, while jsoup writes a numeric
+      reference;
+    - the table of contents (EPUB3 nav outside the spine, EPUB2 NCX), XHTML `<head><title>`, `dc:title` and
+      `dc:description`, the FB2 annotation, and image alt text in EPUB and Markdown stay untranslated (planned: DD-47);
+    - a reordered placeholder pair passes the multiset gate, EPUB repairs it silently, and the export's segment count
+      then fails the whole job at its end (D7 and D8); `.claude/rules/document-roundtrip.md` and the shipped spec
+      disagree on whether token order matters;
+    - Markdown bare URLs are translatable text, and the Markdown writer writes `?` for an unencodable character;
+    - log volume: about 37 DEBUG lines per segment, and `%X{segment}` is missing from the production log pattern
+      (kept as built);
+    - the command line has no Ctrl+C handling, so a killed run leaves `.<destination>` behind, and no folder mode or
+      totals line; the desktop app and a packaged image still reach Guice's `sun.misc.Unsafe` path, which a later JDK
+      may refuse;
+    - for the translation screen: an interrupt while a job runs, not paused, is not a cancellation; export
+      verification compares only segment counts; FB2 inline `<code>` text is translatable, while EPUB's is atomic.
+  - **Done when:** every cited file, anchor and backlog item exists, and every reproduction names a book from
+    `.temporary_context/Books_Examples` or a command a reader can run.
 
-## 6. Gate
+## 7. Gate
 
-- [ ] 6.1 Update `docs/implementation_plan/01_MODULE_INVENTORY.md` with the new packages in `:api` and `:app` and the new classes in `:llm` and `:pipeline`, so the module map matches the code. → docs
+- [ ] 7.1 Update `docs/implementation_plan/01_MODULE_INVENTORY.md` with the new packages in `:api` and `:app` and the new classes in `:llm` and `:pipeline`, so the module map matches the code. → docs
   - **Read:** `docs/implementation_plan/01_MODULE_INVENTORY.md` `#module-api`, `#module-llm`, `#module-pipeline`,
     `#module-app` and its as-built status section.
   - **Change:** `#module-api`: `ua.bookloom.api.llm` and `ua.bookloom.api.pipeline` as real, keeping
@@ -301,11 +411,11 @@ context. These rules apply to every task:
     `SegmentTranslator` and `BookExporter`; `#module-app`: `CoreModules`, `bootstrap.TranslateLauncher` and
     `ua.bookloom.app.cli`; and the as-built status.
   - **Done when:** every row names a package or class that exists.
-- [ ] 6.2 Run `./gradlew clean build check spotlessCheck` and `./gradlew -PstrictLocks verifyLocks` and get both green across the whole project, with no pre-existing-failure exemption, including the ArchUnit rules and the 0.80 branch-coverage gate that now applies to `:llm` and `:pipeline`. A change is not done while any check anywhere is red. → all modules
+- [ ] 7.2 Run `./gradlew clean build check spotlessCheck` and `./gradlew -PstrictLocks verifyLocks` and get both green across the whole project, with no pre-existing-failure exemption, including the ArchUnit rules and the 0.80 branch-coverage gate that now applies to `:llm` and `:pipeline`. A change is not done while any check anywhere is red. → all modules
   - **Done when:** both commands pass, and the gate's tail is pasted as evidence.
-- [ ] 6.3 Translate one real EPUB, FB2, Markdown and TXT book from `.temporary_context/Books_Examples` with `./gradlew -q :app:translate --args="<book>"`, open each result in a reader, and follow one segment through the log of a TRACE run. A result that opens correctly, and a log that explains every flag and failure, are the evidence the feature works; a ticked checkbox is not. → `:app`
+- [ ] 7.3 Translate one real EPUB, FB2, Markdown and TXT book from `.temporary_context/Books_Examples` with `./gradlew -q :app:translate --args="'<book>'"`, open each result in a reader, and follow one segment through the log of a TRACE run. A result that opens correctly, and a log that explains every flag and failure, are the evidence the feature works; a ticked checkbox is not. → `:app`
   - **Do:** run one of the books with `BOOKLOOM_LOG_LEVEL=TRACE`, and follow one segment from its prompt to its
     decision in `bookloom.log` in the dev log folder (on macOS `~/Library/Logs/BookLoom-Dev/`).
-  - **Expect:** the text in capitals, with formatting, images and structure intact. A TXT book in a legacy encoding
-    can fail when upper-casing leaves its charset (`µ` becomes `Μ` and `ÿ` becomes `Ÿ`, neither in ISO-8859-1);
-    record the cause of every failure and flag from the log.
+  - **Expect:** the text in capitals, with formatting, images and structure intact, and a console that shows only the
+    report line. A TXT book in a legacy encoding can fail when upper-casing leaves its charset (`µ` becomes `Μ` and
+    `ÿ` becomes `Ÿ`, neither in ISO-8859-1); record the cause of every failure and flag from the log.
