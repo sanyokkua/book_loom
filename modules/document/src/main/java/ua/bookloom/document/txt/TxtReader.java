@@ -71,6 +71,17 @@ public final class TxtReader {
                 List.of(unitOf(sourceName, segments)));
     }
 
+    /**
+     * Releases the parsed TXT state registered for {@code documentId}.
+     *
+     * @param documentId the opened document's id
+     * @return {@code true} when parsed state was released, {@code false} when it was already absent
+     */
+    public boolean close(String documentId) {
+        Objects.requireNonNull(documentId, "documentId");
+        return registry.close(documentId).isPresent();
+    }
+
     private static List<Segment> segmentsOf(
             List<ByteSpanAnchor> paragraphs, byte[] fileBytes, Charset charset, String unitId) {
         final List<Segment> segments = new ArrayList<>(paragraphs.size());

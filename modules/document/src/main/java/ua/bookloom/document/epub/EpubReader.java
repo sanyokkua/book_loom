@@ -87,6 +87,17 @@ public final class EpubReader {
                 unitsResult.units());
     }
 
+    /**
+     * Releases the parsed EPUB state registered for {@code documentId}.
+     *
+     * @param documentId the opened document's id
+     * @return {@code true} when parsed state was released, {@code false} when it was already absent
+     */
+    public boolean close(String documentId) {
+        Objects.requireNonNull(documentId, "documentId");
+        return registry.close(documentId).isPresent();
+    }
+
     private static byte[] readAllBytes(Path source) {
         try {
             return Files.readAllBytes(source);

@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-15
 **Cross-references:** `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`,
 `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
 `docs/specification/mockups/ui-mockup.html`
@@ -44,9 +44,23 @@ core's worker threads and the scene graph (`08_THREADING_CONCURRENCY.md`).
 
 ### JobProgress snapshot {#jobprogress}
 
-The Translating dashboard binds to a fixed, explicit observable surface so its contract is stable and testable. The
-pipeline reports progress as an immutable **`JobProgress`** snapshot; the mirror exposes each field as an observable
-property/collection:
+The Translating dashboard binds to a fixed, explicit observable surface so its contract is stable and testable. Two
+different things share the name "progress" here, and they are not the same shape.
+
+**The engine's own `JobProgress`** (`ua.bookloom.api.pipeline`, built by `add-translation-engine-and-cli`) is a plain
+point-in-time count snapshot: `JobProgress(JobStage stage, int section, int sections, int accepted, int flagged, int
+pending)`, where `JobStage` is `TRANSLATE` or `EXPORT`. A `TranslationJob` carries one on every `StageStarted` and
+`SegmentDecided` event (`ua.bookloom.api.pipeline.JobEvent`, sealed over `StageStarted`/`SegmentDecided`/`Paused`/
+`Resumed`/`Finished`) and inside `Paused`. It names no throughput, no ETA and no in-flight text — the engine does not
+track those.
+
+**The dashboard's own snapshot below is a richer value the screen will assemble from that event stream**, not the
+engine's `JobProgress` reused verbatim: the mirror derives the counts and the current stage/section from the sequence
+of `JobEvent`s, and computes what the engine does not report itself — elapsed-time-derived `tokensPerSecond`/`eta`,
+and, once later changes add them to what the job reports, `inFlightSource`/`inFlightTarget` (from each segment's
+prompt and reply), `judgeScore` (once the judge exists) and `chapterIndex`/`chunkIndex` (once chunking exists,
+replacing today's coarser `section`/`sections`). None of the table below is built yet — `:ui` remains a placeholder —
+so it is the target shape the Translating screen assembles, not a type the pipeline exposes directly:
 
 | Field             | Meaning                                                                  |
 |-------------------|--------------------------------------------------------------------------|
@@ -67,7 +81,8 @@ Counters (`autoAccepted/repaired/flagged/remaining`) and rates are locale-format
 
 The mirror's `publish*` methods (each wrapping `Platform.runLater`) are the exact surface the pipeline calls:
 
-- `publishJobProgress(JobProgress)` — replace the whole progress snapshot (counts, indices, tok/s, ETA).
+- `publishJobProgress(...)` — replace the whole dashboard snapshot above, assembled from the engine's `JobProgress`/
+  `JobEvent` stream rather than passed through verbatim (counts, indices, tok/s, ETA).
 - `publishInFlight(source, target, judgeScore)` — update the live in-flight source/target/judge-score panel.
 - `publishActivity(ActivityEntry)` — **append** one localized, bundle-keyed entry to the activity log
   (`11_NOTIFICATIONS_AND_ERRORS.md#activity-log`); the log is a bounded observable list (last N).

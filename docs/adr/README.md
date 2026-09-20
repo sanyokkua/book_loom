@@ -52,3 +52,5 @@ explicitly — read them before planning work.
 | ADR-0029 | Transcode the output document to UTF-8 when the source charset cannot hold the target | DD-43               |
 | ADR-0030 | Synthesize a missing EPUB `mimetype` entry on write rather than refusing the book      | DD-43               |
 | ADR-0031 | Mask to character data and compose the restored fragment, rather than substituting into a markup string | DD-07, DD-19, DD-43, DD-45, DD-49 |
+| ADR-0032 | Tests are the evidence; no requirement-id tracking                                    | process             |
+| ADR-0033 | The translation engine gets a bound chat model and runs as a pausable job             | DD-10, DD-15, DD-31 |

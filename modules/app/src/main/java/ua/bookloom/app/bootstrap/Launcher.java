@@ -79,7 +79,9 @@ public final class Launcher {
         try (lock) {
             // Step 5. Nothing above this line may take a logger; everything below it may.
             final AppEnvironment environment = AppEnvironment.resolve(System::getenv, System::getProperty);
-            LoggingBootstrap.configure(paths.logDir(), environment.isDev());
+            final ResolvedLogLevel logLevel =
+                    LoggingLevelResolver.resolve(System::getenv, System::getProperty, environment);
+            LoggingBootstrap.configure(paths.logDir(), environment.isDev(), logLevel);
 
             warnIfOnNetworkFilesystem(paths);
             logStartup(paths, environment);

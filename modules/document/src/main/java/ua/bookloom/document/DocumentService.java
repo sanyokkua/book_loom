@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -68,15 +69,36 @@ public final class DocumentService implements DocumentPort {
     @Override
     public Result<Document> open(Path source) {
         Objects.requireNonNull(source, "source");
+        log.debug("Opening document source={}", source);
+        @Nullable BookFormat resolvedFormat = null;
         try {
-            return Result.ok(readAs(FormatResolver.resolve(source), source));
+            final BookFormat format = FormatResolver.resolve(source);
+            resolvedFormat = format;
+            log.debug("Resolved document source={} format={}", source, format);
+            final Document document = readAs(format, source);
+            log.debug("Opened document source={} format={} outcome=success", source, format);
+            return Result.ok(document);
         } catch (DrmRefusedException e) {
-            return Result.err(drmError(e));
+            final AppError error = drmError(e);
+            logOpenFailure(source, resolvedFormat, error);
+            return Result.err(error);
         } catch (CorruptContainerException e) {
-            return Result.err(refusalError(e));
+            final AppError error = refusalError(e);
+            logOpenFailure(source, resolvedFormat, error);
+            return Result.err(error);
         } catch (Throwable t) {
-            return Result.err(internalError(t));
+            final AppError error = internalError(t);
+            logOpenFailure(source, resolvedFormat, error);
+            return Result.err(error);
         }
+    }
+
+    private void logOpenFailure(Path source, @Nullable BookFormat resolvedFormat, AppError error) {
+        log.debug(
+                "Opened document source={} format={} outcome={}",
+                source,
+                Objects.toString(resolvedFormat, "unresolved"),
+                error.code());
     }
 
     private Document readAs(BookFormat format, Path source) {
@@ -93,17 +115,62 @@ public final class DocumentService implements DocumentPort {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
+        logWriteEntry(document, destination, targetLanguage);
         try {
-            return Result.ok(writeAs(document, destination, targetLanguage));
+            final Path written = writeAs(document, destination, targetLanguage);
+            log.debug("Wrote document id={} format={} outcome=success", document.id(), document.format());
+            return Result.ok(written);
         } catch (DocumentNotOpenException e) {
-            return Result.err(notOpenError(e));
+            final AppError error = notOpenError(e);
+            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            return Result.err(error);
         } catch (CorruptContainerException e) {
-            return Result.err(refusalError(e));
+            final AppError error = refusalError(e);
+            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            return Result.err(error);
         } catch (MalformedFragmentException e) {
-            return Result.err(malformedFragmentError(e));
+            final AppError error = malformedFragmentError(e);
+            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            return Result.err(error);
         } catch (Throwable t) {
-            return Result.err(internalError(t));
+            final AppError error = internalError(t);
+            log.debug("Wrote document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            return Result.err(error);
         }
+    }
+
+    private void logWriteEntry(Document document, Path destination, String targetLanguage) {
+        log.debug(
+                "Writing document id={} format={} destination={} targetLanguage={} translatedSegments={}",
+                document.id(),
+                document.format(),
+                destination,
+                targetLanguage,
+                translatedSegmentCount(document));
+    }
+
+    @Override
+    public Result<Boolean> close(Document document) {
+        Objects.requireNonNull(document, "document");
+        log.debug("Closing document id={} format={}", document.id(), document.format());
+        try {
+            final boolean wasOpen = closeAs(document);
+            log.debug("Closed document id={} format={} wasOpen={}", document.id(), document.format(), wasOpen);
+            return Result.ok(wasOpen);
+        } catch (Throwable t) {
+            final AppError error = internalError(t);
+            log.debug("Closed document id={} format={} outcome={}", document.id(), document.format(), error.code());
+            return Result.err(error);
+        }
+    }
+
+    private boolean closeAs(Document document) {
+        return switch (document.format()) {
+            case EPUB -> epubReader.close(document.id());
+            case FB2 -> fb2Reader.close(document.id());
+            case MARKDOWN -> markdownReader.close(document.id());
+            case TXT -> txtReader.close(document.id());
+        };
     }
 
     private Path writeAs(Document document, Path destination, String targetLanguage) {
@@ -120,20 +187,57 @@ public final class DocumentService implements DocumentPort {
         Objects.requireNonNull(format, "format");
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(translatedMasked, "translatedMasked");
+        logUnmaskEntry(format, segment, translatedMasked);
         try {
             final GateOutcome outcome = PlaceholderGate.compare(segment.masked(), translatedMasked);
             if (!outcome.matches()) {
-                return Result.err(gateError(outcome));
+                final AppError error = gateError(outcome);
+                log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
+                return Result.err(error);
             }
             final RestoredContent restored = Unmasker.restore(format, segment, translatedMasked);
-            return switch (format) {
-                case MARKDOWN -> restoreMarkdown(segment, restored);
-                case EPUB, FB2 -> restoreTree(restored);
-                case TXT -> Result.ok(restored.text());
-            };
+            log.trace("Unmask restored format={} segmentId={} restoredText={}", format, segment.id(), restored.text());
+            final Result<String> result =
+                    switch (format) {
+                        case MARKDOWN -> restoreMarkdown(segment, restored);
+                        case EPUB, FB2 -> restoreTree(restored);
+                        case TXT -> Result.ok(restored.text());
+                    };
+            logUnmaskOutcome(format, segment.id(), result);
+            return result;
         } catch (Throwable t) {
-            return Result.err(internalError(t));
+            final AppError error = internalError(t);
+            log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
+            return Result.err(error);
         }
+    }
+
+    private void logUnmaskEntry(BookFormat format, Segment segment, String translatedMasked) {
+        log.debug(
+                "Unmasking segment format={} segmentId={} placeholders={}",
+                format,
+                segment.id(),
+                segment.placeholders().size());
+        log.trace("Unmask input format={} segmentId={} maskedInput={}", format, segment.id(), translatedMasked);
+    }
+
+    private static long translatedSegmentCount(Document document) {
+        return document.units().stream()
+                .flatMap(unit -> unit.segments().stream())
+                .filter(segment -> segment.targetInner() != null)
+                .count();
+    }
+
+    private void logUnmaskOutcome(BookFormat format, String segmentId, Result<String> result) {
+        if (result.isOk()) {
+            log.debug("Unmasked segment format={} segmentId={} outcome=success", format, segmentId);
+            return;
+        }
+        log.debug(
+                "Unmasked segment format={} segmentId={} outcome={}",
+                format,
+                segmentId,
+                Objects.requireNonNull(result.error(), "error").code());
     }
 
     /**

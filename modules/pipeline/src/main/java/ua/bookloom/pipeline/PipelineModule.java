@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import com.google.inject.AbstractModule;
+import ua.bookloom.api.pipeline.TranslationEngine;
 
 /**
  * Guice bindings owned by {@code :pipeline} — the {@code TranslationEngine} port bound to its implementation, plus
@@ -17,6 +18,6 @@ public final class PipelineModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        // No bindings yet.
+        bind(TranslationEngine.class).to(TranslationEngineImpl.class);
     }
 }

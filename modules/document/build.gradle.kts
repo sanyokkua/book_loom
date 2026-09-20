@@ -33,4 +33,6 @@ dependencies {
     // Charset detection on the import path (01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom). Declared here
     // and nowhere else: `:document` may depend only on `:api` and `:util`, so it cannot borrow `:pipeline`'s copy.
     implementation(libs.icu4j)
+
+    testRuntimeOnly(libs.logback.classic)
 }

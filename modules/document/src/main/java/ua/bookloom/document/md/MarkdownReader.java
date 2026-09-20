@@ -97,6 +97,17 @@ public final class MarkdownReader {
     }
 
     /**
+     * Releases the parsed Markdown state registered for {@code documentId}.
+     *
+     * @param documentId the opened document's id
+     * @return {@code true} when parsed state was released, {@code false} when it was already absent
+     */
+    public boolean close(String documentId) {
+        Objects.requireNonNull(documentId, "documentId");
+        return registry.close(documentId).isPresent();
+    }
+
+    /**
      * Exactly one unit, whose id and href are both the source file name. Single-unit formats need their identity
      * stated as deliberately as FB2's multi-body case does: the unit id seeds every segment id, and
      * {@code segments.id} is a SQLite primary key.

@@ -80,14 +80,14 @@ Gradle project names are `:api` … `:app` even though the directories sit under
 
 | Module | Directory | Status | Holds |
 |---|---|---|---|
-| `:api` | `modules/api` | real | `Result`, `AppError`, `ErrorCode`, `SafeDetails`, the document model, `DocumentPort` |
+| `:api` | `modules/api` | real | `Result`, `AppError`, `ErrorCode`, `SafeDetails`, the document model, `DocumentPort`, the chat-model and translation-engine contracts (`ua.bookloom.api.llm`, `ua.bookloom.api.pipeline`) |
 | `:util` | `modules/util` | real | per-OS paths, dev/prod environment, hashing |
-| `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back |
-| `:llm` | `modules/llm` | empty | one Guice module with no bindings |
-| `:pipeline` | `modules/pipeline` | empty | same |
-| `:persistence` | `modules/persistence` | empty | same |
+| `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close |
+| `:llm` | `modules/llm` | real | the `ChatModel`/`ChatModelFactory` contract, and the offline deterministic `pseudo` model |
+| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel), checked export |
+| `:persistence` | `modules/persistence` | empty | one Guice module with no bindings |
 | `:ui` | `modules/ui` | placeholder | `Theme`, `theme.css`, a `StackPane` with one label |
-| `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the `archTest` suite |
+| `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the command-line translator, the `archTest` suite |
 | `build-logic` | `modules/build-logic` | — | the five convention plugins; an **included build**, not a subproject |
 
 Allowed dependency edges point downward only: `:app`/`:ui` → `:pipeline` → `:document`/`:llm`/`:persistence` →
@@ -146,7 +146,8 @@ green `:app:run` therefore says nothing about the JPMS graph; the packaged image
 
 **Three warnings print on every run and none matters**: `Unsupported JavaFX configuration: classes were loaded from
 'unnamed module'` (the classpath launch), `System::load has been called by … NativeLibLoader` (JEP 472; native access
-is enabled for test tasks only), and `sun.misc.Unsafe … HiddenClassDefiner` (Guice internals).
+is enabled for test tasks only), and `sun.misc.Unsafe … HiddenClassDefiner` (Guice internals) — the last of these is
+switched off on `:app:translate` below, but not here.
 
 **The startup log line** tells you which environment and directories a run used:
 
@@ -170,9 +171,57 @@ set `prod` in a development run configuration: it points a debug session at the 
 when absolute, overrides the whole per-OS layout (logs go to its `logs/` child).
 
 **Startup order** (`Launcher`): resolve environment → resolve paths → create directories → lock
-`dataDir/bookloom.lock` → configure Logback → publish `StartupContext` → `Application.launch`. Nothing before the
-Logback step may log (the `bootstrap-no-static-logger` ArchUnit rule enforces it). Exit codes: **0** = another
-instance already runs (a refusal, not a failure), **1** = startup failed.
+`dataDir/bookloom.lock` → resolve the log level → configure Logback → publish `StartupContext` → `Application.launch`.
+Nothing before the Logback step may log (the `bootstrap-no-static-logger` ArchUnit rule enforces it). Exit codes: **0**
+= another instance already runs (a refusal, not a failure), **1** = startup failed.
+
+**Log level.** `BOOKLOOM_LOG_LEVEL`, else the system property `bookloom.log.level` (`TRACE`/`DEBUG`/`INFO`/`WARN`/
+`ERROR`, any letter case), else the default: `INFO` for an installed (`prod`) app, `DEBUG` for a development run.
+Both the desktop app and the command line below use this same resolver. A value that names no level falls back to
+that default and logs one `WARN` line naming the rejected value; every other logger stays at `WARN` regardless, so a
+third-party library never drowns BookLoom's own lines. Book text, prompts and model replies are logged only at
+`TRACE`, never at `DEBUG` or above (`.claude/rules/logging.md`).
+
+**Where the log goes.** A development or packaged run writes the `bookloom.log` from the table above — on macOS
+`~/Library/Logs/BookLoom-Dev/bookloom.log` for a dev run. A **test** run writes its own log instead:
+`modules/<module>/build/test-logs/test.log`, configured today for `:document`, `:llm` and `:pipeline`
+(`src/test/resources/logback-test.xml`; the other modules have none yet). Read one at `TRACE` with
+`BOOKLOOM_LOG_LEVEL=TRACE ./gradlew :<module>:test --tests '<class>' --rerun`.
+
+**A development run's `DEBUG` default is verbose**: about 37 lines per segment (one 5,000-segment book wrote roughly
+50 MB of log at `TRACE`), so translate a large book with `BOOKLOOM_LOG_LEVEL=INFO` unless you are actually following
+one segment through its log.
+
+**Command line.** `./gradlew :app:translate` runs `ua.bookloom.app.bootstrap.TranslateLauncher`, which repeats
+`Launcher`'s pre-injector steps — paths, single-instance lock, logging — without starting JavaFX, then runs
+`ua.bookloom.app.cli.TranslateCommand`:
+
+```bash
+./gradlew -q :app:translate --args="'<book>' [--to <lang>] [--from <lang>] [--overwrite]"
+```
+
+It translates `<book>` with the deterministic offline `pseudo` model — the text comes back upper-cased — and writes
+`<name>.<to><suffix>` beside it; `--to` defaults to `uk`. `-q` keeps Gradle's own build chatter out of the way, so
+the command's one-line report is what you see; `--overwrite` allows replacing an existing destination.
+
+**Quote a book path that contains spaces inside `--args`**, with an inner pair of single quotes, or Gradle's own
+tokenizer splits it into two arguments before the command ever sees one:
+
+```bash
+./gradlew -q :app:translate --args="'/path/with spaces/Book.epub' --to uk"
+```
+
+An unquoted path with spaces reproduces exactly this failure: it is parsed as two arguments and exits 2, printing the
+reason first, then the usage line.
+
+**Exit codes** are distinct from the desktop app's above, deliberately: **0** the book completed; **1** the book did
+not make it — it could not be opened, the job failed or was cancelled, the destination already exists and
+`--overwrite` was not given, or BookLoom is already running; **2** invalid arguments. The desktop app exits **0**
+when another instance already runs, because a second window is a refusal, not a failure; the command line exits **1**
+for the same case, because a script needs to know that nothing was written. Those are the codes `TranslateLauncher`
+exits with. Through Gradle they collapse: the `translate` task fails on any non-zero code, so `./gradlew` itself exits
+1 for both 1 and 2, and a script that must tell them apart reads the printed line (`Invalid command arguments: …`
+starts a usage error).
 
 ---
 
@@ -183,6 +232,11 @@ configuration (not an Application one) with tasks `:app:run` — it runs the sam
 debugging, run `./gradlew :app:run --debug-jvm` and attach a **Remote JVM Debug** configuration to
 `localhost:5005` (the socket binds to `127.0.0.1` only). An Application configuration may launch `:app` on the module
 path; prefer the Gradle one.
+
+If the Build panel reports `Could not resolve org.jetbrains.kotlin:kotlin-stdlib` on
+`:build-logic:generateExternalPluginSpecBuilders` while `./gradlew` builds fine, IntelliJ is using a different,
+locally-installed Gradle than the wrapper (Settings → Build, Execution, Deployment → Build Tools → Gradle →
+Distribution) — switch it back to the Gradle Wrapper.
 
 ---
 
@@ -267,6 +321,17 @@ lefthook validate                   # optional: does lefthook.yml parse
 
 Pre-push runs **exactly** the CI quality command, so a green push implies a green CI quality job. Escape hatches
 (`git push --no-verify`, `LEFTHOOK=0`) exist and are a decision, not a habit; agents may not use them.
+
+**OpenSpec agent files** are the `openspec-*` skills in `.agents/skills/` and the `/opsx:*` commands in
+`.claude/commands/opsx/`. The OpenSpec CLI generates them; never edit them by hand. Claude and Codex share one copy of
+each skill: Codex reads `.agents/skills/` directly, and Claude reads it through the `.claude/skills` symlink. That copy
+is the Codex rendering, whose references work in both tools.
+
+```bash
+OPENSPEC_TELEMETRY=0 openspec config profile core           # once per machine: propose, explore, apply, update, sync, archive
+OPENSPEC_TELEMETRY=0 openspec update                        # after upgrading the CLI: npm install -g @fission-ai/openspec@latest
+OPENSPEC_TELEMETRY=0 openspec init --tools claude,codex     # first set-up; codex comes last so its rendering is the one kept
+```
 
 **CI** (`.github/workflows/ci.yml`, on every push and pull request): a *quality* job (lock verification, the gate,
 the agent-file sync check, the licence gate — about 4 minutes) and a five-leg *packaging* matrix (macOS x86_64 and

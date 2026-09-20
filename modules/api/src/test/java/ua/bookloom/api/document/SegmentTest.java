@@ -93,6 +93,30 @@ class SegmentTest {
                 .isInstanceOf(UnsupportedOperationException.class);
     }
 
+    @Test
+    void withDecision_newStatusAndTarget_changesOnlyDecisionComponents() {
+        final Segment original = segment("unit:0", "unit", 0, null, null);
+
+        final Segment decided = original.withDecision(SegmentStatus.ACCEPTED, "Translated.");
+
+        assertThat(decided.id()).isEqualTo(original.id());
+        assertThat(decided.unit()).isEqualTo(original.unit());
+        assertThat(decided.order()).isEqualTo(original.order());
+        assertThat(decided.kind()).isEqualTo(original.kind());
+        assertThat(decided.sourceInner()).isEqualTo(original.sourceInner());
+        assertThat(decided.masked()).isEqualTo(original.masked());
+        assertThat(decided.placeholders()).isEqualTo(original.placeholders());
+        assertThat(decided.sourceHash()).isEqualTo(original.sourceHash());
+        assertThat(decided.prevKey()).isEqualTo(original.prevKey());
+        assertThat(decided.nextKey()).isEqualTo(original.nextKey());
+        assertThat(decided.anchor()).isEqualTo(original.anchor());
+        assertThat(decided.targetInner()).isEqualTo("Translated.");
+        assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(decided.confidence()).isEqualTo(original.confidence());
+        assertThat(original.targetInner()).isNull();
+        assertThat(original.status()).isEqualTo(SegmentStatus.PENDING);
+    }
+
     @ParameterizedTest
     @ValueSource(doubles = {-0.1, 1.1})
     void constructor_confidenceOutsideUnitRange_isRejected(double confidence) {

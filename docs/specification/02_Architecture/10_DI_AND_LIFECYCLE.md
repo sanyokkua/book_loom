@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-15
 **Cross-references:** `docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md`,
 `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`,
 `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`,
@@ -17,14 +17,20 @@ One `AbstractModule` per Gradle module, co-located with the implementation it bi
 | Guice module                         | Binds (port → impl)                                                  |
 |--------------------------------------|----------------------------------------------------------------------|
 | `DocumentModule` (`:document`)       | `DocumentPort → DocumentService`                                     |
-| `LlmModule` (`:llm`)                 | `ProviderFactory → ProviderFactoryImpl`, `InferenceGate` (singleton) |
+| `LlmModule` (`:llm`)                 | **built:** `ChatModelFactory → ChatModelFactoryImpl` (resolves only the offline `pseudo` provider); still to come: `ProviderFactory → ProviderFactoryImpl`, `InferenceGate` (singleton) |
 | `PersistenceModule` (`:persistence`) | repository ports → JDBI DAOs, `Jdbi`, `DataSource`                   |
-| `PipelineModule` (`:pipeline`)       | `TranslationEngine → TranslationEngineImpl`, assemblers, QA          |
+| `PipelineModule` (`:pipeline`)       | **built:** `TranslationEngine → TranslationEngineImpl`; still to come: assemblers, QA          |
 | `UiModule` (`:ui`)                   | viewmodels, `Navigator`, state mirror, controllers via factory       |
 | `AppModule` (`:app`)                 | `ExecutorService` (daemon), virtual-thread executor, config, wiring  |
 
 Rules: constructor injection only (`@Inject` on the constructor); `@Singleton` for stateless services and shared
 infrastructure (gate, executors, mirror, DAOs); no field/setter injection; no static holders.
+
+**`ua.bookloom.app.CoreModules`** (`:app`, built by `add-translation-engine-and-cli`) is the Guice module the desktop
+app and the command line **share**, so the two entry points never wire different graphs: it installs `AppModule`,
+`DocumentModule`, `LlmModule`, `PersistenceModule` and `PipelineModule`. `BookLoomApplication.init` builds its
+injector from `CoreModules` plus `UiModule`; `bootstrap.TranslateLauncher` (the `./gradlew :app:translate` entry
+point) builds its injector from `CoreModules` alone — it never starts JavaFX.
 
 ## composition-root {#composition-root}
 
@@ -32,7 +38,7 @@ infrastructure (gate, executors, mirror, DAOs); no field/setter injection; no st
 
 ```java
 Injector injector = Guice.createInjector(
-    new AppModule(dataDir, executor),
+    new AppModule(startup),
     new PersistenceModule(),
     new LlmModule(),
     new DocumentModule(),
@@ -61,7 +67,7 @@ Startup separates **construction** from **resource opening** so the object graph
 
 Splitting the phases keeps DI wiring side-effect-free (safe to construct in tests without a DB) and gives a single,
 ordered place where migrations run before any DAO is used. **Migrations run to completion inside Phase 2, before any
-`JobHandle` exists** — there is no in-flight run to interrupt, so `stop()` can never race or cancel a migration
+`TranslationJob` exists** — there is no in-flight run to interrupt, so `stop()` can never race or cancel a migration
 (see [graceful-shutdown](#graceful-shutdown)). A failed migration rolls back completely and surfaces as a typed startup
 error (`06_DATA_MODEL_SQLITE.md#corruption-and-recovery`).
 
@@ -100,9 +106,9 @@ production instance hold distinct locks and can run at once.
 
 `Application.stop()` (FX lifecycle) runs the shutdown sequence with **bounded await budgets** so shutdown never hangs:
 
-1. **Cancel on shutdown** — signal every active `JobHandle` to cancel; the engine stops at the next chunk boundary and
-   abandons any in-flight HTTP request (`08_THREADING_CONCURRENCY.md#cancellation`). Worst-case time to reach the
-   boundary is the HTTP read-timeout — cancellation is bounded, not instant.
+1. **Cancel on shutdown** — call `cancel()` on every running `TranslationJob`; it stops at its next boundary, once the
+   model call in progress returns (`08_THREADING_CONCURRENCY.md#cancellation`). Worst-case time to reach the boundary
+   is the HTTP read-timeout — cancellation is bounded, not instant.
 2. **Flush pending checkpoints** (the last atomic write), **checkpoint the WAL, and close the `Jdbi`/DataSource
    cleanly** — with a checkpoint-flush budget of **≤ N s** (N chosen so a normal flush always completes; if it is
    exceeded the close proceeds and WAL replay covers the remainder on next open).
@@ -110,8 +116,8 @@ production instance hold distinct locks and can run at once.
    on expiry, stop waiting and let the daemon threads die with the JVM).
 4. Release the single-instance lock.
 
-`stop()` can only cancel work that has a `JobHandle`; **migrations complete during Phase 2 before any `JobHandle`
-exists**, so `stop()` never interrupts a migration (`two-phase-init`). Because accepted segments are already durable, an
+`stop()` can only cancel work a `TranslationJob` is running; **migrations complete during Phase 2 before any
+`TranslationJob` exists**, so `stop()` never interrupts a migration (`two-phase-init`). Because accepted segments are already durable, an
 abrupt kill is also safe — graceful shutdown just avoids losing the last in-flight chunk and leaves WAL in a clean
 state; on OS crash / power loss at most the last in-flight commit is lost, never earlier accepted work
 (`06_DATA_MODEL_SQLITE.md#storage-conventions`, ADR-0009).

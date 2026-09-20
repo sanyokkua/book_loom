@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Locale;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -53,9 +52,11 @@ final class FormatResolver {
     static BookFormat resolve(Path source) {
         Objects.requireNonNull(source, "source");
         refuseUnlessRegularFile(source);
-        final String name = source.getFileName().toString().toLowerCase(Locale.ROOT);
-        final BookFormat candidate = byExtension(name);
-        confirmAgainstContent(source, name, candidate);
+        final String fileName = source.getFileName().toString();
+        final BookFormat candidate = BookFormat.ofFileName(fileName)
+                .orElseThrow(
+                        () -> new CorruptContainerException("This file type is not one this application can open"));
+        confirmAgainstContent(source, fileName, candidate);
         return candidate;
     }
 
@@ -69,30 +70,14 @@ final class FormatResolver {
         }
     }
 
-    private static BookFormat byExtension(String name) {
-        if (name.endsWith(".epub")) {
-            return BookFormat.EPUB;
-        }
-        if (name.endsWith(".fb2") || name.endsWith(".fb2.zip")) {
-            return BookFormat.FB2;
-        }
-        if (name.endsWith(".md") || name.endsWith(".markdown")) {
-            return BookFormat.MARKDOWN;
-        }
-        if (name.endsWith(".txt")) {
-            return BookFormat.TXT;
-        }
-        throw new CorruptContainerException("This file type is not one this application can open");
-    }
-
     /**
      * Confirms the extension against the leading bytes: a zip signature where a container is expected, and a
      * FictionBook root element where a bare FB2 is. Markdown and TXT are deliberately unconfirmed — any bytes are
      * valid content for both, so there is nothing a content check could establish.
      */
-    private static void confirmAgainstContent(Path source, String name, BookFormat candidate) {
+    private static void confirmAgainstContent(Path source, String fileName, BookFormat candidate) {
         final byte[] prolog = readProlog(source);
-        if (candidate == BookFormat.EPUB || name.endsWith(".fb2.zip")) {
+        if (candidate == BookFormat.EPUB || candidate.matchedSuffix(fileName).equalsIgnoreCase(".fb2.zip")) {
             refuseUnless(startsWithZipMagic(prolog), "This file does not contain the archive its name promises");
             return;
         }

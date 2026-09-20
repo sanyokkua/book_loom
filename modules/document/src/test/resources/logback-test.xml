@@ -1,0 +1,15 @@
+<configuration>
+  <appender name="TEST_LOG" class="ch.qos.logback.core.FileAppender">
+    <file>build/test-logs/test.log</file>
+    <append>true</append>
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="ua.bookloom" level="${BOOKLOOM_LOG_LEVEL:-DEBUG}" additivity="false">
+    <appender-ref ref="TEST_LOG" />
+  </logger>
+
+  <root level="WARN" />
+</configuration>

@@ -51,4 +51,16 @@ public record Document(
         metadata = Map.copyOf(metadata);
         units = List.copyOf(units);
     }
+
+    /**
+     * Returns a document with a replacement unit list while preserving its identity, metadata and source hash.
+     *
+     * @param units the non-null replacement units in reading order
+     * @return a new document with the supplied units
+     */
+    public Document withUnits(final List<Unit> units) {
+        Objects.requireNonNull(units, "units");
+        return new Document(
+                id, format, declaredLang, detectedSourceLang, charset, hasBom, contentHash, metadata, units);
+    }
 }

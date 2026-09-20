@@ -19,6 +19,7 @@ module ua.bookloom.pipeline {
     requires ua.bookloom.llm;
     requires ua.bookloom.persistence;
     requires com.google.guice;
+    requires org.slf4j;
 
     exports ua.bookloom.pipeline;
 

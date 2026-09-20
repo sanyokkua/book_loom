@@ -117,8 +117,12 @@ only" toggle** in v1: there is no OS-notification feature (`11_NOTIFICATIONS_AND
 |----------------------|--------------------------|---------------------|-----------------------------|----------------|
 | Data directory       | path (read-only display) | per-OS app data dir | must exist and be writable  | FR-PERSIST-03  |
 | Log directory        | path (read-only display) | per-OS log dir      | must exist and be writable  | DD-23          |
-| Log level            | enum                     | INFO                | ERROR / WARN / INFO / DEBUG | FR-SETTINGS-06 |
+| Log level            | enum                     | INFO (DEBUG in a development run) | ERROR / WARN / INFO / DEBUG / TRACE | FR-SETTINGS-06 |
 | Open data/log folder | action                   | —                   | —                           | FR-SETTINGS-06 |
+
+`BOOKLOOM_LOG_LEVEL`, or else the system property `bookloom.log.level`, overrides the log level for one run, and is the
+only way to set it until this tab exists. `TRACE` is the only level that writes book text, prompts and model replies to
+the log (`03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#secrets-never-stored`).
 
 ## validation-behaviour {#validation-behaviour}
 

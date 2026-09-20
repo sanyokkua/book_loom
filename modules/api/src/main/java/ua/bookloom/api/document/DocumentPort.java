@@ -7,7 +7,7 @@ import ua.bookloom.api.Result;
  * Opens a book file into a {@link Document} and writes a {@link Document} back out in its original format.
  * Implemented by {@code :document} ({@code DocumentService}).
  *
- * <p>Both methods are boundary methods: per {@code 02_Architecture/09_ERROR_HANDLING.md#boundary-discipline}, no
+ * <p>Every method is a boundary method: per {@code 02_Architecture/09_ERROR_HANDLING.md#boundary-discipline}, no
  * exception may cross this interface. A failure — a corrupt container, a DRM refusal, an unexpected throwable — is
  * always returned as a failed {@link Result}, never thrown.
  */
@@ -17,8 +17,8 @@ public interface DocumentPort {
      * Parses a book file into an immutable skeleton plus ordered segments.
      *
      * @param source the book file to open
-     * @return the parsed document, or a failed result (for example {@code ErrorCode.validation} for a corrupt
-     *     container, or a DRM-blocked outcome for encrypted content)
+     * @return the parsed document, or a failed result carrying {@code ErrorCode.validation} when the container is
+     *     corrupt or DRM-protected
      */
     Result<Document> open(Path source);
 
@@ -34,10 +34,18 @@ public interface DocumentPort {
     Result<Path> write(Document document, Path destination, String targetLanguage);
 
     /**
+     * Releases the parsed state retained for {@code document}.
+     *
+     * @param document the document whose parsed state should be released
+     * @return whether the document was open, or a failed result when release cannot complete
+     */
+    Result<Boolean> close(Document document);
+
+    /**
      * Restores {@code segment}'s placeholders into {@code translatedMasked}, after first validating that its
      * placeholder multiset matches {@code segment}'s masked form. Implemented by {@code :document}'s masking
-     * machinery; exposed here so {@code :pipeline} — which may not depend on {@code :document}
-     * (`architecture-layering.md`) — has a seam to call unmask through.
+     * machinery; exposed here so callers use the port. JPMS exports and the {@code ports-not-concretes} rule keep
+     * callers on this interface rather than concrete {@code :document} implementation classes.
      *
      * <p>{@code format} is required because the escaping rule applied to the text between tokens, and the
      * structural check performed on the result, both differ by format, and {@link Segment} itself carries no format

@@ -14,4 +14,7 @@ dependencies {
     implementation(project(":api"))
     implementation(project(":util"))
     implementation(libs.guice)
+    implementation(libs.slf4j.api)
+
+    testRuntimeOnly(libs.logback.classic)
 }

@@ -57,6 +57,22 @@ val runApp =
         javaLauncher = javaToolchains.launcherFor(java.toolchain)
     }
 
+val translateApp =
+    tasks.register<JavaExec>("translate") {
+        description = "Translates one book from the command line."
+        group = ApplicationPlugin.APPLICATION_GROUP
+
+        mainClass = "ua.bookloom.app.bootstrap.TranslateLauncher"
+        classpath = sourceSets.main.get().runtimeClasspath
+        javaLauncher = javaToolchains.launcherFor(java.toolchain)
+        workingDir = rootDir
+
+        // Guice 7.0.0 defines its generated classes through sun.misc.Unsafe, and JDK 25 answers the first use with
+        // four WARNING lines on the console of every run: noise in front of the command's one report line, on a path
+        // a later JDK may refuse. BookLoom uses no Guice AOP, so the reflection Guice falls back to loses nothing.
+        systemProperty("guice_bytecode_gen_option", "DISABLED")
+    }
+
 // --- The build-generated version resource (DD-50) ---------------------------------------------------------------
 //
 // A classpath RESOURCE rather than the jar manifest's `Implementation-Version`, and that is the load-bearing part:

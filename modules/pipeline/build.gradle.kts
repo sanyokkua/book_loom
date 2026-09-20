@@ -15,4 +15,7 @@ dependencies {
     implementation(project(":llm"))
     implementation(project(":persistence"))
     implementation(libs.guice)
+    implementation(libs.slf4j.api)
+
+    testImplementation(libs.logback.classic)
 }

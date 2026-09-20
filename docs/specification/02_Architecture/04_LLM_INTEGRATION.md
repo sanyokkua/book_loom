@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-15
 **Cross-references:** `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
 `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`,
 `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`
@@ -12,10 +12,29 @@ are Java-ish contracts in `ua.bookloom.api.llm` (ports) and `ua.bookloom.llm` (i
 
 ## provider-architecture {#provider-architecture}
 
-A `Provider` **port** plus a `ProviderFactory` hide the concrete client from every caller (`:pipeline`, verification,
-the UI). The factory maps a provider **kind** to the client that speaks that server's dialect. Callers depend only on
-the port and never branch on kind, so adding a provider is adding an implementation behind the factory, not a change at
-the call site.
+**What exists today sits one layer above this section.** The engine never talks to `Provider` directly: it holds a
+`ChatModel` (`:api.llm`, built by `add-translation-engine-and-cli`, ADR-0033) already bound to one provider and model,
+obtained once from a `ChatModelFactory` —
+
+```java
+public interface ChatModel { Result<ChatResponse> chat(ChatRequest request); }
+public interface ChatModelFactory { Result<ChatModel> create(ModelSelection selection); }
+public record ModelSelection(String providerId, String modelId) {}
+```
+
+— the seam this change and ADR-0033 fix so the translation screen and the real clients build on it unchanged: the
+caller resolves the provider and model once and the job keeps one bound `ChatModel` for its whole run, rather than
+re-reading the current provider and settings on every call. `Provider`/`ProviderFactory` below are what
+`ChatModelFactory` will resolve to once real clients exist. Until then, `ua.bookloom.llm.ChatModelFactoryImpl` checks
+the provider id `pseudo` directly and returns `ua.bookloom.llm.pseudo.PseudoChatModel` — a deterministic, offline
+model that upper-cases the last user message, leaves `⟦gN⟧` tokens and character references unchanged, and finishes
+`STOP` — for any model id; any other provider id, or a blank model id, is `ErrorCode.validation`. `pseudo` is the only
+provider until the real clients land.
+
+A `Provider` **port** plus a `ProviderFactory` will hide the concrete client from every caller (`:pipeline`,
+verification, the UI). The factory maps a provider **kind** to the client that speaks that server's dialect. Callers
+depend only on the port and never branch on kind, so adding a provider is adding an implementation behind the factory,
+not a change at the call site.
 
 ```java
 public interface Provider {
@@ -110,9 +129,23 @@ public record ProviderConfig(
 
 ## chat-contracts {#chat-contracts}
 
+The **built** `ChatRequest`/`ChatResponse` (`ua.bookloom.api.llm`) are the plain shape ADR-0033 decided on, not the
+richer draft below:
+
+```java
+public record ChatRequest(List<ChatMessage> messages) {}     // ChatMessage(ChatRole role, String content)
+public record ChatResponse(String content, FinishReason finishReason) {}   // FinishReason: STOP, LENGTH, OTHER
+```
+
+`ChatRequest` carries **no `model` field** — the model is already bound on the `ChatModel` the caller holds
+(#provider-architecture) and is never named per call. A per-call setting that the engine itself chooses and that does
+not depend on which provider answers — a temperature the user changes while a job is paused, later an output format —
+is added as **one nullable `ChatRequest` component at a time**, left out of the wire request when null, the first time
+a prompt or a screen needs it; a provider or model identity is never such a field (ADR-0033). None of `temperature`,
+`topP`, `maxTokens`, `numCtx` or `responseFormat` below exists yet:
+
 ```java
 public record ChatRequest(
-    String model,
     List<Message> messages,         // system + user turns
     Double temperature,             // nullable -> omitted from JSON
     Double topP,                    // nullable -> omitted
@@ -129,14 +162,14 @@ public record ChatResponse(
 ) {}
 ```
 
-**Nullable params are omitted** from the serialized JSON (Jackson `@JsonInclude(NON_NULL)`), so a `null` temperature is
-absent rather than sent as `null` — avoiding rejections from strict endpoints. There is **no `stream` field** —
-streaming is deferred (out of scope for v1), so `chat` always returns the whole `ChatResponse` body synchronously
-(`Result<ChatResponse>`). **Cancellation** is bounded by the per-request HTTP timeout (a hard upper bound) plus a
-cooperative interrupt at the next boundary; worst-case cancel latency is the request read-timeout, not instant
-(`08_THREADING_CONCURRENCY.md#cancellation`). When several `numCtx` inputs collide, precedence is **request-level (
-`ChatRequest.numCtx`) > provider-level (`ProviderConfig.numCtx`) > setting default**, and the packer budgets the single
-resolved value (#effective-context).
+**Nullable params are omitted** from the serialized JSON (Jackson `@JsonInclude(NON_NULL)`) once they exist, so a
+`null` temperature will be absent rather than sent as `null` — avoiding rejections from strict endpoints. There is
+**no `stream` field** — streaming is deferred (out of scope for v1), so `chat` always returns the whole `ChatResponse`
+body synchronously (`Result<ChatResponse>`). **Cancellation** is bounded by the per-request HTTP timeout (a hard upper
+bound) plus a cooperative interrupt at the next boundary; worst-case cancel latency is the request read-timeout, not
+instant (`08_THREADING_CONCURRENCY.md#cancellation`). When several `numCtx` inputs collide, once that hint exists,
+precedence is **request-level (`ChatRequest.numCtx`) > provider-level (`ProviderConfig.numCtx`) > setting default**,
+and the packer budgets the single resolved value (#effective-context).
 
 ## response-handling {#response-handling}
 

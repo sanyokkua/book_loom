@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-15
 **Cross-references:** `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`,
 `docs/specification/03_NonFunctional/05_RELIABILITY_AND_RESUME.md`
@@ -58,14 +58,27 @@ inference gate.
 
 ## cancellation {#cancellation}
 
-- Each translation run exposes a **per-job handle** (`JobHandle` in `:api`) with `pause()` / `resume()` / `cancel()`.
-- Cancellation is cooperative: the engine checks the handle at chunk boundaries and after each `chat` call; an in-flight
-  HTTP request is abandoned via the JDK client's `CompletableFuture` cancellation / timeout.
-- **Worst-case cancel latency** is the HTTP request **read-timeout**, not instant: a cancel raised while a `chat` call
-  is mid-flight takes effect at the next cooperative check point — the chunk boundary — once the request returns or its
-  read-timeout elapses. There is no forced thread interrupt of an in-flight generation; cancellation is bounded by the
-  timeout, not immediate.
-- Cancelling yields `ErrorCode.cancelled` and leaves already-accepted segments intact (they are persisted).
+- Each translation run is its own handle: `TranslationJob` (`:api`, `ua.bookloom.api.pipeline`, built by
+  `add-translation-engine-and-cli`) combines the runnable and the control surface — `pause()`, `resume()`, `cancel()`
+  and `pauseAt(Set<PausePoint>)` are callable from any thread, while `run()` executes synchronously on the caller's
+  thread (ADR-0033). There is no separate `JobHandle`.
+- Cancellation is cooperative and is checked only at **safe boundaries**: before each segment's model call, after
+  each segment is decided (where an enabled `PausePoint` — `AFTER_SEGMENT`, `AFTER_SECTION`, `BETWEEN_STAGES` — or a
+  requested pause is also honored at the same point), before export begins, and once more just before export's final
+  move. Inside export the only pause point is `ON_ERROR`; a pause requested while exporting is ignored until the next
+  boundary. A `cancel()` raised before `run()` is called makes `run()` return at once without opening the book.
+- A cancel raised while a model call is already in flight takes effect at the next boundary rather than interrupting
+  the call: the offline pseudo model returns immediately, so this is not observable today; a real client will bound
+  the wait with its own request timeout, as ADR-0033's Consequences already accept.
+- **Cancelling ends the run with a Cancelled report, not a thrown or propagated `ErrorCode.cancelled`.** `run()`
+  still returns `Result.ok(JobReport)`, with `JobReport.end()` equal to `JobState.CANCELLED`; `JobReport.error()` is
+  populated only when `end()` is `FAILED` (`09_ERROR_HANDLING.md#partial-results`), so a caller tells cancellation
+  from failure apart by state, never by inspecting an error code. `ErrorCode.cancelled` still appears **internally** —
+  a model or `unmask` failure classified `cancelled` is translated into the same Cancelled report — but it never
+  reaches the job's caller as a failed `Result`.
+- Segments already `ACCEPTED`/`FLAGGED` before the cancel point are still counted in the report the job returns.
+  Surviving a restart is not built yet: `:persistence` stays empty in `add-translation-engine-and-cli`, so nothing is
+  checkpointed to disk — see `resume-checkpoints` below for the intended, not-yet-built behaviour.
 
 ## resume-checkpoints {#resume-checkpoints}
 

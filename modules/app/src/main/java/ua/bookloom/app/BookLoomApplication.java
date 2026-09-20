@@ -9,10 +9,6 @@ import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ua.bookloom.document.DocumentModule;
-import ua.bookloom.llm.LlmModule;
-import ua.bookloom.persistence.PersistenceModule;
-import ua.bookloom.pipeline.PipelineModule;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.Theme;
 import ua.bookloom.ui.UiModule;
@@ -50,13 +46,7 @@ public final class BookLoomApplication extends Application {
     public void init() {
         final StartupContext startup = StartupContext.take();
 
-        injector = Guice.createInjector(
-                new AppModule(startup),
-                new DocumentModule(),
-                new LlmModule(),
-                new PersistenceModule(),
-                new PipelineModule(),
-                new UiModule());
+        injector = Guice.createInjector(new CoreModules(startup), new UiModule());
 
         lifecycle.phaseOne(injector);
         lifecycle.phaseTwo(injector);
