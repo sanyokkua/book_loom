@@ -233,6 +233,11 @@ debugging, run `./gradlew :app:run --debug-jvm` and attach a **Remote JVM Debug*
 `localhost:5005` (the socket binds to `127.0.0.1` only). An Application configuration may launch `:app` on the module
 path; prefer the Gradle one.
 
+If the Build panel reports `Could not resolve org.jetbrains.kotlin:kotlin-stdlib` on
+`:build-logic:generateExternalPluginSpecBuilders` while `./gradlew` builds fine, IntelliJ is using a different,
+locally-installed Gradle than the wrapper (Settings → Build, Execution, Deployment → Build Tools → Gradle →
+Distribution) — switch it back to the Gradle Wrapper.
+
 ---
 
 ## 7. Testing {#testing}
