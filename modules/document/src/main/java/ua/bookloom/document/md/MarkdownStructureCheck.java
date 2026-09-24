@@ -5,10 +5,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.commonmark.node.Emphasis;
+import org.commonmark.node.Link;
 import org.commonmark.node.Node;
 import org.commonmark.node.SoftLineBreak;
+import org.commonmark.node.StrongEmphasis;
 import org.commonmark.node.Text;
 import ua.bookloom.api.document.SegmentKind;
 
@@ -103,6 +108,9 @@ public final class MarkdownStructureCheck {
 
     private static final char BACKSLASH = '\\';
 
+    /** A task-list marker and the separator that must remain at a list item's start. */
+    private static final Pattern TASK_LIST_MARKER = Pattern.compile("\\[[ xX]\\][\\t ]+");
+
     /**
      * Compares {@code sourceText} and {@code restoredText}'s construct-type multisets, each parsed on its own.
      *
@@ -121,7 +129,100 @@ public final class MarkdownStructureCheck {
         if (escapesItsBlock(sourceText, restoredText, kind)) {
             return false;
         }
+        if (!pairedConstructsRemainMeaningful(sourceText, restoredText)) {
+            return false;
+        }
+        if (!soleLinkRetainsItsWholeLabel(sourceText, restoredText)) {
+            return false;
+        }
+        if (!taskListMarkerRemainsAtStart(sourceText, restoredText, kind)) {
+            return false;
+        }
         return multisetFor(sourceText, kind).equals(multisetFor(restoredText, kind));
+    }
+
+    /**
+     * Keeps every source-owned paired inline construct meaningful after restoration. A construct multiset alone
+     * accepts {@code [](...)} and {@code ** **}: both still contribute a {@code Link} or formatting delimiter pair,
+     * but no longer format or link the source's visible text. Counting nonblank descendants by construct type keeps
+     * valid translation-driven reordering legal while rejecting detached pairs.
+     */
+    private static boolean pairedConstructsRemainMeaningful(String sourceText, String restoredText) {
+        return pairedContentCounts(sourceText).equals(pairedContentCounts(restoredText));
+    }
+
+    /**
+     * A source segment made wholly of a visible link cannot turn part of its translated label into ordinary prose.
+     * This is deliberately narrower than a global link-position rule: prose surrounding a link is translatable and
+     * may reorder, while a table-of-contents item has no text outside its link to redistribute.
+     */
+    private static boolean soleLinkRetainsItsWholeLabel(String sourceText, String restoredText) {
+        return !isSoleNonblankLink(sourceText) || isSoleNonblankLink(restoredText);
+    }
+
+    private static boolean isSoleNonblankLink(String text) {
+        final Node root = MarkdownReader.parser().parse(text);
+        final Node block = root.getFirstChild();
+        if (block == null || block.getNext() != null) {
+            return false;
+        }
+        boolean foundLink = false;
+        for (Node child = block.getFirstChild(); child != null; child = child.getNext()) {
+            if (child instanceof Text plainText && plainText.getLiteral().isBlank()) {
+                continue;
+            }
+            if (!(child instanceof Link) || foundLink || !hasNonblankVisibleText(child)) {
+                return false;
+            }
+            foundLink = true;
+        }
+        return foundLink;
+    }
+
+    private static PairedContentCounts pairedContentCounts(String text) {
+        final PairedContentCounter counter = new PairedContentCounter();
+        collectPairedContentCounts(MarkdownReader.parser().parse(text), counter);
+        return counter.toCounts();
+    }
+
+    private static void collectPairedContentCounts(Node node, PairedContentCounter counter) {
+        for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+            if (hasNonblankVisibleText(child)) {
+                if (child instanceof Emphasis) {
+                    counter.emphasis++;
+                } else if (child instanceof StrongEmphasis) {
+                    counter.strongEmphasis++;
+                } else if (child instanceof Link) {
+                    counter.links++;
+                }
+            }
+            collectPairedContentCounts(child, counter);
+        }
+    }
+
+    private static boolean hasNonblankVisibleText(Node node) {
+        if (node instanceof Text text && !text.getLiteral().isBlank()) {
+            return true;
+        }
+        for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
+            if (hasNonblankVisibleText(child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Requires a source task marker to remain at the list item's leading position with the same checked state. */
+    private static boolean taskListMarkerRemainsAtStart(String sourceText, String restoredText, SegmentKind kind) {
+        if (kind != SegmentKind.LIST_ITEM) {
+            return true;
+        }
+        final Matcher source = TASK_LIST_MARKER.matcher(sourceText);
+        if (!source.lookingAt()) {
+            return true;
+        }
+        final Matcher restored = TASK_LIST_MARKER.matcher(restoredText);
+        return restored.lookingAt() && source.group().equals(restored.group());
     }
 
     /**
@@ -247,4 +348,16 @@ public final class MarkdownStructureCheck {
             collectConstructNames(child, names);
         }
     }
+
+    private static final class PairedContentCounter {
+        private int emphasis;
+        private int strongEmphasis;
+        private int links;
+
+        private PairedContentCounts toCounts() {
+            return new PairedContentCounts(emphasis, strongEmphasis, links);
+        }
+    }
+
+    private record PairedContentCounts(int emphasis, int strongEmphasis, int links) {}
 }

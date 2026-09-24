@@ -75,6 +75,29 @@ class MarkdownMaskerPortTest {
         assertThat(segment.placeholders()).containsEntry("g1", "](ch2.md)");
     }
 
+    // WHEN a Markdown task list item is segmented, THEN its unchecked marker and separator stay immutable.
+    @Test
+    void mask_uncheckedTaskListMarker_isOneAtomicToken() {
+        final Segment segment = onlySegment("- [ ] Gravity is identical everywhere.");
+
+        assertThat(segment.masked()).isEqualTo("⟦g0⟧Gravity is identical everywhere.");
+        assertThat(segment.placeholders()).containsEntry("g0", "[ ] ");
+    }
+
+    // WHEN a Markdown task list item is segmented, THEN its checked marker and separator stay immutable.
+    @Test
+    void mask_checkedTaskListMarkers_areAtomicTokens() {
+        final Segment segment = onlySegment("- [x] Gravity keeps satellites in orbit.");
+
+        assertThat(segment.masked()).isEqualTo("⟦g0⟧Gravity keeps satellites in orbit.");
+        assertThat(segment.placeholders()).containsEntry("g0", "[x] ");
+
+        final Segment upperCase = onlySegment("- [X] Gravity keeps satellites in orbit.");
+
+        assertThat(upperCase.masked()).isEqualTo("⟦g0⟧Gravity keeps satellites in orbit.");
+        assertThat(upperCase.placeholders()).containsEntry("g0", "[X] ");
+    }
+
     // WHEN a Markdown block is segmented, the system SHALL replace each inline
     // construct using the source ranges it occupies and leave the remaining source text unaltered.
     @Test

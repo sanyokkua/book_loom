@@ -24,7 +24,9 @@ import ua.bookloom.util.paths.AppPaths;
 class TranslateLauncherTest {
 
     private static final String MARKDOWN = "He opened the *old* door.\n";
-    private static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite]";
+    private static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
+            + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] "
+            + "[--base-url <url>] [--timeout <seconds>]";
 
     @TempDir
     private Path tempDir;
@@ -184,10 +186,10 @@ class TranslateLauncherTest {
                 .anyMatch(line -> atLevel(line, "INFO") && line.contains("Translation job ended state=COMPLETED"));
         assertThat(logLines)
                 .anyMatch(line -> atLevel(line, "DEBUG") && line.contains("Book.md:0") && line.contains("ACCEPTED"));
-        assertThat(logLines)
-                .anyMatch(line -> atLevel(line, "TRACE") && line.contains("He opened the ⟦g0⟧old⟦g1⟧ door."));
-        assertThat(logLines)
-                .anyMatch(line -> atLevel(line, "TRACE") && line.contains("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR."));
+        assertThat(logLines).anyMatch(line -> atLevel(line, "TRACE") && line.contains("Pseudo chat lastUserMessage="));
+        assertThat(String.join("\n", logLines))
+                .contains("He opened the ⟦g0⟧old⟦g1⟧ door.")
+                .contains("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
     }
 
     // WHEN the launcher runs at INFO, THEN DEBUG diagnostics and book text are suppressed from the file log.

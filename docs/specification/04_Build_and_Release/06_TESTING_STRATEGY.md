@@ -211,6 +211,26 @@ place it in a **separate `liveLocal` source set** with its own task. Concretely,
 (`./gradlew liveLocal` / `promptEval` / `visual`). Each documents its required env vars and no-ops (all-skipped) when
 they are absent. The same exclusion keeps the prompt-eval and visual sets out of the merge gate.
 
+### 2026-09-24 machine-local route observations
+
+The following results are retained only as guidance for subsequent **live testing on this machine**. They use the
+single-segment strict-`target` prompt revision, `en` → `uk`, temperature `0.2`, the listed local runtimes and the
+captured `/private/tmp/bookloom-single-segment-matrix.TCLnnn` evidence. They are not universal model rankings, a
+supported-model guarantee, or a change to the product preference for Ollama's native client.
+
+| Configuration | Result | Guidance for this machine |
+|---|---|---|
+| Ollama `/v1` shim + `gemma4:e4b-mlx` Q4 | Markdown 46/46, EPUB 140/145, FB2 158/163 accepted | Recommended for further live tests. |
+| Ollama `/v1` shim + `gemma4:e4b-mxfp8` Q8 | 2/3 small control accepted | Compatible with caveat; do not spend long-format time yet. |
+| Native Ollama + `gemma4:e4b-mlx` Q4 | 1/3 small control accepted | Do not repeat until the route or model behavior changes. |
+| Native Ollama + `gemma4:e4b-mxfp8` Q8 | 0/3 small control accepted | Do not repeat. |
+| LM Studio + Gemma | 1/3 small control accepted | Do not repeat. |
+| LM Studio + DeepSeek | 0/3 small control accepted | Do not repeat. |
+
+The only configuration qualifying for long-form follow-up was the Q4 shim, so no artificial second route was promoted
+to EPUB/FB2 testing. A future runtime, model, prompt, or schema change resets this recommendation and requires a new
+matrix rather than extrapolating these observations.
+
 ## prompt-evals {#prompt-evals}
 
 Every pipeline prompt has a **local-only prompt eval** implemented as a JUnit test (tag **`promptEval`**, excluded from

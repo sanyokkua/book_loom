@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -11,7 +12,6 @@ import org.slf4j.MDC;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentStatus;
@@ -31,6 +31,8 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.DraftReplyParser;
 
 /** The single-run translation lifecycle, including pause and cancellation boundaries. */
 @Slf4j
@@ -39,23 +41,30 @@ final class TranslationJobImpl implements TranslationJob {
     private final DocumentPort documents;
     private final TranslationRequest request;
     private final ChatModel model;
+    private final ObjectMapper mapper;
     private final ExportMoveOperation moves;
     private final JobControl control = new JobControl();
     private final JobSubscribers subscribers = new JobSubscribers();
     private final String jobId = UUID.randomUUID().toString();
 
-    TranslationJobImpl(final DocumentPort documents, final TranslationRequest request, final ChatModel model) {
-        this(documents, request, model, ExportMoveOperation.nio());
+    TranslationJobImpl(
+            final DocumentPort documents,
+            final TranslationRequest request,
+            final ChatModel model,
+            final ObjectMapper mapper) {
+        this(documents, request, model, mapper, ExportMoveOperation.nio());
     }
 
     TranslationJobImpl(
             final DocumentPort documents,
             final TranslationRequest request,
             final ChatModel model,
+            final ObjectMapper mapper,
             final ExportMoveOperation moves) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.request = Objects.requireNonNull(request, "request");
         this.model = Objects.requireNonNull(model, "model");
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.moves = Objects.requireNonNull(moves, "moves");
     }
 
@@ -63,7 +72,7 @@ final class TranslationJobImpl implements TranslationJob {
     public Result<JobReport> run() {
         log.debug("Running translation job source={} destination={}", request.source(), request.destination());
         if (!control.claimRun()) {
-            return Result.err(alreadyRunError());
+            return Result.err(TranslationJobErrors.alreadyRun());
         }
         MDC.put("job", jobId);
         try {
@@ -126,10 +135,9 @@ final class TranslationJobImpl implements TranslationJob {
         try {
             logStart(tracker);
             emit(new StageStarted(JobStage.TRANSLATE, tracker.currentTranslationProgress()));
-            if (initial.releaseError() != null) {
-                return finish(JobState.FAILED, tracker, null, initial.releaseError());
-            }
-            return translate(tracker);
+            return initial.releaseError() == null
+                    ? translate(tracker)
+                    : finish(JobState.FAILED, tracker, null, initial.releaseError());
         } catch (Throwable cause) {
             return failAtBoundary(cause, tracker);
         }
@@ -140,8 +148,10 @@ final class TranslationJobImpl implements TranslationJob {
                 documents,
                 model,
                 tracker.format(),
-                request.targetLanguage(),
-                sourceLanguage(tracker.declaredLanguage()));
+                new DraftPromptBuilder(
+                        TranslationJobRequestContext.sourceLanguage(request, tracker.declaredLanguage()),
+                        request.targetLanguage()),
+                new DraftReplyParser(mapper));
         while (tracker.hasPending()) {
             final Result<JobReport> before =
                     honorBoundary(control.boundary(false, false, false), tracker.currentTranslationProgress(), tracker);
@@ -159,7 +169,7 @@ final class TranslationJobImpl implements TranslationJob {
     private @Nullable Result<JobReport> translateOne(
             final JobProgressTracker tracker, final SegmentTranslator translator) {
         final SegmentWork work = tracker.next();
-        final Result<Decision> result = decide(work, translator);
+        final Result<Decision> result = decide(work, tracker.draftContextFor(work), translator);
         if (result.isErr()) {
             return recoverOrFail(errorOf(result), tracker, work);
         }
@@ -242,10 +252,13 @@ final class TranslationJobImpl implements TranslationJob {
         return null;
     }
 
-    private Result<Decision> decide(final SegmentWork work, final SegmentTranslator translator) {
+    private Result<Decision> decide(
+            final SegmentWork work,
+            final ua.bookloom.pipeline.prompt.DraftContext context,
+            final SegmentTranslator translator) {
         MDC.put("segment", work.segment().id());
         try {
-            return translator.translate(work.segment());
+            return translator.translate(work.segment(), context);
         } finally {
             MDC.remove("segment");
         }
@@ -268,7 +281,7 @@ final class TranslationJobImpl implements TranslationJob {
         try {
             if (!request.overwrite() && Files.exists(request.destination())) {
                 log.warn("Refusing translation job because destination already exists: {}", request.destination());
-                return Result.err(destinationExistsError());
+                return Result.err(TranslationJobErrors.destinationExists());
             }
             return Result.ok(Boolean.TRUE);
         } catch (Throwable cause) {
@@ -308,7 +321,15 @@ final class TranslationJobImpl implements TranslationJob {
             @Nullable final Path written,
             @Nullable final AppError error) {
         return tracker == null
-                ? new JobReport(sourceFormat(), end, 0, 0, 0, java.util.List.of(), written, error)
+                ? new JobReport(
+                        TranslationJobRequestContext.sourceFormat(request),
+                        end,
+                        0,
+                        0,
+                        0,
+                        java.util.List.of(),
+                        written,
+                        error)
                 : tracker.report(end, written, error);
     }
 
@@ -355,27 +376,6 @@ final class TranslationJobImpl implements TranslationJob {
         return decision.segment().status() == SegmentStatus.FLAGGED
                 ? Objects.requireNonNull(decision.flagReason(), "flag reason").code()
                 : null;
-    }
-
-    private @Nullable String sourceLanguage(@Nullable final String declaredLanguage) {
-        return request.sourceLanguage() == null ? declaredLanguage : request.sourceLanguage();
-    }
-
-    private BookFormat sourceFormat() {
-        final Path name = Objects.requireNonNull(request.source().getFileName(), "source file name");
-        return BookFormat.ofFileName(name.toString()).orElse(BookFormat.TXT);
-    }
-
-    private static AppError destinationExistsError() {
-        return AppError.of(
-                ErrorCode.validation,
-                "This destination already exists",
-                "Choose a new destination or allow the existing file to be replaced.");
-    }
-
-    private static AppError alreadyRunError() {
-        return AppError.of(
-                ErrorCode.validation, "This job has already run", "Create a new translation job to run again.");
     }
 
     private static AppError snapshotError(final Throwable cause) {

@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
@@ -10,7 +11,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -24,13 +24,20 @@ import ua.bookloom.api.pipeline.TranslationRequest;
 
 /** Validates a translation request and creates its single-run job without opening the source book. */
 @Slf4j
-@RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TranslationEngineImpl implements TranslationEngine {
 
     private static final Pattern LANGUAGE_CODE = Pattern.compile("^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$");
     private static final String ZIPPED_FB2_SUFFIX = ".fb2.zip";
 
     private final DocumentPort documents;
+    private final ObjectMapper mapper;
+
+    /** Creates an engine with the application-wide tolerant JSON mapper. */
+    @Inject
+    public TranslationEngineImpl(final DocumentPort documents, final ObjectMapper mapper) {
+        this.documents = Objects.requireNonNull(documents, "documents");
+        this.mapper = Objects.requireNonNull(mapper, "mapper");
+    }
 
     @Override
     public Result<TranslationJob> newJob(final TranslationRequest request, final ChatModel model) {
@@ -47,7 +54,9 @@ public final class TranslationEngineImpl implements TranslationEngine {
                 return failure(formats);
             }
             final Result<Boolean> identity = checkIdentity(request);
-            return identity.isErr() ? failure(identity) : Result.ok(new TranslationJobImpl(documents, request, model));
+            return identity.isErr()
+                    ? failure(identity)
+                    : Result.ok(new TranslationJobImpl(documents, request, model, mapper));
         } catch (Throwable cause) {
             return Result.err(unexpectedBoundaryError(cause));
         }

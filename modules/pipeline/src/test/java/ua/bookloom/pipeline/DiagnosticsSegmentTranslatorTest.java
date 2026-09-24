@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -24,13 +25,13 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.DraftReplyParser;
 
 /** Verifies diagnostics from the per-segment decision boundary. */
 class DiagnosticsSegmentTranslatorTest {
 
     private static final Path TEST_LOG = Path.of("build/test-logs/test.log");
-    private static final String SYSTEM_PROMPT = "Translate the following text from en into uk. Preserve every "
-            + "⟦gN⟧ placeholder exactly as written. Return only the translated text.";
 
     @TempDir
     private Path tempDir;
@@ -49,20 +50,21 @@ class DiagnosticsSegmentTranslatorTest {
         final long offset = testLogSize();
 
         translator(response("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.")).translate(segment);
-        translator(response("HE OPENED THE ⟦g0⟧OLD DOOR.")).translate(segment);
+        translator(responseThen("HE OPENED THE ⟦g0⟧OLD DOOR.", "HE OPENED THE ⟦g0⟧OLD DOOR."))
+                .translate(segment);
         translator(new ScriptedChatModel().throwFailure(new IllegalStateException("diagnostic model explosion")))
                 .translate(segment);
 
         final String log = testLogSince(offset);
         assertThat(log)
-                .contains("Translating segment id=" + segment.id() + " format=MARKDOWN targetLanguage=uk")
-                .contains("Building system prompt targetLanguage=uk sourceLanguagePresent=true")
-                .contains("System prompt sourceBranch=known sourceLanguage=en")
+                .contains("Translating segment id=" + segment.id() + " format=MARKDOWN")
+                .contains("Building draft prompt sourceLanguage=English (en) targetLanguage=Ukrainian (uk) segmentId="
+                        + segment.id())
                 .contains("Building chat request segmentId=" + segment.id() + " maskedLength=31")
                 .contains("Built chat request segmentId=" + segment.id() + " messageCount=2")
                 .contains("Calling chat model segmentId=" + segment.id() + " messageCount=2")
                 .contains("Chat model completed segmentId=" + segment.id() + " result=success")
-                .contains("Model reply segment=" + segment.id() + " kind=text finish=STOP empty=false")
+                .contains("Model reply segment=" + segment.id() + " kind=STRUCTURED finish=STOP empty=false")
                 .contains("Restoring segment id=" + segment.id() + " format=MARKDOWN trimmedLength=31")
                 .contains("Restoring whitespace sourceLength=31 trimmedLength=31")
                 .contains("Restored whitespace leadingLength=0 trailingLength=0 restoredLength=31")
@@ -70,7 +72,7 @@ class DiagnosticsSegmentTranslatorTest {
                 .contains("Flagged segment id=" + segment.id() + " code=validation")
                 .contains("Collecting expected tokens segmentId=" + segment.id() + " placeholderCount=2")
                 .contains("Collected observed tokens textLength=27 tokenCount=1")
-                .contains("expectedTokens=[⟦g0⟧, ⟦g1⟧] observedTokens=[⟦g0⟧]")
+                .contains("expectedTokens=⟦g0⟧ ⟦g1⟧ observedTokens=[⟦g0⟧]")
                 .contains("IllegalStateException: diagnostic model explosion");
         assertThat(count(log, "Unexpected model failure segment=" + segment.id() + " code=internal"))
                 .isEqualTo(1);
@@ -85,13 +87,16 @@ class DiagnosticsSegmentTranslatorTest {
         final Segment segment = txtSegment(source);
         final long offset = testLogSize();
 
-        atTraceLevel(
-                () -> new SegmentTranslator(documents, response(reply), BookFormat.TXT, "uk", "en").translate(segment));
+        atTraceLevel(() -> translator(documents, response(reply), BookFormat.TXT, "uk", "en")
+                .translate(segment));
 
         final String log = testLogSince(offset);
         assertThat(log)
-                .contains("TRACE", "Segment prompt system=" + SYSTEM_PROMPT, "user=" + source)
-                .contains("Segment reply raw=" + reply, "trimmed=" + reply)
+                .contains(
+                        "TRACE",
+                        "Draft prompt system=You are a professional literary translator",
+                        "<Text>\n" + source + "\n</Text>")
+                .contains("Segment reply raw={\"target\":\"" + reply + "\"}", "trimmed=" + reply)
                 .contains("Segment reply restored=  SENSITIVE MANUSCRIPT SENTENCE.  ")
                 .contains("Segment unmask input=  SENSITIVE MANUSCRIPT SENTENCE.  ");
         assertSensitiveTextOnlyAtTrace(log, "Sensitive manuscript sentence.", "SENSITIVE MANUSCRIPT SENTENCE.");
@@ -138,11 +143,32 @@ class DiagnosticsSegmentTranslatorTest {
     }
 
     private SegmentTranslator translator(final ScriptedChatModel model) {
-        return new SegmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en");
+        return translator(documents, model, BookFormat.MARKDOWN, "uk", "en");
+    }
+
+    private static SegmentTranslator translator(
+            final DocumentPort documents,
+            final ScriptedChatModel model,
+            final BookFormat format,
+            final String targetLanguage,
+            final String sourceLanguage) {
+        return new SegmentTranslator(
+                documents,
+                model,
+                format,
+                new DraftPromptBuilder(sourceLanguage, targetLanguage),
+                new DraftReplyParser(new ObjectMapper()));
     }
 
     private static ScriptedChatModel response(final String content) {
-        return new ScriptedChatModel().answer(Result.ok(new ChatResponse(content, FinishReason.STOP)));
+        return new ScriptedChatModel()
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(content), FinishReason.STOP)));
+    }
+
+    private static ScriptedChatModel responseThen(final String first, final String second) {
+        return new ScriptedChatModel()
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(first), FinishReason.STOP)))
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(second), FinishReason.STOP)));
     }
 
     private static long testLogSize() {
@@ -169,8 +195,9 @@ class DiagnosticsSegmentTranslatorTest {
 
     private static void assertSensitiveTextOnlyAtTrace(
             final String log, final String sourceText, final String replyText) {
-        assertThat(log.lines().filter(line -> line.contains(sourceText) || line.contains(replyText)))
-                .isNotEmpty()
-                .allMatch(line -> line.contains(" TRACE "));
+        final int firstTrace = log.indexOf(" TRACE ");
+        assertThat(firstTrace).isPositive();
+        assertThat(log.substring(0, firstTrace)).doesNotContain(sourceText, replyText);
+        assertThat(log).contains(sourceText, replyText);
     }
 }

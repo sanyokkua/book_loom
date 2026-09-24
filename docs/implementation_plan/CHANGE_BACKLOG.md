@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** anyone picking up the next unit of work **Last Updated:**
-2026-09-15 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
+2026-09-22 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
 `docs/adr/ADR-0023-backend-complete-milestone-and-backlog-interstitials.md`,
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`,
 `docs/adr/ADR-0030-synthesize-a-missing-epub-mimetype-entry-on-write.md`, `docs/implementation_plan/07_ROADMAP.md`,
@@ -17,12 +17,14 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 
 ## where-this-stands {#where-this-stands}
 
-**Seven changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
+**Eight changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
 of four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11).
-`add-translation-engine-and-cli` is code-complete and gate-green, pending archive: it delivered the walking skeleton
+`add-translation-engine-and-cli` is archived: it delivered the walking skeleton
 the owner named as the next unit of work — a book of any of the four formats through the whole pipeline from the
 command line with a deterministic pseudo model (`docs/Architecture.md` §9) — making `:llm` and `:pipeline` real. The
 interstitial `settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 when D2 and D11 were fixed directly.
+`add-real-llm-clients` is in progress and makes the existing LLM seam real for Ollama-native and OpenAI-compatible
+endpoints.
 
 | Archived | Change | What it shipped |
 |---|---|---|
@@ -38,9 +40,9 @@ interstitial `settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 w
 
 | Metric | Value |
 |---|---|
-| Capabilities with a built-behaviour spec | **1 of 16** (`document-round-trip`) — `add-translation-engine-and-cli`'s `inference`/`translation-pipeline`/`resume`/`export` specs live under its own `openspec/changes/` directory until it is archived |
-| Tests | **616** at the last archive (2026-09-11), across the four then-real modules; `add-translation-engine-and-cli` (built, pending archive) adds a full suite across `:llm`, `:pipeline` and `:app` on top of that — the test's name and its one-line comment say what it proves, requirement-id markers were retired on 2026-09-11 (ADR-0032) |
-| Modules carrying real production logic | **6 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:app`) — `add-translation-engine-and-cli` made the last two real; not yet archived |
+| Capabilities with a built-behaviour spec | The archived `add-translation-engine-and-cli` change records the shipped `inference`, `translation-pipeline`, `resume` and `export` behaviour; the main ledger is updated by OpenSpec archive |
+| Tests | **616** at the 2026-09-11 archive, plus the suites shipped by the archived `add-translation-engine-and-cli` change across `:llm`, `:pipeline` and `:app` — a test's name and one-line comment say what it proves; requirement-id markers were retired on 2026-09-11 (ADR-0032) |
+| Modules carrying real production logic | **6 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:app`) — `add-translation-engine-and-cli` made the last two real |
 | Stages complete | **A only**, of A · B · B′ · C · D · E |
 
 **Inline masking now exists — the previous edition of this section said it did not.**
@@ -539,8 +541,8 @@ also the largest stage by some distance: **twelve changes, and all three stub mo
 |---|---|---|
 | 8 | `add-local-storage` | `local-storage` **NEW** |
 | 9 | `add-resume-checkpoints` | `resume` MOD |
-| 10 | `add-llm-provider-abstraction` | `llm-provider` **NEW** |
-| 11 | `add-inference-gate-and-response-contract` | `inference` MOD |
+| 10 | `add-llm-provider-abstraction` | `llm-provider` **NEW** — consumed in reduced form by `add-real-llm-clients`; persistence and provider editing remain |
+| 11 | `add-inference-gate-and-response-contract` | `inference` MOD — consumed in reduced form by `add-real-llm-clients`; repair and interactive gate behavior remain |
 | 12 | `add-chunking-and-context-assembly` | `translation-pipeline` MOD |
 | — | `add-prompt-catalog-and-output-contract` | `translation-pipeline` MOD |
 | 13 | `add-translation-draft-loop` | `translation-pipeline` MOD |

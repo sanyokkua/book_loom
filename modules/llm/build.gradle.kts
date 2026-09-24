@@ -14,7 +14,8 @@ dependencies {
     implementation(project(":api"))
     implementation(project(":util"))
     implementation(libs.guice)
+    implementation(libs.jackson.databind)
     implementation(libs.slf4j.api)
 
-    testRuntimeOnly(libs.logback.classic)
+    testImplementation(libs.logback.classic)
 }

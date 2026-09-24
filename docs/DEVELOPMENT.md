@@ -197,12 +197,20 @@ one segment through its log.
 `ua.bookloom.app.cli.TranslateCommand`:
 
 ```bash
-./gradlew -q :app:translate --args="'<book>' [--to <lang>] [--from <lang>] [--overwrite]"
+./gradlew -q :app:translate --args="'<book>' [--to <lang>] [--from <lang>] [--overwrite] \
+  [--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] [--timeout <seconds>]"
 ```
 
-It translates `<book>` with the deterministic offline `pseudo` model — the text comes back upper-cased — and writes
-`<name>.<to><suffix>` beside it; `--to` defaults to `uk`. `-q` keeps Gradle's own build chatter out of the way, so
-the command's one-line report is what you see; `--overwrite` allows replacing an existing destination.
+Without provider flags it translates `<book>` with the deterministic offline `pseudo` model — the text comes back
+upper-cased — and writes `<name>.<to><suffix>` beside it; `--to` defaults to `uk`. `--provider ollama` and
+`--provider lmstudio` use their local presets and require `--model`; `--provider openai-compatible` additionally
+requires `--base-url`. `--timeout` overrides the per-request timeout in seconds. `-q` keeps Gradle's own build chatter
+out of the way, so the command's preflight and completion lines are what you see; `--overwrite` allows replacing an
+existing destination.
+
+For LM Studio, an unknown requested model id can still yield a reply from the model currently loaded by the server.
+BookLoom warns about that model mismatch but retains an otherwise usable reply; use the preflight output and the server's
+loaded-model configuration to avoid a typo before a full run. The mismatch itself is recorded as a WARN log entry.
 
 **Quote a book path that contains spaces inside `--args`**, with an inner pair of single quotes, or Gradle's own
 tokenizer splits it into two arguments before the command ever sees one:
@@ -259,11 +267,17 @@ green (`failOnNoDiscoveredTests = false`):
 ```bash
 BOOKLOOM_CORPUS_DIR=/path/to/books ./gradlew :document:corpus      # the 216-book sweep (never up-to-date)
 BOOKLOOM_CORPUS_REPORT_DIR=/path ...                                 # optional: where the JSONL/TSV report lands
-./gradlew liveLocal   promptEval   visual                            # reserved: no tests carry these tags yet
+BOOKLOOM_LIVE_OLLAMA_URL=http://localhost:11434 \
+  BOOKLOOM_LIVE_OLLAMA_MODEL=<model-id> ./gradlew :llm:liveLocal :app:liveLocal
+BOOKLOOM_LIVE_LMSTUDIO_URL=http://localhost:1234/v1 \
+  BOOKLOOM_LIVE_LMSTUDIO_MODEL=<model-id> ./gradlew :llm:liveLocal :app:liveLocal
+./gradlew promptEval visual                                           # local-only sets when their tests exist
 ```
 
-`corpus` is the only tag with tests behind it today. Without `BOOKLOOM_CORPUS_DIR` the corpus test skips via a JUnit
-assumption; a set-but-missing directory is a hard failure. The last recorded run is in
+The `liveLocal` provider suites use the four `BOOKLOOM_LIVE_OLLAMA_URL`, `BOOKLOOM_LIVE_OLLAMA_MODEL`,
+`BOOKLOOM_LIVE_LMSTUDIO_URL`, and `BOOKLOOM_LIVE_LMSTUDIO_MODEL` variables; URL absence skips that provider's cases.
+They are excluded from `check` and CI. Without `BOOKLOOM_CORPUS_DIR` the corpus test skips via a JUnit assumption; a
+set-but-missing directory is a hard failure. The last recorded corpus run is in
 `docs/implementation_plan/notes-corpus-verification.md`.
 
 **Conventions** (full rules in `.claude/rules/testing.md`):

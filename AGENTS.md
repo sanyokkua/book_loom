@@ -15,11 +15,10 @@ Flyway planned. Full inventory: `gradle/libs.versions.toml`.
 Real: `:api` (`Result`/`AppError`, document model, `DocumentPort`), `:util`, `:document` (four-format round trip,
 inline masking to `⟦gN⟧`, unmask behind a placeholder-multiset hard gate — verified on the owner's 216-book local corpus) and
 `:app` (boot, logging, single-instance lock, DI, an empty themed window). `:llm` (chat-model contract, factory,
-pseudo model) and `:pipeline` (translation engine, pausable job, checked export) are now real too, and a book of any
-of the four formats goes through the whole pipeline from the command line with the pseudo model. Empty:
-`:persistence`; `:ui` is a placeholder. Still missing are real LLM clients, the UI and persistence. Next come real
-LLM clients (Ollama-native and OpenAI-compatible), then the UI, before any breadth (theming, persistence, QA,
-glossary).
+pseudo model, gated/retried Ollama-native and OpenAI-compatible clients, verification) and `:pipeline` (translation
+engine, pausable job, checked export) are now real too, and a book of any of the four formats goes through the whole
+pipeline from the command line with either the pseudo model or a configured real provider. Empty: `:persistence`;
+`:ui` is a placeholder. Next comes the UI, then persistence and remaining breadth (theming, QA, glossary).
 
 ## Commands
 
@@ -86,10 +85,12 @@ Edges point downward only; `:pipeline` sees the three services, services see onl
 
 ## Git
 
-`master` is protected: never developed on, never merged into by an agent — final review and merge belong to the owner.
-Work on `feature/<slug>`; branch each task as `feature/<slug>--<task>` (the separator is `--`, because `feature/x/y`
-cannot coexist with the ref `feature/x`). Commit on task branches, squash-merge one coherent commit into the parent,
-delete the task branch. Never `--no-verify`, never force-push; if a hook is wrong, fix the hook and say so.
+`master` is protected: never develop on or merge into it — final review and merge belong to the owner. Work on
+`feature/<slug>`; branch each task as `feature/<slug>--<task>` (the `--` separator avoids Git's file/directory ref
+conflict). Commit each task on its task branch. After marking the task complete in `tasks.md` and committing it,
+squash-merge the task branch into its parent `feature/<slug>` branch, then delete the task branch; a checked-off,
+committed task is not complete until this merge succeeds. If no separate task branch was created, skip this merge
+step. Never `--no-verify`, never force-push; if a hook is wrong, fix the hook and say so.
 
 ## What will bite you
 

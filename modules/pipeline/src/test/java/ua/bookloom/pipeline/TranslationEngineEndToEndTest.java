@@ -2,6 +2,9 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.InputStream;
@@ -9,7 +12,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,8 +24,8 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -30,6 +36,9 @@ import ua.bookloom.llm.LlmModule;
 
 /** Proves the public engine translates every supported generated book through the real document module. */
 class TranslationEngineEndToEndTest {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Pattern PLACEHOLDER = Pattern.compile("⟦g\\d+⟧");
 
     @TempDir
     private Path tempDir;
@@ -111,11 +120,45 @@ class TranslationEngineEndToEndTest {
     private JobReport translate(final Path source, final Path destination) {
         final Injector injector = Guice.createInjector(new DocumentModule(), new LlmModule(), new PipelineModule());
         final TranslationEngine engine = injector.getInstance(TranslationEngine.class);
-        final ChatModelFactory models = injector.getInstance(ChatModelFactory.class);
-        final ChatModel model = dataOf(models.create(new ModelSelection("pseudo", "uppercase")));
+        final ChatModel model = jsonUppercaseModel();
         final TranslationJob job =
                 dataOf(engine.newJob(new TranslationRequest(source, destination, "uk", null, false), model));
         return dataOf(job.run());
+    }
+
+    private static ChatModel jsonUppercaseModel() {
+        return request -> {
+            try {
+                final String target = uppercasePreservingPlaceholders(
+                        sourceText(request.messages().get(1).content()));
+                final ObjectNode reply = MAPPER.createObjectNode();
+                reply.put("target", target);
+                return Result.ok(new ChatResponse(MAPPER.writeValueAsString(reply), FinishReason.STOP));
+            } catch (JsonProcessingException cause) {
+                throw new AssertionError("could not parse draft prompt source", cause);
+            }
+        };
+    }
+
+    private static String sourceText(final String userMessage) {
+        return userMessage
+                .lines()
+                .dropWhile(line -> !line.equals("<Text>"))
+                .dropWhile(line -> line.equals("<Text>"))
+                .takeWhile(line -> !line.equals("</Text>"))
+                .collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private static String uppercasePreservingPlaceholders(final String source) {
+        final Matcher matcher = PLACEHOLDER.matcher(source);
+        final StringBuilder target = new StringBuilder(source.length());
+        int index = 0;
+        while (matcher.find()) {
+            target.append(source.substring(index, matcher.start()).toUpperCase(Locale.ROOT))
+                    .append(matcher.group());
+            index = matcher.end();
+        }
+        return target.append(source.substring(index).toUpperCase(Locale.ROOT)).toString();
     }
 
     private void assertCheckedExport(final Path source, final Path destination) {

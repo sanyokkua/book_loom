@@ -3,7 +3,6 @@
 name = "coder"
 description = "Implements an approved OpenSpec change's tasks in module src and tests. Obeys the layering, error-envelope, records-first, FX-free, token-only, and offline rules. Runs ./gradlew spotlessApply build. Never edits an archived change; fixes a wrong spec clause in the same change rather than coding around it."
 model = "sonnet"
-tools = ["Read", "Write", "Edit", "Grep", "Glob", "Bash"]
 developer_instructions = """
 # Role
 

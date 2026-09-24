@@ -2698,8 +2698,10 @@ that construct occupies, and SHALL leave the remaining source text unaltered in 
 
 An emphasis, a strong emphasis and a link whose visible text is not its own destination SHALL be masked as a paired
 group so their enclosed text is still translated. A code span, an image, a link written in autolink form or whose
-visible text is its own destination, and each inline HTML fragment SHALL be masked as a single atomic token. Any
-other inline construct SHALL be masked as a single atomic token.
+visible text is its own destination, and each inline HTML fragment SHALL be masked as a single atomic token. A
+GitHub-Flavored Markdown task-list marker at the start of a list-item segment — `[ ]`, `[x]`, or `[X]` together with
+its required following horizontal whitespace — SHALL also be one atomic token, leaving only the task label
+translatable. Any other inline construct SHALL be masked as a single atomic token.
 
 A hard line break SHALL be masked as a single atomic token whose fragment is the trailing whitespace or backslash
 that spells it, taken from the end of the preceding text run.
@@ -2708,17 +2710,17 @@ Source: FR-DOC-MD-1, FR-DOC-MD-2, FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.m
 FR-DOC-10 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1
 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-49
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-49-code-and-technical-content-preservation`).
-In plain words: Markdown has no tags to hide, only punctuation that means something because of where it sits. The
-whole construct — the `*` on both ends of an emphasis, the `](url)` on the end of a link — must be replaced, not
-just its label, or the model is left holding delimiters it can move. The link rule splits in two: `[chapter
-two](ch2.md)` has a label a reader reads and a target a reader does not, so the label translates; but an autolink
-such as `<https://x.org/a>` or `<me@example.com>` has the address *as* its visible text, and pairing it would hand
-that address to the model as prose — precisely what the requirement to protect URLs forbids. "Ranges" is plural
-because an emphasis spanning a line break is reported as two disjoint ranges. A hard line break needs its own clause
-because the parser reports no range for its common spelling — two trailing spaces — and folds them into the
-preceding text instead; masking it anyway is what gives the model a token to preserve, and what makes its loss a
-failure the repair tier can name rather than an unexplainable one. The catch-all clause exists so that enabling a
-Markdown extension later cannot silently leave a new construct unmasked.
+
+#### Scenario: An unchecked task marker stays protected while its label translates
+
+- **WHEN** a Markdown list item is written `- [ ] Gravity is identical everywhere.`
+- **THEN** its segment starts with one placeholder whose fragment is `[ ] ` and whose remaining masked text is
+  `Gravity is identical everywhere.`
+
+#### Scenario: A checked task marker preserves its state
+
+- **WHEN** a Markdown list item starts with `[x] ` or `[X] `
+- **THEN** its marker and following separator are one atomic placeholder and the checked state is unchanged on restore
 
 #### Scenario: An emphasis is masked as a pair with its text still translatable
 
@@ -2787,8 +2789,7 @@ Markdown extension later cannot silently leave a new construct unmasked.
 
 #### Scenario: A hard line break is one token
 
-- **WHEN** a Markdown paragraph whose source is `line one` followed by two spaces, a line feed and `line two` is
-  parsed
+- **WHEN** a Markdown paragraph whose source is `line one` followed by two spaces, a line feed and `line two` is parsed
 - **THEN** the segment's masked form is `line one⟦g0⟧` followed by a line feed and `line two`
 
 #### Scenario: The hard line break's own spelling is what the map holds
@@ -2913,6 +2914,11 @@ WHEN a Markdown segment's placeholders have been restored, the system SHALL pars
 restored text in the same way, each on its own, and SHALL compare the multiset of construct types each yields,
 disregarding text and soft line breaks.
 
+WHERE the source contains a paired emphasis, strong emphasis, or translatable link with nonblank visible text, the
+restored counterpart SHALL also have nonblank visible text. WHERE the source segment's only nonblank inline construct
+is a translatable link, the restored segment's only nonblank inline construct SHALL also be that link. WHERE a
+list-item source starts with a task-list marker, the restored text SHALL start with that exact marker and separator.
+
 WHERE the segment's content is inline content owned by a block marker the skeleton holds — a heading or a table
 cell — the comparison SHALL disregard block construct types on both sides.
 
@@ -2922,53 +2928,34 @@ the segment's source text, THEN the system SHALL treat the segment as a structur
 WHERE the segment is a table cell, IF the restored text carries more unescaped `|` characters than the segment's
 source text, THEN the system SHALL treat the segment as a structure mismatch.
 
-IF the two multisets differ, or either containment condition above holds, THEN the system SHALL return a failed
-result carrying `ErrorCode.validation`, and SHALL NOT attempt a repair.
+IF the two multisets differ, either paired-content or task-marker condition fails, or either containment condition
+above holds, THEN the system SHALL return a failed result carrying `ErrorCode.validation`, and SHALL NOT attempt a
+repair inside `:document`.
 
 Source: FR-DOC-MD-4 (`01_Product/03_DOCUMENT_FORMATS.md#markdown`), FR-DOC-05
 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`), EC-MD-1
 (`01_Product/03_DOCUMENT_FORMATS.md#markdown-edge-cases`), DD-43
 (`00_Foundation/04_DESIGN_DECISIONS.md#dd-43-canonical-round-trip`), ADR-0031
 (`docs/adr/ADR-0031-masked-text-is-character-data.md`).
-In plain words: Markdown's delimiters are context-sensitive in a way tags are not — `*old*` is emphasis but
-`* old *` is three literal characters, and at the start of a line it is a bullet list. A model that returns
-`⟦g0⟧ старі ⟦g1⟧` satisfies the placeholder multiset perfectly and still deletes the formatting from the book,
-silently. Three details keep it from misfiring. Both sides are parsed the same way and on their own, so restoring a
-segment unchanged always passes — parsing the source in document context and the restored text alone would fail
-any segment holding a reference link, whose definition lives outside it. A multiset and not a sequence, because
-translation reorders: `*старі* двері` against a source `the *old* door` must pass even though the emphasis moved to
-the front. And soft line breaks are disregarded, because rendering two source lines as one is legal Markdown and
-routine in translation. EPUB and FB2 need none of this, because a restored element is spliced back as a node and
-cannot be redefined by its neighbours.
 
-The fourth detail is the block carve-out, and it is not a refinement of taste — without it an ordinary numbered
-heading cannot be translated at all. A heading's segment is the text *after* its `#` marker, and a table cell's is
-the text *between* its pipes; both markers live in the skeleton, not in the segment. So `1. Alpha beta`, parsed on
-its own, is an ordered list — and any translation that does not keep the numeral at position zero loses a construct
-the document never contained. That failure is unrepairable, because escaping can only remove a construct the model
-*added*, never restore one the parse invented. Measured against the 213-book corpus, 54 of 2,065 Markdown segments
-across four books are in this position: 43 headings and 11 table cells. A paragraph keeps the full comparison, so
-the scenario below in which a restored segment becomes a bullet list still fails.
+#### Scenario: Link delimiters cannot be detached from their label
 
-**The carve-out holds in one direction only, and the containment conditions above are what make that true.** An
-earlier wording of this requirement justified it with "a heading or a cell has no block structure of its own to
-lose", which is right about what such a segment can *lose* and wrong about what it can *gain*. Because the multiset
-already disregards text nodes, a heading translation carrying a blank line reduces to `[Paragraph, Paragraph]`
-against a source's `[Paragraph]`, and disregarding block types then empties *both* sides — making the comparison
-vacuous rather than merely relaxed. Measured, a heading given the target `Заголовок` + blank line + `second
-paragraph` was accepted verbatim and written to disk as a heading *plus a new paragraph*, turning two segments into
-three; the same target was correctly rejected as a paragraph. So the block carve-out is paired with a containment
-test on the characters that actually terminate the enclosing block: a line terminator for either kind, since a
-heading ends at its line and a newline inside a cell ends its row, and an unescaped `|` for a cell, since a pipe
-opens a new column. Both are compared against the source rather than forbidden outright, so a segment whose source
-already holds one is unaffected and a model that escapes its own pipe as `\|` is still accepted. The pipe condition
-also retires what was recorded as decision debt D10: a `|` written into a translated cell was measured to collapse
-a four-cell row into a single paragraph, destroying the table.
+- **WHEN** a source link `[chapter two](ch2.md)` is restored as translated prose followed by `[](ch2.md)`
+- **THEN** the caller receives `ErrorCode.validation`
+
+#### Scenario: A sole-link label cannot spill outside its link
+
+- **WHEN** source `[Visual Overview](#visual-overview)` restores as `Overview [Visual outline](#visual-overview)`
+- **THEN** the caller receives `ErrorCode.validation`
+
+#### Scenario: A task marker cannot move after its label
+
+- **WHEN** an unchecked task-list item is restored with `[ ] ` after its translated label
+- **THEN** the caller receives `ErrorCode.validation`
 
 #### Scenario: A numbered heading's translation is not rejected for losing a list it never had
 
-- **WHEN** a Markdown heading written `## 1. Alpha beta gamma` yields the segment `1. Alpha beta gamma`, and that
-  segment is given the target `gamma beta Alpha 1.`
+- **WHEN** a Markdown heading written `## 1. Alpha beta gamma` yields the segment `1. Alpha beta gamma`, and that segment is given the target `gamma beta Alpha 1.`
 - **THEN** the restored content is `gamma beta Alpha 1.` and the operation succeeds
 
 #### Scenario: A table cell's translation is not rejected for losing a list it never had
@@ -2978,8 +2965,7 @@ a four-cell row into a single paragraph, destroying the table.
 
 #### Scenario: A heading whose translation gains a second block is a validation failure
 
-- **WHEN** a Markdown heading written `# Title` yields the segment `Title`, and that segment is given a target
-  holding `Заголовок`, a blank line, and `second paragraph`
+- **WHEN** a Markdown heading written `# Title` yields the segment `Title`, and that segment is given a target holding `Заголовок`, a blank line, and `second paragraph`
 - **THEN** the caller receives a failed result carrying `ErrorCode.validation`
 
 #### Scenario: A table cell whose translation adds an unescaped pipe is a validation failure
@@ -2994,14 +2980,12 @@ a four-cell row into a single paragraph, destroying the table.
 
 #### Scenario: A paragraph that becomes a bullet list is still a validation failure
 
-- **WHEN** a Markdown paragraph segment whose masked form is `⟦g0⟧old⟦g1⟧ door` is given the target
-  `⟦g0⟧ старі⟦g1⟧ двері`
+- **WHEN** a Markdown paragraph segment whose masked form is `⟦g0⟧old⟦g1⟧ door` is given the target `⟦g0⟧ старі⟦g1⟧ двері`
 - **THEN** the caller receives a failed result carrying `ErrorCode.validation`
 
 #### Scenario: A space introduced inside an emphasis pair is a validation failure
 
-- **WHEN** a Markdown segment whose masked form is `the ⟦g0⟧old⟦g1⟧ door` is given the target
-  `⟦g0⟧ старі ⟦g1⟧ двері`
+- **WHEN** a Markdown segment whose masked form is `the ⟦g0⟧old⟦g1⟧ door` is given the target `⟦g0⟧ старі ⟦g1⟧ двері`
 - **THEN** the caller receives a failed result carrying `ErrorCode.validation`
 
 #### Scenario: A translation that moves the emphasis to the front passes
@@ -3016,8 +3000,7 @@ a four-cell row into a single paragraph, destroying the table.
 
 #### Scenario: Rendering two soft-wrapped source lines as one passes
 
-- **WHEN** a Markdown segment whose masked form is `line one` followed by a line feed and `line two`, with no
-  placeholder between them, is given the target `рядок один рядок два`
+- **WHEN** a Markdown segment whose masked form is `line one` followed by a line feed and `line two`, with no placeholder between them, is given the target `рядок один рядок два`
 - **THEN** the restored content is `рядок один рядок два`
 
 ### Requirement: Mask identically for identical bytes

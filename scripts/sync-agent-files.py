@@ -280,9 +280,6 @@ def render_toml(name: str, meta: dict, body: str) -> str:
         out.append(f"description = {toml_basic(meta['description'])}")
     if "model" in meta:
         out.append(f"model = {toml_basic(meta['model'])}")
-    if "tools" in meta:
-        tools = [t.strip() for t in meta["tools"].split(",") if t.strip()]
-        out.append("tools = [" + ", ".join(toml_basic(t) for t in tools) + "]")
     out.append(f"developer_instructions = {toml_multiline(body.strip())}")
     return "\n".join(out) + "\n"
 

@@ -16,10 +16,15 @@ module ua.bookloom.llm {
     requires ua.bookloom.util;
     requires java.net.http;
     requires com.google.guice;
+    requires com.fasterxml.jackson.databind;
     requires org.slf4j;
 
     exports ua.bookloom.llm;
 
     opens ua.bookloom.llm to
+            com.google.guice;
+    opens ua.bookloom.llm.dto to
+            com.fasterxml.jackson.databind;
+    opens ua.bookloom.llm.verify to
             com.google.guice;
 }

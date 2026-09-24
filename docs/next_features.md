@@ -164,9 +164,25 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 - **Reproduce:** translate a Markdown book with the line `See https://example.com/path`; the output reads
   `SEE HTTPS://EXAMPLE.COM/PATH`.
 
+## Deferred from `add-real-llm-clients`
+
+### 11. Real-client follow-ups
+
+- **Structured output and repair:** a structured-output rejection is still a normal mapped failure. The silent
+  downgrade to a plain request, JSON extraction from surrounding prose and one bounded JSON repair call remain future
+  work.
+- **Interactive gate behavior:** the shared gate supports blocking `run`; `tryRun` and its `busy` outcome belong with
+  the first interactive screen.
+- **Authentication:** the future Bearer path must store only an environment-variable name and resolve it at request
+  time. Keychain support is not included.
+- **Reasoning and context controls:** `think`, `reasoning_effort`, `num_ctx`, `/api/show` context sizing and
+  `keep_alive` are intentionally not sent by the current clients.
+- **Now reachable with a real model:** backlog D7, D9 and D15 can now occur in an actual provider-backed translation,
+  rather than only in scripted or pseudo-model investigation.
+
 ## Deferred from `add-translation-engine-and-cli`
 
-### 11. Log volume
+### 12. Log volume
 
 - **Owner decision, 2026-09-15:** kept as built.
 - **Evidence:** *Building Microservices* at TRACE wrote 42 lines per segment, 37 of them DEBUG: about 53 MB for 5,096
@@ -179,7 +195,7 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 - **Suggested fix, if revisited:** no DEBUG line in pure query methods, one line per decision step, and `%X{segment}`
   in the production pattern.
 
-### 12. Command line: Ctrl+C, folder mode, and Guice outside the `translate` task
+### 13. Command line: Ctrl+C, folder mode, and Guice outside the `translate` task
 
 - **Ctrl+C:** there is no shutdown hook, so a killed run can leave the hidden `.<destination file name>` beside the
   output. The next export to the same destination overwrites it. A hook that cancels the job and waits briefly would
@@ -191,7 +207,7 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
   warning and a later JDK may refuse outright. Set the property for `run` and the jpackage launcher too, or move to a
   Guice release that no longer needs it.
 
-### 13. For the translation screen
+### 14. For the translation screen
 
 - **An interrupt while a job runs is not a cancellation.** `JobControl.awaitPause` treats an interrupt as cancel only
   while the job is paused; a background task cancelled during a model call keeps going until the next pause. Checking

@@ -23,20 +23,17 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.prompt.DraftSchema;
 
 /** The per-segment prompt, whitespace, placeholder gate and reply decision table. */
 class SegmentTranslatorTest {
 
     private static final String MARKED_SOURCE = "He opened the *old* door.";
     private static final String MASKED_SOURCE = "He opened the ⟦g0⟧old⟦g1⟧ door.";
-    private static final String SYSTEM_WITH_SOURCE = "Translate the following text from en into uk. Preserve every "
-            + "⟦gN⟧ placeholder exactly as written. Return only the translated text.";
-    private static final String SYSTEM_WITHOUT_SOURCE = "Translate the following text into uk. Preserve every "
-            + "⟦gN⟧ placeholder exactly as written. Return only the translated text.";
 
     @TempDir
     private Path tempDir;
@@ -48,31 +45,30 @@ class SegmentTranslatorTest {
         documents = Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
     }
 
-    // A known source language and the masked source text are sent as exactly two ordered messages.
+    // A known source language and masked source are placed in the catalog's ordered prompt messages.
     @Test
     void translate_knownSource_recordsExactSystemAndUserMessages() {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
         final ScriptedChatModel model = acceptingModel();
-
-        new SegmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en").translate(segment);
-
-        assertThat(model.requests())
-                .singleElement()
-                .satisfies(request -> assertThat(request.messages())
-                        .containsExactly(
-                                new ChatMessage(ua.bookloom.api.llm.ChatRole.SYSTEM, SYSTEM_WITH_SOURCE),
-                                new ChatMessage(ua.bookloom.api.llm.ChatRole.USER, MASKED_SOURCE)));
+        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
+                .translate(segment);
+        assertThat(model.requests()).singleElement().satisfies(request -> {
+            assertThat(request.messages().getFirst().content()).contains("from English (en) into Ukrainian (uk)");
+            assertThat(request.messages().get(1).content())
+                    .contains("<Text>\n" + MASKED_SOURCE + "\n</Text>")
+                    .doesNotContain("\"id\":", "\"source\":");
+        });
     }
 
-    // An unknown source language uses the shorter exact system prompt and does not invent a source.
+    // An unknown source language tells the model to infer the segment language instead of inventing one.
     @Test
     void translate_unknownSource_recordsExactSystemPromptWithoutSource() {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
         final ScriptedChatModel model = acceptingModel();
-
-        new SegmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null).translate(segment);
-
-        assertThat(model.requests().getFirst().messages().getFirst().content()).isEqualTo(SYSTEM_WITHOUT_SOURCE);
+        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null)
+                .translate(segment);
+        assertThat(model.requests().getFirst().messages().getFirst().content())
+                .contains("from the language of this segment (infer it from its text) into Ukrainian (uk)");
     }
 
     // The already-resolved requested source is used even when the opened book declares another language.
@@ -80,24 +76,60 @@ class SegmentTranslatorTest {
     void translate_resolvedRequestedSource_recordsRequestedLanguageInsteadOfDeclaredLanguage() {
         final Segment segment = markdownSegment(MARKED_SOURCE, "en");
         final ScriptedChatModel model = acceptingModel();
-
-        new SegmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "de").translate(segment);
-
+        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "de")
+                .translate(segment);
         assertThat(model.requests().getFirst().messages().getFirst().content())
-                .isEqualTo("Translate the following text from de into uk. Preserve every ⟦gN⟧ placeholder exactly "
-                        + "as written. Return only the translated text.")
-                .doesNotContain("from en");
+                .contains("from German (de) into Ukrainian (uk)")
+                .doesNotContain("from English (en)");
+    }
+
+    // Each draft request must constrain the provider to the catalog's low-variance JSON response contract.
+    @Test
+    void translate_segment_requestsDraftTemperatureAndSchema() {
+        final Segment segment = markdownSegment(MARKED_SOURCE, null);
+        final ScriptedChatModel model = acceptingModel();
+        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
+                .translate(segment);
+        assertThat(model.requests()).singleElement().satisfies(request -> {
+            assertThat(request.temperature()).isEqualTo(0.2);
+            assertThat(request.responseFormat()).isEqualTo(new ResponseFormat("draft_translation", DraftSchema.SCHEMA));
+            assertThat(request.reasoningEnabled()).isFalse();
+        });
+    }
+
+    // The required target JSON is parsed before the existing placeholder restoration gate runs.
+    @Test
+    void translate_documentedJsonReply_restoresAndAcceptsTranslation() {
+        final Segment segment = markdownSegment(MARKED_SOURCE, null);
+        final ScriptedChatModel model = response("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", FinishReason.STOP);
+        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+                        documents, model, BookFormat.MARKDOWN, "uk", "en")
+                .translate(segment);
+        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(decisionOf(result).segment().targetInner()).isEqualTo("Він відчинив *старі* двері.");
+    }
+
+    // A second strict target reply also restores its protected markdown range.
+    @Test
+    void translate_mapReply_restoresAndAcceptsTranslation() {
+        final Segment segment = markdownSegment(MARKED_SOURCE, null);
+        final ScriptedChatModel model = response("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", FinishReason.STOP);
+        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+                        documents, model, BookFormat.MARKDOWN, "uk", "en")
+                .translate(segment);
+        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(decisionOf(result).segment().targetInner()).isEqualTo("Він відчинив *старі* двері.");
     }
 
     // Source leading and trailing whitespace wins over the model reply's surrounding whitespace.
     @Test
     void translate_differentReplyWhitespace_restoresSourceWhitespace() {
         final Segment segment = txtSegment("  Hello world\n");
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(Result.ok(new ChatResponse("\nHELLO WORLD  ", FinishReason.STOP)));
+        final ScriptedChatModel model = response("\nHELLO WORLD  ", FinishReason.STOP);
 
-        final Result<Decision> result =
-                new SegmentTranslator(documents, model, BookFormat.TXT, "uk", "en").translate(segment);
+        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+                        documents, model, BookFormat.TXT, "uk", "en")
+                .translate(segment);
 
         assertThat(decisionOf(result).segment().targetInner()).isEqualTo("  HELLO WORLD\n");
         assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
@@ -113,12 +145,12 @@ class SegmentTranslatorTest {
             final Consumer<Result<Decision>> expectation) {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
 
-        final Result<Decision> result = new SegmentTranslator(
+        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
                         portDecorator.apply(documents), model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
         expectation.accept(result);
-        assertThat(model.requests()).hasSize(1);
+        assertThat(model.requests()).hasSize(name.equals("missing g1") ? 2 : 1);
     }
 
     // A thrown middle outcome consumes one queue item and does not prevent a later scripted result from being used.
@@ -129,10 +161,12 @@ class SegmentTranslatorTest {
         final Segment third = markdownSegment("Third.", null, "Third.md");
         final IllegalStateException failure = new IllegalStateException("middle call failed");
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(Result.ok(new ChatResponse("FIRST.", FinishReason.STOP)))
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("FIRST."), FinishReason.STOP)))
                 .throwFailure(failure)
-                .answer(Result.ok(new ChatResponse("THIRD.", FinishReason.STOP)));
-        final SegmentTranslator translator = new SegmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null);
+                .answer(Result.ok(
+                        new ChatResponse(TranslationJobTestSupport.targetReply("THIRD."), FinishReason.STOP)));
+        final SegmentTranslator translator =
+                TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null);
 
         final Result<Decision> firstResult = translator.translate(first);
         final Result<Decision> secondResult = translator.translate(second);
@@ -143,7 +177,7 @@ class SegmentTranslatorTest {
         assertThat(decisionOf(thirdResult).segment().targetInner()).isEqualTo("THIRD.");
         assertThat(model.requests())
                 .extracting(request -> request.messages().get(1).content())
-                .containsExactly("First.", "Second.", "Third.");
+                .allSatisfy(message -> assertThat(message).contains("<Text>"));
     }
 
     private static Stream<Arguments> decisionCases() {
@@ -161,7 +195,7 @@ class SegmentTranslatorTest {
                         accepted("HE OPENED THE *OLD* DOOR.")),
                 arguments(
                         "missing g1",
-                        response("HE OPENED THE ⟦g0⟧OLD DOOR.", FinishReason.STOP),
+                        responseThen("HE OPENED THE ⟦g0⟧OLD DOOR.", "HE OPENED THE ⟦g0⟧OLD DOOR."),
                         UnaryOperator.identity(),
                         flagged(ErrorCode.validation)));
     }
@@ -264,7 +298,15 @@ class SegmentTranslatorTest {
     }
 
     private static ScriptedChatModel response(final String content, final FinishReason finish) {
-        return new ScriptedChatModel().answer(Result.ok(new ChatResponse(content, finish)));
+        return new ScriptedChatModel()
+                .answer(Result.ok(new ChatResponse(
+                        content.isBlank() ? content : TranslationJobTestSupport.targetReply(content), finish)));
+    }
+
+    private static ScriptedChatModel responseThen(final String first, final String second) {
+        return new ScriptedChatModel()
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(first), FinishReason.STOP)))
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(second), FinishReason.STOP)));
     }
 
     private static ScriptedChatModel modelError(final AppError error) {

@@ -19,9 +19,12 @@ summary**. There is no embedding or RAG step anywhere in this catalogue.
 
 ## prompt-construction {#prompt-construction}
 
-Every prompt is assembled from a fixed template with named slots. Slots that carry no content for a given chunk collapse
-to a literal `(none)` rather than being left dangling, and any purely optional block may be omitted entirely; the model
-is told to translate what is present, not to expect every slot. **Load-bearing slots sit at the prompt edges** (the
+Every prompt is assembled from a fixed template with named slots. Unless a prompt defines a stricter contract, slots
+that carry no content for a given chunk collapse to a literal `(none)` rather than being left dangling, and any purely
+optional block may be omitted entirely; the model is told to translate what is present, not to expect every slot. The
+single-segment draft contract is the exception: it omits all absent optional blocks, including preceding context, so
+its model-facing input is only context when present, the source text, and the strict reply shape. **Load-bearing slots
+sit at the prompt edges** (the
 instruction frame at the top, the masked source at the bottom) to counter lost-in-the-middle
 (`05_TRANSLATION_ALGORITHM.md#context-package`).
 
@@ -51,33 +54,24 @@ How each source of context is built and adapted:
 
 ## output-contract {#output-contract}
 
-Every call in this catalogue follows the JSON-first, tolerant response contract
-(`02_Architecture/04_LLM_INTEGRATION.md`):
+Draft translation uses a strict single-segment response contract (`02_Architecture/04_LLM_INTEGRATION.md`):
 
-1. **Structured output is requested** where the provider supports it — OpenAI `response_format` (`json_schema` or
-   `json_object`), Ollama `format` (`json` or a JSON schema) — asking for the shape shown per call.
-2. **The response is sanitized** before parsing: reasoning/thinking blocks (`<think>…</think>` and analogues),
-   chain-of-thought preambles, markdown code fences, and leading/trailing prose are stripped; any separate reasoning
-   channel is ignored.
-3. **Reasoning level** is set low/off where controllable (Ollama `think`, OpenAI reasoning params) for translation and
-   judge calls, to cut latency and noise.
-4. **Parsing is tolerant:** unknown/unexpected fields are ignored, missing optional fields are defaulted, whitespace is
-   trimmed, and the JSON object is located within the cleaned text. The shapes below are therefore a *contract for what
-   to emit*, not a strict rejection schema on read.
-5. **One repair retry** on malformed output (*"return only valid JSON matching this shape …"*).
-6. **Text fallback** applies to **single-segment draft calls only**: if a draft that carries exactly one segment is
-   still unparseable, the cleaned response is treated deterministically as that segment's plain translation and sent
-   through the QA gates. A **multi-segment** unparseable draft is **never** text-fallen-back; instead it triggers
-   **per-segment calls** (`#draft-translation`), and each single-segment call may then use the text fallback. Other
-   calls fall back to their defined default (e.g. judge → treat as non-accept and route to self-heal). This refines the
-   JSON-first, tolerant response-handling contract (DD-33).
+1. **Structured output is requested** through native Ollama `format` and OpenAI-compatible
+   `response_format.json_schema`, requiring exactly `{"target":"…"}` with no additional properties.
+2. **The prompt repeats the compact shape** because a provider schema controls the envelope but cannot prove that a
+   model preserved the dynamic `⟦gN⟧` sequence inside `target`.
+3. **Parsing is exact:** prose, maps, arrays, embedded JSON, extra fields, malformed JSON, and blank targets are
+   rejected before unmasking; there is no plain-text fallback.
+4. **One structural repair** includes the delimited rejected reply and a parsing diagnosis. A valid target that fails
+   the placeholder hard gate receives **one separate placeholder repair** with the original source, rejected target,
+   and required ordered tokens. Neither repair recurses.
 
 Nullable request parameters are omitted from the serialized JSON, never sent as `null`.
 
 ## draft-translation {#draft-translation}
 
-The primary per-chunk call (`05_TRANSLATION_ALGORITHM.md#chunk-loop`, `FR-ALGO-C4`). Translates the masked source
-segments into the target language.
+The primary per-segment call (`05_TRANSLATION_ALGORITHM.md#chunk-loop`, `FR-ALGO-C4`). It translates exactly one
+masked source segment; previously accepted targets are context only, never additional inference inputs.
 
 **SYSTEM**
 
@@ -97,66 +91,55 @@ Rules:
 - Apply the glossary renderings exactly, respecting gender and agreement.
 - Continue the voice and terminology of the preceding translated text; keep names consistent with it.
 - {{foreignPassageRule}}
-- If you cannot finalize a segment without a fact revealed later in the book (e.g. a character's gender not yet
-  known), still translate it as best you can and record it in "deferrals" with a short reason.
 - Follow any extra instruction under [Extra instruction] exactly, without breaking the rules above.
 - Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+
+Token-layout examples are structural only: translate the actual <Text>, never copy these labels.
+- A ⟦g0⟧B⟦g1⟧ C → X ⟦g0⟧Y⟦g1⟧ Z
+- A ⟦g0⟧B⟦g1⟧ C ⟦g2⟧D⟦g3⟧ → X ⟦g0⟧Y⟦g1⟧ Z ⟦g2⟧W⟦g3⟧
+- A ⟦g0⟧https://example.test/a⟦g1⟧ meets ⟦g2⟧Ada⟦g3⟧ → X ⟦g0⟧https://example.test/a⟦g1⟧ Y ⟦g2⟧Ada⟦g3⟧
+- Return exactly: {"target":"X ⟦g0⟧Y⟦g1⟧ Z"}
 ```
 
 **USER**
 
 ```
-[Book so far — bilingual summary]
-{{rollingSummary}}
-
-[Glossary — apply exactly (term → target, type, gender)]
-{{glossaryTerms}}
-
 [Preceding target text — continue this voice; do NOT re-translate it]
 {{precedingTarget}}
 
-[Translation-memory suggestions — reuse only if they fit this exact context]
-{{tmHits}}
+[Immutable tokens for this text]
+Copy this exact ordered sequence unchanged: {{requiredTokenSequence}}
+Do not add, reorder, split, translate, or omit these tokens.
 
-[Extra instruction — retry-with-note; follow exactly]
-{{userNote}}
+<Text>
+{{sourceText}}
+</Text>
 
-[Translate these segments from {{sourceLang}} to {{targetLang}}. Return each keyed by its id.]
-{{sourceSegments}}
-
-Return JSON exactly as:
-{"segments":[{"id":"<segment-id>","target":"<translation>"}],
- "deferrals":[{"segmentId":"<id>","reason":"<why it needs a later fact>"}]}
+Return exactly one JSON object matching this schema: {"target":"<translation>"}
 ```
 
 | Variable                           | Required? | Source / notes                                                                                                                                                                                           |
 |------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages (`FR-BRIEF-01`).                                                                                                                                                                       |
+| `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages (`FR-BRIEF-01`), rendered for the model as an English display name plus the exact BCP-47 tag (for example, `English (en)`); an unregistered tag is `language tag "&lt;tag&gt;"`. When the source is unknown, use `the language of this segment (infer it from its text)`. |
 | `{{styleSheet}}`                   | Required  | Derived style sheet (`#book-brief-tone-setup`); defaults if user did not customize.                                                                                                                      |
 | `{{foreignPassageRule}}`           | Required  | Expanded foreign-passage policy (`FR-BRIEF-04`).                                                                                                                                                         |
-| `{{sourceSegments}}`               | Required  | Masked chunk segments, each with its id and `⟦gN⟧` intact.                                                                                                                                               |
-| `{{glossaryTerms}}`                | Optional  | Only terms occurring in the chunk; `(none)` if empty.                                                                                                                                                    |
-| `{{rollingSummary}}`               | Optional  | `(none)` at book start.                                                                                                                                                                                  |
-| `{{precedingTarget}}`              | Optional  | Up to ~3 target blocks; `(none)` at chapter start.                                                                                                                                                       |
-| `{{tmHits}}`                       | Optional  | Labelled exact/context/fuzzy; `(none)` if empty.                                                                                                                                                         |
-| `{{userNote}}`                     | Optional  | Retry-with-note free-text instruction (`06_REVIEW_AND_EDITING.md#segment-actions`); `(none)` in normal runs. On a retry-with-note the original chunk context is reconstructed and this note is injected. |
+| `{{sourceText}}`                   | Required  | The one masked source segment, rendered verbatim inside `<Text>`.                                                                                                                                        |
+| `{{requiredTokenSequence}}`         | Required  | This segment's exact source-order placeholder sequence, or an explicit no-token statement.                                                                                                              |
+| `{{precedingTarget}}`              | Optional  | The last three accepted targets in the current section; the entire block is omitted when absent and reset at a section boundary.                                                                        |
+| glossary, summary, TM, retry note  | Deferred  | Omitted until their producers exist; no empty `(none)` blocks are emitted.                                                                                                                               |
 
-**Parameters:** temperature ~0.2; output format = JSON object / schema; reasoning low/off; non-streaming; `num_ctx`
-sized so the budget reservation holds (`02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`).
+**Parameters:** temperature 0.2; output format = the strict `target` JSON schema; reasoning low/off; non-streaming.
 
 **Expected output**
 
 ```json
-{ "segments": [ { "id": "s10", "target": "…" }, { "id": "s11", "target": "…" } ],
-  "deferrals": [ { "segmentId": "s10", "reason": "gender of ‘the visitor' not yet established" } ] }
+{ "target": "…" }
 ```
 
-Tolerant read: an id→text object map (`{"s10":"…"}`) is also accepted; `deferrals` may be absent/empty; unknown fields
-ignored. **Id-mismatch handling** — a **missing or duplicate** id triggers **per-segment calls for the missing ids
-only** (valid returned segments are reused, **extra/unknown ids are ignored**, order is irrelevant); a
-**single-segment** unparseable response uses the text fallback, while a **multi-segment** unparseable response goes to
-per-segment calls (`FR-ALGO-C4`). Recorded `deferrals` feed the deferred-resolution / backward-revision machinery
-(`02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`).
+Only this exact shape is accepted. Provider-enforced schema does not replace the document placeholder multiset gate.
+Malformed or wrong-shape output gets one repair with a delimited rejected reply and parsing diagnosis. A valid target
+that fails the gate gets one distinct repair with the original source, rejected target, and exact required token order;
+every repair must parse strictly and pass unmasking.
 
 ## judge-quality-evaluation {#judge-quality-evaluation}
 

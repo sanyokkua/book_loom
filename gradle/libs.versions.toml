@@ -5,7 +5,7 @@
 # (docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
 #
 # Populated by change `bootstrap-gradle-and-quality-toolchain`. Runtime libraries the application itself needs
-# (sqlite-jdbc, Flyway, JDBI, CommonMark, Jackson, Lingua, ICU4J, SLF4J/Logback, AtlantaFX,
+# (sqlite-jdbc, Flyway, JDBI, CommonMark, Lingua, ICU4J, SLF4J/Logback, AtlantaFX,
 # Ikonli, ControlsFX) are NOT here yet — each arrives with the change that first uses it, at the narrowest
 # scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency.
 
@@ -18,6 +18,7 @@ guice = "7.0.0"
 # Guice 7.0.0 itself pins Guava 31.0.1-jre, which calls a terminally-deprecated sun.misc.Unsafe method and
 # warns on JDK 25. Pinned here so the constraint that upgrades it has a catalog-backed version.
 guava = "33.6.0-jre"
+jackson = "2.20.2"
 # JavaFX 26, not the 25 LTS that DD-02/ADR-0001 chose. JavaFX 26 is the first release with a first-class
 # headless glass platform built into `javafx.graphics`; `org.testfx:openjfx-monocle` — which the frozen spec
 # names for every headless UI test — has no build past 21.0.2 and none for 22–25. See ADR-0019.
@@ -110,6 +111,7 @@ licenseReportPlugin = "3.1.4"
 # --- Runtime ---------------------------------------------------------------------------------------------
 guice = { module = "com.google.inject:guice", version.ref = "guice" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 
 # --- Compiler-facing ----------------------------------------------------------------------------------------
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }

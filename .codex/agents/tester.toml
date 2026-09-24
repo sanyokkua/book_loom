@@ -3,7 +3,6 @@
 name = "tester"
 description = "Writes the covering tests for an OpenSpec change's requirements and edge cases — named `method_state_expected`, with a one-line plain-language comment saying what each proves. Uses WireMock for the LLM HTTP seam and TestFX for UI. Runs ./gradlew test and the whole-project clean gate."
 model = "sonnet"
-tools = ["Read", "Write", "Edit", "Grep", "Glob", "Bash"]
 developer_instructions = """
 # Role
 

@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -73,7 +74,7 @@ class TranslationEngineFileTypeTest {
                 Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
         final TranslationRequest request = new TranslationRequest(
                 tempDir.resolve(sourceName), tempDir.resolve(destinationName), "uk", null, false);
-        return new TranslationEngineImpl(documents).newJob(request, model);
+        return new TranslationEngineImpl(documents, new ObjectMapper()).newJob(request, model);
     }
 
     private static AppError errorOf(final Result<?> result) {

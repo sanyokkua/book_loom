@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +20,7 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.pipeline.prompt.DraftContext;
 
 /** Keeps all run-thread decisions and their observable counts together. */
 @Slf4j
@@ -28,11 +30,13 @@ final class JobProgressTracker {
     private final List<SegmentWork> pending;
     private final List<FlaggedSegment> flaggedSegments = new ArrayList<>();
     private final Map<String, Segment> decisions = new HashMap<>();
+    private final ArrayDeque<String> precedingTargets = new ArrayDeque<>();
     private @Nullable Document materialized;
     private int next;
     private int accepted;
     private int flagged;
     private int lastSection;
+    private int contextSection = -1;
 
     JobProgressTracker(final Document source) {
         this.source = Objects.requireNonNull(source, "source");
@@ -81,7 +85,16 @@ final class JobProgressTracker {
         lastSection = work.section();
         next++;
         recordDecision(decision);
+        recordPrecedingTarget(work, decision);
         return logProgress("decision", progress(JobStage.TRANSLATE, lastSection));
+    }
+
+    DraftContext draftContextFor(final SegmentWork work) {
+        Objects.requireNonNull(work, "work");
+        if (contextSection != work.section()) {
+            return DraftContext.empty();
+        }
+        return new DraftContext(List.copyOf(precedingTargets));
     }
 
     boolean endsSection(final SegmentWork work) {
@@ -185,6 +198,20 @@ final class JobProgressTracker {
                 reason.code(),
                 accepted,
                 flagged);
+    }
+
+    private void recordPrecedingTarget(final SegmentWork work, final Decision decision) {
+        if (contextSection != work.section()) {
+            precedingTargets.clear();
+            contextSection = work.section();
+        }
+        if (decision.segment().status() != SegmentStatus.ACCEPTED) {
+            return;
+        }
+        precedingTargets.addLast(Objects.requireNonNull(decision.segment().targetInner(), "accepted target"));
+        if (precedingTargets.size() > 3) {
+            precedingTargets.removeFirst();
+        }
     }
 
     private static JobProgress logProgress(final String source, final JobProgress progress) {

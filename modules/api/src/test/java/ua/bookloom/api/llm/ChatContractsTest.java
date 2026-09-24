@@ -25,6 +25,41 @@ class ChatContractsTest {
         assertThatThrownBy(() -> request.messages().add(message)).isInstanceOf(UnsupportedOperationException.class);
     }
 
+    @Test
+    void request_messageOnlyConstructorDefaultsOptionalSettingsToNull() {
+        final ChatRequest request = new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")));
+
+        assertThat(request.temperature()).isNull();
+        assertThat(request.responseFormat()).isNull();
+        assertThat(request.reasoningEnabled()).isNull();
+    }
+
+    @Test
+    void request_explicitSettingsArePreserved() {
+        final List<ChatMessage> messages = List.of(new ChatMessage(ChatRole.USER, "hello"));
+        final ResponseFormat responseFormat = new ResponseFormat("draft", "{\"type\":\"object\"}");
+        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat);
+
+        assertThat(request.messages()).isEqualTo(messages);
+        assertThat(request.temperature()).isEqualTo(0.2);
+        assertThat(request.responseFormat()).isEqualTo(responseFormat);
+        assertThat(request.reasoningEnabled()).isNull();
+    }
+
+    // A caller may disable reasoning without changing the existing three-argument request construction.
+    @Test
+    void request_reasoningDisabled_preservesAllHints() {
+        final List<ChatMessage> messages = List.of(new ChatMessage(ChatRole.USER, "hello"));
+        final ResponseFormat responseFormat = new ResponseFormat("draft", "{\"type\":\"object\"}");
+
+        final ChatRequest request = new ChatRequest(messages, 0.2, responseFormat, false);
+
+        assertThat(request.messages()).isEqualTo(messages);
+        assertThat(request.temperature()).isEqualTo(0.2);
+        assertThat(request.responseFormat()).isEqualTo(responseFormat);
+        assertThat(request.reasoningEnabled()).isFalse();
+    }
+
     @SuppressWarnings("NullAway")
     @Test
     void request_nullMessages_isRejected() {

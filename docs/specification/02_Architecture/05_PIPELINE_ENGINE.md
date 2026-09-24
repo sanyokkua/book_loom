@@ -68,8 +68,8 @@ lost-in-the-middle. Order:
 4. **Preceding-target window** — the last ~N translated (target) blocks, capped ~3; this is the main consistency lever,
    not the source.
 5. **TM hits** — exact/context/fuzzy suggestions for segments in the chunk.
-6. **Masked source** at the bottom edge — the segments to translate, keyed by segment id, with `⟦gN⟧` placeholders
-   intact.
+6. **Masked source** at the bottom edge — exactly one source segment, with `⟦gN⟧` placeholders intact and its ordered
+   sequence repeated immediately before `<Text>…</Text>`.
 
 N (preceding blocks), whether TM/summary are included, and budget are dial-driven.
 
@@ -78,11 +78,12 @@ N (preceding blocks), whether TM/summary are included, and budget are dial-drive
 Scoring is **per chunk**, but a failure flags only the **offending segment (s)**; a directed fix re-renders the whole
 chunk and the result is re-QA'd per segment. Per chunk (see `chunk-translate-loop.mermaid`):
 
-1. **Draft** — one `chat` call; model returns a JSON array keyed by segment id. On any **id mismatch** (missing or
-   duplicate id) re-issue per-segment calls for the **missing ids only**, reuse valid returned segments, ignore
-   extra/unknown ids, and treat order as irrelevant. A wholly **unparseable multi-segment** draft falls back to
-   **per-segment** calls (the **text fallback applies to single-segment calls only**). A **context-match TM auto-reuse**
-   skips this draft call (and the judge) entirely.
+1. **Draft** — one `chat` call for exactly one source segment; the response is exactly `{"target":"…"}`. The last
+   three accepted targets may provide context only within their section. A malformed or wrong-shape response gets one
+   structural repair containing its delimited rejected reply and parsing diagnosis; a valid target that fails the tag
+   multiset gets one separate repair containing the source, rejected target, and required token order. No array, id
+   map, prose, embedded-object, or text fallback is accepted, and neither repair recurses. A **context-match TM
+   auto-reuse** skips this draft call (and the judge) entirely.
 2. **Unmask + validate** — restore placeholders; **tag-multiset hard gate**
    (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Failure → self-heal with a concrete finding.
 3. **Deterministic QA gate** — run the checks in `#qa-checks`; compute `confidence`.

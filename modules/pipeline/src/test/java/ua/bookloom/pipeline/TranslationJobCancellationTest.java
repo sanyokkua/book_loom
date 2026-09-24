@@ -11,6 +11,7 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -182,7 +183,11 @@ class TranslationJobCancellationTest {
         final ExportMoveOperation moves =
                 (temporary, published, options) -> publishThenCancel(reference, temporary, published, options);
         final TranslationJobImpl translation = new TranslationJobImpl(
-                documents(), new TranslationRequest(source, destination, "uk", "en", false), replies("ONE."), moves);
+                documents(),
+                new TranslationRequest(source, destination, "uk", "en", false),
+                replies("ONE."),
+                new ObjectMapper(),
+                moves);
         reference.set(translation);
 
         final JobReport result = report(translation.run());

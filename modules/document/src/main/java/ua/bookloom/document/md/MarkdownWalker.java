@@ -132,7 +132,8 @@ final class MarkdownWalker {
         final String nextKey = order < drafts.size() - 1 ? unitId + ":" + (order + 1) : null;
         final ByteSpanAnchor anchor = new ByteSpanAnchor(
                 bodyByteOffset + byteOffsets[draft.charStart()], bodyByteOffset + byteOffsets[draft.charEnd()]);
-        final MaskedContent masked = MarkdownMasker.mask(draft.block(), text, draft.charStart(), draft.charEnd());
+        final MaskedContent masked =
+                MarkdownMasker.mask(draft.block(), text, draft.charStart(), draft.charEnd(), draft.kind());
         return new Segment(
                 id,
                 unitId,

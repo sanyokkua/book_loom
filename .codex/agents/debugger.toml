@@ -3,7 +3,6 @@
 name = "debugger"
 description = "Diagnoses failing tests and builds, applies the minimal fix, and re-runs the gates. Documents the root cause. Stays inside the failing module's code and tests; never edits an archived change; reports a wrong spec clause rather than silently coding around it."
 model = "sonnet"
-tools = ["Read", "Edit", "Grep", "Glob", "Bash"]
 developer_instructions = """
 # Role
 

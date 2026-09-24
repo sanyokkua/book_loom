@@ -82,7 +82,8 @@ class DiagnosticsTranslationJobTest {
         final AppError unreachable = AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.");
         final MdcRecordingModel model = new MdcRecordingModel(replies()
                 .answer(Result.err(unreachable))
-                .answer(Result.ok(new ChatResponse("ONE.", ua.bookloom.api.llm.FinishReason.STOP))));
+                .answer(Result.ok(new ChatResponse(
+                        TranslationJobTestSupport.targetReply("ONE."), ua.bookloom.api.llm.FinishReason.STOP))));
         final TranslationJobImpl translation = markdownJob(model, "One.");
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         final AtomicReference<MdcObservation> pausedMdc = new AtomicReference<>();
@@ -195,7 +196,9 @@ class DiagnosticsTranslationJobTest {
                 tempDir.resolve("Book.uk.md"),
                 replies("ONE.")
                         .answer(Result.err(invalid))
-                        .answer(Result.ok(new ChatResponse("THREE.", ua.bookloom.api.llm.FinishReason.STOP))));
+                        .answer(Result.ok(new ChatResponse(
+                                TranslationJobTestSupport.targetReply("THREE."),
+                                ua.bookloom.api.llm.FinishReason.STOP))));
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
 

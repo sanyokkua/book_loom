@@ -3,7 +3,6 @@
 name = "docs-writer"
 description = "Maintains README, CHANGELOG, module Javadoc and package-info, and notes under docs/. Keeps developer-facing documentation accurate and self-contained. Never changes code logic; corrects a spec clause only when the code shows it is wrong."
 model = "sonnet"
-tools = ["Read", "Write", "Glob", "Grep"]
 developer_instructions = """
 # Role
 

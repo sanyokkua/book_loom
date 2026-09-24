@@ -58,6 +58,69 @@ class MarkdownStructureRestoreTest {
         assertThat(result.data()).isEqualTo("*старі* двері");
     }
 
+    // IF a link's paired placeholders restore as an empty link, THEN the result is a validation failure.
+    @Test
+    void unmask_linkPairDetachedFromItsLabel_returnsValidationError() {
+        final Map<String, String> placeholders = new LinkedHashMap<>();
+        placeholders.put("g0", "[");
+        placeholders.put("g1", "](ch2.md)");
+        final Segment segment = segment(
+                SegmentKind.PARAGRAPH, "See [chapter two](ch2.md) now.", "See ⟦g0⟧chapter two⟦g1⟧ now.", placeholders);
+
+        final Result<String> result =
+                newService().unmask(BookFormat.MARKDOWN, segment, "See translated chapter two ⟦g0⟧ ⟦g1⟧ now.");
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+    }
+
+    // WHEN a translated link retains visible text inside its paired placeholders, THEN it restores successfully.
+    @Test
+    void unmask_linkPairAroundTranslatedLabel_restoresSuccessfully() {
+        final Map<String, String> placeholders = new LinkedHashMap<>();
+        placeholders.put("g0", "[");
+        placeholders.put("g1", "](ch2.md)");
+        final Segment segment = segment(
+                SegmentKind.PARAGRAPH, "See [chapter two](ch2.md) now.", "See ⟦g0⟧chapter two⟦g1⟧ now.", placeholders);
+
+        final Result<String> result =
+                newService().unmask(BookFormat.MARKDOWN, segment, "See ⟦g0⟧перекладений розділ⟦g1⟧ now.");
+
+        assertThat(result.data()).isEqualTo("See [перекладений розділ](ch2.md) now.");
+    }
+
+    // IF a segment consists solely of a link, THEN the restored link must still own all nonblank segment text.
+    @Test
+    void unmask_soleLinkWithTranslatedTextOutsideThePair_returnsValidationError() {
+        final Map<String, String> placeholders = new LinkedHashMap<>();
+        placeholders.put("g0", "[");
+        placeholders.put("g1", "](#visual-overview)");
+        final Segment segment = segment(
+                SegmentKind.LIST_ITEM, "[Visual Overview](#visual-overview)", "⟦g0⟧Visual Overview⟦g1⟧", placeholders);
+
+        final Result<String> result =
+                newService().unmask(BookFormat.MARKDOWN, segment, "Огляд ⟦g0⟧Візуальний обрис⟦g1⟧");
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+    }
+
+    // IF a task marker is restored away from the list-item prefix, THEN the result is a validation failure.
+    @Test
+    void unmask_taskMarkerMovedAfterItsLabel_returnsValidationError() {
+        final Segment segment = segment(
+                SegmentKind.LIST_ITEM,
+                "[ ] Gravity is identical everywhere.",
+                "⟦g0⟧Gravity is identical everywhere.",
+                Map.of("g0", "[ ] "));
+
+        final Result<String> result =
+                newService().unmask(BookFormat.MARKDOWN, segment, "Гравітація всюди однакова. ⟦g0⟧");
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
+    }
+
     // IF a restored Markdown segment's construct multiset differs from its source's, THEN
     // the result is a validation failure.
     @Test
@@ -272,11 +335,16 @@ class MarkdownStructureRestoreTest {
     }
 
     private static Segment segment(String sourceInner, String masked, Map<String, String> placeholders) {
+        return segment(SegmentKind.PARAGRAPH, sourceInner, masked, placeholders);
+    }
+
+    private static Segment segment(
+            SegmentKind kind, String sourceInner, String masked, Map<String, String> placeholders) {
         return new Segment(
                 "seg-1",
                 "unit-1",
                 0,
-                SegmentKind.PARAGRAPH,
+                kind,
                 sourceInner,
                 masked,
                 placeholders,

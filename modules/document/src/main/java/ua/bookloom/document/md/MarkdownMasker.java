@@ -3,6 +3,8 @@ package ua.bookloom.document.md;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.commonmark.node.Emphasis;
@@ -13,6 +15,7 @@ import org.commonmark.node.SoftLineBreak;
 import org.commonmark.node.StrongEmphasis;
 import org.commonmark.node.Text;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.document.mask.MaskWriter;
 import ua.bookloom.document.mask.MaskedContent;
 
@@ -39,6 +42,9 @@ import ua.bookloom.document.mask.MaskedContent;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class MarkdownMasker {
 
+    /** A GFM task marker and the horizontal whitespace that makes its following label a task-list label. */
+    private static final Pattern TASK_LIST_MARKER = Pattern.compile("\\[[ xX]\\][\\t ]+");
+
     /**
      * Masks {@code block}'s content, {@code text[charStart, charEnd)}, by the source ranges its inline descendants
      * occupy.
@@ -51,10 +57,12 @@ final class MarkdownMasker {
      * @return the masked content; never null
      * @throws ua.bookloom.document.mask.MaskInvariantException if the mask-time invariant fails
      */
-    static MaskedContent mask(Node block, String text, int charStart, int charEnd) {
+    static MaskedContent mask(Node block, String text, int charStart, int charEnd, SegmentKind kind) {
         Objects.requireNonNull(block, "block");
         Objects.requireNonNull(text, "text");
+        Objects.requireNonNull(kind, "kind");
         final List<int[]> ranges = new ArrayList<>();
+        collectTaskListMarker(kind, text, charStart, charEnd, ranges);
         collectChildren(block, text, ranges);
         final MaskWriter writer = new MaskWriter();
         int cursor = charStart;
@@ -65,6 +73,19 @@ final class MarkdownMasker {
         }
         writer.appendCharacterData(text.substring(cursor, charEnd));
         return writer.build();
+    }
+
+    /** Adds a task marker before inline child ranges, keeping the task state outside model-controlled text. */
+    private static void collectTaskListMarker(
+            SegmentKind kind, String text, int charStart, int charEnd, List<int[]> ranges) {
+        if (kind != SegmentKind.LIST_ITEM) {
+            return;
+        }
+        final Matcher matcher = TASK_LIST_MARKER.matcher(text);
+        matcher.region(charStart, charEnd);
+        if (matcher.lookingAt()) {
+            ranges.add(new int[] {charStart, matcher.end()});
+        }
     }
 
     private static void collectChildren(Node parent, String text, List<int[]> ranges) {

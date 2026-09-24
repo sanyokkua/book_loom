@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import java.net.URI;
 import java.nio.file.ClosedFileSystemException;
@@ -306,7 +307,7 @@ class TranslationEngineImplTest {
     }
 
     private TranslationEngine engine() {
-        return new TranslationEngineImpl(documents());
+        return new TranslationEngineImpl(documents(), new ObjectMapper());
     }
 
     private DocumentPort documents() {
@@ -335,7 +336,8 @@ class TranslationEngineImplTest {
     }
 
     private static ScriptedChatModel answers(final String reply) {
-        return new ScriptedChatModel().answer(Result.ok(new ChatResponse(reply, FinishReason.STOP)));
+        return new ScriptedChatModel()
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply(reply), FinishReason.STOP)));
     }
 
     private static String read(final Path path) {

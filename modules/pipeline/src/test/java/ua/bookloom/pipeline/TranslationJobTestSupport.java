@@ -1,7 +1,10 @@
 package ua.bookloom.pipeline;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -13,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModel;
@@ -24,6 +28,8 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
+import ua.bookloom.pipeline.prompt.DraftReplyParser;
 
 /** Shared real-document and controlled-model setup for translation job acceptance tests. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -31,6 +37,7 @@ import ua.bookloom.document.DocumentModule;
 final class TranslationJobTestSupport {
 
     private static final long WAIT_SECONDS = 5;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
 
     static DocumentPort documents() {
@@ -39,15 +46,38 @@ final class TranslationJobTestSupport {
 
     static TranslationJobImpl job(
             final DocumentPort documents, final Path source, final Path destination, final ChatModel model) {
-        return new TranslationJobImpl(documents, new TranslationRequest(source, destination, "uk", "en", false), model);
+        return new TranslationJobImpl(
+                documents, new TranslationRequest(source, destination, "uk", "en", false), model, new ObjectMapper());
+    }
+
+    static SegmentTranslator segmentTranslator(
+            final DocumentPort documents,
+            final ChatModel model,
+            final ua.bookloom.api.document.BookFormat format,
+            final String targetLanguage,
+            @Nullable final String sourceLanguage) {
+        return new SegmentTranslator(
+                documents,
+                model,
+                format,
+                new DraftPromptBuilder(sourceLanguage, targetLanguage),
+                new DraftReplyParser(new ObjectMapper()));
     }
 
     static ScriptedChatModel replies(final String... content) {
         final ScriptedChatModel model = new ScriptedChatModel();
         for (final String reply : content) {
-            model.answer(Result.ok(new ChatResponse(reply, FinishReason.STOP)));
+            model.answer(Result.ok(new ChatResponse(targetReply(reply), FinishReason.STOP)));
         }
         return model;
+    }
+
+    static String targetReply(final String target) {
+        try {
+            return MAPPER.writeValueAsString(Map.of("target", target));
+        } catch (JsonProcessingException cause) {
+            throw new AssertionError("could not encode scripted target", cause);
+        }
     }
 
     static JobReport report(final Result<JobReport> result) {

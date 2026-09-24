@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -40,6 +41,8 @@ import ua.bookloom.api.pipeline.StageStarted;
 
 /** Proves recoverable errors retry only the failed model or export step. */
 class TranslationJobRecoveryTest {
+
+    private static final Pattern SOURCE_TEXT = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
 
     @TempDir
     private Path tempDir;
@@ -65,7 +68,7 @@ class TranslationJobRecoveryTest {
                         JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged, JobReport::error)
                 .containsExactly(JobState.FAILED, 3, 1, 0, unreachable);
         assertThat(model.requests())
-                .extracting(request -> request.messages().get(1).content())
+                .extracting(request -> sourceText(request.messages().get(1).content()))
                 .containsExactly("One.", "Two.");
         assertThat(Files.exists(destination)).isFalse();
     }
@@ -97,7 +100,7 @@ class TranslationJobRecoveryTest {
                 .extracting(JobReport::end, JobReport::accepted, JobReport::flagged)
                 .containsExactly(JobState.COMPLETED, 3, 0);
         assertThat(model.requests())
-                .extracting(request -> request.messages().get(1).content())
+                .extracting(request -> sourceText(request.messages().get(1).content()))
                 .containsExactly("One.", "Two.", "Two.", "Three.");
         shutdown(workers);
     }
@@ -129,7 +132,7 @@ class TranslationJobRecoveryTest {
         assertThat(pause).extracting(Paused::reason, Paused::error).containsExactly(PauseReason.REQUESTED, unreachable);
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
         assertThat(scripted.requests())
-                .extracting(request -> request.messages().get(1).content())
+                .extracting(request -> sourceText(request.messages().get(1).content()))
                 .containsExactly("One.", "Two.", "Two.", "Three.");
         shutdown(workers);
     }
@@ -237,7 +240,7 @@ class TranslationJobRecoveryTest {
                 .containsExactly(JobState.FAILED, unreachable);
         assertThat(pauses).isEmpty();
         assertThat(model.requests())
-                .extracting(request -> request.messages().get(1).content())
+                .extracting(request -> sourceText(request.messages().get(1).content()))
                 .containsExactly("One.", "One.");
         shutdown(workers);
     }
@@ -252,7 +255,16 @@ class TranslationJobRecoveryTest {
     }
 
     private static ChatResponse response(final String content) {
-        return new ChatResponse(content, FinishReason.STOP);
+        return new ChatResponse(TranslationJobTestSupport.targetReply(content), FinishReason.STOP);
+    }
+
+    private static String sourceText(final String userMessage) {
+        return SOURCE_TEXT
+                .matcher(userMessage)
+                .results()
+                .findFirst()
+                .map(match -> match.group(1))
+                .orElseThrow(() -> new AssertionError("draft prompt did not contain source text"));
     }
 
     private static AppError unreachable() {

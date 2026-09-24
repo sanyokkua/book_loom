@@ -3,7 +3,6 @@
 name = "investigator"
 description = "Read-only repo and state mapper. Use before proposing an OpenSpec change to learn what already exists, what is partial, and what is absent, with evidence paths. Reports prior changes and shipped-requirement coverage. Writes nothing."
 model = "sonnet"
-tools = ["Read", "Grep", "Glob", "Bash"]
 developer_instructions = """
 # Role
 

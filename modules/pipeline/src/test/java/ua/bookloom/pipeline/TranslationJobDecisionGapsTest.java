@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
@@ -29,9 +30,6 @@ import ua.bookloom.api.pipeline.TranslationRequest;
 /** Proves, through a whole job, the decisions the scenario audit found covered only at the translator. */
 class TranslationJobDecisionGapsTest {
 
-    private static final String PROMPT_RULES =
-            " Preserve every ⟦gN⟧ placeholder exactly as written. Return only the translated text.";
-
     @TempDir
     private Path tempDir;
 
@@ -45,7 +43,7 @@ class TranslationJobDecisionGapsTest {
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(model.requests().getFirst().messages().getFirst().content())
-                .isEqualTo("Translate the following text from de into uk." + PROMPT_RULES);
+                .contains("from German (de) into Ukrainian (uk)");
     }
 
     // Without a requested language the job must use the book's declaration, and name none when the book has none.
@@ -53,7 +51,10 @@ class TranslationJobDecisionGapsTest {
     @CsvSource(
             delimiter = '|',
             nullValues = "NULL",
-            value = {"en|Translate the following text from en into uk.", "NULL|Translate the following text into uk."})
+            value = {
+                "en|from English (en) into Ukrainian (uk)",
+                "NULL|from the language of this segment (infer it from its text) into Ukrainian (uk)"
+            })
     void run_noRequestedSourceLanguage_usesTheBookDeclaration(
             @Nullable final String declared, final String expectedInstruction) {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.", declared);
@@ -62,8 +63,7 @@ class TranslationJobDecisionGapsTest {
         final JobReport report = report(job(TranslationJobTestSupport.documents(), source, null, model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(model.requests().getFirst().messages().getFirst().content())
-                .isEqualTo(expectedInstruction + PROMPT_RULES);
+        assertThat(model.requests().getFirst().messages().getFirst().content()).contains(expectedInstruction);
     }
 
     // A flag that stopped the loop would leave the second paragraph unsent and the book unwritten.
@@ -72,16 +72,19 @@ class TranslationJobDecisionGapsTest {
     void run_flaggedFirstSegment_stillSendsAndAcceptsTheSecond(
             final String label, final Result<ChatResponse> firstReply, final ErrorCode reason) {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.\n\nShe left.\n");
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(firstReply)
-                .answer(Result.ok(new ChatResponse("SHE LEFT.", FinishReason.STOP)));
+        final ScriptedChatModel model = new ScriptedChatModel().answer(firstReply);
+        if (label.equals("missing token")) {
+            model.answer(firstReply);
+        }
+        model.answer(
+                Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("SHE LEFT."), FinishReason.STOP)));
 
         final JobReport report = report(job(TranslationJobTestSupport.documents(), source, "en", model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(report.accepted()).isEqualTo(1);
         assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.md:0", reason));
-        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests()).hasSize(label.equals("missing token") ? 3 : 2);
     }
 
     private static Stream<Arguments> flaggingReplies() {
@@ -166,7 +169,7 @@ class TranslationJobDecisionGapsTest {
             final ChatModel model) {
         final TranslationRequest request =
                 new TranslationRequest(source, tempDir.resolve("Book.uk.md"), "uk", sourceLanguage, false);
-        return new TranslationJobImpl(documents, request, model);
+        return new TranslationJobImpl(documents, request, model, new ObjectMapper());
     }
 
     private static JobReport report(final TranslationJobImpl job) {
@@ -174,7 +177,8 @@ class TranslationJobDecisionGapsTest {
     }
 
     private static Result<ChatResponse> reply(final String content, final FinishReason finish) {
-        return Result.ok(new ChatResponse(content, finish));
+        return Result.ok(
+                new ChatResponse(content.isBlank() ? content : TranslationJobTestSupport.targetReply(content), finish));
     }
 
     private static Result<ChatResponse> refusal(final ErrorCode code) {
