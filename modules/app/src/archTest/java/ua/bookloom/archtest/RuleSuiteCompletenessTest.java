@@ -8,7 +8,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * Counts the rules, by name, against the eight the specification enumerates.
+ * Counts the rules, by name, against the nine the specification enumerates.
  *
  * <p>A rule dropped from the suite is invisible by inspection: the build stays green, the report shrinks by a few
  * lines nobody reads, and the boundary it guarded silently becomes a convention again. The same is true of a rule
@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 class RuleSuiteCompletenessTest {
 
     /**
-     * The eight rule names of {@code 02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, in the order that
+     * The nine rule names of {@code 02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, in the order that
      * section lists them. Hard-coded on purpose: this list is a transcription of the specification, so deriving it
      * from the code it checks would make the test a tautology.
      */
@@ -32,10 +32,11 @@ class RuleSuiteCompletenessTest {
             "no-sql-in-core-except-persistence",
             "api-is-framework-free",
             "records-first",
-            "bootstrap-no-static-logger");
+            "bootstrap-no-static-logger",
+            "no-inline-style-in-ui");
 
     @Test
-    void suite_containsExactlyTheEightRulesTheSpecificationEnumerates() {
+    void suite_containsExactlyTheNineRulesTheSpecificationEnumerates() {
         assertThat(RuleSuite.byName().keySet())
                 .as("boundary rules discovered on ArchitectureRules by reflection")
                 .containsExactlyInAnyOrderElementsOf(SPEC_RULE_NAMES);

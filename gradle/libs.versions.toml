@@ -5,9 +5,9 @@
 # (docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
 #
 # Populated by change `bootstrap-gradle-and-quality-toolchain`. Runtime libraries the application itself needs
-# (sqlite-jdbc, Flyway, JDBI, CommonMark, Lingua, ICU4J, SLF4J/Logback, AtlantaFX,
-# Ikonli, ControlsFX) are NOT here yet — each arrives with the change that first uses it, at the narrowest
-# scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency.
+# (sqlite-jdbc, Flyway, JDBI, Lingua) are NOT here yet — each arrives with the change that first uses it, at the
+# narrowest scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency. AtlantaFX is declined outright, not deferred
+# (add-ui-translation-workspace design.md D7).
 
 [versions]
 
@@ -89,6 +89,14 @@ commonmark = "0.24.0"
 # which is exactly the case the licence gate exists to adjudicate rather than assume.
 icu4j = "77.1"
 
+# --- UI controls and icons ----------------------------------------------------------------------------------
+# Arrive with `add-ui-translation-workspace`, task 2.1. Declared on `:ui` only. Module names read off the jars'
+# real `module-info.class`: `org.controlsfx.controls`, `org.kordamp.ikonli.javafx`, `org.kordamp.ikonli.feather`.
+# ControlsFX supplies the toggle switch, segmented picker and notification pane the JavaFX toolkit lacks; Ikonli
+# supplies icon nodes from font packs. Licences: BSD-3-Clause and Apache-2.0, both in the default allowlisted family.
+controlsfx = "11.2.5"
+ikonli = "12.4.0"
+
 # --- Test ---------------------------------------------------------------------------------------------------
 # The JUnit 5 line (the frozen stack specifies JUnit 5; 6.x is a separate major).
 junit = "5.14.4"
@@ -133,6 +141,11 @@ jdom2 = { module = "org.jdom:jdom2", version.ref = "jdom2" }
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
 icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
+
+# --- UI controls and icons ----------------------------------------------------------------------------------------
+controlsfx = { module = "org.controlsfx:controlsfx", version.ref = "controlsfx" }
+ikonli-javafx = { module = "org.kordamp.ikonli:ikonli-javafx", version.ref = "ikonli" }
+ikonli-feather-pack = { module = "org.kordamp.ikonli:ikonli-feather-pack", version.ref = "ikonli" }
 
 # --- Test ------------------------------------------------------------------------------------------------------
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }

@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** anyone picking up the next unit of work **Last Updated:**
-2026-09-22 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
+2026-09-26 **Cross-references:** `docs/adr/ADR-0017-infrastructure-first-delivery-order.md`,
 `docs/adr/ADR-0023-backend-complete-milestone-and-backlog-interstitials.md`,
 `docs/adr/ADR-0016-openspec-delivery-tracking.md`, `docs/adr/ADR-0029-transcode-to-utf8-on-unrepresentable-target-text.md`,
 `docs/adr/ADR-0030-synthesize-a-missing-epub-mimetype-entry-on-write.md`, `docs/implementation_plan/07_ROADMAP.md`,
@@ -17,14 +17,19 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 
 ## where-this-stands {#where-this-stands}
 
-**Eight changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
+**Ten changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
 of four archived**, change 5 — `add-inline-masking-and-placeholder-gate` — included (2026-09-11).
-`add-translation-engine-and-cli` is archived: it delivered the walking skeleton
-the owner named as the next unit of work — a book of any of the four formats through the whole pipeline from the
-command line with a deterministic pseudo model (`docs/Architecture.md` §9) — making `:llm` and `:pipeline` real. The
-interstitial `settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 when D2 and D11 were fixed directly.
-`add-real-llm-clients` is in progress and makes the existing LLM seam real for Ollama-native and OpenAI-compatible
-endpoints.
+`add-translation-engine-and-cli` (2026-09-20) delivered the walking skeleton the owner named as the next unit of work
+— a book of any of the four formats through the whole pipeline from the command line with a deterministic pseudo
+model (`docs/Architecture.md` §9) — making `:llm` and `:pipeline` real. `add-real-llm-clients` (2026-09-24) made the
+existing LLM seam real for Ollama-native and OpenAI-compatible endpoints. The interstitial
+`settle-writer-policy-and-document-lifetime` shrank on 2026-09-11 when D2 and D11 were fixed directly.
+
+**`add-ui-translation-workspace` was archived on 2026-09-26.** It gave the pipeline a face: the desktop window
+now opens a book of each of the four formats, takes a target language, destination and overwrite choice, verifies a
+provider, starts / pauses / resumes / stops a run and shows the written file in the file manager. It consumed several
+Stage B′ and Stage D rows in reduced form — each row below says what it took and what it left — and touched no
+persistence, so nothing survives a restart.
 
 | Archived | Change | What it shipped |
 |---|---|---|
@@ -35,14 +40,17 @@ endpoints.
 | 2026-08-09 | 4 · `add-fb2-md-txt-roundtrip` | FB2, Markdown and TXT round trips; ADR-0025/0026/0027 |
 | 2026-08-11 | — · `fix-document-round-trip-corpus-defects` | Eight defects found by a 214-book write-back sweep; ADR-0028; the sweep made repeatable |
 | 2026-09-11 | 5 · `add-inline-masking-and-placeholder-gate` | `⟦gN⟧` masking for all four formats, `DocumentPort.unmask` behind the placeholder-multiset gate, Markdown escape + structure check; ADR-0031 |
+| 2026-09-20 | — · `add-translation-engine-and-cli` | `:llm` and `:pipeline` made real: the pausable job, checked export, a deterministic pseudo model, the `translate` command; `inference`, `translation-pipeline`, `resume` and `export` created |
+| 2026-09-24 | — · `add-real-llm-clients` | Ollama-native and OpenAI-compatible clients behind the chat-model boundary, retry, the single-flight gate, three-stage verification; `llm-provider` created |
+| 2026-09-26 | — · `add-ui-translation-workspace` | The desktop window: shell, Import, Book Brief, Structure, Translating, Export and Settings screens, state mirror, English and Ukrainian bundles, theme; Pause and Stop abort the request in flight; `app-shell`, `book-brief`, `book-import`, `localization`, `notifications`, `settings` and `theming` created, `export`, `llm-provider`, `resume`, `translation-pipeline` and `document-round-trip` extended |
 
 **Honest completion figures**, so nobody reads the table above as more progress than it is:
 
 | Metric | Value |
 |---|---|
-| Capabilities with a built-behaviour spec | The archived `add-translation-engine-and-cli` change records the shipped `inference`, `translation-pipeline`, `resume` and `export` behaviour; the main ledger is updated by OpenSpec archive |
-| Tests | **616** at the 2026-09-11 archive, plus the suites shipped by the archived `add-translation-engine-and-cli` change across `:llm`, `:pipeline` and `:app` — a test's name and one-line comment say what it proves; requirement-id markers were retired on 2026-09-11 (ADR-0032) |
-| Modules carrying real production logic | **6 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:app`) — `add-translation-engine-and-cli` made the last two real |
+| Capabilities with a built-behaviour spec | Thirteen in `openspec/specs/`: `app-shell`, `book-brief`, `book-import`, `document-round-trip`, `export`, `inference`, `llm-provider`, `localization`, `notifications`, `resume`, `settings`, `theming`, `translation-pipeline` |
+| Tests | **616** at the 2026-09-11 archive, plus the suites shipped by the archived `add-translation-engine-and-cli` change across `:llm`, `:pipeline` and `:app`, and by `add-real-llm-clients` and the not-yet-archived `add-ui-translation-workspace` (which adds the `:ui` suites) — a test's name and one-line comment say what it proves; requirement-id markers were retired on 2026-09-11 (ADR-0032) |
+| Modules carrying real production logic | **7 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:ui`, `:app`) — only `:persistence` is still empty; `add-ui-translation-workspace` made `:ui` real |
 | Stages complete | **A only**, of A · B · B′ · C · D · E |
 
 **Inline masking now exists — the previous edition of this section said it did not.**
@@ -244,6 +252,7 @@ moment it is found.
 | D16 | The Markdown structure check is per-segment, so document-level block structure is unguarded | Open — measured, one book re-opened with 28 segments where it had 31 | `add-chunking-and-context-assembly` (change 12) |
 | D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | Open — found by the 2026-09-12 `Books_Examples` sweep; owned by `add-metadata-units-and-language-detection` |
 | D18 | `:document` logs only at its port boundary: its readers, writers and maskers write no DEBUG or TRACE lines | Open — left out of `add-translation-engine-and-cli` by design (its design.md, Non-Goals) | Unowned — the next `:document` change |
+| D19 | A provider HTTP error (for example LM Studio's `400` "Model unloaded") is flagged as a `validation` segment and counted as processed, so the run carries on and finishes with every remaining segment flagged; it should end the run | Open — found in `add-ui-translation-workspace`'s hand run | Unowned — the next `:pipeline` change |
 
 **The review of `add-translation-engine-and-cli` found more gaps** — EPUB language metadata, serialization details, the
 command line and what the translation screen will need. They are recorded, each with a reproduction, in
@@ -421,6 +430,13 @@ coverage floor therefore over-reports on any FB2 book using CDATA for prose. Fou
 it does *not* silently drop these blocks, which is the right call for a masking change and leaves the metric wrong.
 Belongs with whichever change next owns the coverage metric.
 
+**D19 — a provider HTTP error is treated as a bad reply, not as a failed run.** Found in the hand run of
+`add-ui-translation-workspace`: when LM Studio answers `400` with "Model unloaded", the engine records the segment as
+flagged with `ErrorCode.validation` and counts it as processed. The run then sends the next segment into the same failure, so a
+book ends "finished" with every remaining segment flagged rather than stopping at the first request that cannot
+succeed. A retryable or transient error is the client's to retry; one that will fail identically for every later
+segment should end the run with the error and keep the accepted segments. Unowned — the next `:pipeline` change.
+
 **Two test-strength findings that are not decision debt but should not be lost either.** `FixtureSweepTest`'s
 `sourceHash` assertion recomputes the expected value with production's own `HashUtil` call, which the
 anti-tautology rule in `testing.md` forbids; and `PrimaryFixtureEpub`, the richest EPUB fixture in the tree, is not
@@ -494,8 +510,8 @@ work is ever split across people.
 | # | Change | Capability |
 |---|---|---|
 | — | `add-api-contract-floor-and-stubs` | *(skip_specs)* |
-| 6 | `add-theming-token-system` | `theming` **NEW** |
-| 7 | `add-ui-component-library` | `app-shell` **NEW** *(or `skip_specs` — decide at propose time)* |
+| 6 | `add-theming-token-system` | `theming` **NEW** — nearly whole, consumed by `add-ui-translation-workspace`: the 44 roles in light and dark, the OS colour-scheme seam, the title-bar toggle and the Settings tri-state; the three elevation roles are drop-shadow effects, and AtlantaFX was not adopted. Left: persisting the choice, and the accent, which stays fixed |
+| 7 | `add-ui-component-library` | `app-shell` **NEW** *(or `skip_specs` — decide at propose time)* — not built as a screen: `add-ui-translation-workspace` dropped the mockup's specimen sheets (task 9.8) and the real controls arrived inside the screens. Suggest marking it **superseded**; the owner decides |
 
 **`add-api-contract-floor-and-stubs` runs after change 2 and heads Stage B′**, in parallel with change 3 (ADR-0023).
 Without it Stage B′ is parallel only on paper: a control library has no port to build against until Stage C is well
@@ -643,15 +659,26 @@ binding — never a service.
 
 | # | Change | Capability |
 |---|---|---|
-| 17 | `add-app-shell-and-navigation` | `app-shell` MOD |
-| 18 | `add-localization-infrastructure` | `localization` **NEW** |
-| 19 | `add-import-and-brief-screens` | `book-import` MOD · `book-brief` MOD |
-| 20 | `add-structure-and-glossary-screens` | `glossary` MOD |
-| 21 | `add-translating-dashboard` | `app-shell` MOD |
+| 17 | `add-app-shell-and-navigation` | `app-shell` MOD — consumed in reduced form by `add-ui-translation-workspace`: the shell, `ViewNames`/`Navigator`, the state mirror, the modal and toast hosts and About. Left: the Projects, Names & style and Review screens (inert entries today) and the other dialogs |
+| 18 | `add-localization-infrastructure` | `localization` **NEW** — consumed in reduced form by `add-ui-translation-workspace`: `en` and `uk` bundles, typed keys, ICU plurals, the locale chosen by the OS. Left: the in-app language switch and the persisted `ui.language` (FR-UI-06) |
+| 19 | `add-import-and-brief-screens` | `book-import` MOD · `book-brief` MOD — consumed in reduced form by `add-ui-translation-workspace`: the Import screen and the brief's languages, destination and overwrite. Left: source-language detection and its mismatch trigger, cover and chapter count, an editable source language; FR-BRIEF-02..08 are drawn but disabled |
+| 20 | `add-structure-and-glossary-screens` | `glossary` MOD — the structure half consumed in reduced form by `add-ui-translation-workspace` (a read-only, flat list of resources); the glossary half not started |
+| 21 | `add-translating-dashboard` | `app-shell` MOD — consumed in reduced form by `add-ui-translation-workspace`: progress, the four counts the engine emits, the activity log, start / pause / resume / stop / new run. Left: throughput and ETA, the in-flight panel, a "repaired" count and a resumable stop, which need engine and storage work |
 | 22 | `add-review-queue` | `review-queue` **NEW** |
-| 23 | `add-export-flow` | `export` MOD |
-| 24 | `add-settings-and-provider-ui` | `settings` **NEW** · `llm-provider` MOD |
-| 25 | `add-notifications-and-error-surfacing` | `notifications` **NEW** |
+| 23 | `add-export-flow` | `export` MOD — consumed in reduced form by `add-ui-translation-workspace`: a report-only screen that shows the written file. Left: side files, the consistency pass and the export-complete dialog; the save-path field was dropped by design |
+| 24 | `add-settings-and-provider-ui` | `settings` **NEW** · `llm-provider` MOD — consumed in reduced form by `add-ui-translation-workspace`: the Providers tab (two presets, three-stage verify, model discovery plus a typed id) and the Appearance theme. Left: add / edit / delete provider, credentials, the other tabs, persistence |
+| 25 | `add-notifications-and-error-surfacing` | `notifications` **NEW** — the error-with-details dialog and the toasts consumed by `add-ui-translation-workspace` |
+
+**Findings from the hand run of `add-ui-translation-workspace`, owned by no row yet:**
+
+- **The source language cannot be corrected.** A book whose metadata declares `en-US` but whose text is Ukrainian keeps
+  its Ukrainian passages verbatim, because the draft prompt tells the model to keep passages in other languages as
+  they are, and the Book Brief's source-language selector is read-only. Detection and an editable selector belong to
+  row 19's remainder and to `add-metadata-units-and-language-detection`.
+- **The Book Brief's segmented buttons truncate Ukrainian labels at 1024 px**; the window's 960x640 minimum is no
+  wider, so the labels need a shorter form or a wrapping layout.
+- **A single provider request can hang until the three-minute timeout** (about 1 in 1,750 observed). Pause and Stop
+  now abort the request in flight, so the person is no longer stuck; a shorter or adaptive timeout is open.
 
 Change 17 establishes **seam F8** (the observable state mirror). Change 18 lands **before** the screens deliberately, so
 every screen is built against bundle keys from the start rather than retrofitted (`07_ROADMAP.md#execution-notes`).

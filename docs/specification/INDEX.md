@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester, reviewer **Last Updated:** 2026-09-26
 **Cross-references:** `../Architecture.md`, `mockups/ui-mockup.html`
 
 # Specification Index — BookLoom
@@ -9,7 +9,7 @@ recording the difference somewhere else. An ADR (`../adr/`) records a decision t
 a document. The UI source of truth is `mockups/ui-mockup.html`.
 
 Requirement identifiers used throughout: `FR-<AREA>-NN` (functional), `NFR-<AREA>-NN` (non-functional), `DD-NN` (design
-decision), `ADR-NNNN` (decision record, in `../adr/`), `EC-<AREA>-N` (edge case). Stories cite spec clauses as
+decision), `ADR-NNNN` (decision record, in `../adr/`), `EC-<AREA>-N` (edge case). OpenSpec requirements cite spec clauses as
 `<file>#<anchor>`; the canonical anchor list is `00_Foundation/05_SPEC_INDEX.md`.
 
 ## 00 — Foundation
@@ -38,6 +38,7 @@ decision), `ADR-NNNN` (decision record, in `../adr/`), `EC-<AREA>-N` (edge case)
 | `01_Product/09_THEMING.md`                  | Token model, palette, light + dark                                                                 |
 | `01_Product/10_I18N_AND_ACCESSIBILITY.md`   | i18n and WCAG 2.1 AA                                                                               |
 | `01_Product/11_NOTIFICATIONS_AND_ERRORS.md` | Toasts, banners, error dialogs, empty states                                                       |
+| `IMPLEMENTED_REQUIREMENTS.md`               | Which requirements the built changes implement — a prose pointer maintained by hand; not a traceability tool (ADR-0032) |
 | `01_Product/12_PROMPT_CATALOG.md`           | Normative per-phase LLM prompt catalog (system + user templates, variables, params, output shapes) |
 
 ## 02 — Architecture
@@ -84,6 +85,6 @@ decision), `ADR-NNNN` (decision record, in `../adr/`), `EC-<AREA>-N` (edge case)
 
 ## Process (in `../implementation_plan/`)
 
-Module inventory, story format, traceability, ADR format, acceptance-criteria patterns, definition of done, roadmap, and
-the phase files live in `../implementation_plan/`. ADRs live in `../adr/`. The generated traceability record is
-`../traceability.yaml`.
+The module inventory, ADR format, roadmap, change backlog and corpus notes live in `../implementation_plan/`. ADRs live in
+`../adr/`. There is no story format and no generated traceability record: a test is the evidence of a behaviour, and
+`IMPLEMENTED_REQUIREMENTS.md` is a hand-kept prose pointer only (ADR-0032).

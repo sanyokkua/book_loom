@@ -3,12 +3,14 @@ package ua.bookloom.app;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.name.Named;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
+import ua.bookloom.ui.BackgroundExecutor;
+import ua.bookloom.ui.BuildVersion;
+import ua.bookloom.ui.IoExecutor;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -19,19 +21,13 @@ import ua.bookloom.util.paths.AppPaths;
  * this module ({@link StartupContext}) exists because the JavaFX launcher constructs the application reflectively,
  * and it stops at this boundary: everything the injector builds receives its dependencies as constructor arguments.
  *
- * <p>Two executors, because they are for different work. The {@code background} pool runs bounded, cancellable
+ * <p>Two executors, because they are for different work. The {@link BackgroundExecutor} pool runs bounded, cancellable
  * application work off the FX Application Thread; it is <strong>daemon</strong>, so a lingering task can never keep
- * the JVM alive after the last window closes. The {@code io} executor uses virtual threads, which suit blocking I/O
+ * the JVM alive after the last window closes. The {@link IoExecutor} executor uses virtual threads, which suit blocking I/O
  * fan-out and are wrong for anything CPU-bound or gated — inference in particular is single-flight and must not be
  * fanned out at all (`threading-concurrency.md`).
  */
 public final class AppModule extends AbstractModule {
-
-    /** Binding name for the daemon pool that runs background application work. */
-    public static final String BACKGROUND_EXECUTOR = "background";
-
-    /** Binding name for the virtual-thread executor used for blocking I/O fan-out. */
-    public static final String IO_EXECUTOR = "io";
 
     private final StartupContext startup;
 
@@ -51,6 +47,9 @@ public final class AppModule extends AbstractModule {
         bind(AppPaths.class).toInstance(startup.paths());
         bind(AppEnvironment.class).toInstance(startup.environment());
         bind(StartupContext.class).toInstance(startup);
+        // The one read of the build version: the launcher's startup line and the About dialog must report the same
+        // string, and `:ui` cannot see this module's reader, so the value crosses the edge as a binding.
+        bind(String.class).annotatedWith(BuildVersion.class).toInstance(AppVersion.current());
     }
 
     /**
@@ -60,7 +59,7 @@ public final class AppModule extends AbstractModule {
      */
     @Provides
     @Singleton
-    @Named(BACKGROUND_EXECUTOR)
+    @BackgroundExecutor
     ExecutorService backgroundExecutor() {
         final AtomicLong counter = new AtomicLong();
         final ThreadFactory factory = runnable -> {
@@ -80,7 +79,7 @@ public final class AppModule extends AbstractModule {
      */
     @Provides
     @Singleton
-    @Named(IO_EXECUTOR)
+    @IoExecutor
     ExecutorService ioExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }

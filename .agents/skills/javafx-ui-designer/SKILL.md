@@ -71,7 +71,7 @@ over the FX-free core, driven by an observable state mirror. The mockup at
    invent a token); JavaFX 25 reads OS `prefers-color-scheme`. The accent is **fixed to
    Cognac** (FR-THEME-4, not user-selectable) and there is **no density/compact mode** in
    v1. AtlantaFX supplies the base control theme; app tokens override brand colors.
-   Controls reference `-color-accent`, `-color-bg-surface`, … never hex.
+   Controls reference `-color-primary`, `-color-surface`, … never hex.
 9. **Add i18n.** All labels are bundle keys addressed through the **typed message-key
    registry** (no bare string literals at call sites); plural/gender-sensitive strings are
    **ICU4J `MessageFormat` patterns** in the bundles (UK needs one/few/many/other — DD-48);

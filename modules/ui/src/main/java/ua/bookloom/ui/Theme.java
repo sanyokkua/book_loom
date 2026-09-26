@@ -16,6 +16,14 @@ import java.util.Objects;
  */
 public final class Theme {
 
+    /**
+     * The style class that switches the token set to dark. The light values live on {@code .root} itself, and
+     * {@code .root.theme-dark} overrides the same role names, so adding this class to the Scene root re-resolves every
+     * looked-up colour and removing it restores the light block — one stylesheet, two value blocks, no per-component
+     * dark rules.
+     */
+    public static final String DARK_STYLE_CLASS = "theme-dark";
+
     private static final String STYLESHEET = "theme.css";
 
     private Theme() {

@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -24,6 +25,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.junit.jupiter.api.parallel.Resources;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -227,6 +230,29 @@ class ChatModelFactoryImplTest {
         assertThat(model.chat(chatRequest()).data()).isNotNull();
         server.verify(postRequestedFor(urlEqualTo("/v1/chat/completions"))
                 .withRequestBody(matchingJsonPath("$.model", equalTo("google/gemma-4-e4b"))));
+    }
+
+    // A plain http:// provider must never be offered an h2c upgrade, which stalls a first request on local servers.
+    @ParameterizedTest
+    @CsvSource({"OLLAMA,'',/api/chat", "OPENAI_COMPATIBLE,/v1,/v1/chat/completions"})
+    void chat_plainHttp_sendsNoH2cUpgrade(ProviderKind kind, String basePath, String route) {
+        server.stubFor(post(urlPathEqualTo("/api/chat"))
+                .willReturn(aResponse().withStatus(200).withBody(OLLAMA_REPLY)));
+        server.stubFor(post(urlPathEqualTo("/v1/chat/completions"))
+                .willReturn(aResponse().withStatus(200).withBody(OPENAI_REPLY)));
+        register(new ProviderConfig(
+                "local",
+                kind,
+                URI.create(server.baseUrl() + basePath),
+                ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
+                ProviderConfig.DEFAULT_REQUEST_TIMEOUT));
+        final ChatModel model = Objects.requireNonNull(
+                factory().create(new ModelSelection("local", "any-model")).data(), "model");
+
+        assertThat(model.chat(chatRequest()).data()).isNotNull();
+
+        server.verify(
+                postRequestedFor(urlPathEqualTo(route)).withoutHeader("Upgrade").withoutHeader("HTTP2-Settings"));
     }
 
     // Guice shares the registry, client factory, gate, and retry policy across all model resolutions.

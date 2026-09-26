@@ -106,9 +106,10 @@ production instance hold distinct locks and can run at once.
 
 `Application.stop()` (FX lifecycle) runs the shutdown sequence with **bounded await budgets** so shutdown never hangs:
 
-1. **Cancel on shutdown** — call `cancel()` on every running `TranslationJob`; it stops at its next boundary, once the
-   model call in progress returns (`08_THREADING_CONCURRENCY.md#cancellation`). Worst-case time to reach the boundary
-   is the HTTP read-timeout — cancellation is bounded, not instant.
+1. **Cancel on shutdown** — call `cancel()` on every running `TranslationJob`; a model call in flight is aborted at once
+   and the run ends Cancelled (`08_THREADING_CONCURRENCY.md#cancellation`). The export is never interrupted: a
+   shutdown during it lets the write finish, and the run ends Cancelled just before the temporary file would replace
+   the destination, discarding it, so a shutdown never leaves a half-written book at the destination.
 2. **Flush pending checkpoints** (the last atomic write), **checkpoint the WAL, and close the `Jdbi`/DataSource
    cleanly** — with a checkpoint-flush budget of **≤ N s** (N chosen so a normal flush always completes; if it is
    exceeded the close proceeds and WAL replay covers the remainder on next open).

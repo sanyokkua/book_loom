@@ -14,7 +14,7 @@ import java.util.TreeMap;
  * <p>The distinction is the whole reason this class exists. A hand-maintained list can fall out of step with the
  * fields in two directions: a rule deleted from the list but left as a field becomes dead code nobody evaluates,
  * and a rule added as a field but forgotten in the list never runs. Reading the fields makes the suite and the
- * class the same thing, so {@code RuleSuiteCompletenessTest} comparing this against the spec's eight names is a
+ * class the same thing, so {@code RuleSuiteCompletenessTest} comparing this against the spec's nine names is a
  * real check and not a tautology.
  */
 final class RuleSuite {

@@ -1,15 +1,19 @@
 package ua.bookloom.archtest;
 
+import static com.tngtech.archunit.core.domain.JavaAccess.Predicates.target;
 import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
+import static com.tngtech.archunit.core.domain.properties.HasOwner.Predicates.With.owner;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.AccessTarget;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * The eight boundary rules of {@code 02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, declared once
+ * The nine boundary rules of {@code 02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, declared once
  * for the whole module graph.
  *
  * <p>Each rule's description begins with its spec name followed by {@value #NAME_SEPARATOR}. That is not
@@ -223,5 +227,27 @@ public final class ArchitectureRules {
                     + "from its static initializer")
             .because("these classes run BEFORE Logback is configured (paths-first startup, DD-39/ADR-0015); a "
                     + "logger created there pins logging to a default directory that is not the resolved one")
+            .allowEmptyShould(true);
+
+    // ===== 9. no-inline-style-in-ui ======================================================================
+
+    /**
+     * Rule 9: no {@code :ui} code styles anything JavaFX owns from Java. The owner test is "any {@code javafx..}
+     * type" rather than {@code Node}, because {@code Tooltip}, {@code ContextMenu}, {@code Tab} and
+     * {@code MenuItem} all carry {@code setStyle} without being nodes; the access-target form also catches a method
+     * reference ({@code label::setStyle}). Style classes stay free: only a method named {@code setStyle} is banned.
+     */
+    public static final ArchRule NO_INLINE_STYLE_IN_UI = noClasses()
+            .that()
+            .resideInAPackage(ROOT + ".ui..")
+            .should()
+            .accessTargetWhere(target(DescribedPredicate.<AccessTarget>alwaysTrue()
+                    .and(name("setStyle"))
+                    .and(owner(resideInAPackage("javafx..")))))
+            .as("no-inline-style-in-ui" + NAME_SEPARATOR
+                    + "no class in :ui may call setStyle on any javafx.. type (nodes, tooltips, menus, tabs); "
+                    + "styling comes from theme.css tokens and style classes")
+            .because("an inline style is invisible to the token sheet, so no theme swap can reach it and it "
+                    + "hard-codes a value the single stylesheet was meant to own (FR-THEME-5, theming-tokens.md)")
             .allowEmptyShould(true);
 }

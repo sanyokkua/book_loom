@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** architect, engineering (`:ui`, `:persistence`), QA **Last
-Updated:** 2026-07-18 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
+Updated:** 2026-09-26 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md`, `docs/specification/01_Product/09_THEMING.md`,
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md`
 
@@ -85,13 +85,17 @@ settings.
 
 | Setting       | Type              | Default                  | Validation                                                                              | Requirement           |
 |---------------|-------------------|--------------------------|-----------------------------------------------------------------------------------------|-----------------------|
-| Theme         | enum              | system                   | light / dark / system (JavaFX 25 reads OS `prefers-color-scheme`)                       | FR-SETTINGS-04, DD-22 |
+| Theme         | enum              | system                   | light / dark / system (JavaFX 26 reads OS `prefers-color-scheme`)                       | FR-SETTINGS-04, DD-22 |
 | Accent        | fixed (read-only) | Cognac                   | not selectable in v1 (Cognac only, FR-THEME-4)                                          | FR-SETTINGS-04        |
-| Language (UI) | enum              | OS locale on first start | English / Ukrainian; persisted as `ui.language`; applied on change (restart acceptable) | FR-UI-06, DD-34       |
+| Language (UI) | enum              | OS locale on first start | English / Ukrainian; persisted as `ui.language`; applied on change (restart acceptable). **Deferred:** not offered in this build — see below | FR-UI-06, DD-34       |
 
 **Theme control is tri-state here** (light / dark / system). The **toolbar theme control is a 2-state light↔dark
 quick-toggle only**; the tri-state selector including `system` lives in this tab
 (`08_UI_SCREENS_AND_STATES.md#shell-and-navigation`).
+
+**The Language (UI) row is deferred.** The Appearance screen has no language control and nothing persists `ui.language`,
+because persisting it needs local storage, which does not exist yet. Until then the interface language follows the
+operating system's locale (Ukrainian OS → Ukrainian, otherwise English); the row stays here as the target behaviour.
 
 **Accent is fixed to Cognac** in v1 and shown read-only; it is not a selectable enum (see `09_THEMING.md` FR-THEME-4).
 **Density is deferred to a later version** and is not offered in v1 Appearance — no spacing/density tokens exist in the

@@ -50,7 +50,7 @@ There is no `gradle.properties`; one you add is not ignored by git.
 ```bash
 git clone <repo-url> && cd book_loom
 ./gradlew build          # compile, lint, test
-./gradlew :app:run       # opens a 1024x700 window titled "BookLoom"
+./gradlew :app:run       # opens the BookLoom window (1024x700, minimum 960x640)
 ```
 
 The full gate — what pre-push and CI run — is:
@@ -83,10 +83,10 @@ Gradle project names are `:api` … `:app` even though the directories sit under
 | `:api` | `modules/api` | real | `Result`, `AppError`, `ErrorCode`, `SafeDetails`, the document model, `DocumentPort`, the chat-model and translation-engine contracts (`ua.bookloom.api.llm`, `ua.bookloom.api.pipeline`) |
 | `:util` | `modules/util` | real | per-OS paths, dev/prod environment, hashing |
 | `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close |
-| `:llm` | `modules/llm` | real | the `ChatModel`/`ChatModelFactory` contract, and the offline deterministic `pseudo` model |
-| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel), checked export |
+| `:llm` | `modules/llm` | real | the `pseudo` model, the Ollama-native and OpenAI-compatible clients (retry, single-flight gate, three-stage verification), model discovery |
+| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export |
 | `:persistence` | `modules/persistence` | empty | one Guice module with no bindings |
-| `:ui` | `modules/ui` | placeholder | `Theme`, `theme.css`, a `StackPane` with one label |
+| `:ui` | `modules/ui` | real | the shell, six screens (Import, Book Brief, Structure, Translating, Export, Settings), the state mirror and viewmodels, `en`/`uk` bundles, the theme — six of eight planned packages |
 | `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the command-line translator, the `archTest` suite |
 | `build-logic` | `modules/build-logic` | — | the five convention plugins; an **included build**, not a subproject |
 
@@ -137,7 +137,7 @@ The root build adds one thing: the licence gate (`checkLicense`, [§9](#quality-
 ## 5. Run and debug {#running}
 
 ```bash
-./gradlew :app:run                # 1024x700 window titled "BookLoom"
+./gradlew :app:run                # the BookLoom window: opens 1024x700, minimum 960x640
 ./gradlew :app:run --debug-jvm    # suspends before main, listening on 127.0.0.1:5005
 ```
 
@@ -149,12 +149,30 @@ green `:app:run` therefore says nothing about the JPMS graph; the packaged image
 is enabled for test tasks only), and `sun.misc.Unsafe … HiddenClassDefiner` (Guice internals) — the last of these is
 switched off on `:app:translate` below, but not here.
 
+**What the window can do.** Open a book of any of the four formats (EPUB, FB2, Markdown, TXT), choose a target
+language, a destination and whether to overwrite, verify a provider (the Ollama and LM Studio presets; connection,
+models, then a test inference), choose a model, then start, pause, resume, stop and start again. The dashboard shows
+progress, the four counts the engine emits and a log; after 10 s without an answer it says "Waiting for the model…
+m:ss". Pause and Stop abort the request in flight, and a stopped run is final and writes nothing. When a run
+finishes, the Export screen has a button that shows the written file in the operating system's file manager.
+
+**What it cannot do yet.** Persist anything (`:persistence` is empty, so a run cannot be resumed after a restart and
+the theme is not remembered), detect the book's source language (the selector is read-only), switch language inside
+the app, or open the Projects, Names & style and Review entries, which are greyed and have no screen.
+
+**Ukrainian interface.** The language follows the operating system: a Ukrainian locale shows `uk`, anything else
+shows `en`, and there is no switch in the app. To see Ukrainian without changing the OS, run
+`./gradlew :app:run -Duser.language=uk -Duser.country=UA`. The build script does nothing special for this: Gradle
+copies `user.language`, `user.country`, `user.variant` and `file.encoding` from its own JVM into every forked JVM
+(`JvmOptions` in `gradle-process-services`), so a `-D` on the Gradle command line reaches the launched application
+and `OsLocaleProvider` sees `uk_UA` (the log records `OS locale uk_UA is Ukrainian, displaying uk`).
+
 **The startup log line** tells you which environment and directories a run used:
 
 ```
 INFO [main] ua.bookloom.app.bootstrap.Launcher - app started version=dev environment=DEV dataDir=… logDir=…
 INFO [JavaFX-Launcher] … BookLoomApplication - injector built and two-phase init complete
-INFO [JavaFX Application Thread] … BookLoomApplication - primary stage shown
+INFO [JavaFX Application Thread] … BookLoomApplication - window shown, initialView=IMPORT
 ```
 
 **Where the app writes** (`ua.bookloom.util.paths.AppPathsResolver`; `-Dev` is appended in the dev environment):
@@ -256,7 +274,7 @@ Distribution) — switch it back to the Gradle Wrapper.
 | `./gradlew :document:test` | one module |
 | `./gradlew :document:test --tests 'ua.bookloom.document.mask.*'` | one package or class (pattern) |
 | `./gradlew :document:test --tests '*Fb2WriterTest.write_lineFeedSource_keepsBareLineFeeds'` | one method |
-| `./gradlew :app:archTest` | the eight ArchUnit rules (also part of `check`) |
+| `./gradlew :app:archTest` | the nine ArchUnit rules (also part of `check`) |
 
 **Headless UI.** Every `Test` task gets `-Dglass.platform=Headless -Dprism.order=sw -Djava.awt.headless=true` from
 `bookloom.test-conventions`: JavaFX 26's built-in headless platform, not Monocle. No display server is needed.

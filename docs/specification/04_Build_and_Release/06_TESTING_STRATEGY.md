@@ -109,7 +109,7 @@ They cover every state named in `08_UI_SCREENS_AND_STATES.md`: Import (`detected
 `DRM-blocked`, `unsupported`), Translating (`running`, `paused`, `stopped`, `provider-error`), Projects and Review
 populated-vs-empty, and each dialog opening in the modal host with scrim. A state test drives the viewmodel/navigator
 into the state and asserts the expected controls, banners, and empty states appear — including that the `stopped` state
-shows Resume and no error surface (cancellation is not an error). Runs in CI.
+shows New run (a stopped run cannot be resumed) and no error surface (cancellation is not an error). Runs in CI.
 
 ### ui-matches-mockup-conformance {#ui-conformance}
 

@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-15
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-26
 **Cross-references:** `docs/specification/02_Architecture/08_THREADING_CONCURRENCY.md`,
 `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md`, `docs/specification/02_Architecture/09_ERROR_HANDLING.md`,
 `docs/specification/mockups/ui-mockup.html`
@@ -34,6 +34,14 @@ Three layers inside `:ui`:
 - **Model** — the FX-free core reached through ports (`TranslationEngine`, repositories) and the observable state
   mirror.
 
+**Shell chrome exception.** The View layer is FXML + a controller for every screen. The shell chrome — title bar,
+navigation column, content host, modal host and toast host (`AppShellView`) — and the dialog cards shown in its modal
+host (the About card, the error-with-details dialog) are built in code. The chrome's navigation entries are generated
+from the `ViewNames` enum, and a dialog card is short static content assembled with the shell and shown in the shell's
+own host, so an FXML file for either would be an empty container or a controller with no state of its own. The chrome
+still observes properties (the navigator's current view and content, the theme block) rather than owning state, and no
+screen is built this way.
+
 ## observable-state-mirror {#state-mirror}
 
 Core progress and job state are pushed into a `@Singleton` **state mirror** — an object of JavaFX observable
@@ -44,59 +52,51 @@ core's worker threads and the scene graph (`08_THREADING_CONCURRENCY.md`).
 
 ### JobProgress snapshot {#jobprogress}
 
-The Translating dashboard binds to a fixed, explicit observable surface so its contract is stable and testable. Two
-different things share the name "progress" here, and they are not the same shape.
+The Translating dashboard binds to the mirror's fixed, explicit observable surface, so its contract is stable and
+testable. The engine reports counts only; the dashboard shows those counts and derives nothing else.
 
-**The engine's own `JobProgress`** (`ua.bookloom.api.pipeline`, built by `add-translation-engine-and-cli`) is a plain
-point-in-time count snapshot: `JobProgress(JobStage stage, int section, int sections, int accepted, int flagged, int
-pending)`, where `JobStage` is `TRANSLATE` or `EXPORT`. A `TranslationJob` carries one on every `StageStarted` and
-`SegmentDecided` event (`ua.bookloom.api.pipeline.JobEvent`, sealed over `StageStarted`/`SegmentDecided`/`Paused`/
-`Resumed`/`Finished`) and inside `Paused`. It names no throughput, no ETA and no in-flight text — the engine does not
-track those.
+**The engine's events** (`ua.bookloom.api.pipeline`): `JobEvent` is sealed over `StageStarted`, `ModelCallStarted`,
+`SegmentDecided`, `Paused`, `Resumed` and `Finished`. The point-in-time count snapshot they carry is
+`JobProgress(JobStage stage, int section, int sections, int accepted, int flagged, int pending)`, where `JobStage` is
+`TRANSLATE` or `EXPORT`; it rides on `StageStarted`, `SegmentDecided` and `Paused`. `ModelCallStarted(segmentId)` marks
+that a model call started (a draft and each repair announce once each; the client's own retries of one call do not). The engine names no throughput, no ETA, no in-flight text and no judge score, so
+none of those appears on the dashboard.
 
-**The dashboard's own snapshot below is a richer value the screen will assemble from that event stream**, not the
-engine's `JobProgress` reused verbatim: the mirror derives the counts and the current stage/section from the sequence
-of `JobEvent`s, and computes what the engine does not report itself — elapsed-time-derived `tokensPerSecond`/`eta`,
-and, once later changes add them to what the job reports, `inFlightSource`/`inFlightTarget` (from each segment's
-prompt and reply), `judgeScore` (once the judge exists) and `chapterIndex`/`chunkIndex` (once chunking exists,
-replacing today's coarser `section`/`sections`). None of the table below is built yet — `:ui` remains a placeholder —
-so it is the target shape the Translating screen assembles, not a type the pipeline exposes directly:
+**The mirror's properties** (`StateMirror`, read-only, read on the FX thread):
 
-| Field             | Meaning                                                                  |
-|-------------------|--------------------------------------------------------------------------|
-| `autoAccepted`    | count of segments auto-accepted this run                                 |
-| `repaired`        | count accepted after a directed repair round                             |
-| `flagged`         | count flagged for review                                                 |
-| `remaining`       | count not yet processed                                                  |
-| `chapterIndex`    | current chapter index                                                    |
-| `chunkIndex`      | current chunk index within the chapter                                   |
-| `inFlightSource`  | live in-flight source text (current chunk)                               |
-| `inFlightTarget`  | live in-flight target text (streamed-in whole, not token streaming — D8) |
-| `judgeScore`      | live judge score for the in-flight chunk (or absent when judge off)      |
-| `tokensPerSecond` | current throughput (tok/s)                                               |
-| `eta`             | estimated time remaining (`java.time.Duration`)                          |
+| Property          | Meaning                                                                                               |
+|-------------------|-------------------------------------------------------------------------------------------------------|
+| `runState`        | `RunState`: `IDLE`, `RUNNING`, `PAUSING`, `PAUSED`, `STOPPING`, `STOPPED`, `COMPLETED`, `FAILED`      |
+| `accepted`        | segments accepted so far                                                                              |
+| `flagged`         | segments flagged so far                                                                               |
+| `remaining`       | segments not yet decided (the engine's `pending`)                                                     |
+| `total`           | accepted + flagged + remaining, derived once by `RunFigures`                                          |
+| `progressFraction`| decided segments over the total, `0.0` when the total is zero; the section columns never move the bar |
+| `waitingSeconds`  | how long one model request has been outstanding once past 10 s, else `NOT_WAITING` (-1)               |
+| `failure`         | the run's `AppError`, when it ended on one                                                            |
+| `report`          | the run's `JobReport`, when it returned one                                                           |
+| `activityLog`     | unmodifiable `ObservableList<LogEntry>` of the newest 500 entries                                     |
 
-Counters (`autoAccepted/repaired/flagged/remaining`) and rates are locale-formatted for display
-(`10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
+Counts are locale-formatted for display (`10_I18N_AND_ACCESSIBILITY.md#locale-formatted-fields`).
 
-The mirror's `publish*` methods (each wrapping `Platform.runLater`) are the exact surface the pipeline calls:
-
-- `publishJobProgress(...)` — replace the whole dashboard snapshot above, assembled from the engine's `JobProgress`/
-  `JobEvent` stream rather than passed through verbatim (counts, indices, tok/s, ETA).
-- `publishInFlight(source, target, judgeScore)` — update the live in-flight source/target/judge-score panel.
-- `publishActivity(ActivityEntry)` — **append** one localized, bundle-keyed entry to the activity log
-  (`11_NOTIFICATIONS_AND_ERRORS.md#activity-log`); the log is a bounded observable list (last N).
-- `publishRunState(RunState)` — set the run state (`running`/`paused`/`stopped`/`provider-error`).
-- `publishToast(kind, key, args)` and `publishBanner(...)` — transient/persistent surfacing
-  (`11_NOTIFICATIONS_AND_ERRORS.md`).
+**The publishers** (each wraps `Platform.runLater`, so engine threads call plain methods): `publishRunStarted()`,
+`publishRunState(RunState)`, `publishWaitingSeconds(int)`, `publishProgress(JobProgress)`,
+`publishLogEntries(List<LogEntry>)` and `publishOutcome(RunState, JobReport, AppError)`. A per-run `RunSession` receives
+the engine events on the engine's thread and coalesces them into **one publish per 100 ms tick**, so a fast job never
+floods the FX queue. `TranslationRunner` treats the `Result<JobReport>` the job **returns** as authoritative for the
+terminal state — a run refused before it starts emits no `Finished` event — and publishes it last, so a late tick cannot
+overwrite it. Toasts and banners are surfaced by the notification components, not the mirror
+(`11_NOTIFICATIONS_AND_ERRORS.md`).
 
 Views bind read-only to these; no other channel mutates the dashboard. This fixed surface is what `#ui-conformance`
 /widget tests drive (`04_Build_and_Release/06_TESTING_STRATEGY.md`).
 
 ## navigation {#navigation}
 
-- **`ViewNames`** enum — one constant per screen (`PROJECTS`, `IMPORT`, `BOOK_BRIEF`, `STRUCTURE`, `NAMES_STYLE`,
-  `TRANSLATING`, `REVIEW`, `EXPORT`, `SETTINGS`), each carrying its FXML path.
+- **`ViewNames`** enum — one constant per navigation entry (`PROJECTS`, `IMPORT`, `BOOK_BRIEF`, `STRUCTURE`, `NAMES_STYLE`,
+  `TRANSLATING`, `REVIEW`, `EXPORT`, `SETTINGS`), each carrying its FXML path once it has a screen. `PROJECTS`,
+  `NAMES_STYLE` and `REVIEW` carry none in this build: they are inert entries, and `Navigator.nextAvailableStep` skips
+  them.
 - A `Navigator` (`@Singleton`) swaps the root content region by `ViewNames`, using the controller factory to construct
   the target view. Back/forward and deep-linking to a screen state (e.g. Import → language-mismatch) are driven by view
   state, not separate FXML.
@@ -105,11 +105,16 @@ Views bind read-only to these; no other channel mutates the dashboard. This fixe
 
 - **Token-only CSS** applied at the **Scene** level: **one set of token *roles*** on `.root` (surface, border, text,
   primary/Cognac, nav- *, title-*, status ok/warn/err/info, focus, …), with **two value blocks — light and dark —
-  swapped at `.root`**; JavaFX 25 reads the OS `prefers-color-scheme` to pick the block. AtlantaFX provides the base
-  control theme; app tokens override brand colors. The full role catalogue with light + dark values is in
+  swapped at `.root`**; JavaFX 26 reads the OS `prefers-color-scheme` to pick the block. `theme.css` is the **single
+  stylesheet** and the only source of colour. The full role catalogue with light + dark values is in
   `01_Product/09_THEMING.md#token-catalog`.
+- **AtlantaFX is not used** and is on no classpath. Controls come from JavaFX itself plus **ControlsFX** (toggle
+  switch, segmented picker) and **Ikonli** (icons). A second base theme that also styles `.root` and every control would
+  be a second source of colour and a resolution order to reason about, and would compete with the role-lookup
+  conformance check, which reads a role off `.root` (FR-THEME-5;
+  `openspec/changes/archive/2026-09-26-add-ui-translation-workspace/design.md`, D7).
 - The **accent is fixed to Cognac** in v1 (not user-selectable — `09_THEMING.md` FR-THEME-4).
-- Controls reference role tokens (`-color-accent`, `-color-bg-surface`, …), never hard-coded hex. Switching theme swaps
+- Controls reference role tokens (`-color-primary`, `-color-surface`, …), never hard-coded hex. Switching theme swaps
   the value block only, not the roles.
 
 ## controls-mapping {#controls-mapping}
@@ -125,28 +130,37 @@ Every mockup widget maps to a real JavaFX/ControlsFX control:
 | toggles                          | `ToggleSwitch` (ControlsFX)       |
 | tabbed settings                  | `TabPane`                         |
 | dialogs                          | `Dialog` / `Alert`                |
-| toasts                           | ControlsFX `Notifications`        |
+| toasts                           | Native token-styled nodes         |
 | icons                            | Ikonli                            |
 
 ## screens {#screens}
 
-Enumerated against the mockup (each is a P6 visual-reference acceptance target):
+Enumerated against the mockup (each is a P6 visual-reference acceptance target); the per-screen detail and what this
+build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
 
-- **Projects** (+ empty state) — project list, new/import entry.
-- **Import** — states: `detected-ok`, `language-mismatch`, `DRM-blocked`, `unsupported`; detected-file card with
-  cover/metadata.
-- **Book Brief** — languages, genre, register, voice/era, audience, name policy, foreign-passage policy (keep-as-is /
-  translate / translate+note), footnote/unit policy, faithful↔natural slider, quality dial, and the **"Also translate"
-  toggle group** (ToC/navigation labels [on], image alt-text [on], book metadata title/author [on], frontmatter
-  values [off]).
-- **Structure** — chapter `TreeView`, segment counts.
-- **Names & Style (glossary)** — glossary `TableView`, lock, add/import/export.
-- **Translating** — states: `running`, `paused`, `stopped` (resumable), `provider-error`; the `JobProgress` dashboard
-  (`#jobprogress`) — progress, live counters, in-flight source/target/judge-score, tok/s, ETA, activity log.
+- **Projects** (+ empty state) — project list, new/import entry. Inert in this build (no screen yet).
+- **Import** — states: idle, opening, detected, refused (DRM and unsupported, with the typed error code),
+  `language-mismatch` (built, no trigger yet — nothing detects a source language); detected-file card with file,
+  format, title/author/declared language when present, and unit and segment counts. No cover.
+- **Book Brief** — source language (read-only, as declared by the book), target language, the destination path with
+  overwrite, and the cards nothing reads yet, shown disabled: genre, register, voice/era, audience, name policy,
+  foreign-passage policy (keep-as-is / translate / translate+note), footnote/unit policy, faithful↔natural slider,
+  quality dial, and the **"Also translate"** toggle group (ToC/navigation labels [on], image alt-text [on], book
+  metadata title/author [on], frontmatter values [off]). A no-book state exists.
+- **Structure** — a read-only flat list of units (resource path, position, segment count), the segment total, Back and
+  Continue. No translate-vs-preserve confirmation.
+- **Names & Style (glossary)** — glossary `TableView`, lock, add/import/export. Inert in this build.
+- **Translating** — states: `idle`, `running`, `pausing`, `paused`, `stopping`, `stopped` (terminal: nothing is written
+  and the run cannot be resumed), `completed`, `failed`; provider-error, refused and missing-input are notices in the
+  state banner, not states. The dashboard (`#jobprogress`) shows the accepted / flagged / remaining / total counts and a
+  progress bar, a "Waiting for the model… m:ss" cue after 10 s on one request, and the activity log. There is no
+  throughput, ETA or in-flight panel.
 - **Review** — flagged list + side-by-side compare (two `TextArea`, no diff); actions Save-edit / Accept /
   Revert-to-machine-target / Retry / Retry-with-note / Skip, with dirty-edit tracking
-  (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`).
-- **Export** — format pick, validation, save path, optional glossary/bilingual/report, final consistency toggle.
+  (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`). Inert in this build.
+- **Export** — reports the finished file rather than triggering it: format, written path, accepted and flagged counts,
+  and an action that shows the file in the system file manager. No save path and no Export button (the path is chosen on
+  the Book Brief); the glossary/bilingual/report options and the final consistency toggle are shown disabled.
 - **Settings** — `TabPane`: Providers / Models / Generation / Appearance / Automation / Storage & logs.
 
 ## dialogs-and-notifications {#dialogs-notifications}
@@ -155,13 +169,17 @@ Enumerated against the mockup (each is a P6 visual-reference acceptance target):
   `04_LLM_INTEGRATION.md#three-stage-verification`), the two **provider-binding** prompts (bound provider/model
   unavailable → confirm fallback; settings-differ-from-last-used → apply vs continue — DD-31,
   `01_Product/08_UI_SCREENS_AND_STATES.md#dialog-provider-binding`), add glossary term, retry-with-note, confirm-delete,
-  unsaved-changes, error-with-details (expandable technical detail), export-complete, about.
-- **Notifications:** toasts `ok/info/warn/err`; banners `info/warn/err`; empty states per screen. Errors surface as a
-  dialog (with expandable typed `AppError.details`) plus a toast, per `09_ERROR_HANDLING.md#ui-surfacing`.
+  unsaved-changes, error-with-details (expandable technical detail), export-complete (specified but not shipped — the
+  Export screen reports the written file itself), about.
+- **Notifications:** toasts (native token-styled nodes stacked in-shell) `ok/info/warn/err`; banners `info/warn/err`;
+  empty states per screen. Errors surface as a dialog (with expandable typed `AppError.details`) plus a toast, per
+  `09_ERROR_HANDLING.md#ui-surfacing`.
 
 ## i18n {#i18n}
 
-UI strings come from `ResourceBundle`s keyed by locale; the Appearance tab selects app language. No user text is
+UI strings come from `ResourceBundle`s keyed by locale; the Appearance tab is specified to select the app language, but
+that switch is **deferred** in this build: it needs local storage for `ui.language`, so the language follows the
+operating system's locale (Ukrainian OS → `uk`, otherwise English). No user text is
 concatenated into layout; all labels are addressed through a **typed message-key registry** (no bare string literals),
 and plural/gender-sensitive strings render via **ICU4J `MessageFormat`** (DD-48). The OS locale used for first-start
 detection is read through an **injectable `Locale` provider** so the rule is unit-testable. Details in

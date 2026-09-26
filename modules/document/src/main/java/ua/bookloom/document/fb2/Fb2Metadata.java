@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jdom2.Element;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.MetadataKey;
 
 /**
  * Reads the book's declared language, title and author out of {@code description/title-info}.
@@ -46,8 +47,8 @@ final class Fb2Metadata {
      */
     static Map<String, String> read(@Nullable Element titleInfo) {
         final Map<String, String> metadata = new LinkedHashMap<>();
-        putIfPresent(metadata, "title", textOrNull(childOf(titleInfo, "book-title")));
-        putIfPresent(metadata, "author", authorOf(titleInfo));
+        putIfPresent(metadata, MetadataKey.TITLE.key(), textOrNull(childOf(titleInfo, "book-title")));
+        putIfPresent(metadata, MetadataKey.AUTHOR.key(), authorOf(titleInfo));
         return metadata;
     }
 

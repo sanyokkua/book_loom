@@ -64,12 +64,12 @@ LOG_FILE="${SMOKE_DATA_DIR}/logs/bookloom.log"
 
 # --- Wait for the positive startup signal ---------------------------------------------------------------------------
 
-# All three, not just the first: "the process started" is not "the application started". The stage line is the one
+# All three, not just the first: "the process started" is not "the application started". The window line is the one
 # that proves the toolkit initialized and a window was actually shown.
 required_signals() {
     grep -q "app started version=" "${LOG_FILE}" 2>/dev/null &&
         grep -q "injector built and two-phase init complete" "${LOG_FILE}" 2>/dev/null &&
-        grep -q "primary stage shown" "${LOG_FILE}" 2>/dev/null
+        grep -q "window shown, initialView=" "${LOG_FILE}" 2>/dev/null
 }
 
 deadline=$((SECONDS + TIMEOUT_SECONDS))

@@ -17,9 +17,10 @@ import java.util.Properties;
  * is {@code null} whenever the code runs from class directories — which is how {@code ./gradlew :app:run}, the
  * tests, and every IDE launch execute.
  *
- * <p>DD-50 permits exactly two consumers: the startup log line, and the About dialog. Only the first exists in this
- * change; the About dialog arrives with the UI. There is deliberately one reader and no second copy of the string —
- * a second copy is how a displayed version drifts from the tag that produced it.
+ * <p>DD-50 permits exactly two consumers: the startup log line, and the About dialog. The dialog receives the value
+ * through the {@code @BuildVersion} binding {@code AppModule} makes from {@link #current()}, so there is still one
+ * reader and no second copy of the string — a second copy is how a displayed version drifts from the tag that
+ * produced it.
  */
 public final class AppVersion {
 

@@ -11,6 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class HttpClients {
 
+    // Local Ollama and LM Studio speak HTTP/1.1; the JDK's default h2c upgrade offer on plain http:// can stall a first
+    // request.
+    private static final HttpClient.Version PROTOCOL_VERSION = HttpClient.Version.HTTP_1_1;
+
     private final ConcurrentMap<Duration, HttpClient> clients = new ConcurrentHashMap<>();
 
     /** Returns the shared client for this exact connect timeout, building it once under concurrent access. */
@@ -26,7 +30,10 @@ public final class HttpClients {
     }
 
     private HttpClient newClient(Duration timeout) {
-        log.debug("Creating HTTP client connectTimeout={}", timeout);
-        return HttpClient.newBuilder().connectTimeout(timeout).build();
+        log.debug("Creating HTTP client connectTimeout={} version={}", timeout, PROTOCOL_VERSION);
+        return HttpClient.newBuilder()
+                .version(PROTOCOL_VERSION)
+                .connectTimeout(timeout)
+                .build();
     }
 }

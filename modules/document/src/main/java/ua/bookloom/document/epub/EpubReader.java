@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.MetadataKey;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
@@ -172,10 +173,10 @@ public final class EpubReader {
     private static Map<String, String> metadata(ParsedOpf opf) {
         final Map<String, String> metadata = new LinkedHashMap<>();
         if (opf.title() != null) {
-            metadata.put("title", opf.title());
+            metadata.put(MetadataKey.TITLE.key(), opf.title());
         }
         if (opf.author() != null) {
-            metadata.put("author", opf.author());
+            metadata.put(MetadataKey.AUTHOR.key(), opf.author());
         }
         return metadata;
     }

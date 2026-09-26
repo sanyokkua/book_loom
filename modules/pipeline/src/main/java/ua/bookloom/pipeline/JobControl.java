@@ -23,6 +23,12 @@ final class JobControl {
     private boolean pauseRequested;
     private boolean cancelRequested;
     private boolean exportStarted;
+    // The thread inside a model call, or null between calls. It is the only thread pause() and cancel() may
+    // interrupt, and both read and write it under the lock, so an interrupt can never land outside a call.
+    private @Nullable Thread modelCallThread;
+    // Set when pause() aborts a call, so that a resume pressed before the job thread notices does not turn the
+    // aborted call into a cancellation.
+    private boolean pauseAbortedCall;
 
     boolean claimRun() {
         final boolean claimedNow;
@@ -49,17 +55,20 @@ final class JobControl {
     void pause() {
         final JobState observed;
         final boolean ignored;
+        final boolean interrupted;
         lock.lock();
         try {
             ignored = isTerminal() || exportStarted;
             if (!ignored) {
                 pauseRequested = true;
             }
+            interrupted = !ignored && interruptModelCall();
+            pauseAbortedCall |= interrupted;
             observed = state;
         } finally {
             lock.unlock();
         }
-        log.debug("Requested pause state={} ignored={}", observed, ignored);
+        log.debug("Requested pause state={} ignored={} interruptedModelCall={}", observed, ignored, interrupted);
     }
 
     void resume() {
@@ -85,6 +94,7 @@ final class JobControl {
     void cancel() {
         final JobState observed;
         final boolean ignored;
+        final boolean interrupted;
         lock.lock();
         try {
             ignored = isTerminal();
@@ -96,11 +106,84 @@ final class JobControl {
                     changed.signalAll();
                 }
             }
+            interrupted = !ignored && interruptModelCall();
             observed = state;
         } finally {
             lock.unlock();
         }
-        log.debug("Cancelled translation job state={} ignored={}", observed, ignored);
+        log.debug(
+                "Cancelled translation job state={} ignored={} interruptedModelCall={}",
+                observed,
+                ignored,
+                interrupted);
+    }
+
+    /**
+     * Claims the calling thread as the one inside a model call, unless a stop or a pause is already requested.
+     *
+     * <p>The check and the claim are one step under the lock: a pause arriving between two separate calls would
+     * neither refuse the call nor interrupt it.
+     *
+     * @return {@code true} if the call may go ahead and must be closed with {@link #exitModelCall()}
+     */
+    boolean enterModelCall() {
+        final boolean entered;
+        final JobState observed;
+        lock.lock();
+        try {
+            entered = !cancelRequested && !pauseRequested;
+            if (entered) {
+                modelCallThread = Thread.currentThread();
+                pauseAbortedCall = false;
+            } else {
+                pauseAbortedCall |= !cancelRequested;
+            }
+            observed = state;
+        } finally {
+            lock.unlock();
+        }
+        log.debug("Model call entry entered={} state={}", entered, observed);
+        return entered;
+    }
+
+    /**
+     * Ends the claim and clears an interrupt left on the calling thread, which is what stops any later work — the
+     * pause wait, the export — from ever seeing the interrupt that aborted a call.
+     */
+    void exitModelCall() {
+        final boolean stale;
+        lock.lock();
+        try {
+            modelCallThread = null;
+            stale = Thread.interrupted();
+        } finally {
+            lock.unlock();
+        }
+        log.debug("Model call exit staleInterruptCleared={}", stale);
+    }
+
+    /**
+     * Decides what the job does after a model call was aborted: stop if a stop was asked for, pause if a pause is
+     * still asked for, try the same segment again if the pause was withdrawn meanwhile, and otherwise stop because
+     * something outside this control interrupted the run.
+     */
+    BoundaryDecision abortedCallBoundary() {
+        final BoundaryDecision decision;
+        lock.lock();
+        try {
+            if (cancelRequested) {
+                decision = BoundaryDecision.cancel();
+            } else if (pauseRequested) {
+                decision = pause(consumeRequestedPause());
+            } else {
+                decision = pauseAbortedCall ? BoundaryDecision.continueRunning() : BoundaryDecision.cancel();
+            }
+            pauseAbortedCall = false;
+        } finally {
+            lock.unlock();
+        }
+        log.debug("Checked aborted-call boundary decision={}", decision);
+        return decision;
     }
 
     void pauseAt(final Set<PausePoint> points) {
@@ -264,6 +347,14 @@ final class JobControl {
         if (interrupted) {
             Thread.currentThread().interrupt();
         }
+    }
+
+    private boolean interruptModelCall() {
+        if (modelCallThread == null) {
+            return false;
+        }
+        modelCallThread.interrupt();
+        return true;
     }
 
     private boolean isTerminal() {

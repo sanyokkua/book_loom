@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.llm.LlmModule;
@@ -21,6 +22,7 @@ class HttpClientsTest {
 
         assertThat(second).isSameAs(first);
         assertThat(first.connectTimeout()).contains(timeout);
+        assertThat(first.version()).isEqualTo(HttpClient.Version.HTTP_1_1);
     }
 
     @Test

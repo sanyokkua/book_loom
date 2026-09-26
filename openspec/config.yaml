@@ -245,7 +245,7 @@ operations:
         cleanly when no local endpoint is configured. It never runs in CI.
       - ArchUnit boundary tests must be green - FX-free core, dependency direction, ports-not-concretes,
         no-http-outside-`:llm`, no-sql-outside-`:persistence`, api-framework-free, records-first,
-        bootstrap-no-static-logger.
+        bootstrap-no-static-logger, no-inline-style-in-ui.
       - "`:ui` changes must match `docs/specification/mockups/ui-mockup.html` for each named screen, state,
         and theme, asserted structurally and by looked-up palette token."
       - The offline invariant must hold - no new background, scheduled, or unsolicited network call, and no

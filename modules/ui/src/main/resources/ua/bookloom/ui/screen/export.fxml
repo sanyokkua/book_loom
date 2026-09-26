@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.ExportController" id="export-screen" spacing="14">
+    <Label fx:id="title" id="export-title" styleClass="screen-title" text="%nav.export"/>
+    <VBox fx:id="host" id="export-state" spacing="14" VBox.vgrow="ALWAYS"/>
+</VBox>

@@ -1,5 +1,6 @@
 /**
- * Fixtures for {@code ports-not-concretes}, plus the JavaFX negative control {@code fx-free-core} must NOT flag.
+ * Fixtures for {@code ports-not-concretes} and {@code no-inline-style-in-ui}, plus the JavaFX negative controls
+ * {@code fx-free-core} and {@code no-inline-style-in-ui} must NOT flag.
  *
  * <p>Fixture scaffolding for the boundary suite — see {@code ua.bookloom.archtest.RuleViolationFixtureTest}. These
  * types exist only in the {@code archTest} source set and are excluded from the production import by

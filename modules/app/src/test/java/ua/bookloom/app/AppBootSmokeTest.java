@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -12,7 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.testfx.api.FxToolkit;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.pipeline.TranslationEngine;
-import ua.bookloom.ui.AppShellView;
+import ua.bookloom.ui.IoExecutor;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -64,9 +66,40 @@ class AppBootSmokeTest {
         final Stage stage = FxToolkit.toolkitContext().getRegisteredStage();
         assertThat(stage.isShowing()).isTrue();
         assertThat(stage.getTitle()).isEqualTo("BookLoom");
-        assertThat(stage.getScene().lookup("#" + AppShellView.PLACEHOLDER_ID))
-                .as("the themed root must actually be in the scene graph, not merely constructed")
+        final Scene scene = stage.getScene();
+        assertThat(scene.lookup("#shell-title-bar"))
+                .as("the real chrome must actually be in the scene graph, not merely constructed")
                 .isNotNull();
+        assertThat(scene.lookup("#shell-nav")).isNotNull();
+        assertThat(scene.lookup("#shell-breadcrumb")).isNotNull();
+        assertThat(scene.lookup("#shell-content")).isNotNull();
+    }
+
+    // IF the real stage had no minimum, THEN a person could shrink the window until nothing was visible.
+    @Test
+    void start_realApplication_setsTheWindowMinimum() throws Exception {
+        StartupContext.publish(new StartupContext(tempPaths(), AppEnvironment.DEV));
+        FxToolkit.registerPrimaryStage();
+
+        FxToolkit.setupApplication(BookLoomApplication.class);
+
+        final Stage stage = FxToolkit.toolkitContext().getRegisteredStage();
+        assertThat(stage.getMinWidth()).isEqualTo(960);
+        assertThat(stage.getMinHeight()).isEqualTo(640);
+    }
+
+    // IF the composition root showed the window before navigating, THEN the person would open on an empty screen
+    // area with no entry marked; the first available view is Import.
+    @Test
+    void start_realApplication_opensOnTheFirstAvailableViewWithItsBreadcrumb() throws Exception {
+        StartupContext.publish(new StartupContext(tempPaths(), AppEnvironment.DEV));
+        FxToolkit.registerPrimaryStage();
+
+        FxToolkit.setupApplication(BookLoomApplication.class);
+
+        final Scene scene = FxToolkit.toolkitContext().getRegisteredStage().getScene();
+        assertThat(((Label) scene.lookup("#shell-breadcrumb")).getText())
+                .isEqualTo("Workflow / Import book · step 1 of 7");
     }
 
     /**
@@ -82,9 +115,7 @@ class AppBootSmokeTest {
 
         assertThat(app.injector().getInstance(AppPaths.class).dataDir()).isEqualTo(dataDir);
         assertThat(app.injector().getInstance(AppEnvironment.class)).isEqualTo(AppEnvironment.DEV);
-        assertThat(app.injector()
-                        .getInstance(com.google.inject.Key.get(
-                                ExecutorService.class, com.google.inject.name.Names.named(AppModule.IO_EXECUTOR))))
+        assertThat(app.injector().getInstance(com.google.inject.Key.get(ExecutorService.class, IoExecutor.class)))
                 .isNotNull();
         assertThat(app.injector().getInstance(TranslationEngine.class)).isNotNull();
         assertThat(app.injector().getInstance(ChatModelFactory.class)).isNotNull();

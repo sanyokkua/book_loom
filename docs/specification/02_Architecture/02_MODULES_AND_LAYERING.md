@@ -183,12 +183,14 @@ module ua.bookloom.ui {
     requires ua.bookloom.util;
     requires javafx.controls;
     requires javafx.fxml;
+    requires javafx.graphics;
     requires com.google.guice;
     requires com.ibm.icu;             // ICU4J MessageFormat for i18n plurals/gender (DD-48)
-    requires org.controlsfx.controls; // Notifications, ToggleSwitch, SegmentedButton
+    requires org.controlsfx.controls; // ToggleSwitch, SegmentedButton (no AtlantaFX: see 07_UI_ARCHITECTURE_JAVAFX.md#theming)
     requires org.kordamp.ikonli.javafx;
-    requires atlantafx.base;
-    opens ua.bookloom.ui.view to javafx.fxml, com.google.guice; // FXML controller injection
+    requires org.kordamp.ikonli.feather;
+    opens ua.bookloom.ui to javafx.fxml, com.google.guice; // FXML controller injection; likewise ui.i18n,
+                                                           // ui.notify, ui.screen, ui.state and ui.theme
     exports ua.bookloom.ui;
 }
 ```
@@ -245,5 +247,9 @@ Enforced as JUnit tests in a shared `arch-test` source set, run in CI (and `pre-
    `Logger` fields and do not touch `org.slf4j..` at class-init time: they run **before** logging is configured
    (paths-first startup order, DD-39, `11_APP_ENVIRONMENT_AND_PATHS.md`), so a static logger there would freeze an
    unconfigured logging context.
+9. **no-inline-style-in-ui** — no class in `:ui` calls (or takes a method reference to) `setStyle` on any `javafx..` type —
+   nodes, tooltips, context menus, menu items, tabs. Styling comes from the single `theme.css` token sheet and style
+   classes (`getStyleClass()` stays allowed), so a theme swap reaches every element (`FR-THEME-5`,
+   `.claude/rules/theming-tokens.md`).
 
 A failing ArchUnit test fails the build; the boundary is not a guideline.

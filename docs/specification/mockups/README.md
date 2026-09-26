@@ -26,7 +26,8 @@ against mockup renders, with a small tolerance for font rasterisation and platfo
   retry-with-note, confirm-delete, unsaved-changes, error-with-details, export-complete, the resume-binding pair
   (bound-provider-unavailable / provider-model-changed), about.
 - **Notifications & inline states:** toasts (ok/info/warn/err), banners, empty states, and a component library that
-  names the **JavaFX control** each widget maps to.
+  names the **JavaFX control** each widget maps to. The component-library, dialogs and notifications pages are a
+  reference sheet: the application does not ship them, and its navigation has no "Design reference" group.
 
 ## JavaFX implementability
 

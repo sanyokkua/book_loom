@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.SettingsController" id="settings-screen" spacing="14">
+    <Label id="settings-title" styleClass="screen-title" text="%settings.title"/>
+    <TabPane id="settings-tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+        <Tab id="settings-tab-providers" text="%settings.tab.providers">
+            <HBox spacing="14" alignment="TOP_LEFT">
+                <padding>
+                    <Insets top="14"/>
+                </padding>
+                <VBox id="settings-provider-card" styleClass="card" spacing="10" minWidth="300" prefWidth="300"
+                      maxWidth="300">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label styleClass="card-title" text="%settings.providers.title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button id="settings-provider-add" styleClass="btn-ghost" disable="true"
+                                text="%settings.provider.add"/>
+                    </HBox>
+                    <VBox fx:id="providerList" id="settings-provider-list" spacing="6"/>
+                </VBox>
+                <VBox id="settings-detail-card" styleClass="card" spacing="10" HBox.hgrow="ALWAYS">
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <Label fx:id="detailName" styleClass="card-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button id="settings-provider-edit" styleClass="btn-ghost" disable="true"
+                                text="%settings.provider.edit"/>
+                        <Button id="settings-provider-delete" styleClass="btn-danger-outline" disable="true"
+                                text="%settings.provider.delete"/>
+                    </HBox>
+                    <HBox spacing="8">
+                        <Label styleClass="muted" text="%settings.endpoint.label"/>
+                        <Label fx:id="detailEndpoint" styleClass="provider-endpoint"/>
+                    </HBox>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label styleClass="muted" text="%settings.model.label"/>
+                        <ComboBox fx:id="modelCombo" id="settings-model" editable="true"
+                                  promptText="%settings.model.notChosen" prefWidth="260" HBox.hgrow="ALWAYS"
+                                  maxWidth="Infinity"/>
+                    </HBox>
+                    <Label fx:id="modelListing" id="settings-model-listing" styleClass="hint"
+                           text="%settings.model.listing"/>
+                    <Label fx:id="modelNoList" id="settings-model-nolist" styleClass="hint" wrapText="true"
+                           text="%settings.model.noList"/>
+                    <Label fx:id="modelRefusal" id="settings-model-refusal" styleClass="hint" wrapText="true"/>
+                    <Label fx:id="checkHint" styleClass="hint" text="%settings.check.needsModel"/>
+                    <Label fx:id="checkRefusal" id="settings-check-refusal" styleClass="hint" wrapText="true"/>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="checkButton" id="settings-check" styleClass="btn-primary"
+                                text="%settings.check.action"/>
+                        <Label fx:id="checkProgress" id="settings-check-progress" styleClass="muted"
+                               text="%settings.check.progress"/>
+                    </HBox>
+                    <FlowPane fx:id="chips" id="settings-chips" hgap="8" vgap="8"/>
+                </VBox>
+            </HBox>
+        </Tab>
+        <Tab id="settings-tab-models" disable="true" text="%settings.tab.models"/>
+        <Tab id="settings-tab-generation" disable="true" text="%settings.tab.generation"/>
+        <Tab id="settings-tab-appearance" text="%settings.tab.appearance">
+            <fx:include source="appearance.fxml"/>
+        </Tab>
+        <Tab id="settings-tab-automation" disable="true" text="%settings.tab.automation"/>
+        <Tab id="settings-tab-storage" disable="true" text="%settings.tab.storage"/>
+    </TabPane>
+</VBox>

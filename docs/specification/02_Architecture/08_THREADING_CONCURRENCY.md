@@ -62,14 +62,17 @@ inference gate.
   `add-translation-engine-and-cli`) combines the runnable and the control surface — `pause()`, `resume()`, `cancel()`
   and `pauseAt(Set<PausePoint>)` are callable from any thread, while `run()` executes synchronously on the caller's
   thread (ADR-0033). There is no separate `JobHandle`.
-- Cancellation is cooperative and is checked only at **safe boundaries**: before each segment's model call, after
+- Outside a model call, cancellation is cooperative and is checked at **safe boundaries**: before each segment's model call, after
   each segment is decided (where an enabled `PausePoint` — `AFTER_SEGMENT`, `AFTER_SECTION`, `BETWEEN_STAGES` — or a
   requested pause is also honored at the same point), before export begins, and once more just before export's final
   move. Inside export the only pause point is `ON_ERROR`; a pause requested while exporting is ignored until the next
   boundary. A `cancel()` raised before `run()` is called makes `run()` return at once without opening the book.
-- A cancel raised while a model call is already in flight takes effect at the next boundary rather than interrupting
-  the call: the offline pseudo model returns immediately, so this is not observable today; a real client will bound
-  the wait with its own request timeout, as ADR-0033's Consequences already accept.
+- A pause or a cancel raised while a model call is in flight **aborts that call at once** rather than waiting for the
+  provider: the job thread is interrupted only while it is inside a model call, the provider client answers
+  `ErrorCode.cancelled`, and no further request — no retry, no structural or placeholder repair — is sent. On a pause the
+  interrupted segment has no decision and is translated again on resume; on a stop the run ends Cancelled and writes
+  nothing; a reply that had already arrived before the click is decided normally. Neither the wait while paused nor the
+  export is ever interrupted. The request timeout stays the upper bound only for a call nobody cancels.
 - **Cancelling ends the run with a Cancelled report, not a thrown or propagated `ErrorCode.cancelled`.** `run()`
   still returns `Result.ok(JobReport)`, with `JobReport.end()` equal to `JobState.CANCELLED`; `JobReport.error()` is
   populated only when `end()` is `FAILED` (`09_ERROR_HANDLING.md#partial-results`), so a caller tells cancellation

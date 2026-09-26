@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import org.controlsfx.control.SegmentedButton?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="ua.bookloom.ui.screen.AppearanceController" id="settings-appearance-host">
+    <padding>
+        <Insets top="14"/>
+    </padding>
+    <VBox id="settings-appearance-card" styleClass="card" spacing="16" maxWidth="640">
+        <VBox spacing="5">
+            <Label styleClass="muted" text="%appearance.theme.label"/>
+            <SegmentedButton fx:id="themeSelector" id="appearance-theme" maxWidth="-Infinity">
+                <buttons>
+                    <ToggleButton fx:id="lightToggle" id="appearance-light" text="%appearance.theme.light"/>
+                    <ToggleButton fx:id="darkToggle" id="appearance-dark" text="%appearance.theme.dark"/>
+                    <ToggleButton fx:id="systemToggle" id="appearance-system" text="%appearance.theme.system"/>
+                </buttons>
+            </SegmentedButton>
+            <Label styleClass="hint" wrapText="true" text="%appearance.theme.hint"/>
+        </VBox>
+        <VBox spacing="5">
+            <Label styleClass="muted" text="%appearance.accent.label"/>
+            <HBox id="appearance-accent-row" spacing="8" alignment="CENTER_LEFT">
+                <Region id="appearance-accent-swatch" styleClass="accent-swatch"/>
+                <Label id="appearance-accent-value" text="%appearance.accent.value"/>
+                <Label id="appearance-accent-fixed" styleClass="tag-note" text="%appearance.accent.fixed"/>
+            </HBox>
+        </VBox>
+    </VBox>
+</VBox>

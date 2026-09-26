@@ -2,13 +2,18 @@
  * BookLoom theme — the single stylesheet FR-THEME-5 mandates.
  *
  * FR-THEME-5 fixes both the location and the count: theme CSS lives in the `:ui` module resources as ONE stylesheet
- * declaring the role set once, with the value blocks applied on `.root`. The theming change extends this file; it
- * must never add a second one beside it.
+ * declaring the role set once, with the value blocks applied on `.root`. Never add a second one beside it.
  *
- * The structure below is already the shape FR-THEME-2's light/dark swap needs — a role set resolved from a value
- * block on `.root` — so that change adds a dark block and the remaining roles rather than restructuring what is
- * here. What this file proves today is the MECHANISM: looked-up colors declared on `.root`, referenced by selector,
- * attached at Scene level, with no hard-coded hex outside the `.root` block and no inline `setStyle` anywhere.
+ * The full published token catalogue (01_Product/09_THEMING.md#token-catalog and #status-colours) is carried here:
+ * 41 looked-up colour roles as `-color-<role>`, plus the three elevation roles. The light values sit on `.root`;
+ * `.root.theme-dark` overrides the same 41 names, so switching theme is one style-class toggle on the Scene root
+ * (`Theme.DARK_STYLE_CLASS`) and never a second stylesheet. Colours may hold `rgba(...)`, but a box-shadow is not a
+ * colour: `shadow-sm`, `shadow` and `shadow-lg` are drop-shadow effects on the `.elevation-sm`, `.elevation` and
+ * `.elevation-lg` style classes, because a looked-up colour holding a shadow triple is silently dropped and the
+ * element then renders with no background at all (design D12).
+ *
+ * Every colour literal lives in a selector beginning `.root`; component rules below reference roles only, and no
+ * Java code calls `setStyle`.
  */
 
 .root {
@@ -18,31 +23,1375 @@
     -color-brand-sand: #e7d6c0;
     -color-brand-cognac: #a58075;
 
-    /* --- Role tokens: the light value block ------------------------------------------------------------- */
-    /*
-     * Named by ROLE, not by hue, so a palette change is a value swap rather than a rename across every selector.
-     * The dark block swaps these same names.
-     */
-    -color-bg: white;
-    -color-surface: -color-brand-sand;
-    -color-text: -color-brand-charcoal;
-    -color-border: -color-brand-slate;
-    -color-accent: -color-brand-cognac;
+    /* --- Role tokens: the light value block -------------------------------------------------------------- */
+    /* Named by ROLE, not by hue, so a palette change is a value swap. The dark block swaps these same names. */
+    /* Surfaces and borders */
+    -color-bg: #f4f1ea;
+    -color-surface: #ffffff;
+    -color-surface-2: #f6f1e8;
+    -color-surface-alt: #fbf9f4;
+    -color-border: #ddd5c8;
+    -color-border-cool: #cdd2d3;
+    -color-divider: #eae4d8;
+
+    /* Text */
+    -color-text: #2c3941;
+    -color-text-strong: #22303a;
+    -color-muted: #6f7c82;
+    -color-muted-2: #95928a;
+
+    /* Primary (Cognac) and warm tints */
+    -color-primary: #a58075;
+    -color-primary-hover: #916b60;
+    -color-primary-press: #7e5b51;
+    -color-primary-fg: #ffffff;
+    -color-primary-soft: #f0e5dd;
+    -color-sand-soft: #f2e9db;
+    -color-sand-strong: #dcc4a3;
+    -color-selected: #f0e6d6;
+
+    /* Navigation and title bar */
+    -color-nav-bg: #3a4a52;
+    -color-nav-bg-2: #324148;
+    -color-nav-fg: #cdd5d8;
+    -color-nav-fg-muted: #859399;
+    -color-nav-active-bg: rgba(231,214,192,.13);
+    -color-nav-active-fg: #f3ede3;
+    -color-nav-accent: #c99a86;
+    -color-title-bg: #324148;
+    -color-title-fg: #dfe4e6;
+
+    /* Keyboard focus */
+    -color-focus: #a58075;
+    /* Modena's own focus colours, pointed at the role so no blue ring leaks on a control the rules below miss. */
+    -fx-focus-color: -color-focus;
+    -fx-faint-focus-color: transparent;
+
+    /* Status (desaturated): success, warning, danger, info */
+    -color-ok: #5f8a6b;
+    -color-ok-bg: #e7efe8;
+    -color-ok-bd: #bcd4c1;
+    -color-warn: #bd863a;
+    -color-warn-bg: #f6ecd8;
+    -color-warn-bd: #e4cfa2;
+    -color-err: #b0574c;
+    -color-err-bg: #f7e4df;
+    -color-err-bd: #e4b6ad;
+    -color-info: #4d6b78;
+    -color-info-bg: #e5edf0;
+    -color-info-bd: #b7cbd2;
 
     -fx-background-color: -color-bg;
 }
 
-/*
- * The blank window's root region. Referencing tokens rather than values is the point of the exercise: every later
- * screen inherits this pattern, and a single hard-coded hex here would be the precedent that erodes it.
- */
-.app-shell {
+/* --- The dark value block: the same 41 names, applied when the root carries `theme-dark` ------------------ */
+.root.theme-dark {
+    /* Surfaces and borders */
+    -color-bg: #283237;
+    -color-surface: #33424a;
+    -color-surface-2: #2e3b41;
+    -color-surface-alt: #38474f;
+    -color-border: #48585f;
+    -color-border-cool: #48585f;
+    -color-divider: #3c4a51;
+
+    /* Text */
+    -color-text: #e6ebed;
+    -color-text-strong: #f4f7f8;
+    -color-muted: #9fb0b7;
+    -color-muted-2: #7f9098;
+
+    /* Primary (Cognac) and warm tints */
+    -color-primary: #c4917e;
+    -color-primary-hover: #d4a593;
+    -color-primary-press: #b47e6b;
+    -color-primary-fg: #241c19;
+    -color-primary-soft: #3f3733;
+    -color-sand-soft: #3a3a37;
+    -color-sand-strong: #6d5f4a;
+    -color-selected: rgba(231,214,192,.12);
+
+    /* Navigation and title bar */
+    -color-nav-bg: #20292e;
+    -color-nav-bg-2: #1c2429;
+    -color-nav-fg: #cdd6da;
+    -color-nav-fg-muted: #7d8f97;
+    -color-nav-active-bg: rgba(231,214,192,.10);
+    -color-nav-active-fg: #f3ede3;
+    -color-nav-accent: #c99a86;
+    -color-title-bg: #1c2429;
+    -color-title-fg: #dfe4e6;
+
+    /* Keyboard focus */
+    -color-focus: #c4917e;
+
+    /* Status (desaturated): success, warning, danger, info */
+    -color-ok: #7faa8a;
+    -color-ok-bg: #2b3a33;
+    -color-ok-bd: #3f5a49;
+    -color-warn: #d0a25a;
+    -color-warn-bg: #3a3327;
+    -color-warn-bd: #5c4d31;
+    -color-err: #cc7a6f;
+    -color-err-bg: #3b2b28;
+    -color-err-bd: #5e3f39;
+    -color-info: #7a9dab;
+    -color-info-bg: #293940;
+    -color-info-bd: #3d525b;
+}
+
+/* --- Elevation roles: light ---------------------------------------------------------------------------------- */
+.root .elevation-sm {
+    -fx-effect: dropshadow(three-pass-box, rgba(58,74,82,.10), 2, 0, 0, 1);
+}
+
+.root .elevation {
+    -fx-effect: dropshadow(three-pass-box, rgba(58,74,82,.12), 10, 0, 0, 3);
+}
+
+.root .elevation-lg {
+    -fx-effect: dropshadow(three-pass-box, rgba(35,45,50,.22), 34, 0, 0, 12);
+}
+
+/* --- Elevation roles: dark (the effect's colour and blur differ per block) ---------------------------------- */
+.root.theme-dark .elevation-sm {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
+}
+
+.root.theme-dark .elevation {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.35), 14, 0, 0, 4);
+}
+
+.root.theme-dark .elevation-lg {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.5), 40, 0, 0, 16);
+}
+
+/* --- Placeholder screens: the one label style the FXML stand-ins share ---------------------------------- */
+.placeholder-label {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 14px;
+}
+
+/* --- Shell chrome (ui-mockup.html: .titlebar .sidebar .nav-* .toolbar .crumbs .content) ---------------------- */
+/* Roles only: every colour below is a looked-up role, so the dark block re-themes the chrome with no extra rule. */
+.shell-title-bar {
+    -fx-background-color: -color-title-bg;
+    -fx-min-height: 38px;
+    -fx-pref-height: 38px;
+    -fx-max-height: 38px;
+    -fx-padding: 0 12px 0 12px;
+    -fx-spacing: 6px;
+}
+
+.shell-title {
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: bold;
+}
+
+.shell-title-button,
+.shell-title-button:selected {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12px;
+    -fx-padding: 3px 7px 3px 7px;
+    -fx-opacity: 0.8;
+    -fx-cursor: hand;
+}
+
+.shell-title-button:hover {
+    -fx-background-color: -color-nav-bg;
+    -fx-opacity: 1;
+}
+
+.shell-title-button:focused {
+    -fx-border-color: -color-focus;
+    -fx-opacity: 1;
+}
+
+.shell-title-button .ikonli-font-icon {
+    -fx-icon-color: -color-title-fg;
+    -fx-icon-size: 13;
+}
+
+/* The column is a scroll pane (a short window must still reach every entry) and carries the width and background. */
+.shell-nav,
+.shell-nav:focused {
+    -fx-background-color: -color-nav-bg;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-min-width: 236px;
+    -fx-pref-width: 236px;
+    -fx-max-width: 236px;
+}
+
+.nav-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.nav-scroll .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.nav-scroll .scroll-bar > .thumb {
+    -fx-background-color: -color-nav-fg-muted;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.nav-scroll .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+.nav-brand {
+    -fx-padding: 14px 16px 10px 16px;
+    -fx-spacing: 10px;
+}
+
+.nav-brand-logo {
+    -fx-background-color: -color-primary;
+    -fx-background-radius: 7px;
+    -fx-text-fill: -color-primary-fg;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-min-width: 26px;
+    -fx-pref-width: 26px;
+    -fx-max-width: 26px;
+    -fx-min-height: 26px;
+    -fx-pref-height: 26px;
+    -fx-max-height: 26px;
+}
+
+.nav-brand-title {
+    -fx-text-fill: -color-nav-active-fg;
+    -fx-font-size: 13.5px;
+    -fx-font-weight: bold;
+}
+
+.nav-brand-sub {
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-font-size: 10.5px;
+}
+
+.nav-group {
+    -fx-padding: 8px 10px 2px 10px;
+}
+
+.nav-label {
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-font-size: 10px;
+    -fx-padding: 6px 8px 4px 8px;
+}
+
+.nav-item {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px 1px 1px 3px;
+    -fx-border-radius: 7px;
+    -fx-text-fill: -color-nav-fg;
+    -fx-font-size: 13px;
+    -fx-alignment: center-left;
+    -fx-graphic-text-gap: 10px;
+    -fx-padding: 7px 9px 7px 10px;
+    -fx-cursor: hand;
+}
+
+.nav-item:hover {
+    -fx-background-color: -color-nav-bg-2;
+}
+
+.nav-item:focused {
+    -fx-border-color: -color-focus;
+}
+
+.nav-item .ikonli-font-icon {
+    -fx-icon-color: -color-nav-fg;
+    -fx-icon-size: 16;
+}
+
+.nav-step {
+    -fx-background-color: -color-nav-bg-2;
+    -fx-background-radius: 8px;
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-font-size: 10px;
+    -fx-alignment: center;
+    -fx-min-width: 16px;
+    -fx-pref-width: 16px;
+    -fx-max-width: 16px;
+    -fx-min-height: 16px;
+    -fx-pref-height: 16px;
+    -fx-max-height: 16px;
+}
+
+.nav-item-current,
+.nav-item-current:hover {
+    -fx-background-color: -color-nav-active-bg;
+    -fx-border-color: transparent transparent transparent -color-nav-accent;
+    -fx-text-fill: -color-nav-active-fg;
+    -fx-font-weight: bold;
+}
+
+.nav-item-current:focused {
+    -fx-border-color: -color-focus -color-focus -color-focus -color-nav-accent;
+}
+
+.nav-item-current .nav-step {
+    -fx-background-color: -color-nav-accent;
+    -fx-text-fill: -color-nav-bg;
+    -fx-font-weight: bold;
+}
+
+.nav-item-current .ikonli-font-icon {
+    -fx-icon-color: -color-nav-active-fg;
+}
+
+.nav-item-unavailable,
+.nav-item-unavailable:hover {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-cursor: default;
+}
+
+.nav-item-unavailable .ikonli-font-icon {
+    -fx-icon-color: -color-nav-fg-muted;
+}
+
+/* Fixed height: the row must not resize with its text, or the screen area beneath it would move on navigation. */
+.shell-toolbar {
+    -fx-background-color: -color-surface;
+    -fx-border-color: -color-divider;
+    -fx-border-width: 0 0 1 0;
+    -fx-min-height: 46px;
+    -fx-pref-height: 46px;
+    -fx-max-height: 46px;
+    -fx-padding: 0 20px 0 20px;
+}
+
+.shell-breadcrumb {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12.5px;
+}
+
+.shell-actions {
+    -fx-spacing: 8px;
+}
+
+.shell-content {
     -fx-background-color: -color-bg;
+    -fx-padding: 22px 26px 40px 26px;
+}
+
+/* The content area scrolls when a screen is taller or wider than the window; the pane is a frame that paints the */
+/* page colour so no other colour shows beside a scroll bar, and the padded host inside it scrolls with the screen. */
+.content-scroll,
+.content-scroll:focused {
+    -fx-background-color: -color-bg;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.content-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.content-scroll .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.content-scroll .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.content-scroll .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+/* --- Modal host: a dimming layer and a dialog card ------------------------------------------------------ */
+/* The scrim is a filled region with an opacity, not an rgba fill, so no colour literal appears outside `.root`. */
+.shell-scrim {
+    -fx-background-color: -color-title-bg;
+    -fx-opacity: 0.45;
+}
+
+.shell-toast-host {
+    -fx-padding: 52px 18px 0 0;
+    -fx-spacing: 8px;
+}
+
+/* --- Toasts: a status-coloured left edge and icon, the rest neutral surface --------------------------------- */
+.toast {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 7px;
     -fx-border-color: -color-border;
+    -fx-border-width: 1 1 1 4;
+    -fx-border-radius: 7px;
+    -fx-pref-width: 340px;
+    -fx-padding: 10px 14px 10px 12px;
+    -fx-spacing: 10px;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+}
+
+.toast-ok {
+    -fx-border-color: -color-border -color-border -color-border -color-ok;
+}
+
+.toast-info {
+    -fx-border-color: -color-border -color-border -color-border -color-info;
+}
+
+.toast-warn {
+    -fx-border-color: -color-border -color-border -color-border -color-warn;
+}
+
+.toast-err {
+    -fx-border-color: -color-border -color-border -color-border -color-err;
+}
+
+.toast-icon {
+    -fx-icon-size: 16;
+}
+
+.toast-ok .toast-icon {
+    -fx-icon-color: -color-ok;
+}
+
+.toast-info .toast-icon {
+    -fx-icon-color: -color-info;
+}
+
+.toast-warn .toast-icon {
+    -fx-icon-color: -color-warn;
+}
+
+.toast-err .toast-icon {
+    -fx-icon-color: -color-err;
+}
+
+.toast-text {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 12.5px;
+}
+
+/* The card is a DialogPane; Modena styles its header panel, content and button bar, so each is reset here. */
+.dialog-card {
+    -fx-background-color: -color-surface;
+    -fx-background-radius: 9px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 9px;
+    -fx-border-width: 1px;
+    -fx-pref-width: 520px;
+}
+
+.dialog-card > .header-panel {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-border-color: -color-divider;
     -fx-border-width: 0 0 1 0;
 }
 
-.app-shell .placeholder-label {
+.dialog-card > .content {
+    -fx-padding: 18px;
+}
+
+.dialog-card > .button-bar > .container {
+    -fx-background-color: -color-surface-alt;
+    -fx-background-radius: 0 0 9px 9px;
+    -fx-border-color: -color-divider;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 13px 18px 13px 18px;
+    -fx-spacing: 8px;
+}
+
+.dialog-h {
+    -fx-padding: 15px 18px 15px 18px;
+    -fx-spacing: 2px;
+}
+
+.dialog-title {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+.dialog-sub {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 11.5px;
+}
+
+.dialog-text {
     -fx-text-fill: -color-text;
-    -fx-font-size: 14px;
+}
+
+.btn-primary {
+    -fx-background-color: -color-primary;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-text-fill: -color-primary-fg;
+    -fx-cursor: hand;
+}
+
+.btn-primary:hover {
+    -fx-background-color: -color-primary-hover;
+}
+
+.btn-primary:pressed {
+    -fx-background-color: -color-primary-press;
+}
+
+.btn-primary:focused {
+    -fx-border-color: -color-focus;
+}
+
+.btn-secondary {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-text-fill: -color-text;
+    -fx-cursor: hand;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: -color-surface-2;
+}
+
+.btn-secondary:pressed {
+    -fx-background-color: -color-sand-soft;
+}
+
+.btn-secondary:focused {
+    -fx-border-color: -color-focus;
+}
+
+/* --- Error dialog ------------------------------------------------------------------------------------------ */
+.error-header {
+    -fx-spacing: 10px;
+    -fx-alignment: center-left;
+}
+
+.error-body {
+    -fx-spacing: 10px;
+}
+
+.dialog-icon-err {
+    -fx-icon-color: -color-err;
+    -fx-icon-size: 20;
+}
+
+.error-details {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 12px;
+}
+
+/* --- Settings: cards, tabs, list rows, status chips and the buttons that share them -------------------------- */
+.screen-title {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.card {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 9px;
+    -fx-padding: 14px;
+}
+
+.card-title {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 13.5px;
+    -fx-font-weight: bold;
+}
+
+.muted {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+}
+
+.hint {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 11.5px;
+}
+
+/* Modena draws the tab strip with its own greys; the strip is reset so only roles show through. */
+.tab-pane {
+    -fx-background-color: transparent;
+}
+
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: transparent;
+}
+
+.tab {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px 7px 0 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px 7px 0 0;
+    -fx-padding: 5px 12px 5px 12px;
+}
+
+.tab .tab-label {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12.5px;
+}
+
+.tab:selected {
+    -fx-background-color: -color-surface;
+    -fx-border-color: -color-border -color-border transparent -color-border;
+}
+
+.tab:selected .tab-label {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
+.tab:disabled {
+    -fx-opacity: 0.45;
+}
+
+.tab-pane > .tab-content-area {
+    -fx-background-color: transparent;
+}
+
+/* Modena paints a blue ring on the selected tab while the pane has focus; it is recoloured to the focus role. */
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-color: -color-focus;
+    -fx-background-color: transparent;
+}
+
+/* --- List rows: the provider list ----------------------------------------------------------------------- */
+.list-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 7px;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-padding: 8px 10px 8px 10px;
+    -fx-cursor: hand;
+}
+
+.list-item:hover {
+    -fx-background-color: -color-surface-2;
+}
+
+.list-item:focused {
+    -fx-border-color: -color-focus;
+}
+
+.list-item-selected,
+.list-item-selected:hover {
+    -fx-background-color: -color-selected;
+    -fx-border-color: -color-sand-strong;
+}
+
+.list-item-selected:focused {
+    -fx-border-color: -color-focus;
+}
+
+.provider-name {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.provider-endpoint {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 11.5px;
+}
+
+/* --- Chips: a status is told by its own glyph and words as well as by these roles ------------------------ */
+.chip {
+    -fx-background-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-padding: 2px 9px 2px 9px;
+    -fx-font-size: 11.5px;
+}
+
+.chip-ok {
+    -fx-background-color: -color-ok-bg;
+    -fx-border-color: -color-ok-bd;
+    -fx-text-fill: -color-ok;
+}
+
+.chip-warn {
+    -fx-background-color: -color-warn-bg;
+    -fx-border-color: -color-warn-bd;
+    -fx-text-fill: -color-warn;
+}
+
+.chip-err {
+    -fx-background-color: -color-err-bg;
+    -fx-border-color: -color-err-bd;
+    -fx-text-fill: -color-err;
+}
+
+.chip-neutral {
+    -fx-background-color: -color-surface-2;
+    -fx-border-color: -color-border;
+    -fx-text-fill: -color-muted;
+}
+
+/* --- Buttons that sit beside the primary and secondary ones --------------------------------------------- */
+.btn-ghost {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-text-fill: -color-text;
+    -fx-cursor: hand;
+}
+
+.btn-ghost:hover {
+    -fx-background-color: -color-surface-2;
+}
+
+.btn-ghost:focused {
+    -fx-border-color: -color-focus;
+}
+
+.btn-danger-outline {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: -color-err-bd;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-text-fill: -color-err;
+    -fx-cursor: hand;
+}
+
+.btn-danger-outline:hover {
+    -fx-background-color: -color-err-bg;
+}
+
+.btn-danger-outline:focused {
+    -fx-border-color: -color-focus;
+}
+
+/* An unavailable button is dimmed, not recoloured, so its role stays readable and no colour is invented. */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-ghost:disabled,
+.btn-danger-outline:disabled {
+    -fx-opacity: 0.45;
+    -fx-cursor: default;
+}
+
+/* --- Inputs: text fields and the editable combo box (ui-mockup.html: .input) -------------------------------- */
+/* Modena paints these from its own greys; every part is reset to roles so both value blocks reach it. */
+.text-field {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-text-fill: -color-text;
+    -fx-prompt-text-fill: -color-muted-2;
+    -fx-highlight-fill: -color-primary-soft;
+    -fx-highlight-text-fill: -color-text-strong;
+    -fx-font-size: 13px;
+    -fx-padding: 7px 10px 7px 10px;
+}
+
+.text-field:focused {
+    -fx-border-color: -color-focus;
+}
+
+.combo-box,
+.combo-box:editable {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-font-size: 13px;
+    -fx-padding: 0;
+}
+
+.combo-box:hover,
+.combo-box:editable:hover {
+    -fx-background-color: -color-surface;
+}
+
+.combo-box:focused,
+.combo-box:editable:focused {
+    -fx-background-color: -color-surface;
+    -fx-border-color: -color-focus;
+}
+
+/* The editor sits inside the combo's own border, so it draws none of its own. */
+.combo-box > .text-field,
+.combo-box:editable > .text-field,
+.combo-box:editable:focused > .text-field {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 7px 10px 7px 10px;
+}
+
+.combo-box > .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text;
+    -fx-padding: 7px 10px 7px 10px;
+}
+
+.combo-box > .arrow-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0 7px 7px 0;
+    -fx-padding: 0 10px 0 6px;
+}
+
+.combo-box > .arrow-button > .arrow {
+    -fx-background-color: -color-muted;
+    -fx-background-insets: 0;
+}
+
+.combo-box-popup > .list-view {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-padding: 0;
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 10px 6px 10px;
+}
+
+.combo-box-popup .list-cell:filled:hover {
+    -fx-background-color: -color-surface-2;
+}
+
+.combo-box-popup .list-cell:filled:selected,
+.combo-box-popup .list-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+    -fx-text-fill: -color-text-strong;
+}
+
+/* --- Segmented selector (ui-mockup.html: .seg): ControlsFX's pills, recoloured to roles ------------------ */
+.segmented-button .toggle-button,
+.segmented-button .toggle-button.left-pill,
+.segmented-button .toggle-button.center-pill {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px 0 1px 1px;
+    -fx-border-radius: 0;
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12.5px;
+    -fx-padding: 7px 13px 7px 13px;
+    -fx-cursor: hand;
+}
+
+.segmented-button .toggle-button.left-pill {
+    -fx-background-radius: 7px 0 0 7px;
+    -fx-border-radius: 7px 0 0 7px;
+}
+
+.segmented-button .toggle-button.right-pill {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0 7px 7px 0;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 0 7px 7px 0;
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12.5px;
+    -fx-padding: 7px 13px 7px 13px;
+    -fx-cursor: hand;
+}
+
+.segmented-button .toggle-button:hover,
+.segmented-button .toggle-button.left-pill:hover,
+.segmented-button .toggle-button.center-pill:hover,
+.segmented-button .toggle-button.right-pill:hover {
+    -fx-background-color: -color-surface-2;
+}
+
+.segmented-button .toggle-button:selected,
+.segmented-button .toggle-button.left-pill:selected,
+.segmented-button .toggle-button.center-pill:selected,
+.segmented-button .toggle-button.right-pill:selected,
+.segmented-button .toggle-button:selected:hover,
+.segmented-button .toggle-button.left-pill:selected:hover,
+.segmented-button .toggle-button.center-pill:selected:hover,
+.segmented-button .toggle-button.right-pill:selected:hover {
+    -fx-background-color: -color-primary;
+    -fx-text-fill: -color-primary-fg;
+    -fx-font-weight: bold;
+}
+
+.segmented-button .toggle-button:focused,
+.segmented-button .toggle-button.left-pill:focused,
+.segmented-button .toggle-button.center-pill:focused,
+.segmented-button .toggle-button.right-pill:focused {
+    -fx-border-color: -color-focus;
+}
+
+/* --- Screen scroll host (book brief, import), the multi-line input, the switch and the slider ------------ */
+/* Modena paints each of these from its own greys and blues; every part is reset to roles so both blocks reach it. */
+/* The text-area rules are scoped to `.brief-input` so the error dialog's details area keeps its own look. */
+/* The scroll pane is a frame only: the shell content host behind it already paints the page. */
+.brief-scroll,
+.brief-scroll > .viewport,
+.import-scroll,
+.import-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.brief-scroll .scroll-bar,
+.import-scroll .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.brief-scroll .scroll-bar > .thumb,
+.import-scroll .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.brief-scroll .scroll-bar > .track,
+.import-scroll .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+.text-area.brief-input {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 7px;
+    -fx-text-fill: -color-text;
+    -fx-prompt-text-fill: -color-muted-2;
+    -fx-highlight-fill: -color-primary-soft;
+    -fx-highlight-text-fill: -color-text-strong;
+    -fx-font-size: 13px;
+}
+
+.text-area.brief-input .content {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+    -fx-padding: 6px 9px 6px 9px;
+}
+
+.text-area.brief-input:focused {
+    -fx-border-color: -color-focus;
+}
+
+.text-area.brief-input:focused .content {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 7px;
+}
+
+/* On is the primary role and off the cool border role, so the state is told by position and colour together. */
+.toggle-switch .label {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+}
+
+.toggle-switch .thumb-area {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 1em;
+}
+
+.toggle-switch:selected .thumb-area {
+    -fx-background-color: -color-primary;
+}
+
+.toggle-switch .thumb {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 1em;
+    -fx-border-color: transparent;
+}
+
+.toggle-switch:focused .thumb {
+    -fx-border-color: -color-focus;
+    -fx-border-radius: 1em;
+    -fx-border-width: 1px;
+}
+
+.slider .track {
+    -fx-background-color: -color-border;
+    -fx-background-insets: 0;
+    -fx-background-radius: 3px;
+    -fx-padding: 3px;
+}
+
+.slider .thumb {
+    -fx-background-color: -color-primary;
+    -fx-background-insets: 0;
+    -fx-background-radius: 1em;
+    -fx-padding: 7px;
+    -fx-effect: null;
+}
+
+.slider:focused .thumb {
+    -fx-background-color: -color-primary;
+    -fx-background-insets: 0;
+    -fx-background-radius: 1em;
+}
+
+/* An unavailable box is dimmed, not recoloured, like a button; a chosen one is the primary role with a light tick. */
+.check-box {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-label-padding: 0 0 0 8px;
+}
+
+.check-box .box {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+    -fx-border-color: -color-border-cool;
+    -fx-border-width: 1px;
+    -fx-border-radius: 4px;
+}
+
+.check-box:selected .box {
+    -fx-background-color: -color-primary;
+    -fx-border-color: -color-primary;
+}
+
+.check-box .mark {
+    -fx-background-color: -color-primary-fg;
+}
+
+.check-box:focused .box {
+    -fx-border-color: -color-focus;
+}
+
+.check-box:disabled {
+    -fx-opacity: 0.45;
+}
+
+/* --- The accent shown in the appearance tab, and the small tag beside it ------------------------------- */
+.accent-swatch {
+    -fx-background-color: -color-brand-cognac;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+}
+
+.tag-note {
+    -fx-background-color: -color-surface-2;
+    -fx-background-radius: 5px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 11px;
+    -fx-padding: 2px 7px 2px 7px;
+}
+
+/* --- Import screen: the drop zone (ui-mockup.html: .dropzone), the book card's rows and the banners -------- */
+.dropzone {
+    -fx-background-color: -color-sand-soft;
+    -fx-background-insets: 0;
+    -fx-background-radius: 12px;
+    -fx-border-color: -color-sand-strong;
+    -fx-border-width: 2px;
+    -fx-border-style: dashed;
+    -fx-border-radius: 12px;
+    -fx-padding: 30px;
+}
+
+/* While a droppable file is over the zone: the primary tint says "release here". */
+.dropzone-active {
+    -fx-background-color: -color-primary-soft;
+    -fx-border-color: -color-primary;
+}
+
+.dropzone-glyph {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 26px;
+}
+
+.kv {
+    -fx-padding: 6px 0 6px 0;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.kv-key {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12.5px;
+    -fx-min-width: 170px;
+}
+
+.kv-value {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 13px;
+}
+
+/* A banner is told by its glyph and its words as well as by these roles, never by colour alone. */
+.banner {
+    -fx-background-insets: 0;
+    -fx-background-radius: 8px;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-padding: 11px 14px 11px 14px;
+    -fx-spacing: 10px;
+}
+
+.banner-err {
+    -fx-background-color: -color-err-bg;
+    -fx-border-color: -color-err-bd;
+}
+
+.banner-warn {
+    -fx-background-color: -color-warn-bg;
+    -fx-border-color: -color-warn-bd;
+}
+
+.banner-err .banner-icon {
+    -fx-text-fill: -color-err;
+    -fx-font-size: 15px;
+}
+
+.banner-warn .banner-icon {
+    -fx-text-fill: -color-warn;
+    -fx-font-size: 15px;
+}
+
+.banner-title {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.banner-text {
+    -fx-text-fill: -color-text;
+    -fx-font-size: 12.5px;
+}
+
+/* --- Status roles: the text colour of a log entry, told apart by its glyph as well (LogKind#mark) ------------- */
+.status-ok {
+    -fx-text-fill: -color-ok;
+}
+
+.status-info {
+    -fx-text-fill: -color-info;
+}
+
+.status-warn {
+    -fx-text-fill: -color-warn;
+}
+
+.status-err {
+    -fx-text-fill: -color-err;
+}
+
+/* --- Banner roles the translating dashboard adds: neutral information and success ---------------------------- */
+.banner-info {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+}
+
+.banner-ok {
+    -fx-background-color: -color-ok-bg;
+    -fx-border-color: -color-ok-bd;
+}
+
+.banner-info .banner-icon {
+    -fx-text-fill: -color-info;
+    -fx-font-size: 15px;
+}
+
+.banner-ok .banner-icon {
+    -fx-text-fill: -color-ok;
+    -fx-font-size: 15px;
+}
+
+/* --- Translating: the progress bar, the count tiles (ui-mockup.html: .bar, .stat) and the activity log ------- */
+/* Modena paints the bar from its own accent and greys; both parts are reset to roles so both blocks reach them. */
+/* A progress bar's own minimum height is zero, so a screen taller than the window squeezed it away: the 9px of the */
+/* mockup's .bar is fixed as both the minimum and the preferred height, and the bar's own padding (which is what */
+/* made it twice that tall) is removed. */
+.progress-bar {
+    -fx-min-height: 9px;
+    -fx-pref-height: 9px;
+}
+
+.progress-bar > .track {
+    -fx-background-color: -color-surface-2;
+    -fx-background-insets: 0;
+    -fx-background-radius: 5px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+}
+
+.progress-bar > .bar {
+    -fx-background-color: -color-primary;
+    -fx-background-insets: 0;
+    -fx-background-radius: 5px;
+    -fx-padding: 0;
+}
+
+.stat {
+    -fx-min-width: 120px;
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 9px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 9px;
+    -fx-padding: 12px 16px 12px 16px;
+}
+
+.stat-number {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.stat-caption {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 11.5px;
+}
+
+/* A cell's colour comes from its status class, so the cell rule sets none: an author rule of two classes would */
+/* out-rank the one-class role rules above. The selected row keeps its role colour instead of Modena's white text. */
+.activity-log {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-min-height: 120px;
+}
+
+.activity-log .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-font-size: 12px;
+    -fx-padding: 5px 6px 5px 6px;
+}
+
+.activity-log .list-cell:filled:selected,
+.activity-log .list-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+}
+
+.activity-log .list-cell.status-ok:filled:selected {
+    -fx-text-fill: -color-ok;
+}
+
+.activity-log .list-cell.status-info:filled:selected {
+    -fx-text-fill: -color-info;
+}
+
+.activity-log .list-cell.status-warn:filled:selected {
+    -fx-text-fill: -color-warn;
+}
+
+.activity-log .list-cell.status-err:filled:selected {
+    -fx-text-fill: -color-err;
+}
+
+.activity-log .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.activity-log .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.activity-log .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+/* --- Structure: the flat, read-only tree of a book's units (ui-mockup.html: the chapter tree) --------------- */
+.structure-tree {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-min-height: 140px;
+}
+
+.structure-tree .tree-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-padding: 7px 10px 7px 10px;
+}
+
+.structure-tree .tree-cell:filled:hover {
+    -fx-background-color: -color-surface-alt;
+}
+
+.structure-tree .tree-cell:filled:selected,
+.structure-tree .tree-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+}
+
+.structure-tree .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.structure-tree .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.structure-tree .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+.structure-row-href {
+    -fx-text-fill: -color-text-strong;
 }

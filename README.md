@@ -38,15 +38,15 @@ docs/
 openspec/
   config.yaml                 Project context + the authoring rules that steer generated artifacts
   changes/<name>/             THE UNIT OF WORK: proposal.md, design.md, specs/, tasks.md
-  specs/<capability>/         The ledger of what is actually BUILT — starts empty, grows on archive
+  specs/<capability>/         The ledger of what is actually BUILT — grows on archive
 modules/                      ALL the code lives here (ADR-0021) — the root stays prose + build config
   api/                        Contracts: interfaces, records/DTOs, Result/AppError — the dependency floor
   util/                       Per-OS paths, shared helpers
   document/                   EPUB/FB2/Markdown/TXT parsing, masking, reassembly
-  llm/                        (planned) provider port + Ollama-native and OpenAI-compatible clients — empty today
-  pipeline/                   (planned) translation engine: chunking, QA, judge, repair — empty today
+  llm/                        Provider clients (Ollama-native, OpenAI-compatible), the pseudo model, model discovery
+  pipeline/                   Translation engine: the pausable job, checked export (QA, judge and repair are planned)
   persistence/                (planned) SQLite + Flyway + JDBI — empty today
-  ui/                         JavaFX theming and an empty app shell (only ui/ and app/ see JavaFX)
+  ui/                         JavaFX shell, screens, state mirror, en/uk bundles, theme (only ui/ and app/ see JavaFX)
   app/                        Launcher, Application, Guice composition root, the arch-test suite
   build-logic/                Gradle convention plugins (an included build)
                               Gradle project names are UNCHANGED by the move: still :api … :app, still
@@ -73,7 +73,7 @@ Gradle itself arrives through the committed wrapper — always invoke `./gradlew
 ```bash
 ./gradlew build                        # compile + spotlessCheck + lint + test
 ./gradlew clean build check spotlessCheck   # the full gate — what pre-push and CI both run
-./gradlew :app:run                     # launch the app (1024x700 window)
+./gradlew :app:run                     # launch the app (opens 1024x700, minimum 960x640)
 ```
 
 **New here? Read [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).** It covers prerequisites, the module map, running and
@@ -112,9 +112,12 @@ LEFTHOOK=0 git <cmd>     # skip every lefthook hook for one command
 
 ## Status
 
-**Document engine shipped; translation not yet.** `:api`, `:util`, `:document` and `:app` carry real code: an EPUB,
-FB2, Markdown or TXT book is parsed into a skeleton plus segments, every segment is masked to `⟦gN⟧` placeholders,
-and a translated segment is restored behind a placeholder-multiset hard gate — verified canonical-equal on a 216-book
-local corpus. `./gradlew :app:run` opens a themed, empty window. `:llm`, `:pipeline` and `:persistence` are Guice
-stubs and `:ui` is a placeholder; no book has been translated end to end yet. The next unit of work is the walking
-skeleton: one EPUB through one local model to a translated EPUB, from the UI.
+**A book can be translated from the window.** `:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:ui` and `:app` carry
+real code. `./gradlew :app:run` opens the desktop window: open an EPUB, FB2, Markdown or TXT book, choose a target
+language and destination, verify an Ollama or LM Studio provider, pick a model, then start, pause, resume or stop the
+run and show the written file in your file manager. The same pipeline runs from the command line
+(`./gradlew :app:translate`, see `docs/DEVELOPMENT.md`). Every segment is masked to `⟦gN⟧` placeholders and restored
+behind a placeholder-multiset hard gate — verified canonical-equal on a 216-book local corpus. The interface is English
+or Ukrainian, chosen from the operating system's language. `:persistence` is still empty, so nothing is saved: a run
+cannot be resumed after a restart, and the theme is not remembered. Next: persistence, then source-language
+detection, quality checks and the glossary.

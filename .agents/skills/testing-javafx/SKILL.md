@@ -136,7 +136,8 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
     test harness, never in the app runtime.
 12. **Guard boundaries with ArchUnit:** `fx-free-core`, `dependency-direction`,
     `ports-not-concretes`, `no-http-in-core-except-llm`, `no-sql-in-core-except-persistence`,
-    `api-is-framework-free`, `records-first`, `bootstrap-no-static-logger`. A failing
+    `api-is-framework-free`, `records-first`, `bootstrap-no-static-logger`,
+    `no-inline-style-in-ui`. A failing
     ArchUnit test fails the build.
 13. **Run the gate.** `./gradlew test` green, then the whole-project clean gate
     `./gradlew clean build check spotlessCheck` with no pre-existing-failure exemption, then

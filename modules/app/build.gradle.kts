@@ -144,7 +144,7 @@ val collectDist =
 
 // --- The shared `arch-test` source set (design D4) --------------------------------------------------------------
 //
-// The eight boundary rules of `02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules` live HERE, once, and
+// The nine boundary rules of `02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules` live HERE, once, and
 // nowhere else.
 //
 // Why `:app` and not a ninth subproject: ArchUnit reasons over compiled bytecode reachable on a classpath, and

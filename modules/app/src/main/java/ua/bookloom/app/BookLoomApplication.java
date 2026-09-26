@@ -2,16 +2,18 @@ package ua.bookloom.app;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ua.bookloom.ui.AppShellView;
-import ua.bookloom.ui.Theme;
+import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.UiModule;
+import ua.bookloom.ui.ViewNames;
 
 /**
  * The JavaFX application: everything after the launcher, and the only place an injector is constructed.
@@ -25,9 +27,8 @@ import ua.bookloom.ui.UiModule;
  * {@code opens … to com.google.guice} fails only when Guice reflects, and only at startup — so wiring in just the
  * two modules with content would prove strictly less, and would prove it about the easy half.
  */
+@Slf4j
 public final class BookLoomApplication extends Application {
-
-    private static final Logger LOG = LoggerFactory.getLogger(BookLoomApplication.class);
 
     private static final String TITLE = "BookLoom";
     private static final double INITIAL_WIDTH = 1024;
@@ -50,26 +51,36 @@ public final class BookLoomApplication extends Application {
 
         lifecycle.phaseOne(injector);
         lifecycle.phaseTwo(injector);
-        LOG.info("injector built and two-phase init complete");
+        log.info("injector built and two-phase init complete");
     }
 
     @Override
     public void start(Stage stage) {
         Objects.requireNonNull(stage, "stage");
 
-        final Scene scene = new Scene(AppShellView.create(), INITIAL_WIDTH, INITIAL_HEIGHT);
-        // Attached at SCENE level, not on a node: that is what makes the `.root` token block cascade to every
-        // descendant, and it is the one attachment point every later screen inherits.
-        scene.getStylesheets().add(Theme.stylesheet());
+        final AppShellView shell = injector().getInstance(AppShellView.class);
+        // The shell attaches the theme at SCENE level, not on a node: that is what makes the `.root` token block
+        // cascade to every descendant, and it is the one attachment point every later screen inherits.
+        final Scene scene = shell.createScene(INITIAL_WIDTH, INITIAL_HEIGHT);
 
         // Throws if phase 2 has not run — the scene must not be built before resources are open, because the first
         // settings read would otherwise silently return a default from a database nobody had opened.
         lifecycle.sceneBuilt();
 
+        initialView().ifPresent(shell::activate);
+
         stage.setTitle(TITLE);
+        shell.applyWindowLimits(stage);
         stage.setScene(scene);
         stage.show();
-        LOG.info("primary stage shown");
+        log.info(
+                "window shown, initialView={}",
+                injector().getInstance(Navigator.class).currentView().get());
+    }
+
+    /** The first entry with a screen, so the window never opens on an empty screen area while any screen exists. */
+    private static Optional<ViewNames> initialView() {
+        return Arrays.stream(ViewNames.values()).filter(ViewNames::isAvailable).findFirst();
     }
 
     /**

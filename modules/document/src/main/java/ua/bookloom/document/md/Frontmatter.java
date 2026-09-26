@@ -6,6 +6,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.MetadataKey;
 
 /**
  * Splits a leading {@code ---}-delimited frontmatter block off a Markdown file, and reads the two scalar keys the
@@ -110,7 +111,7 @@ final class Frontmatter {
         }
         final String key = line.substring(0, colon).strip();
         final String value = unquote(line.substring(colon + 1).strip());
-        if (!value.isEmpty() && ("title".equals(key) || "lang".equals(key))) {
+        if (!value.isEmpty() && (MetadataKey.TITLE.key().equals(key) || "lang".equals(key))) {
             found.put(key, value);
         }
     }

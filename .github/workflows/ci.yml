@@ -138,7 +138,7 @@ jobs:
       # THE shared gate. Identical to `.lefthook/pre-push/quality-gate.sh`. See the D8 block at the top of this
       # file before changing so much as a flag here.
       #
-      # Covers: Spotless, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, the eight ArchUnit boundary
+      # Covers: Spotless, Checkstyle, Error Prone + NullAway, SpotBugs + FindSecBugs, the nine ArchUnit boundary
       # rules, the JaCoCo branch-coverage gate, every test tier that can run on a runner, and the `build-logic`
       # functional tests that prove each of those fails red on a seeded canary.
       - name: Quality gate

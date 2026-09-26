@@ -39,6 +39,7 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.SegmentDecided;
@@ -56,7 +57,8 @@ class TranslationJobEventsTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // Changing order or pending bookkeeping would break these hard-coded lifecycle snapshots.
+    // Changing order or pending bookkeeping would break these hard-coded lifecycle snapshots; the request events have
+    // their own test, so they are left out of the order here.
     @Test
     void events_threeAcceptedSegments_areExactAndOrdered() {
         final TranslationJobImpl translation = markdownJob(replies("ONE.", "TWO.", "THREE."), "One.\n\nTwo.\n\nThree.");
@@ -66,8 +68,7 @@ class TranslationJobEventsTest {
         final Result<JobReport> result = translation.run();
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
-        assertThat(events)
-                .extracting(event -> event.getClass().getSimpleName())
+        assertThat(namesWithoutRequests(events))
                 .containsExactly(
                         "StageStarted",
                         "SegmentDecided",
@@ -151,7 +152,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(4);
+        assertThat(healthy).hasSize(5);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -188,7 +189,7 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "SegmentDecided", "StageStarted", "Finished");
+                .containsExactly("StageStarted", "ModelCallStarted", "SegmentDecided", "StageStarted", "Finished");
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -211,9 +212,11 @@ class TranslationJobEventsTest {
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactly(
                         "StageStarted",
+                        "ModelCallStarted",
                         "SegmentDecided",
                         "Paused",
                         "Resumed",
+                        "ModelCallStarted",
                         "SegmentDecided",
                         "StageStarted",
                         "Finished");
@@ -305,6 +308,13 @@ class TranslationJobEventsTest {
                 TestBooks.markdown(tempDir.resolve("Book.md"), content),
                 tempDir.resolve("Book.uk.md"),
                 model);
+    }
+
+    private static List<String> namesWithoutRequests(final List<JobEvent> events) {
+        return events.stream()
+                .filter(event -> !(event instanceof ModelCallStarted))
+                .map(event -> event.getClass().getSimpleName())
+                .toList();
     }
 
     private static void observeFinishedState(

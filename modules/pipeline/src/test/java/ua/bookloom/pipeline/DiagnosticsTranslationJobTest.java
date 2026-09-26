@@ -292,7 +292,14 @@ class DiagnosticsTranslationJobTest {
         assertThat(result.error()).extracting(AppError::cause).isSameAs(cause);
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "SegmentDecided", "SegmentDecided", "Finished");
+                .containsExactly(
+                        "StageStarted",
+                        "ModelCallStarted",
+                        "SegmentDecided",
+                        "ModelCallStarted",
+                        "SegmentDecided",
+                        "ModelCallStarted",
+                        "Finished");
         assertThat(((Finished) events.getLast()).report()).isEqualTo(result);
         assertOnlyErrorCarries(cause);
     }

@@ -13,7 +13,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -103,6 +102,10 @@ final class TranslationJobTestSupport {
         }
     }
 
+    static void await(final CountDownLatch latch) {
+        awaitIgnoringInterrupt(latch, "a test signal");
+    }
+
     static JobEvent await(final LinkedBlockingQueue<JobEvent> events) {
         try {
             final JobEvent event = events.poll(WAIT_SECONDS, TimeUnit.SECONDS);
@@ -152,12 +155,37 @@ final class TranslationJobTestSupport {
         }
     }
 
+    /**
+     * Waits like a provider that does not honour an interrupt: the call keeps waiting and returns its answer, which
+     * is what the boundary tests need, because they prove what the job does with an answer that arrives anyway.
+     */
+    private static void awaitIgnoringInterrupt(final CountDownLatch latch, final String what) {
+        boolean interrupted = false;
+        final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
+        try {
+            while (latch.getCount() > 0) {
+                final long left = deadline - System.nanoTime();
+                if (left <= 0) {
+                    throw new AssertionError("timed out waiting for " + what);
+                }
+                try {
+                    latch.await(left, TimeUnit.NANOSECONDS);
+                } catch (InterruptedException cause) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
     static final class BlockingChatModel implements ChatModel {
 
         private final ChatModel delegate;
         private final CountDownLatch entered = new CountDownLatch(1);
         private final CountDownLatch released = new CountDownLatch(1);
-        private final AtomicReference<Throwable> failure = new AtomicReference<>();
 
         BlockingChatModel(final ChatModel delegate) {
             this.delegate = java.util.Objects.requireNonNull(delegate, "delegate");
@@ -167,7 +195,6 @@ final class TranslationJobTestSupport {
         public Result<ChatResponse> chat(final ChatRequest request) {
             entered.countDown();
             await(released);
-            throwIfFailed();
             return delegate.chat(request);
         }
 
@@ -180,21 +207,7 @@ final class TranslationJobTestSupport {
         }
 
         private void await(final CountDownLatch latch) {
-            try {
-                if (!latch.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new AssertionError("timed out waiting for controlled model");
-                }
-            } catch (InterruptedException cause) {
-                Thread.currentThread().interrupt();
-                failure.compareAndSet(null, cause);
-            }
-        }
-
-        private void throwIfFailed() {
-            final Throwable cause = failure.get();
-            if (cause != null) {
-                throw new AssertionError("controlled model interrupted", cause);
-            }
+            awaitIgnoringInterrupt(latch, "controlled model");
         }
     }
 
@@ -227,14 +240,7 @@ final class TranslationJobTestSupport {
         }
 
         private static void await(final CountDownLatch latch) {
-            try {
-                if (!latch.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new AssertionError("timed out waiting for second model call");
-                }
-            } catch (InterruptedException cause) {
-                Thread.currentThread().interrupt();
-                throw new AssertionError("interrupted waiting for second model call", cause);
-            }
+            awaitIgnoringInterrupt(latch, "second model call");
         }
     }
 

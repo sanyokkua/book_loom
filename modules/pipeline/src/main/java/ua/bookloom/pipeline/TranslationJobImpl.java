@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
@@ -46,6 +47,8 @@ final class TranslationJobImpl implements TranslationJob {
     private final JobControl control = new JobControl();
     private final JobSubscribers subscribers = new JobSubscribers();
     private final String jobId = UUID.randomUUID().toString();
+    // Read and written only on the job thread: decide sets it, and the model decorator runs inside decide.
+    private @Nullable String decidingSegment;
 
     TranslationJobImpl(
             final DocumentPort documents,
@@ -133,7 +136,7 @@ final class TranslationJobImpl implements TranslationJob {
         final InitialSnapshot initial = dataOf(snapshot);
         final JobProgressTracker tracker = new JobProgressTracker(initial.document());
         try {
-            logStart(tracker);
+            JobLifecycleLogger.started(request, tracker, control.pausePoints());
             emit(new StageStarted(JobStage.TRANSLATE, tracker.currentTranslationProgress()));
             return initial.releaseError() == null
                     ? translate(tracker)
@@ -146,7 +149,7 @@ final class TranslationJobImpl implements TranslationJob {
     private Result<JobReport> translate(final JobProgressTracker tracker) {
         final SegmentTranslator translator = new SegmentTranslator(
                 documents,
-                model,
+                new CancellableChatModel(model, control, this::announceModelCall),
                 tracker.format(),
                 new DraftPromptBuilder(
                         TranslationJobRequestContext.sourceLanguage(request, tracker.declaredLanguage()),
@@ -171,7 +174,9 @@ final class TranslationJobImpl implements TranslationJob {
         final SegmentWork work = tracker.next();
         final Result<Decision> result = decide(work, tracker.draftContextFor(work), translator);
         if (result.isErr()) {
-            return recoverOrFail(errorOf(result), tracker, work);
+            return errorOf(result).code() == ErrorCode.cancelled
+                    ? honorBoundary(control.abortedCallBoundary(), tracker.currentTranslationProgress(), tracker)
+                    : recoverOrFail(errorOf(result), tracker, work);
         }
         final Decision decision = dataOf(result);
         final JobProgress progress = tracker.apply(work, decision);
@@ -257,11 +262,17 @@ final class TranslationJobImpl implements TranslationJob {
             final ua.bookloom.pipeline.prompt.DraftContext context,
             final SegmentTranslator translator) {
         MDC.put("segment", work.segment().id());
+        decidingSegment = work.segment().id();
         try {
             return translator.translate(work.segment(), context);
         } finally {
+            decidingSegment = null;
             MDC.remove("segment");
         }
+    }
+
+    private void announceModelCall() {
+        emit(new ModelCallStarted(Objects.requireNonNull(decidingSegment, "segment being decided")));
     }
 
     private Result<InitialSnapshot> openSnapshot() {
@@ -311,7 +322,7 @@ final class TranslationJobImpl implements TranslationJob {
                     Objects.requireNonNull(error, "error").code());
         }
         emit(new Finished(report));
-        logEnd(report);
+        JobLifecycleLogger.ended(report);
         return Result.ok(report);
     }
 
@@ -347,29 +358,6 @@ final class TranslationJobImpl implements TranslationJob {
     private void emit(final JobEvent event) {
         log.debug("Sending translation job event type={}", event.getClass().getSimpleName());
         subscribers.deliver(event);
-    }
-
-    private void logStart(final JobProgressTracker tracker) {
-        log.info(
-                "Translation job started format={} source={} destination={} targetLanguage={} sourceLanguage={} pausePoints={} segments={} sections={}",
-                tracker.format(),
-                request.source(),
-                request.destination(),
-                request.targetLanguage(),
-                request.sourceLanguage(),
-                control.pausePoints(),
-                tracker.segmentCount(),
-                tracker.sectionCount());
-    }
-
-    private void logEnd(final JobReport report) {
-        log.info(
-                "Translation job ended state={} segments={} accepted={} flagged={} written={}",
-                report.end(),
-                report.segments(),
-                report.accepted(),
-                report.flagged(),
-                report.written());
     }
 
     private @Nullable ErrorCode flagCode(final Decision decision) {

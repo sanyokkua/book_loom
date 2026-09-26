@@ -7,6 +7,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import java.time.Clock;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.llm.gate.InferenceGate;
@@ -30,6 +31,7 @@ public final class LlmModule extends AbstractModule {
     protected void configure() {
         bind(ChatModelFactory.class).to(ChatModelFactoryImpl.class);
         bind(ProviderVerifier.class).to(ProviderVerifierImpl.class);
+        bind(ModelCatalog.class).to(ModelCatalogService.class);
         bind(ProviderConfigs.class).to(InMemoryProviderConfigs.class).in(Singleton.class);
         bind(InferenceGate.class).in(Singleton.class);
         bind(ProviderClientFactory.class).in(Singleton.class);

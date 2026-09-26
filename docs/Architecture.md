@@ -1,30 +1,32 @@
 # BookLoom — Architecture and Current Capabilities
 
-*Generated from the code as of 2026-09-15 (branch `feature/add-translation-engine-and-cli`). Sections are
+*Generated from the code as of 2026-09-26 (branch `feature/add-ui-translation-workspace`). Sections are
 numbered and stable so a prompt or a review can say "per §4.3". When the code changes, change this file in the same
 commit. `docs/DEVELOPMENT.md` says how to build and run; `AGENTS.md` is the operating manual.*
 
 ## 1. What BookLoom is, and where it honestly stands
 
-BookLoom is a local-first, offline desktop application that will translate whole books (EPUB, FB2, Markdown, TXT)
+BookLoom is a local-first, offline desktop application that translates whole books (EPUB, FB2, Markdown, TXT)
 with a locally-run LLM (Ollama / LM Studio) or any OpenAI-compatible endpoint, preserving the book's structure, IDs,
 images and fonts through a canonical-equal round trip.
 
-**Today a book of any of the four formats goes through the whole pipeline from the command line, translated by a
-deterministic offline pseudo model.** `./gradlew -q :app:translate --args="'<book>' [--to <lang>] [--from <lang>]
-[--overwrite]"` opens a book, sends every pending segment to a chat model in document order, and writes the
-translated book back canonical-equal beside it (§5). `:llm` and `:pipeline` are real now: a `ChatModel`/
-`ChatModelFactory` contract bound once per job (ADR-0033, §3.4), the offline `pseudo` provider that upper-cases text
-and leaves placeholders and character references alone, and a pausable `TranslationEngine`/`TranslationJob` that
-accepts, flags or stops on each segment and exports only after the written file re-opens with the source's segment
-count (§3.5). There is still no real LLM client — Ollama and LM Studio have nothing to talk to yet — no persistence,
-and no screen beyond the empty themed window, so the app itself cannot start or watch a translation (§6). The next
-unit of work is real LLM clients, then the translation screen (§9).
+**Today a book of any of the four formats goes through the whole pipeline from the desktop window or the command
+line, translated by a deterministic offline pseudo model or by a real local provider.** In the window a person opens a
+book, chooses a target language, a destination and whether to overwrite, verifies an Ollama or LM Studio provider,
+chooses a model, starts, pauses, resumes and stops the run, watches its progress and shows the written file in the file
+manager (§5, §6). `./gradlew -q :app:translate --args="'<book>' [--to <lang>] [--from <lang>] [--overwrite]
+[--provider …] [--model …]"` does the same without a window (§5). `:llm` and `:pipeline` are real: a `ChatModel`/
+`ChatModelFactory` contract bound once per job (ADR-0033, §3.4), the offline `pseudo` provider, gated and retried
+Ollama-native and OpenAI-compatible clients, and a pausable `TranslationEngine`/`TranslationJob` that accepts, flags or
+stops on each segment, aborts a model request in flight on Pause or Stop, and exports only after the written file
+re-opens with the source's segment count (§3.5). `:ui` is real too: the shell, six screens, the state mirror, English
+and Ukrainian bundles chosen by the operating system, and a light/dark theme. Only `:persistence` is empty, so nothing
+is persisted — no resume across a restart, no remembered theme (§6). The next unit of work is persistence (§9).
 
 | | |
 |---|---|
-| Production Java | ≈14,600 lines in 8 JPMS modules, counted 2026-09-15 on `add-translation-engine-and-cli` (`:document` 7,976; `:pipeline` 2,159; `:api` 1,809; `:app` 1,638; `:util` 622; `:llm` 236; `:ui` 146; `:persistence` 57) |
-| Tests | 816 test methods (`:document` 498, `:pipeline` 133, `:api` 74, `:app` 54, `:util` 44, `:llm` 10, `:ui` 3), 1,168 runs once parameterized cases expand — zero Mockito throughout; fixtures are real bytes in temp dirs |
+| Production Java | 8 JPMS modules; seven carry real code, `:persistence` is one Guice module with no bindings. Line counts are not recorded here, so they cannot drift |
+| Tests | JUnit 5 + AssertJ in every module (`:ui` under TestFX on the headless platform), WireMock at the provider HTTP seam, zero Mockito throughout; fixtures are real bytes in temp dirs. Run `./gradlew test` for the current count |
 | Stack | Java 25, JavaFX 26, Gradle 9 (Kotlin DSL), Guice 7, jsoup + JDOM2 + commonmark + ICU4J, JUnit 5 + AssertJ |
 
 ## 2. Modules and layering
@@ -43,7 +45,7 @@ unit of work is real LLM clients, then the translation screen (§9).
 
 Edges point downward only. `settings.gradle.kts` maps `:api` … `:app` onto `modules/<name>` (ADR-0021).
 
-**Eight ArchUnit rules** (`modules/app/src/archTest/java/ua/bookloom/archtest/ArchitectureRules.java`, run by
+**Nine ArchUnit rules** (`modules/app/src/archTest/java/ua/bookloom/archtest/ArchitectureRules.java`, run by
 `BoundaryRulesTest`; `RuleViolationFixtureTest` proves each one fires on a deliberate violation):
 
 | Rule | Guarantees |
@@ -56,13 +58,14 @@ Edges point downward only. `settings.gradle.kts` maps `:api` … `:app` onto `mo
 | `API_IS_FRAMEWORK_FREE` | `:api` depends on no Guice, Lombok or JavaFX |
 | `RECORDS_FIRST` | immutable data carriers are records |
 | `BOOTSTRAP_NO_STATIC_LOGGER` | nothing on the pre-logging boot path holds a static logger |
+| `NO_INLINE_STYLE_IN_UI` | no `:ui` class calls `setStyle` on any JavaFX type (node, tooltip, menu, tab); styling is `theme.css` tokens and style classes |
 
 Guice wiring: `AppModule` (paths, environment, startup context, a background pool and a virtual-thread IO executor),
-`DocumentModule` (`DocumentPort` → `DocumentService`), `LlmModule` (`ChatModelFactory` → `ChatModelFactoryImpl`,
-resolving only the offline `pseudo` provider today) and `PipelineModule` (`TranslationEngine` →
-`TranslationEngineImpl`). `ua.bookloom.app.CoreModules` installs all five and is what the desktop app and
-`./gradlew :app:translate` share, so the two entry points never wire different graphs (§5). `PersistenceModule` and
-`UiModule` still bind nothing.
+`DocumentModule` (`DocumentPort` → `DocumentService`), `LlmModule` (`ChatModelFactory`, `ProviderVerifier`,
+`ModelCatalog` and `ProviderConfigs`, resolving the offline `pseudo` provider and the in-memory `ollama`/`lmstudio`
+presets) and `PipelineModule` (`TranslationEngine` → `TranslationEngineImpl`). `ua.bookloom.app.CoreModules` installs
+all five and is what the desktop app and `./gradlew :app:translate` share, so the two entry points never wire
+different graphs (§5); the desktop app adds `UiModule` on top. `PersistenceModule` still binds nothing.
 
 ## 3. Contracts (`:api`, package `ua.bookloom.api`)
 
@@ -132,9 +135,9 @@ The engine never names a provider or a model itself: it is handed a `ChatModel` 
 same instance for the whole job, so `ChatRequest` carries no model field. `ua.bookloom.llm.ChatModelFactoryImpl`
 resolves the provider id `pseudo` to the offline `PseudoChatModel` (`ua.bookloom.llm.pseudo`, neither exported nor
 opened) — it upper-cases the last user message with `Locale.ROOT`, copies every `⟦gN⟧` token and character reference
-unchanged, and finishes `STOP`; any other provider id, or a blank model id, is `ErrorCode.validation`. Real
-Ollama-native and OpenAI-compatible clients bind behind the same `ChatModelFactory` later, without changing
-`:pipeline`.
+unchanged, and finishes `STOP`; any other provider id, or a blank model id, is `ErrorCode.validation`. The
+Ollama-native and OpenAI-compatible clients (`add-real-llm-clients`) bind behind the same `ChatModelFactory`, so
+`:pipeline` did not change; `ChatRequest` gained optional temperature and response-format hints.
 
 ### 3.5 The translation engine contract (`ua.bookloom.api.pipeline`)
 
@@ -244,16 +247,21 @@ Details never contain paths, bodies or exception messages (§3.1).
 `bookloom.log`, 10 MB files, 14 days, 200 MB cap; console only in dev) → startup log line → `Application.launch`.
 `BookLoomApplication.init` builds the Guice injector from `ua.bookloom.app.CoreModules` (`AppModule`,
 `DocumentModule`, `LlmModule`, `PersistenceModule`, `PipelineModule`) plus `UiModule`, and runs `AppLifecycle` phase
-one and two (phase two is empty by design; the order is enforced). `start` shows a 1024×700 `Scene` over
-`AppShellView` with `theme.css`.
+one and two (phase two is empty by design; the order is enforced). `start` shows a 1024×700 `Scene` (minimum
+960×640) over `AppShellView` with `theme.css`.
 
 - **Second launch**: `ErrorCode.busy`, a "BookLoom is already running" window, exit **0**.
 - **Startup failure**: `StartupFailureDialog` on a bare `Platform.startup`, waits ≤ 300 s, exit **1**.
 - **Environment**: `BOOKLOOM_ENV` → `-Dbookloom.env` → jpackage property → dev; data/log directories per OS with a
   `-Dev` suffix in dev; `BOOKLOOM_DATA_DIR` overrides.
 - **`AppVersion`** reads `version.properties` generated from the git tag, or `dev`.
-- **`:ui`** is `Theme` (resolves the single stylesheet: four brand anchors, five role tokens) and a `StackPane`
-  holding one `Label("BookLoom")`.
+- **`:ui`** (`add-ui-translation-workspace`) is six packages: `ua.bookloom.ui` (`AppShellView` chrome built in code,
+  `Navigator`, `ViewNames`, `Theme`), `.screen` (Import, Book Brief, Structure, Translating, Export, Settings — FXML
+  plus a thin controller), `.state` (`StateMirror`, `RunSession`, `TranslationRunner`, the viewmodels, the file
+  revealer), `.i18n` (`en`/`uk` bundles, typed `MessageKey`, a locale chosen by the OS — no in-app switch), `.notify`
+  (error dialog, toasts) and `.theme` (44 role tokens in light and dark, one stylesheet). Projects, Names & style and
+  Review are inert navigation entries with no screen. The window opens 1024×700, minimum 960×640, and its content
+  scrolls when it does not fit.
 
 **Log level.** `ua.bookloom.app.bootstrap.LoggingLevelResolver` is a pure function over injected `getEnv`/
 `getProperty` (the same shape as `AppEnvironment.resolve`): `BOOKLOOM_LOG_LEVEL`, else the system property
@@ -293,11 +301,15 @@ job at segment, section, stage and error boundaries; export only after the writt
 segment count, never silently overwriting a source or an existing destination.
 
 **Can, as an app:** start once, refuse a second instance, log to the right per-OS directory at a level
-`BOOKLOOM_LOG_LEVEL` controls, package into a native image on macOS, Windows and Linux.
+`BOOKLOOM_LOG_LEVEL` controls, package into a native image on macOS, Windows and Linux; and, through the window, open
+a book of any of the four formats, choose a target language, destination and overwrite, verify a provider (Ollama or
+LM Studio preset), choose a model, start / pause / resume / stop / start again, watch progress and the activity log,
+and show the written file in the file manager. Pause and Stop abort the request in flight; a stopped run is final and
+writes nothing.
 
-**Cannot yet:** call a real LLM (Ollama and LM Studio have nothing to talk to yet), persist anything, resume a job
-after a restart, show any screen with content, detect the source language, or chunk long segments. `:persistence`
-still holds one empty Guice module; `:ui` is a placeholder.
+**Cannot yet:** persist anything (no resume across a restart, no remembered theme), detect the source language (the
+selector is read-only), switch the interface language in the app (the OS chooses `en` or `uk`), open the Projects,
+Names & style or Review entries, or chunk long segments. `:persistence` still holds one empty Guice module.
 
 **Text the walker never reaches** — everything outside a content document's `<body>` or an FB2 `<body>`; after a
 translation these stay in the source language until the metadata-units change lands. Counted on the owner's 216-book
@@ -324,7 +336,7 @@ Code-visible today:
 
 Resolved on 2026-09-11/12: D2 (missing `mimetype` synthesized on write), D11 (FB2 line endings echoed), D13
 (`FragmentRange` record), D6 (FB2 entities expanded once; `Fb2EntityExpansionTest`). Resolved by
-`add-translation-engine-and-cli` (code-complete, pending archive): D3 — `DocumentPort.close(Document)` now exists
+`add-translation-engine-and-cli` (archived 2026-09-20): D3 — `DocumentPort.close(Document)` now exists
 and is called, by `:pipeline`'s job after it snapshots the source and by `BookExporter` after each write attempt, so
 a translated book no longer stays open in memory for the rest of the process's life. The full list with history:
 `CHANGE_BACKLOG.md#decision-debt`.
@@ -361,15 +373,12 @@ segments and 272,817 placeholders; text coverage per book (words of visible body
 0.9808, median 1.0, the two lowest being a word-boundary counting artefact on span-built paragraphs; 2 min 39 s. Details and the defects it found: `docs/implementation_plan/notes-corpus-verification.md`.
 
 **The running app**: `./gradlew :app:run` prints `app started`, `injector built and two-phase init complete`,
-`primary stage shown`; `./scripts/launch-smoke.sh` asserts the same three lines against the packaged image.
+`window shown, initialView=…`; `./scripts/launch-smoke.sh` asserts the same three lines against the packaged image.
 
 ## 9. What comes next
 
-The walking skeleton the owner named as the next unit of work is done: a book of any of the four formats goes
-through the whole pipeline from the command line, translated by the offline `pseudo` model (§1, §5). Next: real
-`:llm` chat clients — Ollama-native and OpenAI-compatible, tested at the HTTP seam with WireMock for both dialects —
-bound behind the same `ChatModelFactory` the pseudo model already implements, so `:pipeline` does not change; then a
-translation screen (file, endpoint, model, target language, Translate, progress) driven by the same
-`TranslationEngine`/`TranslationJob` the command line already drives. Done means a real small EPUB translated with a
-local Ollama from the app and opened in a reader. Persistence, chunking, QA, judge, glossary, theming and
-localization follow, one small change each; the order is `docs/implementation_plan/CHANGE_BACKLOG.md`.
+The walking skeleton is done and so is the face on it: a book of any of the four formats goes through the whole
+pipeline from the command line and from the window, with the offline `pseudo` model or a real local provider (§1, §5,
+§6). Next: `:persistence` — projects, settings and per-chunk checkpoints, which is what makes resume across a restart,
+a remembered theme and a language switch possible. Chunking, source-language detection, QA, judge and glossary follow,
+one small change each; the order is `docs/implementation_plan/CHANGE_BACKLOG.md`.

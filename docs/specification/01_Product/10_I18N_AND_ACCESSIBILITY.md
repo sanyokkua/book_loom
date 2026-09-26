@@ -84,12 +84,12 @@ checks are concrete rather than open-ended:
 |---------------|-----------------------------------------------------------------------------------------------------|
 | Projects      | project list rows, New/Import project button                                                        |
 | Import        | drop zone / file picker, Continue, and the state's banner action                                    |
-| Book Brief    | source/target language pickers, faithful↔natural slider, quality dial, the "Also translate" toggles |
-| Structure     | chapter `TreeView`                                                                                  |
+| Book Brief    | target language picker, destination path + Browse, overwrite switch (the source language is read-only) |
+| Structure     | unit list `TreeView`, Back / Continue                                                               |
 | Names & Style | glossary table, lock toggle, Add-term button                                                        |
-| Translating   | Pause/Resume, Stop, and (in `stopped`) the Resume action                                            |
+| Translating   | Pause/Resume, Stop, and (in `stopped`, `completed`, `failed`) the New run action                    |
 | Review        | flagged list, target `TextArea`, Save edit / Accept / Revert / Retry / Retry-with-note / Skip       |
-| Export        | save-path field + picker, "Also export" toggles, Export button                                      |
+| Export        | Open folder button; "Also export" options (disabled in this build)                                  |
 | Settings      | tab bar and, per tab, its focusable fields                                                          |
 
 ## verification {#verification}

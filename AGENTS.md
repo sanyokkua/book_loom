@@ -13,12 +13,14 @@ Flyway planned. Full inventory: `gradle/libs.versions.toml`.
 ## Where it stands — keep this paragraph current
 
 Real: `:api` (`Result`/`AppError`, document model, `DocumentPort`), `:util`, `:document` (four-format round trip,
-inline masking to `⟦gN⟧`, unmask behind a placeholder-multiset hard gate — verified on the owner's 216-book local corpus) and
-`:app` (boot, logging, single-instance lock, DI, an empty themed window). `:llm` (chat-model contract, factory,
-pseudo model, gated/retried Ollama-native and OpenAI-compatible clients, verification) and `:pipeline` (translation
-engine, pausable job, checked export) are now real too, and a book of any of the four formats goes through the whole
-pipeline from the command line with either the pseudo model or a configured real provider. Empty: `:persistence`;
-`:ui` is a placeholder. Next comes the UI, then persistence and remaining breadth (theming, QA, glossary).
+inline masking to `⟦gN⟧`, unmask behind a placeholder-multiset hard gate — verified on the owner's 216-book local corpus),
+`:llm` (chat-model contract, factory, pseudo model, gated/retried Ollama-native and OpenAI-compatible clients,
+verification, model discovery), `:pipeline` (translation engine, pausable and interruptible job, checked export), `:ui`
+(the shell, six screens, the state mirror, English and Ukrainian bundles chosen by the OS, light/dark theme) and `:app`
+(boot, logging, single-instance lock, DI, the window). A book of any of the four formats goes through the whole
+pipeline from the window or the command line, with the pseudo model or a configured real provider. Empty:
+`:persistence` — nothing is saved, so no resume across a restart and no remembered settings. Next comes persistence,
+then remaining breadth (QA, glossary, source-language detection).
 
 ## Commands
 

@@ -29,6 +29,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.util.paths.DestinationPath;
 
 /** Parses and executes the one-book translation command behind the public launcher. */
 @Slf4j
@@ -64,7 +65,8 @@ public final class TranslateCommand {
     }
 
     private int execute(TranslateArguments arguments, PrintStream out) {
-        final Path destination = destination(arguments);
+        final Path destination =
+                DestinationPath.destinationFor(arguments.source(), arguments.format(), arguments.targetLanguage());
         log.debug(
                 "translate command parsed source={} destination={} targetLanguage={} sourceLanguage={} overwrite={}",
                 arguments.source(),
@@ -262,16 +264,6 @@ public final class TranslateCommand {
     private static AppError usageError(AppError error) {
         return AppError.of(
                 ErrorCode.validation, "Invalid command arguments", error.message(), error.details(), error.cause());
-    }
-
-    private static Path destination(TranslateArguments arguments) {
-        final String fileName =
-                Objects.requireNonNull(arguments.source().getFileName()).toString();
-        final String suffix = arguments.format().matchedSuffix(fileName);
-        final String outputName =
-                fileName.substring(0, fileName.length() - suffix.length()) + "." + arguments.targetLanguage() + suffix;
-        final Path parent = arguments.source().getParent();
-        return parent == null ? Path.of(outputName) : parent.resolve(outputName);
     }
 
     private static AppError stoppedError(JobState state) {

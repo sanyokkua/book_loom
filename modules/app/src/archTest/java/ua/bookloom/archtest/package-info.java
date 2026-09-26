@@ -1,5 +1,5 @@
 /**
- * The shared {@code arch-test} boundary suite: the eight ArchUnit rules of
+ * The shared {@code arch-test} boundary suite: the nine ArchUnit rules of
  * {@code docs/specification/02_Architecture/02_MODULES_AND_LAYERING.md#archunit-rules}, the violation fixtures
  * that prove each one bites, and the completeness test that proves none has been dropped.
  *

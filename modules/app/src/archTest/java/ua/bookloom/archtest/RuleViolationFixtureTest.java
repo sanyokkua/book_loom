@@ -17,6 +17,10 @@ import ua.bookloom.persistence.archfixture.FixtureProjectDao;
 import ua.bookloom.pipeline.archfixture.HttpUsingCoordinator;
 import ua.bookloom.ui.archfixture.ConcreteDaoConsumer;
 import ua.bookloom.ui.archfixture.FxUsingView;
+import ua.bookloom.ui.archfixture.InlineStyledView;
+import ua.bookloom.ui.archfixture.MethodRefStyledView;
+import ua.bookloom.ui.archfixture.StyleClassView;
+import ua.bookloom.ui.archfixture.TooltipStyledView;
 import ua.bookloom.util.archfixture.ReversedEdgeHelper;
 import ua.bookloom.util.paths.archfixture.ClassInitLoggingResolver;
 import ua.bookloom.util.paths.archfixture.StaticLoggerResolver;
@@ -145,6 +149,41 @@ class RuleViolationFixtureTest {
     @Test
     void bootstrapNoStaticLogger_staticLoggerFieldInAppLauncher_isRejected() {
         assertRejects(ArchitectureRules.BOOTSTRAP_NO_STATIC_LOGGER, fixture(Launcher.class), Launcher.class.getName());
+    }
+
+    // ===== 9. no-inline-style-in-ui ======================================================================
+
+    // IF a :ui class calls setStyle on a node, THEN the rule rejects it and names the class.
+    @Test
+    void noInlineStyleInUi_setStyleCallInUi_isRejected() {
+        assertRejects(
+                ArchitectureRules.NO_INLINE_STYLE_IN_UI,
+                fixture(InlineStyledView.class),
+                InlineStyledView.class.getName());
+    }
+
+    // IF a :ui class calls setStyle on a non-Node JavaFX type (a Tooltip), THEN the rule still rejects it.
+    @Test
+    void noInlineStyleInUi_tooltipSetStyleInUi_isRejected() {
+        assertRejects(
+                ArchitectureRules.NO_INLINE_STYLE_IN_UI,
+                fixture(TooltipStyledView.class),
+                TooltipStyledView.class.getName());
+    }
+
+    // IF a :ui class takes setStyle as a method reference, THEN the rule rejects it as well.
+    @Test
+    void noInlineStyleInUi_setStyleMethodReferenceInUi_isRejected() {
+        assertRejects(
+                ArchitectureRules.NO_INLINE_STYLE_IN_UI,
+                fixture(MethodRefStyledView.class),
+                MethodRefStyledView.class.getName());
+    }
+
+    /** The mis-scoping that would pass the positive test: banning styling through style classes as well. */
+    @Test
+    void noInlineStyleInUi_styleClassInUi_isAccepted() {
+        assertAccepts(ArchitectureRules.NO_INLINE_STYLE_IN_UI, fixture(StyleClassView.class));
     }
 
     // ===== helpers =======================================================================================

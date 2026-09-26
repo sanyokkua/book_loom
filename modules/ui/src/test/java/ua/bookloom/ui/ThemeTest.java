@@ -2,15 +2,18 @@ package ua.bookloom.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Locale;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.paint.Color;
+import javafx.scene.control.Labeled;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * The theming mechanism every later screen depends on.
+ *
+ * <p>The scene root is the real {@link AppShellView}, so the cascade is proved through the chrome every screen sits
+ * in: a looked-up colour declared on {@code .root} must reach labels several levels down the tree.
  *
  * <p>The assertion is on the <strong>resolved colour</strong>, not on the presence of a stylesheet URL, and that
  * distinction is the whole value of the test: a stylesheet that fails to parse still attaches, and
@@ -22,37 +25,46 @@ import org.testfx.framework.junit5.ApplicationTest;
  */
 class ThemeTest extends ApplicationTest {
 
-    /** Charcoal — the brand anchor that {@code -color-text} resolves to in the light block. */
-    private static final Color EXPECTED_TEXT = Color.web("#3a4a52");
+    /** The published light value of the {@code muted} role (09_THEMING.md#token-catalog). */
+    private static final String EXPECTED_MUTED = "#6f7c82";
+
+    /** The published light value of the {@code title-fg} role. */
+    private static final String EXPECTED_TITLE_FG = "#dfe4e6";
+
+    // Assigned in start(), which ApplicationTest runs before every test.
+    @SuppressWarnings("NullAway.Init")
+    private Scene scene;
 
     @Override
     public void start(final Stage stage) {
-        final Scene scene = new Scene(AppShellView.create(), 640, 400);
+        final AppShellView shell = UiTestInjector.create(Locale.ENGLISH).getInstance(AppShellView.class);
+        scene = new Scene(shell.root(), 640, 400);
         scene.getStylesheets().add(Theme.stylesheet());
         stage.setScene(scene);
         stage.show();
     }
 
     @Test
-    void stylesheet_attachedAtSceneLevel_cascadesTheTokenToADescendantNode() {
-        final Label placeholder = lookup("#" + AppShellView.PLACEHOLDER_ID).queryAs(Label.class);
+    void stylesheet_attachedAtSceneLevel_cascadesTheMutedRoleToTheBreadcrumbLabel() {
+        // The breadcrumb sits in the toolbar inside the frame inside the root; its text fill can only be the muted
+        // role if the .root block reached it. A stylesheet that failed to parse leaves the platform default.
+        final Labeled breadcrumb = lookup("#shell-breadcrumb").queryLabeled();
 
-        assertThat(placeholder.getTextFill())
-                .as("-color-text must resolve through the .root token block to the charcoal brand anchor; a "
-                        + "stylesheet that failed to parse would leave the platform default here")
-                .isEqualTo(EXPECTED_TEXT);
+        ThemeTestSupport.assertSameColour(
+                breadcrumb.getTextFill(), EXPECTED_MUTED, "breadcrumb text fill (-color-muted) through .root");
     }
 
     @Test
-    void stylesheet_lookedUpColor_isDeclaredOnRootRatherThanOnTheComponent() {
-        final Label placeholder = lookup("#" + AppShellView.PLACEHOLDER_ID).queryAs(Label.class);
+    void stylesheet_attachedAtSceneLevel_cascadesTheTitleForegroundToTheProductName() {
+        final Labeled product = lookup(".shell-title").queryLabeled();
 
-        // The token resolves from `.root`, so the same lookup must succeed from the scene root — which is what
-        // makes one value block able to re-theme every descendant.
-        assertThat(placeholder.getScene().getRoot().getStyleClass())
-                .as("the shell carries the class the token block styles")
-                .contains(AppShellView.SHELL_STYLE_CLASS);
-        assertThat(placeholder.getScene().getStylesheets())
+        ThemeTestSupport.assertSameColour(
+                product.getTextFill(), EXPECTED_TITLE_FG, "product name text fill (-color-title-fg) through .root");
+    }
+
+    @Test
+    void stylesheet_attachedToTheScene_isListedExactlyOnce() {
+        assertThat(scene.getStylesheets())
                 .as("attached at Scene level, not on a node: node-level attachment would not cascade from .root")
                 .hasSize(1);
     }

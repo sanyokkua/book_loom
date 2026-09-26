@@ -209,14 +209,53 @@ The output is `<name>.<to><suffix>` beside the book, `pg2760-images.uk.epub` her
 
 ### 14. For the translation screen
 
-- **An interrupt while a job runs is not a cancellation.** `JobControl.awaitPause` treats an interrupt as cancel only
-  while the job is paused; a background task cancelled during a model call keeps going until the next pause. Checking
-  the thread's interrupt flag at each boundary would fix it.
-- **A refused start sends no event.** When the destination exists without overwrite, or the source does not open,
-  `run()` returns the error and the job ends Failed without a `Finished` event, so a screen that only listens to events
-  never hears the end.
+- **An interrupt while a job runs was not a cancellation — answered by `add-ui-translation-workspace` (task 9.5).**
+  `JobControl.pause()` and `cancel()` now interrupt the job thread while it is inside a model call, the provider client
+  turns the interrupt into `ErrorCode.cancelled`, and `CancellableChatModel` refuses any further call once a stop or a
+  pause is requested, so no request reaches the provider after the button is pressed. What remains by design: nothing
+  interrupts the export stage: a Pause pressed once export began is ignored, and a Stop ends the run Cancelled
+  before the destination is replaced (`BookExporter` checks for it after the temporary file is written and validated),
+  so nothing is written. A Pause pressed in the gap just before export no longer leaves the dashboard on "pausing": `RunSession`
+  drops the pending request when the export stage starts and shows the run as running again.
+- **A refused start sent no event — answered from the screen side.** When the destination exists without overwrite, or
+  the source does not open, `run()` returns the error and the job ends Failed without a `Finished` event. The
+  translating screen no longer depends on events for the end: `TranslationRunner` reads the `Result<JobReport>` that
+  `run()` returns and publishes the terminal state from it. The engine itself still sends no event in that case.
 - **Export verification counts segments only** (`BookExporter.validateCountAndPublish`). A restored segment whose
   structure changed but whose count did not still passes; comparing each re-opened segment's placeholders would not.
 - **FB2 inline `<code>` text is translatable**, masked as a pair, while EPUB's inline `<code>` is one atomic
   placeholder. This follows the shipped document-round-trip specification but not the wording of DD-49, which protects
   inline `<code>`; confirm which is intended.
+
+## Deferred from `add-ui-translation-workspace`
+
+### 15. Left open by the hand test
+
+The hand test of the translation workspace (2026-09-26, English and Ukrainian interface, both themes, Ollama and LM
+Studio, all four formats) and the independent review of the change left these open. None blocked the change.
+
+- **A provider request can hang until Stop.** One Ollama `qwen2.5:1.5b` request, for segment `earth-gravity.md:138`
+  (sent 18:19:06), got no reply for 131 s until the person pressed Stop; Stop aborted it in 7 ms. That is one request
+  in about 1,750. The client is non-streaming, so the log cannot tell a hung server from a very long generation.
+  Before the client was pinned to HTTP/1.1 (task 9.6) there were five three-minute timeouts. Owner: `:llm`
+  (`HttpExchange`, `ProviderConfig.DEFAULT_REQUEST_TIMEOUT`) and `:pipeline`. Suggested fix: stream the reply or send
+  a heartbeat, use a shorter or adaptive timeout, and capture Ollama's own server log when reproducing.
+- **The source language cannot be corrected.** `Croatian_Lesson_Police.epub` declares `en-US` but its text is
+  Ukrainian. The Book Brief's source-language selector is read-only, and the draft prompt tells the model to keep a
+  passage in any other language verbatim, so some Ukrainian stays in the Polish output (the heading "4. Логіка
+  хорватської граматики", the cell "Проживання"). Reproduce: import that book, choose Polish, run to the end, open the
+  result. Owner: `:document` (detection) and `:ui` (the selector), FR-IMPORT-03 and FR-BRIEF-01; backlog row 19.
+  Suggested fix: detect the source language from the text and let the person override it.
+- **Book Brief segmented buttons truncate Ukrainian labels at 1024 px** ("Залишат…", "Транслітерув…",
+  "Залишати оригі…"). Cosmetic. Owner: `:ui` (`BriefCards`, `theme.css`). Suggested fix: shorter Ukrainian labels, or
+  let the segments wrap or size to their text.
+- **The Windows reveal is untested.** `OsCommand` builds `explorer.exe /select,<path>`; Java quotes the whole argument
+  when the path has spaces (`"/select,C:\a b\x.epub"`), which Explorer usually accepts, and Explorer returns exit code
+  1 even on success, which nothing checks. Linux only opens the folder. The macOS command was seen selecting the
+  file. Needs a hand check on Windows. Owner: `:ui` (`OsCommand`, `ProcessCommandLauncher`).
+- **`JobControl.exitModelCall` clears every interrupt on the job thread**, not only one the control sent. An outside
+  interrupt that lands during a model call which still returns a good answer would be swallowed. Nothing in
+  production sends one today (no `cancel(true)` or `shutdownNow` on the job thread). Owner: `:pipeline`. Suggested
+  fix: remember that `interruptModelCall` fired and clear the interrupt only then.
+- **Already tracked elsewhere:** a provider HTTP error such as LM Studio's `400` "Model unloaded" is flagged as a
+  `validation` segment and counted as processed, when it should end the run (`CHANGE_BACKLOG.md`, decision debt D19).

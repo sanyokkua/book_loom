@@ -20,10 +20,34 @@ module ua.bookloom.ui {
     requires javafx.fxml;
     requires javafx.graphics;
     requires com.google.guice;
+    // `@BuildVersion` is a JSR-330 qualifier; Guice honours it but does not re-export the annotation package.
+    requires jakarta.inject;
+    requires org.slf4j;
+    // ICU MessageFormat for the catalogue's plural forms. Ships as an automatic module (Automatic-Module-Name:
+    // com.ibm.icu), which the `-Xlint:-requires-automatic` carve-out in `bookloom.java-conventions` accounts for.
+    requires com.ibm.icu;
+    requires org.controlsfx.controls;
+    requires org.kordamp.ikonli.javafx;
+    requires org.kordamp.ikonli.feather;
 
     exports ua.bookloom.ui;
 
     opens ua.bookloom.ui to
+            com.google.guice,
+            javafx.fxml;
+    opens ua.bookloom.ui.i18n to
+            com.google.guice,
+            javafx.fxml;
+    opens ua.bookloom.ui.notify to
+            com.google.guice,
+            javafx.fxml;
+    opens ua.bookloom.ui.screen to
+            com.google.guice,
+            javafx.fxml;
+    opens ua.bookloom.ui.state to
+            com.google.guice,
+            javafx.fxml;
+    opens ua.bookloom.ui.theme to
             com.google.guice,
             javafx.fxml;
 }

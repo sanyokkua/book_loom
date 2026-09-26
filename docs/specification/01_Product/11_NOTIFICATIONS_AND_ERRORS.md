@@ -14,7 +14,7 @@ completion is surfaced in-app on the Translating dashboard (`08_UI_SCREENS_AND_S
 
 ## toasts {#toasts}
 
-Toasts are transient (ControlsFX `Notifications`) in four types (FR-NOTIF-01):
+Toasts are transient, native token-styled JavaFX nodes in four types (FR-NOTIF-01):
 
 | Type | Token               | Fires when                                                                                  |
 |------|---------------------|---------------------------------------------------------------------------------------------|
@@ -98,12 +98,12 @@ confirm fallback; settings differ from last-used → apply vs continue (DD-31).
 
 **Cancellation is not an error.** A user-initiated stop/cancel of a run
 (`08_UI_SCREENS_AND_STATES.md#screen-translating`) resolves to a `cancelled` outcome, **not** an `AppError`: it produces
-no error dialog and no `err` toast. It is surfaced as a neutral `info` state (the run enters the resumable `stopped`
+no error dialog and no `err` toast. It is surfaced as a neutral `info` state (the run enters the terminal `stopped`
 state), so an intentional stop is never presented as a failure.
 
 ## empty-states {#empty-states}
 
-| ID          | Requirement                                                                                                      |
+| ID          | Requirement                                                                                                                      |
 |-------------|------------------------------------------------------------------------------------------------------------------|
 | FR-NOTIF-5a | Every list/collection screen shows an empty state when it has no data (FR-NOTIF-05).                             |
 | FR-NOTIF-5b | Empty states are: Projects ("No projects yet"), Review ("Nothing flagged"), Providers (no providers configured). |
