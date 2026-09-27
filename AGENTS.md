@@ -62,7 +62,7 @@ Edges point downward only; `:pipeline` sees the three services, services see onl
 | Rule | Enforced by |
 |---|---|
 | FX-free core — only `:ui`/`:app` see JavaFX | ArchUnit `fx-free-core` |
-| Skeleton never regenerated; only text nodes change | per-format golden round-trip test |
+| Skeleton never regenerated; only text nodes and the attribute values DD-47 lists (image alt text) change | per-format golden round-trip test |
 | Records for data, Lombok only on services | ArchUnit `records-first` |
 | Opening a book never needs the network; provider calls are user-triggered; anything else must be optional, safe, and degrade without an error | ArchUnit `no-http-in-core-except-llm` |
 | `Result<T>` + typed `AppError` at every port; no exception crosses a module edge | advisory |

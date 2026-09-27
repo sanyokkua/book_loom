@@ -174,10 +174,12 @@ public final class InferenceGate {
 }
 ```
 
-A local model serves one request at a time (`01_SYSTEM_ARCHITECTURE.md#single-flight-inference`). `run` acquires before
-every provider call and releases in `finally`. The gate is released during backoff or `Retry-After` sleeps and
-re-acquired per attempt, so a retrying call never holds the permit while it sleeps. Interactive `tryRun` and the
-`ErrorCode.busy` UI behavior are deferred until an interactive screen owns them.
+A local model serves one request at a time (`01_SYSTEM_ARCHITECTURE.md#single-flight-inference`). `run` is the gate's
+only entry point: it acquires before every provider call, blocking until the permit is free, and releases in
+`finally`. The gate is released during backoff or `Retry-After` sleeps and re-acquired per attempt, so a retrying call
+never holds the permit while it sleeps. No call is ever refused by the gate itself; the one `busy` outcome belongs to
+the review-retry case, which is refused with `ErrorCode.busy` read from the run record — not from the gate — while
+the project's own run is RUNNING, and its UI behavior is owned by the interactive review screen.
 
 ## http-error-mapping {#http-error-mapping}
 

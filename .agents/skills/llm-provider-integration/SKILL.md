@@ -98,10 +98,13 @@ resolution, and verification. It is FX-free and reaches the network only through
    use it for that one call, never persist/log/echo it. A reference resolving to nothing ->
    `ErrorCode.missingCredential`. Local kinds default to `AuthScheme.NONE`.
 8. **Wrap inference in the gate.** `InferenceGate.run(...)` (blocking, fair semaphore
-   permit=1) acquires before every `chat` and releases in `finally`. Use `tryRun(call,
-   wait)` for interactive actions so a user "retry now" fails fast with `ErrorCode.busy`
-   instead of queueing behind a batch. The gate wraps inference only; parse/QA/persist run
-   concurrently around it.
+   permit=1) is the gate's only entry point — it acquires before every `chat` and releases
+   in `finally`, and simply waits when a call is already in flight; there is no
+   bounded-wait or fail-fast entry point. The one `busy` outcome anywhere in this system is
+   a review retry asked while the project's own run is RUNNING, refused with
+   `ErrorCode.busy` read from the run record before any model call, and never queued
+   behind that run. The gate wraps inference only; parse/QA/persist run concurrently
+   around it.
 9. **Let the service own retry.** Retry only typed retryable errors — `timeout`,
    `rateLimited`, `unreachable`, `upstream` (5xx). Do NOT retry `auth`, `modelNotFound`,
    `contextWindow`, `validation`, `emptyCompletion`. Honor `Retry-After` when present,
@@ -165,7 +168,8 @@ empty-after-sanitize repair retry, then an empty text-fallback result that QA fl
       `ChatRequest.stream` field or streaming path (`chat` is synchronous; streaming
       FR-INFER-04 is deferred from v1).
 - [ ] Credentials are `CredentialRef` only; secrets never stored/logged/echoed.
-- [ ] Every `chat` call goes through the `InferenceGate` (`run`/`tryRun`).
+- [ ] Every `chat` call goes through the `InferenceGate`'s blocking `run`; a review retry's
+      `busy` comes from the run record, never from the gate.
 - [ ] Retry only on the typed retryable set; Retry-After honored; fresh per-attempt timeout.
 - [ ] Every HTTP/transport outcome maps to exactly one typed `AppError`/`ErrorCode`.
 - [ ] Three-stage verification runs on the DRAFT config with per-stage results.
@@ -179,8 +183,10 @@ empty-after-sanitize repair retry, then an empty text-fallback result that QA fl
 - Be strict in the ask (request JSON) but tolerant in the parse: unknown fields ignored,
   missing defaulted. Exactly ONE repair retry, then plain-text fallback — not a repair loop.
 - `emptyCompletion` (200 with blank body) is NOT retryable — retrying wastes the gate.
-- `tryRun` prevents an interactive "retry now" from deadlocking behind a long batch; use
-  it for user-triggered single calls, `run` for the batch loop.
+- The gate has one entry point, the blocking `run`; there is no bounded-wait or fail-fast
+  variant. An interactive "retry now" against a RUNNING project's own run is refused with
+  `ErrorCode.busy` read from the run record before it ever reaches the gate — a paused run
+  holds no permit, so a retry against a paused project reaches the model at once.
 - Verification tests the draft config so a broken save is caught before it is persisted; the
   same connection+model checks run as the per-project preflight before every run.
 - Do not retry `auth`/`contextWindow` — they will never succeed on retry and burn budget.

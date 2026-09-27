@@ -58,9 +58,11 @@ context: |
   ## Non-negotiable invariants (true after every change)
 
   - **FX-free core.** No class in `:api/:util/:document/:llm/:pipeline/:persistence` imports `javafx..`.
-  - **Skeleton is never regenerated.** Only text nodes change; structure/IDs/images/fonts survive a
-    canonical-equal round trip (TXT is exact bytes, DD-43). Inline tags and locked terms mask to `gN`
-    placeholders, are validated as a tag-multiset hard gate on return, then unmasked.
+  - **Skeleton is never regenerated.** Only text nodes and the attribute values DD-47 lists (image alt
+    text) change; structure/IDs/images/fonts survive a canonical-equal round trip (TXT is exact bytes,
+    DD-43). Inline tags and locked terms mask to `gN` placeholders, are validated as a hard gate on
+    return — the multiset, plus each pair's order and nesting, a pair that held text still holding text,
+    and a line break staying inside its innermost pair (ADR-0040 as amended) — then unmasked.
   - **Uniform error envelope.** Boundaries return `Result<T>{data,error}` with one typed
     `AppError{code,title,message,details,retryable,cause}` + `ErrorCode`. No exception crosses a module
     edge. `details` is built only from the safe-details allowlist and never contains secrets. Partial
@@ -71,9 +73,11 @@ context: |
     code. No `synchronized` in new code.
   - **Credentials are a reference, never a secret.** Persist an env-var name or an OS-keychain reference;
     resolve just before the call; never store or log the secret.
-  - **Single-flight inference.** One `InferenceGate` (`Semaphore(1)`, `tryAcquire`) guards all inference,
-    real runs and diagnostics alike. The gate is released across backoff/`Retry-After` sleeps. Retry is
-    service-owned, keyed on typed retryable errors, with a fresh timeout per attempt.
+  - **Single-flight inference.** One `InferenceGate` (`Semaphore(1)`) blocks and guards all inference —
+    real runs and diagnostics alike; no call is ever refused by it. The one `busy` outcome in this system
+    is a review retry asked while the project's own run is RUNNING, refused from the run record and never
+    queued behind that run (`design.md` D9). The gate is released across backoff/`Retry-After` sleeps.
+    Retry is service-owned, keyed on typed retryable errors, with a fresh timeout per attempt.
   - **Token-only theming.** Looked-up colors on `.root`, light + dark from one token set; stylesheets
     attached at Scene level; never `node.setStyle(...)`.
   - **Offline.** No background, scheduled, or unsolicited network call; no telemetry. The only outbound

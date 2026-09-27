@@ -53,8 +53,10 @@ inference gate.
   one `chat` call is in flight (`04_LLM_INTEGRATION.md#inference-gate`).
 - The pipeline may prepare the *next* chunk's context concurrently while a generation is in flight, but the actual
   `chat` call blocks on the gate.
-- Interactive "retry now" uses `tryRun` (`tryAcquire`) so it fails fast with `ErrorCode.busy` rather than deadlocking
-  behind the batch.
+- The gate's single entry point blocks; no call is ever refused by it. An interactive "retry now" against a project
+  whose own run is RUNNING is refused with `ErrorCode.busy` read from the run record, before it ever reaches the gate
+  — never by deadlocking behind the batch. A retry against a paused project's run holds no permit and reaches the
+  gate at once.
 
 ## cancellation {#cancellation}
 
