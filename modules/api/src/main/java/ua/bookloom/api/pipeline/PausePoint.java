@@ -15,5 +15,8 @@ public enum PausePoint {
     BETWEEN_STAGES,
 
     /** When an otherwise terminal error occurs. */
-    ON_ERROR
+    ON_ERROR,
+
+    /** When a segment is flagged. */
+    ON_FLAGGED
 }

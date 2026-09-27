@@ -1,6 +1,7 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Announces that one request is now being sent to the model for a segment.
@@ -11,12 +12,23 @@ import java.util.Objects;
  * counting across them. The event is the only sign of life during a slow request, which is why it exists: no decision
  * follows until the request returns.
  *
- * @param segmentId the stable identifier of the segment the request belongs to
+ * @param segmentId the stable identifier of the segment the request belongs to, or null for a call not tied to one
+ *     segment (a prescan or summary call)
+ * @param kind what the call is for
  */
-public record ModelCallStarted(String segmentId) implements JobEvent {
+public record ModelCallStarted(@Nullable String segmentId, CallKind kind) implements JobEvent {
 
-    /** Rejects an event without a segment id. */
+    /** Rejects an event without a kind. */
     public ModelCallStarted {
-        Objects.requireNonNull(segmentId, "segmentId");
+        Objects.requireNonNull(kind, "kind");
+    }
+
+    /**
+     * Builds a draft-call event for the given segment.
+     *
+     * @param segmentId the stable identifier of the segment the request belongs to
+     */
+    public ModelCallStarted(final String segmentId) {
+        this(Objects.requireNonNull(segmentId, "segmentId"), CallKind.DRAFT);
     }
 }

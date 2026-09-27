@@ -12,7 +12,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -20,10 +19,14 @@ import ua.bookloom.api.pipeline.JobListener;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
+import ua.bookloom.api.pipeline.MemoryUpdated;
+import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.SegmentDrafted;
+import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 
 /**
@@ -44,15 +47,6 @@ final class RunSession implements JobListener {
     private static final String FINISHED = "finished";
     /** A request answered within this many seconds is normal for a local model and is not worth a notice. */
     private static final long WAIT_NOTICE_THRESHOLD_SECONDS = 10;
-
-    /** How a returned result maps onto the mirror. */
-    private record Outcome(
-            RunState state,
-            @Nullable JobReport report,
-            @Nullable AppError error) {}
-
-    /** The counts an outcome line reports. */
-    private record Counts(int segments, int accepted, int flagged) {}
 
     private final StateMirror mirror;
     private final Clock clock;
@@ -193,7 +187,7 @@ final class RunSession implements JobListener {
     void finish(final Result<JobReport> result, final Runnable release) {
         Objects.requireNonNull(result, "result");
         Objects.requireNonNull(release, "release");
-        final Outcome outcome = outcomeOf(result);
+        final RunOutcomes.Outcome outcome = RunOutcomes.outcomeOf(result);
         logOutcome(outcome);
         publishLock.lock();
         try {
@@ -217,11 +211,22 @@ final class RunSession implements JobListener {
             case Resumed resumed -> onPausedOrResumed(resumed.progress(), RESUMED, RunState.RUNNING, false);
             case ModelCallStarted started -> onModelCall(started);
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
+            case SegmentStarted started -> ignoreUntilTask114(started);
+            case SegmentDrafted drafted -> ignoreUntilTask114(drafted);
+            case ModelCallFinished finished -> ignoreUntilTask114(finished);
+            case MemoryUpdated updated -> ignoreUntilTask114(updated);
         }
     }
 
+    // Task 11.4 gives these events meaning on screen; until then dispatch only proves the switch stays exhaustive.
+    private void ignoreUntilTask114(final JobEvent event) {
+        log.debug(
+                "ignoring the {} event until task 11.4 gives it meaning",
+                event.getClass().getSimpleName());
+    }
+
     private void onModelCall(final ModelCallStarted started) {
-        log.trace("model call started for segment {}", started.segmentId());
+        log.trace("model call started for segment {}", started.segmentId() == null ? "none" : started.segmentId());
         publishLock.lock();
         try {
             clearWaitLocked("a new request started");
@@ -347,26 +352,8 @@ final class RunSession implements JobListener {
         return new LogEntry(LogKind.MILESTONE, List.of(token));
     }
 
-    private static Outcome outcomeOf(final Result<JobReport> result) {
-        final AppError refusal = result.error();
-        if (refusal != null) {
-            // A stop the person chose can come back as an error result too; it is the stopped state, not a failure.
-            return refusal.code() == ErrorCode.cancelled
-                    ? new Outcome(RunState.STOPPED, null, null)
-                    : new Outcome(RunState.FAILED, null, refusal);
-        }
-        final JobReport report = Objects.requireNonNull(result.data(), "successful result data");
-        return switch (report.end()) {
-            case COMPLETED -> new Outcome(RunState.COMPLETED, report, null);
-            case CANCELLED -> new Outcome(RunState.STOPPED, report, null);
-            case FAILED -> new Outcome(RunState.FAILED, report, report.error());
-            // JobReport's constructor rejects a non-terminal end, so no report can carry one.
-            case NEW, RUNNING, PAUSED -> throw new IllegalStateException("a job report carried a non-final state");
-        };
-    }
-
-    private void logOutcome(final Outcome outcome) {
-        final Counts counts = countsOf(outcome.report());
+    private void logOutcome(final RunOutcomes.Outcome outcome) {
+        final RunOutcomes.Counts counts = RunOutcomes.countsOf(outcome.report(), lastSeen.get());
         final AppError error = outcome.error();
         log.info(
                 "run ended {}: {} segments, {} accepted, {} flagged, error code {}",
@@ -375,17 +362,5 @@ final class RunSession implements JobListener {
                 counts.accepted(),
                 counts.flagged(),
                 error == null ? "none" : error.code());
-    }
-
-    private Counts countsOf(final @Nullable JobReport report) {
-        if (report != null) {
-            return new Counts(report.segments(), report.accepted(), report.flagged());
-        }
-        final JobProgress seen = lastSeen.get();
-        if (seen == null) {
-            return new Counts(0, 0, 0);
-        }
-        final RunFigures figures = RunFigures.from(seen);
-        return new Counts(figures.total(), figures.accepted(), figures.flagged());
     }
 }

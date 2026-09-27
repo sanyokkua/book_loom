@@ -18,5 +18,8 @@ public enum PauseReason {
     BETWEEN_STAGES,
 
     /** An otherwise terminal error was encountered. */
-    ON_ERROR
+    ON_ERROR,
+
+    /** A segment was flagged. */
+    ON_FLAGGED
 }
