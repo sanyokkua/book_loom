@@ -69,4 +69,18 @@ class UnitTest {
                 .isThrownBy(() ->
                         new Unit("OEBPS/c01.xhtml", 0, "OEBPS/c01.xhtml", "application/xhtml+xml", null, List.of()));
     }
+
+    @Test
+    void isAuxiliary_idAux_isTrue() {
+        final Unit unit = new Unit(Unit.AUXILIARY_ID, 0, "aux", "application/xhtml+xml", SKELETON, List.of());
+
+        assertThat(unit.isAuxiliary()).isTrue();
+    }
+
+    @Test
+    void isAuxiliary_idCh1Xhtml_isFalse() {
+        final Unit unit = new Unit("ch1.xhtml", 0, "ch1.xhtml", "application/xhtml+xml", SKELETON, List.of());
+
+        assertThat(unit.isAuxiliary()).isFalse();
+    }
 }

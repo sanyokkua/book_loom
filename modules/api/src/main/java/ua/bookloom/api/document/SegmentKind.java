@@ -11,8 +11,7 @@ package ua.bookloom.api.document;
  *
  * <p>Every constant ships now even though {@code add-document-skeleton-and-epub-roundtrip} only ever produces
  * {@link #PARAGRAPH}, {@link #HEADING} and {@link #LIST_ITEM} — seam F1 is a fixed target for the changes that
- * follow, so this enum does not grow as each later producer arrives (DD-07,
- * {@code 01_MODULE_INVENTORY.md#module-api}).
+ * follow (DD-07, {@code 01_MODULE_INVENTORY.md#module-api}).
  */
 public enum SegmentKind {
 
@@ -45,6 +44,9 @@ public enum SegmentKind {
 
     /** The book's author, from OPF {@code dc:creator} (EPUB) or {@code title-info/author} (FB2). */
     METADATA_AUTHOR,
+
+    /** The book's description, from OPF {@code dc:description} (EPUB) or an {@code annotation} paragraph (FB2). */
+    METADATA_DESCRIPTION,
 
     /** A Markdown frontmatter value; the frontmatter key is never masked or translated. */
     FRONTMATTER_VALUE,

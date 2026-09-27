@@ -18,6 +18,10 @@ import java.util.Objects;
 public record Unit(
         String id, int order, String href, String mediaType, SkeletonHandle skeleton, List<Segment> segments) {
 
+    /** The synthetic metadata/auxiliary unit's stable id — book title/author/description, frontmatter, alt text and
+     * nav labels are all recorded as segments of this one unit. */
+    public static final String AUXILIARY_ID = "aux";
+
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies {@code segments} into an
      * unmodifiable list, so a caller-held mutable list cannot corrupt this record after construction.
@@ -43,5 +47,14 @@ public record Unit(
     public Unit withSegments(final List<Segment> segments) {
         Objects.requireNonNull(segments, "segments");
         return new Unit(id, order, href, mediaType, skeleton, segments);
+    }
+
+    /**
+     * Reports whether this is the document's synthetic auxiliary/metadata unit.
+     *
+     * @return {@code true} if this unit's id is {@link #AUXILIARY_ID}, {@code false} otherwise
+     */
+    public boolean isAuxiliary() {
+        return id.equals(AUXILIARY_ID);
     }
 }
