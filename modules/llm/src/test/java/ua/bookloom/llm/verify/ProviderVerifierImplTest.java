@@ -128,6 +128,7 @@ class ProviderVerifierImplTest {
                 .extracting(StageOutcome::status)
                 .containsExactly(StageStatus.PASSED, StageStatus.FAILED);
         assertThat(error(report.stages().get(1)).code()).isEqualTo(ErrorCode.modelUnavailable);
+        assertThat(report.stages().get(1).count()).isEqualTo(1);
         server.verify(0, postRequestedFor(urlEqualTo(OLLAMA_CHAT_PATH)));
     }
 
