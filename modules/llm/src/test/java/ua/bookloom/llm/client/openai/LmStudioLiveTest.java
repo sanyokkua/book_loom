@@ -104,6 +104,26 @@ class LmStudioLiveTest {
         assertThat(reply.path("target").asText()).isEqualTo(TOKEN_REPLY);
     }
 
+    // Real usage figures let the Translating screen's throughput meter read from the server, not an estimate.
+    @Test
+    void chat_realLmStudio_reportsTokenUsage() {
+        final Result<ChatResponse> result = client().chat(
+                        modelId(),
+                        new ChatRequest(
+                                List.of(new ChatMessage(
+                                        ChatRole.USER, "Return only {\"target\":\"HELLO\"} with no other text.")),
+                                0.0,
+                                TOKEN_FORMAT))
+                .result();
+
+        final ChatResponse response = Objects.requireNonNull(result.data(), "chat response");
+        assertThat(result.isOk()).as("LM Studio chat result: " + result.error()).isTrue();
+        assertThat(response.usage()).isNotNull();
+        assertThat(response.usage().prompt()).isGreaterThan(0);
+        assertThat(response.usage().completion()).isGreaterThan(0);
+        assertThat(response.usage().generation()).isPositive();
+    }
+
     private static OpenAiCompatibleClient client() {
         final URI origin = URI.create(
                 Objects.requireNonNull(System.getenv("BOOKLOOM_LIVE_LMSTUDIO_URL"), "BOOKLOOM_LIVE_LMSTUDIO_URL"));

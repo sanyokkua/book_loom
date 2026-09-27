@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
@@ -100,6 +101,30 @@ class OllamaLiveTest {
 
         final JsonNode reply = new LlmModule().objectMapper().readTree(responseContent(result));
         assertThat(reply.path("target").asText()).isEqualTo(TOKEN_REPLY);
+    }
+
+    // A real generation call at the effective context size reports a normal finish and real usage figures.
+    @Test
+    void chat_realOllamaWithContext8192_reportsNormalFinishAndTokenUsage() {
+        final Result<ChatResponse> result = client().chat(
+                        modelId(),
+                        new ChatRequest(
+                                List.of(new ChatMessage(
+                                        ChatRole.USER,
+                                        "Return only {\"target\":\"" + TOKEN_REPLY + "\"} with no other text.")),
+                                0.0,
+                                TOKEN_FORMAT,
+                                null,
+                                8192,
+                                null))
+                .result();
+
+        final ChatResponse response = Objects.requireNonNull(result.data(), "chat response");
+        assertThat(result.isOk()).as("Ollama chat result: " + result.error()).isTrue();
+        assertThat(response.finishReason()).isEqualTo(FinishReason.STOP);
+        assertThat(response.usage()).isNotNull();
+        assertThat(response.usage().completion()).isGreaterThan(0);
+        assertThat(response.usage().generation()).isPositive();
     }
 
     private static OllamaClient client() {

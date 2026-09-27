@@ -266,7 +266,7 @@ planned and applied in a session that remembers nothing about the others. These 
   - **Log:** DEBUG the format name and which reply shape was chosen (plus the existing message-count line); TRACE the message and reply as today.
   - **Done when:** `./gradlew :llm:check` is green.
 
-- [ ] 3.6 Add `liveLocal` cases proving that a real Ollama and a real LM Studio return token usage and that Ollama accepts `num_ctx` 8192, each skipped when its endpoint variable is unset. Usage field names and presence drift between server versions in ways WireMock cannot show, and a throughput figure built on a field the real server stopped sending would silently fall back to estimates forever. → `:llm`
+- [x] 3.6 Add `liveLocal` cases proving that a real Ollama and a real LM Studio return token usage and that Ollama accepts `num_ctx` 8192, each skipped when its endpoint variable is unset. Usage field names and presence drift between server versions in ways WireMock cannot show, and a throughput figure built on a field the real server stopped sending would silently fall back to estimates forever. → `:llm`
   - **Depends on:** tasks 3.1 and 3.2.
   - **Excludes:** any CI change — `liveLocal` never runs in `check` or CI.
   - **Read:** `.claude/rules/testing.md` "Local-only (`liveLocal`)"; `modules/llm/src/test/java/ua/bookloom/llm/client/ollama/OllamaLiveTest.java` and `.../openai/LmStudioLiveTest.java` (`@Tag("liveLocal")`, `@EnabledIfEnvironmentVariable` on `BOOKLOOM_LIVE_OLLAMA_URL` / `BOOKLOOM_LIVE_LMSTUDIO_URL`, the model from `BOOKLOOM_LIVE_OLLAMA_MODEL` / `BOOKLOOM_LIVE_LMSTUDIO_MODEL`); `modules/build-logic/src/main/kotlin/bookloom.test-conventions.gradle.kts` (the tag partition).
