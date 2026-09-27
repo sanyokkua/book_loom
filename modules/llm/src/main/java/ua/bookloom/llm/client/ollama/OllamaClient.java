@@ -29,6 +29,7 @@ import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
+import ua.bookloom.llm.http.RequestTimeouts;
 import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.ProviderCallResult;
@@ -190,13 +191,14 @@ public final class OllamaClient implements ProviderClient {
     }
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
-        final Result<HttpReply> response = exchange.post(config, CHAT_PATH, body);
+        final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request.expectedOutputTokens());
+        final Result<HttpReply> response = exchange.post(chatConfig, CHAT_PATH, body);
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
         final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
         return ProviderCallResult.fromHttpReply(
-                HttpErrorMapper.map(reply, config, CallPurpose.CHAT, modelId),
+                HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId),
                 reply,
                 CapabilityRejections.from(reply, request));
     }

@@ -1,5 +1,6 @@
 package ua.bookloom.llm.client.ollama;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
@@ -17,9 +18,12 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -71,6 +75,57 @@ class OllamaClientUsageTest {
         assertThat(sendChat(messageOnlyRequest()).usage()).isEqualTo(expected);
     }
 
+    // A configured 1 s timeout is replaced by the 200 s a 400-token expectation scales to.
+    @Test
+    void chat_expectedOutputScalesTimeoutPastAShortConfiguredFloor_getsItsReply() {
+        server.stubFor(post(urlEqualTo(CHAT_PATH))
+                .willReturn(aResponse()
+                        .withFixedDelay(1500)
+                        .withBody(
+                                "{\"model\":\"gemma4:e4b-mlx\",\"message\":{\"content\":\"reply\"},\"done_reason\":\"stop\"}")
+                        .withHeader("Content-Type", "application/json")));
+
+        final ChatResponse response = sendChat(
+                client(Duration.ofSeconds(1)),
+                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, null, 400));
+
+        assertThat(response.content()).isEqualTo("reply");
+    }
+
+    // With no expected output, a 1 s configured timeout is kept exactly, so the delayed reply is never seen.
+    @Test
+    void chat_noExpectedOutputWithShortConfiguredTimeout_failsAtTheConfiguredFloor() {
+        server.stubFor(post(urlEqualTo(CHAT_PATH))
+                .willReturn(aResponse().withFixedDelay(1500).withBody("{}")));
+
+        final Result<ChatResponse> result = client(Duration.ofSeconds(1))
+                .chat(MODEL_ID, messageOnlyRequest())
+                .result();
+
+        assertTimedOutAtOneSecond(result);
+    }
+
+    // A one-token expectation still scales to less than the 1 s floor, so the floor still applies.
+    @Test
+    void chat_tinyExpectedOutputWithShortConfiguredTimeout_failsAtTheConfiguredFloor() {
+        server.stubFor(post(urlEqualTo(CHAT_PATH))
+                .willReturn(aResponse().withFixedDelay(1500).withBody("{}")));
+
+        final Result<ChatResponse> result = client(Duration.ofSeconds(1))
+                .chat(
+                        MODEL_ID,
+                        new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, null, 1))
+                .result();
+
+        assertTimedOutAtOneSecond(result);
+    }
+
+    private static void assertTimedOutAtOneSecond(Result<ChatResponse> result) {
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.timeout);
+        assertThat(error.details()).contains("timeoutMs=1000");
+    }
+
     private static Stream<Arguments> contextWindowRequests() {
         return Stream.of(
                 arguments(
@@ -103,18 +158,22 @@ class OllamaClientUsageTest {
     }
 
     private ChatResponse sendChat(ChatRequest request) {
-        final Result<ChatResponse> result = client().chat(MODEL_ID, request).result();
+        return sendChat(client(), request);
+    }
+
+    private ChatResponse sendChat(OllamaClient client, ChatRequest request) {
+        final Result<ChatResponse> result = client.chat(MODEL_ID, request).result();
         assertThat(result.isOk()).as("Ollama chat result: " + result.error()).isTrue();
         return Objects.requireNonNull(result.data(), "chat response");
     }
 
     private OllamaClient client() {
+        return client(Duration.ofSeconds(2));
+    }
+
+    private OllamaClient client(Duration requestTimeout) {
         final ProviderConfig config = new ProviderConfig(
-                "ollama",
-                ProviderKind.OLLAMA,
-                URI.create(server.baseUrl()),
-                Duration.ofSeconds(2),
-                Duration.ofSeconds(2));
+                "ollama", ProviderKind.OLLAMA, URI.create(server.baseUrl()), Duration.ofSeconds(2), requestTimeout);
         return new OllamaClient(config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
     }
 

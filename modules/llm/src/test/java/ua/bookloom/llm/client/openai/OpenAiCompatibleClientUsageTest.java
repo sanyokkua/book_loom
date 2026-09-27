@@ -1,5 +1,6 @@
 package ua.bookloom.llm.client.openai;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
@@ -20,6 +21,8 @@ import java.util.stream.LongStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -91,6 +94,57 @@ class OpenAiCompatibleClientUsageTest {
         assertThat(sendChat(client(() -> 0L), messageOnlyRequest()).usage()).isNull();
     }
 
+    // A configured 1 s timeout is replaced by the 200 s a 400-token expectation scales to.
+    @Test
+    void chat_expectedOutputScalesTimeoutPastAShortConfiguredFloor_getsItsReply() {
+        server.stubFor(post(urlEqualTo(CHAT_PATH))
+                .willReturn(aResponse()
+                        .withFixedDelay(1500)
+                        .withBody(
+                                "{\"model\":\"google/gemma-4-e4b\",\"choices\":[{\"message\":{\"content\":\"reply\"},\"finish_reason\":\"stop\"}]}")
+                        .withHeader("Content-Type", "application/json")));
+
+        final ChatResponse response = sendChat(
+                client(() -> 0L, Duration.ofSeconds(1)),
+                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, null, 400));
+
+        assertThat(response.content()).isEqualTo("reply");
+    }
+
+    // With no expected output, a 1 s configured timeout is kept exactly, so the delayed reply is never seen.
+    @Test
+    void chat_noExpectedOutputWithShortConfiguredTimeout_failsAtTheConfiguredFloor() {
+        server.stubFor(post(urlEqualTo(CHAT_PATH))
+                .willReturn(aResponse().withFixedDelay(1500).withBody("{}")));
+
+        final Result<ChatResponse> result = client(() -> 0L, Duration.ofSeconds(1))
+                .chat(MODEL_ID, messageOnlyRequest())
+                .result();
+
+        assertTimedOutAtOneSecond(result);
+    }
+
+    // A one-token expectation still scales to less than the 1 s floor, so the floor still applies.
+    @Test
+    void chat_tinyExpectedOutputWithShortConfiguredTimeout_failsAtTheConfiguredFloor() {
+        server.stubFor(post(urlEqualTo(CHAT_PATH))
+                .willReturn(aResponse().withFixedDelay(1500).withBody("{}")));
+
+        final Result<ChatResponse> result = client(() -> 0L, Duration.ofSeconds(1))
+                .chat(
+                        MODEL_ID,
+                        new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, null, 1))
+                .result();
+
+        assertTimedOutAtOneSecond(result);
+    }
+
+    private static void assertTimedOutAtOneSecond(Result<ChatResponse> result) {
+        final AppError error = Objects.requireNonNull(result.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.timeout);
+        assertThat(error.details()).contains("timeoutMs=1000");
+    }
+
     private void stubChat(String body) {
         server.stubFor(post(urlEqualTo(CHAT_PATH)).willReturn(okJson(body)));
     }
@@ -104,12 +158,16 @@ class OpenAiCompatibleClientUsageTest {
     }
 
     private OpenAiCompatibleClient client(LongSupplier nanoTime) {
+        return client(nanoTime, Duration.ofSeconds(2));
+    }
+
+    private OpenAiCompatibleClient client(LongSupplier nanoTime, Duration requestTimeout) {
         final ProviderConfig config = new ProviderConfig(
                 "lmstudio",
                 ProviderKind.OPENAI_COMPATIBLE,
                 URI.create(server.baseUrl() + "/v1"),
                 Duration.ofSeconds(2),
-                Duration.ofSeconds(2));
+                requestTimeout);
         return new OpenAiCompatibleClient(
                 config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), nanoTime);
     }
