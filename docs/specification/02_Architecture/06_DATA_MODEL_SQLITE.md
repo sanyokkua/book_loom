@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-07-18
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-27
 **Cross-references:** `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
 `docs/specification/02_Architecture/09_ERROR_HANDLING.md`, `docs/specification/02_Architecture/10_DI_AND_LIFECYCLE.md`,
@@ -69,6 +69,10 @@ falling back to a default. The project also stores a **document-level content ha
 whole imported source at import time; it is distinct from the per-segment `source_hash` and is used on resume to detect
 that the underlying file changed since the skeleton was built (`EC-RESUME-*` in `05_RELIABILITY_AND_RESUME.md`).
 
+A run's **current state** — `RUNNING`, `PAUSED`, `COMPLETED`, `CANCELLED`, `FAILED`, or "no run yet" — lives on an
+in-memory `RunRecord` per project, which this change maps into SQLite alongside the tables below; review-desk actions
+such as retry read it to decide whether the project's own run is in progress (`ADR-0034`, `02_Architecture/09_ERROR_HANDLING.md#ui-surfacing`).
+
 ### units {#units}
 
 Spine units per project (skeleton lives on disk / blob; DB holds order + metadata).
@@ -79,15 +83,27 @@ The ordered segment list with status and translation (mirrors `03_DOCUMENT_MODEL
 composite string **`{unitId}:{ord}`** (kept for stable, human-readable IDs and deterministic TM/context keys);
 `UNIQUE(unit_id, ord)` enforces spine ordering. `kind` is the segment classifier enum:
 `PARAGRAPH | HEADING | VERSE_LINE | …` plus the synthetic-metadata kinds
-`METADATA_TITLE | METADATA_AUTHOR | FRONTMATTER_VALUE | ALT | NAV_LABEL` (DD-47, `03_DOCUMENT_MODEL.md`), which anchor
-to OPF/frontmatter/attribute/nav nodes rather than spine prose. `prev_key`/`next_key` are the **TM context
-neighbours** — the `source_hash`-domain keys of the immediately preceding and following segments used to build
-`tm.context_key`; both are **null at spine ends** (first segment has no `prev_key`, last has no `next_key`), which the
-context hash represents with the `⟦BOS⟧`/`⟦EOS⟧` sentinels described under [tm](#tm).
+`METADATA_TITLE | METADATA_AUTHOR | METADATA_DESCRIPTION | FRONTMATTER_VALUE | ALT | NAV_LABEL` (DD-47,
+`03_DOCUMENT_MODEL.md`), which anchor to OPF/frontmatter/attribute/nav nodes rather than spine prose. `prev_key`/
+`next_key` are the **TM context neighbours** — the `source_hash`-domain keys of the immediately preceding and
+following segments used to build `tm.context_key`; both are **null at spine ends** (first segment has no `prev_key`,
+last has no `next_key`), which the context hash represents with the `⟦BOS⟧`/`⟦EOS⟧` sentinels described under
+[tm](#tm).
+
+`machine_target` holds the **last target that passed every hard gate** — the machine's own answer, never overwritten by
+a person's edit; `target_inner` holds the person's edit, when there is one. The **effective target** a review screen or
+an export reads is `target_inner` when it is present, else `machine_target`. Beyond the columns below, the other
+in-memory fields of a segment's decision — its masked machine target and masked user target, judge score, QA findings,
+the path it was decided by, its repair-round count, whether a person has reviewed it, and the context snapshot holding
+the exact texts its first draft saw — are likewise mapped into this table or a sibling one by the same change
+(`design.md` D2). A record whose kind the Book-Brief "Also translate" switches currently exclude is **not** a stored
+status: "kept as source by choice" is derived, at the moment it is read, from the brief's current switches against the
+segment's `kind` (`design.md` D2) — no column records it.
 
 ### glossary {#glossary}
 
-The name/term dictionary — term, type, gender, locked flag, target rendering. `gender` accepts
+The name/term dictionary — term, type, gender, locked flag, target rendering. `type` accepts
+`character | place | term | title | other`. `gender` accepts
 `masculine | feminine | neuter | unknown` (the pre-scan/deterministic fallback yields `unknown` until the user or a
 backward-revision pass fills it in, DD-46).
 
@@ -178,21 +194,22 @@ CREATE TABLE units (
 );
 
 CREATE TABLE segments (
-  id           TEXT PRIMARY KEY,           -- {unitId}:{ord}  (composite string PK, stable & human-readable)
-  project_id   TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  unit_id      TEXT NOT NULL REFERENCES units(id) ON DELETE CASCADE,
-  ord          INTEGER NOT NULL,
-  kind         TEXT NOT NULL,              -- PARAGRAPH|HEADING|VERSE_LINE|...|METADATA_TITLE|METADATA_AUTHOR|FRONTMATTER_VALUE|ALT|NAV_LABEL
-  source_inner TEXT NOT NULL,
-  masked       TEXT NOT NULL,
-  placeholders TEXT NOT NULL,              -- JSON map gN -> fragment
-  source_hash  TEXT NOT NULL,              -- over UNMASKED, NFC-normalized source_inner
-  prev_key     TEXT,                       -- TM context neighbour: preceding segment's source_hash-domain key; NULL at spine start (⟦BOS⟧)
-  next_key     TEXT,                       -- TM context neighbour: following segment's source_hash-domain key; NULL at spine end (⟦EOS⟧)
-  target_inner TEXT,
-  status       TEXT NOT NULL DEFAULT 'PENDING', -- PENDING|ACCEPTED|FLAGGED|REVISED
-  confidence   REAL,
-  updated_at   TEXT NOT NULL,
+  id             TEXT PRIMARY KEY,           -- {unitId}:{ord}  (composite string PK, stable & human-readable)
+  project_id     TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  unit_id        TEXT NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  ord            INTEGER NOT NULL,
+  kind           TEXT NOT NULL,              -- PARAGRAPH|HEADING|VERSE_LINE|...|METADATA_TITLE|METADATA_AUTHOR|METADATA_DESCRIPTION|FRONTMATTER_VALUE|ALT|NAV_LABEL
+  source_inner   TEXT NOT NULL,
+  masked         TEXT NOT NULL,
+  placeholders   TEXT NOT NULL,              -- JSON map gN -> fragment
+  source_hash    TEXT NOT NULL,              -- over UNMASKED, NFC-normalized source_inner
+  prev_key       TEXT,                       -- TM context neighbour: preceding segment's source_hash-domain key; NULL at spine start (⟦BOS⟧)
+  next_key       TEXT,                       -- TM context neighbour: following segment's source_hash-domain key; NULL at spine end (⟦EOS⟧)
+  machine_target TEXT,                       -- the last target that passed every hard gate; never overwritten by a user edit
+  target_inner   TEXT,                       -- the user's edit, when present; the effective target is this, else machine_target
+  status         TEXT NOT NULL DEFAULT 'PENDING', -- PENDING|ACCEPTED|FLAGGED|REVISED
+  confidence     REAL,
+  updated_at     TEXT NOT NULL,
   UNIQUE(unit_id, ord)
 );
 CREATE INDEX ix_seg_project_status ON segments(project_id, status);
@@ -201,7 +218,7 @@ CREATE TABLE glossary (
   id          TEXT PRIMARY KEY,
   project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   term        TEXT NOT NULL,
-  type        TEXT,                        -- person|place|org|term
+  type        TEXT,                        -- character|place|term|title|other
   gender      TEXT,                        -- masculine|feminine|neuter|unknown  (unknown until user/backward-revision fills it, DD-46)
   target      TEXT,                        -- chosen rendering
   locked      INTEGER NOT NULL DEFAULT 0,
@@ -277,7 +294,7 @@ encoding decided solely by `type`. A single **codec keyed off `type`** owns both
 site formats a settings value ad hoc.
 
 | `type`   | Canonical encoding of `value`                                                      |
-|----------|------------------------------------------------------------------------------------|
+|----------|--------------------------------------------------------------------------------------|
 | `BOOL`   | the literal string `true` or `false` (lowercase).                                  |
 | `INT`    | `Long.toString(v)` under `Locale.ROOT` (no grouping separators, no locale digits). |
 | `DOUBLE` | `Double.toString(v)` under `Locale.ROOT` (`.` decimal point, no grouping).         |

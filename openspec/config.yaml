@@ -30,8 +30,8 @@ context: |
   Java 25 (LTS) - JavaFX 25 (LTS) - Gradle (Kotlin DSL) + version catalog (`gradle/libs.versions.toml`)
   + dependency locking - Guice DI (constructor injection only) - SQLite (sqlite-jdbc, WAL) + Flyway
   (additive `V{ver}__desc.sql` migrations) + JDBI 3 (no ORM) - JDOM2/dom4j + jsoup + `java.util.zip`
-  (documents) + a CommonMark library (Markdown) - `java.net.http` + Jackson (LLM HTTP/JSON) - Lingua +
-  ICU4J (language detect / segmentation) - SLF4J 2 + Logback 1.5 - Spotless (Palantir, 120 col) +
+  (documents) + a CommonMark library (Markdown) - `java.net.http` + Jackson (LLM HTTP/JSON) - ICU4J for
+  segmentation and charset detection - SLF4J 2 + Logback 1.5 - Spotless (Palantir, 120 col) +
   Error Prone/NullAway (JSpecify `@NullMarked`) + Checkstyle + SpotBugs/FindSecBugs + ArchUnit - Lefthook -
   JUnit 5 + AssertJ + WireMock + TestFX (JavaFX 26 built-in headless) - jpackage (unsigned, per-OS; Windows is a
   portable app-image zip, never an installer). MIT license; permissive dependencies only
@@ -74,7 +74,7 @@ context: |
   - **Single-flight inference.** One `InferenceGate` (`Semaphore(1)`, `tryAcquire`) guards all inference,
     real runs and diagnostics alike. The gate is released across backoff/`Retry-After` sleeps. Retry is
     service-owned, keyed on typed retryable errors, with a fresh timeout per attempt.
-  - **Token-only theming.** Looked-up colors on `.root`; light + dark from one token set; stylesheets
+  - **Token-only theming.** Looked-up colors on `.root`, light + dark from one token set; stylesheets
     attached at Scene level; never `node.setStyle(...)`.
   - **Offline.** No background, scheduled, or unsolicited network call; no telemetry. The only outbound
     traffic ever is user-triggered provider communication (inference, model discovery, verification) with

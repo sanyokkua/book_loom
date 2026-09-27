@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** architect, engineering (`:document`), QA **Last Updated:**
-2026-07-18 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
+2026-09-27 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/00_Foundation/02_GLOSSARY.md`, `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`
 
 # Document Formats
@@ -30,7 +30,7 @@ the round-trip golden requirement below meaningful.
 
 | Preserved verbatim                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Translated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Element structure, nesting, and order; attributes and element IDs; images and fonts; ZIP layout and file order; inline markup (masked); inline code `<code>` (masked as an atomic protected placeholder, its text kept exactly — DD-49); block code listings `<pre>`/`<pre><code>` (non-translatable blocks — never segmented, skeleton-preserved, DD-49); MathML `<math>` (verbatim, DD-49); index-term and cross-reference anchor ids/targets (DD-49); URLs, standalone/typographic numerals, numerals inside locked terms, and locked terms (masked); the OPF manifest/spine identity. | Visible prose text nodes; headings, list items, table cell text; figure captions; verse lines; footnote/endnote body text (per policy); admonition/sidebar prose (note/tip/warning/sidebar blocks — ordinary translatable prose, DD-49); visible link text of index-term/cross-reference anchors (DD-49); prose numerals (kept translatable so they inflect/localize); metadata title/author (as configured); frontmatter values in Markdown (as configured); image `alt`/caption text (as configured); EPUB nav (EPUB 3) / NCX (EPUB 2) ToC labels (as configured). |
+| Element structure, nesting, and order; attributes and element IDs; images and fonts; ZIP layout and file order; inline markup (masked); inline code `<code>` (masked as an atomic protected placeholder, its text kept exactly — DD-49); block code listings `<pre>`/`<pre><code>` (non-translatable blocks — never segmented, skeleton-preserved, DD-49); MathML `<math>` (verbatim, DD-49); index-term and cross-reference anchor ids/targets (DD-49); URLs and locked terms (masked). No numeral, standalone or in prose, is masked in this build (owner decision D-7). | Visible prose text nodes; headings, list items, table cell text; figure captions; verse lines; footnote/endnote body text (per policy); admonition/sidebar prose (note/tip/warning/sidebar blocks — ordinary translatable prose, DD-49); visible link text of index-term/cross-reference anchors (DD-49); every numeral, wherever it appears, so it inflects and localizes; metadata title/author (as configured); frontmatter values in Markdown (as configured); image `alt`/caption text (as configured); EPUB nav (EPUB 3) / NCX (EPUB 2) ToC labels (as configured). |
 
 The last four rows on the "translated" side (metadata title/author, frontmatter values, `alt`/caption, nav/NCX ToC
 labels) are governed by the Book-Brief "Also translate" toggle group (see FR-BRIEF and DD-47); each is modelled as a
@@ -41,17 +41,21 @@ anchored to the OPF / frontmatter / attribute / nav node it came from
 ## round-trip-golden-requirement {#round-trip-golden-requirement}
 
 For each format, parsing to skeleton + segments and reassembling **without changing any target text** shall reproduce a
-**canonical-equal** copy of the source, except for intentional language-metadata updates (FR-DOC-09). Equality is
-asserted on the **canonicalized** form, not on raw bytes (DD-43, ADR-0003), because a faithful re-serializer may
-normalize entities, attribute quoting, or insignificant whitespace. Per format:
+**canonical-equal** copy of the source, except for intentional language-metadata updates (FR-DOC-09) — including the
+Markdown frontmatter `lang` value, which is intentional language metadata like OPF `dc:language` and FB2 `<lang>`, not
+an accidental deviation. Equality is asserted on the **canonicalized** form, not on raw bytes (DD-43, ADR-0003),
+because a faithful re-serializer may normalize entities, attribute quoting, or insignificant whitespace. Per format:
 
 - **EPUB** — compare entry-by-entry: each text entry (OPF, XHTML, nav, NCX, CSS) by its **decompressed canonical
   content**; **entry order preserved**; `mimetype` **first and STORED**; every unchanged binary entry (images, fonts) by
   **decompressed bytes** (ZIP recompression differences allowed).
 - **Markdown** — compare by **re-parse-equal AST**: re-parsing the output yields a CommonMark AST equal to the source
-  AST.
-- **TXT** — compare **exactly** (byte-for-byte), since TXT reassembles by splicing target spans into the original byte
-  buffer (see `#txt`).
+  AST. A no-edit export preserves the resolved encoding and BOM presence; an encoding-switched fixture (see
+  `#encoding-and-bom`) is asserted against a re-parsed canonical form instead (extending EC-FB2-1's carve-out to
+  Markdown, ADR-0029).
+- **TXT** — compare **exactly** (byte-for-byte) for a no-edit export, since TXT reassembles by splicing target spans
+  into the original byte buffer (see `#txt`); an encoding-switched fixture (see `#encoding-and-bom`) is likewise
+  asserted against a re-parsed canonical form rather than raw bytes (ADR-0029).
 - **FB2** — compare by canonical XML over the parsed tree; when the export legitimately switches the declared encoding
   to UTF-8 (see `#fb2`, EC-FB2-1), that fixture is **excluded from the source-language golden** and instead asserted
   against a re-parsed canonical tree.
@@ -73,7 +77,7 @@ is the complete export contract — there is no format-conversion path to verify
 | FR-DOC-EPUB-6 | On export, set the target language in the OPF: **replace the first `dc:language`** (adding one if none is present), leaving any additional `dc:language` entries untouched (FR-DOC-07).                                                                                                                                                                                                                                                                                                                                                                               |
 | FR-DOC-EPUB-7 | Detect content-encryption DRM and refuse to process it, while **allowing the two known IDPF font-obfuscation algorithms** and processing normally (FR-IMPORT-04; see EC-EPUB-1, EC-FONT-1).                                                                                                                                                                                                                                                                                                                                                                           |
 | FR-DOC-EPUB-8 | Translate ToC labels as configured: EPUB 3 nav-document (`nav[epub:type=toc]`) link text and EPUB 2 NCX `navLabel/text`, modelled as `NAV_LABEL` metadata-unit segments (DD-47). Nav/NCX resources are **carved out of the out-of-spine verbatim rule** (see EC-EPUB-3) so their labels can be translated; their structure, `playOrder`, and href targets are preserved. Real EPUB 3 books often ship a **legacy NCX alongside the nav-document**; when both are present, translate **both, consistently** — the same label yields the same rendering in nav and NCX. |
-| FR-DOC-EPUB-9 | Preserve code, math, and technical markup per `#code-and-technical-content` (DD-49): mask inline `<code>` atomically; treat `<pre>`/`<pre><code>` listings as non-translatable blocks; carry MathML `<math>` through verbatim; keep index-term/cross-reference anchor ids and targets while their visible link text stays translatable.                                                                                                                                                                                                                               |
+| FR-DOC-EPUB-9 | Preserve code, math, and technical markup per `#code-and-technical-content` (DD-49): mask inline `<code>` atomically; treat `<pre>`/`<pre><code>` listings as non-translatable blocks; carry MathML `<math>` through verbatim; keep index-term/cross-reference anchor ids and targets while their visible link text stays translatable.                                                                                                                                                                                                                              |
 
 ### epub-edge-cases {#epub-edge-cases}
 
@@ -100,7 +104,7 @@ is the complete export contract — there is no format-conversion path to verify
 ### fb2-edge-cases {#fb2-edge-cases}
 
 | ID       | Edge case                                                | Expected behaviour                                                                                                                                                                                                                                                                                                                              |
-|----------|------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|----------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | EC-FB2-1 | Declared encoding is `windows-1251` (or other non-UTF-8) | Read using the declared encoding (after BOM sniff / ICU charset detection; see `#encoding-and-bom`). On export, keep it if every target character is representable; otherwise switch to UTF-8 and rewrite the XML declaration. An encoding-switched fixture is excluded from the source-language golden (see `#round-trip-golden-requirement`). |
 | EC-FB2-2 | Mismatch between XML declaration and actual bytes        | Detect and reject as corrupt, or honour a reliably detected encoding; never silently corrupt.                                                                                                                                                                                                                                                   |
 | EC-FB2-3 | Notes body with cross-references to note anchors         | Preserve anchor/link IDs; translate note text per policy.                                                                                                                                                                                                                                                                                       |
@@ -112,7 +116,7 @@ is the complete export contract — there is no format-conversion path to verify
 |-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-DOC-MD-1 | Parse Markdown into an AST and translate prose text nodes only.                                                                                                                                                                                                                   |
 | FR-DOC-MD-2 | Protect inline code (masked as an atomic protected placeholder) and URLs from translation; treat fenced/indented code blocks as **non-translatable blocks** — excluded from segmentation and the token budget, preserved via the skeleton (DD-49, `#code-and-technical-content`). |
-| FR-DOC-MD-3 | Protect frontmatter keys; translate frontmatter values only as configured, modelled as `FRONTMATTER_VALUE` metadata-unit segments anchored to the frontmatter node (DD-47).                                                                                                       |
+| FR-DOC-MD-3 | Protect frontmatter keys; translate a frontmatter value as a `FRONTMATTER_VALUE` metadata-unit segment only when it is a single-line, untyped text scalar — never a key, never `lang`/`language`, never a YAML-typed value (null, boolean, number, date), a list, a map, or a URL/e-mail (owner decision D-2). An existing top-level `lang` value is replaced by the target language tag in its own quote style on export; `lang` is never added where absent, and `language` is left untouched. |
 | FR-DOC-MD-4 | Preserve Markdown structure (headings, lists, tables, blockquotes, emphasis) on reassembly.                                                                                                                                                                                       |
 
 ### markdown-edge-cases {#markdown-edge-cases}
@@ -121,13 +125,13 @@ is the complete export contract — there is no format-conversion path to verify
 |---------|--------------------------------------------------------------------|---------------------------------------------------------------------------|
 | EC-MD-1 | Inline code or link label containing translatable-looking text | Keep code spans verbatim; translate link text but never the URL target. |
 | EC-MD-2 | HTML embedded in Markdown                                      | Preserve raw HTML structure; translate only text nodes within it.       |
-| EC-MD-3 | Frontmatter with mixed keys/values                             | Never translate keys; translate values only where configured.           |
+| EC-MD-3 | Frontmatter with mixed keys/values                             | Never translate a key. Translate a value only when it qualifies as a text scalar under owner decision D-2 — a single-line, untyped, non-URL text value that is not `lang` or `language`; a typed, multi-line, list, map, or `lang`/`language` value is always preserved verbatim. |
 
 ## txt {#txt}
 
 | ID           | Requirement                                                                                                                                                                                                                                                           |
 |--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-DOC-TXT-1 | Treat plain text as paragraph-delimited segments (blank-line separated), preserving line endings and encoding.                                                                                                                                                        |
+| FR-DOC-TXT-1 | Treat plain text as paragraph-delimited segments (blank-line separated), preserving line endings; preserving encoding **unless** a target character is unrepresentable in it, in which case the whole document is written as UTF-8 (ADR-0029).                       |
 | FR-DOC-TXT-2 | Preserve whitespace/indentation structure on reassembly.                                                                                                                                                                                                              |
 | FR-DOC-TXT-3 | Model the TXT skeleton as the **original byte buffer plus a list of segment byte-span slots**; export splices each target span back into its slot, leaving all other bytes untouched (so the no-edit round trip is byte-exact; see `#round-trip-golden-requirement`). |
 
@@ -141,10 +145,15 @@ Character encoding is resolved once on import and re-emitted faithfully on expor
    charset detection over the bytes.
 3. **Default UTF-8** — if detection is inconclusive, default to UTF-8.
 
-The detected charset **and** whether a BOM was present are recorded on the `Document` and reproduced verbatim on export.
-Format-specific rules layer on top: FB2 honours its declared encoding and may switch to UTF-8 with a rewritten
-declaration when a target character is unrepresentable (FR-DOC-FB2-3, EC-FB2-1); TXT preserves the exact charset and
-line endings via its byte-buffer skeleton (FR-DOC-TXT-3). See `02_Architecture/03_DOCUMENT_MODEL.md#repackaging`.
+The detected charset **and** whether a BOM was present are recorded on the `Document` and reproduced verbatim on
+export, **unless a target character is unrepresentable in the resolved charset** (TXT and Markdown, ADR-0029): the
+whole document is then written as UTF-8, a byte-order mark is written exactly when the source had one, and the
+`Document`'s recorded charset becomes UTF-8. Format-specific rules layer on top: FB2 honours its declared encoding and
+may switch to UTF-8 with a rewritten declaration when a target character is unrepresentable (FR-DOC-FB2-3, EC-FB2-1),
+generalized by ADR-0029 to TXT and Markdown; EPUB always writes lossless numeric character references and never
+switches its declared encoding. TXT preserves the exact charset and line endings via its byte-buffer skeleton
+(FR-DOC-TXT-3) except under this same-encoding-unrepresentable rule. See
+`02_Architecture/03_DOCUMENT_MODEL.md#repackaging`.
 
 ## inline-masking-rules {#inline-masking-rules}
 
@@ -160,25 +169,27 @@ placeholder token grammar, escaping, and uniqueness validation are specified nor
 - **inline code** (`<code>`, Markdown code spans) — masked as a single **atomic** protected placeholder whose text is
   kept exactly (DD-49, `#code-and-technical-content`);
 - **inline MathML** `<math>` inside a prose block — the whole subtree as one atomic placeholder (DD-49);
-- locked glossary terms;
+- locked glossary terms that carry a target;
 - URLs;
-- **standalone/typographic numerals**, numerals **inside locked terms**, and numerals inside URLs;
-- a detected **foreign-language inline run** (masked as a protected keep-as-is placeholder so surrounding prose still
-  translates — see EC-FOREIGN-3).
+- under the Keep foreign-passage policy, an inline element whose own `lang`/`xml:lang` differs from the source
+  language — protected by the pipeline as one token and restored verbatim, known from the element's own markup only,
+  never detected from unmarked text (ADR-0037).
 
 Block code listings (`<pre>`, `<pre><code>`, fenced/indented Markdown blocks) are **not masked** — they never become
 segments at all: they are non-translatable blocks that live only in the skeleton (DD-49, `#code-and-technical-content`).
 
-**What is NOT masked** (stays translatable): **prose numerals** — numerals embedded in running prose remain in the
-segment text so they can inflect and localize (DD-09). Number preservation for masked numerals is already guaranteed by
-the tag-multiset hard gate, so there is no separate number-preservation QA check.
+**What is NOT masked** (stays translatable): **every numeral**, wherever it appears — standalone, typographic, inside
+running prose, or inside a locked term — is left in the segment text so it can inflect and localize; no numeral is
+masked in this build (owner decision D-7). Number preservation for the categories that ARE masked (inline markup, code,
+math, locked terms, kept foreign runs) is already guaranteed by the placeholder-multiset hard gate, so there is no
+separate number-preservation QA check.
 
 | ID          | Edge case                                      | Expected behaviour                                                                                                                                |
 |-------------|--------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
 | EC-INLINE-1 | Nested inline tags (e.g. bold inside italic)   | Mask as a well-formed placeholder set; restore exact nesting.                                                                                     |
 | EC-INLINE-2 | Placeholder dropped or duplicated by the model | Hard-fail the chunk; route to self-heal/flag; never export a broken placeholder set.                                                              |
 | EC-INLINE-3 | Locked glossary term inside a longer word      | Mask only the intended span; avoid partial-word substitution.                                                                                     |
-| EC-INLINE-4 | Number/unit the unit policy must convert       | Standalone/locked-term numerals are masked; prose numerals stay translatable; the unit policy's conversion path applies to the translatable text. |
+| EC-INLINE-4 | Number/unit the unit policy must convert       | No numeral is ever masked; the unit policy's conversion path applies to the numeral in its translatable text, wherever it appears.                |
 | EC-INLINE-5 | Source already contains a `⟦` bracket          | Escape the pre-existing `⟦` before masking so it cannot be read as a placeholder token, and restore it on unmask (`#inline-masking` escape rule). |
 
 ## code-and-technical-content {#code-and-technical-content}
@@ -205,7 +216,7 @@ so their handling is normative (DD-49), across all formats:
 ### code-edge-cases {#code-edge-cases}
 
 | ID        | Edge case                                                              | Expected behaviour                                                                                                                                                                                                                                                                               |
-|-----------|--------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-----------|--------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | EC-CODE-1 | A `<pre>` listing block is the entire chapter/content document         | The unit yields zero segments and passes through skeleton-only; the run counts the unit complete without stalling; the round trip preserves the listing exactly (canonical-equal, DD-43).                                                                                                        |
 | EC-CODE-2 | Inline code whose text contains the masking bracket characters `⟦`/`⟧` | The code span is captured atomically into the placeholder map **before** placeholder-token scanning, so its brackets can never be read as placeholder tokens; brackets in the surrounding prose follow the escape rule (EC-INLINE-5). Restored byte-exactly within the canonical-equal contract. |
 | EC-CODE-3 | Inline `<code>` inside a heading                                       | The heading is a normal translatable segment (`HEADING`); the code span is masked as an atomic placeholder within it and restored exactly — including when the heading's text is mirrored in a `NAV_LABEL` ToC entry, which must render consistently.                                            |
@@ -214,7 +225,7 @@ so their handling is normative (DD-49), across all formats:
 ## verse-tables-notes {#verse-tables-notes}
 
 | ID         | Edge case                                  | Expected behaviour                                                                                                                                                         |
-|------------|-----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|------------|-----------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | EC-VERSE-1 | Verse/poem line breaks and stanza grouping | Translate per line; preserve breaks and grouping.                                                                                                                          |
 | EC-VERSE-2 | Tables                                     | Translate cell text; preserve rows/columns and header structure.                                                                                                           |
 | EC-VERSE-3 | Footnotes/endnotes and scene-break markers | Preserve anchors/markers; translate note text per the footnote policy (translate or keep; default translate — the removed "omit-marker" behaviour is out of scope for v1). |
@@ -222,7 +233,7 @@ so their handling is normative (DD-49), across all formats:
 ## images-and-fonts {#images-and-fonts}
 
 | ID        | Edge case                                                                 | Expected behaviour                                                                                                                                              |
-|-----------|-----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-----------|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | EC-IMG-1  | Raster/vector images referenced from content                              | Preserve bytes and references unchanged; never translate image content.                                                                                         |
 | EC-IMG-2  | Image with translatable `alt`/caption text                                | Translate `alt`/caption text as configured, modelled as an `ALT` metadata-unit segment anchored to the attribute node (DD-47); keep the image binary untouched. |
 | EC-FONT-1 | Embedded fonts obfuscated per a **known** IDPF font-obfuscation algorithm | Not treated as DRM: allow and process; preserve the font resources and their obfuscation bytes exactly (see EC-EPUB-1).                                         |

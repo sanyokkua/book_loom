@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** architect, engineering (`:pipeline`, `:llm`), QA **Last Updated:**
-2026-07-18 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
+2026-09-27 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md`, `docs/specification/01_Product/07_SETTINGS.md`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md`,
 `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md`, `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`
@@ -47,9 +47,10 @@ How each source of context is built and adapted:
   re-translate it. Optional: empty at chapter start → `(none)`.
 - **Foreign-passage policy** — `{{foreignPassageRule}}` expands from the project's foreign-passage flag (`FR-BRIEF-04`).
   Default keep-as-is renders: *"If a passage is deliberately in a language other than {{sourceLang}}, keep it verbatim;
-  do not translate it."* The deterministic target-language QA check is made policy-aware so a kept passage is not scored
-  as wrong-language (`FR-QA-03`). A segment is treated as a **legitimate foreign-keep** — and its **untranslated-echo**
-  check suppressed — **only when it matches a pre-detected foreign span from import**; an unmarked segment that merely
+  do not translate it."* The deterministic target-script QA check is made policy-aware so a kept passage is not scored
+  as wrong-script (`FR-QA-03`). A segment is treated as a **legitimate foreign-keep** — and its **untranslated-echo**
+  and **target-script** checks suppressed — **only when its own declared block language differs from the run's source
+  language, or its dominant script does**; nothing is ever inferred from unmarked text. An unmarked segment that merely
   echoes the source is still flagged.
 
 ## output-contract {#output-contract}
@@ -84,10 +85,10 @@ Style guidance:
 
 Rules:
 - Preserve every placeholder token of the form ⟦gN⟧ EXACTLY as written — same text, same order, same count.
-  They stand for inline formatting, locked names and terms, URLs, and the specific numerals that were masked
-  (standalone/typographic numerals and numerals inside locked terms). Ordinary prose numerals are NOT masked —
-  translate and localize them normally. Never translate, reorder, drop, merge, or invent a placeholder, and
-  never insert text between a paired ⟦gN⟧ … ⟦gM⟧ that changes what it wraps.
+  They stand for inline formatting, locked names and terms, URLs, and kept foreign passages. Numerals are NOT
+  masked in this build — translate and localize every numeral normally, wherever it appears. Never translate,
+  reorder, drop, merge, or invent a placeholder, and never insert text between a paired ⟦gN⟧ … ⟦gM⟧ that changes
+  what it wraps.
 - Apply the glossary renderings exactly, respecting gender and agreement.
 - Continue the voice and terminology of the preceding translated text; keep names consistent with it.
 - {{foreignPassageRule}}
@@ -119,7 +120,7 @@ Return exactly one JSON object matching this schema: {"target":"<translation>"}
 ```
 
 | Variable                           | Required? | Source / notes                                                                                                                                                                                           |
-|------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages (`FR-BRIEF-01`), rendered for the model as an English display name plus the exact BCP-47 tag (for example, `English (en)`); an unregistered tag is `language tag "&lt;tag&gt;"`. When the source is unknown, use `the language of this segment (infer it from its text)`. |
 | `{{styleSheet}}`                   | Required  | Derived style sheet (`#book-brief-tone-setup`); defaults if user did not customize.                                                                                                                      |
 | `{{foreignPassageRule}}`           | Required  | Expanded foreign-passage policy (`FR-BRIEF-04`).                                                                                                                                                         |
@@ -144,8 +145,10 @@ every repair must parse strictly and pass unmasking.
 ## judge-quality-evaluation {#judge-quality-evaluation}
 
 LLM-as-judge, run only when the dial enables the judge and the deterministic QA gate has passed
-(`05_TRANSLATION_ALGORITHM.md#chunk-loop`). Produces a quality score compared against the dial's `τ` and, where
-possible, concrete findings that let self-heal choose a **directed fix** over reflect→improve.
+(`05_TRANSLATION_ALGORITHM.md#chunk-loop`). Scores the whole chunk in **one call**, labelling its qualifying pairs
+`s1…sk` in document order — these are **local labels for this call only**, never the segments' real ids. Produces a
+quality score compared against the dial's `τ_judge` and, where possible, concrete findings that let self-heal choose a
+**directed fix** over reflect→improve.
 
 **SYSTEM**
 
@@ -157,7 +160,8 @@ Score the translation on four anchored dimensions, each 0.0–1.0:
 - fluency: 1.0 = natural, idiomatic target prose; 0.5 = understandable but awkward; 0.0 = ungrammatical.
 - glossary & style: 1.0 = every locked term and style rule honoured; 0.5 = a minor miss; 0.0 = repeated violations.
 The overall "score" is your holistic judgement across these dimensions (not a forced average).
-You are a judge: do not rewrite the text. Report concrete, segment-level findings where a specific problem exists.
+You are a judge: do not rewrite the text. Report concrete findings against the local labels s1, s2, … given below,
+where a specific problem exists.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 ```
 
@@ -171,59 +175,58 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 [Foreign-passage policy in force]
 {{foreignPassageRule}}
 
-[Source segments]
+[Source pairs, labelled s1..sk]
 {{sourceSegments}}
 
-[Candidate translation to evaluate]
+[Candidate translations to evaluate, same labels]
 {{candidateTarget}}
 
-Score 0.0–1.0 overall (1.0 = publishable, faithful, complete). List findings for concrete defects only.
-If a segment needs a fact revealed later in the book, note it under "deferrals".
+Score 0.0–1.0 overall (1.0 = publishable, faithful, complete). List findings for concrete defects only, by label.
+If a labelled pair needs a fact revealed later in the book, note it under "deferrals".
 Return JSON exactly as:
 {"score":<0.0-1.0>,"verdict":"accept"|"revise",
- "findings":[{"segmentId":"<id>","type":"meaning|omission|fluency|glossary|language|tag","severity":"low|medium|high","note":"<short>"}],
- "deferrals":[{"segmentId":"<id>","reason":"<why it needs a later fact>"}]}
+ "findings":[{"segmentId":"<s1..sk label>","type":"meaning|omission|fluency|glossary|language|tag","severity":"low|medium|high","note":"<short>"}],
+ "deferrals":[{"segmentId":"<s1..sk label>","reason":"<why it needs a later fact>"}]}
 ```
 
-| Variable                           | Required? | Source / notes                                              |
-|------------------------------------|-----------|-------------------------------------------------------------|
-| `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages.                                          |
-| `{{sourceSegments}}`               | Required  | Masked source of the chunk.                                 |
-| `{{candidateTarget}}`              | Required  | The unmasked-then-remasked draft under review, keyed by id. |
-| `{{styleSheet}}`                   | Required  | So style adherence can be judged.                           |
-| `{{glossaryTerms}}`                | Optional  | Terms in the chunk; `(none)` if empty.                      |
-| `{{foreignPassageRule}}`           | Required  | So a kept foreign passage is not scored as wrong-language.  |
+| Variable                           | Required? | Source / notes                                                          |
+|------------------------------------|-----------|---------------------------------------------------------------------------|
+| `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages.                                                      |
+| `{{sourceSegments}}`               | Required  | The chunk's masked source pairs that passed their hard gates and were not reused, labelled `s1…sk`. |
+| `{{candidateTarget}}`              | Required  | The unmasked-then-remasked drafts under review, labelled with the same `s1…sk`.                    |
+| `{{styleSheet}}`                   | Required  | So style adherence can be judged.                                       |
+| `{{glossaryTerms}}`                | Optional  | Terms in the chunk; `(none)` if empty.                                  |
+| `{{foreignPassageRule}}`           | Required  | So a kept foreign passage is not scored as wrong-script.                |
 
-**Parameters:** temperature ~0.0–0.2 (low, for stability — but LLM scoring is not bit-reproducible, so no "identical
-input → identical score" guarantee is claimed); output format = JSON object / schema; reasoning low/off. Where the dial
-calls for it, the judge is run as a **small multi-sample average** (e.g. 2–3 samples), and the **averaged `score`** is
-what the accept rule compares against `τ_judge`.
+**Parameters:** temperature 0.1, one sample (no multi-sample averaging); output format = JSON object / schema;
+reasoning low/off.
 
-**Decision rule:** `score ≥ τ_judge` **decides** acceptance (`τ_judge` defaults to `τ`); `verdict` is **advisory/logging
-only** and never overrides the numeric gate.
+**Decision rule:** `score ≥ τ_judge` **decides** acceptance for a labelled pair, together with the absence of a
+`medium`/`high` finding on it (`τ_judge` defaults to `τ`); `verdict` is **advisory/logging only** and never overrides
+the numeric gate. An **unreadable** reply (fails to parse, or omits `score`) is treated as **not accepted** for every
+pair in the call, routing each to self-heal.
 
 **Expected output**
 
 ```json
 { "score": 0.86, "verdict": "accept",
-  "findings": [ { "segmentId": "s11", "type": "glossary", "severity": "low", "note": "…" } ],
-  "deferrals": [ { "segmentId": "s11", "reason": "pronoun depends on later-revealed gender" } ] }
+  "findings": [ { "segmentId": "s2", "type": "glossary", "severity": "low", "note": "…" } ],
+  "deferrals": [ { "segmentId": "s2", "reason": "pronoun depends on later-revealed gender" } ] }
 ```
 
-Tolerant read: `findings` and `deferrals` may be absent/empty; unknown fields ignored. If unparseable, the judge is
-treated as non-accept and the chunk routes to self-heal.
+Tolerant read: `findings` and `deferrals` may be absent/empty; unknown fields ignored.
 
 ## directed-fix-repair {#directed-fix-repair}
 
-Self-heal path when concrete findings exist (deterministic QA finding or judge finding). **One** call that asks the
-model to correct exactly the named problems and change nothing else (`05_TRANSLATION_ALGORITHM.md#self-heal`,
-`FR-ALGO-C11`).
+Self-heal path when concrete findings exist (deterministic QA finding or judge finding), for **one** failing segment.
+**One** call that asks the model to correct exactly the named problems in that segment and change nothing else
+(`05_TRANSLATION_ALGORITHM.md#self-heal`, `FR-ALGO-C11`).
 
 **SYSTEM**
 
 ```
 You are revising your own {{sourceLang}} → {{targetLang}} translation to fix specific, listed defects.
-Change ONLY what the findings require. Keep every correct sentence and every ⟦gN⟧ placeholder unchanged.
+Change ONLY what the findings require. Keep every correct part of the sentence and every ⟦gN⟧ placeholder unchanged.
 Do not re-translate freely, do not paraphrase unaffected text, do not add or omit content.
 If [Expected placeholders] is present, your output MUST contain exactly that multiset of ⟦gN⟧ tokens — restore
 any that are missing and remove any that were invented, without changing what each one wraps.
@@ -239,11 +242,8 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 {{glossaryTerms}}
 {{foreignPassageRule}}
 
-[Source segments]
-{{sourceSegments}}
-
-[Your current translation]
-{{candidateTarget}}
+[Source — for reference only, outside the text to rewrite]
+{{sourceSegment}}
 
 [Defects to fix — address each exactly]
 {{findings}}
@@ -254,30 +254,33 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 [Extra instruction — retry-with-note; follow exactly]
 {{userNote}}
 
-Return the corrected translation in the same shape:
-{"segments":[{"id":"<segment-id>","target":"<corrected translation>"}]}
+<Text>
+{{textToRewrite}}
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<corrected translation>"}
 ```
 
 | Variable                                   | Required? | Source / notes                                                                                                                    |
-|--------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `{{sourceSegments}}`                       | Required  | The chunk's masked source.                                                                                                        |
-| `{{candidateTarget}}`                      | Required  | The rejected draft, keyed by id.                                                                                                  |
-| `{{findings}}`                             | Required  | Concrete findings from QA and/or the judge (type, segmentId, note).                                                               |
-| `{{styleSheet}}`, `{{foreignPassageRule}}` | Required  | Same frame as the draft.                                                                                                          |
-| `{{glossaryTerms}}`                        | Optional  | Terms in the chunk; `(none)` if empty.                                                                                            |
+|--------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `{{textToRewrite}}`                        | Required  | The single `<Text>` block: the rejected target, or the masked source when the finding is a refusal or an empty target.            |
+| `{{sourceSegment}}`                        | Required  | The masked source, shown under `[Source]` outside `<Text>` for reference.                                                          |
+| `{{findings}}`                             | Required  | Concrete findings for this one segment (type, note).                                                                               |
+| `{{styleSheet}}`, `{{foreignPassageRule}}` | Required  | Same frame as the draft.                                                                                                            |
+| `{{glossaryTerms}}`                        | Optional  | Terms in the segment; `(none)` if empty.                                                                                            |
 | `{{expectedPlaceholders}}`                 | Optional  | On a **tag-multiset mismatch** finding, the exact expected multiset of `⟦gN⟧` tokens (e.g. `⟦g1⟧ ⟦g2⟧ ⟦g3⟧`); `(none)` otherwise. |
-| `{{userNote}}`                             | Optional  | Retry-with-note free-text; `(none)` in normal runs.                                                                               |
+| `{{userNote}}`                             | Optional  | Retry-with-note free-text; `(none)` in normal runs.                                                                                 |
 
-**Parameters:** temperature ~0.2 (the "lower temperature for this retry" option may reduce it further); output format =
-JSON object / schema; reasoning low/off.
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off.
 
-**Expected output:** same shape as `#draft-translation`. Re-enters unmask + QA; bounded by the repair budget N.
+**Expected output:** `{"target":"<corrected translation>"}` — the same single-segment shape as `#draft-translation`.
+Re-enters unmask + QA for this one segment; bounded by the repair budget N.
 
 ## reflect-improve {#reflect-improve}
 
-Self-heal path when the failure is a **vague** quality concern with no concrete finding (e.g. a low judge score alone).
-Two calls — a reflection critique, then a rewrite that consumes it — optionally followed by a monolingual polish
-(`05_TRANSLATION_ALGORITHM.md#self-heal`, `FR-ALGO-C11`).
+Self-heal path when the failure is a **vague** quality concern with no concrete finding (e.g. a low judge score alone),
+for **one** failing segment. Two calls — a reflection critique, then a rewrite that consumes it — optionally followed by
+a monolingual polish (`05_TRANSLATION_ALGORITHM.md#self-heal`, `FR-ALGO-C11`).
 
 ### reflect (call 1 — critique) {#reflect-critique}
 
@@ -300,20 +303,26 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 [Preceding target text — the voice to match]
 {{precedingTarget}}
 
-[Source segments]
-{{sourceSegments}}
+[Source — for reference only, outside the text under review]
+{{sourceSegment}}
 
-[Candidate translation]
+<Text>
 {{candidateTarget}}
+</Text>
 
 Return JSON exactly as:
-{"issues":[{"segmentId":"<id>","note":"<what is wrong>","suggestion":"<how to fix>"}]}
+{"issues":[{"note":"<what is wrong>","suggestion":"<how to fix>"}]}
 ```
 
-**Parameters:** temperature ~0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+| Variable             | Required? | Source / notes                                                        |
+|----------------------|-----------|--------------------------------------------------------------------------|
+| `{{candidateTarget}}` | Required  | The single `<Text>` block: the candidate translation under critique.    |
+| `{{sourceSegment}}`   | Required  | The masked source, shown under `[Source]` outside `<Text>` for reference. |
+
+**Parameters:** temperature 0.35; output format = JSON object / schema; reasoning low/off. **Expected output**
 
 ```json
-{ "issues": [ { "segmentId": "s12", "note": "…", "suggestion": "…" } ] }
+{ "issues": [ { "note": "…", "suggestion": "…" } ] }
 ```
 
 ### improve (call 2 — rewrite) {#reflect-rewrite}
@@ -338,37 +347,38 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 [Preceding target text]
 {{precedingTarget}}
 
-[Source segments]
-{{sourceSegments}}
-
-[Previous translation]
-{{candidateTarget}}
+[Source — for reference only, outside the text to rewrite]
+{{sourceSegment}}
 
 [Critique to apply]
 {{reflection}}
 
-Return the improved translation as:
-{"segments":[{"id":"<segment-id>","target":"<improved translation>"}]}
+<Text>
+{{candidateTarget}}
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<improved translation>"}
 ```
 
-| Variable                                    | Required?         | Source / notes                             |
-|---------------------------------------------|-------------------|--------------------------------------------|
-| `{{sourceSegments}}`, `{{candidateTarget}}` | Required          | Chunk source and the draft being improved. |
-| `{{reflection}}`                            | Required (call 2) | The `issues` JSON from the reflect call.   |
-| `{{styleSheet}}`, `{{foreignPassageRule}}`  | Required          | Same frame as the draft.                   |
-| `{{precedingTarget}}`                       | Optional          | `(none)` at chapter start.                 |
-| `{{glossaryTerms}}`                         | Optional          | Terms in the chunk; `(none)` if empty.     |
+| Variable                                    | Required?         | Source / notes                                                     |
+|-----------------------------------------------|-------------------|-------------------------------------------------------------------|
+| `{{candidateTarget}}`                        | Required          | The single `<Text>` block: the target being improved.             |
+| `{{sourceSegment}}`                          | Required          | The masked source, shown under `[Source]` outside `<Text>`.       |
+| `{{reflection}}`                             | Required (call 2) | The `issues` JSON from the reflect call.                          |
+| `{{styleSheet}}`, `{{foreignPassageRule}}`   | Required          | Same frame as the draft.                                          |
+| `{{precedingTarget}}`                        | Optional          | `(none)` at chapter start.                                        |
+| `{{glossaryTerms}}`                          | Optional          | Terms in the segment; `(none)` if empty.                          |
 
-**Parameters:** temperature slightly higher than draft (≤ ~0.4) to escape a bad local phrasing; output format = JSON
-object / schema; reasoning low/off. **Expected output:** same shape as `#draft-translation`. Re-enters unmask + QA;
-bounded by N.
+**Parameters:** temperature 0.35 (to escape a bad local phrasing); output format = JSON object / schema; reasoning
+low/off. **Expected output:** `{"target":"<improved translation>"}` — the same single-segment shape as
+`#draft-translation`. Re-enters unmask + QA for this one segment; bounded by N.
 
 ### polish (optional call — monolingual smoothing) {#monolingual-polish}
 
-An **optional** third call in the reflect→improve path, run **only** when the post-improve QA still leaves the segment
-**borderline** (hard gates pass but `confidence ∈ [τ − ε, τ)`; `05_TRANSLATION_ALGORITHM.md#self-heal`). It smooths the
-**target text monolingually** — it is given the target only, not the source, so it cannot drift the meaning — while
-preserving every placeholder.
+An **optional** third call in the reflect→improve path, run **only** when the post-improve check leaves the segment
+**borderline** (hard gates pass, no soft check failed, and `confidence ∈ [τ − 0.05, τ)`;
+`05_TRANSLATION_ALGORITHM.md#self-heal`). It smooths the **target text monolingually** — it is given the target only,
+not the source, so it cannot drift the meaning — while preserving every placeholder.
 
 **SYSTEM**
 
@@ -389,37 +399,38 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 [Preceding target text — match this voice]
 {{precedingTarget}}
 
-[Text to polish — improve fluency only]
+<Text>
 {{candidateTarget}}
+</Text>
 
-Return JSON exactly as:
-{"segments":[{"id":"<segment-id>","target":"<polished translation>"}]}
+Return exactly one JSON object matching this schema: {"target":"<polished translation>"}
 ```
 
 | Variable                           | Required? | Source / notes                                                  |
-|------------------------------------|-----------|-----------------------------------------------------------------|
-| `{{candidateTarget}}`              | Required  | The post-improve target, keyed by id (target only — no source). |
+|------------------------------------|-----------|-------------------------------------------------------------------|
+| `{{candidateTarget}}`              | Required  | The single `<Text>` block: the post-improve target (target only — no source). |
 | `{{targetLang}}`, `{{styleSheet}}` | Required  | Target language and style frame.                                |
-| `{{precedingTarget}}`              | Optional  | `(none)` at chapter start.                                      |
+| `{{precedingTarget}}`              | Optional  | `(none)` at chapter start.                                       |
 
-**Parameters:** temperature ~0.2; output format = JSON object / schema; reasoning low/off. **Expected output:** same
-shape as `#draft-translation`. Re-enters unmask + QA; still bounded by the same repair round.
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output:**
+`{"target":"<polished translation>"}` — the same single-segment shape as `#draft-translation`. Re-enters unmask + QA;
+still bounded by the same repair round.
 
 ## backward-revision-consistency {#backward-revision-consistency}
 
-Optional whole-book pass (dial-gated: Max or the export toggle). Resolves deferred-resolution items with full-book facts
-and aligns terminology, re-rendering affected earlier segments to `REVISED`
-(`05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, `FR-ALGO-D1`/`D2`). This **LLM re-render is invoked only for
-gender/agreement deferrals**; **locked-term** consistency is applied by **deterministic string substitution** with no
-LLM call, and the sweep is **bounded to segments containing a swept term**. **User-edited `REVISED` segments are
-protected** — the sweep proposes but does not overwrite them, re-rendering a user-edited segment only with explicit user
-opt-in.
+Optional whole-book pass (dial-gated: Max or the export toggle), applied **one segment per call**. Resolves
+deferred-resolution items with full-book facts and aligns terminology, re-rendering an affected earlier segment to
+`REVISED` (`05_TRANSLATION_ALGORITHM.md#phase-d-backward-revision`, `FR-ALGO-D1`/`D2`). This **LLM re-render is invoked
+only for gender/agreement deferrals**; **locked-term** consistency is applied by **deterministic string substitution**
+with no LLM call, and the sweep is **bounded to segments containing a swept term**. **User-edited `REVISED` segments
+are protected** — the sweep proposes but does not overwrite them, re-rendering a user-edited segment only with
+explicit user opt-in.
 
 **SYSTEM**
 
 ```
 You are performing a consistency revision on an already-translated book ({{sourceLang}} → {{targetLang}}).
-Using now-known book-wide facts and the canonical glossary, correct only the listed segments so that
+Using now-known book-wide facts and the canonical glossary, correct only this one segment so that
 names, gender agreement, and key terminology are consistent with the rest of the book.
 Keep every ⟦gN⟧ placeholder exactly. Do not restyle text that is already consistent.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
@@ -434,27 +445,32 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 [Resolved facts revealed later in the book]
 {{resolvedFacts}}
 
-[Segments to revise — with their current translation]
-{{segmentsToRevise}}
+[Source — for reference only, outside the text to revise]
+{{sourceSegment}}
 
-Return JSON exactly as:
-{"revisions":[{"id":"<segment-id>","target":"<revised translation>","reason":"<short>"}]}
+<Text>
+{{currentTarget}}
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<revised translation>"}
 ```
 
 | Variable                           | Required? | Source / notes                                                                                       |
-|------------------------------------|-----------|------------------------------------------------------------------------------------------------------|
-| `{{segmentsToRevise}}`             | Required  | Earlier segments flagged by deferred-resolution / term sweep, with source + current target.          |
-| `{{canonicalGlossary}}`            | Required  | Finalized name/term dictionary for the whole book.                                                   |
+|-------------------------------------|-----------|--------------------------------------------------------------------------------------------------------|
+| `{{currentTarget}}`                | Required  | The single `<Text>` block: the segment's current translation.                                        |
+| `{{sourceSegment}}`                | Required  | The masked source, shown under `[Source]` outside `<Text>`.                                          |
+| `{{canonicalGlossary}}`            | Required  | Finalized name/term dictionary for the whole book.                                                    |
 | `{{resolvedFacts}}`                | Optional  | Deferred-resolution facts (e.g. a character's later-revealed gender); `(none)` if only a term sweep. |
-| `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages.                                                                                   |
+| `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages.                                                                                     |
 
-**Parameters:** temperature ~0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
 
 ```json
-{ "revisions": [ { "id": "s08", "target": "…", "reason": "gender now known" } ] }
+{ "target": "…" }
 ```
 
-Tolerant read: an empty `revisions` array means "nothing to change"; unknown fields ignored.
+`{"target":"<revised translation>"}` — the same single-segment shape as `#draft-translation`; a deferral that does not
+need re-rendering is simply not called.
 
 ## book-brief-tone-setup {#book-brief-tone-setup}
 
@@ -492,13 +508,13 @@ Return JSON exactly as:
 ```
 
 | Variable                                                                                             | Required? | Source / notes                                |
-|------------------------------------------------------------------------------------------------------|-----------|-----------------------------------------------|
+|--------------------------------------------------------------------------------------------------------|-----------|-----------------------------------------------|
 | `{{sourceLang}}`, `{{targetLang}}`                                                                   | Required  | `FR-BRIEF-01`.                                |
 | `{{genre}}`, `{{register}}`, `{{faithfulNaturalBias}}`, `{{namePolicy}}`, `{{foreignPassagePolicy}}` | Required  | `FR-BRIEF-02..05`; all have defaults.         |
 | `{{voiceEra}}`, `{{audience}}`                                                                       | Optional  | Free-text; `(none)` if unset.                 |
 | `{{footnotePolicy}}`, `{{unitPolicy}}`                                                               | Optional  | `FR-BRIEF-06/07`; default behaviour if unset. |
 
-**Parameters:** temperature ~0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
 
 ```json
 { "styleSheet": { "summary": "…", "register": "neutral", "voice": "…",
@@ -510,8 +526,8 @@ Return JSON exactly as:
 A one-time Prep call (phase B, `05_TRANSLATION_ALGORITHM.md#phase-b-prep`, `FR-ALGO-B1`, `FR-GLOSS-01`, DD-46) that
 proposes **name/term candidates** — characters, places, organizations, recurring domain terms — each with a **type** and
 a **provisional gender**, to seed the user-editable Glossary (Names & Style) step. It is an **app-runtime LLM call**,
-distinct from any eval-only embeddings; there is no NER library. Long books are scanned in batches and the candidate
-lists are merged/deduplicated deterministically before display.
+distinct from any eval-only embeddings; there is no NER library. Long books are scanned in batches of 40 candidates and
+the candidate lists are merged/deduplicated deterministically before display.
 
 **SYSTEM**
 
@@ -539,12 +555,12 @@ Return JSON exactly as:
 ```
 
 | Variable                           | Required? | Source / notes                                                             |
-|------------------------------------|-----------|----------------------------------------------------------------------------|
+|------------------------------------|-----------|------------------------------------------------------------------------------|
 | `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages (`FR-BRIEF-01`).                                         |
 | `{{scanText}}`                     | Required  | The book text (or a representative excerpt / current batch) to scan.       |
 | `{{existingTerms}}`                | Optional  | Already-known glossary terms to avoid duplicating; `(none)` on first scan. |
 
-**Parameters:** temperature ~0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
 
 ```json
 { "terms": [
@@ -595,12 +611,12 @@ Return JSON exactly as:
 ```
 
 | Variable                                 | Required? | Source / notes                                                                           |
-|------------------------------------------|-----------|------------------------------------------------------------------------------------------|
+|--------------------------------------------|-----------|--------------------------------------------------------------------------------------------|
 | `{{sourceLang}}`, `{{targetLang}}`       | Required  | Project languages.                                                                       |
 | `{{chapterSource}}`, `{{chapterTarget}}` | Required  | The just-finished chapter's source and accepted target (may be condensed to fit budget). |
 | `{{previousSummary}}`                    | Optional  | `(none)` for the first chapter.                                                          |
 
-**Parameters:** temperature ~0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
 
 ```json
 { "summary": { "source": "…", "target": "…" },

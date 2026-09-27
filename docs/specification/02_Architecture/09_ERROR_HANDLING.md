@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-15
+**Status:** Final **Owner:** architect **Audience:** architect, coder, tester **Last Updated:** 2026-09-27
 **Cross-references:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md`,
 `docs/specification/02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md`,
 `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md`
@@ -60,7 +60,7 @@ public enum ErrorCode {
     cancelled,        // user cancelled the job
     validation,       // input/config invalid; QA hard-gate failures
     internal,         // unexpected/uncaught -> wrapped at a boundary
-    busy              // InferenceGate tryAcquire failed (single-flight)
+    busy              // a review-desk action was asked while the project's run is RUNNING
 }
 ```
 
@@ -74,6 +74,13 @@ public enum ErrorCode {
 - **`modelUnavailable`** — a model the project is **bound** to (`translator_model`/`judge_model`) is not offered by the
   provider at run or resume time. This drives the resume **"provider unavailable → prompt"** path
   (`06_DATA_MODEL_SQLITE.md#resume-support`, `05_RELIABILITY_AND_RESUME.md`, DD-31); it is not silently substituted.
+- **A DRM-protected or otherwise unsupported import is an inspection verdict carried as data, not a distinct
+  `ErrorCode`.** Inspecting a book (`ADR-0039`) answers with a `BookInspection` whose `verdict` names the refusal
+  reason (for example `DRM_PROTECTED`, naming the scheme) as ordinary data — a refusing verdict is a normal, successful
+  answer from the inspector, never a thrown failure. The `ErrorCode` enum stays at its **fifteen constants** (`ADR-0022`):
+  actually **opening** a book whose inspection refused it still fails with `validation`, the same code any other
+  invalid input uses; inspection only moves *how the reason is discovered and displayed* earlier and off the exception
+  path, not the code that failure carries.
 
 ## safe-details-allowlist {#safe-details-allowlist}
 
@@ -116,6 +123,8 @@ built.
   an **error dialog** with `message` and an **expandable technical details** panel bound to `AppError.details` (never
   `cause` raw).
 - `retryable` errors offer a Retry action; `cancelled` is shown as an info state, not an error; `busy` is shown as a
-  soft "model in use, try again" toast.
+  soft "model in use, try again" toast. A review-desk retry answers `busy` whenever the project's own run record
+  (`06_DATA_MODEL_SQLITE.md`) reads `RUNNING` — read once, compared, and refused with no model call; the gate that
+  serializes inference itself never refuses a caller, it only ever waits its turn.
 - Errors are marshaled to the FXAT through the state mirror's `publishToast`/`publishError`
   (`07_UI_ARCHITECTURE_JAVAFX.md#state-mirror`), so the pipeline reports failures without touching the scene graph.
