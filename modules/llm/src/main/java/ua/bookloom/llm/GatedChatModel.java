@@ -119,7 +119,7 @@ public final class GatedChatModel implements ChatModel {
             return null;
         }
         log.info("Provider rejected structured output; retrying once without that capability model={}", modelId);
-        return new ChatRequest(request.messages(), request.temperature(), null, request.reasoningEnabled());
+        return request.withoutResponseFormat();
     }
 
     private @org.jspecify.annotations.Nullable ChatRequest withoutReasoningControl(ChatRequest request) {
@@ -127,7 +127,7 @@ public final class GatedChatModel implements ChatModel {
             return null;
         }
         log.info("Provider rejected reasoning control; retrying once without that capability model={}", modelId);
-        return new ChatRequest(request.messages(), request.temperature(), request.responseFormat(), null);
+        return request.withoutReasoning();
     }
 
     private static AttemptResult finished(ProviderCallResult<ChatResponse> call) {
