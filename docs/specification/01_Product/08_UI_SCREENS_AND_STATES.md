@@ -1,4 +1,4 @@
-**Status:** Final **Owner:** architect **Audience:** architect, engineering (`:ui`), QA, UX **Last Updated:** 2026-09-26
+**Status:** Final **Owner:** architect **Audience:** architect, engineering (`:ui`), QA, UX **Last Updated:** 2026-09-27
 **Cross-references:** `docs/specification/mockups/ui-mockup.html`,
 `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`, `docs/specification/01_Product/09_THEMING.md`,
 `docs/specification/01_Product/11_NOTIFICATIONS_AND_ERRORS.md`,
@@ -22,7 +22,8 @@ toolbar-actions area, a content host, a modal host with scrim, and a toast host.
 | Element            | JavaFX control                    | Notes                                                                                                                                                |
 |--------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Window / stage     | `Stage` + root `BorderPane`       | `.root` carries theme tokens                                                                                                                         |
-| Left navigation    | `ScrollPane` around a `VBox`      | Workflow and Application groups; 236 px wide, scrolls vertically when the window is short                                                            |
+| Title bar          | `HBox`                            | Product name, then the run status (only while a run exists, `#title-bar-run-status`), then the theme toggle                                          |
+| Left navigation    | `ScrollPane` around a `VBox`      | Workflow (six numbered steps, `#workflow-navigation`) and Application groups; 236 px wide, scrolls vertically when the window is short               |
 | Breadcrumb         | `Label`/`Breadcrumbs`-style bar   | Reflects current screen                                                                                                                              |
 | Toolbar actions    | `ToolBar` / `HBox` of `Button`    | Context actions per screen                                                                                                                           |
 | Theme toggle       | `ToggleButton`                    | **2-state light↔dark quick-toggle** only; the tri-state selector including `system` lives in Settings → Appearance (`07_SETTINGS.md#appearance-tab`) |
@@ -37,19 +38,78 @@ every part stays reachable, scrolling vertically where the screen is taller: the
 scroll rather than clip, a count tile (`.stat`) keeps its 120 px minimum width and never shows an ellipsis for its caption, and a progress bar keeps its 9 px height (a progress bar's
 own minimum height is zero, so the height is fixed in the stylesheet).
 
-P6 reference: match the shell chrome, nav grouping, and theme toggle in the mockup, except that the mockup's
-"Design reference" group (component library, dialogs and alerts, notifications) is a specimen sheet for the designer and
-is not a navigation group of the application.
+### Title bar run status {#title-bar-run-status}
 
-Projects, Names & style and Review are inert navigation entries in this build: they are listed but have no screen yet,
-so "Continue" skips them to the next entry that has one.
+While the current project has no run, the title bar shows only the product name and the theme toggle. While a run
+exists — from Start until the project's book is replaced by a different import — the title bar shows, between the
+product name and the theme toggle: the file name; the state text (`Progress 78%` while running, `Paused at 78%`,
+`Stopped at 78%`, `Provider error`, `Finished`, or `Failed at 78%`); and the elapsed time and the time left. It
+offers **Pause** while running, **Resume** while paused, stopped or in a provider error, and **no control** once the
+run has finished or failed. The title bar's control does exactly what the Translating screen's control of the same
+name does — pressing either one acts on the same run.
+
+### Start and Resume {#start-and-resume}
+
+**Start** begins a new run at the first pending segment. It is offered only by the Names & style screen's
+`Start translation` action (`#screen-names-and-style`) and by the Translating screen's own start control
+(`#screen-translating`), and only when the project has no run yet, its last run completed with pending segments left
+(for example after an "Also translate" switch was turned on once the run had completed), or its last run failed.
+While a run can be resumed instead, `Start translation` starts nothing — it only navigates to Translating, where
+Resume is offered.
+
+**Resume** continues the book's one run. From **Paused** or a **provider error** it continues in place, at the
+segment it left off on. From **Stopped** it begins a new run at the first pending segment, because a stopped run
+re-enters at the first pending segment rather than mid-chunk.
+
+### Workflow navigation {#workflow-navigation}
+
+The left navigation's **WORKFLOW** group numbers its six steps — **1 Import, 2 Book Brief, 3 Structure, 4 Names &
+style, 5 Translating, 6 Export** — each showing a done mark once its work is complete, under an uppercase heading.
+The **APPLICATION** group (also an uppercase heading) lists Settings and Projects. Only **Projects** is an inert
+entry in this build: it is listed but has no screen yet, so "Continue" skips it. Every workflow step — Import, Book
+Brief, Structure, Names & style, Translating, Export — has a live screen; the Review entry from the mockup is gone,
+because review is a panel inside Translating, not a step of its own.
+
+### Navigation footer {#navigation-footer}
+
+The navigation column's footer reads the chosen provider's display name and model id, for example `Ollama · gemma4:26b`, or `No model chosen` when none is configured. It shows **no readiness dot** — readiness is not tracked in this build.
+
+P6 reference: match the shell chrome, nav grouping, and theme toggle in the mockup, except for the departures named
+below. The mockup's "Design reference" group (component library, dialogs and alerts, notifications) is a specimen
+sheet for the designer and is not a navigation group of the application.
+
+### Departures from the mockup {#shell-departures}
+
+This build departs from the mockup on purpose, each for a stated reason:
+
+- **The separate Review step and its navigation entry** — review is a panel inside Translating, not a screen or a
+  step of its own (owner decision D-8, ADR-0036).
+- **The toolbar's Pause and `Review (3)`** — the run control lives in the title bar; review lives on the Translating
+  screen.
+- **The title bar's always-shown Resume** — the run status, Resume included, appears only while a run exists.
+- **"Back to projects"** — Projects is not built in this release.
+- **The footer's readiness dot and the Book Brief's `ready` model badge** — both need a verification state the
+  application does not keep.
+- **The import card's `valid` badge** — nothing validates a book beyond opening it.
+- **The import screen's "Source language override" dropdown** — the source language is chosen on the Book Brief, not
+  on Import (ADR-0037).
+- **The `primes system prompt` and `Slower · Max-quality` notes** — notes for the mockup's reader; the consistency
+  pass runs on any quality dial setting chosen from Export.
+- **The per-node formatting pills on Structure** — formatting is reported for the whole book in the statistics card,
+  not per node.
+- **Toasts naming no requirement** — the mockup's toast text is illustrative; this document is the binding toast
+  contract.
+- **The preview-state switchers** — every screen shows its own live state, not a designer-only switcher between
+  states.
+- **The design-reference group** — a specimen sheet for the designer, not a navigation group of the application.
+- **"EPUBCheck passed"** — the round-trip and resource-id checks this build runs are its own checks, not EPUBCheck's.
 
 ## screen-projects {#screen-projects}
 
 Purpose: list existing projects and start a new one.
 
 | Control            | JavaFX control          | Behaviour                            |
-|--------------------|-------------------------|--------------------------------------|
+|---------------------|--------------------------|----------------------------------------|
 | Project list       | `TableView` / card list | Rows open a project; supports resume |
 | New project action | `Button`                | Opens Import                         |
 
@@ -60,20 +120,27 @@ Requirements: FR-NOTIF-05. P6 reference: Projects and Projects-empty.
 
 Purpose: open a book and confirm the detected-file card.
 
-| Control                 | JavaFX control                   | Behaviour                                                                                                                                                                                                             |
-|-------------------------|----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Drop zone / file picker | drag-drop target + `FileChooser` | FR-IMPORT-02                                                                                                                                                                                                          |
-| Detected file card      | card of key/value rows (`Label`s) | Rows: file, format, title, author and declared language (each only when the book declares it), units ("Divided into") and segments ("Text to translate") (FR-IMPORT-06). No cover, no detected source language, no chapter count yet |
+| Control                 | JavaFX control                       | Behaviour                                                                                                                                                       |
+|--------------------------|----------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Drop zone / file picker | drag-drop target + `FileChooser`      | FR-IMPORT-02                                                                                                                                                    |
+| Cover                    | `ImageView` or a neutral placeholder  | Shows the book's cover image when the format carries one, else a neutral placeholder                                                                           |
+| Detected file card       | card of key/value rows (`Label`s)     | Rows, in order: file; format with its version (e.g. `EPUB 2.0`); `Title · Author`; declared language written `English (en)`; chapters · `~words`; images · fonts; DRM `none` |
+| Continue / Cancel        | `Button`s                              | `Continue to Book Brief` leads to the Book Brief; `Cancel` discards the import                                                                                  |
 
-States (`#importState`):
+States (`#importState`), all decided by the inspection the application performs on open (ADR-0039):
 
-| State             | Trigger                                                                       | UI                                                                                                    |
-|-------------------|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
-| idle              | Nothing chosen yet                                                            | Drop zone                                                                                             |
-| opening           | A book has been handed to the port                                            | Progress line naming the file                                                                         |
-| detected          | Supported, no DRM                                                             | Detected-file card + Continue                                                                         |
-| refused           | DRM detected (EC-DRM-1) or unsupported/corrupt file (FR-IMPORT-05)            | Error banner carrying the typed error code as a chip; the import is refused                           |
-| language-mismatch | Declared ≠ detected language (EC-LANG-1)                                      | Warning banner. **Built but has no trigger yet:** nothing detects a source language, so `open` never produces it |
+| State                  | Trigger                                                                                                          | UI                                                                                                                              |
+|--------------------------|---------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| idle                    | Nothing chosen yet                                                                                              | Drop zone                                                                                                                       |
+| opening                 | A book has been handed to the port                                                                              | Progress line naming the file                                                                                                   |
+| detected                | Supported, no DRM, no language disagreement                                                                     | Detected-file card + Continue                                                                                                   |
+| language-mismatch       | An EPUB's own language declarations disagree (its package language against its content documents' majority), or the book declares a language the application does not recognize | Warning banner alongside the detected-file card                                                                                 |
+| refused (DRM)           | DRM detected (EC-DRM-1)                                                                                         | Banner `This book is DRM-protected.`, naming the file and the encryption scheme when known (e.g. `ZIP encryption` for a zipped FB2); `Import blocked`; `Choose another file` |
+| refused (unsupported)   | An unsupported or corrupt file type (FR-IMPORT-05)                                                              | Banner `Couldn't read this file.`, naming the detected type as `not supported`, plus the supported-formats hint                 |
+
+There is no "Preview state" switcher on this screen — the states above are the screen's real behaviour, not a
+designer-only selector — and no detected-from-text language row: the source language is chosen on the Book Brief, not
+detected on Import (ADR-0037).
 
 Requirements: FR-IMPORT-01..07. P6 reference: Import and each import state.
 
@@ -81,141 +148,157 @@ Requirements: FR-IMPORT-01..07. P6 reference: Import and each import state.
 
 Purpose: capture the Book Brief.
 
-| Section              | Control                                                                                  | JavaFX control                                  | Requirement              |
-|----------------------|------------------------------------------------------------------------------------------|-------------------------------------------------|--------------------------|
-| Languages            | source (read-only display) and target (editable) pickers                                 | `ComboBox` (source disabled)                    | FR-BRIEF-01              |
-| Destination          | output path (default computed from the source name and target language), Browse, overwrite switch, "already exists" warning | `TextField` + `FileChooser`, `ToggleSwitch`, warning banner | FR-EXPORT-04             |
-| Tone & style         | genre, register, voice/era, audience; faithful↔natural                                   | `ComboBox`, `TextField`, `Slider`               | FR-BRIEF-02, FR-BRIEF-03 |
-| Translation policies | name, foreign-passage (keep-as-is / translate / translate+note), footnote, unit policies | `SegmentedButton`/`ToggleGroup`, `ToggleSwitch` | FR-BRIEF-04..07          |
-| Also translate       | ToC/navigation labels, image alt-text, book metadata title/author, frontmatter values    | four `ToggleSwitch`es                           | FR-BRIEF-04, FR-DOC      |
-| Quality vs speed     | Fast/Balanced/Max                                                                        | `SegmentedButton`/`ToggleGroup`                 | FR-BRIEF-08              |
+| Section              | Control                                                                                                    | JavaFX control                                            | Requirement              |
+|-----------------------|--------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------|--------------------------|
+| Languages             | source and target, both editable and searchable over the same 34 languages                                   | two searchable `ComboBox`es                                   | FR-BRIEF-01              |
+| Tone & style          | genre (searchable free-text field over the forty genres), register, voice/era, audience                       | searchable `TextField`/`ComboBox`, `ComboBox`s                | FR-BRIEF-02, FR-BRIEF-03 |
+| Translation policies  | name, foreign-passage (keep-as-is / translate / translate+note), footnote, unit policies, faithful↔natural slider | `SegmentedButton`/`ToggleGroup`, `ToggleSwitch`, `Slider`      | FR-BRIEF-04..07          |
+| Also translate        | ToC/navigation labels (also governs page titles), image alt-text, book metadata title/author (also governs the description), frontmatter values | four `ToggleSwitch`es                                          | FR-BRIEF-04, FR-DOC      |
+| Quality vs speed      | Fast/Balanced/Max, three hint lines, and the model row with a `change` link                                    | `SegmentedButton`/`ToggleGroup`, `Label`s, `Hyperlink`         | FR-BRIEF-08              |
 
-The **"Also translate" toggle group** controls which auxiliary text units the run translates (modelled as the synthetic
-metadata unit — `NAV_LABEL`, `ALT`, `METADATA_TITLE`/`METADATA_AUTHOR`, `FRONTMATTER_VALUE`). Defaults: **ToC/navigation
-labels on, image alt-text on, book metadata title/author on, frontmatter values off**.
+Both the source and the target language are editable and searchable over the same 34-language list; the source is
+preselected from the normalized declaration on the detected-file card or, when an EPUB's content documents disagree,
+from their majority. Choosing the same language for both is refused with `The source and target languages are the
+same.` There is no destination card on this screen — the save path and overwrite switch live on the Export screen
+(`#screen-export`).
 
-In this build the source language is a read-only display: it shows the language the book declares, or "The book does
-not declare one", because nothing edits or detects it yet. The target language is chosen from a fixed list. The
-**destination path** and the **overwrite** switch live on this screen, not on Export: the save path is one of the four
-components of the translation request and must exist before a run starts (FR-EXPORT-04); a warning shows while the path
-already exists and overwriting is off, and Continue is unavailable until the request is valid. The Tone & style,
-Translation policies, Also translate and Quality vs speed cards are drawn but **disabled and tagged "not used yet"**,
-because nothing reads them. Opened with no book, the screen shows a **no-book state** ("No book is open" with an action
-that leads to Import) instead of the form.
+Every card on this screen is **live**: Tone & style, Translation policies, Also translate and Quality vs speed all
+feed the run — none are drawn disabled. The faithful↔natural slider defaults to **55**. The **"Also translate"
+toggle group** controls which auxiliary text units the run translates: **ToC/navigation labels** (on by default;
+also governs the translation of page titles), **image alt-text** (on), **book metadata title/author** (on; also
+governs the translation of the description), and **frontmatter values** (off). The quality dial shows its three hint
+lines and a model row naming the chosen provider and model with a `change` link — there is no readiness badge.
+Segmented-button labels **wrap** rather than truncate at narrow widths. There is no review-mode control on this
+screen. Opened with no book, the screen shows a **no-book state** ("No book is open" with an action that leads to
+Import) instead of the form.
 
 P6 reference: Book Brief with its sections, including the "Also translate" group.
 
 ## screen-structure {#screen-structure}
 
-Purpose: show the parsed reading order, read-only.
+Purpose: show the parsed reading order and the book's structural health, read-only.
 
-| Control                | JavaFX control                | Behaviour                                                                                                                     |
-|------------------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| Reading order          | `TreeView` (flat, virtualized) | One row per unit in reading order: its resource path, its position and its segment count. A unit carries no title, so none is shown |
-| Total                  | `Label`                       | Total segments in the book                                                                                                    |
-| Back / Continue        | `Button`s                     | Back returns to the Book Brief; Continue goes to the next **available** step (`Navigator.nextAvailableStep`), i.e. Translating, not the inert Names & style |
+| Control                     | JavaFX control            | Behaviour                                                                                                                        |
+|-------------------------------|------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| Structure tree                | `TreeView` (virtualized)     | Nested, titled from the book's own navigation (its ToC/nav document); a count pill per node shows its segment count; a node with no title reads `Untitled` |
+| Statistics card                | `Label`s / stat tiles        | Eight rows beside the tree: total segments, chapters/sections, words, images, fonts, footnotes, cross-references, auxiliary units |
+| Round-trip / resource checks   | banner(s)                    | Background checks run beside the structure; a failed round-trip shows `Round-trip check failed — structure not preserved`; missing resource ids show `IDs missing after the round trip:` followed by their list. A failed check never blocks Continue |
+| Oversized-segment warning      | banner                       | Warns when a segment exceeds the chunking limit                                                                                  |
+| Back / Continue                | `Button`s                    | Back returns to the Book Brief; Continue leads to Names & style                                                                  |
 
-The list is flat: the document model has no chapter tree yet. There is **no translate-vs-preserve confirmation** in this
-build. With no book open the screen shows the same no-book state as the Book Brief.
+With no book open the screen shows the same no-book state as the Book Brief.
 
 Requirements: FR-DOC-01, FR-DOC-08. P6 reference: Structure found / Reading order.
 
 ## screen-names-and-style {#screen-names-and-style}
 
-Purpose: review and edit the auto-proposed glossary.
+Purpose: review and edit the glossary before or during a run.
 
-| Control        | JavaFX control                      | Behaviour                                         |
-|----------------|-------------------------------------|---------------------------------------------------|
-| Glossary table | `TableView`                         | source term, target rendering, type, gender, lock |
-| Lock toggle    | `ToggleSwitch`/checkbox column      | FR-GLOSS-03                                       |
-| Add term       | `Button` → add-glossary-term dialog | FR-GLOSS-04                                       |
+| Control              | JavaFX control                       | Behaviour                                                                                          |
+|------------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
+| Glossary table         | `TableView`                             | Columns: Source term, Type, Target, Gender, Locked                                                |
+| Model-scan button      | `Button`                                | Runs a model-assisted name scan in addition to the deterministic scan                             |
+| Add term               | `Button` → add-glossary-term dialog     | FR-GLOSS-04; refuses locking a term that has no target                                             |
+| CSV import / export    | `Button`s + `FileChooser`               | Import refuses locking a row that has no target; export writes the current table                  |
+| `Start translation`    | `Button`                                | Starts a new run at the first pending segment when Start is offered (`#start-and-resume`)          |
+| Info banner            | `Label`                                 | `Skip this and the app builds names on the fly as it translates.`                                  |
+
+A **deterministic scan** runs automatically when the screen opens, proposing entries from the book's own text; these
+proposals start **unlocked** (design.md D10). Locking is allowed only for an entry that has a target — the table, Add
+term, and CSV import each refuse a lock with no target with `A locked term needs a target.` The info banner is true
+either way: a run never depends on this screen — it adds the names it meets at each body unit's end as it translates
+(design.md D5). With no book open the screen shows a **no-book state**: it says no book is open, routes to Import,
+and shows no table, no scan, and no `Start translation`.
 
 Requirements: FR-GLOSS-01..05. P6 reference: Names & style / Glossary — proposed.
 
 ## screen-translating {#screen-translating}
 
-Purpose: drive and monitor the automatic run. The dashboard binds to the state mirror's observable surface, built from
-the counts the engine emits (`07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`); it never polls.
+Purpose: drive and monitor the automatic run, and review flagged segments without leaving the screen. The dashboard
+binds to the state mirror's observable surface, built from the events the engine emits
+(`07_UI_ARCHITECTURE_JAVAFX.md#jobprogress`); it never polls.
 
-| Control        | JavaFX control          | Behaviour                                                                                                                                                                                      |
-|----------------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| State banner   | icon + title + text     | Says where the run is; shows "Waiting for the model… m:ss" once one request has been outstanding for 10 s; a provider failure shows the error code and an "Open provider settings" button      |
-| Progress       | `ProgressBar` + `Label` | Four count tiles — accepted / flagged / remaining / total — and "N of M segments processed" beside a bar. No "repaired" count and no chapter/chunk index: the engine emits neither             |
-| Activity log   | `ListView`              | Appended entries for each accepted segment, each segment error and the run's milestones (stage start, pause, resume, finish); the vocabulary holds more kinds that no engine event produces yet. Bounded to the last 500, bundle-keyed/localized (`11_NOTIFICATIONS_AND_ERRORS.md#activity-log`)                                              |
-| Controls       | `Button`s               | Start, Pause, Resume, Stop, New run (FR-RESUME-03); which are offered follows the state table below                                                                                            |
+Subtitle: `A stopped run resumes where it left off — until the application closes.`
 
-There is no throughput/ETA row and no in-flight source/target panel: the engine reports no rate and no in-flight text,
-so the screen has nothing to show for them.
+| Control               | JavaFX control            | Behaviour                                                                                                                                       |
+|-------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| Progress line           | `Label` + `ProgressBar`      | Percentage · `Chapter k of n` (the body-unit position; the auxiliary unit is never counted as a chapter) · chunk `k/K`                          |
+| Rate / time             | `Label`s                     | Time left and tokens per second, from the recent drafts                                                                                        |
+| Count tiles             | four stat tiles              | auto-accepted / repaired / flagged / remaining — `remaining` leaves out segments kept as source by choice                                       |
+| Current chunk (live)    | two-row panel                | Row 1: the segment decided last, with its judge and path badges. Row 2: the segment in progress — `waiting for the model…` until its draft arrives, then marked `awaiting judge` while the judge runs |
+| Activity log            | `ListView` (monospace)       | Tagged entries — `ok`, `fix`, `mem`, `sum`, `retry`, `err`, `info` — naming segments by locator (e.g. `ch7 · p42`); bounded to the last 500       |
+| Controls                | `Button`s                    | Start, Pause, Resume, Stop, `Review flagged (n)`; which are offered follows the state table below                                               |
 
-States (`#runState`, from `RunState`):
+The start toast reads `Translation started` / `Keep the application open — progress is kept only until it closes.`
 
-| State     | UI                                                                                                             | Controls offered            |
-|-----------|----------------------------------------------------------------------------------------------------------------|-----------------------------|
-| idle      | "Ready to translate"                                                                                           | Start                       |
-| running   | Progress advancing; "Waiting for the model…" replaces the banner text after 10 s of one request                 | Pause, Stop                 |
-| pausing   | A pause is pending; the request in flight is being cancelled and will be repeated on resume                     | Stop (Pause disabled)       |
-| paused    | The engine is waiting                                                                                          | Resume, Stop                |
-| stopping  | A stop is pending; the request in flight is being cancelled                                                     | nothing (Stop disabled)     |
-| stopped   | Neutral info banner: a stopped run cannot be resumed; start a new run to translate from the beginning          | New run                     |
-| completed | Every segment processed and the book written                                                                    | New run                     |
-| failed    | The run ended before every segment was processed                                                               | New run                     |
+States (`#runState`):
 
-A provider error, a refused start and a missing input (no book, no model) are **notices** (`RunNotice`) worded in the
-same banner in place of the plain state, not states of their own; only a provider error offers "Open provider
-settings" (see `11_NOTIFICATIONS_AND_ERRORS.md`).
+| State           | Shows                                                                                                                                                                        | Offers                                                            |
+|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
+| idle              | A ready card: book, model, review mode, quality dial, pending count; a missing model or missing brief field is named in place                                              | Start (its own)                                                       |
+| running           | Progress advancing, the live panel, the activity log                                                                                                                        | Pause, Stop, `Review flagged (n)`                                     |
+| paused            | Banner `Paused. Progress is kept until the application closes. Resume any time — it continues at chunk 41/66.`                                                             | Resume, Stop, `Review flagged (n)`                                    |
+| stopped           | Banner `Run stopped. Progress is kept until the application closes. Resume any time — it re-enters at the first pending segment; flagged segments wait in the review panel.` | Resume, `Review flagged (n)`                                          |
+| provider error    | Auto-paused, naming the failure's error code                                                                                                                                | `Retry now` (= Resume), `Open provider settings`, `Stay paused`       |
+| completed         | Auto-accepted, repaired-and-accepted, flagged, and kept-as-source counts                                                                                                     | Continue to Export, `Review flagged (n)`; Start only while pending segments remain (e.g. after an "Also translate" switch is turned on once the run has completed) |
+| failed            | A blocking dialog: `Decided segments are kept until the application closes.`, then the outcome so far                                                                      | Start (begins a new run at the first pending segment)                 |
 
-**Pause / Stop behaviour.** Pause and Stop abort the model request that is in flight: no request is sent to the provider
-after the button is pressed. A paused run that is resumed translates the interrupted segment again from the start. The
-"Waiting for the model…" cue appears when one request has been outstanding for 10 seconds and is cleared by the next
-decision, a pause or the end of the run. A pause pressed while the book is being written is ignored (the engine honours
-none during export).
+The **review panel** lives inside this screen (`#screen-review`) rather than on a separate screen or nav entry.
 
-**Stop is terminal.** Stop ends the run in `stopped` — a neutral `info` state, **not** a failure: cancellation is never
-an error dialog or `err` toast (`11_NOTIFICATIONS_AND_ERRORS.md#typed-error-surface`). A stopped run **writes nothing**
-and cannot be resumed; only a new run, which begins with the first segment, is offered. Resuming a stopped run needs
-local storage (persistence) and arrives with it.
+### Review panel {#screen-review}
 
-Requirements: FR-ALGO-01, FR-RESUME-03. P6 reference: Translating and each run state.
+Purpose: review flagged segments (and, on request, every segment) without leaving the Translating screen.
 
-## screen-review {#screen-review}
+| Control            | JavaFX control              | Behaviour                                                                                                                        |
+|-----------------------|---------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| Filter chips           | `ToggleGroup` of chips          | `all`, `names`, `omissions`, `foreign · kept`, and `All segments` — the one list that also shows segments kept as source, each marked `kept as source` |
+| Flagged list           | `ListView`/`TableView`          | Items by locator (e.g. `ch5 · p12`) with a main-finding badge: the highest-severity finding, ties broken `name` > `wrong lang?` > `omission` > `low score` |
+| Compare panes          | two `TextArea`                  | Source (read-only) and target (editable)                                                                                          |
+| Findings / context     | `Label`s/chips                  | The segment's QA findings and a line of surrounding context                                                                       |
+| Actions                | `Button`s                       | Save edit / Accept / Revert to machine target / Retry / Retry with note / Skip                                                    |
 
-Purpose: review flagged segments side by side.
+**Target editor.** The editable pane shows, in order of preference: the saved human edit, else the machine target,
+else the source (when the segment has neither) — all in **masked** form: `⟦gN⟧` tokens stay visible and a locked
+name shows as its locked rendering. Saving an edit that deletes or reorders a token is refused, naming the reason; a
+revised segment can be edited again.
 
-| Control      | JavaFX control         | Behaviour                                                                      |
-|--------------|------------------------|--------------------------------------------------------------------------------|
-| Flagged list | `ListView`/`TableView` | e.g. "Flagged (3)", items like "ch5 · p12"                                     |
-| Source pane  | read-only `TextArea`   | FR-REVIEW-C1                                                                   |
-| Target pane  | editable `TextArea`    | FR-REVIEW-C2; typing marks the pane **dirty** and enables **Save edit**        |
-| QA findings  | `Label`s/chips         | FR-REVIEW-C3                                                                   |
-| Actions      | `Button`s              | Save edit / Accept / Revert to machine target / Retry / Retry-with-note / Skip |
+**Edit vs accept.** Typing in the target pane disables **Accept** until the edit is either **Save**d or
+**Revert**ed — editing disables Accept until Save edit or Revert, so Accept never silently discards an unsaved edit.
+Accept moves a `FLAGGED` segment to `ACCEPTED` and confirms an already-`ACCEPTED` segment; it is refused on `PENDING`
+or `REVISED`, and on a segment with no machine target (`There is no machine translation to accept — edit it or
+retry.`).
 
-**Edit vs accept (no silent discard).** The target pane starts holding the machine target. Typing enables **Save edit**;
-saving records the human revision (state `REVISED`). **Accept** keeps the **machine target only when the pane is not
-dirty** — if there are unsaved edits, Accept does not silently discard them (the user must Save edit first, or
-explicitly revert). **Revert to machine target** discards the current pane edits and restores the machine target; from a
-saved `REVISED` segment this is the `REVISED → (revert) → ACCEPTED` path — revert clears the revision and accepts the
-machine target. No edit is ever dropped without an explicit Save-edit or Revert.
+**Retry.** Retry (with or without a note) is allowed whenever no run of the project is currently running; it is
+refused as busy while one is. While a retry is in flight, Resume and the other review actions are disabled.
 
-States: **flagged-populated** and **empty** ("Nothing flagged" empty state). Requirements: FR-REVIEW-01..07. P6
-reference: Review queue (side-by-side) and Nothing-flagged.
+This panel has **no navigation entry of its own** — it is reached only from the Translating screen.
+
+Requirements: FR-ALGO-01, FR-RESUME-03, FR-REVIEW-01..07. P6 reference: Translating, each run state, and Review queue
+(side-by-side).
 
 ## screen-export {#screen-export}
 
-Purpose: report the translated book the run wrote. The screen **reports a finished file; it does not trigger one** —
-export is the run's final stage (DD-30, FR-EXPORT-01), so there is no save-path field and no Export button here (the
-path is chosen on the Book Brief, `#screen-book-brief`).
+Purpose: choose the destination and export the translated book.
 
-| Control                | JavaFX control                      | Behaviour                                                                                                                              |
-|------------------------|-------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| Format                 | read-only `Label`                   | The book's original format (EPUB/FB2/MD/TXT) — export is same-format only; there is **no format chooser** (DD-30, FR-EXPORT-01)         |
-| Written to             | `Label`                             | The path the run wrote                                                                                                                 |
-| Counts                 | count tiles                         | Accepted and flagged                                                                                                                   |
-| Open folder            | `Button`                            | Shows the written file in the system file manager: `open -R` on macOS, `explorer.exe /select,` on Windows, `xdg-open` on its folder on Linux |
-| Also export            | disabled `CheckBox`es               | Glossary / bilingual copy / quality report (FR-EXPORT-05) — shown, tagged "not used yet", not produced by anything yet                  |
-| Final consistency pass | disabled `ToggleSwitch`             | FR-EXPORT-06 — shown but disabled; nothing runs it yet                                                                                 |
+| Control                   | JavaFX control                | Behaviour                                                                                                                                |
+|------------------------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| Save to / Browse             | `TextField` + `FileChooser`      | Output path, defaulted from the source name and target language, with the shared naming rule and an "already exists" warning when overwrite is off |
+| Overwrite                    | `ToggleSwitch`                    | Allows writing over an existing file at the chosen path                                                                                  |
+| Format                       | read-only `Label`                 | The book's original format (EPUB/FB2/MD/TXT) — export is same-format only; there is **no format chooser** (DD-30, FR-EXPORT-01)          |
+| Also export (side files)     | three `CheckBox`es (live)         | Glossary / bilingual copy / quality report (FR-EXPORT-05) — each produces its file when checked                                          |
+| Final consistency pass       | `ToggleSwitch` (live)             | FR-EXPORT-06 — runs the consistency pass on export at any quality dial setting                                                           |
+| Checks                       | banner(s)                         | The round-trip and resource checks carried over from Structure, re-shown here before writing                                             |
+| Counts                       | stat tiles                        | Accepted, flagged, pending, and kept-as-source, named apart                                                                              |
+| `Export book`                | `Button`                          | Writes the book; **unavailable while a run of this project is translating**                                                              |
+| Open folder                  | `Button`                          | Shows the written file in the system file manager: `open -R` on macOS, `explorer.exe /select,` on Windows (an exit code of 1 still counts as success), `xdg-open` on its folder on Linux |
 
-States: **populated** (a run has written a book) and **empty** ("No translated book has been produced yet", with a hint
-to finish a run; nothing to reveal). No export-complete dialog is shown.
+The partial-export statement names **pending segments** (not yet decided) and **segments kept as source by choice**
+apart, so a partial export never describes every remaining segment as the same kind of gap. The
+**export-complete dialog** (`#dialog-export-complete`) is the export's **only** success notice — no `ok` toast
+duplicates it.
+
+States: **populated** (a book is open, ready to export) and **empty** ("No book is open", with a hint to Import;
+nothing to reveal).
 
 Requirements: FR-EXPORT-01..06. Export always writes the book back in its original format; converting to another format
 is out of scope (DD-30). P6 reference: Translated book ready / Export.
@@ -225,8 +308,8 @@ is out of scope (DD-30). P6 reference: Translated book ready / Export.
 Purpose: host the six settings tabs.
 
 | Control | JavaFX control             | Behaviour                                                                  |
-|---------|----------------------------|----------------------------------------------------------------------------|
-| Tabs    | `TabPane` (`#settingsTab`) | Providers / Models / Generation / Appearance / Automation / Storage & logs |
+|---------|------------------------------|------------------------------------------------------------------------------|
+| Tabs    | `TabPane` (`#settingsTab`)   | Providers / Models / Generation / Appearance / Automation / Storage & logs |
 
 Each tab's fields, defaults, and ranges are specified in `07_SETTINGS.md`. The Providers tab hosts the add/edit-provider
 dialog trigger. P6 reference: Settings with each tab.
@@ -259,13 +342,15 @@ Provider/model binding prompt.
 
 ### dialog-add-glossary-term {#dialog-add-glossary-term}
 
-Add a glossary term (source, target, type, gender, lock). Control: `Dialog`. FR-GLOSS-04. P6 reference: Add glossary
-term.
+**Ships in this build.** Add a glossary term: source, target, type, gender, lock. The dialog refuses a duplicate
+source term, and refuses locking a term that has no target (`A locked term needs a target.`). Control: `Dialog`.
+FR-GLOSS-04. P6 reference: Add glossary term.
 
 ### dialog-retry-with-note {#dialog-retry-with-note}
 
-Retry a flagged segment with a free-text instruction. Control: `Dialog` with a `TextArea` note field. FR-REVIEW-A2. P6
-reference: Retry with note.
+**Ships in this build.** Retry a flagged segment with a free-text instruction, plus a checkbox offering **lower
+temperature for this retry**. Control: `Dialog` with a `TextArea` note field. FR-REVIEW-A2. P6 reference: Retry with
+note.
 
 ### dialog-confirm-delete {#dialog-confirm-delete}
 
@@ -283,9 +368,9 @@ FR-NOTIF-04). Control: `Alert` (error) with expandable content. P6 reference: Tr
 
 ### dialog-export-complete {#dialog-export-complete}
 
-**Not shipped.** The Export screen itself reports the written path and offers the action that shows the file in the
-system file manager (`#screen-export`), so no separate confirmation dialog is shown. P6 reference: Export complete (the
-mockup's dialog is a specimen only).
+**Ships in this build.** Shown once the run's export stage finishes writing the book: the written path, the format,
+and an `Open folder` action that shows the file in the system file manager. It is the export's **only** success
+notice — no `ok` toast duplicates it. Control: `Dialog`. P6 reference: Export complete.
 
 ### dialog-about {#dialog-about}
 
@@ -305,13 +390,13 @@ provider-error (err). FR-NOTIF-02. Specified in `11_NOTIFICATIONS_AND_ERRORS.md#
 
 ## empty-states {#empty-states}
 
-Every list screen has an empty state (FR-NOTIF-05): Projects ("No projects yet"), Review ("Nothing flagged"), Providers
-(no providers configured). P6 reference: each empty state in the mockup.
+Every list screen has an empty state (FR-NOTIF-05): Projects ("No projects yet"), the Translating screen's review
+panel ("Nothing flagged"), Providers (no providers configured). P6 reference: each empty state in the mockup.
 
 ## control-mapping-summary {#control-mapping-summary}
 
 | Mockup widget      | JavaFX control                    |
-|--------------------|-----------------------------------|
+|---------------------|--------------------------------------|
 | Segmented picker   | `SegmentedButton` / `ToggleGroup` |
 | Side-by-side panes | two `TextArea`                    |
 | Data table         | `TableView`                       |

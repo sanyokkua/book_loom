@@ -16,21 +16,22 @@ completion is surfaced in-app on the Translating dashboard (`08_UI_SCREENS_AND_S
 
 Toasts are transient, native token-styled JavaFX nodes in four types (FR-NOTIF-01):
 
-| Type | Token               | Fires when                                                                                  |
-|------|---------------------|---------------------------------------------------------------------------------------------|
-| ok   | success (sage)      | An action completes successfully (e.g. provider verified, export saved, glossary imported). |
-| info | info (slate-blue)   | A neutral status update (e.g. resume available, pass started).                              |
+| Type | Token               | Fires when                                                                  |
+|------|---------------------|------------------------------------------------------------------------------|
+| ok   | success (sage)      | An action completes successfully (e.g. provider verified, glossary imported). |
+| info | info (slate-blue)   | A neutral status update (e.g. resume available, pass started).              |
 | warn | warning (ochre)     | A non-blocking concern (e.g. language mismatch confirmed, segment left flagged on export).  |
 | err  | danger (terracotta) | A recoverable failure that does not warrant a modal (e.g. a single retry failed).           |
 
-Toasts must not be the sole channel for critical information (FR-A11Y-8).
+Toasts must not be the sole channel for critical information (FR-A11Y-8). An export's success is reported by its own
+dialog alone (`08_UI_SCREENS_AND_STATES.md#dialog-export-complete`), not an `ok` toast.
 
 ## banners {#banners}
 
 Banners are persistent, in-context strips in three severities (FR-NOTIF-02):
 
 | Severity | Token   | Example condition                                     | Screen                                             |
-|----------|---------|-------------------------------------------------------|----------------------------------------------------|
+|----------|---------|--------------------------------------------------------|-----------------------------------------------------|
 | info     | info    | Resume offered from a checkpoint                      | Projects / Translating                             |
 | warn     | warning | Declared vs detected language mismatch (EC-LANG-1)    | Import (language-mismatch)                         |
 | err      | danger  | DRM-blocked import (EC-DRM-1); provider-error mid-run | Import (DRM-blocked); Translating (provider-error) |
@@ -45,7 +46,7 @@ The Translating dashboard hosts an **activity log** — an append-only, in-run e
 and a localized message:
 
 | Event   | Meaning                                            | Token               |
-|---------|----------------------------------------------------|---------------------|
+|---------|------------------------------------------------------|---------------------|
 | `ok`    | A segment/chunk was accepted                       | success (sage)      |
 | `fix`   | A directed repair round ran (QA re-entry)          | info (slate-blue)   |
 | `mem`   | Translation-memory / glossary applied              | info                |
@@ -73,7 +74,7 @@ P6 reference: `08_UI_SCREENS_AND_STATES.md#dialog-error-with-details` (Translati
 ## typed-error-surface {#typed-error-surface}
 
 | ID          | Requirement                                                                                                                           |
-|-------------|---------------------------------------------------------------------------------------------------------------------------------------|
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------|
 | FR-NOTIF-4a | Every user-visible failure derives from a typed `AppError` carrying an `ErrorCode`.                                                   |
 | FR-NOTIF-4b | The user-facing message and expandable details are populated only from the safe-details allowlist (DD-14).                            |
 | FR-NOTIF-4c | Error presentation is chosen by severity and blocking-ness: toast (transient), banner (persistent, in-context), or dialog (blocking). |
@@ -84,7 +85,7 @@ P6 reference: `08_UI_SCREENS_AND_STATES.md#dialog-error-with-details` (Translati
 Representative `ErrorCode` categories the surface must handle (non-exhaustive; canonical enum in `:api`):
 
 | Category    | Examples                                                                 | Typical surface            |
-|-------------|--------------------------------------------------------------------------|----------------------------|
+|-------------|----------------------------------------------------------------------------|-----------------------------|
 | Import      | unsupported-format, corrupt-file, drm-protected                          | banner / dialog            |
 | Provider    | connection-failed, discovery-failed, inference-failed, model-unavailable | banner / dialog / toast    |
 | Inference   | rate-limited (retryable), timeout (retryable), non-retryable-http        | retried, then toast/banner |
@@ -104,7 +105,7 @@ state), so an intentional stop is never presented as a failure.
 ## empty-states {#empty-states}
 
 | ID          | Requirement                                                                                                                      |
-|-------------|------------------------------------------------------------------------------------------------------------------|
+|-------------|------------------------------------------------------------------------------------------------------------------------------------|
 | FR-NOTIF-5a | Every list/collection screen shows an empty state when it has no data (FR-NOTIF-05).                             |
 | FR-NOTIF-5b | Empty states are: Projects ("No projects yet"), Review ("Nothing flagged"), Providers (no providers configured). |
 | FR-NOTIF-5c | Each empty state offers the primary next action (e.g. import a book, add a provider).                            |
