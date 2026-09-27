@@ -35,7 +35,8 @@ class ModelCatalogLiveTest {
         assertThat(configs.register(config).isOk()).isTrue();
         final ModelCatalogService catalog = new ModelCatalogService(
                 configs,
-                new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper()));
+                new ProviderClientFactory(
+                        new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime));
 
         final Result<List<ModelInfo>> result = catalog.listModels("ollama");
 

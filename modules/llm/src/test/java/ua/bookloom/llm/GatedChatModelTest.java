@@ -172,6 +172,62 @@ class GatedChatModelTest {
                 .anySatisfy(body -> assertThat(body).doesNotContain("\"think\""));
     }
 
+    // A downgraded retry keeps the context size the original request carried.
+    @Test
+    void chat_ollamaThinkRejectedWithContextWindow_retriedRequestStillPostsNumCtx() {
+        server.stubFor(post(urlEqualTo(OLLAMA_CHAT_PATH))
+                .inScenario("think capability with context")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(aResponse().withStatus(400).withBody("{\"error\":\"unknown field think\"}"))
+                .willSetStateTo("think removed"));
+        server.stubFor(post(urlEqualTo(OLLAMA_CHAT_PATH))
+                .inScenario("think capability with context")
+                .whenScenarioStateIs("think removed")
+                .willReturn(aResponse().withStatus(200).withBody(OLLAMA_REPLY)));
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "Translate this.")), null, null, false, 8192, null);
+
+        final Result<ChatResponse> result = ollamaModel(ignored -> {}).chat(request);
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(server.getAllServeEvents())
+                .extracting(event -> event.getRequest().getBodyAsString())
+                .allSatisfy(body -> assertThat(body).contains("\"num_ctx\":8192"))
+                .anySatisfy(body -> assertThat(body).contains("\"think\":false"))
+                .anySatisfy(body -> assertThat(body).doesNotContain("\"think\""));
+    }
+
+    // A structured-output downgrade keeps both the temperature and the context size the original request carried.
+    @Test
+    void chat_structuredOutputRejectedWithContextWindow_retriedRequestKeepsTemperatureAndNumCtx() {
+        server.stubFor(post(urlEqualTo(OLLAMA_CHAT_PATH))
+                .inScenario("format capability with context")
+                .whenScenarioStateIs(Scenario.STARTED)
+                .willReturn(aResponse().withStatus(400).withBody("{\"error\":\"unknown field format\"}"))
+                .willSetStateTo("format removed"));
+        server.stubFor(post(urlEqualTo(OLLAMA_CHAT_PATH))
+                .inScenario("format capability with context")
+                .whenScenarioStateIs("format removed")
+                .willReturn(aResponse().withStatus(200).withBody(OLLAMA_REPLY)));
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "Translate this.")),
+                0.2,
+                new ResponseFormat("draft", "{\"type\":\"object\"}"),
+                null,
+                8192,
+                null);
+
+        final Result<ChatResponse> result = ollamaModel(ignored -> {}).chat(request);
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(server.getAllServeEvents())
+                .extracting(event -> event.getRequest().getBodyAsString())
+                .anySatisfy(body -> assertThat(body).contains("\"format\""))
+                .anySatisfy(body -> assertThat(body)
+                        .doesNotContain("\"format\"")
+                        .contains("\"options\":{\"temperature\":0.2,\"num_ctx\":8192}"));
+    }
+
     @Test
     void chat_rateLimitPassesRetryAfterDelayToSleeper() {
         server.stubFor(post(urlEqualTo(CHAT_PATH))
@@ -276,8 +332,8 @@ class GatedChatModelTest {
                 URI.create(server.baseUrl() + "/v1"),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(3));
-        final ProviderClientFactory clients =
-                new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        final ProviderClientFactory clients = new ProviderClientFactory(
+                new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, sleeper);
         return new GatedChatModel(clients.create(config), MODEL_ID, new InferenceGate(), retryPolicy);
     }
@@ -289,8 +345,8 @@ class GatedChatModelTest {
                 URI.create(server.baseUrl()),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(3));
-        final ProviderClientFactory clients =
-                new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        final ProviderClientFactory clients = new ProviderClientFactory(
+                new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retryPolicy = new RetryPolicy(CLOCK, () -> 0.5, sleeper);
         return new GatedChatModel(clients.create(config), MODEL_ID, new InferenceGate(), retryPolicy);
     }

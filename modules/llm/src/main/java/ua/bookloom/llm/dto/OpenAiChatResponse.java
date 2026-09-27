@@ -10,11 +10,13 @@ import org.jspecify.annotations.Nullable;
  *
  * @param model nullable because provider replies may omit metadata
  * @param choices nullable because malformed or partial replies may omit the collection
+ * @param usage nullable because providers may omit reported token counts
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OpenAiChatResponse(
         @JsonProperty("model") @Nullable String model,
-        @JsonProperty("choices") @Nullable List<Choice> choices) {
+        @JsonProperty("choices") @Nullable List<Choice> choices,
+        @JsonProperty("usage") @Nullable Usage usage) {
 
     /** Copies a present choices list to preserve its order and prevent mutation. */
     public OpenAiChatResponse {
@@ -44,4 +46,15 @@ public record OpenAiChatResponse(
     public record Message(
             @JsonProperty("role") @Nullable String role,
             @JsonProperty("content") @Nullable String content) {}
+
+    /**
+     * Token counts consumed from a chat completion's reported usage.
+     *
+     * @param promptTokens nullable because a provider may omit the prompt token count
+     * @param completionTokens nullable because a provider may omit the completion token count
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Usage(
+            @JsonProperty("prompt_tokens") @Nullable Integer promptTokens,
+            @JsonProperty("completion_tokens") @Nullable Integer completionTokens) {}
 }

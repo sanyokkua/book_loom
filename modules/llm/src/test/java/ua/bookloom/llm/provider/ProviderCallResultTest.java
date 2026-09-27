@@ -84,7 +84,8 @@ class ProviderCallResultTest {
         return new OpenAiCompatibleClient(
                 config(ProviderKind.OPENAI_COMPATIBLE, server.baseUrl() + "/v1"),
                 new HttpExchange(new HttpClients()),
-                new LlmModule().objectMapper());
+                new LlmModule().objectMapper(),
+                System::nanoTime);
     }
 
     private static ProviderConfig config(ProviderKind kind, String endpoint) {

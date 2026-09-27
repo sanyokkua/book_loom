@@ -73,6 +73,7 @@ class OpenAiCompatibleClientProbeTest {
                 URI.create(server.baseUrl() + "/v1"),
                 Duration.ofSeconds(2),
                 Duration.ofSeconds(2));
-        return new OpenAiCompatibleClient(config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        return new OpenAiCompatibleClient(
+                config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }
 }

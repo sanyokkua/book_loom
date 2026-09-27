@@ -31,7 +31,7 @@ public record OllamaChatRequest(
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(messages, "messages");
         messages = List.copyOf(messages);
-        if (options != null && options.temperature() == null) {
+        if (options != null && options.temperature() == null && options.numCtx() == null) {
             options = null;
         }
     }
@@ -58,8 +58,10 @@ public record OllamaChatRequest(
      * Ollama-native optional generation controls used by this change.
      *
      * @param temperature nullable so an unspecified temperature is omitted from the wire body
+     * @param numCtx nullable so an unspecified context size is omitted from the wire body
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Options(
-            @JsonProperty("temperature") @Nullable Double temperature) {}
+            @JsonProperty("temperature") @Nullable Double temperature,
+            @JsonProperty("num_ctx") @Nullable Integer numCtx) {}
 }

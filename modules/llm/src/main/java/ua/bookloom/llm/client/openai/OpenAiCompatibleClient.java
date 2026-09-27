@@ -3,9 +3,11 @@ package ua.bookloom.llm.client.openai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -20,6 +22,7 @@ import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatRequest.ResponseFormatDto;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
@@ -30,6 +33,7 @@ import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
 import ua.bookloom.llm.http.HttpExchange;
 import ua.bookloom.llm.http.HttpReply;
 import ua.bookloom.llm.provider.CapabilityRejections;
+import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.response.ReplySanitizer;
@@ -43,11 +47,15 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
-    /** Binds one client to an endpoint while sharing the application's HTTP and JSON infrastructure. */
-    public OpenAiCompatibleClient(ProviderConfig config, HttpExchange exchange, ObjectMapper mapper) {
+    private final LongSupplier nanoTime;
+
+    /** Binds one client to an endpoint while sharing the application's HTTP, JSON, and time infrastructure. */
+    public OpenAiCompatibleClient(
+            ProviderConfig config, HttpExchange exchange, ObjectMapper mapper, LongSupplier nanoTime) {
         this.config = Objects.requireNonNull(config, "config");
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
     @Override
@@ -124,8 +132,10 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return ProviderCallResult.withoutRetryAfter(
                     Result.err(Objects.requireNonNull(requestBody.error(), "error")));
         }
+        final long startNanos = nanoTime.getAsLong();
         final ProviderCallResult<HttpReply> call =
                 postChat(modelId, Objects.requireNonNull(requestBody.data(), "body"), request);
+        final Duration elapsed = Duration.ofNanos(nanoTime.getAsLong() - startNanos);
         final Result<HttpReply> response = call.result();
         if (response.isErr()) {
             final AppError error = Objects.requireNonNull(response.error(), "error");
@@ -133,7 +143,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
         return new ProviderCallResult<>(
-                readChatResponse(modelId, Objects.requireNonNull(response.data(), "reply")), call.retryAfter());
+                readChatResponse(modelId, Objects.requireNonNull(response.data(), "reply"), elapsed),
+                call.retryAfter());
     }
 
     private Result<ParsedFormat> parseFormat(@Nullable ResponseFormat format, String modelId) {
@@ -195,19 +206,20 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 CapabilityRejections.from(reply, request));
     }
 
-    private Result<ChatResponse> readChatResponse(String requestedModel, HttpReply reply) {
+    private Result<ChatResponse> readChatResponse(String requestedModel, HttpReply reply, Duration elapsed) {
         try {
             final OpenAiChatResponse decoded = mapper.readValue(reply.body(), OpenAiChatResponse.class);
             if (decoded == null) {
                 return unreadableChatResponse(requestedModel, null);
             }
-            return chatResponse(requestedModel, reply, decoded);
+            return chatResponse(requestedModel, reply, decoded, elapsed);
         } catch (JsonProcessingException failure) {
             return unreadableChatResponse(requestedModel, failure);
         }
     }
 
-    private Result<ChatResponse> chatResponse(String requestedModel, HttpReply reply, OpenAiChatResponse decoded) {
+    private Result<ChatResponse> chatResponse(
+            String requestedModel, HttpReply reply, OpenAiChatResponse decoded, Duration elapsed) {
         if (decoded.choices() == null
                 || decoded.choices().isEmpty()
                 || decoded.choices().getFirst() == null) {
@@ -221,24 +233,25 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return emptyCompletion(requestedModel, reply);
         }
         logModelMismatch(requestedModel, decoded.model());
-        return successfulChat(
-                requestedModel,
-                reply,
-                ReplySanitizer.clean(message.content()),
-                decoded.choices().getFirst().finishReason());
-    }
-
-    private Result<ChatResponse> successfulChat(
-            String requestedModel, HttpReply reply, String content, @Nullable String wireFinishReason) {
-        final FinishReason finishReason = finishReason(wireFinishReason);
+        final FinishReason finishReason =
+                finishReason(decoded.choices().getFirst().finishReason());
+        final TokenUsage usage = usage(decoded.usage(), elapsed);
         log.debug(
-                "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={}",
+                "OpenAI-compatible chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
                 config.baseUrl().getHost(),
                 requestedModel,
                 reply.status(),
                 reply.body().length(),
-                finishReason);
-        return Result.ok(new ChatResponse(content, finishReason));
+                finishReason,
+                usage);
+        return Result.ok(new ChatResponse(ReplySanitizer.clean(message.content()), finishReason, usage));
+    }
+
+    private static @Nullable TokenUsage usage(OpenAiChatResponse.@Nullable Usage usage, Duration elapsed) {
+        if (usage == null || (usage.promptTokens() == null && usage.completionTokens() == null)) {
+            return null;
+        }
+        return new TokenUsage(usage.promptTokens(), usage.completionTokens(), elapsed);
     }
 
     private Result<ChatResponse> emptyCompletion(String modelId, HttpReply reply) {
@@ -301,7 +314,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private Result<List<ModelInfo>> discoveryError(AppError error) {
-        if (preserveDiscoveryError(error.code())) {
+        if (DiscoveryErrors.preserve(error.code())) {
             log.debug(
                     "OpenAI-compatible discovery outcome host={} code={}",
                     config.baseUrl().getHost(),
@@ -319,23 +332,6 @@ public final class OpenAiCompatibleClient implements ProviderClient {
                 "The OpenAI-compatible model list could not be read.",
                 error.details(),
                 error.cause()));
-    }
-
-    private static boolean preserveDiscoveryError(ErrorCode code) {
-        return switch (code) {
-            case auth, unreachable, timeout, cancelled -> true;
-            case rateLimited,
-                    modelNotFound,
-                    modelUnavailable,
-                    discoveryFailed,
-                    upstream,
-                    missingCredential,
-                    contextWindow,
-                    emptyCompletion,
-                    validation,
-                    internal,
-                    busy -> false;
-        };
     }
 
     private AppError discoveryFailure(@Nullable Throwable cause) {

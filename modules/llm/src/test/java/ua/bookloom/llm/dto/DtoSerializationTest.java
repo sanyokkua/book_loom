@@ -22,19 +22,19 @@ class DtoSerializationTest {
     @Test
     void ollamaChatRequest_withoutOptionalSettings_omitsOptionalKeys() {
         final ObjectMapper mapper = mapper();
-        final JsonNode bodyWithNullTemperature = mapper.valueToTree(new OllamaChatRequest(
+        final JsonNode bodyWithNullOptions = mapper.valueToTree(new OllamaChatRequest(
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(null),
+                new OllamaChatRequest.Options(null, null),
                 null,
                 null));
         final JsonNode bodyWithoutOptions = mapper.valueToTree(new OllamaChatRequest(
                 "gemma4:e4b-mlx", List.of(new OllamaChatRequest.Message("user", "hello")), false, null, null, null));
 
-        assertThat(bodyWithNullTemperature.has("options")).isFalse();
-        assertThat(bodyWithNullTemperature.has("format")).isFalse();
-        assertThat(bodyWithNullTemperature.has("think")).isFalse();
+        assertThat(bodyWithNullOptions.has("options")).isFalse();
+        assertThat(bodyWithNullOptions.has("format")).isFalse();
+        assertThat(bodyWithNullOptions.has("think")).isFalse();
         assertThat(bodyWithoutOptions.has("options")).isFalse();
     }
 
@@ -45,11 +45,25 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(0.2),
+                new OllamaChatRequest.Options(0.2, null),
                 null,
                 null));
 
         assertThat(body.path("options").toString()).isEqualTo("{\"temperature\":0.2}");
+    }
+
+    // A supplied context size serializes as num_ctx and omits a null temperature.
+    @Test
+    void ollamaChatRequest_withContextWindow_serializesNumCtxAndOmitsNullTemperature() {
+        final JsonNode body = mapper().valueToTree(new OllamaChatRequest(
+                "gemma4:e4b-mlx",
+                List.of(new OllamaChatRequest.Message("user", "hello")),
+                false,
+                new OllamaChatRequest.Options(null, 8192),
+                null,
+                null));
+
+        assertThat(body.path("options").toString()).isEqualTo("{\"num_ctx\":8192}");
     }
 
     // The native thinking control is top-level and remains absent unless a caller explicitly requests it.

@@ -47,7 +47,8 @@ class ModelCatalogServiceTest {
         configs = new InMemoryProviderConfigs();
         catalog = new ModelCatalogService(
                 configs,
-                new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper()));
+                new ProviderClientFactory(
+                        new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime));
     }
 
     @AfterEach

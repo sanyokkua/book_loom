@@ -343,7 +343,8 @@ class OpenAiCompatibleClientTest {
     private OpenAiCompatibleClient client(URI endpoint, Duration requestTimeout) {
         final ProviderConfig config = new ProviderConfig(
                 "lmstudio", ProviderKind.OPENAI_COMPATIBLE, endpoint, Duration.ofSeconds(2), requestTimeout);
-        return new OpenAiCompatibleClient(config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        return new OpenAiCompatibleClient(
+                config, new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
     }
 
     private static ChatRequest messageOnlyRequest() {

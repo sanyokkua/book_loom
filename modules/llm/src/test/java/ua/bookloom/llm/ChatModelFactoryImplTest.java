@@ -269,8 +269,8 @@ class ChatModelFactoryImplTest {
     }
 
     private ChatModelFactory factory() {
-        final ProviderClientFactory clients =
-                new ProviderClientFactory(new HttpExchange(new HttpClients()), new LlmModule().objectMapper());
+        final ProviderClientFactory clients = new ProviderClientFactory(
+                new HttpExchange(new HttpClients()), new LlmModule().objectMapper(), System::nanoTime);
         final RetryPolicy retries = new RetryPolicy(
                 Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC), () -> 0.5, ignored -> {});
         return new ChatModelFactoryImpl(configs, clients, new InferenceGate(), retries, new LlmModule().objectMapper());
