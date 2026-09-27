@@ -1,5 +1,5 @@
 **Status:** Final **Owner:** architect **Audience:** architect, engineering (`:pipeline`), QA **Last Updated:**
-2026-07-18 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
+2026-09-27 **Cross-references:** `docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md`,
 `docs/specification/01_Product/03_DOCUMENT_FORMATS.md`, `docs/specification/01_Product/06_REVIEW_AND_EDITING.md`,
 `docs/specification/01_Product/07_SETTINGS.md`, `docs/specification/01_Product/12_PROMPT_CATALOG.md`,
 `docs/specification/00_Foundation/04_DESIGN_DECISIONS.md`, `docs/specification/diagrams/pipeline.mermaid`,
@@ -41,12 +41,11 @@ numerals to `⟦gN⟧` placeholders; hash the source; detect the content languag
 
 ## phase-b-prep {#phase-b-prep}
 
-One-time, automatic preparation: pre-scan entities to seed the name/term dictionary; derive a style sheet from the Book
-Brief.
+One-time, automatic preparation: seed the name/term dictionary; derive a style sheet from the Book Brief.
 
 | ID         | Requirement                                                                                                                                                                                                                                                                                                                          |
-|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-ALGO-B1 | Pre-scan the book with the **LLM name/term pre-scan** call (`12_PROMPT_CATALOG.md#name-term-pre-scan`) to propose names/terms with type and provisional gender for the glossary; when the provider is offline/disabled, fall back to a **deterministic frequency + casing** extraction with `gender = unknown` (DD-46, FR-GLOSS-01). |
+|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| FR-ALGO-B1 | Run the deterministic frequency-and-capitalization scan (`12_PROMPT_CATALOG.md#name-term-pre-scan` documents the offline fallback shape) over the whole book when the glossary is empty, seeding it with unlocked candidates of no target and gender unknown. The LLM pre-scan is the person's own button on Names & style, sent in batches of 40 candidates, and is merged into the glossary only when every batch succeeded; it never runs automatically, and never at a run's start (DD-46, FR-GLOSS-01). |
 | FR-ALGO-B2 | Derive a style sheet (register, voice, policies, faithful↔natural bias) from the Book Brief for prompt construction.                                                                                                                                                                                                                 |
 
 ## phase-c-translate {#phase-c-translate}
@@ -102,19 +101,20 @@ window. Source text is measured with the **source** script's `K`; the reserved o
 | CJK — Chinese, Japanese, Korean        | 1.5             |
 | Mixed / unknown (conservative)         | 3.0             |
 
-The **chunk budget** is then a `min` of the context-derived budget and the user cap:
+The **chunk budget** is then a fixed constant in this build:
 
 ```
-chunkBudget = min( effectiveContext − reservedHeadroom , chunkBudgetSetting )
+chunkBudget = min( 8192 − reservedHeadroom , 1200 )
 ```
 
-`effectiveContext` is the per-provider effective context window (DD-44; Ollama `num_ctx` / `/api/show` → discovery → the
-provider profile's manual "effective context (tokens)" field → conservative default). `reservedHeadroom` is the summed
-`estTokens` of everything else the prompt carries — system frame and Book Brief, rolling bilingual summary, injected
-glossary terms, the preceding-target window, and TM hits — **plus** the expected target-output allowance (target-script
-`K`, larger for expanding pairs such as EN→UK). The Generation **"chunk budget" setting is a CAP**: it can only lower
-the budget below what the window allows, never raise it above `effectiveContext − reservedHeadroom`. Paragraphs are
-packed until the next one would push the running `estTokens` over `chunkBudget`.
+`8192` is the fixed effective context this build sends to Ollama as `num_ctx` (FR-MODEL-07); an OpenAI-compatible
+server receives no context-size field. `reservedHeadroom` is the summed `estTokens` of everything else the prompt
+carries — system frame and Book Brief, rolling bilingual summary, injected glossary terms, the preceding-target
+window, and TM hits — **plus** the expected target-output allowance (target-script `K`, larger for expanding pairs
+such as EN→UK). The Generation **"chunk budget" setting is a CAP**: it can only lower the budget below what the
+window allows, never raise it above `8192 − reservedHeadroom`. Paragraphs are packed until the next one would push the
+running `estTokens` over `chunkBudget`. Resolving a per-provider effective context from Ollama `num_ctx`/`/api/show`,
+model discovery, or a manual provider field is deferred to the Generation settings (future work, not this change).
 
 Chunk boundaries prefer chapter/unit boundaries. At chapter start the **preceding-target window is soft-reset** so stale
 local phrasing from the previous chapter does not leak in, while the rolling bilingual summary carries book-level facts
@@ -124,8 +124,8 @@ window is capped at ~3 blocks** (dial-driven, `#quality-dial-mapping`) — enoug
 crowding out the source.
 
 | ID          | Requirement                                                                                                                                                                          |
-|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-ALGO-C1  | Pack whole paragraphs into a chunk up to `chunkBudget = min(effectiveContext − reservedHeadroom, chunkBudgetSetting)` without splitting a paragraph across chunks (FR-ALGO-02).      |
+|-------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| FR-ALGO-C1  | Pack whole paragraphs into a chunk up to `chunkBudget = min(8192 − reservedHeadroom, 1200)` without splitting a paragraph across chunks (FR-ALGO-02).                               |
 | FR-ALGO-C2  | Sentence-split a single paragraph only when it alone exceeds the budget, never cutting a masked inline-tag pair (FR-ALGO-03).                                                        |
 | FR-ALGO-C2b | Send a genuinely unsplittable over-budget unit as its own over-budget chunk with degraded context rather than cutting a masked inline-tag pair; log the degraded chunk (FR-ALGO-03). |
 | FR-ALGO-C3  | Soft-reset the preceding-target window at chapter start; cap it at ~3 blocks (FR-ALGO-08).                                                                                           |
@@ -136,7 +136,7 @@ Assemble the prompt with load-bearing items at the EDGES (FR-ALGO-04). The packa
 priority:
 
 | Component                    | Role                                                       |
-|------------------------------|------------------------------------------------------------|
+|------------------------------|--------------------------------------------------------------|
 | System + brief (style sheet) | Instruction frame; placed at an edge.                      |
 | Rolling bilingual summary    | Book-so-far context for tone/terminology.                  |
 | Relevant glossary terms      | Only terms occurring in the chunk are injected.            |
@@ -149,7 +149,7 @@ priority:
 For each chunk (see `chunk-translate-loop.mermaid`):
 
 | ID          | Requirement                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-ALGO-C4  | Issue exactly one source segment per draft inference. Prior accepted targets may be supplied only as section-local context and never as additional source inputs. Require exactly `{"target":"…"}`: no source id, envelope array, map, extra field, wrapper prose, or text fallback. A malformed or wrong-shape reply receives one structural repair; a valid target that fails the placeholder hard gate receives one separate token-preservation repair. Every repair is strictly parsed and re-gated, with no loop. |
 | FR-ALGO-C4b | A **context-match TM auto-reuse** skips the draft and judge calls but still passes the unmask hard gate and the deterministic QA gate before acceptance (FR-ALGO-06).                                                                                                                                                                                                                                                                                                              |
 | FR-ALGO-C5  | Unmask and validate the placeholder multiset as a hard gate; a mismatch cannot be accepted (FR-DOC-05, FR-QA-04).                                                                                                                                                                                                                                                                                                                                                                  |
@@ -167,7 +167,7 @@ on a QA/judge failure (DD-16) and consumes the repair budget **N = the number of
 exactly one path:
 
 | Path              | Trigger                                            | Calls                                                                                                                                                                                                                   |
-|-------------------|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-------------------|-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Directed fix      | Concrete QA/judge findings exist                   | 1 call injecting the findings, asking the model to correct exactly those. On a **tag-multiset mismatch** the instruction is specialised to inject the expected placeholder multiset ("restore exactly: `⟦g1⟧ ⟦g2⟧ …`"). |
 | Reflect → improve | Only a vague quality concern (no concrete finding) | 2 calls (reflect, then improve), followed by an **optional monolingual polish** — triggered only when the post-improve QA still leaves the segment **borderline** (hard gates pass but `confidence` in `[τ − ε, τ)`).   |
 
@@ -175,7 +175,7 @@ exactly one path:
 realizes the automatic-first, tiered self-heal model (ADR-0007).
 
 | ID          | Requirement                                                                                                                                                                              |
-|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|-------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-ALGO-C11 | Prefer directed fix when concrete findings exist; use reflect→improve otherwise; specialise the directed fix for a tag-multiset mismatch by injecting the expected placeholder multiset. |
 | FR-ALGO-C12 | Bound total repair rounds by the repair budget N from the quality dial; `N=0` = flag on first failure.                                                                                   |
 | FR-ALGO-C13 | Score per chunk, flag only the offending segment(s), re-render the chunk on a directed fix, and re-QA per segment.                                                                       |
@@ -186,15 +186,15 @@ Optional whole-book pass (enabled by the Max dial or the export toggle). The swe
 user-edited `REVISED` segments are **protected** and change only with explicit user opt-in.
 
 | ID         | Requirement                                                                                                                                                                                                                            |
-|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-ALGO-D1 | Resolve deferred-resolution items using full-book facts and re-render affected earlier segments to REVISED. User-`REVISED` segments are protected: the sweep proposes a change but does not overwrite them.                            |
-| FR-ALGO-D2 | Run a global term-consistency sweep **bounded to segments that contain a swept term**. Apply **deterministic string substitution** for **locked** terms; invoke an **LLM re-render only** where gender/agreement deferrals require it. |
+| FR-ALGO-D2 | Run a global term-consistency sweep **bounded to segments that contain a swept term**. Apply **deterministic string substitution, without a model call**, and only where the glossary held a previous target for that term which the person then changed; a rendering the model chose on its own for a term that had no glossary target is never swept. Invoke an **LLM re-render only** where a gender/agreement deferral now has a known gender. |
 | FR-ALGO-D3 | A `REVISED → REVISED` transition (re-sweeping an already user-edited segment) happens **only with user opt-in**.                                                                                                                       |
 
 ## phase-e-export {#phase-e-export}
 
 | ID         | Requirement                                                                                                            |
-|------------|------------------------------------------------------------------------------------------------------------------------|
+|------------|--------------------------------------------------------------------------------------------------------------------------|
 | FR-ALGO-E1 | Write each target string back into its DOM/AST node (FR-EXPORT-02).                                                    |
 | FR-ALGO-E2 | Repackage in the source format (EPUB mimetype-first / FB2 encoding-preserving / MD / TXT) and validate (FR-EXPORT-03). |
 
@@ -219,7 +219,7 @@ creative variation, and low temperature reduces hallucination, drift off the glo
 paraphrase-away-from-source failure mode. The per-phase guidance is:
 
 | Phase                                    | Temperature              | Rationale                                                                                                          |
-|------------------------------------------|--------------------------|--------------------------------------------------------------------------------------------------------------------|
+|-------------------------------------------|--------------------------|----------------------------------------------------------------------------------------------------------------------|
 | Draft translation                        | ~0.2 (default)           | Faithful and reproducible; enough flexibility for fluent target phrasing without inventing content.                |
 | Judge / deterministic-QA-assisting judge | ~0.0–0.2                 | A scorer should be near-deterministic so the same draft yields the same verdict; τ comparisons stay stable.        |
 | Directed fix                             | ~0.2                     | A targeted correction of named findings; stay close to the accepted draft.                                         |
@@ -284,12 +284,12 @@ compose.*
   genre literary, register neutral, faithful↔natural mid.
 - **C Context package:** system+brief at edge; rolling summary (empty at book start); glossary term for `⟦g3⟧`;
   preceding-target window (prior sentence's UK translation); masked source at the other edge.
-- **C Draft (JSON keyed by id):** `{"s42": "Він відчинив ⟦g1⟧старі⟦g2⟧ двері біля ⟦g3⟧."}`
+- **C Draft (one segment per call):** `{"target": "Він відчинив ⟦g1⟧старі⟦g2⟧ двері біля ⟦g3⟧."}`
 - **C Unmask + hard gate:** placeholder multiset `{g1,g2,g3}` matches → pass; `⟦g1⟧⟦g2⟧` restore to `<em>…</em>`; `⟦g3⟧`
   restores to the locked target `Бейкер-стріт, 7`.
-- **C Deterministic QA:** target language = Ukrainian (pass, policy-aware, above the min-length + Lingua-confidence
+- **C Deterministic QA:** target language = Ukrainian (pass, policy-aware, above the min-length + script-share
   floor); no untranslated echo; length ratio within the EN→UK band; glossary term present; `confidence ≥ τ`. There is
-  **no** separate number/named-entity check — the number `7` is preserved by riding inside the locked term `⟦g3⟧` (D9).
+  **no** separate number/named-entity check — no numeral is masked in this build (D9).
 - **C Judge:** `score ≥ τ_judge` (verdict advisory) and `confidence ≥ τ` → **ACCEPTED**. TM updated (context-keyed),
   preceding-target window advanced, name dictionary unchanged, segment persisted atomically.
 - **E Export:** target written back into the s42 text node; `<em>` and the address preserved; document language metadata
