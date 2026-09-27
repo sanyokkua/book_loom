@@ -54,3 +54,11 @@ explicitly — read them before planning work.
 | ADR-0031 | Mask to character data and compose the restored fragment, rather than substituting into a markup string | DD-07, DD-19, DD-43, DD-45, DD-49 |
 | ADR-0032 | Tests are the evidence; no requirement-id tracking                                    | process             |
 | ADR-0033 | The translation engine gets a bound chat model and runs as a pausable job             | DD-10, DD-15, DD-31 |
+| ADR-0034 | Working state behind storage ports; in-memory adapters until SQLite                   | DD-20               |
+| ADR-0035 | Export is a separate action; a run ends when the translation ends (amends ADR-0033)   | DD-30               |
+| ADR-0036 | Review modes decide when the run pauses, as well as τ                                 | DD-45               |
+| ADR-0037 | Source language from metadata only; target language checked by script                 | EC-LANG-1           |
+| ADR-0038 | Judge a chunk together; generate every target one segment at a time                   | DD-16, DD-45        |
+| ADR-0039 | Import refusal kind reported as data; ErrorCode stays at fifteen                      | DD-14               |
+| ADR-0040 | Paired placeholders keep order and nesting; atomic ones may move                      | DD-19               |
+| ADR-0041 | DD-47 attribute values (image alt) are translatable                                   | DD-47               |

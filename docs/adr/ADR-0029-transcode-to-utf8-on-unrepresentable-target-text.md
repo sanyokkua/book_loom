@@ -1,6 +1,7 @@
 # ADR-0029 — Transcode the whole output document to UTF-8 when the source charset cannot represent the target text
 
-**Status:** accepted **Date:** 2026-08-11
+**Status:** accepted — implemented for TXT and Markdown by `complete-translation-workflow`; EPUB out of scope (see the
+amendment) **Date:** 2026-08-11 **Amended:** 2026-09-27
 **Deciders:** architect
 **Supersedes:** none
 
@@ -8,17 +9,18 @@
 
 `fix-document-round-trip-corpus-defects`'s verification harness sets every segment's target to a marker plus its own
 source text and writes the book back, which exercises the one case no fixture had: **target text the source's
-resolved charset cannot encode**. It found that the four writers do three different things, two of them silently.
+resolved charset cannot encode**. It found that the four writers do four different things, one of them silently
+damaging the book.
 
 | format | behaviour today | where |
 |---|---|---|
 | TXT | **refuses** — `CorruptContainerException` → `ErrorCode.validation` | `TxtWriter.encode` |
 | FB2 | **switches the whole document to UTF-8** and rewrites the XML declaration | `Fb2Writer.serialize` |
-| Markdown | **silently substitutes `?`** and returns success | `MarkdownWriter` |
-| EPUB | **silently substitutes `?`** — `tree.outerHtml().getBytes(charset)` maps unmappable characters | `EpubWriter` |
+| Markdown | **silently substitutes `?`** and returns success — `targetInner.getBytes(charset)` | `MarkdownWriter` |
+| EPUB | **writes a numeric character reference** (lossless) — jsoup's output settings carry the charset, so `outerHtml()` escapes every unmappable character before `getBytes` sees it (corrected 2026-09-27; the first measurement misread this row) | `EpubWriter` |
 
 Adding TXT's guard to the other three would cement one of three competing behaviours with no requirement behind it,
-and would leave EPUB and Markdown corrupting books quietly in the meantime. The evidence and measurements are in
+and would leave Markdown corrupting books quietly in the meantime. The evidence and measurements are in
 `docs/implementation_plan/notes-corpus-verification.md`.
 
 This is latent only while `:pipeline` is a stub. It stops being latent on the first real run, and not rarely: a
@@ -61,9 +63,8 @@ Concretely, on export, for every format:
 3. If **any** character is not, the **whole output document** is encoded as UTF-8 instead, and the encoding is
    re-declared in the form the format carries it:
    - **FB2** — rewrite the XML declaration's `encoding` (already implemented; unchanged).
-   - **EPUB** — rewrite each affected content document's XML declaration and any `<meta charset>`/
-     `http-equiv="Content-Type"` it carries. The OCF container is UTF-8 by specification, so only content documents
-     are in scope.
+   - **EPUB** — not needed: its writer never meets an unrepresentable character, because jsoup writes a numeric
+     character reference, which every reading system resolves (amended 2026-09-27).
    - **Markdown** and **TXT** — no in-band declaration exists; the bytes become UTF-8 and the `Document`'s recorded
      charset is updated so a re-import resolves it correctly.
 4. **A byte-order mark is preserved as a property, not as bytes.** If the source carried a BOM, the UTF-8 output
@@ -75,8 +76,8 @@ Concretely, on export, for every format:
 
 - Positive: no book is ever refused at export, and no book is ever silently damaged. The two outcomes that actually
   matter are both removed.
-- Positive: one rule, four formats, one requirement with a scenario per format. FB2 needs no code change; TXT, Markdown
-  and EPUB converge onto what it already does.
+- Positive: one rule, four formats, one requirement with a scenario per format. FB2 needs no code change; TXT and
+  Markdown converge onto what it already does, and EPUB never needs it (see the amendment).
 - Positive: UTF-8 is what the target language usually needs. A `windows-1251` FB2 translated into Ukrainian is
   representable, but a `windows-1252` source is not, and transcoding is the only outcome that produces a readable book.
 - Negative: **the output declares an encoding the source did not.** For a reader or toolchain that hard-codes the
@@ -141,5 +142,15 @@ FR-DOC-FB2-3 and EC-FB2-1 are **not** deviations — this generalises them.
   `#txt` (FR-DOC-TXT-1, FR-DOC-TXT-3), `#encoding-and-bom`, `#round-trip-golden-requirement`,
   `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#repackaging`
 - Evidence: `docs/implementation_plan/notes-corpus-verification.md` (the four-writer measurement table)
-- Implemented by: the `settle-writer-policy-and-document-lifetime` change (backlog item D1)
+- Implemented by: FB2 before this ADR; TXT and Markdown by `complete-translation-workflow` (backlog item D1, and
+  `docs/next_features.md` §6–§7)
 - Related: ADR-0030 (the other half of the writer's acceptance policy)
+
+## Amended in this change (2026-09-27)
+
+`complete-translation-workflow` implements this decision for TXT and Markdown, replacing TXT's refusal and Markdown's
+silent `?` (owner decision): the writer first encodes in the charset resolved at import with a reporting encoder, and
+on any unrepresentable character writes the whole document as UTF-8, with a byte-order mark exactly when the source
+had one, and records UTF-8 as the document's charset. EPUB needs no transcoding — the Context row was wrong; jsoup
+already writes lossless numeric references, which a test now pins — and FB2 keeps the switch it always had. The golden
+carve-out for an encoding-switched fixture applies to TXT and Markdown.
