@@ -219,9 +219,9 @@ public final class DocumentService implements DocumentPort {
         }
     }
 
-    /** An image's alternative text comes back as plain text: its writer encodes it once, where it lands. */
+    /** An image's alternative text and a frontmatter value come back as plain text: the writer encodes them once. */
     private Result<String> restore(BookFormat format, Segment segment, String translatedMasked) {
-        final boolean isPlain = segment.kind() == SegmentKind.ALT;
+        final boolean isPlain = segment.kind() == SegmentKind.ALT || segment.kind() == SegmentKind.FRONTMATTER_VALUE;
         final RestoredContent restored = isPlain
                 ? Unmasker.restorePlain(segment, translatedMasked)
                 : Unmasker.restore(format, segment, translatedMasked);

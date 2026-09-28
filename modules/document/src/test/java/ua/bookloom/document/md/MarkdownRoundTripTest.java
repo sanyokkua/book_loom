@@ -113,12 +113,17 @@ class MarkdownRoundTripTest {
                 .noneSatisfy(inner -> assertThat(inner).contains("class=\"note\""));
     }
 
-    // frontmatter yields no segment for any key or value it contains.
+    // frontmatter yields no body segment for any key or value, and exactly one auxiliary segment: its title text.
     @Test
-    void read_frontmatter_yieldsNoSegmentForItsKeysOrValues() {
-        assertThat(innersOf(openPrimary()))
-                .noneSatisfy(inner -> assertThat(inner).contains("title:"));
-        assertThat(innersOf(openPrimary())).doesNotContain("The Book");
+    void read_frontmatter_yieldsNoBodySegmentAndOneAuxiliarySegmentForItsTextValue() {
+        final Document document = openPrimary();
+
+        assertThat(innersOf(document)).noneSatisfy(inner -> assertThat(inner).contains("title:"));
+        assertThat(innersOf(document)).doesNotContain("The Book", "title", "lang", "en");
+        final Segment only = document.units().get(1).segments().get(0);
+        assertThat(document.units().get(1).segments()).hasSize(1);
+        assertThat(only.id()).isEqualTo("aux:fm:title");
+        assertThat(only.sourceInner()).isEqualTo("The Book");
     }
 
     // the frontmatter's title and lang reach the metadata map and declaredLang.
@@ -149,9 +154,9 @@ class MarkdownRoundTripTest {
                 .containsOnlyNulls();
     }
 
-    // Every book ends with an auxiliary unit, empty until the frontmatter and image alt slots exist.
+    // Every book ends with an auxiliary unit named for the file; the primary fixture's holds its frontmatter title.
     @Test
-    void read_markdownFile_endsWithAnEmptyAuxiliaryUnitNamedForTheFile() {
+    void read_markdownFile_endsWithAnAuxiliaryUnitNamedForTheFile() {
         final Document document = openPrimary();
 
         final Unit last = document.units().get(document.units().size() - 1);
@@ -160,7 +165,7 @@ class MarkdownRoundTripTest {
         assertThat(last.id()).isEqualTo("aux");
         assertThat(last.href()).isEqualTo("chapter.md");
         assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
-        assertThat(last.segments()).isEmpty();
+        assertThat(last.segments()).extracting(Segment::id).containsExactly("aux:fm:title");
     }
 
     // the unit's id, href and media type identify a single-unit format.
@@ -184,15 +189,15 @@ class MarkdownRoundTripTest {
         assertThat(textOf(writeOut(document, "uk"))).isEqualTo(MarkdownFixtures.ONLY_A_FENCE);
     }
 
-    // WHEN a Markdown file is reassembled with no segment carrying target text, THEN the
-    // output bytes are identical to the source's.
+    // WHEN a Markdown file is reassembled with no segment carrying target text, THEN the output equals the source
+    // except that the frontmatter's lang value names the target language.
     @Test
-    void write_zeroEditRoundTrip_isByteIdentical() {
+    void write_zeroEditRoundTrip_changesOnlyTheLangValue() {
         final Document document = openPrimary();
 
         final Path output = writeOut(document, "uk");
 
-        assertThat(textOf(output)).isEqualTo(MarkdownFixtures.PRIMARY);
+        assertThat(textOf(output)).isEqualTo(MarkdownFixtures.PRIMARY.replace("lang: en", "lang: uk"));
     }
 
     // a file whose last byte is not a newline still has no trailing newline afterwards.

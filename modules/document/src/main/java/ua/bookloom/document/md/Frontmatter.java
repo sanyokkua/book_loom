@@ -76,12 +76,12 @@ final class Frontmatter {
         return -1;
     }
 
-    private static int endOfLine(String text, int from) {
+    static int endOfLine(String text, int from) {
         final int newline = text.indexOf('\n', from);
         return newline < 0 ? text.length() : newline;
     }
 
-    private static int nextLineStart(String text, int from) {
+    static int nextLineStart(String text, int from) {
         final int newline = text.indexOf('\n', from);
         return newline < 0 ? text.length() : newline + 1;
     }

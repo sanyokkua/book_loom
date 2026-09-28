@@ -5,15 +5,9 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SkeletonAnchor;
-import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.model.BufferTextWriter;
 import ua.bookloom.document.model.DocumentNotOpenException;
 
@@ -29,9 +23,9 @@ import ua.bookloom.document.model.DocumentNotOpenException;
  * <p><strong>A translation the source encoding cannot hold switches the whole file to UTF-8</strong> rather than
  * being written as {@code ?} (ADR-0029); see {@link BufferTextWriter}.
  *
- * <p><strong>No language metadata is added.</strong> The export contract takes a target language for every format,
- * but Markdown has nowhere to put one. Inventing a place — a {@code lang:} key in a frontmatter block the source
- * never had — would add content that was not there and break the byte-exact round trip for a field nothing reads.
+ * <p><strong>Language metadata is replaced, never added.</strong> Markdown has a place for it only when the
+ * frontmatter already declares a top-level {@code lang}; inventing one the source never had would add content that
+ * was not there and break the byte-exact round trip for a field nothing reads.
  */
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class MarkdownWriter {
@@ -43,7 +37,7 @@ public final class MarkdownWriter {
      *
      * @param document the document to reassemble, in the state its segments should be written back in
      * @param destination the file to write
-     * @param targetLanguage accepted and deliberately unused — Markdown carries no language field
+     * @param targetLanguage the tag an existing top-level frontmatter {@code lang} value is replaced with
      * @return {@code destination}
      * @throws DocumentNotOpenException if {@code document}'s id was never registered by
      *     {@link MarkdownReader#read}
@@ -59,7 +53,7 @@ public final class MarkdownWriter {
                 parsed.originalBytes(),
                 parsed.charset(),
                 Boolean.TRUE.equals(document.hasBom()),
-                replacementsOf(document),
+                MarkdownReplacements.of(document, parsed, targetLanguage),
                 document.id(),
                 document.format());
         try {
@@ -68,40 +62,5 @@ public final class MarkdownWriter {
             throw new UncheckedIOException("Unable to write Markdown output", e);
         }
         return destination;
-    }
-
-    private static List<BufferTextWriter.TextReplacement> replacementsOf(Document document) {
-        final List<BufferTextWriter.TextReplacement> replacements = new ArrayList<>();
-        for (final Unit unit : document.units()) {
-            if (unit.isAuxiliary()) {
-                continue;
-            }
-            for (final Segment segment : unit.segments()) {
-                addReplacement(replacements, segment);
-            }
-        }
-        return replacements;
-    }
-
-    private static void addReplacement(List<BufferTextWriter.TextReplacement> replacements, Segment segment) {
-        final String targetInner = segment.targetInner();
-        if (targetInner == null) {
-            return;
-        }
-        replacements.add(new BufferTextWriter.TextReplacement(spanOf(segment.anchor()), targetInner));
-    }
-
-    /**
-     * A buffer skeleton can only be addressed by a byte span; a node path indexes a tree this format does not
-     * have, so reaching here with one is a programming error rather than a data error.
-     */
-    private static ByteSpanAnchor spanOf(SkeletonAnchor anchor) {
-        return switch (anchor) {
-            case ByteSpanAnchor span -> span;
-            case ua.bookloom.api.document.NodeAnchor ignored ->
-                throw new IllegalArgumentException("A buffer skeleton cannot be addressed by a node path");
-            case ua.bookloom.api.document.AttributeAnchor ignored ->
-                throw new IllegalArgumentException("A buffer skeleton cannot be addressed by an attribute");
-        };
     }
 }
