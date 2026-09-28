@@ -293,4 +293,22 @@ class MarkdownMaskerPortTest {
         assertThat(segment.masked()).isEqualTo("Read ⟦g0⟧ now.");
         assertThat(segment.placeholders()).isEqualTo(Map.of("g0", "[\n](https://example.org/d)"));
     }
+
+    // WHEN a paragraph holds a bare web address, THEN the whole address is one atomic token.
+    @Test
+    void mask_bareHttpsUrl_isOneAtomicToken() {
+        assertThat(onlySegment("See https://example.com/path").masked()).isEqualTo("See ⟦g0⟧");
+    }
+
+    // WHEN a paragraph holds a bare www address, THEN it too is one atomic token, mid-sentence.
+    @Test
+    void mask_bareWwwAddress_isOneAtomicToken() {
+        assertThat(onlySegment("Visit www.example.com today").masked()).isEqualTo("Visit ⟦g0⟧ today");
+    }
+
+    // WHEN a link is written with link syntax, THEN its text stays translatable as before.
+    @Test
+    void mask_explicitLink_keepsItsTextTranslatable() {
+        assertThat(onlySegment("[docs](https://example.com)").masked()).isEqualTo("⟦g0⟧docs⟦g1⟧");
+    }
 }

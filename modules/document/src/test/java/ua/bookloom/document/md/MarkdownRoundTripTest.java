@@ -10,13 +10,16 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.document.DocumentServices;
 import ua.bookloom.document.fixture.MarkdownFixtures;
 
 /**
@@ -245,6 +248,18 @@ class MarkdownRoundTripTest {
     }
 
     /** Rebuilds {@code document} with the segment whose source starts with {@code sourcePrefix} translated. */
+    // WHEN a paragraph with a bare URL is unmasked with the token kept and then written, THEN the line holds the
+    // translated words and the address exactly as written.
+    @Test
+    void write_bareUrlKeptThroughUnmask_isWrittenVerbatim() {
+        final Document document = open("See https://example.com/path\n", "url.md");
+        final Segment segment = document.units().get(0).segments().get(0);
+        final Result<String> restored = DocumentServices.newService().unmask(BookFormat.MARKDOWN, segment, "ДИВ. ⟦g0⟧");
+        final Document translated = withTarget(document, "See ", Objects.requireNonNull(restored.data()));
+
+        assertThat(textOf(writeOut(translated, "uk"))).isEqualTo("ДИВ. https://example.com/path\n");
+    }
+
     private static Document withTarget(Document document, String sourcePrefix, String targetInner) {
         final Unit unit = document.units().get(0);
         final List<Segment> segments = new ArrayList<>(unit.segments());

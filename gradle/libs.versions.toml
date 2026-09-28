@@ -75,9 +75,10 @@ jdom2 = "2.0.6.1"
 #
 # commonmark-java is used for ANALYSIS ONLY — its renderer is never invoked. The Markdown reader locates each
 # leaf block's byte span in the AST and export splices translated spans into a copy of the original bytes, so
-# nothing is ever re-rendered (design.md D4). The GFM tables extension is the ONLY extension added: tables are
-# block-level and change segmentation (36 tables across 7 of 8 surveyed documents), while strikethrough and
-# autolink are inline constructs that alter no block boundary and the surveyed corpus contains zero of either.
+# nothing is ever re-rendered (design.md D4). The GFM tables extension is added because tables are block-level
+# and change segmentation (36 tables across 7 of 8 surveyed documents); the autolink extension (task 5.7) is added
+# so a bare web address in prose is one atomic token a model cannot re-case or translate. Strikethrough is still
+# left out: it is inline, alters no block boundary, and the surveyed corpus contains none.
 # Licence: BSD-2-Clause, already in the default allowlisted family.
 commonmark = "0.24.0"
 
@@ -140,6 +141,7 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 jdom2 = { module = "org.jdom:jdom2", version.ref = "jdom2" }
 commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
 commonmark-ext-gfm-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+commonmark-ext-autolink = { module = "org.commonmark:commonmark-ext-autolink", version.ref = "commonmark" }
 icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
 
 # --- UI controls and icons ----------------------------------------------------------------------------------------

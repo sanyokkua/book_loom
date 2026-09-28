@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.commonmark.ext.autolink.AutolinkExtension;
 import org.commonmark.ext.gfm.tables.TablesExtension;
 import org.commonmark.node.Node;
 import org.commonmark.parser.IncludeSourceSpans;
@@ -50,7 +51,7 @@ public final class MarkdownReader {
      */
     static Parser parser() {
         return Parser.builder()
-                .extensions(List.of(TablesExtension.create()))
+                .extensions(List.of(TablesExtension.create(), AutolinkExtension.create()))
                 .includeSourceSpans(IncludeSourceSpans.BLOCKS_AND_INLINES)
                 .build();
     }

@@ -25,11 +25,11 @@ module ua.bookloom.document {
     // Strict XML — container.xml, the OPF, and FB2 (design.md D4).
     requires org.jdom2;
     // Markdown ANALYSIS ONLY: the AST locates each leaf block's byte span and the renderer is never invoked
-    // (design.md D4). GFM tables is the only extension, because tables are block-level and change segmentation
-    // while strikethrough and autolink are inline and change no block boundary. Task 5.2 names the first of these
-    // two; the extension module is required alongside it because a JPMS module cannot reach an extension's types
-    // through the core module that does not re-export them.
+    // (design.md D4). GFM tables is required because tables are block-level and change segmentation; autolink
+    // (task 5.7) so a bare web address is one atomic token. Each extension module is required alongside the core
+    // because a JPMS module cannot reach an extension's types through the core module that does not re-export them.
     requires org.commonmark;
+    requires org.commonmark.ext.autolink;
     requires org.commonmark.ext.gfm.tables;
     // Charset detection on the import path. Ships as an automatic module (Automatic-Module-Name: com.ibm.icu),
     // which the `-Xlint:-requires-automatic` carve-out in `bookloom.java-conventions` already accounts for.

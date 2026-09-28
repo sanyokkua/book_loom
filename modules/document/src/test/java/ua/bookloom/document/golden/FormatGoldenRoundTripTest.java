@@ -169,6 +169,21 @@ class FormatGoldenRoundTripTest {
                 .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
     }
 
+    // WHEN a Markdown book holding bare web addresses in prose is reassembled with zero edits, THEN re-parsing the
+    // output equals the source's tree and the bytes are identical.
+    @Test
+    void golden_markdownWithBareUrls_isReParseEqualAndByteIdentical() throws IOException {
+        final Path source = tempDir.resolve("urls.md");
+        Files.writeString(source, "# Links\n\nSee https://example.com/path and visit www.example.com today.\n");
+
+        final RoundTrip result = roundTrip(source);
+
+        MarkdownAstAssert.assertReParseEqual(result.source(), result.output());
+        assertThat(Files.readAllBytes(result.output())).isEqualTo(Files.readAllBytes(source));
+        assertThat(allSegmentsOf(result.document()))
+                .anySatisfy(segment -> assertThat(segment.masked()).isEqualTo("See ⟦g0⟧ and visit ⟦g1⟧ today."));
+    }
+
     // WHEN a fixture TXT book with a byte-order mark and CRLF endings is reassembled with
     // zero segment edits, THEN the output bytes are identical to the source's, mark and line endings included.
     @Test
