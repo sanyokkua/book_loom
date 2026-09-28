@@ -132,4 +132,14 @@ public final class JsoupTreeNode implements TreeNode {
         final String value = element.attr(qualifiedName);
         return value.isEmpty() ? null : value;
     }
+
+    @Override
+    public void setAttribute(String qualifiedName, String plainValue) {
+        Objects.requireNonNull(qualifiedName, "qualifiedName");
+        Objects.requireNonNull(plainValue, "plainValue");
+        if (!(node instanceof Element element)) {
+            throw new IllegalStateException("Only an element has attributes to set");
+        }
+        element.attr(qualifiedName, plainValue);
+    }
 }

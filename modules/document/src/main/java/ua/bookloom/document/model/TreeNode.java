@@ -99,4 +99,14 @@ public interface TreeNode {
      */
     @Nullable
     String attribute(String qualifiedName);
+
+    /**
+     * Replaces this element's value for {@code qualifiedName}, leaving every other attribute and child untouched.
+     * The value is plain text: the tree escapes it on output, so the caller never pre-escapes it.
+     *
+     * @param qualifiedName the attribute's qualified name, e.g. {@code "alt"}
+     * @param plainValue the new value as plain text, not markup
+     * @throws IllegalStateException if this node is not an element
+     */
+    void setAttribute(String qualifiedName, String plainValue);
 }

@@ -2,11 +2,17 @@ package ua.bookloom.document.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.StringReader;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import ua.bookloom.api.document.AttributeAnchor;
 import ua.bookloom.api.document.Segment;
 
 /**
@@ -106,5 +112,58 @@ class SkeletonAnchorsTest {
 
         assertThat(body.html()).contains("<!-- a comment -->");
         assertThat(body.select("p").get(1).text()).isEqualTo("Після.");
+    }
+
+    private static final String IMG = "<img id=\"f1\" src=\"fig1.png\" alt=\"Figure 1\" title=\"Fig. 1\"/>";
+
+    private static TreeNode jsoupRoot() {
+        return JsoupTreeNode.of(bodyOf(IMG));
+    }
+
+    private static TreeNode jdomRoot() {
+        try {
+            return Jdom2TreeNode.of(SecureXml.builder()
+                    .build(new StringReader("<div>" + IMG + "</div>"))
+                    .getRootElement());
+        } catch (Exception e) {
+            throw new IllegalStateException("fixture is not parseable", e);
+        }
+    }
+
+    private static Stream<Function<Void, TreeNode>> adapters() {
+        return Stream.of(ignored -> jsoupRoot(), ignored -> jdomRoot());
+    }
+
+    private static TreeNode img(TreeNode root) {
+        return root.childNodes().stream()
+                .filter(child -> "img".equals(child.tagName()))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    // WHEN an AttributeAnchor is written, THEN only that attribute's value changes and the element count is unchanged.
+    @ParameterizedTest
+    @MethodSource("adapters")
+    void writeBack_attributeAnchor_replacesOnlyThatAttributeValue(Function<Void, TreeNode> adapter) {
+        final TreeNode root = adapter.apply(null);
+        final int before = root.childNodes().size();
+
+        SkeletonAnchors.writeBack(root, new AttributeAnchor(List.of(0), "alt"), "Рисунок 1");
+
+        assertThat(img(root).openMarkup())
+                .isEqualTo("<img id=\"f1\" src=\"fig1.png\" alt=\"Рисунок 1\" title=\"Fig. 1\">");
+        assertThat(root.childNodes()).hasSize(before);
+    }
+
+    // WHEN the plain value contains an ampersand, THEN it is escaped exactly once on output.
+    @ParameterizedTest
+    @MethodSource("adapters")
+    void writeBack_attributeValueWithAmpersand_isEscapedOnce(Function<Void, TreeNode> adapter) {
+        final TreeNode root = adapter.apply(null);
+
+        SkeletonAnchors.writeBack(root, new AttributeAnchor(List.of(0), "alt"), "Том & Джеррі");
+
+        assertThat(img(root).openMarkup()).contains("alt=\"Том &amp; Джеррі\"").doesNotContain("&amp;amp;");
+        assertThat(img(root).attribute("alt")).isEqualTo("Том & Джеррі");
     }
 }

@@ -205,6 +205,31 @@ public final class Jdom2TreeNode implements TreeNode {
     }
 
     /**
+     * {@code xml:lang} and any other prefixed name are resolved through the namespace in scope, because JDOM2
+     * stores a prefixed attribute under its namespace and a plain string-named write would add a second, unrelated
+     * attribute beside it.
+     */
+    @Override
+    public void setAttribute(String qualifiedName, String plainValue) {
+        Objects.requireNonNull(qualifiedName, "qualifiedName");
+        Objects.requireNonNull(plainValue, "plainValue");
+        if (!(content instanceof Element element)) {
+            throw new IllegalStateException("Only an element has attributes to set");
+        }
+        final int colon = qualifiedName.indexOf(':');
+        if (colon < 0) {
+            element.setAttribute(qualifiedName, plainValue);
+            return;
+        }
+        final String prefix = qualifiedName.substring(0, colon);
+        final Namespace namespace = "xml".equals(prefix) ? Namespace.XML_NAMESPACE : element.getNamespace(prefix);
+        if (namespace == null) {
+            throw new IllegalArgumentException("No namespace is declared for the prefix " + prefix);
+        }
+        element.setAttribute(qualifiedName.substring(colon + 1), plainValue, namespace);
+    }
+
+    /**
      * Escapes {@code &}, {@code <}, {@code >} and {@code "} for use inside a double-quoted attribute value, plus
      * the three whitespace characters an XML parser would otherwise normalize away there: without the numeric
      * escapes, a value containing a line feed comes back as a plain space when the composed tag is re-parsed, so

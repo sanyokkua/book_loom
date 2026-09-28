@@ -97,6 +97,8 @@ public final class MarkdownWriter {
             case ByteSpanAnchor span -> span;
             case ua.bookloom.api.document.NodeAnchor ignored ->
                 throw new IllegalArgumentException("A buffer skeleton cannot be addressed by a node path");
+            case ua.bookloom.api.document.AttributeAnchor ignored ->
+                throw new IllegalArgumentException("A buffer skeleton cannot be addressed by an attribute");
         };
     }
 }

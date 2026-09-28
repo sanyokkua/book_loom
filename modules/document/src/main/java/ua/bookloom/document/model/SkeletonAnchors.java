@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.document.AttributeAnchor;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.NodeAnchor;
 import ua.bookloom.api.document.SkeletonAnchor;
@@ -45,6 +47,7 @@ import ua.bookloom.api.document.SkeletonAnchor;
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SkeletonAnchors {
 
@@ -76,8 +79,16 @@ public final class SkeletonAnchors {
     public static void writeBackAll(TreeNode root, List<PendingWrite> writes) {
         Objects.requireNonNull(root, "root");
         Objects.requireNonNull(writes, "writes");
+        final List<PendingWrite> runWrites = new ArrayList<>(writes.size());
+        for (final PendingWrite write : writes) {
+            if (write.anchor() instanceof AttributeAnchor attributeAnchor) {
+                writeAttribute(root, attributeAnchor, write.targetInner());
+            } else {
+                runWrites.add(write);
+            }
+        }
         for (final Map.Entry<List<Integer>, List<PendingWrite>> block :
-                groupByBlock(writes).entrySet()) {
+                groupByBlock(runWrites).entrySet()) {
             writeBlock(resolve(root, block.getKey()), block.getValue());
         }
     }
@@ -95,6 +106,19 @@ public final class SkeletonAnchors {
             Objects.requireNonNull(anchor, "anchor");
             Objects.requireNonNull(targetInner, "targetInner");
         }
+    }
+
+    /**
+     * An attribute write replaces one value on the addressed element and moves no child, so it needs no plan and
+     * cannot disturb the run ranges resolved for the other writes.
+     */
+    private static void writeAttribute(TreeNode root, AttributeAnchor anchor, String plainValue) {
+        log.debug(
+                "write-back anchor=attribute depth={} attribute={}",
+                anchor.nodePath().size(),
+                anchor.attribute());
+        log.trace("attribute value written: {}", plainValue);
+        resolve(root, anchor.nodePath()).setAttribute(anchor.attribute(), plainValue);
     }
 
     /** Groups by node path, so a block is resolved and split once however many of its runs are being written. */
@@ -140,6 +164,8 @@ public final class SkeletonAnchors {
             case NodeAnchor nodeAnchor -> nodeAnchor;
             case ByteSpanAnchor ignored ->
                 throw new IllegalArgumentException("A tree skeleton cannot be addressed by a byte span");
+            case AttributeAnchor ignored ->
+                throw new IllegalArgumentException("An attribute anchor is not a run write");
         };
     }
 

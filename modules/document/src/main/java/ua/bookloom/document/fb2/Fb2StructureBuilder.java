@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jdom2.Element;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.AttributeAnchor;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.NodeAnchor;
@@ -142,6 +143,8 @@ final class Fb2StructureBuilder {
             case NodeAnchor nodeAnchor -> resolvePath(root, nodeAnchor.nodePath());
             case ByteSpanAnchor ignored ->
                 throw new IllegalStateException("An FB2 segment must be anchored by a node path");
+            case AttributeAnchor ignored ->
+                throw new IllegalStateException("An FB2 body segment must be anchored by a node path");
         };
     }
 

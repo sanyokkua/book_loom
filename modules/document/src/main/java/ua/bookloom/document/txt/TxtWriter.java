@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import ua.bookloom.api.document.AttributeAnchor;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.NodeAnchor;
@@ -88,6 +89,8 @@ public final class TxtWriter {
             case ByteSpanAnchor span -> span;
             case NodeAnchor ignored ->
                 throw new IllegalArgumentException("A buffer skeleton cannot be addressed by a node path");
+            case AttributeAnchor ignored ->
+                throw new IllegalArgumentException("A buffer skeleton cannot be addressed by an attribute");
         };
     }
 }
