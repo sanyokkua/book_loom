@@ -27,6 +27,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Verifies diagnostics from the per-segment decision boundary. */
 class DiagnosticsSegmentTranslatorTest {
@@ -156,7 +157,7 @@ class DiagnosticsSegmentTranslatorTest {
                 documents,
                 model,
                 format,
-                new DraftPromptBuilder(sourceLanguage, targetLanguage),
+                new DraftPromptBuilder(new PromptTemplates(), sourceLanguage, targetLanguage),
                 new DraftReplyParser(new ObjectMapper()));
     }
 

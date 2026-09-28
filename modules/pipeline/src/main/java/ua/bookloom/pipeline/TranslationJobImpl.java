@@ -34,6 +34,7 @@ import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** The single-run translation lifecycle, including pause and cancellation boundaries. */
 @Slf4j
@@ -43,6 +44,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final TranslationRequest request;
     private final ChatModel model;
     private final ObjectMapper mapper;
+    private final PromptTemplates templates;
     private final ExportMoveOperation moves;
     private final JobControl control = new JobControl();
     private final JobSubscribers subscribers = new JobSubscribers();
@@ -54,8 +56,9 @@ final class TranslationJobImpl implements TranslationJob {
             final DocumentPort documents,
             final TranslationRequest request,
             final ChatModel model,
-            final ObjectMapper mapper) {
-        this(documents, request, model, mapper, ExportMoveOperation.nio());
+            final ObjectMapper mapper,
+            final PromptTemplates templates) {
+        this(documents, request, model, mapper, templates, ExportMoveOperation.nio());
     }
 
     TranslationJobImpl(
@@ -63,11 +66,13 @@ final class TranslationJobImpl implements TranslationJob {
             final TranslationRequest request,
             final ChatModel model,
             final ObjectMapper mapper,
+            final PromptTemplates templates,
             final ExportMoveOperation moves) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.request = Objects.requireNonNull(request, "request");
         this.model = Objects.requireNonNull(model, "model");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.templates = Objects.requireNonNull(templates, "templates");
         this.moves = Objects.requireNonNull(moves, "moves");
     }
 
@@ -152,6 +157,7 @@ final class TranslationJobImpl implements TranslationJob {
                 new CancellableChatModel(model, control, this::announceModelCall),
                 tracker.format(),
                 new DraftPromptBuilder(
+                        templates,
                         TranslationJobRequestContext.sourceLanguage(request, tracker.declaredLanguage()),
                         request.targetLanguage()),
                 new DraftReplyParser(mapper));

@@ -21,6 +21,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Validates a translation request and creates its single-run job without opening the source book. */
 @Slf4j
@@ -31,12 +32,15 @@ public final class TranslationEngineImpl implements TranslationEngine {
 
     private final DocumentPort documents;
     private final ObjectMapper mapper;
+    private final PromptTemplates templates;
 
     /** Creates an engine with the application-wide tolerant JSON mapper. */
     @Inject
-    public TranslationEngineImpl(final DocumentPort documents, final ObjectMapper mapper) {
+    public TranslationEngineImpl(
+            final DocumentPort documents, final ObjectMapper mapper, final PromptTemplates templates) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.templates = Objects.requireNonNull(templates, "templates");
     }
 
     @Override
@@ -56,7 +60,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final Result<Boolean> identity = checkIdentity(request);
             return identity.isErr()
                     ? failure(identity)
-                    : Result.ok(new TranslationJobImpl(documents, request, model, mapper));
+                    : Result.ok(new TranslationJobImpl(documents, request, model, mapper, templates));
         } catch (Throwable cause) {
             return Result.err(unexpectedBoundaryError(cause));
         }

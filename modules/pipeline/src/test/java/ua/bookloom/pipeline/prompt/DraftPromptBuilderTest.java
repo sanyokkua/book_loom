@@ -16,7 +16,7 @@ class DraftPromptBuilderTest {
     // A BCP-47 language pair must reach the model as unambiguous English names plus its raw tags.
     @Test
     void messagesFor_knownLanguages_rendersReadableLanguageDescriptions() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder("en", "uk");
+        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
 
         final var messages = builder.messagesFor(segment("He opened the ⟦g0⟧old⟦g1⟧ door."));
 
@@ -31,7 +31,7 @@ class DraftPromptBuilderTest {
     // An absent source language must tell the model to infer the segment language rather than leave it vague.
     @Test
     void messagesFor_unknownSourceLanguage_instructsModelToInferItFromSegmentText() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(null, "uk");
+        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), null, "uk");
 
         final String system = builder.messagesFor(segment("Hello.")).getFirst().content();
 
@@ -43,7 +43,7 @@ class DraftPromptBuilderTest {
     // A BCP-47 variant must give the model both the English locale description and exact tag.
     @Test
     void messagesFor_variantLanguageTag_rendersEnglishDescriptionAndTag() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder("zh-Hant", "uk");
+        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "zh-Hant", "uk");
 
         final String system = builder.messagesFor(segment("你好。")).getFirst().content();
 
@@ -53,7 +53,7 @@ class DraftPromptBuilderTest {
     // An unregistered BCP-47 tag must stay explicit instead of being mistaken for a language name.
     @Test
     void messagesFor_unregisteredLanguageTag_rendersQuotedTagFallback() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder("en", "qaa");
+        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "qaa");
 
         final String system = builder.messagesFor(segment("Hello.")).getFirst().content();
 
@@ -63,7 +63,7 @@ class DraftPromptBuilderTest {
     // One source segment is delimited as prose, while absent context is omitted rather than distracting the model.
     @Test
     void messagesFor_emptyContext_rendersDelimitedSourceAndRepeatedTokenRule() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder("en", "uk");
+        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
 
         final String user = builder.messagesFor(segment("He opened the ⟦g0⟧old⟦g1⟧ door."), DraftContext.empty())
                 .get(1)
@@ -81,7 +81,7 @@ class DraftPromptBuilderTest {
     // The system teaches placeholder placement structurally without biasing the requested target language.
     @Test
     void messagesFor_anyLanguage_rendersLanguageNeutralPlaceholderShots() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder("en", "uk");
+        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
 
         final String system = builder.messagesFor(segment("Hello."), DraftContext.empty())
                 .getFirst()
@@ -98,7 +98,7 @@ class DraftPromptBuilderTest {
     // Previous accepted targets are the only context rendered today and retain their document order.
     @Test
     void messagesFor_precedingTargets_rendersOnlyDelimitedContext() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder("en", "uk");
+        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
 
         final String user = builder.messagesFor(segment("Hello."), new DraftContext(List.of("One.", "Two.")))
                 .get(1)

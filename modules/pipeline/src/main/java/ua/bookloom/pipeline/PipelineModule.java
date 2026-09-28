@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import com.google.inject.AbstractModule;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * Guice bindings owned by {@code :pipeline} — the {@code TranslationEngine} port bound to its implementation, plus
@@ -18,6 +19,7 @@ public final class PipelineModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        bind(PromptTemplates.class).asEagerSingleton();
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
     }
 }

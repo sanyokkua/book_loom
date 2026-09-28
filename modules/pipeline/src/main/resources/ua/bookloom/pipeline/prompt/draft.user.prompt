@@ -1,0 +1,33 @@
+{{#summary}}
+[Book so far — context only; do NOT re-translate it]
+{{summary}}
+{{/summary}}
+
+{{#glossaryTerms}}
+[Glossary — apply these renderings exactly]
+{{glossaryTerms}}
+{{/glossaryTerms}}
+
+{{#memoryHint}}
+[Earlier decisions — keep consistent]
+{{memoryHint}}
+{{/memoryHint}}
+
+{{#precedingTargets}}
+[Previous translated text — context only; do NOT re-translate it]
+<PreviousTranslations>
+{{precedingTargets}}
+</PreviousTranslations>
+{{/precedingTargets}}
+
+Translate from {{source}} to {{target}}.
+
+[Immutable tokens for this text]
+Copy this exact ordered sequence unchanged: {{tokens}}
+Do not add, reorder, split, translate, or omit these tokens.
+
+<Text>
+{{text}}
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<translation>"}

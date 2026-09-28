@@ -92,7 +92,7 @@ class SegmentTranslatorTest {
                 .translate(segment);
         assertThat(model.requests()).singleElement().satisfies(request -> {
             assertThat(request.temperature()).isEqualTo(0.2);
-            assertThat(request.responseFormat()).isEqualTo(new ResponseFormat("draft_translation", DraftSchema.SCHEMA));
+            assertThat(request.responseFormat()).isEqualTo(new ResponseFormat("draft", DraftSchema.SCHEMA));
             assertThat(request.reasoningEnabled()).isFalse();
         });
     }

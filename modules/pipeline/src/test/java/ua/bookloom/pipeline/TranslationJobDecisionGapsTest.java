@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Proves, through a whole job, the decisions the scenario audit found covered only at the translator. */
 class TranslationJobDecisionGapsTest {
@@ -169,7 +170,7 @@ class TranslationJobDecisionGapsTest {
             final ChatModel model) {
         final TranslationRequest request =
                 new TranslationRequest(source, tempDir.resolve("Book.uk.md"), "uk", sourceLanguage, false);
-        return new TranslationJobImpl(documents, request, model, new ObjectMapper());
+        return new TranslationJobImpl(documents, request, model, new ObjectMapper(), new PromptTemplates());
     }
 
     private static JobReport report(final TranslationJobImpl job) {

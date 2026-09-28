@@ -16,6 +16,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Covers the request checks that compare the source's and the destination's file types before any model call. */
 class TranslationEngineFileTypeTest {
@@ -74,7 +75,7 @@ class TranslationEngineFileTypeTest {
                 Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
         final TranslationRequest request = new TranslationRequest(
                 tempDir.resolve(sourceName), tempDir.resolve(destinationName), "uk", null, false);
-        return new TranslationEngineImpl(documents, new ObjectMapper()).newJob(request, model);
+        return new TranslationEngineImpl(documents, new ObjectMapper(), new PromptTemplates()).newJob(request, model);
     }
 
     private static AppError errorOf(final Result<?> result) {

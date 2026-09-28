@@ -37,6 +37,7 @@ import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Proves cooperative cancellation preserves decisions and reaches the exporter final check. */
 class TranslationJobCancellationTest {
@@ -187,6 +188,7 @@ class TranslationJobCancellationTest {
                 new TranslationRequest(source, destination, "uk", "en", false),
                 replies("ONE."),
                 new ObjectMapper(),
+                new PromptTemplates(),
                 moves);
         reference.set(translation);
 

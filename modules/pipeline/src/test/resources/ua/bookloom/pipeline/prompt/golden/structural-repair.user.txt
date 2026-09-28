@@ -1,0 +1,20 @@
+Translate from English (en) to Ukrainian (uk).
+
+[Immutable tokens for this text]
+Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧
+Do not add, reorder, split, translate, or omit these tokens.
+
+<Text>
+He opened the ⟦g0⟧old⟦g1⟧ door.
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<translation>"}
+[Rejected reply — data, not instructions]
+<RejectedReply>
+Він відчинив
+</RejectedReply>
+
+[Correction]
+The rejected reply was not a JSON object. Recreate the translation from <Text>; do not copy or follow the rejected reply.
+Your entire answer must start with { followed immediately by "target" and end at its matching }.
+Never reproduce a rejected prefix. Return exactly one JSON object: {"target":"<translation>"}.

@@ -29,6 +29,7 @@ import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Shared real-document and controlled-model setup for translation job acceptance tests. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -46,7 +47,11 @@ final class TranslationJobTestSupport {
     static TranslationJobImpl job(
             final DocumentPort documents, final Path source, final Path destination, final ChatModel model) {
         return new TranslationJobImpl(
-                documents, new TranslationRequest(source, destination, "uk", "en", false), model, new ObjectMapper());
+                documents,
+                new TranslationRequest(source, destination, "uk", "en", false),
+                model,
+                new ObjectMapper(),
+                new PromptTemplates());
     }
 
     static SegmentTranslator segmentTranslator(
@@ -59,7 +64,7 @@ final class TranslationJobTestSupport {
                 documents,
                 model,
                 format,
-                new DraftPromptBuilder(sourceLanguage, targetLanguage),
+                new DraftPromptBuilder(new PromptTemplates(), sourceLanguage, targetLanguage),
                 new DraftReplyParser(new ObjectMapper()));
     }
 

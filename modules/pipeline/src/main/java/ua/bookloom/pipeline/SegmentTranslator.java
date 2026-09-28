@@ -23,6 +23,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftSchema;
+import ua.bookloom.pipeline.prompt.PromptName;
 
 /** Makes one model call and decides one segment. */
 @Slf4j
@@ -57,7 +58,7 @@ final class SegmentTranslator {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
         log.debug("Translating segment id={} format={}", segment.id(), format);
-        final ChatRequest request = requestFor(segment, context, RequestKind.DRAFT, "", "");
+        final ChatRequest request = requestFor(segment, context, PromptName.DRAFT, "", "");
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
             return decideModelError(segment, Objects.requireNonNull(reply.error()));
@@ -68,7 +69,7 @@ final class SegmentTranslator {
     private ChatRequest requestFor(
             final Segment segment,
             final DraftContext context,
-            final RequestKind kind,
+            final PromptName kind,
             final String rejected,
             final String diagnostic) {
         log.debug(
@@ -77,8 +78,8 @@ final class SegmentTranslator {
                 segment.masked().length());
         final ChatRequest request = new ChatRequest(
                 messagesFor(segment, context, kind, rejected, diagnostic),
-                DraftPromptBuilder.TEMPERATURE,
-                new ResponseFormat("draft_translation", DraftSchema.SCHEMA),
+                kind.temperature(false),
+                new ResponseFormat(kind.responseFormatName(), DraftSchema.SCHEMA),
                 false);
         log.debug(
                 "Built chat request segmentId={} messageCount={}",
@@ -90,7 +91,7 @@ final class SegmentTranslator {
     private List<ua.bookloom.api.llm.ChatMessage> messagesFor(
             final Segment segment,
             final DraftContext context,
-            final RequestKind kind,
+            final PromptName kind,
             final String rejected,
             final String diagnostic) {
         return switch (kind) {
@@ -166,7 +167,7 @@ final class SegmentTranslator {
             final Segment segment, final DraftContext context, final String rejectedReply, final String diagnostic) {
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
         final ChatRequest request =
-                requestFor(segment, context, RequestKind.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
+                requestFor(segment, context, PromptName.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
             return decideModelError(segment, Objects.requireNonNull(reply.error()));
@@ -216,7 +217,7 @@ final class SegmentTranslator {
     private Result<Decision> repairPlaceholder(
             final Segment segment, final DraftContext context, final String rejectedTarget) {
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final ChatRequest request = requestFor(segment, context, RequestKind.PLACEHOLDER_REPAIR, rejectedTarget, "");
+        final ChatRequest request = requestFor(segment, context, PromptName.PLACEHOLDER_REPAIR, rejectedTarget, "");
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
             return decideModelError(segment, Objects.requireNonNull(reply.error()));
@@ -321,11 +322,5 @@ final class SegmentTranslator {
         if (log.isTraceEnabled()) {
             log.trace("Segment unmask input={} output={}", input, output);
         }
-    }
-
-    private enum RequestKind {
-        DRAFT,
-        STRUCTURAL_REPAIR,
-        PLACEHOLDER_REPAIR
     }
 }

@@ -1,0 +1,11 @@
+Translate from the language of this segment (infer it from its text) to Ukrainian (uk).
+
+[Immutable tokens for this text]
+Copy this exact ordered sequence unchanged: (none; do not invent placeholders)
+Do not add, reorder, split, translate, or omit these tokens.
+
+<Text>
+One.
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<translation>"}

@@ -34,6 +34,7 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Covers the public engine boundary and the runtime checks owned by the job it creates. */
 class TranslationEngineImplTest {
@@ -307,7 +308,7 @@ class TranslationEngineImplTest {
     }
 
     private TranslationEngine engine() {
-        return new TranslationEngineImpl(documents(), new ObjectMapper());
+        return new TranslationEngineImpl(documents(), new ObjectMapper(), new PromptTemplates());
     }
 
     private DocumentPort documents() {
