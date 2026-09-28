@@ -1,7 +1,6 @@
 package ua.bookloom.document.epub;
 
 import com.google.inject.Inject;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
@@ -21,8 +20,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
-import org.jdom2.output.Format;
-import org.jdom2.output.XMLOutputter;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
@@ -342,7 +339,7 @@ public final class EpubWriter {
     private static byte[] payloadFor(
             RawEntry entry, ParsedEpub parsed, Map<String, org.jsoup.nodes.Document> treesByHref) {
         if (entry.name().equals(parsed.opfPath())) {
-            return serializeOpf(parsed.opfDocument());
+            return XmlDocumentSerializer.serialize(parsed.opfDocument(), entry.content());
         }
         final org.jsoup.nodes.Document tree = treesByHref.get(entry.name());
         return tree == null ? entry.content() : serializeContentDocument(tree);
@@ -358,17 +355,6 @@ public final class EpubWriter {
     private static byte[] serializeContentDocument(org.jsoup.nodes.Document tree) {
         final org.jsoup.nodes.Document serializable = PreformattedLineFeedRestorer.forSerialization(tree);
         return serializable.outerHtml().getBytes(tree.outputSettings().charset());
-    }
-
-    private static byte[] serializeOpf(org.jdom2.Document opfDocument) {
-        final XMLOutputter outputter = new XMLOutputter(Format.getRawFormat());
-        final ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            outputter.output(opfDocument, out);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Unable to serialize OPF package document", e);
-        }
-        return out.toByteArray();
     }
 
     /**
