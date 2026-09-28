@@ -14,10 +14,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -33,6 +30,8 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class Polish {
+
+    private static final String LABEL = "Polish";
 
     private final PromptTemplates templates;
     private final DraftReplyParser replyParser;
@@ -58,7 +57,7 @@ public final class Polish {
         Objects.requireNonNull(maskedSource, "maskedSource");
         Objects.requireNonNull(maskedTarget, "maskedTarget");
         Objects.requireNonNull(calls, "calls");
-        log.debug("Polishing segment id={}", segment.id());
+        log.debug("Polishing segment id={} temperature={}", segment.id(), PromptName.POLISH.temperature(false));
         try {
             return callPolish(segment, frame, maskedSource, maskedTarget, calls);
         } catch (Throwable cause) {
@@ -76,64 +75,20 @@ public final class Polish {
             final String maskedTarget,
             final ModelCalls calls) {
         final List<ChatMessage> messages = messagesFor(frame, maskedSource, maskedTarget);
-        final int allowance = TokenEstimator.outputAllowance(
-                DisplayText.of(maskedSource), frame.sourceLanguage(), frame.targetLanguage());
-        final ChatRequest request =
-                ChatRequests.build(PromptName.POLISH, messages, allowance > 0 ? allowance : null, false);
-        logTraceMessages(request);
+        final ChatRequest request = ChatRequests.build(
+                PromptName.POLISH, messages, SelfHealCalls.outputAllowance(maskedSource, frame), false);
+        SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.POLISH, segment.id(), request);
-        logTraceReply(reply);
+        SelfHealCalls.logTraceReply(log, LABEL, reply);
         final Result<RepairReply> outcome = RepairReplies.read(reply, replyParser);
-        logOutcome(segment.id(), outcome);
+        SelfHealCalls.logOutcome(log, LABEL, segment.id(), outcome);
         return outcome;
     }
 
     private List<ChatMessage> messagesFor(final CallFrame frame, final String maskedSource, final String maskedTarget) {
-        final String system = templates
-                .renderSystem(PromptName.POLISH, frame.systemSlotValues())
-                .strip();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("source", maskedSource);
         userValues.put("text", maskedTarget);
-        final String user = templates.renderUser(PromptName.POLISH, userValues).strip();
-        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
-    }
-
-    private static void logTraceMessages(final ChatRequest request) {
-        if (log.isTraceEnabled()) {
-            log.trace("Polish messages {}", request.messages());
-        }
-    }
-
-    private static void logTraceReply(final Result<ChatResponse> reply) {
-        if (log.isTraceEnabled() && reply.isOk()) {
-            log.trace(
-                    "Polish raw reply {}", Objects.requireNonNull(reply.data()).content());
-        }
-    }
-
-    private static void logOutcome(final String segmentId, final Result<RepairReply> outcome) {
-        if (outcome.isErr()) {
-            log.debug(
-                    "Polish reply segmentId={} outcome=error code={}",
-                    segmentId,
-                    Objects.requireNonNull(outcome.error()).code());
-            return;
-        }
-        switch (Objects.requireNonNull(outcome.data())) {
-            case RepairReply.Rewritten rewritten ->
-                log.debug(
-                        "Polish reply segmentId={} outcome=Rewritten targetLength={}",
-                        segmentId,
-                        rewritten.maskedTarget().length());
-            case RepairReply.Malformed malformed ->
-                log.debug(
-                        "Polish reply segmentId={} outcome=Malformed diagnostic={}", segmentId, malformed.diagnostic());
-            case RepairReply.FlagNow flagNow ->
-                log.debug(
-                        "Polish reply segmentId={} outcome=FlagNow code={}",
-                        segmentId,
-                        flagNow.error().code());
-        }
+        return SelfHealCalls.messagesFor(templates, PromptName.POLISH, frame, userValues);
     }
 }

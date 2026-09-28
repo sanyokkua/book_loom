@@ -162,7 +162,7 @@ For each chunk (see `chunk-translate-loop.mermaid`):
 | FR-ALGO-C5  | Unmask and validate the placeholder multiset as a hard gate; a mismatch cannot be accepted (FR-DOC-05, FR-QA-04).                                                                                                                                                                                                                                                                                                                                                                  |
 | FR-ALGO-C6  | Run the deterministic QA gate and compute the `confidence` scalar — the documented weighted blend of the **soft** QA-check margins (hard gates and judge excluded; see `02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`) (FR-QA-01).                                                                                                                                                                                                                                              |
 | FR-ALGO-C7  | Accept each segment individually — never the whole chunk at once — by the rule `hardGatesPass ∧ noSoftCheckFailed ∧ confidence ≥ τ ∧ (judgeOff ∨ (judgeScore ≥ τ_judge ∧ no medium or high judge finding on the segment))`. A failed echo check on a source whose display text is under 20 code points is not counted as a failed soft check — it only contributes its 0.0 margin to `confidence`, lowering it rather than blocking acceptance outright (ADR-0038). `τ` is owned by the **review-mode dial** (not the quality dial); `τ_judge` defaults to `τ`. The judge's `score` decides; its `verdict` is advisory/logging only (DD-45). |
-| FR-ALGO-C8  | Otherwise enter self-heal (see below) for up to **N QA re-entry rounds** (the repair budget from the quality dial; `N=0` flags on the first failure); if still failing, mark the **offending segment(s)** FLAGGED.                                                                                                                                                                                                                                                                 |
+| FR-ALGO-C8  | Otherwise enter self-heal (see below) for up to **N QA re-entry rounds** (the repair budget from the quality dial: 1 / 2 / 3); if still failing, mark the **offending segment(s)** FLAGGED.                                                                                                                                                                                                                                                                 |
 | FR-ALGO-C9  | On acceptance, update the name dictionary, the context-keyed TM, and the preceding-target window; register deferred-resolution items; persist atomically. Resume picks up at the **first PENDING** segment; FLAGGED is terminal-for-run and excluded from auto-resume (FR-RESUME-01).                                                                                                                                                                                              |
 | FR-ALGO-C10 | Update the rolling bilingual summary on a **size-based trigger — every K accepted blocks or at chapter end, whichever comes first** (FR-ALGO-07; `02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`).                                                                                                                                                                                                                                                                         |
 
@@ -180,13 +180,15 @@ of QA re-entry rounds**; each round takes exactly one path (ADR-0038):
 | Directed fix      | Concrete QA/judge findings exist                   | 1 call injecting the findings, asking the model to correct exactly those in this one segment. On a **tag-multiset mismatch** the instruction is specialised to inject the expected placeholder multiset ("restore exactly: `⟦g1⟧ ⟦g2⟧ …`"). |
 | Reflect → improve | Only a vague quality concern (no concrete finding) | 2 calls (reflect, then improve — each returning exactly one segment's target), followed by an **optional monolingual polish** — triggered only when the post-improve check leaves the segment with **no failed check** and `confidence` in `[τ − ε, τ)` (borderline). |
 
-`N=0` flags on the first failure with no repair round; after N rounds the still-failing segment (s) are FLAGGED. This
+With the judge on, a repaired target that passes its hard gates, fails no soft check and reaches `τ` is judged again
+on its own (a one-pair call labelled `s1`) and decided by that call instead of its chunk's; a target short of any of
+these goes to the next round with no judge call. After N rounds the still-failing segment (s) are FLAGGED. This
 realizes the automatic-first, tiered self-heal model (ADR-0007).
 
 | ID          | Requirement                                                                                                                                                                              |
 |-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | FR-ALGO-C11 | Prefer directed fix when concrete findings exist; use reflect→improve otherwise; specialise the directed fix for a tag-multiset mismatch by injecting the expected placeholder multiset. |
-| FR-ALGO-C12 | Bound total repair rounds by the repair budget N from the quality dial; `N=0` = flag on first failure.                                                                                   |
+| FR-ALGO-C12 | Bound total repair rounds by the repair budget N from the quality dial (1 / 2 / 3).                                                                                                      |
 | FR-ALGO-C13 | Score the chunk once with the judge, labelling its qualifying pairs `s1…sk`; flag only the offending segment(s); repair each failing segment on its own — a directed fix, reflect/improve, or polish call returns exactly one segment's target — and re-QA that segment alone (ADR-0038). |
 
 ## phase-d-backward-revision {#phase-d-backward-revision}
@@ -210,8 +212,8 @@ user-edited `REVISED` segments are **protected** and change only with explicit u
 ## quality-dial-mapping {#quality-dial-mapping}
 
 A single quality-vs-speed dial sets pipeline **mechanics** (FR-ALGO-11). It does **not** set the accept threshold `τ`:
-`τ` is owned solely by the **review-mode dial** (Unattended/Assisted/Manual), with an advanced Manual-settings override
-at highest precedence (DD-45, `07_SETTINGS.md`). `τ_judge` defaults to `τ`.
+`τ` is owned solely by the **review-mode dial** (Unattended/Assisted/Manual); a manual Settings override is not offered
+in this build (DD-45, `07_SETTINGS.md`). `τ_judge` equals `τ`.
 
 | Parameter                            | Fast       | Balanced | Max      |
 |--------------------------------------|------------|----------|----------|
@@ -233,10 +235,11 @@ paraphrase-away-from-source failure mode. The per-phase guidance is:
 | Judge / deterministic-QA-assisting judge | 0.1                      | A scorer should be near-deterministic so the same draft yields the same verdict; τ comparisons stay stable.        |
 | Directed fix                             | 0.2                      | A targeted correction of named findings; stay close to the accepted draft.                                                         |
 | Reflect → improve                        | 0.35                     | The failure is vague quality; a little more latitude helps the rewrite escape a bad local phrasing. Still bounded. |
+| Polish                                   | 0.2                      | Smoothing a near miss; stay close to the improved target.                                                          |
 | Backward revision                        | 0.2                      | Consistency alignment across the book; determinism preferred.                                                      |
 
 The default is **0.2**, user-adjustable in Generation settings over the range 0.0–2.0 (`07_SETTINGS.md#generation-tab`);
-the "lower temperature for this retry" option nudges a repair attempt further toward determinism (to 0.1) when asked.
+the review panel's "lower temperature for this retry" option sends that retry — a draft, not a repair — at 0.1.
 Where the provider exposes a **reasoning level** (Ollama `think`, OpenAI reasoning params), translation and judge calls
 run it **low/off** to cut latency and noise; any separate reasoning channel is ignored on parse. Concrete per-call
 parameter values and output schemas are catalogued in `12_PROMPT_CATALOG.md`.

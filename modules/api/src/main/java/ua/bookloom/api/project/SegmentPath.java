@@ -6,13 +6,13 @@ package ua.bookloom.api.project;
  */
 public enum SegmentPath {
 
-    /** A fresh model draft that passed every hard gate. */
+    /** Decided with no self-heal round: an accepted fresh draft, or a segment flagged at once with none run. */
     DRAFT,
 
     /** Reused from translation memory without a model call. */
     TM_REUSE,
 
-    /** A draft repaired after failing a hard gate. */
+    /** Decided after at least one self-heal round, whether the outcome was accepted or flagged. */
     REPAIRED,
 
     /** The person's own edit. */

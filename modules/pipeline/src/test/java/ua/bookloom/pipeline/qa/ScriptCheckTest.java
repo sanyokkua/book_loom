@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.util.List;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -176,5 +177,15 @@ class ScriptCheckTest {
         return Stream.of(
                 Arguments.of("a Latin target for a Ukrainian book fails", LATIN_TARGET_FAILS),
                 Arguments.of("under Transliterate the same target's share fails", TRANSLITERATE_SHARE_FAILS));
+    }
+
+    // Under Transliterate the locked terms count toward the letters: 33 of the target's 61 letters are Cyrillic
+    // (the rest, the untransliterated locked names, are Latin) — share 33/61, below the 0.60 threshold.
+    @Test
+    void run_transliterateShareFails_noteCarriesTheComputedShare() {
+        final CheckResult result = ScriptCheck.run(TRANSLITERATE_SHARE_FAILS);
+
+        assertThat(result.finding()).isNotNull();
+        assertThat(result.finding().note()).contains("share " + (33.0 / 61.0) + " below 0.6");
     }
 }

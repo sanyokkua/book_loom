@@ -18,10 +18,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -38,6 +35,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ReflectImprove {
+
+    private static final String REFLECT_LABEL = "Reflect";
+    private static final String IMPROVE_LABEL = "Improve";
 
     private final PromptTemplates templates;
     private final DraftReplyParser replyParser;
@@ -66,7 +66,7 @@ public final class ReflectImprove {
         Objects.requireNonNull(maskedSource, "maskedSource");
         Objects.requireNonNull(maskedTarget, "maskedTarget");
         Objects.requireNonNull(calls, "calls");
-        log.debug("Reflecting on segment id={}", segment.id());
+        log.debug("Reflecting on segment id={} temperature={}", segment.id(), PromptName.REFLECT.temperature(false));
         try {
             return callReflect(segment.id(), frame, maskedSource, maskedTarget, calls);
         } catch (Throwable cause) {
@@ -101,7 +101,11 @@ public final class ReflectImprove {
         Objects.requireNonNull(maskedTarget, "maskedTarget");
         Objects.requireNonNull(issues, "issues");
         Objects.requireNonNull(calls, "calls");
-        log.debug("Improving segment id={} issueCount={}", segment.id(), issues.size());
+        log.debug(
+                "Improving segment id={} issueCount={} temperature={}",
+                segment.id(),
+                issues.size(),
+                PromptName.IMPROVE.temperature(false));
         try {
             return callImprove(segment, frame, maskedSource, maskedTarget, issues, calls);
         } catch (Throwable cause) {
@@ -120,7 +124,7 @@ public final class ReflectImprove {
             final ModelCalls calls) {
         final List<ChatMessage> messages = reflectMessages(frame, maskedSource, maskedTarget);
         final ChatRequest request = ChatRequests.build(PromptName.REFLECT, messages, null, false);
-        logTraceMessages("Reflect", request);
+        SelfHealCalls.logTraceMessages(log, REFLECT_LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.REFLECT, segmentId, request);
         final Result<List<String>> outcome = readIssues(reply);
         logReflectOutcome(segmentId, outcome);
@@ -135,41 +139,31 @@ public final class ReflectImprove {
             final List<String> issues,
             final ModelCalls calls) {
         final List<ChatMessage> messages = improveMessages(frame, maskedSource, maskedTarget, issues);
-        final int allowance = TokenEstimator.outputAllowance(
-                DisplayText.of(maskedSource), frame.sourceLanguage(), frame.targetLanguage());
-        final ChatRequest request =
-                ChatRequests.build(PromptName.IMPROVE, messages, allowance > 0 ? allowance : null, false);
-        logTraceMessages("Improve", request);
+        final ChatRequest request = ChatRequests.build(
+                PromptName.IMPROVE, messages, SelfHealCalls.outputAllowance(maskedSource, frame), false);
+        SelfHealCalls.logTraceMessages(log, IMPROVE_LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.IMPROVE, segment.id(), request);
-        logTraceReply("Improve", reply);
+        SelfHealCalls.logTraceReply(log, IMPROVE_LABEL, reply);
         final Result<RepairReply> outcome = RepairReplies.read(reply, replyParser);
-        logImproveOutcome(segment.id(), outcome);
+        SelfHealCalls.logOutcome(log, IMPROVE_LABEL, segment.id(), outcome);
         return outcome;
     }
 
     private List<ChatMessage> reflectMessages(
             final CallFrame frame, final String maskedSource, final String maskedTarget) {
-        final String system = templates
-                .renderSystem(PromptName.REFLECT, frame.systemSlotValues())
-                .strip();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("source", maskedSource);
         userValues.put("text", maskedTarget);
-        final String user = templates.renderUser(PromptName.REFLECT, userValues).strip();
-        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+        return SelfHealCalls.messagesFor(templates, PromptName.REFLECT, frame, userValues);
     }
 
     private List<ChatMessage> improveMessages(
             final CallFrame frame, final String maskedSource, final String maskedTarget, final List<String> issues) {
-        final String system = templates
-                .renderSystem(PromptName.IMPROVE, frame.systemSlotValues())
-                .strip();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("source", maskedSource);
         userValues.put("text", maskedTarget);
         userValues.put("issues", String.join("\n", issues));
-        final String user = templates.renderUser(PromptName.IMPROVE, userValues).strip();
-        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+        return SelfHealCalls.messagesFor(templates, PromptName.IMPROVE, frame, userValues);
     }
 
     private Result<List<String>> readIssues(final Result<ChatResponse> reply) {
@@ -223,21 +217,6 @@ public final class ReflectImprove {
         return suggestion.isEmpty() ? note : note + " — " + suggestion;
     }
 
-    private static void logTraceMessages(final String label, final ChatRequest request) {
-        if (log.isTraceEnabled()) {
-            log.trace("{} messages {}", label, request.messages());
-        }
-    }
-
-    private static void logTraceReply(final String label, final Result<ChatResponse> reply) {
-        if (log.isTraceEnabled() && reply.isOk()) {
-            log.trace(
-                    "{} raw reply {}",
-                    label,
-                    Objects.requireNonNull(reply.data()).content());
-        }
-    }
-
     private static void logReflectOutcome(final String segmentId, final Result<List<String>> outcome) {
         if (outcome.isErr()) {
             log.debug(
@@ -250,32 +229,5 @@ public final class ReflectImprove {
                 "Reflect reply segmentId={} issueCount={}",
                 segmentId,
                 Objects.requireNonNull(outcome.data()).size());
-    }
-
-    private static void logImproveOutcome(final String segmentId, final Result<RepairReply> outcome) {
-        if (outcome.isErr()) {
-            log.debug(
-                    "Improve reply segmentId={} outcome=error code={}",
-                    segmentId,
-                    Objects.requireNonNull(outcome.error()).code());
-            return;
-        }
-        switch (Objects.requireNonNull(outcome.data())) {
-            case RepairReply.Rewritten rewritten ->
-                log.debug(
-                        "Improve reply segmentId={} outcome=Rewritten targetLength={}",
-                        segmentId,
-                        rewritten.maskedTarget().length());
-            case RepairReply.Malformed malformed ->
-                log.debug(
-                        "Improve reply segmentId={} outcome=Malformed diagnostic={}",
-                        segmentId,
-                        malformed.diagnostic());
-            case RepairReply.FlagNow flagNow ->
-                log.debug(
-                        "Improve reply segmentId={} outcome=FlagNow code={}",
-                        segmentId,
-                        flagNow.error().code());
-        }
     }
 }

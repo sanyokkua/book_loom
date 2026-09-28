@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.DisplayText;
 
 /** {@link RefusalGate}: an apology or a task comment must never reach the book, whatever its confidence score. */
 class RefusalGateTest {
@@ -20,7 +21,10 @@ class RefusalGateTest {
     private static final String UK_REFUSAL = "Вибачте, я не можу перекласти цей текст.";
     private static final String UK_UNRELATED_OPENER = "Ось переклад: Він відчинив старі двері.";
     private static final String CURLY_APOSTROPHE_REFUSAL = "I’m sorry, but I can’t translate this.";
-    private static final String DISPLAY_TEXT_REFUSAL = "I cannot translate this.";
+
+    // The masked reply the gate actually reads a display text from — the placeholder tokens must not shield the
+    // phrase they flank.
+    private static final String DISPLAY_TEXT_REFUSAL = DisplayText.of("⟦g0⟧I cannot translate this.⟦g1⟧");
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("refusingCases")

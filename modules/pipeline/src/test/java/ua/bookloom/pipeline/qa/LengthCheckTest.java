@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.DisplayText;
 
 /** The length-ratio check: the pair's band, its widening for a short source, and the margin window. */
 class LengthCheckTest {
@@ -64,9 +65,11 @@ class LengthCheckTest {
         assertThat(result.finding().raisedBy()).isEqualTo("length");
     }
 
+    // A source of protected tokens only display-texts to empty, exactly like a real all-placeholder segment would.
     @Test
     void run_emptySource_skipsMeasuringLength() {
-        final CheckResult result = LengthCheck.run(SoftCheckFixtures.length("", "b".repeat(10), "en", "uk"));
+        final CheckResult result =
+                LengthCheck.run(SoftCheckFixtures.length(DisplayText.of("⟦g0⟧⟦g1⟧"), "b".repeat(10), "en", "uk"));
 
         assertThat(result.margin()).isCloseTo(1.0, within(1e-9));
         assertThat(result.skipped()).isTrue();

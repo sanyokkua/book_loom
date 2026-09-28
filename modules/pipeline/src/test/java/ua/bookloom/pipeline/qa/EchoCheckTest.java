@@ -11,6 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.DisplayText;
 
 /** The untranslated-echo check — the echo floor, the KEEP_ORIGINAL name removal and the foreign-marking edges. */
 class EchoCheckTest {
@@ -27,8 +28,16 @@ class EchoCheckTest {
             ForeignPassagePolicy.TRANSLATE,
             null,
             List.of());
+    // A source of protected tokens only display-texts to empty, exactly like a real all-placeholder segment would.
     private static final SoftCheckInput EMPTY_SOURCE_SKIPS = SoftCheckFixtures.scriptEcho(
-            "", "", "en", "uk", NamePolicy.TRANSLITERATE, ForeignPassagePolicy.TRANSLATE, null, List.of());
+            DisplayText.of("⟦g0⟧⟦g1⟧"),
+            DisplayText.of("⟦g0⟧⟦g1⟧"),
+            "en",
+            "uk",
+            NamePolicy.TRANSLITERATE,
+            ForeignPassagePolicy.TRANSLATE,
+            null,
+            List.of());
     private static final SoftCheckInput MARKED_FRENCH_SKIPS = SoftCheckFixtures.scriptEcho(
             "Je ne regrette rien.",
             "Je ne regrette rien.",

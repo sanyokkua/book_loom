@@ -101,8 +101,8 @@ class ReflectImproveTest {
         REFLECT_IMPROVE.reflect(segment(), FRAME, SOURCE, CANDIDATE, calls(model));
 
         final String user = model.requests().getFirst().messages().get(1).content();
-        assertThat(textBlockCount(user)).isEqualTo(1);
-        assertThat(textBlockOf(user)).isEqualTo(CANDIDATE);
+        assertThat(TextBlockAssertions.textBlockCount(user)).isEqualTo(1);
+        assertThat(TextBlockAssertions.textBlockOf(user)).isEqualTo(CANDIDATE);
         assertThat(user).contains("[Source]").contains(SOURCE);
     }
 
@@ -156,8 +156,8 @@ class ReflectImproveTest {
         REFLECT_IMPROVE.improve(segment(), FRAME, SOURCE, CANDIDATE, List.of(), calls(model));
 
         final String user = model.requests().getFirst().messages().get(1).content();
-        assertThat(textBlockCount(user)).isEqualTo(1);
-        assertThat(textBlockOf(user)).isEqualTo(CANDIDATE);
+        assertThat(TextBlockAssertions.textBlockCount(user)).isEqualTo(1);
+        assertThat(TextBlockAssertions.textBlockOf(user)).isEqualTo(CANDIDATE);
         assertThat(user).contains("[Source]").contains(SOURCE);
     }
 
@@ -197,23 +197,6 @@ class ReflectImproveTest {
 
     private static Result<ChatResponse> readable(final String content) {
         return Result.ok(new ChatResponse(content, FinishReason.STOP));
-    }
-
-    private static String textBlockOf(final String userMessage) {
-        final String opening = "<Text>\n";
-        final int start = userMessage.indexOf(opening);
-        final int end = userMessage.indexOf("\n</Text>", start + opening.length());
-        return userMessage.substring(start + opening.length(), end);
-    }
-
-    private static int textBlockCount(final String userMessage) {
-        int count = 0;
-        int index = 0;
-        while ((index = userMessage.indexOf("<Text>\n", index)) != -1) {
-            count++;
-            index += "<Text>\n".length();
-        }
-        return count;
     }
 
     private static Segment segment() {

@@ -65,11 +65,8 @@ public final class JudgeReplyParser {
             final String segmentId = labelToSegmentId.get(node.path("segmentId").asText(""));
             final Severity severity = severityOf(node.path("severity").asText(""));
             if (segmentId == null || severity == null) {
-                log.debug(
-                        "Dropped judge finding label={} severity={} knownLabel={}",
-                        node.path("segmentId").asText(""),
-                        node.path("severity").asText(""),
-                        segmentId != null);
+                log.debug("Dropped judge finding knownLabel={} knownSeverity={}", segmentId != null, severity != null);
+                logTraceDropped("finding", node);
                 continue;
             }
             findings.add(new JudgeFinding(
@@ -89,14 +86,19 @@ public final class JudgeReplyParser {
         for (final JsonNode node : array) {
             final String segmentId = labelToSegmentId.get(node.path("segmentId").asText(""));
             if (segmentId == null) {
-                log.debug(
-                        "Dropped judge deferral label={}",
-                        node.path("segmentId").asText(""));
+                log.debug("Dropped judge deferral knownLabel=false");
+                logTraceDropped("deferral", node);
                 continue;
             }
             deferrals.add(new JudgeDeferral(segmentId, node.path("reason").asText("")));
         }
         return deferrals;
+    }
+
+    private static void logTraceDropped(final String kind, final JsonNode node) {
+        if (log.isTraceEnabled()) {
+            log.trace("Dropped judge {} node={}", kind, node);
+        }
     }
 
     private static @Nullable Severity severityOf(final String raw) {

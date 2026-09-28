@@ -102,7 +102,7 @@ fix, reflect, improve, polish) returns exactly one segment's target, never a chu
    code points of display text does not count as a failed soft check (`#qa-thresholds`). `τ` is owned by the
    **review-mode dial** (not this engine's quality dial); `τ_judge` defaults to `τ` (ADR-0038; a model-call error
    instead of a quality failure is routed by `design.md` D3's failure-routing table, not this rule). → `ACCEPTED`.
-6. **Self-heal** — otherwise, over up to **N QA re-entry rounds** (repair budget; `N=0` flags on first failure):
+6. **Self-heal** — otherwise, over up to **N QA re-entry rounds** (the repair budget: 1 / 2 / 3 by dial):
     - **Directed fix (1 call)** when QA/the judge produced *concrete* findings (tag mismatch, wrong script, dropped
       content, glossary miss) — inject the exact findings and ask for a targeted correction of this one segment; on a
       **tag-multiset mismatch** inject the expected placeholder multiset ("restore exactly: …").
@@ -110,7 +110,12 @@ fix, reflect, improve, polish) returns exactly one segment's target, never a chu
       reflect, then rewrite, each returning exactly one segment's target; an **optional monolingual polish** fires only
       when the improved target passes its hard gates, **no soft check failed**, and `confidence ∈ [τ − 0.05, τ)`
       (borderline).
-    - Loop back through QA up to `N` rounds. Still failing → the offending segment (s) `FLAGGED`.
+    - Loop back through QA up to `N` rounds. With the judge on, a repaired target that passes its hard gates, fails
+      no soft check and reaches `τ` is **judged again on its own** — a one-pair call labelled `s1` whose score and
+      findings replace the chunk's for that segment; a target short of any of these goes to the next round with no
+      judge call. A self-heal reply that is blank or cut off flags the segment at once; one that is not the required
+      object fails its round (a self-heal call gets no format repair). Still failing → the offending segment (s)
+      `FLAGGED`, keeping the last target that passed every hard gate as its machine translation.
 7. **Persist + update memory** — atomically write the segment; update name dictionary, context-keyed TM, and
    preceding-target window; register any deferred-resolution items. Resume picks up at the **first PENDING** segment
    (FLAGGED is terminal-for-run, excluded from auto-resume). Update the rolling summary on its size-based trigger
@@ -314,8 +319,8 @@ embedding or RAG stage.
 ## quality-dial {#quality-dial}
 
 A single "quality vs speed" dial (`FAST | BALANCED | MAX`) parameterizes the engine's **mechanics**. It does **not** own
-the accept threshold `τ`: `τ` is owned by the **review-mode dial** (Unattended/Assisted/Manual), Manual-settings
-override highest (DD-45); `τ_judge` defaults to `τ`.
+the accept threshold `τ`: `τ` is owned by the **review-mode dial** (Unattended/Assisted/Manual) alone — a manual
+Settings override is not offered in this build (DD-45, `01_Product/07_SETTINGS.md`); `τ_judge` equals `τ`.
 
 | Parameter                          | FAST  | BALANCED | MAX   |
 |------------------------------------|-------|----------|-------|

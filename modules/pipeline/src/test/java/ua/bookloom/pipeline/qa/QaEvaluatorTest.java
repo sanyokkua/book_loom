@@ -103,6 +103,33 @@ class QaEvaluatorTest {
     }
 
     @Test
+    void evaluate_refusalPhraseTarget_reportsFailedRefusalGate() {
+        final SoftCheckInput input = SoftCheckFixtures.scriptEcho(
+                "He opened the old door.",
+                "I'm sorry, but I can't translate this text.",
+                EN,
+                UK,
+                NamePolicy.TRANSLITERATE,
+                ForeignPassagePolicy.TRANSLATE,
+                null,
+                List.of());
+
+        final QaResult result = QaEvaluator.evaluate(List.of(), input);
+
+        assertThat(result.hardGatesPass()).isFalse();
+        assertThat(result.hardGates())
+                .filteredOn(gate -> gate.check() == CheckName.REFUSAL)
+                .singleElement()
+                .satisfies(refusal -> {
+                    assertThat(refusal.blocking()).isTrue();
+                    assertThat(refusal.finding()).isNotNull();
+                    assertThat(refusal.finding().severity()).isEqualTo(Severity.HIGH);
+                    assertThat(refusal.finding().kind()).isEqualTo("meaning");
+                    assertThat(refusal.finding().raisedBy()).isEqualTo("refusal");
+                });
+    }
+
+    @Test
     void evaluate_failedPlaceholderGateGiven_appearsAmongHardGates() {
         final SoftCheckInput input = SoftCheckFixtures.scriptEcho(
                 "Yes, sir.",

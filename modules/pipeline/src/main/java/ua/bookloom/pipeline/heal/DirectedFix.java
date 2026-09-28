@@ -16,11 +16,8 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -43,6 +40,7 @@ public final class DirectedFix {
 
     private static final Set<String> EXPECTED_TOKEN_RAISED_BY =
             Set.of(CheckName.PLACEHOLDER.raisedBy(), CheckName.LOCKED_TERM.raisedBy(), CheckName.KEPT_RUN.raisedBy());
+    private static final String LABEL = "Directed fix";
 
     private final PromptTemplates templates;
     private final DraftReplyParser replyParser;
@@ -77,11 +75,12 @@ public final class DirectedFix {
         final boolean includeExpectedTokens = findings.stream().anyMatch(DirectedFix::needsExpectedTokens);
         final String block = refusal ? maskedSource : textToRewrite;
         log.debug(
-                "Fixing segment id={} findingKinds={} textSource={} expectedTokensIncluded={}",
+                "Fixing segment id={} findingKinds={} textSource={} expectedTokensIncluded={} temperature={}",
                 segment.id(),
                 findingKinds(findings),
                 refusal ? "source" : "rejected-target",
-                includeExpectedTokens);
+                includeExpectedTokens,
+                PromptName.DIRECTED_FIX.temperature(false));
         try {
             return callAndRead(segment.id(), frame, maskedSource, block, findings, includeExpectedTokens, calls);
         } catch (Throwable cause) {
@@ -101,15 +100,13 @@ public final class DirectedFix {
             final boolean includeExpectedTokens,
             final ModelCalls calls) {
         final List<ChatMessage> messages = messagesFor(frame, maskedSource, block, findings, includeExpectedTokens);
-        final int allowance = TokenEstimator.outputAllowance(
-                DisplayText.of(maskedSource), frame.sourceLanguage(), frame.targetLanguage());
-        final ChatRequest request =
-                ChatRequests.build(PromptName.DIRECTED_FIX, messages, allowance > 0 ? allowance : null, false);
-        logTraceMessages(request);
+        final ChatRequest request = ChatRequests.build(
+                PromptName.DIRECTED_FIX, messages, SelfHealCalls.outputAllowance(maskedSource, frame), false);
+        SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.DIRECTED_FIX, segmentId, request);
-        logTraceReply(reply);
+        SelfHealCalls.logTraceReply(log, LABEL, reply);
         final Result<RepairReply> outcome = RepairReplies.read(reply, replyParser);
-        logOutcome(segmentId, outcome);
+        SelfHealCalls.logOutcome(log, LABEL, segmentId, outcome);
         return outcome;
     }
 
@@ -119,9 +116,6 @@ public final class DirectedFix {
             final String block,
             final List<QaFinding> findings,
             final boolean includeExpectedTokens) {
-        final String system = templates
-                .renderSystem(PromptName.DIRECTED_FIX, frame.systemSlotValues())
-                .strip();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("source", maskedSource);
         userValues.put("text", block);
@@ -129,9 +123,7 @@ public final class DirectedFix {
         if (includeExpectedTokens) {
             userValues.put("expectedTokens", DraftPromptBuilder.expectedTokenSequence(maskedSource));
         }
-        final String user =
-                templates.renderUser(PromptName.DIRECTED_FIX, userValues).strip();
-        return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+        return SelfHealCalls.messagesFor(templates, PromptName.DIRECTED_FIX, frame, userValues);
     }
 
     private static String renderFindings(final List<QaFinding> findings) {
@@ -150,46 +142,5 @@ public final class DirectedFix {
 
     private static List<String> findingKinds(final List<QaFinding> findings) {
         return findings.stream().map(QaFinding::kind).toList();
-    }
-
-    private static void logTraceMessages(final ChatRequest request) {
-        if (log.isTraceEnabled()) {
-            log.trace("Directed fix messages {}", request.messages());
-        }
-    }
-
-    private static void logTraceReply(final Result<ChatResponse> reply) {
-        if (log.isTraceEnabled() && reply.isOk()) {
-            log.trace(
-                    "Directed fix raw reply {}",
-                    Objects.requireNonNull(reply.data()).content());
-        }
-    }
-
-    private static void logOutcome(final String segmentId, final Result<RepairReply> outcome) {
-        if (outcome.isErr()) {
-            log.debug(
-                    "Directed fix reply segmentId={} outcome=error code={}",
-                    segmentId,
-                    Objects.requireNonNull(outcome.error()).code());
-            return;
-        }
-        switch (Objects.requireNonNull(outcome.data())) {
-            case RepairReply.Rewritten rewritten ->
-                log.debug(
-                        "Directed fix reply segmentId={} outcome=Rewritten targetLength={}",
-                        segmentId,
-                        rewritten.maskedTarget().length());
-            case RepairReply.Malformed malformed ->
-                log.debug(
-                        "Directed fix reply segmentId={} outcome=Malformed diagnostic={}",
-                        segmentId,
-                        malformed.diagnostic());
-            case RepairReply.FlagNow flagNow ->
-                log.debug(
-                        "Directed fix reply segmentId={} outcome=FlagNow code={}",
-                        segmentId,
-                        flagNow.error().code());
-        }
     }
 }

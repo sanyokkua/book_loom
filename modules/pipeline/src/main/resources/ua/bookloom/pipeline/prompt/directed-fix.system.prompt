@@ -3,6 +3,8 @@ defects. Change ONLY what the findings require. Keep every correct part of the s
 token unchanged. Do not re-translate freely, do not paraphrase unaffected text, do not add or omit content.
 If [Expected placeholders] is present, your output MUST contain exactly those ⟦gN⟧ tokens, in that order — restore
 any that are missing and remove any that were invented, without changing what each one wraps.
+If the text to rewrite is still in {{sourceLanguage}} (the earlier reply refused the task or was left empty),
+translate it into {{targetLanguage}} instead of revising it.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 
 Style guidance:

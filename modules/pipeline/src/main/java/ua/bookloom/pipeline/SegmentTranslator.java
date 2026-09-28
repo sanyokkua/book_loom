@@ -111,7 +111,7 @@ final class SegmentTranslator {
             if (drafted.isErr()) {
                 return decideModelError(segment, Objects.requireNonNull(drafted.error()));
             }
-            replies.add(restoreWhitespace(piece, Objects.requireNonNull(drafted.data())));
+            replies.add(WhitespaceRestoration.restore(piece, Objects.requireNonNull(drafted.data())));
         }
         return restore(segment, context, String.join("", replies).strip(), true);
     }
@@ -247,7 +247,7 @@ final class SegmentTranslator {
             final String trimmed,
             final boolean placeholderRepairUsed) {
         log.debug("Restoring segment id={} format={} trimmedLength={}", segment.id(), format, trimmed.length());
-        final String restoredWhitespace = restoreWhitespace(segment.masked(), trimmed);
+        final String restoredWhitespace = WhitespaceRestoration.restore(segment.masked(), trimmed);
         logTraceRestoration(restoredWhitespace);
         final Result<String> unmasked = documents.unmask(format, segment, restoredWhitespace);
         if (unmasked.isErr()) {
@@ -304,25 +304,6 @@ final class SegmentTranslator {
                 replyKind,
                 error.code());
         return Result.err(error);
-    }
-
-    private static String restoreWhitespace(final String source, final String trimmed) {
-        log.debug("Restoring whitespace sourceLength={} trimmedLength={}", source.length(), trimmed.length());
-        int leadingEnd = 0;
-        while (leadingEnd < source.length() && Character.isWhitespace(source.charAt(leadingEnd))) {
-            leadingEnd++;
-        }
-        int trailingStart = source.length();
-        while (trailingStart > leadingEnd && Character.isWhitespace(source.charAt(trailingStart - 1))) {
-            trailingStart--;
-        }
-        final String restored = source.substring(0, leadingEnd) + trimmed + source.substring(trailingStart);
-        log.debug(
-                "Restored whitespace leadingLength={} trailingLength={} restoredLength={}",
-                leadingEnd,
-                source.length() - trailingStart,
-                restored.length());
-        return restored;
     }
 
     private static String expectedTokens(final Segment segment) {

@@ -1,0 +1,144 @@
+package ua.bookloom.pipeline.heal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.prompt.ModelCalls;
+
+/**
+ * {@link QualityLoop#start}: which pairs the chunk's one judge call shows — only {@link DraftOutcome.Drafted}
+ * outcomes whose hard gates passed — and how a judge-call failure ends the step
+ * ({@code specs/quality-gates/spec.md} "Judge each chunk once when the quality dial enables the judge").
+ */
+class QualityLoopJudgeInputTest {
+
+    private static final GateFunction PASSTHROUGH_GATE = (segment, maskedTarget) -> Result.ok(maskedTarget);
+
+    @TempDir
+    private Path tempDir;
+
+    private final DocumentPort documents = QualityLoopFixtures.documents();
+    private final QualityLoop loop = QualityLoopFixtures.loop();
+
+    // A chunk of four: the first still fails its placeholder gate (crossed pair) after the draft's own repair, the
+    // third is flagged at once; only the second and fourth passed their hard gates, so the judge call shows them.
+    @Test
+    void start_balancedChunkWithGateFailureAndFlagAtOnce_judgesOnlyTheQualifyingPairsInOrder() {
+        final Segment first =
+                QualityLoopFixtures.markdownSegment(tempDir.resolve("s1.md"), "He opened the *old* door.");
+        final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("s2.md"), "She smiled softly.");
+        final Segment third = QualityLoopFixtures.markdownSegment(tempDir.resolve("s3.md"), "It was quiet.");
+        final Segment fourth = QualityLoopFixtures.markdownSegment(tempDir.resolve("s4.md"), "The rain fell.");
+        final List<DraftOutcome> outcomes = List.of(
+                QualityLoopFixtures.drafted(first, documents, "ВІН ВІДЧИНИВ ⟦g1⟧OLD⟦g0⟧ ДВЕРІ."),
+                QualityLoopFixtures.drafted(second, documents, "Вона тихо усміхнулася."),
+                QualityLoopFixtures.flaggedAtOnce(third, emptyCompletion()),
+                QualityLoopFixtures.drafted(fourth, documents, "Йшов дощ."));
+        final ScriptedChatModel model = new ScriptedChatModel().answer(judgeReply());
+
+        final Result<ChunkDecider> started = loop.start(
+                outcomes,
+                QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
+                PASSTHROUGH_GATE,
+                calls(model));
+
+        assertThat(started.isOk()).isTrue();
+        assertThat(model.requests()).hasSize(1);
+        final String userMessage =
+                model.requests().getFirst().messages().getLast().content();
+        assertThat(userMessage)
+                .contains("[s1]\nSource: She smiled softly.")
+                .contains("[s2]\nSource: The rain fell.")
+                .doesNotContain("s3", "s4");
+    }
+
+    @Test
+    void start_bothOutcomesFlaggedAtOnce_makesNoJudgeCall() {
+        final Segment first = QualityLoopFixtures.markdownSegment(tempDir.resolve("a.md"), "One.");
+        final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("b.md"), "Two.");
+        final List<DraftOutcome> outcomes = List.of(
+                QualityLoopFixtures.flaggedAtOnce(first, emptyCompletion()),
+                QualityLoopFixtures.flaggedAtOnce(second, emptyCompletion()));
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        final Result<ChunkDecider> started = loop.start(
+                outcomes,
+                QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
+                PASSTHROUGH_GATE,
+                calls(model));
+
+        assertThat(started.isOk()).isTrue();
+        assertThat(model.requests()).isEmpty();
+    }
+
+    @Test
+    void start_fastDial_makesNoJudgeCallEvenWithEightDraftedSegments() {
+        final List<DraftOutcome> outcomes = eightShortDraftedOutcomes();
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        final Result<ChunkDecider> started = loop.start(
+                outcomes,
+                QualityLoopFixtures.settings(ReviewMode.UNATTENDED, QualityDial.FAST),
+                PASSTHROUGH_GATE,
+                calls(model));
+
+        assertThat(started.isOk()).isTrue();
+        assertThat(model.requests()).isEmpty();
+    }
+
+    /** Eight short, individually-parsed drafted outcomes — a fixture, not a loop in the test body. */
+    private List<DraftOutcome> eightShortDraftedOutcomes() {
+        final List<DraftOutcome> outcomes = new ArrayList<>();
+        for (int index = 0; index < 8; index++) {
+            final Segment segment =
+                    QualityLoopFixtures.markdownSegment(tempDir.resolve("fast" + index + ".md"), "Short line.");
+            outcomes.add(QualityLoopFixtures.drafted(segment, documents, "Короткий рядок."));
+        }
+        return List.copyOf(outcomes);
+    }
+
+    @Test
+    void start_judgeAnswersUnreachable_endsTheStepWithThatErrorAndNoDecider() {
+        final Segment segment = QualityLoopFixtures.markdownSegment(tempDir.resolve("u.md"), "She left quickly.");
+        final List<DraftOutcome> outcomes =
+                List.of(QualityLoopFixtures.drafted(segment, documents, "Вона швидко пішла."));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")));
+
+        final Result<ChunkDecider> started = loop.start(
+                outcomes,
+                QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
+                PASSTHROUGH_GATE,
+                calls(model));
+
+        assertThat(started.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(started.error()).code()).isEqualTo(ErrorCode.unreachable);
+    }
+
+    private static AppError emptyCompletion() {
+        return AppError.of(ErrorCode.emptyCompletion, "Empty model response", "The model returned no translated text.");
+    }
+
+    private static ModelCalls calls(final ScriptedChatModel model) {
+        return (kind, segmentId, request) -> model.chat(request);
+    }
+
+    private static Result<ChatResponse> judgeReply() {
+        return Result.ok(new ChatResponse("{\"score\":0.9,\"verdict\":\"accept\"}", FinishReason.STOP));
+    }
+}

@@ -88,8 +88,8 @@ class DirectedFixTest {
         FIX.fix(segment("Book.md:0"), FRAME, ECHO_SOURCE, ECHO_REJECTED_TARGET, List.of(ECHO_FINDING), calls(model));
 
         final String user = userMessageOf(model);
-        assertThat(textBlockCount(user)).isEqualTo(1);
-        assertThat(textBlockOf(user)).isEqualTo(ECHO_REJECTED_TARGET);
+        assertThat(TextBlockAssertions.textBlockCount(user)).isEqualTo(1);
+        assertThat(TextBlockAssertions.textBlockOf(user)).isEqualTo(ECHO_REJECTED_TARGET);
         assertThat(user).contains("[Source]").contains(ECHO_SOURCE);
     }
 
@@ -106,7 +106,9 @@ class DirectedFixTest {
                 calls(model));
 
         final String user = userMessageOf(model);
-        assertThat(textBlockOf(user)).isEqualTo(REFUSAL_SOURCE).doesNotContain(REFUSAL_REJECTED_TARGET);
+        assertThat(TextBlockAssertions.textBlockOf(user))
+                .isEqualTo(REFUSAL_SOURCE)
+                .doesNotContain(REFUSAL_REJECTED_TARGET);
     }
 
     @Test
@@ -231,23 +233,6 @@ class DirectedFixTest {
 
     private static String userMessageOf(final ScriptedChatModel model) {
         return model.requests().getFirst().messages().get(1).content();
-    }
-
-    private static String textBlockOf(final String userMessage) {
-        final String opening = "<Text>\n";
-        final int start = userMessage.indexOf(opening);
-        final int end = userMessage.indexOf("\n</Text>", start + opening.length());
-        return userMessage.substring(start + opening.length(), end);
-    }
-
-    private static int textBlockCount(final String userMessage) {
-        int count = 0;
-        int index = 0;
-        while ((index = userMessage.indexOf("<Text>\n", index)) != -1) {
-            count++;
-            index += "<Text>\n".length();
-        }
-        return count;
     }
 
     private static ModelCalls calls(final ScriptedChatModel model) {

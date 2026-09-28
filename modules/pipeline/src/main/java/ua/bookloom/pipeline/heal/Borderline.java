@@ -17,13 +17,6 @@ public final class Borderline {
     public static final double POLISH_WINDOW = 0.05;
 
     /**
-     * The floating-point tolerance this window's lower bound is read with, shared with
-     * {@code heal.AcceptanceRule}'s τ comparison (design D8, "Tuning constants": confidence comparison), so a sum a
-     * hair below the true bound still meets it.
-     */
-    public static final double ACCEPTANCE_TOLERANCE = 1e-9;
-
-    /**
      * Decides whether an improved target is borderline.
      *
      * @param hardGatesPass whether every hard gate passed
@@ -32,13 +25,15 @@ public final class Borderline {
      * @param confidence the segment's blended confidence, in {@code [0,1]}
      * @param tau the review mode's acceptance threshold
      * @return {@code true} when hard gates pass, no check failed outright, and confidence lies in
-     *     {@code [tau - POLISH_WINDOW, tau)}
+     *     {@code [tau - POLISH_WINDOW, tau - }{@link AcceptanceRule#ACCEPTANCE_TOLERANCE}{@code )} — the upper bound
+     *     reads with the same tolerance {@link AcceptanceRule#accepts} does, so a target the rule would already
+     *     accept is never sent to polish
      */
     public static boolean isBorderline(
             final boolean hardGatesPass, final boolean failedOutright, final double confidence, final double tau) {
         return hardGatesPass
                 && !failedOutright
-                && confidence >= tau - POLISH_WINDOW - ACCEPTANCE_TOLERANCE
-                && confidence < tau;
+                && confidence >= tau - POLISH_WINDOW - AcceptanceRule.ACCEPTANCE_TOLERANCE
+                && confidence < tau - AcceptanceRule.ACCEPTANCE_TOLERANCE;
     }
 }
