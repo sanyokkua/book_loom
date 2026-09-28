@@ -117,8 +117,12 @@ public final class ProjectServiceImpl implements ProjectService {
     @Override
     public Result<RoundTripReport> roundTrip(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
-        return Result.err(AppError.of(
-                ErrorCode.internal, "Round-trip check unavailable", "The round-trip check is not available yet."));
+        try {
+            return findProject(projectId)
+                    .flatMap(project -> new RoundTripCheck(inspector, documents).run(projectId, project.source()));
+        } catch (Throwable cause) {
+            return Result.err(internalError("run the round-trip check", cause));
+        }
     }
 
     @Override
