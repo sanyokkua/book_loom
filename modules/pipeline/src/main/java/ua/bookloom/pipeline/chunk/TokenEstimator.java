@@ -46,7 +46,7 @@ public final class TokenEstimator {
         return (int) Math.ceil(value - ROUNDING_TOLERANCE);
     }
 
-    private static double charsPerToken(@Nullable final String tag) {
+    static double charsPerToken(@Nullable final String tag) {
         return LanguageTags.normalize(tag)
                 .flatMap(Languages::byTag)
                 .map(language -> language.script())
