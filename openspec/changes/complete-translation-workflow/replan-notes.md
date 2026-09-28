@@ -69,6 +69,22 @@ edited where marked **(edited)**; the rest is for the re-plan to decide.
 
 ## Open quality items found at the checkpoint (not group-8 scope)
 
+- **No output cap is sent with any request.** `TokenEstimator.outputAllowance` is computed for every call but only
+  scales the timeout; neither `num_predict` (Ollama) nor `max_tokens` (OpenAI-compatible) is sent. In the packaged
+  window, `qwen2.5:1.5b` looped on one segment of `earth-gravity.md` until the 3-minute timeout, three attempts in a
+  row (~9 minutes for one paragraph) before the run moved on. Capping output at the allowance (with a margin) would
+  turn a runaway reply into a cut-off one, which design D3 already flags at once. Decide in the re-plan (llm-provider /
+  inference capability, near task 10.4's failure routing) — it changes a request field in both dialects.
+- **Real-model runs on the job's original path flag short emphasised sentences.** `TranslateCommandLiveTest`
+  (`:app:liveLocal`, written before task 5.8) now fails with the intended `gemma4:e4b-mlx`: the model answers
+  `Другий ⟦g0⟧⟦g1⟧ позначений абзац.` for `The ⟦g0⟧second⟦g1⟧ marked paragraph.`, the `EMPTIED_PAIR` rule (task 5.8,
+  ADR-0040) refuses it — correctly: accepting it wrote `Другий ** …` before — and the one placeholder repair repeats
+  the mistake. Two contributing causes to weigh in 9.6/10.2: the preceding-target context shows earlier targets in
+  their restored form (`*перший* позначений абзац.`), which the model imitates, and the placeholder-repair prompt does
+  not say which rule broke (the gate's `AppError` message does). The quality loop's directed fix (group 8) gets the
+  gate's message as its finding, so re-run `./gradlew :app:liveLocal` once 10.2 wires the loop, and update the test's
+  expectation then. The small `qwen2.5:1.5b` also drops every placeholder of a Markdown link list (`MULTISET`).
+
 - **Two tests fail only under load**: `OllamaClientUsageTest.chat_temperatureAndOrContextWindow_postsExpectedNativeOptions[2]`
   (`:llm`, a WireMock 404) and `TranslationJobProviderAbortTest` (`:pipeline`, a 5 s `awaitChatRequests` budget). See
   the checkpoint report for what the investigation found.
