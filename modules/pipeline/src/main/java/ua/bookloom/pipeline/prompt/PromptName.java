@@ -19,6 +19,7 @@ public enum PromptName {
             "draft",
             CallKind.DRAFT,
             "draft",
+            DraftSchema.SCHEMA,
             0.2,
             0.1,
             new Slots(Set.of("source", "target", "styleSheet", "foreignPassageRule"), Set.of()),
@@ -31,6 +32,7 @@ public enum PromptName {
             "structural-repair",
             CallKind.STRUCTURAL_REPAIR,
             "structural-repair",
+            DraftSchema.SCHEMA,
             0.2,
             null,
             null,
@@ -41,14 +43,27 @@ public enum PromptName {
             "placeholder-repair",
             CallKind.PLACEHOLDER_REPAIR,
             "placeholder-repair",
+            DraftSchema.SCHEMA,
             0.2,
             null,
             null,
-            new Slots(Set.of("rejectedTarget", "tokens"), Set.of()));
+            new Slots(Set.of("rejectedTarget", "tokens"), Set.of())),
+
+    /** Scores a chunk's drafted pairs once per chunk, so it states no expected output of its own. */
+    JUDGE(
+            "judge",
+            CallKind.JUDGE,
+            "judge",
+            JudgeSchema.SCHEMA,
+            0.1,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
+            new Slots(Set.of("pairs"), Set.of("glossaryTerms")));
 
     private final String resourceBaseName;
     private final CallKind callKind;
     private final String responseFormatName;
+    private final String responseSchema;
     private final double temperature;
     private final @Nullable Double lowerTemperature;
     private final @Nullable Slots systemSlots;
@@ -58,6 +73,7 @@ public enum PromptName {
             final String resourceBaseName,
             final CallKind callKind,
             final String responseFormatName,
+            final String responseSchema,
             final double temperature,
             @Nullable final Double lowerTemperature,
             @Nullable final Slots systemSlots,
@@ -65,6 +81,7 @@ public enum PromptName {
         this.resourceBaseName = resourceBaseName;
         this.callKind = callKind;
         this.responseFormatName = responseFormatName;
+        this.responseSchema = responseSchema;
         this.temperature = temperature;
         this.lowerTemperature = lowerTemperature;
         this.systemSlots = systemSlots;
@@ -84,6 +101,11 @@ public enum PromptName {
     /** The response-format name the pseudo model switches on. */
     public String responseFormatName() {
         return responseFormatName;
+    }
+
+    /** The JSON schema this call's structured response must match. */
+    public String responseSchema() {
+        return responseSchema;
     }
 
     /**

@@ -2,7 +2,6 @@ package ua.bookloom.pipeline.prompt;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -18,7 +17,6 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 @Slf4j
 public final class DraftPromptBuilder {
 
-    private static final String UNKNOWN_SOURCE_LANGUAGE = "the language of this segment (infer it from its text)";
     private static final Pattern PLACEHOLDER = Pattern.compile("⟦g\\d+⟧");
 
     private final PromptTemplates templates;
@@ -61,7 +59,7 @@ public final class DraftPromptBuilder {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
         final String source = resolvedSourceLanguage();
-        final String target = languageDescription(targetLanguage);
+        final String target = PromptLanguages.describe(targetLanguage);
         log.debug(
                 "Building draft prompt sourceLanguage={} targetLanguage={} segmentId={} maskedLength={}",
                 source,
@@ -105,7 +103,7 @@ public final class DraftPromptBuilder {
     }
 
     private String resolvedSourceLanguage() {
-        return sourceLanguage == null ? UNKNOWN_SOURCE_LANGUAGE : languageDescription(sourceLanguage);
+        return PromptLanguages.describe(sourceLanguage);
     }
 
     private String systemMessage(final String source, final String target) {
@@ -146,13 +144,5 @@ public final class DraftPromptBuilder {
             tokens.add(matcher.group());
         }
         return tokens.isEmpty() ? "(none; do not invent placeholders)" : String.join(" ", tokens);
-    }
-
-    private static String languageDescription(final String languageTag) {
-        final String displayName = Locale.forLanguageTag(languageTag).getDisplayName(Locale.ENGLISH);
-        if (displayName.isBlank() || displayName.equalsIgnoreCase(languageTag)) {
-            return "language tag \"" + languageTag + "\"";
-        }
-        return displayName + " (" + languageTag + ")";
     }
 }

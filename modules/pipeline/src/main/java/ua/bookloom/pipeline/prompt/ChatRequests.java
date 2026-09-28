@@ -33,7 +33,7 @@ public final class ChatRequests {
         return new ChatRequest(
                 messages,
                 name.temperature(lowerTemperature),
-                new ResponseFormat(name.responseFormatName(), DraftSchema.SCHEMA),
+                new ResponseFormat(name.responseFormatName(), name.responseSchema()),
                 false,
                 TokenBudget.EFFECTIVE_CONTEXT,
                 expectedOutputTokens);

@@ -150,6 +150,7 @@ final class SegmentTranslator {
             case DRAFT -> promptBuilder.messagesFor(segment, context);
             case STRUCTURAL_REPAIR -> promptBuilder.messagesForStructuredRepair(segment, context, rejected, diagnostic);
             case PLACEHOLDER_REPAIR -> promptBuilder.messagesForPlaceholderRepair(segment, context, rejected);
+            case JUDGE -> throw new IllegalArgumentException(kind + " is not rendered by the draft step");
         };
     }
 

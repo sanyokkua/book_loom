@@ -11,19 +11,23 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 
-/** A deterministic chat model that records requests and consumes scripted outcomes in order. */
-final class ScriptedChatModel implements ChatModel {
+/**
+ * A deterministic chat model that records requests and consumes scripted outcomes in order. Public so the
+ * {@code judge} and {@code heal} test packages can script the {@link ua.bookloom.pipeline.prompt.ModelCalls} seam
+ * with it too.
+ */
+public final class ScriptedChatModel implements ChatModel {
 
     private final Deque<Supplier<Result<ChatResponse>>> outcomes = new ArrayDeque<>();
     private final List<ChatRequest> requests = new ArrayList<>();
 
-    ScriptedChatModel answer(final Result<ChatResponse> result) {
+    public ScriptedChatModel answer(final Result<ChatResponse> result) {
         Objects.requireNonNull(result, "result");
         outcomes.addLast(() -> result);
         return this;
     }
 
-    ScriptedChatModel throwFailure(final RuntimeException failure) {
+    public ScriptedChatModel throwFailure(final RuntimeException failure) {
         Objects.requireNonNull(failure, "failure");
         outcomes.addLast(() -> {
             throw failure;
@@ -37,7 +41,7 @@ final class ScriptedChatModel implements ChatModel {
         return Objects.requireNonNull(outcomes.removeFirst().get(), "scripted outcome");
     }
 
-    List<ChatRequest> requests() {
+    public List<ChatRequest> requests() {
         return List.copyOf(requests);
     }
 }

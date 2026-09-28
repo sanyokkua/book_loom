@@ -144,8 +144,8 @@ every repair must parse strictly and pass unmasking.
 
 ## judge-quality-evaluation {#judge-quality-evaluation}
 
-LLM-as-judge, run only when the dial enables the judge and the deterministic QA gate has passed
-(`05_TRANSLATION_ALGORITHM.md#chunk-loop`). Scores the whole chunk in **one call**, labelling its qualifying pairs
+LLM-as-judge, run only when the dial enables the judge, over the drafted pairs that passed their hard gates — a pair
+that failed a soft check is still judged (`05_TRANSLATION_ALGORITHM.md#chunk-loop`). Scores the whole chunk in **one call**, labelling its qualifying pairs
 `s1…sk` in document order — these are **local labels for this call only**, never the segments' real ids. Produces a
 quality score compared against the dial's `τ_judge` and, where possible, concrete findings that let self-heal choose a
 **directed fix** over reflect→improve.
@@ -160,6 +160,8 @@ Score the translation on four anchored dimensions, each 0.0–1.0:
 - fluency: 1.0 = natural, idiomatic target prose; 0.5 = understandable but awkward; 0.0 = ungrammatical.
 - glossary & style: 1.0 = every locked term and style rule honoured; 0.5 = a minor miss; 0.0 = repeated violations.
 The overall "score" is your holistic judgement across these dimensions (not a forced average).
+[Style sheet — the style the translation had to follow]
+{{styleSheet}}
 You are a judge: do not rewrite the text. Report concrete findings against the local labels s1, s2, … given below,
 where a specific problem exists.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
@@ -168,8 +170,7 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 **USER**
 
 ```
-[Style + glossary that were required]
-{{styleSheet}}
+[Glossary that was required]
 {{glossaryTerms}}
 
 [Foreign-passage policy in force]
@@ -194,7 +195,7 @@ Return JSON exactly as:
 | `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages.                                                      |
 | `{{sourceSegments}}`               | Required  | The chunk's masked source pairs that passed their hard gates and were not reused, labelled `s1…sk`. |
 | `{{candidateTarget}}`              | Required  | The unmasked-then-remasked drafts under review, labelled with the same `s1…sk`.                    |
-| `{{styleSheet}}`                   | Required  | So style adherence can be judged.                                       |
+| `{{styleSheet}}`                   | Required  | So style adherence can be judged; in the SYSTEM message, as in every call of a run. |
 | `{{glossaryTerms}}`                | Optional  | Terms in the chunk; `(none)` if empty.                                  |
 | `{{foreignPassageRule}}`           | Required  | So a kept foreign passage is not scored as wrong-script.                |
 
@@ -214,7 +215,9 @@ pair in the call, routing each to self-heal.
   "deferrals": [ { "segmentId": "s2", "reason": "pronoun depends on later-revealed gender" } ] }
 ```
 
-Tolerant read: `findings` and `deferrals` may be absent/empty; unknown fields ignored.
+Tolerant read: `findings` and `deferrals` may be absent/empty; unknown fields ignored; a finding with an unknown
+severity, or a finding or deferral whose label is outside `s1…sk`, is dropped; a finding's `type` is kept as written
+(`tag` here is what the deterministic checks call `markup`).
 
 ## directed-fix-repair {#directed-fix-repair}
 
