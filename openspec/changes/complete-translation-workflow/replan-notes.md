@@ -85,9 +85,18 @@ edited where marked **(edited)**; the rest is for the re-plan to decide.
   gate's message as its finding, so re-run `./gradlew :app:liveLocal` once 10.2 wires the loop, and update the test's
   expectation then. The small `qwen2.5:1.5b` also drops every placeholder of a Markdown link list (`MULTISET`).
 
-- **Two tests fail only under load**: `OllamaClientUsageTest.chat_temperatureAndOrContextWindow_postsExpectedNativeOptions[2]`
-  (`:llm`, a WireMock 404) and `TranslationJobProviderAbortTest` (`:pipeline`, a 5 s `awaitChatRequests` budget). See
-  the checkpoint report for what the investigation found.
+- **Two tests fail only under load**, each seen once in a full gate run and green on the next:
+  `OllamaClientUsageTest.chat_temperatureAndOrContextWindow_postsExpectedNativeOptions[2]` (`:llm`, a WireMock 404 →
+  `modelNotFound`) and `TranslationJobProviderAbortTest` (`:pipeline`, stop-during-repair / second slow request). A
+  checkpoint investigation reproduced the `:llm` one twice in 40 runs beside a concurrent `:ui:test`, and never the
+  `:pipeline` one in 60. Ruled out with direct tests: a shared or static `HttpClient` (both tests build fresh clients or
+  injectors), plain ephemeral-port reuse (~10,000 port cycles), and a delayed reply landing after `server.stop()` on a
+  rebound port (150 forced cycles). One clue: under CPU starvation the `:llm` class's "should time out" cases twice got
+  HTTP 400/401 answers none of its stubs configure — something other than the intended stub answered, pointing at
+  WireMock/Jetty teardown under load rather than BookLoom code. The `:pipeline` test stacks four wall-clock budgets
+  (`WireMockProvider.WAIT_SECONDS` 5, `TranslationJobTestSupport.WAIT_SECONDS` 5, `STOP_BUDGET_SECONDS` 5, a 2 s reply
+  delay). No change was made: nothing was proven. Next step if it recurs: log the elapsed times of those budgets and
+  the WireMock request journal inside a real full gate run.
 - **The spec still names provider types that do not exist** (`Provider`, `ProviderFactory`, `ProviderProfile`,
   `CredentialRef`) in `02_Architecture/04_LLM_INTEGRATION.md`, `02_MODULES_AND_LAYERING.md`, `10_DI_AND_LIFECYCLE.md`,
   `01_Product/04_LLM_PROVIDERS_AND_MODELS.md`, `00_Foundation/02_GLOSSARY.md`, `04_DESIGN_DECISIONS.md`,
