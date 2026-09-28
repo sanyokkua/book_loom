@@ -169,7 +169,19 @@ public final class SkeletonAnchors {
         };
     }
 
-    /** Follows an element-sibling path from {@code root}, stepping over text nodes and comments. */
+    /**
+     * Follows an element-sibling path from {@code root} — the walk root of a body, or the root of an auxiliary
+     * slot — stepping over text nodes and comments.
+     *
+     * @param root the node the path starts from
+     * @param nodePath the element-sibling indices, outermost first
+     * @return the element the path addresses
+     * @throws IllegalStateException if the path leaves the tree
+     */
+    public static TreeNode nodeAt(TreeNode root, List<Integer> nodePath) {
+        return resolve(root, nodePath);
+    }
+
     private static TreeNode resolve(TreeNode root, List<Integer> nodePath) {
         TreeNode current = root;
         for (final int step : nodePath) {

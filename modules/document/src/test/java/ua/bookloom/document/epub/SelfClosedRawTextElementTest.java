@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.fixture.EpubFixtures;
+import ua.bookloom.document.inspect.BodySegments;
 
 /**
  * FR-DOC-01's scenarios: a self-closed raw-text element (design.md D1's measured set — {@code script}, {@code
@@ -96,10 +96,8 @@ class SelfClosedRawTextElementTest {
 
     private static List<String> sourceTextsOf(Document document) {
         final List<String> texts = new ArrayList<>();
-        for (final Unit unit : document.units()) {
-            for (final Segment segment : unit.segments()) {
-                texts.add(segment.sourceInner());
-            }
+        for (final Segment segment : BodySegments.of(document)) {
+            texts.add(segment.sourceInner());
         }
         return texts;
     }

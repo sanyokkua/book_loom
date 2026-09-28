@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jsoup.nodes.Document;
+import ua.bookloom.api.document.Unit;
+import ua.bookloom.document.model.AuxiliarySlots;
 import ua.bookloom.document.model.RawEntry;
 
 /**
@@ -21,19 +23,30 @@ import ua.bookloom.document.model.RawEntry;
  *     other passthrough entry when repackaging (task 3.3)
  * @param opfDocument the OPF's own parsed tree, kept so export can replace {@code dc:language} in place
  * @param spineTreesByHandleId each spine unit's parsed jsoup tree, keyed by its {@code SkeletonHandle}'s opaque id
+ * @param auxiliarySlotsByHandleId the auxiliary slot table, keyed by the auxiliary unit's {@code SkeletonHandle}'s
+ *     opaque id
  */
 record ParsedEpub(
         List<RawEntry> rawEntries,
         String opfPath,
         org.jdom2.Document opfDocument,
-        Map<String, Document> spineTreesByHandleId) {
+        Map<String, Document> spineTreesByHandleId,
+        Map<String, AuxiliarySlots> auxiliarySlotsByHandleId) {
 
     ParsedEpub {
         Objects.requireNonNull(rawEntries, "rawEntries");
         Objects.requireNonNull(opfPath, "opfPath");
         Objects.requireNonNull(opfDocument, "opfDocument");
         Objects.requireNonNull(spineTreesByHandleId, "spineTreesByHandleId");
+        Objects.requireNonNull(auxiliarySlotsByHandleId, "auxiliarySlotsByHandleId");
         rawEntries = List.copyOf(rawEntries);
         spineTreesByHandleId = Map.copyOf(spineTreesByHandleId);
+        auxiliarySlotsByHandleId = Map.copyOf(auxiliarySlotsByHandleId);
+    }
+
+    AuxiliarySlots slotsOf(Unit auxiliaryUnit) {
+        return Objects.requireNonNull(
+                auxiliarySlotsByHandleId.get(auxiliaryUnit.skeleton().opaqueId()),
+                "No auxiliary slot table registered for the auxiliary unit");
     }
 }

@@ -52,6 +52,7 @@ class BookInspectorServiceStructureTest {
 
     private static int totalSegments(Document document) {
         return document.units().stream()
+                .filter(unit -> !unit.isAuxiliary())
                 .mapToInt(unit -> unit.segments().size())
                 .sum();
     }

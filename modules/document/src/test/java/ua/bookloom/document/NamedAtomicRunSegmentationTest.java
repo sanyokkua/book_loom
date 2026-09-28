@@ -11,6 +11,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.document.fixture.BodyContentEpub;
+import ua.bookloom.document.inspect.BodySegments;
 
 /**
  * Whether a line-break-delimited run whose only content is a named-atomic span becomes a segment.
@@ -61,8 +62,6 @@ class NamedAtomicRunSegmentationTest {
         assertThat(opened.isOk())
                 .withFailMessage("fixture did not open: %s", opened.error())
                 .isTrue();
-        return Objects.requireNonNull(opened.data(), "document").units().stream()
-                .flatMap(unit -> unit.segments().stream())
-                .toList();
+        return BodySegments.of(Objects.requireNonNull(opened.data(), "document"));
     }
 }

@@ -55,8 +55,11 @@ final class BookExporterTestSupport {
     static Document onlyDecision(
             final Document document, final SegmentStatus status, @Nullable final String targetInner) {
         final Unit unit = document.units().getFirst();
-        final Segment decided = unit.segments().getFirst().withDecision(status, targetInner);
-        return document.withUnits(List.of(unit.withSegments(List.of(decided))));
+        final List<Segment> segments = new ArrayList<>(unit.segments());
+        segments.set(0, segments.getFirst().withDecision(status, targetInner));
+        final List<Unit> units = new ArrayList<>(document.units());
+        units.set(0, unit.withSegments(segments));
+        return document.withUnits(units);
     }
 
     static int segmentCount(final Document document) {

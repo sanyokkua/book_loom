@@ -27,6 +27,7 @@ import ua.bookloom.pipeline.prompt.DraftContext;
 final class JobProgressTracker {
 
     private final Document source;
+    private final List<Unit> bodyUnits;
     private final List<SegmentWork> pending;
     private final List<FlaggedSegment> flaggedSegments = new ArrayList<>();
     private final Map<String, Segment> decisions = new HashMap<>();
@@ -40,11 +41,12 @@ final class JobProgressTracker {
 
     JobProgressTracker(final Document source) {
         this.source = Objects.requireNonNull(source, "source");
-        pending = pendingSegments(source);
+        bodyUnits = bodyUnits(source);
+        pending = pendingSegments(bodyUnits, source.format());
         log.debug(
                 "Initialized job progress format={} units={} pending={}",
                 source.format(),
-                source.units().size(),
+                sectionCount(),
                 pending.size());
     }
 
@@ -141,11 +143,11 @@ final class JobProgressTracker {
     }
 
     int sectionCount() {
-        return source.units().size();
+        return bodyUnits.size();
     }
 
     int segmentCount() {
-        return source.units().stream().mapToInt(unit -> unit.segments().size()).sum();
+        return bodyUnits.stream().mapToInt(unit -> unit.segments().size()).sum();
     }
 
     JobReport report(final JobState end, @Nullable final Path written, @Nullable final AppError error) {
@@ -168,7 +170,7 @@ final class JobProgressTracker {
 
     private JobProgress progress(final JobStage stage, final int section) {
         final JobProgress progress =
-                new JobProgress(stage, section, source.units().size(), accepted, flagged, pending.size() - next);
+                new JobProgress(stage, section, sectionCount(), accepted, flagged, pending.size() - next);
         log.debug(
                 "Built progress stage={} section={} accepted={} flagged={} pending={}",
                 stage,
@@ -227,18 +229,34 @@ final class JobProgressTracker {
         return progress;
     }
 
-    private static List<SegmentWork> pendingSegments(final Document document) {
-        log.debug(
-                "Collecting pending segments units={} format={}",
-                document.units().size(),
-                document.format());
+    private static List<SegmentWork> pendingSegments(final List<Unit> units, final BookFormat format) {
+        log.debug("Collecting pending segments units={} format={}", units.size(), format);
         final List<SegmentWork> work = new ArrayList<>();
-        for (int section = 0; section < document.units().size(); section++) {
-            addPending(work, document.units().get(section), section);
+        for (int section = 0; section < units.size(); section++) {
+            addPending(work, units.get(section), section);
         }
         final List<SegmentWork> pending = List.copyOf(work);
         log.debug("Collected pending segments count={}", pending.size());
         return pending;
+    }
+
+    /**
+     * The units the job works on. The auxiliary unit is left out until the Book Brief's switches reach the run
+     * (design.md D12); it is never removed from the document, because the export compares full segment counts.
+     * It is always last, so a body unit's index is its section.
+     */
+    private static List<Unit> bodyUnits(final Document document) {
+        final List<Unit> body = new ArrayList<>(document.units().size());
+        for (final Unit unit : document.units()) {
+            if (unit.isAuxiliary()) {
+                log.debug(
+                        "Leaving the auxiliary unit out of the job segments={}",
+                        unit.segments().size());
+            } else {
+                body.add(unit);
+            }
+        }
+        return body;
     }
 
     private static void addPending(final List<SegmentWork> work, final Unit unit, final int section) {

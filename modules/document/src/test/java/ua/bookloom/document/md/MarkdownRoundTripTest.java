@@ -149,6 +149,20 @@ class MarkdownRoundTripTest {
                 .containsOnlyNulls();
     }
 
+    // Every book ends with an auxiliary unit, empty until the frontmatter and image alt slots exist.
+    @Test
+    void read_markdownFile_endsWithAnEmptyAuxiliaryUnitNamedForTheFile() {
+        final Document document = openPrimary();
+
+        final Unit last = document.units().get(document.units().size() - 1);
+        assertThat(document.units()).hasSize(2);
+        assertThat(document.units().get(0).id()).isEqualTo("chapter.md");
+        assertThat(last.id()).isEqualTo("aux");
+        assertThat(last.href()).isEqualTo("chapter.md");
+        assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
+        assertThat(last.segments()).isEmpty();
+    }
+
     // the unit's id, href and media type identify a single-unit format.
     @Test
     void read_markdownFile_yieldsOneUnitNamedForTheFile() {

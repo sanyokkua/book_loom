@@ -33,6 +33,57 @@ class JobProgressTrackerTest {
         assertThat(tracker.draftContextFor(tracker.next()).precedingTargets()).isEmpty();
     }
 
+    // The auxiliary unit is never the job's work until the brief's switches reach the run (task 10.2).
+    @Test
+    void constructor_lastUnitIsAuxiliary_leavesItOutOfPendingWorkAndSectionCount() {
+        final JobProgressTracker tracker = new JobProgressTracker(documentWithAuxiliary());
+
+        assertThat(tracker.sectionCount()).isEqualTo(2);
+        assertThat(tracker.segmentCount()).isEqualTo(5);
+        assertThat(pendingIds(tracker))
+                .containsExactly("one:0", "one:1", "one:2", "one:3", "two:0")
+                .doesNotContain("aux:title");
+    }
+
+    private static List<String> pendingIds(final JobProgressTracker tracker) {
+        final List<String> ids = new java.util.ArrayList<>();
+        while (tracker.hasPending()) {
+            final SegmentWork work = tracker.next();
+            ids.add(work.segment().id());
+            tracker.apply(work, new Decision(work.segment().withDecision(SegmentStatus.ACCEPTED, "T."), null));
+        }
+        return ids;
+    }
+
+    private static Document documentWithAuxiliary() {
+        final Document body = document();
+        final Segment title = new Segment(
+                "aux:title",
+                Unit.AUXILIARY_ID,
+                0,
+                SegmentKind.METADATA_TITLE,
+                "Book",
+                "Book",
+                Map.of(),
+                "hash-title",
+                null,
+                null,
+                new ByteSpanAnchor(0, 4),
+                null,
+                SegmentStatus.PENDING,
+                0.0);
+        final Unit auxiliary = new Unit(
+                Unit.AUXILIARY_ID,
+                2,
+                "one.md",
+                "application/x-bookloom-auxiliary",
+                new SkeletonHandle("aux"),
+                List.of(title));
+        final List<Unit> units = new java.util.ArrayList<>(body.units());
+        units.add(auxiliary);
+        return body.withUnits(units);
+    }
+
     private static void acceptNext(final JobProgressTracker tracker, final String target) {
         final SegmentWork work = tracker.next();
         tracker.apply(work, new Decision(work.segment().withDecision(SegmentStatus.ACCEPTED, target), null));

@@ -25,6 +25,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.DocumentService;
 import ua.bookloom.document.DocumentServices;
+import ua.bookloom.document.inspect.BodySegments;
 
 /**
  * Names each trap the primary fixture (task 5.1) is built to catch as its own test (task 5.5, design.md "Risks"),
@@ -131,6 +132,7 @@ class EpubGoldenTrapsTest {
         final RoundTrip roundTrip = roundTrip();
 
         assertThat(roundTrip.document().units())
+                .filteredOn(unit -> !unit.isAuxiliary())
                 .extracting(Unit::href)
                 .containsExactly(CHAPTER_ONE_ENTRY, CHAPTER_TWO_ENTRY);
     }
@@ -162,9 +164,7 @@ class EpubGoldenTrapsTest {
 
     private static List<String> allSourceInner(Document document) {
         final List<String> inner = new ArrayList<>();
-        for (final Unit unit : document.units()) {
-            unit.segments().forEach(segment -> inner.add(segment.sourceInner()));
-        }
+        BodySegments.of(document).forEach(segment -> inner.add(segment.sourceInner()));
         return inner;
     }
 

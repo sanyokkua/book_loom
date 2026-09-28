@@ -22,6 +22,8 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.inspect.LanguageEvidenceReader;
+import ua.bookloom.document.model.AuxiliarySlots;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.BlockSegmentWalker;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
@@ -76,7 +78,7 @@ public final class EpubReader {
 
         final UnitsResult unitsResult = readUnits(opf, byName);
         final String documentId = UUID.randomUUID().toString();
-        registry.put(documentId, new ParsedEpub(entries, opfPath, opf.jdomDocument(), unitsResult.jsoupTrees()));
+        registry.put(documentId, parsedEpub(entries, opfPath, opf, unitsResult));
 
         final String declaredRaw =
                 opf.dcLanguages().isEmpty() ? null : opf.dcLanguages().get(0);
@@ -161,7 +163,31 @@ public final class EpubReader {
                     skipped,
                     units.size());
         }
-        return new UnitsResult(units, trees);
+        return withAuxiliaryUnit(opf, units, trees);
+    }
+
+    private static ParsedEpub parsedEpub(
+            List<RawEntry> entries, String opfPath, ParsedOpf opf, UnitsResult unitsResult) {
+        return new ParsedEpub(
+                entries,
+                opfPath,
+                opf.jdomDocument(),
+                unitsResult.jsoupTrees(),
+                Map.of(unitsResult.auxiliaryHandleId(), unitsResult.auxiliarySlots()));
+    }
+
+    /** Appends the auxiliary unit after every body unit, so body ids, positions and orders stay as they were. */
+    private static UnitsResult withAuxiliaryUnit(
+            ParsedOpf opf, List<Unit> bodyUnits, Map<String, org.jsoup.nodes.Document> trees) {
+        final AuxiliarySlots.Collected auxiliary = EpubAuxiliary.collect(opf.jdomDocument(), bodyUnits, trees);
+        final String handleId = UUID.randomUUID().toString();
+        final List<Unit> units = new ArrayList<>(bodyUnits);
+        units.add(AuxiliaryUnit.of(opf.opfPath(), bodyUnits.size(), handleId, auxiliary.segments()));
+        log.debug(
+                "EPUB auxiliary unit href={} segments={}",
+                opf.opfPath(),
+                auxiliary.segments().size());
+        return new UnitsResult(units, trees, handleId, auxiliary.slots());
     }
 
     private static void addUnit(
@@ -213,5 +239,9 @@ public final class EpubReader {
         return metadata;
     }
 
-    private record UnitsResult(List<Unit> units, Map<String, org.jsoup.nodes.Document> jsoupTrees) {}
+    private record UnitsResult(
+            List<Unit> units,
+            Map<String, org.jsoup.nodes.Document> jsoupTrees,
+            String auxiliaryHandleId,
+            AuxiliarySlots auxiliarySlots) {}
 }

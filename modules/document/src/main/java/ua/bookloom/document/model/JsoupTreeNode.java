@@ -142,4 +142,13 @@ public final class JsoupTreeNode implements TreeNode {
         }
         element.attr(qualifiedName, plainValue);
     }
+
+    @Override
+    public void setText(String plainText) {
+        Objects.requireNonNull(plainText, "plainText");
+        if (!(node instanceof Element element)) {
+            throw new IllegalStateException("Only an element has text to set");
+        }
+        element.text(plainText);
+    }
 }

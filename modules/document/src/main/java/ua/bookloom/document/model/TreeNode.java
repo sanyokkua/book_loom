@@ -109,4 +109,13 @@ public interface TreeNode {
      * @throws IllegalStateException if this node is not an element
      */
     void setAttribute(String qualifiedName, String plainValue);
+
+    /**
+     * Replaces every child of this element with one text node holding {@code plainText}. The text is plain: the tree
+     * escapes it on output, so the caller never pre-escapes it.
+     *
+     * @param plainText the element's new character data
+     * @throws IllegalStateException if this node is not an element
+     */
+    void setText(String plainText);
 }

@@ -17,7 +17,7 @@ class OpenEpubRegistryTest {
     void find_afterPut_returnsTheRegisteredState() {
         final OpenEpubRegistry registry = new OpenEpubRegistry();
         final ParsedEpub parsed = new ParsedEpub(
-                List.of(), "OEBPS/content.opf", new org.jdom2.Document(new Element("package")), Map.of());
+                List.of(), "OEBPS/content.opf", new org.jdom2.Document(new Element("package")), Map.of(), Map.of());
 
         registry.put("doc-1", parsed);
 

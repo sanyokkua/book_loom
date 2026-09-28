@@ -62,9 +62,26 @@ class Fb2ReaderTest {
     void read_mainAndNotesBodies_getDistinctUnitIdsSharingOneHref() {
         final Document document = readPrimary();
 
-        assertThat(document.units()).extracting(Unit::id).containsExactly("book.fb2#0", "book.fb2#1");
-        assertThat(document.units()).extracting(Unit::href).containsOnly("book.fb2");
-        assertThat(document.units()).extracting(Unit::mediaType).containsOnly("application/x-fictionbook+xml");
+        final List<Unit> bodies =
+                document.units().stream().filter(unit -> !unit.isAuxiliary()).toList();
+        assertThat(bodies).extracting(Unit::id).containsExactly("book.fb2#0", "book.fb2#1");
+        assertThat(bodies).extracting(Unit::href).containsOnly("book.fb2");
+        assertThat(bodies).extracting(Unit::mediaType).containsOnly("application/x-fictionbook+xml");
+    }
+
+    // Every book ends with an auxiliary unit, empty until the FB2 slots exist; body units keep their identity.
+    @Test
+    void read_fictionBook_endsWithAnEmptyAuxiliaryUnitNamedForTheFile() {
+        final Document document = readPrimary();
+
+        final Unit last = document.units().get(document.units().size() - 1);
+        assertThat(document.units()).hasSize(3);
+        assertThat(document.units().get(0).id()).isEqualTo("book.fb2#0");
+        assertThat(last.id()).isEqualTo("aux");
+        assertThat(last.href()).isEqualTo("book.fb2");
+        assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
+        assertThat(last.order()).isEqualTo(2);
+        assertThat(last.segments()).isEmpty();
     }
 
     // segment ids are built from the unit id, so a notes-body segment is namespaced by it.

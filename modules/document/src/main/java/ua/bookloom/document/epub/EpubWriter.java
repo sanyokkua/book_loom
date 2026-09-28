@@ -112,6 +112,10 @@ public final class EpubWriter {
      */
     private static void writeSegmentsBack(Document document, ParsedEpub parsed) {
         for (final Unit unit : document.units()) {
+            if (unit.isAuxiliary()) {
+                parsed.slotsOf(unit).writeBack(unit);
+                continue;
+            }
             final org.jsoup.nodes.Document tree = treeFor(parsed, unit);
             SkeletonAnchors.writeBackAll(JsoupTreeNode.of(tree.body()), pendingWrites(unit));
         }
@@ -221,6 +225,9 @@ public final class EpubWriter {
     private static void rewriteContentDocumentLanguages(
             ParsedEpub parsed, Document document, @Nullable String effectiveSource, String target) {
         for (final Unit unit : document.units()) {
+            if (unit.isAuxiliary()) {
+                continue;
+            }
             final org.jsoup.nodes.Document tree = treeFor(parsed, unit);
             final org.jsoup.nodes.Element html = tree.selectFirst("html");
             if (html == null) {

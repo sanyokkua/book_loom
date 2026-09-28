@@ -70,6 +70,9 @@ public final class TxtWriter {
     private static List<BufferTextWriter.TextReplacement> replacementsOf(Document document) {
         final List<BufferTextWriter.TextReplacement> replacements = new ArrayList<>();
         for (final Unit unit : document.units()) {
+            if (unit.isAuxiliary()) {
+                continue;
+            }
             for (final Segment segment : unit.segments()) {
                 final String targetInner = segment.targetInner();
                 if (targetInner != null) {

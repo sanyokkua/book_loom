@@ -71,6 +71,20 @@ class ImportViewModelTest extends ImportViewModelTestBase {
         assertThat(isOpening(viewModel)).isFalse();
     }
 
+    // IF the auxiliary unit were counted, THEN the card would report a section and segments the person never sees.
+    @Test
+    void open_bookWithAuxiliaryUnit_cardCountsBodyUnitsAndBodySegmentsOnly() {
+        final Path source = dir.resolve("Frankenstein.epub");
+        port.on(source, Result.ok(BookFixtures.withAuxiliaryUnit(BookFixtures.frankenstein(), 6)));
+        final ImportViewModel viewModel = viewModel();
+
+        open(viewModel, source);
+
+        assertThat(stateOf(viewModel))
+                .isEqualTo(new ImportState.Detected(new BookCard(
+                        "Frankenstein.epub", BookFormat.EPUB, "Frankenstein", "Mary Shelley", "en", 3, 9)));
+    }
+
     // IF a plain-text book with no title, author or language got placeholder values, THEN the card would state things
     // the file never said; the three absent fields must be null so the view can omit their rows.
     @Test

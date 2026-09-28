@@ -20,6 +20,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.document.DocumentService;
 import ua.bookloom.document.DocumentServices;
 import ua.bookloom.document.fixture.FixtureCatalog;
+import ua.bookloom.document.inspect.BodySegments;
 import ua.bookloom.util.hash.HashUtil;
 
 /**
@@ -140,7 +141,7 @@ class FixtureSweepTest {
     }
 
     private static List<Segment> segmentsOf(Document document) {
-        return document.units().stream().flatMap(u -> u.segments().stream()).toList();
+        return BodySegments.of(document);
     }
 
     private static Set<SegmentKind> kindsOf(Document document) {

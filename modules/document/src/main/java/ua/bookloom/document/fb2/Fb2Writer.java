@@ -83,6 +83,12 @@ public final class Fb2Writer {
      */
     private static void writeSegmentsBack(Document document, ParsedFb2 parsed) {
         for (final Unit unit : document.units()) {
+            if (unit.isAuxiliary()) {
+                log.debug(
+                        "FB2 auxiliary unit has no slots yet; slots written=0 skipped={}",
+                        unit.segments().size());
+                continue;
+            }
             SkeletonAnchors.writeBackAll(Jdom2TreeNode.of(bodyFor(parsed, unit)), pendingWrites(unit));
         }
     }

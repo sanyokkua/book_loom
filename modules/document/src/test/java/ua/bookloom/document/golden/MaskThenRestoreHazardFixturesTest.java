@@ -15,6 +15,7 @@ import ua.bookloom.document.DocumentService;
 import ua.bookloom.document.DocumentServices;
 import ua.bookloom.document.fixture.EpubHazardFixtures;
 import ua.bookloom.document.fixture.Fb2Fixtures;
+import ua.bookloom.document.inspect.BodySegments;
 
 /**
  * The two hand-picked fixtures task 9.3 asks for: one EPUB paragraph and one FB2 paragraph, each carrying every
@@ -72,8 +73,7 @@ class MaskThenRestoreHazardFixturesTest {
     }
 
     private static Segment onlySegment(Document document) {
-        final List<Segment> segments =
-                document.units().stream().flatMap(u -> u.segments().stream()).toList();
+        final List<Segment> segments = BodySegments.of(document);
         assertThat(segments).as("hazard paragraph segment count").hasSize(1);
         return segments.get(0);
     }

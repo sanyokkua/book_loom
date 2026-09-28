@@ -24,6 +24,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.BlockSegmentWalker;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
@@ -206,6 +207,8 @@ public final class Fb2Reader {
         if (units.isEmpty()) {
             throw new CorruptContainerException("This FictionBook document declares no body");
         }
+        // Empty until the FB2 slots are read; the unit is produced now so every book has one at the same place.
+        units.add(AuxiliaryUnit.empty(sourceName, units.size()));
         return new UnitsResult(units, bodies);
     }
 

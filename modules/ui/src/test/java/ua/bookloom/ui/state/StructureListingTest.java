@@ -50,6 +50,19 @@ class StructureListingTest {
         assertThat(listing.totalSegments()).isEqualTo(1240);
     }
 
+    // IF the auxiliary unit were listed, THEN the screen would show a resource that is not a section of the book.
+    @Test
+    void of_documentWithAuxiliaryUnit_listsBodyUnitsOnlyAndTotalsBodySegments() {
+        final Document document = BookFixtures.withAuxiliaryUnit(
+                BookFixtures.book("aux", BookFormat.EPUB, List.of("a.xhtml", "b.xhtml"), 3, 2), 4);
+
+        final StructureListing listing = StructureListing.of(document);
+
+        assertThat(listing.rows())
+                .containsExactly(new StructureRow("a.xhtml", 0, 3), new StructureRow("b.xhtml", 1, 2));
+        assertThat(listing.totalSegments()).isEqualTo(5);
+    }
+
     // IF a book with nothing in it invented a row or a count, THEN the screen would show structure that is not there.
     @Test
     void of_documentWithNoUnits_hasNoRowsAndAZeroTotal() {

@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -19,6 +20,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.MetadataKey;
+import ua.bookloom.api.document.Unit;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -240,17 +242,31 @@ public final class ImportViewModel {
     private static BookCard cardOf(final String fileName, final Document document) {
         log.debug("building the card of {} ({})", fileName, document.format());
         final Map<String, String> metadata = document.metadata();
-        final int segments = document.units().stream()
-                .mapToInt(unit -> unit.segments().size())
-                .sum();
+        final List<Unit> bodyUnits = bodyUnitsOf(document);
+        final int segments =
+                bodyUnits.stream().mapToInt(unit -> unit.segments().size()).sum();
         return new BookCard(
                 fileName,
                 document.format(),
                 declaredOrNull(metadata.get(MetadataKey.TITLE.key())),
                 declaredOrNull(metadata.get(MetadataKey.AUTHOR.key())),
                 declaredOrNull(document.declaredLang()),
-                document.units().size(),
+                bodyUnits.size(),
                 segments);
+    }
+
+    /** The auxiliary unit is not a section of the book; it is left out of the card's counts until the switches reach the run. */
+    private static List<Unit> bodyUnitsOf(final Document document) {
+        return document.units().stream()
+                .filter(unit -> {
+                    if (unit.isAuxiliary()) {
+                        log.debug(
+                                "the card leaves the auxiliary unit out segments={}",
+                                unit.segments().size());
+                    }
+                    return !unit.isAuxiliary();
+                })
+                .toList();
     }
 
     /** A blank value is no declaration: the row is omitted rather than shown empty. */

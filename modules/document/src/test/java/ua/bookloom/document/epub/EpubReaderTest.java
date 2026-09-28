@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.document.inspect.BodySegments;
 import ua.bookloom.document.model.CorruptContainerException;
 
 /**
@@ -53,8 +54,8 @@ class EpubReaderTest {
 
         final Document document = newReader().read(epub);
 
-        assertThat(document.units()).extracting(Unit::href).containsExactly("OEBPS/c01.xhtml", "OEBPS/c02.xhtml");
-        assertThat(document.units()).extracting(Unit::order).containsExactly(0, 1);
+        assertThat(bodyUnits(document)).extracting(Unit::href).containsExactly("OEBPS/c01.xhtml", "OEBPS/c02.xhtml");
+        assertThat(bodyUnits(document)).extracting(Unit::order).containsExactly(0, 1);
     }
 
     // WHEN an EPUB 2 book carrying an NCX and no nav document is parsed, THEN parsing
@@ -73,7 +74,7 @@ class EpubReaderTest {
 
         final Document document = newReader().read(epub);
 
-        assertThat(document.units()).extracting(Unit::href).containsExactly("OEBPS/c01.xhtml", "OEBPS/c02.xhtml");
+        assertThat(bodyUnits(document)).extracting(Unit::href).containsExactly("OEBPS/c01.xhtml", "OEBPS/c02.xhtml");
         assertThat(document.format()).isEqualTo(ua.bookloom.api.document.BookFormat.EPUB);
     }
 
@@ -187,8 +188,8 @@ class EpubReaderTest {
 
         final Document document = newReader().read(epub);
 
-        assertThat(document.units()).extracting(Unit::href).containsExactly("OEBPS/c01.xhtml", "OEBPS/c03.xhtml");
-        assertThat(document.units()).extracting(Unit::order).containsExactly(0, 1);
+        assertThat(bodyUnits(document)).extracting(Unit::href).containsExactly("OEBPS/c01.xhtml", "OEBPS/c03.xhtml");
+        assertThat(bodyUnits(document)).extracting(Unit::order).containsExactly(0, 1);
     }
 
     // IF no spine item's file exists in the archive at all, THEN the book is refused as corrupt — there is nothing
@@ -228,6 +229,10 @@ class EpubReaderTest {
                   </spine>
                 </package>
                 """.formatted(manifest, spine);
+    }
+
+    private static List<Unit> bodyUnits(Document document) {
+        return document.units().stream().filter(unit -> !unit.isAuxiliary()).toList();
     }
 
     private static EpubReader newReader() {
@@ -324,8 +329,7 @@ class EpubReaderTest {
     }
 
     private static Segment onlySegment(Document document) {
-        final List<Segment> segments =
-                document.units().stream().flatMap(u -> u.segments().stream()).toList();
+        final List<Segment> segments = BodySegments.of(document);
         assertThat(segments).hasSize(1);
         return segments.get(0);
     }

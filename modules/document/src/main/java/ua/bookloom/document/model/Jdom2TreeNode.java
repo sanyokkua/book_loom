@@ -229,6 +229,15 @@ public final class Jdom2TreeNode implements TreeNode {
         element.setAttribute(qualifiedName.substring(colon + 1), plainValue, namespace);
     }
 
+    @Override
+    public void setText(String plainText) {
+        Objects.requireNonNull(plainText, "plainText");
+        if (!(content instanceof Element element)) {
+            throw new IllegalStateException("Only an element has text to set");
+        }
+        element.setText(plainText);
+    }
+
     /**
      * Escapes {@code &}, {@code <}, {@code >} and {@code "} for use inside a double-quoted attribute value, plus
      * the three whitespace characters an XML parser would otherwise normalize away there: without the numeric

@@ -86,6 +86,43 @@ public final class BookFixtures {
         return book("frankenstein", BookFormat.EPUB, "en", "Frankenstein", "Mary Shelley", 2, 3, 4);
     }
 
+    /**
+     * The same book with the auxiliary unit every opened book ends with, holding that many auxiliary segments.
+     *
+     * @param book the body-only book
+     * @param auxiliarySegments how many auxiliary title segments the unit carries
+     * @return {@code book} with an {@code aux} unit appended after its last unit
+     */
+    public static Document withAuxiliaryUnit(final Document book, final int auxiliarySegments) {
+        final List<Segment> segments = new ArrayList<>();
+        for (int s = 0; s < auxiliarySegments; s++) {
+            segments.add(new Segment(
+                    Unit.AUXILIARY_ID + ":title" + s,
+                    Unit.AUXILIARY_ID,
+                    s,
+                    SegmentKind.METADATA_TITLE,
+                    "text",
+                    "text",
+                    Map.of(),
+                    "hash",
+                    null,
+                    null,
+                    new NodeAnchor(List.of(s), 0),
+                    null,
+                    SegmentStatus.PENDING,
+                    0.0));
+        }
+        final List<Unit> units = new ArrayList<>(book.units());
+        units.add(new Unit(
+                Unit.AUXILIARY_ID,
+                units.size(),
+                "content.opf",
+                "application/x-bookloom-auxiliary",
+                new SkeletonHandle(Unit.AUXILIARY_ID),
+                segments));
+        return book.withUnits(units);
+    }
+
     private static Unit unit(final int order, final String href, final int segmentCount) {
         final String unitId = "unit-" + order;
         final List<Segment> segments = new ArrayList<>();

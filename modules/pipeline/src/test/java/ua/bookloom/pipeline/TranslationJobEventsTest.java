@@ -241,6 +241,25 @@ class TranslationJobEventsTest {
                 .containsExactly(0, 1);
     }
 
+    // The auxiliary unit every EPUB now ends with is not the job's work until the brief's switches reach the run:
+    // no draft request is sent for the package title or a page title, and the export still succeeds.
+    @Test
+    void run_epubWithAuxiliaryUnit_sendsOneDraftRequestPerBodySegmentAndExports() {
+        final Path source =
+                TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
+        final Path destination = tempDir.resolve("Book.uk.epub");
+        final ScriptedChatModel model = replies("ONE.", "TWO.", "THREE.");
+        final TranslationJobImpl translation = job(documents(), source, destination, model);
+
+        final JobReport result = report(translation.run());
+
+        assertThat(model.requests()).hasSize(3);
+        assertThat(result)
+                .extracting(JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged)
+                .containsExactly(JobState.COMPLETED, 3, 3, 0);
+        assertThat(destination).exists();
+    }
+
     // Treating an empty book as having no section would reject this zero-count export progress.
     @Test
     void progress_emptyBook_usesSectionZero() {

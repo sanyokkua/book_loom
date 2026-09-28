@@ -21,6 +21,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -94,7 +95,7 @@ public final class MarkdownReader {
                 resolution.hasBom(),
                 HashUtil.sha256Hex(fileBytes),
                 metadata,
-                List.of(unitOf(sourceName, segments)));
+                List.of(unitOf(sourceName, segments), AuxiliaryUnit.empty(sourceName, 1)));
     }
 
     /**

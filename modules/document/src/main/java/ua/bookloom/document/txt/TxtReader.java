@@ -22,6 +22,7 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
 import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.document.mask.PlainTextMasker;
+import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -68,7 +69,7 @@ public final class TxtReader {
                 resolution.hasBom(),
                 HashUtil.sha256Hex(fileBytes),
                 Map.of(),
-                List.of(unitOf(sourceName, segments)));
+                List.of(unitOf(sourceName, segments), AuxiliaryUnit.empty(sourceName, 1)));
     }
 
     /**

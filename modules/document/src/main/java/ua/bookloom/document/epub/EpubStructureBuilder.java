@@ -54,7 +54,9 @@ final class EpubStructureBuilder {
     private static Map<String, Unit> unitsByHref(Document document) {
         final Map<String, Unit> byHref = new LinkedHashMap<>();
         for (final Unit unit : document.units()) {
-            byHref.put(unit.href(), unit);
+            if (!unit.isAuxiliary()) {
+                byHref.put(unit.href(), unit);
+            }
         }
         return byHref;
     }
@@ -119,7 +121,7 @@ final class EpubStructureBuilder {
         }
         int fallbackTiebreak = topEntries.size();
         for (final Unit unit : document.units()) {
-            if (!reachedUnitIds.contains(unit.id())) {
+            if (!unit.isAuxiliary() && !reachedUnitIds.contains(unit.id())) {
                 placed.add(new Placed(unit.order(), fallbackTiebreak++, fallbackNode(unit)));
             }
         }

@@ -117,6 +117,21 @@ class TxtRoundTripTest {
                 .containsOnlyNulls();
     }
 
+    // Every book ends with an auxiliary unit; a plain-text book has nothing auxiliary, so its unit is empty.
+    @Test
+    void read_plainTextFile_endsWithAnEmptyAuxiliaryUnitNamedForTheFile() {
+        final Document document = openPrimary();
+
+        final Unit last = document.units().get(document.units().size() - 1);
+        assertThat(document.units()).hasSize(2);
+        assertThat(document.units().get(0).id()).isEqualTo("notes.txt");
+        assertThat(last.id()).isEqualTo("aux");
+        assertThat(last.href()).isEqualTo("notes.txt");
+        assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
+        assertThat(last.order()).isEqualTo(1);
+        assertThat(last.segments()).isEmpty();
+    }
+
     // a plain-text file is one unit named for the file, with the plain-text media type.
     @Test
     void read_plainTextFile_yieldsOneUnitNamedForTheFile() {
