@@ -16,13 +16,13 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
-import ua.bookloom.pipeline.prompt.DraftSchema;
 import ua.bookloom.pipeline.prompt.PromptName;
 
 /** Makes one model call and decides one segment. */
@@ -76,10 +76,12 @@ final class SegmentTranslator {
                 "Building chat request segmentId={} maskedLength={}",
                 segment.id(),
                 segment.masked().length());
-        final ChatRequest request = new ChatRequest(
+        final int allowance = TokenEstimator.outputAllowance(
+                DisplayText.of(segment.masked()), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
+        final ChatRequest request = ChatRequests.build(
+                kind,
                 messagesFor(segment, context, kind, rejected, diagnostic),
-                kind.temperature(false),
-                new ResponseFormat(kind.responseFormatName(), DraftSchema.SCHEMA),
+                allowance > 0 ? allowance : null,
                 false);
         log.debug(
                 "Built chat request segmentId={} messageCount={}",

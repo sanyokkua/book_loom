@@ -41,6 +41,16 @@ public final class DraftPromptBuilder {
         this.foreignPassages = Objects.requireNonNull(foreignPassages, "foreignPassages");
     }
 
+    /** The job's source language tag, or null when it is inferred from the text. */
+    public @Nullable String sourceLanguage() {
+        return sourceLanguage;
+    }
+
+    /** The job's target language tag. */
+    public String targetLanguage() {
+        return targetLanguage;
+    }
+
     /** Builds the catalog system and user messages for one masked segment. */
     public List<ChatMessage> messagesFor(final Segment segment) {
         return messagesFor(segment, DraftContext.empty());
