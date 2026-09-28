@@ -184,6 +184,37 @@ until the application closes, and the banners say exactly that.
 - **THEN** the screen shows `Run stopped. Progress is kept until the application closes. Resume any time — it re-enters
   at the first pending segment; flagged segments wait in the review panel.` and offers Resume
 
+### Requirement: Restart a segment's repair rounds after a pause or an error inside them
+
+WHEN a self-heal call is aborted by a pause, or is answered with an error that pauses the run, the system SHALL, on
+resume, restart that segment's repair rounds from round 1, and SHALL keep the chunk's judge verdict, making no second
+judge call for the chunk. WHEN a run is stopped, the system SHALL drop the chunk's undecided drafts, as "Decide a
+chunk's segments in document order" says.
+
+**Source:** FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
+`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`,
+`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`,
+`openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
+In plain words: a repair round that was interrupted has no answer to build on, and the rounds before it are not kept,
+so the segment starts its repair again from the first round instead of resuming half-way. What the run already paid for
+at the chunk level — the judge's verdict — is kept, so a pause never costs a second judge call.
+
+#### Scenario: A pause during the second repair round
+
+- **WHEN** a Balanced run drafts `He opened the old door.` and gets the echo `HE OPENED THE OLD DOOR.`, the chunk's judge
+  call is made, the first directed fix is answered with the echo again, and a pause is requested while the second
+  directed fix is in flight, and after resume the first directed fix is answered with the echo and the second with
+  `Він відчинив старі двері.`
+- **THEN** the provider has received 4 requests before the pause — draft, judge, first fix, second fix
+- **AND** it has received 6 in total, only one of them a judge call, and the segment ends ACCEPTED
+
+#### Scenario: An unreachable provider during the second repair round
+
+- **WHEN** the same run's second directed fix is answered with `ErrorCode.unreachable` with pause on error enabled, and
+  after resume the first directed fix is answered with the echo and the second with `Він відчинив старі двері.`
+- **THEN** the run pauses with `ErrorCode.unreachable` after 4 requests
+- **AND** it has received 6 in total, only one of them a judge call
+
 ## MODIFIED Requirements
 
 ### Requirement: Pause on request at the next boundary

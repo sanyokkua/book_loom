@@ -156,8 +156,8 @@ disagree with what the run decides a moment later; pausing first is one click.
 ### Requirement: State what a partial export will write before it is written
 
 WHEN the open book has segments that would not be written with a translation, the export screen SHALL state, before
-Export book is pressed, how many pending segments will be written in the source language and how many flagged segments
-will be written with their machine translation.
+Export book is pressed, how many segments will be written in the source language — the pending ones and the flagged
+ones that have no machine translation — and how many flagged segments will be written with their machine translation.
 
 The pending count SHALL leave out every segment kept as source by choice, and WHERE the book has such segments the
 export screen SHALL state their number apart, as `<n> segments are kept as source by choice`.
@@ -175,6 +175,12 @@ it is named on its own line instead, so nothing written in the source language g
 - **WHEN** the book has `1240` segments, `312` still pending and `3` flagged
 - **THEN** the screen states `312 segments will be written in the source language`
 - **AND** states `3 flagged segments will be written with their machine translation`
+
+#### Scenario: A flagged segment with no machine translation is announced as written in the source language
+
+- **WHEN** the book has `12` segments, `1` pending, `3` flagged of which `1` has no machine translation
+- **THEN** the screen states `2 segments will be written in the source language`
+- **AND** states `2 flagged segments will be written with their machine translation`
 
 #### Scenario: A complete book states nothing partial
 
@@ -494,9 +500,10 @@ segments written with a translation ("segments translated"), the share of segmen
 written file passed its verification ("file validates").
 
 WHEN an export succeeds, the system SHALL report with the written file: the number of segments written with a
-translation; the number of pending segments written in the source language; the number of segments kept as source by
-choice; the number of flagged segments written with their machine translation; the number of segments accepted
-without review; and the number of segments the person reviewed.
+translation; the number of pending segments written in the source language, a flagged segment that has no machine
+translation counted among them; the number of segments kept as source by choice; the number of flagged segments
+written with their machine translation; the number of segments accepted without review; and the number of segments
+the person reviewed.
 
 WHEN an export succeeds, the export screen SHALL list the checks it passed: "Re-opened and verified · structure, ids and
 fonts preserved" and, for an EPUB, an FB2, or a Markdown book whose frontmatter holds a `lang` key, "Language metadata
@@ -571,6 +578,13 @@ message on top of it would only repeat it.
 - **THEN** the export reports `941` segments written with a translation, `312` pending written in the source language,
   `7` kept as source by choice, `3` flagged written with their machine translation, `922` accepted without review and
   `16` reviewed
+
+#### Scenario: A flagged segment with no machine translation counts as pending
+
+- **WHEN** a Markdown book of `12` body segments is exported with `10` accepted, `1` pending and `1` flagged whose every
+  draft failed a hard gate, so it holds no machine translation
+- **THEN** the export reports `10` segments written with a translation, `2` pending written in the source language and
+  `0` flagged written with their machine translation
 
 #### Scenario: Showing the file selects it where the platform can
 

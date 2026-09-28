@@ -13,14 +13,16 @@ character keeps one spelling from the first chapter to the last.
 WHEN the Names & style screen opens for a book whose glossary is empty, or a run prepares a book whose glossary is
 empty, the application SHALL propose, without any network call, every capitalised word and every run of two or three
 capitalised words that occurs at least 3 times not at the start of a sentence, ordered by how often it occurs and then
-by where it first occurs, each as an entry of type other, gender unknown, unlocked and with no target.
+by where it first occurs, each as an entry of type other, gender unknown, unlocked and with no target. A word that follows `Mr.`, `Mrs.`, `Ms.`,
+`Dr.`, `St.` or `Prof.` SHALL NOT count as the start of a sentence, and the title itself SHALL NOT be proposed.
 
 **Source:** FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan` (offline fallback),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`.
 In plain words: a name that recurs mid-sentence is almost certainly a proper noun, so a frequency count finds most of
 a book's names instantly and offline; words at the start of a sentence are ignored because every sentence starts
-with a capital. Proposals stay unlocked because a locked term cannot inflect. A term the person removed is never
+with a capital, and the full stop after an abbreviated title does not end a sentence, so `Hale` in `Mr. Hale` still
+counts. Proposals stay unlocked because a locked term cannot inflect. A term the person removed is never
 proposed again (see "Keep the person's entries and removals when names are proposed").
 
 #### Scenario: Recurring mid-sentence names are proposed
@@ -34,6 +36,11 @@ proposed again (see "Keep the person's entries and removals when names are propo
 
 - **WHEN** `The` begins 40 sentences and never occurs capitalised mid-sentence
 - **THEN** `The` is not proposed
+
+#### Scenario: A name after an honorific is not sentence-initial
+
+- **WHEN** the glossary is empty and the book has `Mr. Hale` 3 times mid-text
+- **THEN** `Hale` is proposed and `Mr` is never proposed
 
 #### Scenario: The scan needs no provider
 

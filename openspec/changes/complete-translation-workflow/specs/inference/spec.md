@@ -130,24 +130,25 @@ exercises the path that estimates throughput.
 ### Requirement: Carry a temperature and a response format per call
 
 The system SHALL let a request carry, besides its messages, an optional temperature, an optional response format made of
-a name and a JSON schema, an optional context size in tokens, and an optional number of output tokens it expects. A
-request built from messages alone SHALL carry none of them. WHEN one is absent, the model SHALL leave it out of what it
+a name and a JSON schema, an optional context size in tokens, an optional number of output tokens it expects, and an optional cap on the
+output tokens the server may generate. A request built from messages alone SHALL carry none of them. WHEN one is absent, the model SHALL leave it out of what it
 sends; WHEN present, the model SHALL pass it on as its provider's dialect takes it. The pseudo model SHALL ignore the
-temperature, the context size and the expected output.
+temperature, the context size, the expected output and the output cap.
 
 **Source:** FR-INFER-03, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#chat-contracts`, `#response-handling`, `#effective-context`,
 `#service-owned-retry`, ADR-0033.
 In plain words: the engine decides how creative the model may be, what shape it wants back, how much context it needs
-and how long an answer it expects, without knowing which server answers. A setting that is not given is simply not sent,
+and how long an answer it expects and where the server must stop, without knowing which server answers. A setting that is not given is simply not sent,
 so an old call site keeps working and a strict server never sees a `null`. Where each dialect puts the context size —
-Ollama only, never an OpenAI-compatible server — and how the expected output sets the call's timeout are the
-`llm-provider` capability's rules.
+Ollama only, never an OpenAI-compatible server — and how the expected output sets the call's timeout and the cap
+becomes a server field are the `llm-provider` capability's rules. The expected output only sets how long to wait; the
+cap is what stops a runaway reply.
 
 #### Scenario: A request built from messages alone carries no settings
 
 - **WHEN** a request is built from the single user message `hello`
-- **THEN** it has no temperature, no response format, no context size and no expected output
+- **THEN** it has no temperature, no response format, no context size, no expected output and no output cap
 
 #### Scenario: A temperature and a format reach the server
 
@@ -158,9 +159,9 @@ Ollama only, never an OpenAI-compatible server — and how the expected output s
 
 #### Scenario: The pseudo model ignores both
 
-- **WHEN** the single user message `hello` with temperature `0.2`, context size `8192`, 400 expected output tokens and no
-  response format is sent to the pseudo model, so the temperature, the context size and the expected output are all
-  present
+- **WHEN** the single user message `hello` with temperature `0.2`, context size `8192`, 400 expected output tokens, an
+  output cap of `661` and no response format is sent to the pseudo model, so the temperature, the context size, the
+  expected output and the output cap are all present
 - **THEN** it replies `HELLO` with a normal finish
 
 ### Requirement: Request provider controls without trusting them as guarantees

@@ -188,6 +188,40 @@ blank, is what tells a person a run cannot start yet.
 - **WHEN** the footer reads `No model chosen` and `qwen3:8b` is then chosen on the providers area
 - **THEN** the footer reads `Ollama · qwen3:8b`
 
+### Requirement: Ask before an import replaces a translation that can continue
+
+WHEN a book is chosen for import while the current run is running, paused, paused on a provider error or stopped, the
+application SHALL ask whether to discard that run and import the book, or to keep the run, and SHALL change nothing
+until the person answers. WHEN the person chooses to keep the run, the application SHALL leave the run, the open book and
+the screen as they were. WHEN the person chooses to discard the run, the application SHALL discard it, import the
+book and show no run in the title bar. WHEN the current run is completed or failed, the application SHALL import the
+book without asking and show no run.
+
+**Source:** `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`,
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#shell-and-navigation`,
+`openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
+In plain words: the application keeps one translation per session, so importing another book would throw away hours of
+work that could still be finished. It asks first, and both answers are safe: keeping the run changes nothing, discarding
+it is what the person said. A run that has already finished or failed has nothing left to continue, so it never
+gets in the way.
+
+#### Scenario: Keeping a paused translation
+
+- **WHEN** the run over `Frankenstein.epub` is paused, `Kobzar.fb2` is chosen for import, and the person answers
+  `Keep translation`
+- **THEN** nothing changes and the run stays paused with `Frankenstein.epub` open
+
+#### Scenario: Discarding a paused translation
+
+- **WHEN** the run over `Frankenstein.epub` is paused, `Kobzar.fb2` is chosen for import, and the person answers
+  `Discard and import`
+- **THEN** `Kobzar.fb2` is opened and the title bar shows no run
+
+#### Scenario: A completed run is replaced without asking
+
+- **WHEN** the run over `Frankenstein.epub` is completed and `Kobzar.fb2` is chosen for import
+- **THEN** no dialog is shown, `Kobzar.fb2` is opened and the title bar shows no run
+
 ## MODIFIED Requirements
 
 ### Requirement: Keep every part of the window reachable at its smallest size

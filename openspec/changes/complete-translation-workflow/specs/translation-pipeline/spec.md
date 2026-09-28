@@ -182,7 +182,8 @@ comes first, counting accepted segments again from zero after each refresh, and 
 later draft prompts. The summary SHALL be built deterministically from the glossary entries whose term occurs in the
 source decided so far and the latest heading texts, condensed to at most 300 estimated tokens. WHERE the dial is Max, the
 refresh at the end of each unit SHALL instead be one summary model call, and the refresh after every 20 accepted
-segments SHALL stay deterministic.
+segments SHALL stay deterministic. A model summary whose target text is empty SHALL count as unreadable: the system SHALL
+keep the previous summary and write one WARN line.
 
 **Source:** FR-ALGO-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C10
 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`),
@@ -202,6 +203,11 @@ setting pays for it.
 
 - **WHEN** a Max run reaches the end of `ch02.xhtml`
 - **THEN** exactly one model call of kind summary is made for that chapter
+
+#### Scenario: A summary with an empty target is unreadable
+
+- **WHEN** a Max run's model summary call for `ch02.xhtml` replies `{"summary":{"source":"","target":""}}`
+- **THEN** the previous summary is kept and one WARN line is logged
 
 #### Scenario: The first prompt has no summary
 
@@ -418,10 +424,48 @@ expected output sets: a call that writes a long paragraph may wait longer than o
 - **THEN** the draft request states 16 expected output tokens
 - **AND** the judge call for its chunk states no expected output
 
+### Requirement: Cap the output of every call that states an expected output
+
+The system SHALL give every call that states an expected output — draft, directed fix, improve, polish and revision —
+also an output cap of `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, where the allowance is the expected
+output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A judge,
+reflect, pre-scan or summary call SHALL state no output cap. IF a capped reply ends with a finish of cut off by length,
+THEN the system SHALL treat it as any other cut-off reply ("Flag a segment whose reply cannot be used, and continue").
+
+**Source:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#response-handling`,
+`openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
+In plain words: a small model sometimes loops on one sentence and would otherwise write until the three-minute timeout,
+three attempts in a row, for one paragraph. The cap is a generous multiple of the length the segment should need —
+half as much again, a fixed margin for the `{"target":…}` wrapper, and room for every placeholder token — so a normal
+reply never reaches it and a runaway one is cut off, flagged and left behind. How each server receives the cap is the
+`llm-provider` capability's rule.
+
+#### Scenario: A short draft gets the floor
+
+- **WHEN** a Balanced run drafts `Book.md:0`, whose source display text `He opened the old door.` states 16 expected
+  output tokens and holds no placeholder token
+- **THEN** the draft request carries an output cap of `64`
+- **AND** the judge call for its chunk carries no output cap
+
+#### Scenario: A long paragraph with tokens gets a proportional cap
+
+- **WHEN** a draft is sent for a 600-character paragraph that states 414 expected output tokens and holds 4 `⟦gN⟧`
+  tokens
+- **THEN** the draft request carries an output cap of `661`
+
+#### Scenario: A reply cut at the cap is flagged and the run goes on
+
+- **WHEN** the model's reply to the draft of `ch07.xhtml:41` ends with a finish of cut off by length
+- **THEN** `ch07.xhtml:41` is FLAGGED with `ErrorCode.validation`
+- **AND** the draft of `ch07.xhtml:42` is still sent
+
 ### Requirement: Record deferrals and revise backwards on Max
 
 The system SHALL record a deferral for a segment when the judge reports one for it, and when the segment contains a
-glossary character whose gender is unknown. WHERE the dial is Max, after the last segment the system SHALL run a backward
+glossary character whose gender is unknown. WHEN the person changes a glossary term's target, the system SHALL record,
+for each decided segment whose target contains the previous target as a whole word, one TERM deferral per changed
+term, only when the entry is locked after the change and had a non-empty target before it. The system SHALL record judge deferrals but SHALL NOT revise a segment for one in
+this change. WHERE the dial is Max, after the last segment the system SHALL run a backward
 revision bounded to segments that contain a swept term: it SHALL substitute each locked term's rendering deterministically,
 without a model call — replacing only the previous glossary target the person changed, never a rendering the model chose
 on its own for a term that had no glossary target — and SHALL call the model with the revision call only for a gender deferral whose character now has a
@@ -452,6 +496,22 @@ everywhere, and never overwrites what the person wrote by hand.
 - **WHEN** `ch01.xhtml:9` mentions `Sam`, whose gender was `unknown` when it was drafted and is `female` at the revision
   stage
 - **THEN** one revision call is made for `ch01.xhtml:9` and its target is replaced with the revised one
+
+#### Scenario: Two changed terms give two deferrals
+
+- **WHEN** `ch01.xhtml:3` contains `Hale` and `Milton`, both locked entries with targets, and the person changes both
+  targets
+- **THEN** two TERM deferrals are recorded on `ch01.xhtml:3`, one for `Hale` and one for `Milton`
+
+#### Scenario: A change to an unlocked entry records nothing
+
+- **WHEN** the person changes the target of the unlocked entry `Hale` and `ch01.xhtml:3` contains `Hale`
+- **THEN** no deferral is recorded for `ch01.xhtml:3`
+
+#### Scenario: A judge deferral is recorded and left alone
+
+- **WHEN** the judge reports a deferral for `ch01.xhtml:9` and a Max run reaches its revision stage
+- **THEN** the deferral is recorded and no revision call is made for it
 
 #### Scenario: A person's edit is protected
 
@@ -521,6 +581,9 @@ IF the reply to a self-heal call is empty or cut off, or the model answers `Erro
 `ErrorCode.contextWindow` to it, THEN the system SHALL likewise flag the segment at once, keeping as its machine
 translation the last target that passed every hard gate, if there is one.
 
+A segment flagged at once SHALL store its reason as a high finding whose kind is the error code's name, raised by
+`reply`.
+
 The system SHALL examine a reply for these causes in a fixed order and act on the first that applies: an error the call
 answered (see also "Stop the job on any other failure"); empty content; an abnormal finish; a reply that is not the
 required JSON object; markup that does not restore; a refusal; and only then the quality checks. A reply whose markup
@@ -550,6 +613,17 @@ pauses the run instead.
 - **THEN** the first segment is FLAGGED with a high `markup` finding after exactly 3 model calls — the draft, the
   placeholder repair naming `⟦g0⟧ ⟦g1⟧`, and a directed fix stating `⟦g0⟧ ⟦g1⟧` — and keeps no machine translation
 - **AND** the second segment is still sent to the model
+
+#### Scenario: A flagged reply stores its reason as a finding
+
+- **WHEN** the model replies `HE OPENED` to the draft of a TXT paragraph and again `HE OPENED` to its structural repair,
+  neither being the required JSON object
+- **THEN** the segment holds one finding of kind `validation`, severity high, raised by `reply`
+
+#### Scenario: An empty reply stores an emptyCompletion finding
+
+- **WHEN** the model replies to the draft of a TXT paragraph with two spaces and a normal finish
+- **THEN** the segment holds one finding of kind `emptyCompletion`, severity high, raised by `reply`
 
 #### Scenario: A reply of only whitespace is flagged as empty
 
@@ -710,7 +784,9 @@ rather than drafting them again, and SHALL give a target the person edited durin
 the resume; the model call a pause interrupted is made again as the `resume` capability's "Pause on request at the next
 boundary" states. WHEN a run is
 stopped, the system SHALL commit the segments already decided and SHALL drop the undecided drafts, whose segments stay
-PENDING for the next run to draft.
+PENDING for the next run to draft. A commit SHALL hold only the segments decided since the previous commit and SHALL
+never write again a record the run already committed, so a target the person saved during a pause is never overwritten
+by the run.
 
 **Source:** FR-ALGO-C4, FR-ALGO-C4b, FR-ALGO-C7, FR-ALGO-C8
 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-ALGO-C13 (`#self-heal`), FR-RESUME-03,
@@ -740,6 +816,12 @@ dropped by a stop and drafted again by the next run.
 - **AND** `ch07.xhtml:40` and `ch07.xhtml:41` were committed before the run began to wait
 - **AND** after the person saves an edit of `ch07.xhtml:41` and resumes, `ch07.xhtml:42` and `ch07.xhtml:43` are decided
   from their existing drafts, with no new draft call for either
+
+#### Scenario: A saved edit survives the rest of the chunk
+
+- **WHEN** an Assisted, Balanced run flags `ch07.xhtml:41` and pauses on it, the person saves the edit
+  `Він рвучко відчинив двері.`, and the run resumes and finishes the chunk
+- **THEN** `ch07.xhtml:41` is still REVISED with `Він рвучко відчинив двері.`
 
 #### Scenario: An edit made during a Balanced pause feeds the next chunk
 
@@ -920,7 +1002,7 @@ say that the few-shots teach token placement only, never their literal text.
 The source language SHALL be the Book Brief's source language — the book's declared language, normalized, unless the
 person changed it — and on the command line the `--from` value when given. Each available BCP-47 tag SHALL be rendered
 for the model as its English display name followed by the exact tag; a tag without a display name SHALL render as
-`language tag "<tag>"`. When no source language is known, the prompt SHALL call it `the language of this segment (infer
+`language tag "<tag>"`. This SHALL hold for any language the application recognizes, not only a listed one. When no source language is known, the prompt SHALL call it `the language of this segment (infer
 it from its text)`.
 
 **Source:** FR-ALGO-01, FR-ALGO-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-DOC-03
@@ -953,6 +1035,11 @@ declaration is often missing or wrong.
 - **WHEN** a Markdown book whose front matter declares `lang: en` is translated to `uk` after the person set the source
   language to `de` on the Book Brief
 - **THEN** the system message names `German (de)` as the source language and does not name `English (en)`
+
+#### Scenario: A language outside the list is still named
+
+- **WHEN** a book is translated from `en` to `la`
+- **THEN** the system message names `Latin (la)` as the target language
 
 #### Scenario: A variant tag stays precise for the model
 
@@ -1110,8 +1197,9 @@ WHEN a job ends, the system SHALL return a successful result carrying:
 
 - the book format;
 - how the job ended: Completed, Cancelled or Failed;
-- the number of segments, and the accepted and flagged counts;
-- each flagged segment with its reason;
+- the number of segments, and the accepted and flagged counts, as the project holds them when the run ends — the
+  segments an earlier run decided included;
+- each flagged segment with its reason, a segment flagged after its repair rounds reported with `ErrorCode.validation`;
 - the error when Failed.
 
 The job SHALL write no book and its result SHALL name no file; writing the book is the separate export (the `export`
@@ -1150,6 +1238,11 @@ A run now translates into memory only; the person decides when and where the boo
 
 - **WHEN** one segment is accepted after one directed fix and two are accepted on their first draft
 - **THEN** the last snapshot counts 2 auto-accepted and 1 repaired-and-accepted
+
+#### Scenario: A second run reports the whole project
+
+- **WHEN** a run over a 12-segment book is stopped after deciding 5 segments, and a second run decides the other 7
+- **THEN** the second run's Completed report counts all 12 segments
 
 #### Scenario: A failed job still returns its report
 
@@ -1501,7 +1594,8 @@ for only the exact JSON object. IF it is again invalid, THEN the segment SHALL b
 
 IF a strictly valid `target` fails placeholder validation — a `⟦gN⟧` token of the document or of a protected span
 missing, repeated or out of order, or the restored markup refused — THEN the system SHALL issue exactly one separate
-repair containing the original source, rejected target, and exact required ordered token sequence. That repair SHALL
+repair containing the original source, rejected target, exact required ordered token sequence and, when the document
+gate refused the restore, the gate's reason (for example an emptied pair `⟦g0⟧⟦g1⟧`). That repair SHALL
 again pass strict parsing and the unchanged placeholder hard gate. IF it fails the placeholder hard gate again, THEN the
 segment SHALL NOT be flagged at once: it SHALL go to self-heal with a `markup` finding, whose directed fix states the
 expected token sequence, and SHALL be FLAGGED only after the dial's repair rounds fail (the `quality-gates` capability).
@@ -1541,6 +1635,13 @@ so a slip never eats the rounds meant for the translation itself.
 - **WHEN** `{"target":"Привіт ⟦g0⟧"}` is valid JSON but a segment requires `⟦g0⟧ ⟦g1⟧`
 - **THEN** the one repair contains the original source, rejected target, and `⟦g0⟧ ⟦g1⟧`; no unmask succeeds until a
   strict repaired target has that sequence
+
+#### Scenario: The placeholder repair names the rule the reply broke
+
+- **WHEN** the masked source is `The ⟦g0⟧second⟦g1⟧ marked paragraph.` and the draft answers
+  `{"target":"Другий ⟦g0⟧⟦g1⟧ позначений абзац."}`
+- **THEN** the gate refuses the restore because the pair `⟦g0⟧⟦g1⟧` encloses no text
+- **AND** the one placeholder repair states that reason beside the required sequence `⟦g0⟧ ⟦g1⟧`
 
 #### Scenario: A placeholder failure after its repair goes to self-heal
 

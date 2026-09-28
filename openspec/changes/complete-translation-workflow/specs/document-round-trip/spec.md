@@ -1538,13 +1538,14 @@ what it saw before. A zipped FB2 has no encryption manifest, so the zip's own en
 ### Requirement: Report the language evidence a book's metadata gives
 
 WHEN a book is inspected, the system SHALL report its language evidence: the declared language code as written; that
-code normalized, or none where it names no language the application offers; for an EPUB, the language declared by
+code normalized, or none where it names no language the application can name; for an EPUB, the language declared by
 more than half of the content documents that declare one on their root element, or none where no language has such a
 majority; and a verdict of
 
 - **match** — a recognized declaration with no content majority or a content majority equal to it;
 - **mismatch** — a recognized declaration and a content majority that differs from it;
-- **unrecognized** — a declaration that names no language the application offers;
+- **unrecognized** — a declaration that names no language the application can name, such as `xx-yy`, whether or not
+  the Book Brief lists the language it does name;
 - **absent** — no declaration.
 
 Declarations SHALL be compared after normalization. The system SHALL NOT infer a language from the book's text.
@@ -1572,6 +1573,11 @@ correct the source on the brief.
 
 - **WHEN** an FB2 whose title information declares `<lang>ua</lang>` is inspected
 - **THEN** the evidence reports declared `ua`, normalized `uk`, no content majority and the verdict match
+
+#### Scenario: A language outside the list is recognized
+
+- **WHEN** a Markdown file whose frontmatter declares `lang: la` is inspected
+- **THEN** the normalized code is `la` and the verdict is match
 
 #### Scenario: An unknown code is unrecognized
 

@@ -82,11 +82,12 @@ Anchored to `docs/implementation_plan/01_MODULE_INVENTORY.md#inventory`; rows ma
 | `:document` | `.split` (new) | `IcuSentenceSplitter` |
 | `:pipeline` | `.prompt` | `PromptTemplates`, `PromptName`, `*.prompt` resources, `StyleSheet`, per-call builders |
 | `:pipeline` | `.chunk`, `.context`, `.qa`, `.judge`, `.heal`, `.memory`, `.glossary`, `.revision`, `.dial` | as the inventory plans them (splitting moves to `:document`, D4) |
-| `:pipeline` | `.run` (new) | `ChunkRunner`, `PrepStage`, `RunRecorder`, `PauseDecider` |
-| `:pipeline` | `.project`, `.review`, `.export` (new) | `OpenProjects` + `ProjectServiceImpl`; `ReviewDeskImpl`; `ExportJobImpl`, side-file writers, `RoundTripCheck` |
-| `:ui` | `ua.bookloom.ui.state` | + `CurrentProject`, `LiveChunkState`, `ThroughputMeter`, `RunClock`, `ActivityLogFeed`, `ProviderTestRunner` |
-| `:ui` | `ua.bookloom.ui.control` (new) | `SearchableCombo`, `RunStatusBar`, `LiveChunkPanel`, `ComparePanes`, `TaggedLog` |
-| `:ui` | `ua.bookloom.ui.dialog` (new) | Add term, Retry with note, Export complete |
+| `:pipeline` | `.run` (new) | `ChunkRunner`, `PrepStage`, `WorkList`, `PendingCommit`, `OutcomeRecords`, `JobModelCalls`, `RunRecorder`, `PauseDecider` |
+| `:pipeline` | root package | + `WholeWord`, `Tokens` beside `DisplayText` (D10) |
+| `:pipeline` | `.project`, `.review`, `.export` (new) | `OpenProjects` + `ProjectServiceImpl`; `ReviewDeskImpl` and its parts; `ExportServiceImpl`, `ExportJobImpl`, `SegmentVerification`, side-file writers, `RoundTripCheck` |
+| `:ui` | `ua.bookloom.ui.state` | + `CurrentProject`, `ImportGuard`, `RunStarter`, `RunContext`, `ImportStates`, `ExportViewModel`, `LanguageNames`, `Genre`, `LiveChunkState`, `ThroughputMeter`, `RunClock`, `ActivityLogFeed`, `ProviderTestRunner` |
+| `:ui` | `ua.bookloom.ui.control` (new) | `SearchableCombo`, `RunStatusBar`, `StepFooter`, `Banner`, `StatTile`, `LiveChunkPanel`, `ComparePanes`, `TaggedLog` |
+| `:ui` | `ua.bookloom.ui.dialog` (new) | Replace run, Add term, Retry with note, Export complete |
 | `:ui` | `ua.bookloom.ui.screen` | + Names & style; rebuilt Import, Brief, Structure, Translating (with review), Export, Providers |
 
 Every new `:api`/`:util` package is exported. Every new package holding a class Guice constructs gets its `opens … to
@@ -94,15 +95,29 @@ com.google.guice` line (`:ui` packages also `to javafx.fxml`) in the task that c
 `document.inspect`, `document.split`, `pipeline.run`, `pipeline.project`, `pipeline.review`, `pipeline.export`,
 `pipeline.glossary`. No `opens` is added for `:pipeline`'s prompt resources: a module reads its own resources.
 
-Five classes would pass the ~400-line limit; the extractions are fixed here:
+Classes at or near the ~400-line limit (measured at the group-8 checkpoint) and the extractions fixed here; the task
+that first grows a class performs its extraction before adding to it:
 
 | Class today | Keeps | Extracted |
 |---|---|---|
-| `TranslationJobImpl` (386) | lifecycle, stage order, event emission | `run.PrepStage` (style sheet, scan), `run.ChunkRunner` (one chunk's lifecycle, D4a), `run.RunRecorder` (`RunRecord` states, building each `ChunkCommit`, the unit-end name re-scan) |
-| `JobControl` (370) | pause, resume and cancel requests; model-call interruption | `run.PauseDecider` (review-mode pause points and the failure routing of D3) |
-| `SegmentTranslator` (331) | the draft step only: draft, structural repair, placeholder repair (D3 precedence) | acceptance and repair to `heal.AcceptanceRule`/`heal.QualityLoop` (D8) |
-| `RunSession` (391) | event dispatch to the mirror | `ui.state.LiveChunkState` (live rows), `ui.state.ThroughputMeter` (tokens per second), `ui.state.RunClock` (time left, elapsed time), `ui.state.ActivityLogFeed` (event → tagged entry with locator) |
+| `TranslationJobImpl` (397) | lifecycle, stage order, event emission | `run.PrepStage` (style sheet, scan), `run.ChunkRunner` (one chunk's lifecycle, D4a), `run.WorkList` (records joined with the document's segments; replaces `JobProgressTracker`'s document walk), `run.PendingCommit` (the decided-since-last-commit buffer → `ChunkCommit`), `run.OutcomeRecords` (`SegmentOutcome` → `SegmentRecord`), `run.JobModelCalls` (the production `ModelCalls`), `run.RunRecorder` (`RunRecord` state writes only) |
+| `JobControl` (370) | pause, resume and cancel requests; model-call interruption | `run.PauseDecider` (the failure routing of D3 and the review-mode pause points) |
+| `SegmentTranslator` (361) | the draft step only: draft, structural repair, placeholder repair (D3 precedence) | acceptance and repair to `heal.AcceptanceRule`/`heal.QualityLoop` (D8); the draft-step prompt names to `prompt.DraftStep`; restore to `heal.GateFunction` |
+| `heal.SegmentHealer` (391) | the rounds of one segment | `heal.RoundEvaluator` (evaluating a round's reply through the gate and the checks) |
+| `BookExporter` (370) | writing and the atomic move | `export.SegmentVerification` (the per-segment re-open check, D13) |
+| `OpenAiCompatibleClient` (396) | the HTTP exchange | `openai.OpenAiRequestMapper` (request DTO shaping, the output cap) |
+| `RunSession` (366) | event dispatch to the mirror | `ui.state.LiveChunkState` (live rows), `ui.state.ThroughputMeter` (tokens per second), `ui.state.RunClock` (time left, elapsed time), `ui.state.ActivityLogFeed` (event → tagged entry with locator) |
+| `StateMirror` (264, would pass 400) | the one `@Singleton` publish seam | section objects `live()` and `review()` (D15) |
+| `TranslatingViewModel` (351) | screen state | `ui.state.RunStarter` (prepare, refusals, `RunContext`) |
+| `ImportViewModel` (313) | screen state | `ui.state.ImportStates` (verdict → state and card, pure) |
+| `BookBriefViewModel` (298, would pass 400) | the brief | `ui.state.ExportViewModel` (the destination members) |
 | `SettingsViewModel` (399) | tab state | `ui.state.ProviderTestRunner` (the three test actions and measured badges) |
+| `ReviewDeskImpl` (new) | the port | `review.SegmentActions` (status machine), `review.RetryDraft` (reuses the draft step, QA and the judge), `review.ReviewQueries`, `review.ReviewCounting` (shared with `ExportJobImpl`) |
+
+`MessageKey` (422) stays one enum: it is the typed registry of catalogue keys, a flat list with no behaviour.
+Test support is consolidated where it is first touched: one `TestDocuments` helper (today three copies), a
+`UiTestInjector` builder instead of telescoping overloads, `ScreenConformanceTest` split into cases and preparations,
+and a thread-safe `ScriptedChatModel` that can block and answer by call kind.
 
 ### D2 — Storage ports and in-memory adapters (ADR-0034)
 
@@ -113,7 +128,10 @@ Five classes would pass the ~400-line limit; the extractions are fixed here:
   passed every hard gate; a user edit never overwrites it. The **masked** forms are the text after protected-span
   restore and before `DocumentPort.unmask` — locked renderings and kept foreign runs substituted back, the document's
   own `⟦gN⟧` tokens still in place — so the review editor shows names, and `unmask` alone restores an edit. `reviewed`
-  becomes true once a person accepted, saved, reverted, applied a proposal or retried successfully.
+  becomes true once a person accepted, saved, reverted, applied a proposal or retried successfully. A segment flagged
+  at once (D3 rules 1–3) stores its reason as one more finding — `QaFinding(kind = the error code's name, HIGH, the
+  error's message, raisedBy = "reply")` — so `SegmentRecord` needs no reason field and the review panel, the report
+  and `SegmentView` show it like any other finding (`run.OutcomeRecords` builds records from `heal.SegmentOutcome`).
 - `SegmentPath` = `DRAFT | TM_REUSE | REPAIRED | USER | SOURCE_KEPT`. `SOURCE_KEPT` is never stored; review views report
   it for a record kept as source by choice (below).
 - `ContextSnapshot(precedingTargets, List<SnapshotTerm> glossary, List<SnapshotTmHit> tmHits, @Nullable summary,
@@ -122,7 +140,10 @@ Five classes would pass the ~400-line limit; the extractions are fixed here:
   repository lookup. The context assembler runs for every segment, a memory reuse included, so every decided record
   carries one.
 - `Deferral(id, projectId, segmentId, reason, @Nullable waitingOn, @Nullable replacedRendering, @Nullable proposal,
-  @Nullable maskedProposal)` — a revision proposal in both forms, so applying it stores both targets.
+  @Nullable maskedProposal)` — a revision proposal in both forms, so applying it stores both targets. `waitingOn`
+  holds the glossary term a TERM or GENDER deferral waits on, and the judge's text for a JUDGE one. The adapters key a
+  deferral by `(segmentId, reason, waitingOn)` — not `(segmentId, reason)` — so two changed terms, or two characters
+  of unknown gender, in one segment are two deferrals.
 - `RunRecord(runId, projectId, startedAt, @Nullable endedAt, JobState state, accepted, flagged)`. `state` is the run's
   current state, written by `run.RunRecorder`: `RUNNING` at start, `PAUSED` and `RUNNING` again on every pause and
   resume, then the terminal `COMPLETED`, `CANCELLED` or `FAILED` with `endedAt`. `RunRepository.save` upserts by run id;
@@ -144,7 +165,9 @@ Five classes would pass the ~400-line limit; the extractions are fixed here:
 - **Commits.** `CheckpointPort.commit(ChunkCommit)` applies one set of segment records with the TM entries, deferrals
   and glossary additions that belong to them, all or nothing. A commit holds the decided segments of a chunk: the
   decided prefix is committed before every pause and at stop or end, and the rest at the chunk's end, so one chunk may
-  take several commits. Undecided drafts are never committed. A glossary addition whose term already exists, or was
+  take several commits. A commit holds **only the segments decided since the previous commit** and never re-writes a
+  record the run already committed (`run.PendingCommit`): the in-memory checkpoint replaces whole records, so re-sending
+  a committed record would erase an edit the person saved during a pause. Undecided drafts are never committed. A glossary addition whose term already exists, or was
   removed by the person in this session, is skipped and the existing entry kept — a commit never fails for it; an
   unknown segment id is the only refusal (`validation`). `GlossaryRepository.remove` remembers the removed term for
   that purpose; the person adding it again (Add term, CSV import) clears the memory.
@@ -165,12 +188,17 @@ Five classes would pass the ~400-line limit; the extractions are fixed here:
   destination and overwrite move to `ExportRequest`, its languages to the brief.
 - `JobStage` = `PREP | TRANSLATE | REVISE`. `PREP` builds the style sheet and, when the glossary is empty, runs the
   deterministic scan over the whole book. `REVISE` runs only on Max. `JobReport` loses `written` and the "completed
-  implies written" invariant; `ExportReport` is separate (D13).
+  implies written" invariant; `ExportReport` is separate (D13). Its counts are the project's counts when the run
+  ends (`countsByStatus`), not only this run's decisions, so a run resumed after a stop reports the whole book. A
+  segment flagged after its repair rounds has no error of its own; `FlaggedSegment` and `SegmentDecided.reason` report
+  it as `validation`.
 - A new job starts at `firstPending(projectId, keptAuxiliaryKinds)`; that is how a stopped run resumes within the
   session. FLAGGED stays terminal for the run (FR-RESUME-01).
 - Pause points: the window runs every mode with its own points plus `ON_ERROR` (Unattended gets `{ON_ERROR}`); the
   command line runs with `pauseAt(Set.of())`, Unattended, and the brief's default dial (Balanced).
-- **Failure routing** of an error a model call answers during a run (`run.PauseDecider`):
+- **Failure routing** of an error a model call answers during a run — a pure `run.PauseDecider.route(ErrorCode)`,
+  landed on today's per-segment path **before** the chunk runner, because a chunk's judge call names no segment and
+  must already pause correctly when chunks arrive:
 
   | Code | Effect on the segment | Effect on the run |
   |---|---|---|
@@ -243,7 +271,12 @@ Five classes would pass the ~400-line limit; the extractions are fixed here:
 
 ### D4a — Chunk lifecycle (ADR-0033, ADR-0034, ADR-0038)
 
-`run.ChunkRunner` takes one chunk through three phases, always in document order:
+`run.ChunkRunner` takes one chunk through three phases, always in document order. It stays small by delegating:
+`run.WorkList` (the project's records joined with the opened document's segments, units and sections, kept kinds),
+`run.PendingCommit` (the segments decided since the last commit, with their TM entries, deferrals and glossary
+additions, built into one `ChunkCommit`), `run.OutcomeRecords` (`heal.SegmentOutcome` → `SegmentRecord`) and
+`run.JobModelCalls` (the production `prompt.ModelCalls`: call kind, events, elapsed time, usage). The judge on or off
+is a boolean branch, not a strategy type.
 
 1. **Draft phase.** For each segment: assemble its context package (D10); a context-matched memory reuse is checked at
    once (hard gates, checks, τ — D8) and, when it passes, skips the draft and the judge and is decided in its turn in
@@ -264,7 +297,11 @@ Pause, stop and resume:
 - On resume the paused segment's record is re-read, so a REVISED target feeds every segment drafted after the resume;
   drafts already made in the chunk are kept, not redrafted. Glossary edits made during the pause apply from the next
   chunk, which re-reads the glossary.
-- A model call interrupted by a pause — a draft, a repair or the judge — is redone on resume.
+- A model call interrupted by a pause — a draft, a repair or the judge — is redone on resume. For a segment in its
+  self-heal rounds this means the segment's rounds **restart from round 1**: `heal.ChunkDecider.nextDecision` re-runs
+  that segment's decision with the chunk's judge verdict kept, so the rounds already made are sent again (owner
+  decision, 2026-09-29; it costs at most a few calls per interrupted segment and keeps `SegmentHealer` stateless).
+  The same holds when a self-heal call answers an error that pauses the run (D3).
 - A stop commits the decided prefix and drops the undecided drafts; those segments stay PENDING and the next run drafts
   them again from `firstPending`.
 - Consequences the specs state: with the judge on (Balanced, Max), a review pause on `s2` of a four-segment chunk comes
@@ -319,10 +356,20 @@ log line above TRACE. `RunSession` turns events into mirror state on its 100 ms 
   gains a nullable `usage`, keeping the two-argument constructor.
 - Ollama: `prompt_eval_count`, `eval_count`, `eval_duration` (nanoseconds). OpenAI-compatible: `usage.prompt_tokens`,
   `usage.completion_tokens`, wall time as the duration. Absent fields stay null.
-- `ChatRequest` gains nullable `contextWindow` (→ Ollama `options.num_ctx`; the OpenAI-compatible client omits it) and
-  `expectedOutputTokens`, keeping its one-, three- and four-argument constructors, and the copy methods
+- `ChatRequest` gains nullable `contextWindow` (→ Ollama `options.num_ctx`; the OpenAI-compatible client omits it),
+  `expectedOutputTokens` and `maxOutputTokens`, keeping its one-, three- and four-argument constructors, and the copy methods
   `withoutResponseFormat()` and `withoutReasoning()`, which keep every other field. `GatedChatModel:122,130` use them, so
-  a capability downgrade no longer drops the context size or the expected output. The engine sends 8192.
+  a capability downgrade no longer drops the context size, the expected output or the cap. The engine sends 8192.
+- **Output cap** (owner decision, 2026-09-29). A call that states an expected output also states a cap,
+  `chunk.TokenEstimator.outputCap(allowance, tokens) = max(64, ⌈1.5 × allowance⌉ + 16 + 6 × tokens)` — the margin
+  covers the `{"target":…}` wrapper and each `⟦gN⟧` the reply must return, which the display-text allowance does not
+  count. `ChatRequests.build` carries both through `OutputLimit(expected, cap)`. Ollama receives it as
+  `options.num_predict` (`OllamaChatRequest.Options(temperature, numCtx, numPredict)`), an OpenAI-compatible server as
+  `max_tokens` (mapped by an `openai.OpenAiRequestMapper` extracted from the 396-line `OpenAiCompatibleClient`); a
+  request with no cap sends neither. Judge, reflect, pre-scan, summary and the verifier state no expected output and
+  therefore no cap. A reply cut at the cap finishes with `length` and is flagged at once (D3 rule 3) instead of running
+  into the timeout: at the checkpoint `qwen2.5:1.5b` looped on one paragraph for three 3-minute timeouts. `max_tokens`
+  counts reasoning tokens on a thinking model; reasoning is already sent low/off.
 - **Timeout** of a chat call: `effective = max(configured, min(600 s, expectedOutputTokens × 0.5 s))`. The configured
   request timeout (default 3 minutes, or the command line's `--timeout`) is the floor and is always honoured; long
   outputs get up to 600 s; a request stating no expected output uses the configured timeout. Draft, directed fix,
@@ -485,32 +532,55 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
 
 ### D10 — Consistency stack
 
+- **Shared text rules** (`:pipeline` root package, beside `DisplayText`): `WholeWord` is the one whole-word matcher,
+  `(?<![\p{L}\p{N}])…(?![\p{L}\p{N}])` with cached patterns (never `\b`, ASCII-only since JDK 19), taken out of
+  `qa.NameRemoval`; matching is case-sensitive everywhere (protected spans, injection, summary, deferrals) except the
+  glossary's duplicate checks, which ignore case. `Tokens` is the one `⟦gN⟧` pattern. `prompt.JsonReplies` is the one
+  tolerant reply parser. `prompt.DraftStep` lists the three draft-step calls, so a new `PromptName` (pre-scan,
+  summary, revision) never edits `SegmentTranslator`.
 - **Glossary scan** (`glossary.FrequencyScan`): capitalised tokens and 2–3-word capitalised runs not at sentence start,
-  ≥ 3 occurrences, ranked by count then first occurrence, type `other`, gender `unknown`, unlocked, no target. It runs
+  ≥ 3 occurrences, ranked by count then first occurrence, type `other`, gender `unknown`, unlocked, no target. It reads
+  the masked text with every `⟦gN⟧` token as a word boundary (`DisplayText` would join `Hale⟦g3⟧Street` into one
+  word). A word after `Mr.`, `Mrs.`, `Ms.`, `Dr.`, `St.` or `Prof.` is not sentence-initial (English only; the list is
+  a tuning constant). `propose` answers candidate terms with counts; `newTerms` builds the entries with ids from
+  `glossary.GlossaryIds.of(projectId, term)` (`projectId:` + the NFC-lower-cased term) after reading the glossary
+  once. A script without capital letters (Chinese, Japanese) gets no proposals. It runs
   in `PREP` over the whole book when the glossary is empty, and when Names & style opens on an empty glossary. No scan,
   deterministic or model, ever proposes a term the person removed in this session (D2).
-- **Names grown during the run** (FR-ALGO-C9): at the end of each body unit `run.RunRecorder` re-runs `FrequencyScan`
-  over the source display text of every segment decided so far and puts the candidates the glossary does not hold
-  into that unit's last commit — unlocked, no target, type `other`, gender `unknown` — then emits
+- **Names grown during the run** (FR-ALGO-C9): at the end of each body unit `run.ChunkRunner` re-runs `FrequencyScan`
+  over the source of every segment decided so far and hands the candidates the glossary does not hold to
+  `run.PendingCommit` for that unit's last commit (`RunRecorder` writes only the run's state) — unlocked, no target,
+  type `other`, gender `unknown` — then emits
   `MemoryUpdated(GLOSSARY, "+n")` when any was added. The commit skips a term that exists or was removed (D2). After a
   whole-book `PREP` scan the re-scan finds nothing new by construction; it grows the glossary when the person started
-  from their own list (CSV import, pre-scan, entries typed in).
+  from their own list (CSV import, pre-scan, entries typed in). The re-scan reads every decided segment each time —
+  quadratic over a book, accepted at this size.
 - **Model pre-scan** (`glossary.PreScan`), from its button only: candidates are capitalised tokens and runs occurring at
   least once not sentence-initially, each with the first sentence holding it, 40 per call at 0.2; replies read
   tolerantly; types mapped person → `character`, place → `place`, org → `other`, term → `term`, other → `other`;
   genders `female`, `male`, `neuter` as given, anything else `unknown`. Merged only after every batch succeeded,
   deduplicated case-insensitively, an existing entry kept unchanged, a term the person removed in this session never
   added back (the same removal memory as the deterministic scan, D2), new entries unlocked with no target; a failed
-  batch returns its `AppError` and writes nothing. It never runs at run start.
+  batch returns its `AppError` and writes nothing. A proposal that is not among its batch's candidates is dropped — the
+  catalogue's "do not invent", and the pseudo model echoes every capitalised word of the prompt. It never runs at run
+  start.
+- **Gate result.** `heal.GateFunction` takes the segment's masked input and answers a typed `heal.GateResult` —
+  `Restored(maskedForm, restored)`, `GateFailed(QaFinding)` or `StepError(AppError)` — so a caller knows which gate
+  failed and gets the D2 masked form; `SegmentTranslator` and the self-heal rounds (`heal.RoundEvaluator`, extracted
+  from the 391-line `SegmentHealer`) restore through this one path, and a round whose reply fails a gate fails with
+  that finding.
 - **Protected spans** (`memory.ProtectedSpans`), masked before drafting and restored before `DocumentPort.unmask`, so
-  the document gate never sees them:
+  the document gate never sees them (`ProtectedMask(maskedText, List<ProtectedSpan(token, restored, CheckName)>,
+  presentLocked)`):
   - **kept foreign runs** first — under the Keep foreign-passage policy only, a placeholder pair whose element carries
     its own `lang`/`xml:lang` (recorded at masking, D11) that differs from the run's source language after
-    `LanguageTags.normalize` collapses, with its inner text, into one atomic token and is restored verbatim;
+    `LanguageTags.normalize` (open to any recognized language, D11) collapses, with its inner text, into one atomic
+    token and is restored verbatim;
   - **locked terms** next — whole-word, case-sensitive matches of an entry that is locked **and has a non-empty
     target** (locking requires a target: the glossary table, the Add term dialog and CSV import refuse a locked entry
     without one), never inside a longer word or a token (EC-INLINE-3), replaced by a token and restored as the entry's
-    target.
+    target. Overlapping terms match longest first (`Baker Street` before `Baker`), then in document order, never
+    overlapping.
   Tokens are numbered from one above the segment's highest token, in document order. One hard gate covers both: each
   protected token exactly once.
 - **Injection:** entries whose term occurs whole-word in any segment of the chunk, with target, type and gender; an
@@ -528,13 +598,32 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   the oldest headings first, then the entries with the fewest occurrences, until it estimates ≤ 300 tokens. Refreshed
   after every 20 ACCEPTED segments and at every unit end; the counter resets at each refresh, not per unit. On Max the
   unit-end refresh is one `summary` model call and the every-20 refresh stays deterministic. An unreadable summary
-  reply keeps the previous version with one WARN; a model-call error routes by D3.
+  reply — an empty `summary.target` included — keeps the previous version with one WARN; a model-call error routes by
+  D3. `RollingSummary` fields: `source` the deterministic text, `target` the model's summary (Max, unit end) or empty (the record's field is non-null),
+  `version` the latest plus one (assigned by the keeper), `lastSummarizedKey` the last decided segment id,
+  `tokensSince` the ACCEPTED segments since the last refresh. The keeper's counter and memory live in the job and are
+  seeded from the decided records when a job starts, so a resume in the session continues them. The draft prompt
+  injects `target` when present, else `source`.
 - **Context package** (`context.ContextPackageAssembler`, seam F5): system frame + style sheet at the top, then summary,
   injected terms, TM hits, preceding targets, and the masked source last. The glossary is read once per chunk. Each
-  draft records its `ContextSnapshot`.
-- **Deferrals and backward revision** (`revision`): judge `deferrals[]`; the unknown-gender heuristic (a segment
-  containing a character entry whose gender is `unknown`); a TERM deferral when the person changes a locked term's
-  target after segments used the old one. The sweep substitutes locked renderings deterministically in segments
+  draft records its `ContextSnapshot`. Preceding targets are the **display text of the D2 masked form** — no `*`,
+  `**` or tokens — because a model shown a restored `*перший*` imitates the markup (checkpoint `liveLocal` run). The
+  assembler takes the summary as a `@Nullable String` and never reads a repository; `DraftPromptBuilder`'s own
+  languages, style sheet and policy fold into `prompt.CallFrame`.
+- **Self-heal calls get no preceding targets** (a decision at the re-plan): directed fix, reflect, improve and polish
+  keep omitting the catalogue's optional preceding-target text — the round's findings and the draft carry what a repair
+  needs, and the repair prompts stay short for small models. Revisit if the hand run shows repairs drifting in style.
+- **The placeholder repair names the broken rule**: when the document gate refused the restore, the draft step's one
+  placeholder repair carries the gate's reason (`GateFailed`'s finding, e.g. an emptied pair) beside the required
+  token sequence — at the checkpoint a model repeated `Другий ⟦g0⟧⟦g1⟧ …` because the repair did not say what was
+  wrong.
+- **Deferrals and backward revision** (`revision`): judge `deferrals[]` (the chunk's and every re-judge's, read
+  through `heal.ChunkDecider.deferrals()`) — **recorded only**: nothing in this change resolves them, the report and
+  the panel show them; the unknown-gender heuristic (a segment containing a character entry whose gender is
+  `unknown`); a TERM deferral when the person changes the target of an entry that is locked after the change and had
+  a non-empty previous target, on each decided segment whose effective target holds the previous target whole-word
+  (`SegmentRecord` holds no source text). `DeferralReason.NAME_UNRESOLVED` stays in the data model and is never
+  produced. The sweep substitutes locked renderings deterministically in segments
   containing a swept term and re-renders gender deferrals through the `revision` template; machine REVISED results
   replace machine targets; user-REVISED segments get a proposal the person applies from the review panel.
 - **Sweep limit:** the deterministic sweep replaces a rendering only when the glossary held a previous target for that
@@ -583,7 +672,14 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   counting pieces holding a letter or digit), images, fonts (manifest font media types via `FontMediaTypes`), code
   blocks, verse lines, footnotes, tables and the formatting kinds present.
 - `LanguageTags.normalize` (`util.lang`) handles `ua`→`uk`, case, `_`, region stripping, `zh`/`zh-CN`/`zh-SG`→`zh-Hans`,
-  `zh-TW`/`zh-HK`/`zh-MO`→`zh-Hant`. `Languages` holds 34 languages: English and the other 23 official EU languages,
+  `zh-TW`/`zh-HK`/`zh-MO`→`zh-Hant`. **Languages are open** (owner decision, 2026-09-29): a tag outside the catalogue
+  normalizes to its lower-cased primary subtag when it is well-formed (`Locale.Builder.setLanguageTag`) and the JDK
+  names its language in English (`getDisplayLanguage(Locale.ENGLISH)` differs from the code) — a **recognized**
+  language (`la` → `la`, Latin); only a tag the application cannot name (`xx-yy`) normalizes to empty and reads
+  `UNRECOGNIZED`. Prompts already name any language through the JDK (`Latin (la)`). A check that needs a script
+  (`ScriptCheck`, the dominant-script branch of foreign marking, `TokenEstimator`'s K) uses the catalogue's `Script` and
+  falls back — the script check is skipped, K is 3.0 — for an uncatalogued language. `Languages` is the convenience list
+  the screens show first; it holds 34 languages: English and the other 23 official EU languages,
   Chinese (Simplified, Traditional), Ukrainian, Russian, Belarusian, Turkish, Japanese, Norwegian Bokmål, Serbian and
   Korean.
 
@@ -647,10 +743,10 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   auxiliary segment through the slot table and skips a slot with no target; `Fb2Writer.bodyFor`, `EpubWriter.treeFor`
   and the TXT writer skip the auxiliary unit. The nav document and the NCX are carved out of "out-of-spine resources
   are verbatim" and re-serialized by D14's rules.
-- **Interim rule, task 6.2 until task 10.2:** the job's pending work list and section count, and the `:ui`
-  `StructureListing:32` and `ImportViewModel:243–252` counts, skip the auxiliary unit. It is never removed from the
-  `Document`, because `BookExporter:184–189` compares full segment counts. Task 10.1 carries the skip into the
-  repository reads; task 10.2 replaces it with the switches and "kept as source by choice" (D2).
+- **Interim rule, until the run applies the "Also translate" switches:** the job's pending work list and section
+  count, and the `:ui` `StructureListing:32` and `ImportViewModel:243–252` counts, skip the auxiliary unit. It is never
+  removed from the `Document`, because the exporter compares full segment counts. The contract migration carries the
+  skip into the repository reads (`run.WorkList`); the switches then replace it with "kept as source by choice" (D2).
 
 ### D13 — Export job (ADR-0035)
 
@@ -667,8 +763,11 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   auxiliary slot can legitimately disappear on re-open — an NCX label translated to the same text as its nav label
   merges with it; a frontmatter value written as `"1984"` holds no letter. `verifiedSegments` counts body segments.
 - `ExportReport(destination, written, pending, sourceKept, flaggedWritten, autoAccepted, reviewed, sideFiles,
-  verifiedSegments)`: `written` segments carry a target, `pending` are PENDING records of translated kinds written as
-  source (a partial export), `sourceKept` are records kept as source by choice.
+  verifiedSegments)`: `written` segments carry a target, `pending` are the segments of translated kinds written as source
+  because they have no target — PENDING records and FLAGGED records with no machine target (a partial export) —,
+  `flaggedWritten` the FLAGGED records written with their machine target, `sourceKept` the records kept as source by
+  choice. `ReviewCounts.pending` stays PENDING records only: the review panel counts work left, the report counts what
+  the file holds.
 - The run's source language reaches the writer through an additive overload `DocumentPort.write(document, destination,
   @Nullable sourceLanguage, targetLanguage)`; the three-argument method delegates with null, meaning the package's
   declared language (D14 §1).
@@ -676,6 +775,11 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
 - Side files beside the book: `<name>.glossary.csv` (RFC-4180, columns term, target, type, gender, locked — the import
   format), `<name>.bilingual.html` (one table row per segment, source | target, self-contained CSS), `<name>.report.md`
   (counts, flagged list by locator with findings, consistency notes).
+- The writer moves first, unchanged, from `TranslationEngineImpl`/`BookExporter` into `pipeline.export` behind a minimal
+  `ExportServiceImpl` over the records, so the job migration never carries the old export stage; the finished
+  `ExportJobImpl` then adds the refusals, side files and per-segment verification (`export.SegmentVerification`,
+  extracted so `BookExporter`, 370 lines, stays under the limit). The autoAccepted, reviewed and pending counts come
+  from one static `review.ReviewCounting` that `ReviewDeskImpl.counts` also uses — one rule, two callers.
 - Command line: destination preflight (exists without `--overwrite` → the current refusal), translate job, export job,
   one report line; exit codes unchanged. A shutdown hook cancels the running job and waits up to 5 s so the export
   deletes its temporary file (§13). `guice_bytecode_gen_option=DISABLED` is set for `:app:run` and the jpackage
@@ -715,11 +819,20 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
 
 - **Current project.** `ui.state.CurrentProject` (`@Singleton`) holds a read-only property of `OpenedBook(projectId,
   source, BookInspection, @Nullable BookProfile, BookBrief)` — the source path feeds the export proposal (D13), the brief
-  is the one `ImportedBook` carries. `ImportViewModel` sets it once `ProjectService.importBook` succeeds (task
-  11.3) and clears it on Cancel and on closing the book (`ProjectService.close`); Brief, Structure, Names & style,
+  is the one `ImportedBook` carries. `ImportViewModel` sets it once `ProjectService.importBook` succeeds and clears it on Cancel and on closing the book (`ProjectService.close`); Brief, Structure, Names & style,
   Translating and Export read it and show their no-book state when it is empty (Names & style included).
+- **One translation per app run** (owner decision, 2026-09-29). Choosing a book to import while the current run is
+  RUNNING, PAUSED (a provider error included) or STOPPED opens `ui.dialog.ReplaceRunDialog` (the `ModalHost` card
+  pattern of `AboutDialog`): "Discard and import" cancels a running job and waits for it off the FX thread, closes the
+  project and imports; "Keep translation" leaves everything as it was. After COMPLETED or FAILED the import runs without
+  asking and the run state returns to idle. `ui.state.ImportGuard` decides; the dialog package is created here and
+  reused by the later dialogs. Switching projects will reuse the guard when Projects exist.
 - `SearchableCombo<T>`: an editable `ComboBox` over a `FilteredList` filtered by the editor text (case- and
-  accent-insensitive, matches anywhere in the display name); `allowFreeText` for Genre; strict mode for languages.
+  accent-insensitive, matches anywhere in the display name), in three modes: STRICT keeps the previous value when the
+  text matches nothing; FREE_TEXT keeps what was typed (Genre); PARSED hands unmatched text to a parser
+  (`Function<String, Optional<T>>`) — the language lists, where `ui.state.LanguageNames.parse` accepts a catalogue name,
+  the ICU display name of any recognized language in the interface language or English, or a recognized tag
+  (`Latin`, `латинська`, `la` → `la`); anything else keeps the previous value and marks the field.
   ControlsFX `SearchableComboBox` is not used — it cannot take free text and is unproven in the packaged image.
 - **Genres:** `ui.state.Genre`, 40 constants carrying the English name sent to the prompt and a message key shown in
   both catalogues: Literary fiction, Classic literature, Historical fiction, Gothic novel, Romance, Historical romance,
@@ -773,6 +886,17 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   for the mockup's reader; the consistency pass runs on any dial from Export); per-node formatting pills on the
   structure tree (formatting is reported for the book in the statistics card); toasts no requirement names; and the
   preview-state switchers, the design-reference group and "EPUBCheck passed" already listed there.
+- **State mirror sections.** `StateMirror` stays the one `@Singleton` but grows by section objects — `live()` (live
+  rows, throughput, kept-as-source count, flagged queue) and `review()` (provider error, review-pause segment, retry in
+  flight) — sharing its `Platform.runLater` publish seam, each field added by the task that produces it. `RunSession`
+  keeps the dispatch; `LiveChunkState`, `ThroughputMeter`, `RunClock` and `ActivityLogFeed` hold the logic.
+  `TranslatingViewModel` hands starting and refusals to `RunStarter` (with one `RunContext(projectId, dial, fileName,
+  selection)`), `ImportViewModel` its verdict mapping to a pure `ImportStates`, and the brief's destination members move
+  to a new `ExportViewModel` that the Export screen builds on. Shared controls `StepFooter`, `Banner` and `StatTile`
+  replace the hand-built footers, banners and tiles.
+- **Interim export.** Until the Export view is rebuilt, a completed window run still writes the book through
+  `ExportService` (the bridge the job migration adds); the Export view's rebuild deletes it, and from then on only the
+  Export screen writes the book.
 - Navigation: `NAMES_STYLE` gets a screen; `REVIEW` is removed from `ViewNames` and from
   `07_UI_ARCHITECTURE_JAVAFX.md#navigation` (a task-group-0 edit); completed steps carry a done mark; six numbered
   workflow steps; group headings uppercase and letter-spaced.
@@ -846,6 +970,8 @@ starting points, each in one place.
 | temperature: retried draft | 0.2, or 0.1 when asked | chosen here | `prompt.PromptName` |
 | chat timeout | `max(configured, min(600 s, expectedOutputTokens × 0.5 s))`; configured default 3 min | chosen here; default from `ProviderConfig.DEFAULT_REQUEST_TIMEOUT` | `:llm` request timeout rule |
 | output allowance | `ceil(chars(source) × band hi / K(target) × 1.15)` | chosen here | `chunk.TokenEstimator` |
+| output cap | `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`; none where no expected output is stated | chosen here (owner decision, 2026-09-29) | `chunk.TokenEstimator` |
+| sentence-start exceptions of the name scan | `Mr.`, `Mrs.`, `Ms.`, `Dr.`, `St.`, `Prof.` | chosen here | `glossary.FrequencyScan` |
 | time left | EWMA α 0.2; shown after 5 decisions | chosen here | `ui.state.RunClock` |
 | tokens per second | last 20 `DRAFT` calls | chosen here | `ui.state.ThroughputMeter` |
 | token estimator | K per script (Latin 4.0, Cyrillic 3.0, Greek 3.5, Han/Japanese/Hangul 1.5, unknown 3.0), × 1.15 | reference `05_TRANSLATION_ALGORITHM.md#token-budget` | `util.lang.Script`, `chunk.TokenEstimator` |
@@ -854,8 +980,9 @@ starting points, each in one place.
 
 ## Risks / Trade-offs
 
-- [Scale — ~100 tasks in one change] → groups are ordered by dependency and each merges separately into the feature
-  branch; the gate runs after every group.
+- [Scale — ~110 tasks in one change] → groups are ordered by dependency and each merges separately into the feature
+  branch; `./gradlew build :app:archTest` runs after every group. Groups 9–16 were re-planned against the code groups
+  0–8 built; each task names the refactoring it needs first.
 - [Balanced adds judge and repair calls, so runs get slower on small models] → the judge is per chunk (ADR-0038);
   Fast turns it off; the time-left figure makes the cost visible.
 - [A failed soft check now blocks acceptance, so more segments are flagged] → the echo floor keeps short lines
@@ -875,13 +1002,20 @@ starting points, each in one place.
 - [Events now carry book text] → only in memory; a test asserts no DEBUG-or-higher log line contains segment text.
 - [Retry while a run is active could queue behind the gate] → refused with `busy` while the run record is RUNNING (D9).
 - [Repeated exports mutate the registry-held tree] → export and the round-trip check always open the source fresh (D2).
+- [The output cap formula is a guess; judge, reflect and summary stay uncapped] → one constant; the hand run records
+  how often replies are cut at the cap.
+- [Languages outside the catalogue get weaker checks — no script check, the default K 3.0 and the widest length band;
+  Latin-script Serbian still reads as Cyrillic] → stated as limits; recognition relies on the JDK's CLDR names.
+- [Discarding a running run on import may take seconds] → the dialog shows it is stopping until the job ends.
 - [Translating screen at 944×600] → the live/log row and the review panel scroll inside their cards; the minimum-size
   test covers Translating with the review panel open.
 
 ## Migration Plan
 
 Nothing is persisted, so there is no data migration. Inside the repository: `TranslationRequest` (28 files — 11 main,
-17 test — across `:api`, `:pipeline`, `:ui`, `:app`) moves to `RunRequest` + `ExportRequest` in the contract migration
-(task 10.1); the existing pipeline tests are rewritten against the new job before the old exporter path is deleted;
+17 test — across `:api`, `:pipeline`, `:ui`, `:app`) moves to `RunRequest` + `ExportRequest` in the contract migration, after the
+writer has moved unchanged into `pipeline.export`; the existing pipeline tests are rewritten against the new job before
+the old exporter path is deleted, and the tests pinned to log strings or internal classes (`DiagnosticsSegmentTranslatorTest`,
+`JobProgressTrackerTest`) are rewritten rather than migrated;
 the command line's observable behaviour is pinned by its existing tests, re-baselined only where the stricter
 acceptance rule changes the pseudo model's counts. Rollback is reverting the feature branch.

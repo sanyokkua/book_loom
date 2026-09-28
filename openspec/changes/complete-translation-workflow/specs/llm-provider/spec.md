@@ -19,6 +19,34 @@ loaded, and a strict server may reject a field it does not know. Only Ollama is 
 - **THEN** the body posted to `/v1/chat/completions` has `"temperature":0.2` and no `num_ctx`, `n_ctx`, `context_length`
   or `options` key
 
+### Requirement: Cap a chat call's output where the request states a cap
+
+WHEN a chat request carries an output cap, the system SHALL send it to an Ollama-native provider as `options.num_predict`
+and to an OpenAI-compatible provider as `max_tokens`. WHEN the request carries none, the system SHALL send neither field.
+
+**Source:** FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
+`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`,
+`openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
+In plain words: a model that loops on one sentence would otherwise write until the server's own limit, and the run would
+wait for all of it. The request states where the server must stop, each dialect names that field its own way, and a call
+that states no cap (a judge, a summary) is left as unbounded as before. Which calls carry a cap, and how large it is, is
+the `translation-pipeline` capability's rule.
+
+#### Scenario: LM Studio receives max_tokens
+
+- **WHEN** a request with an output cap of `80` is sent to the provider `lmstudio` for the model `google/gemma-4-e4b`
+- **THEN** the body posted to `/v1/chat/completions` has `"max_tokens":80`
+
+#### Scenario: No cap sends no max_tokens
+
+- **WHEN** a request with no output cap is sent to the provider `lmstudio`
+- **THEN** the posted body has no `max_tokens` key
+
+#### Scenario: Ollama receives num_predict beside num_ctx
+
+- **WHEN** a request with the context size `8192` and an output cap of `80` is sent to the provider `ollama`
+- **THEN** the body posted to `/api/chat` has `"options":{"num_ctx":8192,"num_predict":80}`
+
 ### Requirement: Scale a chat call's timeout with its expected output
 
 The system SHALL wait for each attempt of a chat call for the longer of the provider's request timeout and 0.5 seconds
@@ -81,7 +109,8 @@ with:
 - `messages`: the conversation as `{"role","content"}` objects with the roles `system`, `user` and `assistant`;
 - `stream`: `false`;
 - `options`: an object holding `temperature`, the request's temperature, only when one is given, and `num_ctx`, the
-  request's context size, only when one is given; the `options` object itself is left out when neither is given;
+  request's context size, only when one is given, and `num_predict`, the request's output cap, only when one is given;
+  the `options` object itself is left out when none of them is given;
 - `format`: the request's JSON schema, only when a response format is given.
 - `think`: `false`, only when the request explicitly disables reasoning output.
 
@@ -102,6 +131,11 @@ size it needs; absent fields remain omitted because a strict server rejects an e
 - **THEN** the body posted to `/api/chat` has `"model":"gemma4:e4b-mlx"`, `"stream":false`,
   `"options":{"temperature":0.2,"num_ctx":8192}` and a `"format"` object holding that schema
 - **AND** it has `"think":false`, no `keep_alive` key, and `/api/show` is never requested
+
+#### Scenario: An output cap joins the options
+
+- **WHEN** a request with the context size `8192` and an output cap of `80` is sent
+- **THEN** the body has `"options":{"num_ctx":8192,"num_predict":80}`
 
 #### Scenario: A context size alone
 

@@ -49,7 +49,8 @@ replies once"); only a segment still failing after it reaches self-heal.
 IF a translated segment does not return, exactly once each, the placeholders that stand for its protected spans — its
 locked glossary terms and, under the `Keep as-is` foreign-passage policy, its kept foreign runs — THEN the application
 SHALL fail that segment's protected-span hard gate, record a high finding — `glossary` for a locked term, `markup` for
-a kept foreign run — and SHALL NOT accept it.
+a kept foreign run — and SHALL NOT accept it. WHERE locked terms overlap in a segment, the application SHALL hide the
+longest match first, so a shorter locked term inside a longer one is not hidden separately.
 
 **Source:** FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`), EC-FOREIGN-3
 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`),
@@ -59,7 +60,8 @@ In plain words: a locked name (see the glossary capability's "Render a locked te
 phrase the book keeps verbatim (see "Keep an inline foreign run verbatim under the Keep as-is policy") both reach the
 model as one placeholder, so the model can neither misspell the name nor translate the phrase. A reply that drops or
 duplicates such a placeholder would lose or double the name or the phrase, so it can never pass. Like any placeholder,
-a protected one may move.
+a protected one may move. When one locked term contains another, the longer wins, so `Baker Street` is never split into
+a placeholder for `Baker` followed by the word `Street`.
 
 #### Scenario: A dropped locked term fails
 
@@ -71,6 +73,11 @@ a protected one may move.
 
 - **WHEN** the same segment's reply is `⟦g0⟧ відчинив двері.`
 - **THEN** the protected-span hard gate passes and the target reads `Гейл відчинив двері.`
+
+#### Scenario: The longest locked term is hidden first
+
+- **WHEN** `Baker Street` and `Baker` are both locked and the segment is `Baker Street was quiet; Baker left.`
+- **THEN** the model receives `⟦g0⟧ was quiet; ⟦g1⟧ left.`
 
 #### Scenario: A repeated kept foreign run fails
 
@@ -84,7 +91,8 @@ a protected one may move.
 WHILE the Book Brief's foreign-passage policy is `Keep as-is`, the application SHALL hide each inline element whose own
 `lang` or `xml:lang` differs from the brief's source language — compared after normalizing both tags — together with
 its text behind one placeholder before the segment reaches the model, SHALL restore that element and its text
-verbatim, and SHALL decide which runs are foreign from those declarations alone, never from the text.
+verbatim, and SHALL decide which runs are foreign from those declarations alone, never from the text. This SHALL hold for any
+language the application recognizes, not only a listed one.
 
 **Source:** EC-FOREIGN-3 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26
 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03
@@ -106,6 +114,12 @@ is not foreign. Under the other two policies the run is translated like the rest
 
 - **WHEN** the policy is `Keep as-is`, the source language is `en`, and the run is `<i xml:lang="en-GB">colour</i>`
 - **THEN** the run is sent as `⟦g0⟧colour⟦g1⟧` and translated with the sentence
+
+#### Scenario: A marked Latin run is kept in an English book
+
+- **WHEN** the policy is `Keep as-is`, the source language is `en`, and the paragraph is
+  `He read <i xml:lang="la">memento mori</i> aloud.`, whose `<i>` pair is `⟦g0⟧`/`⟦g1⟧`
+- **THEN** the model receives `He read ⟦g2⟧ aloud.`, one placeholder for the Latin run
 
 #### Scenario: The Translate policy translates a marked run
 
@@ -179,9 +193,10 @@ a blank `target`, is not this gate's case: the translation-pipeline capability f
 WHEN the source's display text has at least 20 code points, the source and target languages use different scripts,
 and the target has letters, the application SHALL fail the target-script check when fewer than 0.60 of the target's
 letters are written in the target language's script, and otherwise SHALL pass it with a margin of
-(share − 0.60) / 0.20, at most 1.0; in every other case it SHALL skip the check, which then counts as a margin of 1.0.
-Protected spans SHALL never count toward the share, and under the `Keep original` name policy neither SHALL any
-whole-word occurrence of a glossary term.
+(share − 0.60) / 0.20, at most 1.0; a source language whose script the application does not know counts as using a
+different script. In every other case it SHALL skip the check, which then counts as a margin of 1.0 — including when
+the target language's script is not known to the application. Protected spans SHALL never count toward the share,
+and under the `Keep original` name policy neither SHALL any whole-word occurrence of a glossary term.
 
 **Source:** FR-QA-01, FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037.
@@ -211,6 +226,11 @@ are not held against a Cyrillic line. Serbian is catalogued as Cyrillic, so Lati
 
 - **WHEN** English → Polish and the model answers in Czech with `Otevřel staré dveře.`
 - **THEN** the target-script check is skipped and does not fail the segment
+
+#### Scenario: A target language whose script is not known skips the check
+
+- **WHEN** English → Latin (`la`) and the source is `He opened the old door.` (23 code points)
+- **THEN** the target-script check is skipped and contributes a margin of 1.0
 
 #### Scenario: A short source skips the check
 
@@ -358,7 +378,8 @@ weights include it.
 WHILE the Book Brief's foreign-passage policy is `Keep as-is`, the application SHALL skip the untranslated-echo and
 target-script checks, each counting 1.0, for a segment marked foreign — the block it belongs to declares its own
 language and that language differs from the brief's source language after both tags are normalized, or its dominant
-script differs from the source language's — and SHALL apply both checks to every unmarked segment.
+script differs from the source language's — and SHALL apply both checks to every unmarked segment. The comparison SHALL apply to any language the application
+recognizes, not only a listed one.
 
 **Source:** FR-QA-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds` (foreign-keep vs echo), ADR-0037.
@@ -373,6 +394,12 @@ the wrong language does not have every paragraph marked foreign.
 - **WHEN** the policy is `Keep as-is`, the brief's source language is `en`, and the block declares `lang="fr"`
 - **AND** the target for `Je ne regrette rien.` is `Je ne regrette rien.`
 - **THEN** the untranslated-echo and target-script checks are skipped and count 1.0
+
+#### Scenario: A Latin block in an English book is marked foreign
+
+- **WHEN** the policy is `Keep as-is`, the brief's source language is `en`, and the block declares `lang="la"`
+- **AND** the target for `Memento mori.` is `Memento mori.`
+- **THEN** the segment is marked foreign, and the untranslated-echo and target-script checks are skipped and count 1.0
 
 #### Scenario: A Greek-script segment in an English book is kept
 

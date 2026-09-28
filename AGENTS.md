@@ -26,9 +26,10 @@ gate, confidence, per-chunk judge, directed fix, reflect → improve, polish, ac
 pipeline from the window or the command line, with the pseudo model or a configured real provider — on the job's
 original path, which accepts a segment once its markup restores: the stored project, chunking, the brief-driven style
 sheet, the judge and the quality loop are built and tested but not yet wired into a run. Not built: saving (nothing
-survives a restart, no resume, no remembered settings), glossary, translation memory, rolling summary. Next: re-plan
-groups 9–15 of `openspec/changes/complete-translation-workflow` (inputs in its `replan-notes.md`), then memory, the
-run on a stored project, and the screens that show it.
+survives a restart, no resume, no remembered settings), glossary, translation memory, rolling summary. Next: group 9
+of `openspec/changes/complete-translation-workflow` (re-planned against the built code: shared helpers, open
+languages, the memory parts), then the run on a stored project (group 10), review and export (11), and the screens
+(12–15).
 
 ## Commands
 

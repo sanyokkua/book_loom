@@ -47,7 +47,7 @@ language the book's content documents declare; and where the book declares no la
 content documents that declare one agree, that content language.
 
 WHERE the book declares no language and its content documents give no majority, or declares a code the application
-does not recognize, the screen SHALL start with no source language chosen, SHALL say that the book does not declare
+cannot name, the screen SHALL start with no source language chosen, SHALL say that the book does not declare
 one, and SHALL keep `Continue` unavailable — so that no run can start — until a source language is chosen.
 
 **Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-IMPORT-03
@@ -80,6 +80,11 @@ default: a run with the wrong source language is worse than a run that waits for
   unavailable
 - **AND** after `English` is chosen as the source, `Continue` becomes available
 
+#### Scenario: A declared language outside the list is preselected
+
+- **WHEN** an EPUB declaring `la` is open
+- **THEN** the source language shows `Latin`
+
 #### Scenario: A book with no package language takes its chapters' language
 
 - **WHEN** an EPUB whose package declares no language and whose content documents all declare `de` is open
@@ -92,7 +97,8 @@ default: a run with the wrong source language is worse than a run that waits for
 
 ### Requirement: Offer one searchable list of languages for source and target
 
-The book-brief screen SHALL offer the same 34 languages for both the source and the target: English and the other
+The book-brief screen SHALL show the same 34 languages, as a convenience, in the lists for both the source and the
+target: English and the other
 23 official languages of the European Union (Bulgarian, Croatian, Czech, Danish, Dutch, Estonian, Finnish, French,
 German, Greek, Hungarian, Irish, Italian, Latvian, Lithuanian, Maltese, Polish, Portuguese, Romanian, Slovak,
 Slovenian, Spanish, Swedish), Chinese (Simplified), Chinese (Traditional), Ukrainian, Russian, Belarusian, Turkish,
@@ -101,16 +107,19 @@ Japanese, Norwegian Bokmål, Serbian and Korean.
 WHEN a person types into either language field, the screen SHALL narrow the list to the languages whose display name
 contains the typed text anywhere, ignoring letter case and accents.
 
-IF the typed text matches no language when the field loses focus, THEN the screen SHALL keep the previously chosen
-language, or none, rather than accepting the text as a language.
+WHEN the typed text, as a display name or a language tag, names a language the application recognizes that the list does
+not hold, and the field loses focus, the screen SHALL accept it and show it by its display name. A language is
+recognized when its tag is a well-formed BCP-47 tag whose language the application can name. IF the typed text names no
+recognized language when the field loses focus, THEN the screen SHALL keep the previously chosen language, or none.
 
 **Source:** FR-BRIEF-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`),
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`,
 `docs/specification/01_Product/10_I18N_AND_ACCESSIBILITY.md#internationalization`.
 In plain words: a list of 34 languages is too long to scroll every time, so typing a few letters finds the entry —
 `bokmal` finds Norwegian Bokmål without the accent. Both fields share one list because any of these languages can be
-either side of a translation. Free text is refused because the run needs a language it knows the script and prompt
-wording of, not a word someone typed.
+either side of a translation. The list is only the common European languages, not a limit: a person translating Latin
+types `Latin` or `la` and gets it, because the application can name it. Text that names no language is refused rather
+than sent to the model as a language.
 
 #### Scenario: Both lists hold the same 34 languages
 
@@ -133,9 +142,19 @@ wording of, not a word someone typed.
 - **WHEN** `BOKMAL` is typed into the target field
 - **THEN** the list shows `Norwegian Bokmål`
 
+#### Scenario: A language outside the list is accepted by name
+
+- **WHEN** `Latin` is typed into the target field and focus leaves it
+- **THEN** the target is `la` and the field shows `Latin`
+
+#### Scenario: A language outside the list is accepted by tag
+
+- **WHEN** `la` is typed into the source field and focus leaves it
+- **THEN** the source is `la` and the field shows `Latin`
+
 #### Scenario: Unmatched text is not accepted as a language
 
-- **WHEN** the target is `Polish` and `Klingon` is typed into the target field and focus leaves it
+- **WHEN** the target is `Polish` and `Elvish` is typed into the target field and focus leaves it
 - **THEN** the target is still `Polish`
 
 ### Requirement: Refuse a brief whose source and target are the same language

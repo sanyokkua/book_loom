@@ -32,6 +32,10 @@ screen to its empty drop zone.
 The card SHALL NOT show a row for a language detected from the book's text, because no text-based language
 detection exists.
 
+WHEN a different book is opened while a book is open and no run of the open book can continue, the screen SHALL replace
+the open book with the new one and release the first. WHERE a run of the open book can continue, the `app-shell`
+capability's "Ask before an import replaces a translation that can continue" applies first.
+
 **Source:** FR-IMPORT-02, FR-IMPORT-06, FR-IMPORT-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`),
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`, ADR-0037
 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`), ADR-0039
@@ -121,7 +125,7 @@ agree. How the two key names are held in code is a design matter (`design.md` D1
 
 #### Scenario: Opening a second book replaces the first
 
-- **WHEN** a book is open and a different book is opened
+- **WHEN** a book is open, no run of it can continue, and a different book is opened
 - **THEN** the screen reports the second book, and the first is released
 
 ## ADDED Requirements
@@ -133,8 +137,9 @@ letter case SHALL be folded to the standard form, the retired code `ua` SHALL be
 (`en-US` → `en`, `pt-BR` → `pt`), except that Chinese SHALL keep its script distinction — `zh`, `zh-CN` and `zh-SG`
 SHALL become `zh-Hans`, and `zh-TW` and `zh-HK` SHALL become `zh-Hant`.
 
-IF the normalized code names none of the languages the application offers, THEN the system SHALL treat the
-declaration as unrecognized rather than guessing the nearest language.
+IF the normalized code is not a well-formed language tag the application can name, THEN the system SHALL treat the
+declaration as unrecognized rather than guessing the nearest language. A code the application can name is recognized
+whether or not the Book Brief lists it.
 
 **Source:** FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), EC-LANG-1
 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), ADR-0037
@@ -168,6 +173,11 @@ Traditional Chinese are written differently and are separate choices on the brie
 
 - **WHEN** a book declares `zh`
 - **THEN** the normalized language is `zh-Hans`
+
+#### Scenario: A language outside the list is recognized
+
+- **WHEN** a book declares `la`
+- **THEN** the normalized language is `la`, the card reads `Latin (la)` and the language verdict is match
 
 #### Scenario: An unknown code is not guessed
 
@@ -237,7 +247,7 @@ language stays editable on the brief, so a wrong preselection costs one click.
 
 ### Requirement: Warn when a book declares a language the application does not recognize
 
-IF a book's declared language, after normalization, names none of the languages the application offers, THEN the
+IF a book's declared language, after normalization, is not a language tag the application can name, THEN the
 import screen SHALL show a warning quoting the declared code as written and saying the source language must be
 chosen on the Book Brief, SHALL keep `Continue to Book Brief` available, and SHALL leave the Book Brief with no
 source language chosen.
@@ -245,7 +255,7 @@ source language chosen.
 **Source:** FR-IMPORT-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-import`), ADR-0037
 (`docs/adr/ADR-0037-language-evidence-from-metadata-only.md`),
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-import`.
-In plain words: a code the application cannot map is not a language it can preselect, and silently ignoring it
+In plain words: a code the application cannot name is not a language it can preselect, and silently ignoring it
 would look the same as a book that declares nothing. Quoting the code as written lets the person see what the book
 claimed and choose accordingly.
 

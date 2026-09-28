@@ -25,8 +25,8 @@ request that names a stored project; export becomes its own job (ADR-0035). Ever
   glossary, translation memory, rolling summary, deferrals and runs are reached through repository ports in `:api`,
   implemented in memory in `:persistence` (ADR-0034). Nothing survives a restart; stopped runs resume within the
   session.
-- **The Book Brief drives the prompts.** Editable, searchable source and target languages (34 languages; the declared
-  language preselected and normalized); genre (searchable list or free text), register, narrative voice/era, audience;
+- **The Book Brief drives the prompts.** Editable, searchable source and target languages (34 common languages listed
+  for convenience, any other language typed by name or tag; the declared language preselected and normalized); genre (searchable list or free text), register, narrative voice/era, audience;
   name, foreign-passage, footnote and unit policies and the faithful↔natural balance; the four "Also translate"
   switches; the quality dial with its model row. A deterministic style sheet is derived from them and injected into every
   call (FR-BRIEF-01..09, `01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`; FR-ALGO-B2). The destination leaves the
@@ -82,13 +82,22 @@ request that names a stored project; export becomes its own job (ADR-0035). Ever
   export verification (§14), the stray interrupt clear, the Brief's truncated Ukrainian labels, the Windows reveal exit
   code and provider errors that should pause the run (§15, backlog D19). Oversized segments are split at sentence
   boundaries (backlog D5).
+- **Any language the application can name.** The 34-language list is a convenience, not a limit: a well-formed
+  language tag the application can name (`la`, Latin) is accepted everywhere — the brief, the import card, kept
+  foreign runs, prompts and checks. A check that needs a language's script is skipped when the script is not known.
+- **An output cap on every generation call that states its expected length.** Ollama receives `num_predict`, an
+  OpenAI-compatible server `max_tokens`, so a runaway reply is cut off (and flagged) instead of running until the
+  3-minute timeout, three attempts in a row.
+- **One translation per app run.** Importing a book while the current run can still continue (running, paused or
+  stopped) asks first whether to discard that run or keep it.
 - **Settings, lightly.** Providers tab only: underline tabs, subtitle, provider rows with host and status, and three test
   actions reporting measured time and model count. Nothing else in Settings changes.
 
 Assumptions taken, each reversible:
 
 1. **One change, far above the ~10-task norm** (`AGENTS.md#how-work-is-planned`). The owner asked for it explicitly and
-   asked that it not be split; the task list is grouped so each group can be merged and reviewed on its own.
+   asked that it not be split; the task list is grouped into seventeen groups (0–16) so each group can be merged and
+   reviewed on its own.
 2. **No text-based language detection** (owner decision, ADR-0037): the source language is the declared one, editable.
 3. **τ values** 0.60 / 0.75 / 0.85 for Unattended / Assisted / Manual — the specification gives none.
 4. **Ollama receives `num_ctx` 8192**, because its default silently truncates longer prompts; OpenAI-compatible servers
@@ -126,7 +135,8 @@ Assumptions taken, each reversible:
   are normalized; DRM-blocked and Unsupported become distinct states naming their cause; the language-mismatch state
   gets a metadata trigger.
 - `book-brief`: every brief choice becomes live and reaches the prompts; the source language becomes editable; the
-  language lists grow and become searchable; the destination moves to Export.
+  language lists grow, become searchable and accept any language the application can name; the destination moves to
+  Export.
 - `document-round-trip`: chapter titles, statistics and the cover are reported; auxiliary text becomes translatable
   units with write-back; paired placeholders must keep order; oversized segments split at sentence boundaries; the
   next_features fidelity fixes; the structure listing becomes a titled tree.
@@ -137,11 +147,12 @@ Assumptions taken, each reversible:
 - `export`: the destination is chosen on Export; export runs any time a run is not actively translating, writes side files and can run the consistency
   pass; the written book is verified segment by segment.
 - `app-shell`: the title bar shows the run; Names & style becomes a screen and the Review entry goes; every fixed list
-  is searchable by typing.
+  is searchable by typing; importing while a run can continue asks first.
 - `settings`: the Providers tab's three test actions and provider rows.
-- `llm-provider`: token usage is read from both dialects; Ollama receives the context size; verification reports
-  measured values.
-- `inference`: a reply carries token usage when the provider reports it; a request may carry a context size.
+- `llm-provider`: token usage is read from both dialects; Ollama receives the context size and an output cap, an
+  OpenAI-compatible server the output cap; verification reports measured values.
+- `inference`: a reply carries token usage when the provider reports it; a request may carry a context size and an
+  output cap.
 - `notifications`: the provider-error state is an auto-pause with Retry now; a finished export is confirmed in a dialog.
 
 ## Impact
@@ -150,16 +161,17 @@ Assumptions taken, each reversible:
   - `:api` — storage ports and project records (`ua.bookloom.api.persistence`, `ua.bookloom.api.project`), the brief and
     its enums, the inspection and profile contracts, service ports for projects, glossary, review and export, new job
     events, token usage. The job's request and report change shape.
-  - `:util` — the language catalogue and tag normalization (`ua.bookloom.util.lang`).
+  - `:util` — the language catalogue and tag normalization (`ua.bookloom.util.lang`), open to any tag the JDK can name.
   - `:persistence` — in-memory adapters for every port (`ua.bookloom.persistence.memory`); still no database.
-  - `:llm` — usage mapping for both dialects, `num_ctx` for Ollama, measured verification, an output-scaled timeout, a
-    pseudo model that answers every catalogue response format.
+  - `:llm` — usage mapping for both dialects, `num_ctx` for Ollama, the output cap (`num_predict` / `max_tokens`),
+    measured verification, an output-scaled timeout, a pseudo model that answers every catalogue response format.
   - `:document` — inspection, cover, titles, statistics, auxiliary units and their write-back, the sentence splitter,
     the pair-order check, the UTF-8 fallback for TXT and Markdown, and the next_features fidelity fixes.
   - `:pipeline` — most of the change: prompts as data, style sheet, chunks, context package, glossary, memory, summary,
     QA, judge, self-heal, dial, review desk, export job, backward revision, the reworked job.
   - `:ui` — a searchable combo, the title-bar run status, and rebuilt Import, Book Brief, Structure, Names & style,
-    Translating (with review), Export and Providers screens; three new dialogs.
+    Translating (with review), Export and Providers screens; four new dialogs (replace run, add term, retry with note,
+    export complete).
   - `:app` — the review-mode launch flag, bindings, and the command line's translate-then-export flow.
 - **Dependencies:** `org.commonmark:commonmark-ext-autolink` (BSD-2-Clause, same project as the CommonMark parser
   already used) in `:document`, so a bare URL in Markdown prose is masked. No other new dependency; ICU4J (already in
