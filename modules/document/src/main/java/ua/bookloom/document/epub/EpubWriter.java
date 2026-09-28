@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -342,7 +343,7 @@ public final class EpubWriter {
             return XmlDocumentSerializer.serialize(parsed.opfDocument(), entry.content());
         }
         final org.jsoup.nodes.Document tree = treesByHref.get(entry.name());
-        return tree == null ? entry.content() : serializeContentDocument(tree);
+        return tree == null ? entry.content() : serializeContentDocument(tree, entry.content());
     }
 
     /**
@@ -352,10 +353,11 @@ public final class EpubWriter {
      * {@link PreformattedLineFeedRestorer#forSerialization} restores on a clone rather than {@code tree} itself
      * — mutating {@code tree} in place would compound on the next {@code write()} of the same open document.
      */
-    private static byte[] serializeContentDocument(org.jsoup.nodes.Document tree) {
+    private static byte[] serializeContentDocument(org.jsoup.nodes.Document tree, byte[] sourceBytes) {
         final org.jsoup.nodes.Document serializable = PreformattedLineFeedRestorer.forSerialization(tree);
-        return AttributeLineFeedEscaper.outerHtml(serializable)
-                .getBytes(tree.outputSettings().charset());
+        final Charset charset = tree.outputSettings().charset();
+        return XhtmlProlog.serialize(serializable, new String(sourceBytes, charset))
+                .getBytes(charset);
     }
 
     /**
