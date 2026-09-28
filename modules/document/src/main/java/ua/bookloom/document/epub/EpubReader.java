@@ -163,7 +163,7 @@ public final class EpubReader {
                     skipped,
                     units.size());
         }
-        return withAuxiliaryUnit(opf, units, trees);
+        return withAuxiliaryUnit(opf, byName, units, trees);
     }
 
     private static ParsedEpub parsedEpub(
@@ -173,13 +173,18 @@ public final class EpubReader {
                 opfPath,
                 opf.jdomDocument(),
                 unitsResult.jsoupTrees(),
-                Map.of(unitsResult.auxiliaryHandleId(), unitsResult.auxiliarySlots()));
+                Map.of(unitsResult.auxiliaryHandleId(), unitsResult.auxiliarySlots()),
+                unitsResult.navigation());
     }
 
     /** Appends the auxiliary unit after every body unit, so body ids, positions and orders stay as they were. */
     private static UnitsResult withAuxiliaryUnit(
-            ParsedOpf opf, List<Unit> bodyUnits, Map<String, org.jsoup.nodes.Document> trees) {
-        final AuxiliarySlots.Collected auxiliary = EpubAuxiliary.collect(opf.jdomDocument(), bodyUnits, trees);
+            ParsedOpf opf,
+            Map<String, RawEntry> byName,
+            List<Unit> bodyUnits,
+            Map<String, org.jsoup.nodes.Document> trees) {
+        final EpubAuxiliary.Collected collected = EpubAuxiliary.collect(opf, byName, bodyUnits, trees);
+        final AuxiliarySlots.Collected auxiliary = collected.slots();
         final String handleId = UUID.randomUUID().toString();
         final List<Unit> units = new ArrayList<>(bodyUnits);
         units.add(AuxiliaryUnit.of(opf.opfPath(), bodyUnits.size(), handleId, auxiliary.segments()));
@@ -187,7 +192,7 @@ public final class EpubReader {
                 "EPUB auxiliary unit href={} segments={}",
                 opf.opfPath(),
                 auxiliary.segments().size());
-        return new UnitsResult(units, trees, handleId, auxiliary.slots());
+        return new UnitsResult(units, trees, handleId, auxiliary.slots(), collected.navigation());
     }
 
     private static void addUnit(
@@ -243,5 +248,6 @@ public final class EpubReader {
             List<Unit> units,
             Map<String, org.jsoup.nodes.Document> jsoupTrees,
             String auxiliaryHandleId,
-            AuxiliarySlots auxiliarySlots) {}
+            AuxiliarySlots auxiliarySlots,
+            NavigationResources navigation) {}
 }

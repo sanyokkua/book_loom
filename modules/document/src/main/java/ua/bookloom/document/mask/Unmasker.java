@@ -45,9 +45,26 @@ public final class Unmasker {
      */
     public static RestoredContent restore(BookFormat format, Segment segment, String target) {
         Objects.requireNonNull(format, "format");
+        return restoreWith(escaperFor(format), segment, target);
+    }
+
+    /**
+     * Restores {@code target} as plain text: every token substituted back and nothing escaped, for a kind whose
+     * writer encodes the text itself, once, where it lands — an image's {@code alt} (requirement <em>Restore an
+     * image's alternative text and a frontmatter value as plain text</em>).
+     *
+     * @param segment the segment whose placeholder map supplies each token's mapped fragment; never null
+     * @param target the translated text to restore, already validated by {@link PlaceholderGate#compare}; never
+     *     null
+     * @return the restored text and where each mapped fragment landed in it; never null
+     */
+    public static RestoredContent restorePlain(Segment segment, String target) {
+        return restoreWith(UnaryOperator.identity(), segment, target);
+    }
+
+    private static RestoredContent restoreWith(UnaryOperator<String> escape, Segment segment, String target) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(target, "target");
-        final UnaryOperator<String> escape = escaperFor(format);
         final StringBuilder restored = new StringBuilder();
         final List<FragmentRange> fragmentRanges = new ArrayList<>();
         final Matcher matcher = Placeholders.matcher(target);

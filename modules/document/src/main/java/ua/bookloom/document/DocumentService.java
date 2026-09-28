@@ -14,6 +14,7 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.document.epub.EpubReader;
 import ua.bookloom.document.epub.EpubWriter;
 import ua.bookloom.document.fb2.Fb2Reader;
@@ -208,14 +209,7 @@ public final class DocumentService implements DocumentPort {
                 log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
                 return Result.err(error);
             }
-            final RestoredContent restored = Unmasker.restore(format, segment, translatedMasked);
-            log.trace("Unmask restored format={} segmentId={} restoredText={}", format, segment.id(), restored.text());
-            final Result<String> result =
-                    switch (format) {
-                        case MARKDOWN -> restoreMarkdown(segment, restored);
-                        case EPUB, FB2 -> restoreTree(restored);
-                        case TXT -> Result.ok(restored.text());
-                    };
+            final Result<String> result = restore(format, segment, translatedMasked);
             logUnmaskOutcome(format, segment.id(), result);
             return result;
         } catch (Throwable t) {
@@ -223,6 +217,20 @@ public final class DocumentService implements DocumentPort {
             log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
             return Result.err(error);
         }
+    }
+
+    /** An image's alternative text comes back as plain text: its writer encodes it once, where it lands. */
+    private Result<String> restore(BookFormat format, Segment segment, String translatedMasked) {
+        final boolean isPlain = segment.kind() == SegmentKind.ALT;
+        final RestoredContent restored = isPlain
+                ? Unmasker.restorePlain(segment, translatedMasked)
+                : Unmasker.restore(format, segment, translatedMasked);
+        log.trace("Unmask restored format={} segmentId={} restoredText={}", format, segment.id(), restored.text());
+        return switch (format) {
+            case MARKDOWN -> isPlain ? Result.ok(restored.text()) : restoreMarkdown(segment, restored);
+            case EPUB, FB2 -> restoreTree(restored);
+            case TXT -> Result.ok(restored.text());
+        };
     }
 
     private void logUnmaskEntry(BookFormat format, Segment segment, String translatedMasked) {

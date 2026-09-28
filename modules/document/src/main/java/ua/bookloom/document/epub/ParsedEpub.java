@@ -25,13 +25,15 @@ import ua.bookloom.document.model.RawEntry;
  * @param spineTreesByHandleId each spine unit's parsed jsoup tree, keyed by its {@code SkeletonHandle}'s opaque id
  * @param auxiliarySlotsByHandleId the auxiliary slot table, keyed by the auxiliary unit's {@code SkeletonHandle}'s
  *     opaque id
+ * @param navigation the navigation document and NCX kept as live trees, whose labels the slot table writes into
  */
 record ParsedEpub(
         List<RawEntry> rawEntries,
         String opfPath,
         org.jdom2.Document opfDocument,
         Map<String, Document> spineTreesByHandleId,
-        Map<String, AuxiliarySlots> auxiliarySlotsByHandleId) {
+        Map<String, AuxiliarySlots> auxiliarySlotsByHandleId,
+        NavigationResources navigation) {
 
     ParsedEpub {
         Objects.requireNonNull(rawEntries, "rawEntries");
@@ -39,6 +41,7 @@ record ParsedEpub(
         Objects.requireNonNull(opfDocument, "opfDocument");
         Objects.requireNonNull(spineTreesByHandleId, "spineTreesByHandleId");
         Objects.requireNonNull(auxiliarySlotsByHandleId, "auxiliarySlotsByHandleId");
+        Objects.requireNonNull(navigation, "navigation");
         rawEntries = List.copyOf(rawEntries);
         spineTreesByHandleId = Map.copyOf(spineTreesByHandleId);
         auxiliarySlotsByHandleId = Map.copyOf(auxiliarySlotsByHandleId);

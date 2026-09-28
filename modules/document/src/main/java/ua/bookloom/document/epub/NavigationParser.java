@@ -65,6 +65,8 @@ final class NavigationParser {
      * @param entryPath this entry's 1-based position among its siblings, dotted with its ancestors' (e.g. {@code
      *     "1.3.2"})
      * @param navPointId the NCX entry element's own {@code id} attribute, or {@code null} for a nav-document entry
+     * @param anchorPath the element-sibling path to the element holding the label — the link below the navigation
+     *     document's {@code body}, the {@code navLabel/text} below the NCX's root — so a consumer can write to it
      * @param children this entry's nested entries, in document order
      */
     record NavEntry(
@@ -73,13 +75,16 @@ final class NavigationParser {
             @Nullable String fragment,
             String entryPath,
             @Nullable String navPointId,
+            List<Integer> anchorPath,
             List<NavEntry> children) {
 
         NavEntry {
             Objects.requireNonNull(label, "label");
             Objects.requireNonNull(href, "href");
             Objects.requireNonNull(entryPath, "entryPath");
+            Objects.requireNonNull(anchorPath, "anchorPath");
             Objects.requireNonNull(children, "children");
+            anchorPath = List.copyOf(anchorPath);
             children = List.copyOf(children);
         }
     }
@@ -122,7 +127,7 @@ final class NavigationParser {
         return new Result(Source.NONE, List.of());
     }
 
-    private static @Nullable RawEntry findNavEntry(ParsedOpf opf, Map<String, RawEntry> byName, String opfDir) {
+    static @Nullable RawEntry findNavEntry(ParsedOpf opf, Map<String, RawEntry> byName, String opfDir) {
         for (final ManifestItem item : opf.manifestItems()) {
             if (item.properties().contains(NAV_PROPERTY)) {
                 return byName.get(OpfPaths.resolve(opfDir, item.href()));
@@ -131,7 +136,7 @@ final class NavigationParser {
         return null;
     }
 
-    private static @Nullable RawEntry findNcxEntry(ParsedOpf opf, Map<String, RawEntry> byName, String opfDir) {
+    static @Nullable RawEntry findNcxEntry(ParsedOpf opf, Map<String, RawEntry> byName, String opfDir) {
         final String tocId = opf.spineToc();
         for (final ManifestItem item : opf.manifestItems()) {
             if (item.id().equals(tocId) || NCX_MEDIA_TYPE.equals(item.mediaType())) {
@@ -146,7 +151,18 @@ final class NavigationParser {
 
     /** {@code navEntry.name()} is already the navigation document's own archive-absolute path. */
     private static List<NavEntry> parseNav(RawEntry navEntry) {
-        final org.jsoup.nodes.Document doc = XhtmlParser.parse(navEntry.content(), navEntry.name());
+        return parseNav(XhtmlParser.parse(navEntry.content(), navEntry.name()), navEntry.name());
+    }
+
+    /**
+     * Reads the entries of an already parsed navigation document, so a caller that keeps the tree to write into
+     * does not parse it twice.
+     *
+     * @param doc the parsed navigation document
+     * @param navName the document's archive-absolute path, which link targets resolve against
+     * @return the top-level entries; empty when the document has no {@code toc} list
+     */
+    static List<NavEntry> parseNav(org.jsoup.nodes.Document doc, String navName) {
         final org.jsoup.nodes.Element tocNav = findTocNav(doc);
         if (tocNav == null) {
             return List.of();
@@ -155,8 +171,7 @@ final class NavigationParser {
         if (ol == null) {
             return List.of();
         }
-        final String navDir = OpfPaths.parentOf(navEntry.name());
-        return parseOl(ol, navDir, "");
+        return parseOl(ol, doc.body(), OpfPaths.parentOf(navName), "");
     }
 
     private static org.jsoup.nodes.@Nullable Element findTocNav(org.jsoup.nodes.Document doc) {
@@ -177,12 +192,13 @@ final class NavigationParser {
         return null;
     }
 
-    private static List<NavEntry> parseOl(org.jsoup.nodes.Element ol, String navDir, String parentPath) {
+    private static List<NavEntry> parseOl(
+            org.jsoup.nodes.Element ol, org.jsoup.nodes.Element body, String navDir, String parentPath) {
         final List<NavEntry> entries = new ArrayList<>();
         int index = 1;
         for (final org.jsoup.nodes.Element li : ol.children()) {
             if (LI_TAG.equals(li.tagName())) {
-                addNavEntry(li, navDir, parentPath, index, entries);
+                addNavEntry(li, body, navDir, parentPath, index, entries);
                 index++;
             }
         }
@@ -190,7 +206,12 @@ final class NavigationParser {
     }
 
     private static void addNavEntry(
-            org.jsoup.nodes.Element li, String navDir, String parentPath, int index, List<NavEntry> entries) {
+            org.jsoup.nodes.Element li,
+            org.jsoup.nodes.Element body,
+            String navDir,
+            String parentPath,
+            int index,
+            List<NavEntry> entries) {
         final org.jsoup.nodes.Element anchor = firstChildTag(li, A_TAG);
         if (anchor == null) {
             return;
@@ -198,23 +219,46 @@ final class NavigationParser {
         final String entryPath = childPath(parentPath, index);
         final HrefSplit split = HrefSplit.of(anchor.attr(HREF_ATTRIBUTE));
         final org.jsoup.nodes.Element nestedOl = firstChildTag(li, OL_TAG);
-        final List<NavEntry> children = nestedOl == null ? List.of() : parseOl(nestedOl, navDir, entryPath);
+        final List<NavEntry> children = nestedOl == null ? List.of() : parseOl(nestedOl, body, navDir, entryPath);
         entries.add(new NavEntry(
-                anchor.text(), OpfPaths.resolve(navDir, split.path()), split.fragment(), entryPath, null, children));
+                anchor.text(),
+                OpfPaths.resolve(navDir, split.path()),
+                split.fragment(),
+                entryPath,
+                null,
+                ElementPaths.below(body, anchor),
+                children));
     }
 
     /** {@code ncxEntry.name()} is already the NCX's own archive-absolute path. */
     private static List<NavEntry> parseNcx(RawEntry ncxEntry) {
-        final org.jdom2.Document tree = parseXml(ncxEntry.content());
+        return parseNcx(parseXml(ncxEntry.content()), ncxEntry.name());
+    }
+
+    /**
+     * Reads the entries of an already parsed NCX, so a caller that keeps the tree to write into does not parse it
+     * twice.
+     *
+     * @param tree the parsed NCX
+     * @param ncxName the NCX's archive-absolute path, which link targets resolve against
+     * @return the top-level entries; empty when the NCX has no {@code navMap}
+     */
+    static List<NavEntry> parseNcx(org.jdom2.Document tree, String ncxName) {
         final Element navMap = childByLocalName(tree.getRootElement(), NAV_MAP_ELEMENT);
         if (navMap == null) {
             return List.of();
         }
-        final String ncxDir = OpfPaths.parentOf(ncxEntry.name());
-        return parseNavPoints(navMap.getChildren(), ncxDir, "");
+        return parseNavPoints(navMap.getChildren(), tree.getRootElement(), OpfPaths.parentOf(ncxName), "");
     }
 
-    private static org.jdom2.Document parseXml(byte[] content) {
+    /**
+     * Parses NCX bytes strictly.
+     *
+     * @param content the NCX file's bytes
+     * @return the parsed tree
+     * @throws CorruptContainerException if the bytes are not well-formed XML
+     */
+    static org.jdom2.Document parseXml(byte[] content) {
         try {
             return SecureXml.builder().build(new ByteArrayInputStream(content));
         } catch (JDOMException | IOException e) {
@@ -222,36 +266,36 @@ final class NavigationParser {
         }
     }
 
-    private static List<NavEntry> parseNavPoints(List<Element> siblings, String ncxDir, String parentPath) {
+    private static List<NavEntry> parseNavPoints(
+            List<Element> siblings, Element root, String ncxDir, String parentPath) {
         final List<NavEntry> entries = new ArrayList<>();
         int index = 1;
         for (final Element element : siblings) {
             if (NAV_POINT_ELEMENT.equals(element.getName())) {
-                entries.add(navPointEntry(element, ncxDir, parentPath, index));
+                entries.add(navPointEntry(element, root, ncxDir, parentPath, index));
                 index++;
             }
         }
         return entries;
     }
 
-    private static NavEntry navPointEntry(Element navPoint, String ncxDir, String parentPath, int index) {
+    private static NavEntry navPointEntry(Element navPoint, Element root, String ncxDir, String parentPath, int index) {
         final String entryPath = childPath(parentPath, index);
-        final String label = navPointLabel(navPoint);
+        final Element text = navPointText(navPoint);
         final HrefSplit split = HrefSplit.of(navPointSrc(navPoint));
-        final List<NavEntry> children = parseNavPoints(navPoint.getChildren(), ncxDir, entryPath);
+        final List<NavEntry> children = parseNavPoints(navPoint.getChildren(), root, ncxDir, entryPath);
         return new NavEntry(
-                label,
+                text == null ? "" : text.getTextNormalize(),
                 OpfPaths.resolve(ncxDir, split.path()),
                 split.fragment(),
                 entryPath,
                 navPoint.getAttributeValue(ID_ATTRIBUTE),
+                text == null ? List.of() : ElementPaths.below(root, text),
                 children);
     }
 
-    private static String navPointLabel(Element navPoint) {
-        final Element navLabel = childByLocalName(navPoint, NAV_LABEL_ELEMENT);
-        final Element text = childByLocalName(navLabel, TEXT_ELEMENT);
-        return text == null ? "" : text.getTextNormalize();
+    private static @Nullable Element navPointText(Element navPoint) {
+        return childByLocalName(childByLocalName(navPoint, NAV_LABEL_ELEMENT), TEXT_ELEMENT);
     }
 
     private static String navPointSrc(Element navPoint) {
