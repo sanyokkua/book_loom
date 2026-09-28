@@ -1,0 +1,8 @@
+[Source]
+{{source}}
+
+<Text>
+{{text}}
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<polished translation>"}

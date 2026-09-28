@@ -1,0 +1,9 @@
+[Source]
+{{source}}
+
+<Text>
+{{text}}
+</Text>
+
+Return JSON exactly as:
+{"issues":[{"note":"<what is wrong>","suggestion":"<how to fix>"}]}

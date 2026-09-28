@@ -14,8 +14,8 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 
 /**
  * The one place a self-heal call's raw model reply becomes a {@link RepairReply}, applying design D3 rules 2-3 to
- * every self-heal call so {@link DirectedFix} today, and reflect/improve/polish once task 8.5 adds them, read a
- * reply the same way instead of each reimplementing the same three checks.
+ * every self-heal call so {@link DirectedFix}, {@link ReflectImprove#improve} and {@link Polish} read a reply the
+ * same way instead of each reimplementing the same checks.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

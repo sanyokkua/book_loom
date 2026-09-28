@@ -289,19 +289,22 @@ You are a translation critic for {{sourceLang}} → {{targetLang}}.
 Do NOT rewrite. Identify what weakens the candidate translation — awkward phrasing, tone drift,
 terminology inconsistency, subtle meaning loss — and say concretely how to improve it.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+
+[Style sheet]
+{{styleSheet}}
+{{foreignPassageRule}}
 ```
 
 **USER**
 
 ```
-[Style + glossary]
-{{styleSheet}}
+[Glossary]
 {{glossaryTerms}}
 
 [Preceding target text — the voice to match]
 {{precedingTarget}}
 
-[Source — for reference only, outside the text under review]
+[Source]
 {{sourceSegment}}
 
 <Text>
@@ -323,6 +326,9 @@ Return JSON exactly as:
 { "issues": [ { "note": "…", "suggestion": "…" } ] }
 ```
 
+Tolerant read: `issues` may be absent or empty, and an issue may be a plain string; an object is read as
+`note — suggestion`.
+
 ### improve (call 2 — rewrite) {#reflect-rewrite}
 
 **SYSTEM**
@@ -332,20 +338,22 @@ You are a professional literary translator ({{sourceLang}} → {{targetLang}}) a
 Produce a better translation that resolves the critique while staying faithful to the source.
 Preserve every ⟦gN⟧ placeholder exactly. Apply the glossary. Continue the preceding voice.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+
+[Style sheet]
+{{styleSheet}}
+{{foreignPassageRule}}
 ```
 
 **USER**
 
 ```
-[Style + glossary]
-{{styleSheet}}
+[Glossary]
 {{glossaryTerms}}
-{{foreignPassageRule}}
 
 [Preceding target text]
 {{precedingTarget}}
 
-[Source — for reference only, outside the text to rewrite]
+[Source]
 {{sourceSegment}}
 
 [Critique to apply]
@@ -375,24 +383,29 @@ low/off. **Expected output:** `{"target":"<improved translation>"}` — the same
 
 An **optional** third call in the reflect→improve path, run **only** when the post-improve check leaves the segment
 **borderline** (hard gates pass, no soft check failed, and `confidence ∈ [τ − 0.05, τ)`;
-`05_TRANSLATION_ALGORITHM.md#self-heal`). It smooths the **target text monolingually** — it is given the target only,
-not the source, so it cannot drift the meaning — while preserving every placeholder.
+`05_TRANSLATION_ALGORITHM.md#self-heal`). It smooths the **target text** for fluency; the source is shown under
+`[Source]`, outside the one `<Text>` block, only so the smoothing cannot drift the meaning, and every placeholder is
+preserved.
 
 **SYSTEM**
 
 ```
 You are a {{targetLang}} copy-editor polishing an already-faithful translation for fluency and rhythm.
-You do NOT have the source and must NOT change meaning, add, or omit content — only improve wording,
+The source is given for reference only: you must NOT change meaning, add, or omit content — only improve wording,
 flow, and naturalness in {{targetLang}}.
 Preserve every ⟦gN⟧ placeholder EXACTLY (same text, order, count). Keep names and glossary terms unchanged.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+
+[Style sheet]
+{{styleSheet}}
+{{foreignPassageRule}}
 ```
 
 **USER**
 
 ```
-[Style]
-{{styleSheet}}
+[Source]
+{{sourceSegment}}
 
 [Preceding target text — match this voice]
 {{precedingTarget}}
@@ -406,7 +419,8 @@ Return exactly one JSON object matching this schema: {"target":"<polished transl
 
 | Variable                           | Required? | Source / notes                                                  |
 |------------------------------------|-----------|-------------------------------------------------------------------|
-| `{{candidateTarget}}`              | Required  | The single `<Text>` block: the post-improve target (target only — no source). |
+| `{{candidateTarget}}`              | Required  | The single `<Text>` block: the post-improve target.             |
+| `{{sourceSegment}}`                | Required  | The masked source, under `[Source]` outside `<Text>`.            |
 | `{{targetLang}}`, `{{styleSheet}}` | Required  | Target language and style frame.                                |
 | `{{precedingTarget}}`              | Optional  | `(none)` at chapter start.                                       |
 
