@@ -168,6 +168,27 @@ class UnmaskFb2DocumentTest {
                 + "</FictionBook>\n";
     }
 
+    // WHEN a target swaps an FB2 emphasis's opening and closing tokens, THEN unmask refuses it with a validation
+    // error instead of failing the whole export later at write time.
+    @Test
+    void unmask_swappedEmphasisPair_returnsValidationError() {
+        final DocumentService service = DocumentServices.newService();
+        final Document opened = open(service, EMPHASIS_XML);
+        final Segment segment = opened.units().get(0).segments().get(0);
+
+        final Result<String> result = service.unmask(BookFormat.FB2, segment, "Це ⟦g1⟧старі⟦g0⟧ двері.");
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.validation);
+    }
+
+    private static final String EMPHASIS_XML = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+              <body><section><p>The <emphasis>old</emphasis> door.</p></section></body>
+            </FictionBook>
+            """;
+
     private Document open(DocumentService service, String xml) {
         final Result<Document> opened = service.open(writeUtf8(tempDir.resolve("book.fb2"), xml));
         assertThat(opened.isOk())

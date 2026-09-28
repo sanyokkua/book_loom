@@ -252,7 +252,9 @@ public final class BlockSegmentWalker {
                 null,
                 SegmentStatus.PENDING,
                 INITIAL_CONFIDENCE,
-                draft.declaredLanguage());
+                draft.declaredLanguage(),
+                masked.pairs(),
+                masked.lineBreakTokens());
     }
 
     /** DEBUG-logs, per unit, how many segments declared each language — codes and counts, never text. */

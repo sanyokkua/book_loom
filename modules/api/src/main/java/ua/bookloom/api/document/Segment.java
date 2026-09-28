@@ -2,6 +2,7 @@ package ua.bookloom.api.document;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -44,6 +45,10 @@ import org.jspecify.annotations.Nullable;
  *     encloses this segment's text and lies below the document's root element, the segment's own block included —
  *     or {@code null} when no such element declares one, or the source format carries no such notion (Markdown,
  *     TXT); a declaration, never compared against any other language while parsing
+ * @param pairs the opening and closing token of every inline element in {@code masked}, in the order the elements
+ *     open, each with the language the element itself declares; empty when the segment has no inline element
+ * @param lineBreakTokens the tokens in {@code masked} that stand for a line break inside the segment, so the gate
+ *     can refuse a translation that moves one across a pair's edge; empty when there is none
  */
 public record Segment(
         String id,
@@ -60,7 +65,9 @@ public record Segment(
         @Nullable String targetInner,
         SegmentStatus status,
         double confidence,
-        @Nullable String declaredLanguage) {
+        @Nullable String declaredLanguage,
+        List<PlaceholderPair> pairs,
+        List<String> lineBreakTokens) {
 
     private static final double MIN_CONFIDENCE = 0.0;
     private static final double MAX_CONFIDENCE = 1.0;
@@ -86,7 +93,67 @@ public record Segment(
         if (confidence < MIN_CONFIDENCE || confidence > MAX_CONFIDENCE) {
             throw new IllegalArgumentException("confidence must be within [0,1], but was " + confidence);
         }
+        Objects.requireNonNull(pairs, "pairs");
+        Objects.requireNonNull(lineBreakTokens, "lineBreakTokens");
         placeholders = Collections.unmodifiableMap(new LinkedHashMap<>(placeholders));
+        pairs = List.copyOf(pairs);
+        lineBreakTokens = List.copyOf(lineBreakTokens);
+    }
+
+    /**
+     * The shape that records a declared language but no pairs or line breaks — what a segment of a format that
+     * masks no inline pairs is built with.
+     *
+     * @param id the stable segment id, shaped {@code {unitId}:{ordinal}}
+     * @param unit the owning unit's id
+     * @param order this segment's position within its unit, in document order; never negative
+     * @param kind what block this segment was parsed from
+     * @param sourceInner the block's raw inner content, exactly as parsed
+     * @param masked {@code sourceInner} with every protected span replaced by a {@code ⟦gN⟧} token
+     * @param placeholders the ordered map from each token's bare key form to the exact source fragment it replaced
+     * @param sourceHash the SHA-256 hash over the exact pre-mask {@code sourceInner}
+     * @param prevKey the document-order previous segment's id, or {@code null} at the start of the unit
+     * @param nextKey the document-order next segment's id, or {@code null} at the end of the unit
+     * @param anchor where this segment's source text lives in its unit's immutable skeleton
+     * @param targetInner the translated inner content after unmask, or {@code null} until translated
+     * @param status this segment's position in the status machine
+     * @param confidence the QA/judge confidence in {@code [0,1]}
+     * @param declaredLanguage the declared language of the enclosing element, or {@code null}
+     */
+    public Segment(
+            String id,
+            String unit,
+            int order,
+            SegmentKind kind,
+            String sourceInner,
+            String masked,
+            Map<String, String> placeholders,
+            String sourceHash,
+            @Nullable String prevKey,
+            @Nullable String nextKey,
+            SkeletonAnchor anchor,
+            @Nullable String targetInner,
+            SegmentStatus status,
+            double confidence,
+            @Nullable String declaredLanguage) {
+        this(
+                id,
+                unit,
+                order,
+                kind,
+                sourceInner,
+                masked,
+                placeholders,
+                sourceHash,
+                prevKey,
+                nextKey,
+                anchor,
+                targetInner,
+                status,
+                confidence,
+                declaredLanguage,
+                List.of(),
+                List.of());
     }
 
     /**
@@ -166,6 +233,8 @@ public record Segment(
                 targetInner,
                 status,
                 confidence,
-                declaredLanguage);
+                declaredLanguage,
+                pairs,
+                lineBreakTokens);
     }
 }

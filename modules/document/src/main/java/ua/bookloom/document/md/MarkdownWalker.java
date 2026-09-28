@@ -148,7 +148,10 @@ final class MarkdownWalker {
                 anchor,
                 null,
                 SegmentStatus.PENDING,
-                INITIAL_CONFIDENCE);
+                INITIAL_CONFIDENCE,
+                null,
+                masked.pairs(),
+                masked.lineBreakTokens());
     }
 
     private record Draft(SegmentKind kind, Node block, int charStart, int charEnd, String sourceInner) {}

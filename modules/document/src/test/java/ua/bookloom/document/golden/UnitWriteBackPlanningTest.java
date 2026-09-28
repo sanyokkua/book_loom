@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
@@ -60,11 +61,27 @@ class UnitWriteBackPlanningTest {
             </FictionBook>
             """;
 
-    /** A target that moves the `<br/>`-mapped token out of the emphasis; the gate passes it, being order-blind. */
+    /**
+     * A target that moves the line-break token out of the emphasis. The gate now refuses it, so the two write-back
+     * cases supply the restored markup they would have produced directly.
+     */
     private static final String REORDERED_TARGET = "a⟦g1⟧⟦g0⟧xy⟦g2⟧b";
 
     @TempDir
     private Path tempDir;
+
+    // WHEN a target moves a line break out of the emphasis it sat in, THEN unmask refuses it as a validation error.
+    @Test
+    void unmask_lineBreakMovedOutOfItsPair_isRefused() {
+        final DocumentService service = DocumentServices.newService();
+        final Document opened = open(service, BodyContentEpub.withBody(tempDir.resolve("in.epub"), REORDER_BODY));
+
+        final Result<String> result =
+                service.unmask(BookFormat.EPUB, segmentsOf(opened).get(0), REORDERED_TARGET);
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.validation);
+    }
 
     // WHEN a document is reassembled, the system SHALL write each segment's target into the
     // run its anchor addresses, so that no segment's write lands on another segment's text.
@@ -72,8 +89,7 @@ class UnitWriteBackPlanningTest {
     void write_epubBlockWhoseFirstSegmentReordersALineBreak_landsBothSegmentsCorrectly() {
         final DocumentService service = DocumentServices.newService();
         final Document opened = open(service, BodyContentEpub.withBody(tempDir.resolve("in.epub"), REORDER_BODY));
-        final List<Segment> segments = segmentsOf(opened);
-        final String firstTarget = restore(service, BookFormat.EPUB, segments.get(0), REORDERED_TARGET);
+        final String firstTarget = "a<br /><em>xy</em>b";
 
         final Path written = write(service, SegmentTargets.withTargets(opened, List.of(firstTarget, "DRUHYJ")), "epub");
 
@@ -92,8 +108,7 @@ class UnitWriteBackPlanningTest {
     void write_fb2BlockWhoseFirstSegmentReordersALineBreak_landsBothSegmentsCorrectly() {
         final DocumentService service = DocumentServices.newService();
         final Document opened = open(service, fb2(REORDER_FB2, "reorder-in.fb2"));
-        final List<Segment> segments = segmentsOf(opened);
-        final String firstTarget = restore(service, BookFormat.FB2, segments.get(0), REORDERED_TARGET);
+        final String firstTarget = "a<br /><emphasis>xy</emphasis>b";
 
         final Path written = write(service, SegmentTargets.withTargets(opened, List.of(firstTarget, "DRUHYJ")), "fb2");
 
@@ -135,14 +150,6 @@ class UnitWriteBackPlanningTest {
         assertThat(readUtf8(written))
                 .contains("<p>Один<br />Два<br />Три</p>")
                 .doesNotContain("Run one", "Run two", "Run three");
-    }
-
-    private static String restore(DocumentService service, BookFormat format, Segment segment, String target) {
-        final Result<String> restored = service.unmask(format, segment, target);
-        assertThat(restored.isOk())
-                .withFailMessage("the reordered target must pass the order-blind gate, but: %s", restored.error())
-                .isTrue();
-        return Objects.requireNonNull(restored.data(), "data");
     }
 
     private Path fb2(String xml, String fileName) {

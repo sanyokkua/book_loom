@@ -126,6 +126,15 @@ class SegmentTest {
         assertThat(segment.declaredLanguage()).isNull();
     }
 
+    // WHEN a segment is built through the older constructors, THEN it records no pairs and no line-break tokens.
+    @Test
+    void constructor_olderForms_yieldEmptyPairsAndLineBreakTokens() {
+        final Segment segment = segment("unit:0", "unit", 0, null, null);
+
+        assertThat(segment.pairs()).isEmpty();
+        assertThat(segment.lineBreakTokens()).isEmpty();
+    }
+
     @ParameterizedTest
     @ValueSource(doubles = {-0.1, 1.1})
     void constructor_confidenceOutsideUnitRange_isRejected(double confidence) {

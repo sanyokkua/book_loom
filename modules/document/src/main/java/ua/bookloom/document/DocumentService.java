@@ -19,6 +19,7 @@ import ua.bookloom.document.epub.EpubWriter;
 import ua.bookloom.document.fb2.Fb2Reader;
 import ua.bookloom.document.fb2.Fb2Writer;
 import ua.bookloom.document.mask.GateOutcome;
+import ua.bookloom.document.mask.GateRule;
 import ua.bookloom.document.mask.PlaceholderGate;
 import ua.bookloom.document.mask.RestoredContent;
 import ua.bookloom.document.mask.Unmasker;
@@ -200,7 +201,8 @@ public final class DocumentService implements DocumentPort {
         Objects.requireNonNull(translatedMasked, "translatedMasked");
         logUnmaskEntry(format, segment, translatedMasked);
         try {
-            final GateOutcome outcome = PlaceholderGate.compare(segment.masked(), translatedMasked);
+            final GateOutcome outcome = PlaceholderGate.compare(
+                    segment.masked(), translatedMasked, segment.pairs(), segment.lineBreakTokens());
             if (!outcome.matches()) {
                 final AppError error = gateError(outcome);
                 log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
@@ -314,14 +316,13 @@ public final class DocumentService implements DocumentPort {
         final String details = SafeDetails.empty()
                 .withPlaceholderMultiset(outcome.expected(), outcome.observed())
                 .render();
-        log.warn("Refused a translated segment whose placeholder multiset does not match its masked form: {}", details);
-        return AppError.of(
-                ErrorCode.validation,
-                "This translation could not be restored",
-                "The translated text's formatting placeholders do not match the original segment's — one or more"
-                        + " were dropped, duplicated, or invented. Nothing was restored.",
-                details,
-                null);
+        log.warn("Refused a translated segment: placeholder rule {} broken: {}", outcome.failedRule(), details);
+        final String message = outcome.failedRule() == GateRule.MULTISET
+                ? "The translated text's formatting placeholders do not match the original segment's — one or more"
+                        + " were dropped, duplicated, or invented. Nothing was restored."
+                : "The translated text moved, swapped or emptied the formatting around its words — a pair of"
+                        + " placeholders no longer wraps the same text. Nothing was restored.";
+        return AppError.of(ErrorCode.validation, "This translation could not be restored", message, details, null);
     }
 
     private AppError drmError(DrmRefusedException e) {

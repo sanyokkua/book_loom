@@ -44,6 +44,13 @@ import ua.bookloom.document.mask.MaskedContent;
 @Slf4j
 final class MarkdownMasker {
 
+    /** The third element of a range: what kind of token its source fragment becomes. */
+    private static final int ATOMIC = 0;
+
+    private static final int OPEN = 1;
+    private static final int CLOSE = 2;
+    private static final int LINE_BREAK = 3;
+
     private static final Pattern BARE_WWW =
             Pattern.compile("(?<![\\w./@-])www\\.[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+(?:[/?#][^\\s<>]*)?");
 
@@ -73,11 +80,21 @@ final class MarkdownMasker {
         int cursor = charStart;
         for (final int[] range : ranges) {
             writer.appendCharacterData(text.substring(cursor, range[0]));
-            writer.appendAtomic(text.substring(range[0], range[1]));
+            appendRange(writer, text.substring(range[0], range[1]), range[2]);
             cursor = range[1];
         }
         writer.appendCharacterData(text.substring(cursor, charEnd));
         return writer.build();
+    }
+
+    /** Mints one token for a range's source fragment, as an atomic token, a pair's edge or a line break. */
+    private static void appendRange(MaskWriter writer, String fragment, int role) {
+        switch (role) {
+            case OPEN -> writer.appendPairOpen(fragment, null);
+            case CLOSE -> writer.appendPairClose(fragment);
+            case LINE_BREAK -> writer.appendLineBreak(fragment);
+            default -> writer.appendAtomic(fragment);
+        }
     }
 
     /** Adds a task marker before inline child ranges, keeping the task state outside model-controlled text. */
@@ -89,7 +106,7 @@ final class MarkdownMasker {
         final Matcher matcher = TASK_LIST_MARKER.matcher(text);
         matcher.region(charStart, charEnd);
         if (matcher.lookingAt()) {
-            ranges.add(new int[] {charStart, matcher.end()});
+            ranges.add(new int[] {charStart, matcher.end(), ATOMIC});
         }
     }
 
@@ -115,7 +132,7 @@ final class MarkdownMasker {
         if (node instanceof HardLineBreak hardLineBreak) {
             final int @Nullable [] range = hardLineBreakRange(hardLineBreak, text);
             if (range != null) {
-                ranges.add(range);
+                ranges.add(new int[] {range[0], range[1], LINE_BREAK});
             }
             return;
         }
@@ -141,7 +158,7 @@ final class MarkdownMasker {
         int masked = 0;
         while (matcher.find()) {
             final int end = start + matcher.end() - trailingPunctuationLength(matcher.group());
-            ranges.add(new int[] {start + matcher.start(), end});
+            ranges.add(new int[] {start + matcher.start(), end, ATOMIC});
             masked++;
         }
         log.debug("bare www addresses masked in one text run: {}", masked);
@@ -169,9 +186,9 @@ final class MarkdownMasker {
             collectAtomic(node, ranges);
             return;
         }
-        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.firstSpanStart(firstSpanned)});
+        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.firstSpanStart(firstSpanned), OPEN});
         collectChildren(node, text, ranges);
-        ranges.add(new int[] {MarkdownSpans.lastSpanEnd(lastSpanned), MarkdownSpans.lastSpanEnd(node)});
+        ranges.add(new int[] {MarkdownSpans.lastSpanEnd(lastSpanned), MarkdownSpans.lastSpanEnd(node), CLOSE});
     }
 
     /** The catch-all: any construct that is not paired is masked as one atomic token over its full span. */
@@ -179,7 +196,7 @@ final class MarkdownMasker {
         if (node.getSourceSpans().isEmpty()) {
             return;
         }
-        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.lastSpanEnd(node)});
+        ranges.add(new int[] {MarkdownSpans.firstSpanStart(node), MarkdownSpans.lastSpanEnd(node), ATOMIC});
     }
 
     /**

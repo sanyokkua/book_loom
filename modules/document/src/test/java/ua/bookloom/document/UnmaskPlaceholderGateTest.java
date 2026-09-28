@@ -12,6 +12,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.NodeAnchor;
+import ua.bookloom.api.document.PlaceholderPair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
@@ -102,18 +103,32 @@ class UnmaskPlaceholderGateTest {
     // IF the placeholder multiset of the target differs from the source, THEN
     // the chunk fails as a validation error with no repair attempt.
     @Test
-    void unmask_reorderedTokens_passesTheGate() {
+    void unmask_wholePairsMovedPastEachOther_passesTheGate() {
         final Map<String, String> placeholders = new LinkedHashMap<>();
         placeholders.put("g0", "<b>");
         placeholders.put("g1", "</b>");
         placeholders.put("g2", "<i>");
         placeholders.put("g3", "</i>");
-        final Segment segment = segment("⟦g0⟧A⟦g1⟧ and ⟦g2⟧B⟦g3⟧", placeholders);
+        final Segment segment = segment("⟦g0⟧A⟦g1⟧ and ⟦g2⟧B⟦g3⟧", placeholders, pair(0, 1), pair(2, 3));
 
         final Result<String> result = newService().unmask(BookFormat.EPUB, segment, "⟦g2⟧Б⟦g3⟧ і ⟦g0⟧А⟦g1⟧");
 
         assertThat(result.isOk()).isTrue();
         assertThat(result.error()).isNull();
+    }
+
+    // An atomic token (an image) may move inside a pair without failing the gate.
+    @Test
+    void unmask_atomicTokenMovedInsideAPair_passesTheGate() {
+        final Map<String, String> placeholders = new LinkedHashMap<>();
+        placeholders.put("g0", "<b>");
+        placeholders.put("g1", "</b>");
+        placeholders.put("g2", "<img src=\"a.png\"/>");
+        final Segment segment = segment("⟦g0⟧old⟦g1⟧ door ⟦g2⟧", placeholders, pair(0, 1));
+
+        final Result<String> result = newService().unmask(BookFormat.EPUB, segment, "⟦g0⟧старі ⟦g2⟧⟦g1⟧ двері");
+
+        assertThat(result.isOk()).isTrue();
     }
 
     // IF the placeholder multiset of the target differs from the source, THEN
@@ -199,6 +214,33 @@ class UnmaskPlaceholderGateTest {
                 null,
                 SegmentStatus.PENDING,
                 0.0);
+    }
+
+    /** A segment whose masked form holds the given pairs; used where the pair order matters. */
+    private static Segment segment(String masked, Map<String, String> placeholders, PlaceholderPair... pairs) {
+        final Segment plain = segment(masked, placeholders);
+        return new Segment(
+                plain.id(),
+                plain.unit(),
+                plain.order(),
+                plain.kind(),
+                plain.sourceInner(),
+                plain.masked(),
+                plain.placeholders(),
+                plain.sourceHash(),
+                plain.prevKey(),
+                plain.nextKey(),
+                plain.anchor(),
+                plain.targetInner(),
+                plain.status(),
+                plain.confidence(),
+                null,
+                List.of(pairs),
+                List.of());
+    }
+
+    private static PlaceholderPair pair(int open, int close) {
+        return new PlaceholderPair("⟦g" + open + "⟧", "⟦g" + close + "⟧", null);
     }
 
     private static AppError errorOf(Result<?> result) {
