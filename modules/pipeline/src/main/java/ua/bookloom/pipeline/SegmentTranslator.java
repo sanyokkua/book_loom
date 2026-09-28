@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -12,10 +13,12 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -66,7 +69,54 @@ final class SegmentTranslator {
         return decideResponse(segment, context, Objects.requireNonNull(reply.data()), false, false);
     }
 
-    private ChatRequest requestFor(
+    /**
+     * Translates a segment, in sentence-aligned pieces when its masked text alone is above the budget. The pieces are
+     * joined and gated once as that one segment, because the translation goes back into the node it came from.
+     */
+    Result<Decision> translateSplit(
+            final Segment segment,
+            final DraftContext context,
+            final SentenceSplitter splitter,
+            final int budgetTokens) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(splitter, "splitter");
+        final int estimate = TokenEstimator.estimate(segment.masked(), promptBuilder.sourceLanguage());
+        if (estimate <= budgetTokens) {
+            log.debug(
+                    "Segment id={} estimate={} within budget={}, drafted whole", segment.id(), estimate, budgetTokens);
+            return translate(segment, context);
+        }
+        return switch (OversizedSplit.plan(segment, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
+            case OversizedSplit.Pieces plan -> translatePieces(segment, context, plan.pieces());
+            case OversizedSplit.Unsplittable none -> {
+                log.warn(
+                        "Oversized segment {} cannot be split estimate={} budget={}; drafting it whole without"
+                                + " preceding targets",
+                        segment.id(),
+                        estimate,
+                        budgetTokens);
+                yield translate(segment, DraftContext.empty());
+            }
+        };
+    }
+
+    /** Drafts each piece with the segment's own context, joins the replies in order and decides once. */
+    Result<Decision> translatePieces(final Segment segment, final DraftContext context, final List<String> pieces) {
+        log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
+        final PieceDrafter drafter = new PieceDrafter(this, replyParser);
+        final List<String> replies = new ArrayList<>();
+        for (final String piece : pieces) {
+            final Result<String> drafted = drafter.draft(PieceDrafter.pieceOf(segment, piece), context);
+            if (drafted.isErr()) {
+                return decideModelError(segment, Objects.requireNonNull(drafted.error()));
+            }
+            replies.add(restoreWhitespace(piece, Objects.requireNonNull(drafted.data())));
+        }
+        return restore(segment, context, String.join("", replies).strip(), true);
+    }
+
+    ChatRequest requestFor(
             final Segment segment,
             final DraftContext context,
             final PromptName kind,
@@ -103,7 +153,7 @@ final class SegmentTranslator {
         };
     }
 
-    private Result<ChatResponse> callModel(final Segment segment, final ChatRequest request) {
+    Result<ChatResponse> callModel(final Segment segment, final ChatRequest request) {
         log.debug(
                 "Calling chat model segmentId={} messageCount={}",
                 segment.id(),
@@ -289,7 +339,7 @@ final class SegmentTranslator {
     private static String observedTokens(final String text) {
         log.debug("Collecting observed tokens textLength={}", text.length());
         final Matcher matcher = PLACEHOLDER.matcher(text);
-        final List<String> tokens = new java.util.ArrayList<>();
+        final List<String> tokens = new ArrayList<>();
         while (matcher.find()) {
             tokens.add(matcher.group());
         }
