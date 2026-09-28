@@ -168,10 +168,19 @@ target-script share, the untranslated-echo similarity and the echo floor are com
 is mostly kept names is never scored as an echo or a wrong script on their account.
 
 **Refusal phrases.** The refusal hard gate's phrase list is a set of **anchored prefixes** compared
-case-insensitively (`Locale.ROOT`) after trimming, with a curly apostrophe `’` read as a straight `'`. Every phrase
-names the task or the model — never a character's own in-story apology — and the list covers **English**, the run's
-**source language**, and its **target language**; the reference English and Ukrainian lists are catalogued in
-`design.md` D8.
+case-insensitively (`Locale.ROOT`) against the trimmed target **display text**, with a curly apostrophe `’` read as a
+straight `'`, and a phrase matches only when the end of the text or a character that is neither a letter nor a digit
+follows it (`Як ШІ` never catches `Як шість…`, `As an AI` never catches `As an aide…`). Every phrase names the task or
+the model — never a character's own in-story apology — and the list covers **English**, the run's **source
+language**, and its **target language** (tags normalized first; a language with no list contributes none). The prefix
+test is skipped when the source display text itself starts with a listed phrase, so a book's own `Translation:` line is
+not a refusal. The lists (`qa.RefusalPhrases`):
+
+- `en` — `I'm sorry, but I can't translate`, `I am sorry, but I cannot translate`, `I cannot translate`,
+  `I can't translate`, `I am unable to translate`, `I'm unable to translate`, `As an AI`, `As a language model`,
+  `Here is the translation`, `Here's the translation`, `Translation:`, `Sure, here is the translation`;
+- `uk` — `Вибачте, я не можу перекласти`, `Я не можу перекласти`, `Не можу перекласти`, `Як мовна модель`, `Як ШІ`,
+  `Ось переклад`, `Переклад:`.
 
 **Foreign-keep vs echo/script.** A segment is marked **foreign** under the Keep foreign-passage policy when its
 block's own declared language (recorded on the segment at masking time, `03_DOCUMENT_MODEL.md#data-model`) differs

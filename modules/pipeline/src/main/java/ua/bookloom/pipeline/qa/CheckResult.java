@@ -96,4 +96,26 @@ public record CheckResult(
                 false,
                 new QaFinding(check.findingKind(), Severity.LOW, note, check.raisedBy()));
     }
+
+    /**
+     * Builds the outcome of a hard gate that failed — the refusal gate, or a placeholder/protected-span gate a
+     * caller computed elsewhere (e.g. from {@code DocumentPort.unmask}'s {@code ErrorCode.validation}). A hard gate
+     * never enters {@link Confidence#blend}, so its margin carries no meaning; {@code 0.0} is used only to satisfy
+     * this record's invariant, the same convention a failed soft check uses.
+     *
+     * @param check which hard gate failed
+     * @param note a human-readable explanation of the failure
+     * @return a failed, blocking result with margin 0.0 and a {@code high} finding
+     */
+    public static CheckResult hardGateFailed(final CheckName check, final String note) {
+        Objects.requireNonNull(check, "check");
+        Objects.requireNonNull(note, "note");
+        return new CheckResult(
+                check,
+                MIN_MARGIN,
+                false,
+                false,
+                true,
+                new QaFinding(check.findingKind(), Severity.HIGH, note, check.raisedBy()));
+    }
 }

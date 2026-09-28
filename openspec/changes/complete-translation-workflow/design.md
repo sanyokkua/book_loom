@@ -371,8 +371,10 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
     `unmask` (finding `glossary` for a locked term, `markup` for a kept foreign run);
   - refusal — the target display text is empty while the source's is not, or it starts with a refusal phrase of
     English, the source language or the target language (finding `meaning`). Phrases (`qa.RefusalPhrases`) are
-    anchored prefixes compared case-insensitively (`Locale.ROOT`) after trimming, with `’` read as `'`; every phrase
-    names the task or the model, so a character's own apology is never caught:
+    anchored prefixes compared case-insensitively (`Locale.ROOT`) against the trimmed display text, with `’` read as
+    `'`, each matching only when the end of the text or a non-letter, non-digit follows it, and skipped when the
+    source's display text itself starts with a phrase; every phrase names the task or the model, so a character's own
+    apology is never caught:
     - `en`: `I'm sorry, but I can't translate`, `I am sorry, but I cannot translate`, `I cannot translate`,
       `I can't translate`, `I am unable to translate`, `I'm unable to translate`, `As an AI`, `As a language model`,
       `Here is the translation`, `Here's the translation`, `Translation:`, `Sure, here is the translation`;

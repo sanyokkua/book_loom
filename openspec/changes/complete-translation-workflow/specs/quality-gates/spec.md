@@ -118,14 +118,17 @@ IF a translated target's display text — its text with every placeholder remove
 while its source's is not, or the target, trimmed and compared without regard to case and with a typographic
 apostrophe read as `'`, begins with a phrase that talks about the translation task or the model — such as `I cannot
 translate`, `As an AI`, `Here is the translation` or `Ось переклад` — in English, the source language or the target
-language, THEN the application SHALL fail that segment's refusal hard gate, record a high `meaning` finding, and SHALL
+language, followed by the end of the text or by a character that is neither a letter nor a digit, and the source's own
+display text does not begin with such a phrase, THEN the application SHALL fail that segment's refusal hard gate, record a high `meaning` finding, and SHALL
 NOT accept it.
 
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`.
 In plain words: a model that declines, apologises or talks about the text instead of translating it has produced
 nothing a reader can use; letting it through would put the apology into the book. Only phrases about the task or the
-model count — the full list per language is in the design — so a character's own apology is translated, not refused.
+model count — the full list per language is in `05_PIPELINE_ENGINE.md#qa-thresholds` — so a character's own apology
+is translated, not refused; a phrase must end where a word ends, so `Як ШІ` never catches `Як шість`, and a book whose own
+line begins `Translation:` keeps its translated `Переклад:`.
 A reply that holds only its placeholders would silently delete the paragraph's words. A reply with no text at all, or
 a blank `target`, is not this gate's case: the translation-pipeline capability flags or repairs it before any check.
 
@@ -152,6 +155,17 @@ a blank `target`, is not this gate's case: the translation-pipeline capability f
 #### Scenario: A character's own apology passes
 
 - **WHEN** the source is `Sorry, I can't go with you.` and the target is `Вибачте, я не можу піти з вами.`
+- **THEN** the refusal hard gate passes
+
+#### Scenario: A phrase is matched only as whole words
+
+- **WHEN** the target is `Як шість років тому він пішов.` or `As an aide, she opened the door.`
+- **THEN** the refusal hard gate passes
+
+#### Scenario: The book's own heading is not a refusal
+
+- **WHEN** the source is `Translation: the art of carrying meaning.` and the target is
+  `Переклад: мистецтво перенесення змісту.`
 - **THEN** the refusal hard gate passes
 
 #### Scenario: A reply of placeholders only fails

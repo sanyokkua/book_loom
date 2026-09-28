@@ -63,6 +63,21 @@ final class SoftCheckFixtures {
                 List.of());
     }
 
+    /** An input for {@link RefusalGate}, which reads only the two display texts and the two language tags. */
+    static SoftCheckInput refusal(
+            final String source, final String target, @Nullable final String sourceLang, final String targetLang) {
+        return new SoftCheckInput(
+                source,
+                target,
+                sourceLang,
+                targetLang,
+                ForeignPassagePolicy.TRANSLATE,
+                NamePolicy.TRANSLITERATE,
+                null,
+                List.of(),
+                List.of());
+    }
+
     /** An input for {@link GlossaryCheck}, which reads only the target display text and the locked renderings. */
     static SoftCheckInput glossary(final String target, final List<LockedRendering> lockedRenderings) {
         return new SoftCheckInput(
