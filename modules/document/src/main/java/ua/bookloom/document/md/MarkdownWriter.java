@@ -14,7 +14,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonAnchor;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.document.model.BufferReassembler;
+import ua.bookloom.document.model.BufferTextWriter;
 import ua.bookloom.document.model.DocumentNotOpenException;
 
 /**
@@ -25,6 +25,9 @@ import ua.bookloom.document.model.DocumentNotOpenException;
  * emphasis markers, bullet characters, fence styles, and whether the file ends with a newline — in parts of the
  * document nobody translated. Copying the original and replacing only translated spans makes every untouched byte
  * identical by construction, which is both stronger and simpler.
+ *
+ * <p><strong>A translation the source encoding cannot hold switches the whole file to UTF-8</strong> rather than
+ * being written as {@code ?} (ADR-0029); see {@link BufferTextWriter}.
  *
  * <p><strong>No language metadata is added.</strong> The export contract takes a target language for every format,
  * but Markdown has nowhere to put one. Inventing a place — a {@code lang:} key in a frontmatter block the source
@@ -52,7 +55,13 @@ public final class MarkdownWriter {
         final ParsedMarkdown parsed =
                 registry.find(document.id()).orElseThrow(() -> new DocumentNotOpenException(document.id()));
 
-        final byte[] output = BufferReassembler.splice(parsed.originalBytes(), replacementsOf(document, parsed));
+        final byte[] output = BufferTextWriter.assemble(
+                parsed.originalBytes(),
+                parsed.charset(),
+                Boolean.TRUE.equals(document.hasBom()),
+                replacementsOf(document),
+                document.id(),
+                document.format());
         try {
             Files.write(destination, output);
         } catch (IOException e) {
@@ -61,24 +70,22 @@ public final class MarkdownWriter {
         return destination;
     }
 
-    private static List<BufferReassembler.Replacement> replacementsOf(Document document, ParsedMarkdown parsed) {
-        final List<BufferReassembler.Replacement> replacements = new ArrayList<>();
+    private static List<BufferTextWriter.TextReplacement> replacementsOf(Document document) {
+        final List<BufferTextWriter.TextReplacement> replacements = new ArrayList<>();
         for (final Unit unit : document.units()) {
             for (final Segment segment : unit.segments()) {
-                addReplacement(replacements, segment, parsed);
+                addReplacement(replacements, segment);
             }
         }
         return replacements;
     }
 
-    private static void addReplacement(
-            List<BufferReassembler.Replacement> replacements, Segment segment, ParsedMarkdown parsed) {
+    private static void addReplacement(List<BufferTextWriter.TextReplacement> replacements, Segment segment) {
         final String targetInner = segment.targetInner();
         if (targetInner == null) {
             return;
         }
-        replacements.add(
-                new BufferReassembler.Replacement(spanOf(segment.anchor()), targetInner.getBytes(parsed.charset())));
+        replacements.add(new BufferTextWriter.TextReplacement(spanOf(segment.anchor()), targetInner));
     }
 
     /**

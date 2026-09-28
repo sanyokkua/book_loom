@@ -1,7 +1,6 @@
 package ua.bookloom.document.txt;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -20,7 +19,6 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.document.model.CorruptContainerException;
 
 /**
  * The plain-text read and write paths.
@@ -190,17 +188,18 @@ class TxtRoundTripTest {
         assertThat(bytesOf(writeOut(openPrimary(), "uk"))).isEqualTo(PRIMARY.getBytes(StandardCharsets.UTF_8));
     }
 
-    // IF a segment's target text contains a character the source encoding cannot
-    // represent, THEN the export fails with a validation outcome and no output file is written.
+    // WHEN a segment's target holds a character the source encoding cannot represent, THEN the export succeeds and
+    // the whole file is written as UTF-8 with that character in it.
     @Test
-    void write_unrepresentableTargetCharacter_failsAndWritesNoFile() {
+    void write_unrepresentableTargetCharacter_writesTheWholeFileAsUtf8() {
         final Document document = withTarget(open(CYRILLIC_PROSE, WINDOWS_1251, "notes.txt"), 1, "Два 車.");
-        final Path destination = tempDir.resolve("out.txt");
 
-        assertThatThrownBy(() -> new TxtWriter(registry).write(document, destination, "uk"))
-                .isInstanceOf(CorruptContainerException.class)
-                .hasMessageContaining("cannot represent");
-        assertThat(Files.exists(destination)).isFalse();
+        final Path output = writeOut(document, "uk");
+
+        assertThat(new String(bytesOf(output), StandardCharsets.UTF_8))
+                .contains("Два 車.")
+                .doesNotContain("?")
+                .startsWith("Он бегал по улице");
     }
 
     // a representable translation into the source's own encoding is written in it.

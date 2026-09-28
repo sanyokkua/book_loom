@@ -3,11 +3,6 @@ package ua.bookloom.document.txt;
 import com.google.inject.Inject;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.CharBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CodingErrorAction;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -20,8 +15,7 @@ import ua.bookloom.api.document.NodeAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonAnchor;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.document.model.BufferReassembler;
-import ua.bookloom.document.model.CorruptContainerException;
+import ua.bookloom.document.model.BufferTextWriter;
 import ua.bookloom.document.model.DocumentNotOpenException;
 
 /**
@@ -31,11 +25,10 @@ import ua.bookloom.document.model.DocumentNotOpenException;
  * one. Inventing a place — a header line — would add content the source never had and break the byte-exact round
  * trip for a field nothing reads.
  *
- * <p><strong>An unrepresentable character fails the export loudly.</strong> FB2 solves the same problem by
- * switching to UTF-8 and rewriting its declaration; plain text has no declaration, so a reader has no way to learn
- * that the encoding changed. Silently re-encoding would make every non-Latin character in the file unreadable to
- * whatever opens it next, so the export fails instead and the user can re-import the book as UTF-8. The check runs
- * over every segment before a single byte is written, so a refused export leaves no partial file behind.
+ * <p><strong>An unrepresentable character switches the whole file to UTF-8.</strong> Plain text has no declaration
+ * to rewrite, so the file is written whole in UTF-8 with the byte-order mark exactly when the source had one, and
+ * the application's own re-open reads it as UTF-8 (ADR-0029). A translation the source's code page cannot hold is
+ * never refused and never written as {@code ?}.
  */
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TxtWriter {
@@ -50,8 +43,6 @@ public final class TxtWriter {
      * @param targetLanguage accepted and deliberately unused — plain text carries no language field
      * @return {@code destination}
      * @throws DocumentNotOpenException if {@code document}'s id was never registered by {@link TxtReader#read}
-     * @throws CorruptContainerException if a segment's target text cannot be represented in the encoding the
-     *     source was read with
      */
     public Path write(Document document, Path destination, String targetLanguage) {
         Objects.requireNonNull(document, "document");
@@ -60,8 +51,13 @@ public final class TxtWriter {
         final OpenTxtRegistry.ParsedTxt parsed =
                 registry.find(document.id()).orElseThrow(() -> new DocumentNotOpenException(document.id()));
 
-        final List<BufferReassembler.Replacement> replacements = replacementsOf(document, parsed.charset());
-        final byte[] output = BufferReassembler.splice(parsed.originalBytes(), replacements);
+        final byte[] output = BufferTextWriter.assemble(
+                parsed.originalBytes(),
+                parsed.charset(),
+                Boolean.TRUE.equals(document.hasBom()),
+                replacementsOf(document),
+                document.id(),
+                document.format());
         try {
             Files.write(destination, output);
         } catch (IOException e) {
@@ -70,50 +66,17 @@ public final class TxtWriter {
         return destination;
     }
 
-    /**
-     * Encodes every translated segment up front. Doing the whole set before writing is what makes the refusal
-     * leave no output file: the first unrepresentable character stops the export while the destination is still
-     * untouched.
-     */
-    private static List<BufferReassembler.Replacement> replacementsOf(Document document, Charset charset) {
-        final CharsetEncoder encoder = charset.newEncoder()
-                .onMalformedInput(CodingErrorAction.REPORT)
-                .onUnmappableCharacter(CodingErrorAction.REPORT);
-        final List<BufferReassembler.Replacement> replacements = new ArrayList<>();
+    private static List<BufferTextWriter.TextReplacement> replacementsOf(Document document) {
+        final List<BufferTextWriter.TextReplacement> replacements = new ArrayList<>();
         for (final Unit unit : document.units()) {
             for (final Segment segment : unit.segments()) {
-                addReplacement(replacements, segment, encoder, charset);
+                final String targetInner = segment.targetInner();
+                if (targetInner != null) {
+                    replacements.add(new BufferTextWriter.TextReplacement(spanOf(segment.anchor()), targetInner));
+                }
             }
         }
         return replacements;
-    }
-
-    private static void addReplacement(
-            List<BufferReassembler.Replacement> replacements,
-            Segment segment,
-            CharsetEncoder encoder,
-            Charset charset) {
-        final String targetInner = segment.targetInner();
-        if (targetInner == null) {
-            return;
-        }
-        replacements.add(new BufferReassembler.Replacement(
-                spanOf(segment.anchor()), encode(targetInner, encoder, charset, segment.id())));
-    }
-
-    private static byte[] encode(String targetInner, CharsetEncoder encoder, Charset charset, String segmentId) {
-        try {
-            encoder.reset();
-            final java.nio.ByteBuffer encoded = encoder.encode(CharBuffer.wrap(targetInner));
-            final byte[] bytes = new byte[encoded.remaining()];
-            encoded.get(bytes);
-            return bytes;
-        } catch (CharacterCodingException unrepresentable) {
-            throw new CorruptContainerException(
-                    "Segment " + segmentId + " contains a character the source encoding " + charset.name()
-                            + " cannot represent",
-                    unrepresentable);
-        }
     }
 
     /**

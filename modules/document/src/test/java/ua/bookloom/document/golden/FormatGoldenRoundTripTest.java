@@ -18,6 +18,7 @@ import ua.bookloom.document.DocumentService;
 import ua.bookloom.document.DocumentServices;
 import ua.bookloom.document.fixture.Fb2Fixtures;
 import ua.bookloom.document.fixture.MarkdownFixtures;
+import ua.bookloom.document.fixture.TargetedDocuments;
 import ua.bookloom.document.fixture.TxtFixtures;
 
 /**
@@ -88,6 +89,43 @@ class FormatGoldenRoundTripTest {
 
         Fb2CanonicalAssert.assertCanonicalEqual(result.source(), result.output(), result.targetLanguage());
         assertThat(Files.readAllBytes(result.output())).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
+    }
+
+    private static final String LATIN_PROSE =
+            "Le café du coin était fermé ce matin-là, et personne ne savait pourquoi. "
+                    + "Les élèves attendaient devant la porte, sous la pluie fine et froide.";
+
+    // WHEN a Latin-1 TXT export holds a character Latin-1 lacks, THEN the written file, decoded as UTF-8, reads as
+    // the source text with only that paragraph replaced (compared as text, not as the source's bytes).
+    @Test
+    void golden_txtWithAnEncodingSwitch_isEqualToTheExpectedTextReParsed() throws IOException {
+        final Path source = tempDir.resolve("latin.txt");
+        Files.write(source, (LATIN_PROSE + "\n\nSecond paragraph, café.\n").getBytes(StandardCharsets.ISO_8859_1));
+        final DocumentService service = DocumentServices.newService();
+        final Document opened = Objects.requireNonNull(service.open(source).data());
+
+        final Result<Path> written =
+                service.write(TargetedDocuments.withTarget(opened, 1, "第二段."), tempDir.resolve("out.txt"), "zh");
+
+        assertThat(written.isOk()).isTrue();
+        assertThat(Files.readString(tempDir.resolve("out.txt"), StandardCharsets.UTF_8))
+                .isEqualTo(LATIN_PROSE + "\n\n第二段.\n");
+    }
+
+    // WHEN a Latin-1 Markdown export holds a character Latin-1 lacks, THEN re-parsing the written file yields the
+    // paragraph texts the switch should have produced.
+    @Test
+    void golden_markdownWithAnEncodingSwitch_isReParseEqualToTheExpectedText() throws IOException {
+        final Path source = tempDir.resolve("latin.md");
+        Files.write(source, ("# Café\n\n" + LATIN_PROSE + "\n").getBytes(StandardCharsets.ISO_8859_1));
+        final DocumentService service = DocumentServices.newService();
+        final Document opened = Objects.requireNonNull(service.open(source).data());
+
+        service.write(TargetedDocuments.withTarget(opened, 1, "Ÿ voilà."), tempDir.resolve("out.md"), "uk");
+
+        final Document reopened =
+                Objects.requireNonNull(service.open(tempDir.resolve("out.md")).data());
+        assertThat(allSegmentsOf(reopened)).extracting(Segment::sourceInner).containsExactly("Café", "Ÿ voilà.");
     }
 
     // WHERE the source's title information declares no language element, THEN the output
