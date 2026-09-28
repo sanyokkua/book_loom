@@ -124,7 +124,7 @@ public final class EpubCanonicalAssert {
             assertThat(canonicalXml(output.content()))
                     .as("entry %s (canonical XML)", source.name())
                     .isEqualTo(canonicalXml(source.content()));
-        } else if (lowerName.endsWith(".xhtml") || lowerName.endsWith(".html") || lowerName.endsWith(".htm")) {
+        } else if (isXhtmlDocument(lowerName, source.content())) {
             assertThat(canonicalXhtml(output.content()))
                     .as("entry %s (canonical XHTML)", source.name())
                     .isEqualTo(canonicalXhtml(source.content()));
@@ -134,6 +134,28 @@ public final class EpubCanonicalAssert {
                     .isEqualTo(source.content());
         }
     }
+
+    /**
+     * Whether an entry is a content document the writer re-serializes: by extension, or an {@code .xml} entry whose
+     * root element is {@code html} — Calibre-converted books name spine documents {@code cover.xml}. The writer
+     * serializes every spine document, so it is compared as XHTML like any other; an {@code .xml} entry that is
+     * not an {@code html} document (a manifest, a metadata file) stays byte-exact.
+     */
+    private static boolean isXhtmlDocument(String lowerName, byte[] sourceContent) {
+        return lowerName.endsWith(".xhtml")
+                || lowerName.endsWith(".html")
+                || lowerName.endsWith(".htm")
+                || (lowerName.endsWith(".xml")
+                        && XML_HTML_ROOT.matcher(prologFree(sourceContent)).find());
+    }
+
+    /** The source's text past any XML declaration, comments and DOCTYPE, so only the root element is inspected. */
+    private static String prologFree(byte[] content) {
+        return new String(content, StandardCharsets.UTF_8).replaceAll("(?s)<\\?.*?\\?>|<!--.*?-->|<!DOCTYPE[^>]*>", "");
+    }
+
+    private static final Pattern XML_HTML_ROOT =
+            Pattern.compile("^\\s*\\uFEFF?\\s*<html[\\s>]", Pattern.CASE_INSENSITIVE);
 
     /**
      * Duplicates {@link ua.bookloom.document.epub}'s package-private {@code SecureXml.builder()} four lines

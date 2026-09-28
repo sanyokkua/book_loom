@@ -676,3 +676,30 @@ about how 213 real books parse, mask and round-trip.
 baseline** — 43 books differed on that field alone between two consecutive runs of the *same* code,
 while `canonicalEqual` held everywhere. DD-43 makes canonical, not raw, the contract; this field is
 diagnostic only.
+
+## 2026-09-28 — after change group 6 (auxiliary text units)
+
+Swept `.temporary_context/Books_Examples` with `BOOKLOOM_CORPUS_DIR=<abs path> BOOKLOOM_CORPUS_REPORT_DIR=<abs path>
+./gradlew :document:corpus --rerun-tasks`. The corpus is now **235 books** (the earlier baselines counted 213–216), so the
+old totals are not directly comparable. Result: open 235/235 (no refusal), 826,298 segments, 0 books with zero segments,
+zero-edit identity canonical-equal 235/235, fixed point 235/235, mutation counts and tuples 235/235, marker-strip clean
+235/235, idempotence 235/235, mask/unmask 235/235 (322,208 placeholders).
+
+The first sweep was **not** green, and the failures were real: 21 books failed zero-edit canonical equality and 55 the
+marker-strip probe. Root causes, each fixed with a test written first:
+
+- **BOM written twice (6 epubtest.org books)** — regression from task 5.3: the parser kept a leading byte-order mark as
+  body text and the prolog writer added it again. The parser now drops it before jsoup.
+- **Region tag rewritten (7 books)** — regression from task 4.6: `en-US` was rewritten to `en` for target `en`. A value
+  already naming the target language is now left alone.
+- **Raw line feed inside an attribute (1 book)** — regression from task 5.2: an XML reader reads it as a space, the
+  writer's `&#10;` read back as a line feed. A raw LF/CR/tab in an attribute value is normalised to a space on read.
+- **`.xml`-named spine documents (8 Calibre books)** — comparator gap, present before group 6: `EpubCanonicalAssert`
+  now compares an `.xml` entry whose root is `html` as XHTML; every other `.xml` entry stays byte-exact.
+- **Repeated NCX `navPoint` ids (36 books)** — a real defect in task 6.3: several segments shared one id. The first keeps
+  `aux:ncx:<id>`, each repeat becomes `aux:ncx:<id>:<entry path>`.
+- **Probe assumptions (19 books)** — `CorpusMutation` now expects the marker inside an image's alt text and inside each FB2
+  author name part, which is where write-back correctly puts it.
+
+`skippedCodeOnlyBlocks` is still `notMeasured`. Each sweep appends to `modules/document/build/test-logs/test.log`; after
+three sweeps it grew to 1.4 GB and made `DocumentServiceDiagnosticsTest` run out of heap — delete it before a build.

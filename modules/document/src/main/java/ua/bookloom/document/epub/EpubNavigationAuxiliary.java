@@ -111,7 +111,12 @@ final class EpubNavigationAuxiliary {
             log.debug("NCX label {} is written from {}", entry.navPointId(), navSegmentId);
             return;
         }
-        final String id = "aux:ncx:" + (entry.navPointId() != null ? entry.navPointId() : entry.entryPath());
+        final String named = "aux:ncx:" + (entry.navPointId() != null ? entry.navPointId() : entry.entryPath());
+        // Real NCX files repeat a navPoint id; the write-back table and every id lookup need one segment per id.
+        final String id = ownSegmentIds.contains(named) ? named + ":" + entry.entryPath() : named;
+        if (!id.equals(named)) {
+            log.debug("NCX navPoint id {} repeats; label at {} is identified as {}", named, entry.entryPath(), id);
+        }
         builder.addText(ncxPath, id, SegmentKind.NAV_LABEL, root, entry.anchorPath(), TreeDialect.FICTION_BOOK);
         ownSegmentIds.add(id);
     }

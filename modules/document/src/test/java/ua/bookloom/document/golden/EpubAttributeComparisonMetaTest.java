@@ -46,4 +46,33 @@ class EpubAttributeComparisonMetaTest {
         assertThatCode(() -> EpubCanonicalAssert.assertCanonicalEqual(source, output))
                 .doesNotThrowAnyException();
     }
+
+    private Path epubWithXmlEntry(String name, String entryName, String content) {
+        return new EpubZipBuilder()
+                .entry("mimetype", "application/epub+zip", ZipEntry.STORED)
+                .entry(entryName, content)
+                .writeTo(tempDir.resolve(name));
+    }
+
+    // WHEN a spine document named .xml is written with a self-closed element expanded, THEN it compares as XHTML.
+    @Test
+    void epubComparison_xmlNamedXhtmlDocumentReserialized_passes() {
+        final String head =
+                "<?xml version=\"1.0\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>a<br%s></p></body></html>";
+        final Path source = epubWithXmlEntry("source.epub", "OPS/cover.xml", head.formatted("/"));
+        final Path output = epubWithXmlEntry("output.epub", "OPS/cover.xml", head.formatted(" /"));
+
+        assertThatCode(() -> EpubCanonicalAssert.assertCanonicalEqual(source, output))
+                .doesNotThrowAnyException();
+    }
+
+    // WHEN an .xml entry that is not an html document differs, THEN it is still compared byte-exact.
+    @Test
+    void epubComparison_xmlEntryThatIsNotHtmlChanged_isCaught() {
+        final Path source = epubWithXmlEntry("source.epub", "META-INF/other.xml", "<root><a/></root>");
+        final Path output = epubWithXmlEntry("output.epub", "META-INF/other.xml", "<root><a></a></root>");
+
+        assertThatThrownBy(() -> EpubCanonicalAssert.assertCanonicalEqual(source, output))
+                .isInstanceOf(AssertionError.class);
+    }
 }

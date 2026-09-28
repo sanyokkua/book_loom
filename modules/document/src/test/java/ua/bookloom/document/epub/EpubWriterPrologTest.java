@@ -61,6 +61,29 @@ class EpubWriterPrologTest {
         assertThat(new String(written, StandardCharsets.UTF_8)).startsWith("<html");
     }
 
+    // WHEN a content document begins with a byte-order mark, THEN the mark appears once in the written document:
+    // the HTML parser keeps it as text in the tree, so treating it as prolog too would write it twice and no
+    // longer round-trip (corpus: epubtest.org books).
+    @Test
+    void write_documentWithLeadingByteOrderMark_keepsExactlyOneMark() {
+        final byte[] written = writeChapter("\uFEFF" + ROOT);
+
+        assertThat(new String(written, StandardCharsets.UTF_8)
+                        .chars()
+                        .filter(c -> c == '\uFEFF')
+                        .count())
+                .isEqualTo(1);
+    }
+
+    // WHEN the mark is followed by an XML declaration and DOCTYPE, THEN each of them is written once as well.
+    @Test
+    void write_byteOrderMarkThenProlog_writesEachPrologPartOnce() {
+        final String text = new String(writeChapter("\uFEFF" + PROLOG + ROOT), StandardCharsets.UTF_8);
+
+        assertThat(text.chars().filter(c -> c == '\uFEFF').count()).isEqualTo(1);
+        assertThat(text).containsOnlyOnce("<!DOCTYPE").containsOnlyOnce("xml version");
+    }
+
     private static final String ROOT = """
             <html xmlns="http://www.w3.org/1999/xhtml"><head><title>t</title></head>
             <body><p>Hello.</p></body></html>

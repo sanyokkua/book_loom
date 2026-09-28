@@ -52,6 +52,16 @@ class EpubWriterAttributeTest {
         assertThat(attributeValueSeenByXmlReader(written)).isEqualTo("Communication: \nSo Many Choices");
     }
 
+    // WHEN an attribute value holds a raw line feed, which an XML reader reads as a space, THEN the output is still
+    // read as a space: writing it as a line-feed reference would change the value (corpus: an O'Reilly chapter).
+    @Test
+    void write_attributeWithRawLineFeed_isStillReadAsASpace() throws Exception {
+        final byte[] written =
+                writeChapter(chapter("<p data-pdf-bookmark=\"Measuring and Governing \nArchitecture\">Hello.</p>"));
+
+        assertThat(attributeValueSeenByXmlReader(written)).isEqualTo("Measuring and Governing  Architecture");
+    }
+
     // WHEN the document already holds the sentinel code point U+E00A, THEN the post-pass is skipped and the
     // attribute's line feed is written raw, as jsoup writes it.
     @Test

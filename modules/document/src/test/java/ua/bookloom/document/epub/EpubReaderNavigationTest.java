@@ -124,6 +124,29 @@ class EpubReaderNavigationTest {
     }
 
     @Test
+    void read_ncxNavPointsSharingOneId_yieldsOneUniquelyIdentifiedSegmentPerLabel() {
+        final String points = "<navPoint id=\"np\"><navLabel><text>One</text></navLabel><content src=\"c01.xhtml\"/>"
+                + "</navPoint><navPoint id=\"np\"><navLabel><text>Two</text></navLabel><content src=\"c01.xhtml\"/>"
+                + "</navPoint><navPoint id=\"np\"><navLabel><text>Three</text></navLabel>"
+                + "<content src=\"c01.xhtml\"/></navPoint>";
+        final Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("OEBPS/content.opf", opf(NCX_ITEM + chapterItem("c01"), "c01"));
+        entries.put(
+                "OEBPS/toc.ncx",
+                "<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\"><head/>"
+                        + "<docTitle><text>Book</text></docTitle><navMap>" + points + "</navMap></ncx>");
+        entries.put("OEBPS/c01.xhtml", chapter("<p>Prose.</p>"));
+
+        final Unit auxiliary = auxiliaryOf(support.open(support.epub("book.epub", entries)));
+
+        assertThat(auxiliary.segments())
+                .filteredOn(segment -> segment.kind() == SegmentKind.NAV_LABEL)
+                .extracting(Segment::id, Segment::sourceInner)
+                .containsExactly(
+                        tuple("aux:ncx:np", "One"), tuple("aux:ncx:np:2", "Two"), tuple("aux:ncx:np:3", "Three"));
+    }
+
+    @Test
     void read_toc01OutsideSpineWithThreeEntries_yieldsIdsOneTwoThree() {
         final Map<String, String> entries = new LinkedHashMap<>();
         entries.put("OEBPS/content.opf", opf(NAV_ITEM + chapterItem("c01"), "c01"));

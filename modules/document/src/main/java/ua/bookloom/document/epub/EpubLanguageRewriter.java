@@ -90,6 +90,13 @@ final class EpubLanguageRewriter {
     private static void replaceOrAppendLanguageElement(
             Element metadata, Optional<Element> languageElement, String targetLanguage) {
         if (languageElement.isPresent()) {
+            if (sameLanguage(targetLanguage, languageElement.get().getText())) {
+                log.debug(
+                        "dc:language {} already names the target {}; kept",
+                        languageElement.get().getText(),
+                        targetLanguage);
+                return;
+            }
             languageElement.get().setText(targetLanguage);
             log.debug("Replaced existing dc:language nested={}", isNestedInLegacyWrapper(languageElement.get()));
             return;
@@ -106,7 +113,7 @@ final class EpubLanguageRewriter {
     private static void rewriteDctermsLanguageMeta(Element metadata, @Nullable String effectiveSource, String target) {
         for (final Element meta : metadata.getChildren("meta", OPF_NS)) {
             if (DCTERMS_LANGUAGE_META.equals(meta.getAttributeValue("property"))
-                    && sameLanguage(effectiveSource, meta.getText())) {
+                    && isToRewrite(effectiveSource, target, meta.getText())) {
                 log.debug("Rewrote dcterms:language meta from={} to={}", meta.getText(), target);
                 meta.setText(target);
             }
@@ -116,7 +123,7 @@ final class EpubLanguageRewriter {
     private static void rewritePackageLangAttribute(
             Element packageElement, @Nullable String effectiveSource, String target) {
         final org.jdom2.Attribute langAttribute = packageElement.getAttribute("lang", Namespace.XML_NAMESPACE);
-        if (langAttribute != null && sameLanguage(effectiveSource, langAttribute.getValue())) {
+        if (langAttribute != null && isToRewrite(effectiveSource, target, langAttribute.getValue())) {
             log.debug("Rewrote package xml:lang from={} to={}", langAttribute.getValue(), target);
             langAttribute.setValue(target);
         }
@@ -166,12 +173,21 @@ final class EpubLanguageRewriter {
             @Nullable String effectiveSource,
             String target,
             String elementName) {
-        if (element.hasAttr(attributeName) && sameLanguage(effectiveSource, element.attr(attributeName))) {
+        if (element.hasAttr(attributeName) && isToRewrite(effectiveSource, target, element.attr(attributeName))) {
             log.debug("Rewrote {} {} from={} to={}", elementName, attributeName, element.attr(attributeName), target);
             element.attr(attributeName, target);
             return true;
         }
         return false;
+    }
+
+    /**
+     * A value follows the target only when it carries the source language and does not already name the target:
+     * rewriting {@code en-US} to {@code en} when the target is English would change a book that is already in the
+     * target language, so a zero-edit write of a regional-tagged book would no longer round-trip.
+     */
+    private static boolean isToRewrite(@Nullable String effectiveSource, String target, String current) {
+        return sameLanguage(effectiveSource, current) && !sameLanguage(target, current);
     }
 
     /**
