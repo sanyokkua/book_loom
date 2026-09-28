@@ -56,4 +56,13 @@ class DocumentModuleTest {
         assertThat(injector.getInstance(ua.bookloom.document.txt.OpenTxtRegistry.class))
                 .isSameAs(injector.getInstance(ua.bookloom.document.txt.OpenTxtRegistry.class));
     }
+
+    // WHEN the injector is built, THEN the sentence splitter port resolves to the ICU implementation.
+    @Test
+    void configure_documentModule_buildsASentenceSplitter() {
+        final Injector injector = Guice.createInjector(new DocumentModule());
+
+        assertThat(injector.getInstance(ua.bookloom.api.document.SentenceSplitter.class))
+                .isInstanceOf(ua.bookloom.document.split.IcuSentenceSplitter.class);
+    }
 }
