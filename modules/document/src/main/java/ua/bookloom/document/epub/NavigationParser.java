@@ -12,6 +12,7 @@ import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.document.model.CorruptContainerException;
+import ua.bookloom.document.model.ElementPaths;
 import ua.bookloom.document.model.RawEntry;
 import ua.bookloom.document.model.SecureXml;
 

@@ -69,9 +69,10 @@ class Fb2ReaderTest {
         assertThat(bodies).extracting(Unit::mediaType).containsOnly("application/x-fictionbook+xml");
     }
 
-    // Every book ends with an auxiliary unit, empty until the FB2 slots exist; body units keep their identity.
+    // Every book ends with an auxiliary unit named for the file, holding its title and author; body units keep their
+    // identity.
     @Test
-    void read_fictionBook_endsWithAnEmptyAuxiliaryUnitNamedForTheFile() {
+    void read_fictionBook_endsWithTheAuxiliaryUnitNamedForTheFile() {
         final Document document = readPrimary();
 
         final Unit last = document.units().get(document.units().size() - 1);
@@ -81,7 +82,7 @@ class Fb2ReaderTest {
         assertThat(last.href()).isEqualTo("book.fb2");
         assertThat(last.mediaType()).isEqualTo("application/x-bookloom-auxiliary");
         assertThat(last.order()).isEqualTo(2);
-        assertThat(last.segments()).isEmpty();
+        assertThat(last.segments()).extracting(Segment::id).containsExactly("aux:title", "aux:creator:0");
     }
 
     // segment ids are built from the unit id, so a notes-body segment is namespaced by it.

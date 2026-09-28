@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.AttributeAnchor;
 import ua.bookloom.api.document.NodeAnchor;
@@ -63,6 +62,9 @@ public final class AuxiliarySlots {
 
         /** An element whose children are the text's markup, re-parsed from the restored target as body runs are. */
         record Markup(String resource, TreeNode root, List<Integer> path) implements Slot {}
+
+        /** An element whose named children hold the text, written back child by child; see {@link NameParts}. */
+        record Parts(String resource, TreeNode root, List<Integer> path) implements Slot {}
 
         /**
          * A text element with no segment of its own, written from the target of the segment {@code sourceSegmentId}
@@ -148,7 +150,7 @@ public final class AuxiliarySlots {
                 altWrites.add(new AltImages.Write(alt, target));
                 resources.add(alt.resource());
             } else {
-                write(slot, segment.id(), target);
+                SlotWriter.write(slot, segment.id(), target);
                 resources.add(slot.resource());
             }
         }
@@ -164,27 +166,9 @@ public final class AuxiliarySlots {
                 continue;
             }
             log.debug("auxiliary alias in {} written from {}", alias.resource(), alias.sourceSegmentId());
-            write(alias, alias.sourceSegmentId(), target);
+            SlotWriter.write(alias, alias.sourceSegmentId(), target);
             resources.add(alias.resource());
         }
-    }
-
-    private static void write(Slot slot, String segmentId, String targetInner) {
-        final TreeNode element = SkeletonAnchors.nodeAt(slot.root(), slot.path());
-        log.trace("auxiliary slot {} written: {}", segmentId, targetInner);
-        if (slot instanceof Slot.Markup) {
-            element.replaceChildren(0, element.childNodes().size(), targetInner);
-        } else {
-            element.setText(plainTextOf(targetInner));
-        }
-    }
-
-    /**
-     * The character data of restored markup: the restored target is markup, so a text slot decodes it and hands the
-     * tree plain text to escape once on output — so an ampersand is never escaped twice.
-     */
-    private static String plainTextOf(String restoredMarkup) {
-        return Jsoup.parseBodyFragment(restoredMarkup).body().wholeText();
     }
 
     /** Collects auxiliary segments and their slots, in the order they are added. */
@@ -238,6 +222,32 @@ public final class AuxiliarySlots {
                 List<Integer> path,
                 TreeDialect dialect) {
             return addElement(new Slot.Markup(resource, root, path), segmentId, kind, dialect);
+        }
+
+        /**
+         * Adds a segment whose text is spread over the named children of one element, each child masked as a pair by
+         * the caller, so writing it leaves the element's other children alone.
+         *
+         * @param resource the archive path of the resource the element lives in
+         * @param segmentId the segment id, which names the slot
+         * @param kind the auxiliary kind of the segment
+         * @param root the live tree node the path starts from
+         * @param path the element-sibling path from {@code root} to the element
+         * @param sourceInner the source of the segment: each part's markup, joined as the caller masked them
+         * @param masked the masked form of {@code sourceInner}
+         * @return this builder
+         */
+        public Builder addParts(
+                String resource,
+                String segmentId,
+                SegmentKind kind,
+                TreeNode root,
+                List<Integer> path,
+                String sourceInner,
+                MaskedContent masked) {
+            slots.put(segmentId, new Slot.Parts(resource, root, path));
+            drafts.add(new Draft(segmentId, kind, sourceInner, masked, new NodeAnchor(path, 0)));
+            return this;
         }
 
         /**

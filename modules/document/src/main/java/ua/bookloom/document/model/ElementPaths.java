@@ -1,4 +1,4 @@
-package ua.bookloom.document.epub;
+package ua.bookloom.document.model;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs (ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class ElementPaths {
+public final class ElementPaths {
 
     /**
      * The path from {@code root} down to {@code target} in a jsoup tree.
@@ -23,7 +23,7 @@ final class ElementPaths {
      * @param target the element to address
      * @return the element-sibling indices, outermost step first
      */
-    static List<Integer> below(org.jsoup.nodes.Element root, org.jsoup.nodes.Element target) {
+    public static List<Integer> below(org.jsoup.nodes.Element root, org.jsoup.nodes.Element target) {
         final Deque<Integer> path = new ArrayDeque<>();
         org.jsoup.nodes.Element current = target;
         while (!current.equals(root)) {
@@ -40,7 +40,7 @@ final class ElementPaths {
      * @param target the element to address
      * @return the element-sibling indices, outermost step first
      */
-    static List<Integer> below(org.jdom2.Element root, org.jdom2.Element target) {
+    public static List<Integer> below(org.jdom2.Element root, org.jdom2.Element target) {
         final Deque<Integer> path = new ArrayDeque<>();
         org.jdom2.Element current = target;
         while (!current.equals(root)) {

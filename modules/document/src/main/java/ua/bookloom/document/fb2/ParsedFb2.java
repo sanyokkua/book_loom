@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Objects;
 import org.jdom2.Element;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.Unit;
+import ua.bookloom.document.model.AuxiliarySlots;
 
 /**
  * Everything {@code Fb2Writer} needs to find again while a book is open, keyed by the opaque ids that cross the
@@ -20,6 +22,7 @@ import org.jspecify.annotations.Nullable;
  *     preserved encoding is echoed as written rather than as this JVM would normalise it; {@code null} when the
  *     source declared none
  * @param bodiesByHandleId each {@code <body>} element, keyed by its unit's {@code SkeletonHandle} id
+ * @param auxiliarySlotsByHandleId the auxiliary slot table, keyed by the auxiliary unit's {@code SkeletonHandle} id
  * @param crlfLineEndings whether the source bytes used {@code \r\n} line endings, so the writer emits the same
  *     style instead of JDOM's default — an LF book must not come back with every line ending doubled
  * @param byteOrderMark the mark the source began with, exactly as found, or empty when it had none — written back
@@ -33,6 +36,7 @@ record ParsedFb2(
         Charset charset,
         @Nullable String declaredEncodingName,
         Map<String, Element> bodiesByHandleId,
+        Map<String, AuxiliarySlots> auxiliarySlotsByHandleId,
         boolean crlfLineEndings,
         byte[] byteOrderMark) {
 
@@ -41,9 +45,17 @@ record ParsedFb2(
         Objects.requireNonNull(sourceName, "sourceName");
         Objects.requireNonNull(charset, "charset");
         Objects.requireNonNull(bodiesByHandleId, "bodiesByHandleId");
+        Objects.requireNonNull(auxiliarySlotsByHandleId, "auxiliarySlotsByHandleId");
         Objects.requireNonNull(byteOrderMark, "byteOrderMark");
         bodiesByHandleId = Map.copyOf(bodiesByHandleId);
+        auxiliarySlotsByHandleId = Map.copyOf(auxiliarySlotsByHandleId);
         byteOrderMark = byteOrderMark.clone();
+    }
+
+    AuxiliarySlots slotsOf(Unit auxiliaryUnit) {
+        return Objects.requireNonNull(
+                auxiliarySlotsByHandleId.get(auxiliaryUnit.skeleton().opaqueId()),
+                "No auxiliary slot table registered for the auxiliary unit");
     }
 
     @Override

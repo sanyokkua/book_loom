@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jspecify.annotations.Nullable;
@@ -24,6 +25,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.detect.CharsetLadder;
+import ua.bookloom.document.model.AuxiliarySlots;
 import ua.bookloom.document.model.AuxiliaryUnit;
 import ua.bookloom.document.model.BlockSegmentWalker;
 import ua.bookloom.document.model.CorruptContainerException;
@@ -48,6 +50,7 @@ import ua.bookloom.util.hash.HashUtil;
  * <p>Throws rather than returning a {@code Result}, matching the EPUB reader: {@code DocumentService} is the port
  * boundary that classifies these into the typed envelope.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class Fb2Reader {
 
@@ -159,6 +162,7 @@ public final class Fb2Reader {
                         resolution.charset(),
                         declaredEncodingName,
                         units.bodiesByHandleId(),
+                        units.auxiliarySlotsByHandleId(),
                         hasCrLf(source.bytes()),
                         Arrays.copyOf(source.bytes(), resolution.bomLength())));
         return new Document(
@@ -207,9 +211,14 @@ public final class Fb2Reader {
         if (units.isEmpty()) {
             throw new CorruptContainerException("This FictionBook document declares no body");
         }
-        // Empty until the FB2 slots are read; the unit is produced now so every book has one at the same place.
-        units.add(AuxiliaryUnit.empty(sourceName, units.size()));
-        return new UnitsResult(units, bodies);
+        final AuxiliarySlots.Collected auxiliary = Fb2Auxiliary.collect(tree.getRootElement(), sourceName);
+        final String auxiliaryHandleId = UUID.randomUUID().toString();
+        units.add(AuxiliaryUnit.of(sourceName, units.size(), auxiliaryHandleId, auxiliary.segments()));
+        log.debug(
+                "FB2 auxiliary unit href={} segments={}",
+                sourceName,
+                auxiliary.segments().size());
+        return new UnitsResult(units, bodies, Map.of(auxiliaryHandleId, auxiliary.slots()));
     }
 
     private static void addUnit(
@@ -229,5 +238,8 @@ public final class Fb2Reader {
             String name,
             @org.jspecify.annotations.Nullable String zipMemberName) {}
 
-    private record UnitsResult(List<Unit> units, Map<String, Element> bodiesByHandleId) {}
+    private record UnitsResult(
+            List<Unit> units,
+            Map<String, Element> bodiesByHandleId,
+            Map<String, AuxiliarySlots> auxiliarySlotsByHandleId) {}
 }

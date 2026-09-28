@@ -16,6 +16,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.model.AltImages;
 import ua.bookloom.document.model.AuxiliarySlots;
+import ua.bookloom.document.model.ElementPaths;
 import ua.bookloom.document.model.Jdom2TreeNode;
 import ua.bookloom.document.model.JsoupTreeNode;
 import ua.bookloom.document.model.RawEntry;

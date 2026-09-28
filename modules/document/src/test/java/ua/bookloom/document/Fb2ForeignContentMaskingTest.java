@@ -125,6 +125,7 @@ class Fb2ForeignContentMaskingTest {
 
     private static List<Segment> segmentsOf(Document document) {
         return document.units().stream()
+                .filter(unit -> !unit.isAuxiliary())
                 .flatMap(unit -> unit.segments().stream())
                 .toList();
     }
