@@ -13,8 +13,9 @@ import org.jspecify.annotations.Nullable;
  * @param format the format this document was parsed from and will be exported back to (ADR-0004, DD-30 — export
  *     is same-format-only)
  * @param declaredLang the source language the book itself declares, or {@code null} when it declares none
- * @param detectedSourceLang the source language detected from content, or {@code null}; present in the shape but
- *     never populated by this change — {@code add-metadata-units-and-language-detection} owns detection
+ * @param detectedSourceLang the language declared by more than half of the EPUB content documents that declare
+ *     one, or {@code null} when there is no such majority or the format carries no per-document declaration to
+ *     read (FB2, Markdown, TXT)
  * @param charset the character encoding this document was read with and is written back in, or {@code null} for a
  *     container format that has no document-level encoding — an EPUB's spine documents each declare their own, so
  *     the container as a whole has no answer to give

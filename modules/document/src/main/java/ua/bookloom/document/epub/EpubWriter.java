@@ -13,14 +13,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
@@ -29,6 +32,7 @@ import ua.bookloom.document.model.DocumentNotOpenException;
 import ua.bookloom.document.model.JsoupTreeNode;
 import ua.bookloom.document.model.RawEntry;
 import ua.bookloom.document.model.SkeletonAnchors;
+import ua.bookloom.util.lang.LanguageTags;
 
 /**
  * Reassembles an EPUB previously opened by {@link EpubReader} and repackages it — the write side of seam F1 for
@@ -39,18 +43,26 @@ import ua.bookloom.document.model.SkeletonAnchors;
  * <p>Throws rather than returning a {@code Result}, matching {@link EpubReader}: a later change's
  * {@code DocumentService} is the port boundary that catches these and builds the typed envelope.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class EpubWriter {
 
     private static final String MIMETYPE_ENTRY_NAME = "mimetype";
     private static final String MIMETYPE_CONTENT = "application/epub+zip";
     private static final Namespace OPF_NS = Namespace.getNamespace("http://www.idpf.org/2007/opf");
-    private static final Namespace DC_NS = Namespace.getNamespace("http://purl.org/dc/elements/1.1/");
+    // A prefixed namespace, not Namespace.getNamespace(uri) alone (which chooses no-prefix/default): an appended
+    // <language> element must serialize as <dc:language>, not <language xmlns="…">, however Namespace.equals
+    // (URI-only) still matches an existing dc:-prefixed element when reading (task 4.6, the reported bug).
+    private static final Namespace DC_NS = Namespace.getNamespace("dc", "http://purl.org/dc/elements/1.1/");
+    private static final String LANGUAGE_ELEMENT_NAME = "language";
+    private static final String LEGACY_DC_METADATA_ELEMENT_NAME = "dc-metadata";
+    private static final String DCTERMS_LANGUAGE_META = "dcterms:language";
 
     private final OpenEpubRegistry registry;
 
     /**
-     * Reassembles {@code document} and writes it to {@code destination} in EPUB, setting the target language.
+     * Reassembles {@code document} and writes it to {@code destination} in EPUB, setting the target language, with
+     * no source language — the writer falls back to the package's own declared language (task 4.6).
      *
      * @param document the document to reassemble, in the state its segments should be written back in
      * @param destination the file to write
@@ -60,6 +72,25 @@ public final class EpubWriter {
      * @throws CorruptContainerException if the OPF has no {@code <metadata>} element to set the language in
      */
     public Path write(Document document, Path destination, String targetLanguage) {
+        Objects.requireNonNull(targetLanguage, "targetLanguage");
+        return write(document, destination, null, targetLanguage);
+    }
+
+    /**
+     * Reassembles {@code document} and writes it to {@code destination} in EPUB, rewriting every language
+     * attribute that carries {@code sourceLanguage} — or, when {@code sourceLanguage} is {@code null}, the
+     * package's own first declared {@code dc:language} — to {@code targetLanguage} (task 4.6, design.md D14 §1).
+     *
+     * @param document the document to reassemble, in the state its segments should be written back in
+     * @param destination the file to write
+     * @param sourceLanguage the language the run translated from, or {@code null} to use the package's declared
+     *     language instead
+     * @param targetLanguage the language to declare in the written book (for example an ISO 639-1 code)
+     * @return {@code destination}
+     * @throws DocumentNotOpenException if {@code document}'s id was never registered by {@link EpubReader#read}
+     * @throws CorruptContainerException if the OPF has no {@code <metadata>} element to set the language in
+     */
+    public Path write(Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
@@ -67,7 +98,7 @@ public final class EpubWriter {
                 registry.find(document.id()).orElseThrow(() -> new DocumentNotOpenException(document.id()));
 
         writeSegmentsBack(document, parsed);
-        setTargetLanguage(parsed.opfDocument(), targetLanguage);
+        rewriteLanguages(parsed, document, sourceLanguage, targetLanguage);
         repackage(parsed, document, destination);
         return destination;
     }
@@ -106,20 +137,136 @@ public final class EpubWriter {
     }
 
     /**
-     * Replaces the first {@code dc:language} in the OPF's metadata with {@code targetLanguage}, adding one when
-     * none is present, and leaves any further {@code dc:language} entries untouched (task 3.4, FR-DOC-EPUB-6).
+     * Replaces the first {@code dc:language} in the OPF's metadata with {@code targetLanguage} — found directly
+     * under {@code metadata} or, failing that, nested inside a legacy {@code dc-metadata} wrapper — adding one
+     * (with its {@code dc:} prefix) when none is present anywhere, then rewrites every other language-carrying
+     * attribute the spec names wherever its value equals the effective source language (task 4.6, design.md D14
+     * §1): the {@code dcterms:language} meta, the package's own {@code xml:lang}, and each XHTML spine content
+     * document's {@code html}/{@code body} {@code xml:lang}/{@code lang}. The navigation document is out of this
+     * task's scope (task 6.3 continues it). The effective source language is {@code sourceLanguage} when given,
+     * else the package's own {@code dc:language} value read <strong>before</strong> the replacement above.
      */
-    private static void setTargetLanguage(org.jdom2.Document opfDocument, String targetLanguage) {
+    private static void rewriteLanguages(
+            ParsedEpub parsed, Document document, @Nullable String sourceLanguage, String targetLanguage) {
+        final org.jdom2.Document opfDocument = parsed.opfDocument();
         final Element metadata = opfDocument.getRootElement().getChild("metadata", OPF_NS);
         if (metadata == null) {
             throw new CorruptContainerException("OPF has no <metadata> element");
         }
-        final List<Element> languages = metadata.getChildren("language", DC_NS);
-        if (languages.isEmpty()) {
-            metadata.addContent(new Element("language", DC_NS).setText(targetLanguage));
-        } else {
-            languages.get(0).setText(targetLanguage);
+        final Optional<Element> languageElement = findLanguageElement(metadata);
+        final String declaredLanguage = languageElement.map(Element::getText).orElse(null);
+        final String effectiveSource = sourceLanguage != null ? sourceLanguage : declaredLanguage;
+        log.debug(
+                "Rewriting EPUB languages passedSource={} declaredSource={} effectiveSource={} target={}",
+                sourceLanguage,
+                declaredLanguage,
+                effectiveSource,
+                targetLanguage);
+
+        replaceOrAppendLanguageElement(metadata, languageElement, targetLanguage);
+        rewriteDctermsLanguageMeta(metadata, effectiveSource, targetLanguage);
+        rewritePackageLangAttribute(opfDocument.getRootElement(), effectiveSource, targetLanguage);
+        rewriteContentDocumentLanguages(parsed, document, effectiveSource, targetLanguage);
+    }
+
+    private static Optional<Element> findLanguageElement(Element metadata) {
+        final List<Element> direct = metadata.getChildren(LANGUAGE_ELEMENT_NAME, DC_NS);
+        if (!direct.isEmpty()) {
+            return Optional.of(direct.get(0));
         }
+        for (final Element child : metadata.getChildren()) {
+            if (LEGACY_DC_METADATA_ELEMENT_NAME.equals(child.getName())) {
+                final List<Element> nested = child.getChildren(LANGUAGE_ELEMENT_NAME, DC_NS);
+                if (!nested.isEmpty()) {
+                    return Optional.of(nested.get(0));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static void replaceOrAppendLanguageElement(
+            Element metadata, Optional<Element> languageElement, String targetLanguage) {
+        if (languageElement.isPresent()) {
+            languageElement.get().setText(targetLanguage);
+            log.debug("Replaced existing dc:language nested={}", isNestedInLegacyWrapper(languageElement.get()));
+            return;
+        }
+        metadata.addContent(new Element(LANGUAGE_ELEMENT_NAME, DC_NS).setText(targetLanguage));
+        log.debug("Appended a missing dc:language element target={}", targetLanguage);
+    }
+
+    private static boolean isNestedInLegacyWrapper(Element languageElement) {
+        final Element parent = languageElement.getParentElement();
+        return parent != null && LEGACY_DC_METADATA_ELEMENT_NAME.equals(parent.getName());
+    }
+
+    private static void rewriteDctermsLanguageMeta(Element metadata, @Nullable String effectiveSource, String target) {
+        for (final Element meta : metadata.getChildren("meta", OPF_NS)) {
+            if (DCTERMS_LANGUAGE_META.equals(meta.getAttributeValue("property"))
+                    && sameLanguage(effectiveSource, meta.getText())) {
+                log.debug("Rewrote dcterms:language meta from={} to={}", meta.getText(), target);
+                meta.setText(target);
+            }
+        }
+    }
+
+    private static void rewritePackageLangAttribute(
+            Element packageElement, @Nullable String effectiveSource, String target) {
+        final org.jdom2.Attribute langAttribute = packageElement.getAttribute("lang", Namespace.XML_NAMESPACE);
+        if (langAttribute != null && sameLanguage(effectiveSource, langAttribute.getValue())) {
+            log.debug("Rewrote package xml:lang from={} to={}", langAttribute.getValue(), target);
+            langAttribute.setValue(target);
+        }
+    }
+
+    private static void rewriteContentDocumentLanguages(
+            ParsedEpub parsed, Document document, @Nullable String effectiveSource, String target) {
+        for (final Unit unit : document.units()) {
+            final org.jsoup.nodes.Document tree = treeFor(parsed, unit);
+            final org.jsoup.nodes.Element html = tree.selectFirst("html");
+            if (html == null) {
+                continue;
+            }
+            rewriteJsoupLangAttributes(html, effectiveSource, target, "html");
+            rewriteJsoupLangAttributes(tree.body(), effectiveSource, target, "body");
+        }
+    }
+
+    private static void rewriteJsoupLangAttributes(
+            org.jsoup.nodes.Element element, @Nullable String effectiveSource, String target, String elementName) {
+        rewriteJsoupAttribute(element, "xml:lang", effectiveSource, target, elementName);
+        rewriteJsoupAttribute(element, "lang", effectiveSource, target, elementName);
+    }
+
+    private static void rewriteJsoupAttribute(
+            org.jsoup.nodes.Element element,
+            String attributeName,
+            @Nullable String effectiveSource,
+            String target,
+            String elementName) {
+        if (element.hasAttr(attributeName) && sameLanguage(effectiveSource, element.attr(attributeName))) {
+            log.debug("Rewrote {} {} from={} to={}", elementName, attributeName, element.attr(attributeName), target);
+            element.attr(attributeName, target);
+        }
+    }
+
+    /**
+     * Compares a language value against the effective source language after {@link LanguageTags#normalize}, so
+     * {@code en-US} and {@code en} match; falls back to a direct case-insensitive comparison of the raw values when
+     * either side names no catalogued language (e.g. {@code la}), so two uncatalogued tags are never spuriously
+     * treated as equal to each other or to the source merely because both fail to normalize.
+     */
+    private static boolean sameLanguage(@Nullable String effectiveSource, @Nullable String candidate) {
+        if (effectiveSource == null || candidate == null) {
+            return false;
+        }
+        final Optional<String> normalizedSource = LanguageTags.normalize(effectiveSource);
+        final Optional<String> normalizedCandidate = LanguageTags.normalize(candidate);
+        if (normalizedSource.isPresent() && normalizedCandidate.isPresent()) {
+            return normalizedSource.get().equals(normalizedCandidate.get());
+        }
+        return effectiveSource.equalsIgnoreCase(candidate);
     }
 
     /**

@@ -111,6 +111,14 @@ class TxtRoundTripTest {
         assertThat(segmentsOf(document)).hasSize(2);
     }
 
+    // TXT carries no notion of a declared language at all, so no segment ever records one.
+    @Test
+    void read_anyTxtSegment_recordsNoDeclaredLanguage() {
+        assertThat(segmentsOf(openPrimary()))
+                .extracting(Segment::declaredLanguage)
+                .containsOnlyNulls();
+    }
+
     // a plain-text file is one unit named for the file, with the plain-text media type.
     @Test
     void read_plainTextFile_yieldsOneUnitNamedForTheFile() {

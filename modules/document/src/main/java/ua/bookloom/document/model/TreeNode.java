@@ -88,4 +88,15 @@ public interface TreeNode {
      * @throws IllegalStateException if this node is not an element
      */
     String closeMarkup();
+
+    /**
+     * This element's declared value for {@code qualifiedName}, exactly as written — never normalized against any
+     * catalogue. Answers {@code "xml:lang"} from the XML namespace, as JDOM2 requires, and a plain {@code "lang"}
+     * as an ordinary attribute (design.md D11); a non-element node has no attribute to read.
+     *
+     * @param qualifiedName the attribute's qualified name, e.g. {@code "xml:lang"} or {@code "lang"}
+     * @return the declared value, or {@code null} when this node carries no such attribute or is not an element
+     */
+    @Nullable
+    String attribute(String qualifiedName);
 }

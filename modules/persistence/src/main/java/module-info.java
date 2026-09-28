@@ -17,9 +17,12 @@ module ua.bookloom.persistence {
     requires ua.bookloom.util;
     requires java.sql;
     requires com.google.guice;
+    requires org.slf4j;
 
     exports ua.bookloom.persistence;
 
     opens ua.bookloom.persistence to
+            com.google.guice;
+    opens ua.bookloom.persistence.memory to
             com.google.guice;
 }

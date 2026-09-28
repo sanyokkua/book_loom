@@ -204,6 +204,10 @@ class EpubWriterTest {
         final Path output = new EpubWriter(registry).write(document, tempDir.resolve("out.epub"), "uk");
 
         assertThat(dcLanguagesOf(output)).containsExactly("uk");
+        // The reported bug: an appended element serialized with no dc: prefix at all
+        // (<language xmlns="…">) — asserted on the raw bytes because OpfParser matches by namespace URI alone
+        // and would report success even with the wrong prefix.
+        assertThat(rawOpfTextOf(output)).contains("<dc:language>uk</dc:language>");
     }
 
     // writing back an earlier segment does not invalidate a later segment's anchor: no anchor is
@@ -297,6 +301,10 @@ class EpubWriterTest {
     private static List<String> dcLanguagesOf(Path zip) {
         final byte[] opfBytes = contentOf(zip, "OEBPS/content.opf");
         return OpfParser.parse(opfBytes, "OEBPS/content.opf").dcLanguages();
+    }
+
+    private static String rawOpfTextOf(Path zip) {
+        return new String(contentOf(zip, "OEBPS/content.opf"), StandardCharsets.UTF_8);
     }
 
     private static List<String> paragraphTextsOf(Path zip) {

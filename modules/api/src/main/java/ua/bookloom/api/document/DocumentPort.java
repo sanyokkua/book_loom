@@ -1,6 +1,7 @@
 package ua.bookloom.api.document;
 
 import java.nio.file.Path;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 
 /**
@@ -32,6 +33,25 @@ public interface DocumentPort {
      * @return the path written, or a failed result
      */
     Result<Path> write(Document document, Path destination, String targetLanguage);
+
+    /**
+     * Reassembles {@code document} as {@link #write(Document, Path, String)} does, but rewrites a document's
+     * source-language metadata and attributes only where they carry {@code sourceLanguage} rather than the target
+     * writer's default of the package's own declared language — the export job's language-aware overload (design.md
+     * D13). The default implementation ignores {@code sourceLanguage} and delegates to the three-argument method,
+     * so an implementor written before this overload existed keeps compiling and behaves exactly as before.
+     *
+     * @param document the document to reassemble, in the state its segments should be written back in
+     * @param destination the file to write
+     * @param sourceLanguage the language the run translated from, or {@code null} to fall back to the writer's own
+     *     reading of the package's declared language
+     * @param targetLanguage the language to declare in the written book (for example an ISO 639-1 code)
+     * @return the path written, or a failed result
+     */
+    default Result<Path> write(
+            Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
+        return write(document, destination, targetLanguage);
+    }
 
     /**
      * Releases the parsed state retained for {@code document}.

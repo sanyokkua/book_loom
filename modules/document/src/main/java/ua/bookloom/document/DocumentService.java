@@ -29,6 +29,7 @@ import ua.bookloom.document.md.MarkdownWriter;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DocumentNotOpenException;
 import ua.bookloom.document.model.DrmRefusedException;
+import ua.bookloom.document.model.FormatResolver;
 import ua.bookloom.document.model.MalformedFragmentException;
 import ua.bookloom.document.model.XmlCharacters;
 import ua.bookloom.document.txt.TxtReader;
@@ -112,12 +113,19 @@ public final class DocumentService implements DocumentPort {
 
     @Override
     public Result<Path> write(Document document, Path destination, String targetLanguage) {
+        Objects.requireNonNull(targetLanguage, "targetLanguage");
+        return write(document, destination, null, targetLanguage);
+    }
+
+    @Override
+    public Result<Path> write(
+            Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
-        logWriteEntry(document, destination, targetLanguage);
+        logWriteEntry(document, destination, sourceLanguage, targetLanguage);
         try {
-            final Path written = writeAs(document, destination, targetLanguage);
+            final Path written = writeAs(document, destination, sourceLanguage, targetLanguage);
             log.debug("Wrote document id={} format={} outcome=success", document.id(), document.format());
             return Result.ok(written);
         } catch (DocumentNotOpenException e) {
@@ -139,12 +147,15 @@ public final class DocumentService implements DocumentPort {
         }
     }
 
-    private void logWriteEntry(Document document, Path destination, String targetLanguage) {
+    private void logWriteEntry(
+            Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
         log.debug(
-                "Writing document id={} format={} destination={} targetLanguage={} translatedSegments={}",
+                "Writing document id={} format={} destination={} sourceLanguage={} targetLanguage={}"
+                        + " translatedSegments={}",
                 document.id(),
                 document.format(),
                 destination,
+                sourceLanguage,
                 targetLanguage,
                 translatedSegmentCount(document));
     }
@@ -173,9 +184,9 @@ public final class DocumentService implements DocumentPort {
         };
     }
 
-    private Path writeAs(Document document, Path destination, String targetLanguage) {
+    private Path writeAs(Document document, Path destination, @Nullable String sourceLanguage, String targetLanguage) {
         return switch (document.format()) {
-            case EPUB -> epubWriter.write(document, destination, targetLanguage);
+            case EPUB -> epubWriter.write(document, destination, sourceLanguage, targetLanguage);
             case FB2 -> fb2Writer.write(document, destination, targetLanguage);
             case MARKDOWN -> markdownWriter.write(document, destination, targetLanguage);
             case TXT -> txtWriter.write(document, destination, targetLanguage);

@@ -53,4 +53,6 @@ module ua.bookloom.document {
             com.google.guice;
     opens ua.bookloom.document.txt to
             com.google.guice;
+    opens ua.bookloom.document.inspect to
+            com.google.guice;
 }

@@ -161,6 +161,29 @@ class Fb2ReaderTest {
         assertThat(document.metadata()).containsEntry("author", "Іван Котляревський");
     }
 
+    // FB2 has no per-document content declaration to compute a majority from, so detectedSourceLang
+    // stays null however the title-info declares its own language.
+    @Test
+    void read_fictionBookFile_reportsNoDetectedSourceLang() {
+        assertThat(readPrimary().detectedSourceLang()).isNull();
+    }
+
+    // WHEN a paragraph declares its own xml:lang, THEN its segment carries that declaration.
+    @Test
+    void read_paragraphDeclaringXmlLang_recordsItAsTheSegmentsDeclaredLanguage() {
+        final String withForeignParagraph =
+                Fb2Fixtures.PRIMARY_XML.replace("<p>Еней був парубок моторний.</p>", "<p xml:lang=\"de\">Hallo.</p>");
+        final Path file =
+                Fb2Fixtures.writeFb2(tempDir.resolve("book.fb2"), withForeignParagraph, Fb2Fixtures.WINDOWS_1251);
+
+        final Document document = new Fb2Reader(new OpenFb2Registry()).read(file);
+
+        assertThat(segmentsOf(document))
+                .filteredOn(s -> "Hallo.".equals(s.sourceInner()))
+                .extracting(Segment::declaredLanguage)
+                .containsExactly("de");
+    }
+
     // WHEN title-info declares no language, THEN the document records none rather than
     // inventing one, because absence is what a later detection step has to be able to see.
     @Test

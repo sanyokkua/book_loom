@@ -1,4 +1,4 @@
-package ua.bookloom.document;
+package ua.bookloom.document.model;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -6,10 +6,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.document.model.CorruptContainerException;
+import ua.bookloom.api.document.BookInspector;
 
 /**
  * Resolves a book's format from its file-name extension and confirms that resolution against its leading bytes.
@@ -27,15 +28,20 @@ import ua.bookloom.document.model.CorruptContainerException;
  * <p>The awkward inputs are real, not hypothetical: a downloaded book can arrive as a {@code .txt.zip} bundle
  * carrying images and shortcuts alongside the text, or as a <em>directory</em> whose name ends in {@code .fb2}.
  * Each is refused with its own reason before any parser runs.
+ *
+ * <p>Public in a package this module does not export (task 4.2): the class is visible to every package inside
+ * {@code :document} — including {@code ua.bookloom.document.inspect} and the format packages, which need
+ * {@link #probe} without opening the whole book — while staying invisible outside the module, since
+ * {@code ua.bookloom.document.model} is never {@code exports}ed.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs,
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class FormatResolver {
+public final class FormatResolver {
 
-    /** A zip archive's local-file-header signature, {@code PK}. */
+    /** A zip archive's local-file-header signature, {@code PK}. */
     private static final byte[] ZIP_MAGIC = {'P', 'K', 3, 4};
 
     private static final int PROLOG_PROBE_BYTES = 1024;
@@ -49,7 +55,7 @@ final class FormatResolver {
      * @throws CorruptContainerException if the path is not a regular file, its extension names no supported
      *     format, or its leading bytes contradict the format its extension names
      */
-    static BookFormat resolve(Path source) {
+    public static BookFormat resolve(Path source) {
         Objects.requireNonNull(source, "source");
         refuseUnlessRegularFile(source);
         final String fileName = source.getFileName().toString();
@@ -58,6 +64,22 @@ final class FormatResolver {
                         () -> new CorruptContainerException("This file type is not one this application can open"));
         confirmAgainstContent(source, fileName, candidate);
         return candidate;
+    }
+
+    /**
+     * Resolves {@code source}'s format without throwing — the non-throwing counterpart {@link BookInspector}
+     * inspection needs, since a resolution failure there is a normal {@code UNSUPPORTED} verdict rather than a
+     * fault (task 4.2).
+     *
+     * @param source the file to inspect
+     * @return the resolved format, or empty when {@link #resolve} would have refused it
+     */
+    public static Optional<BookFormat> probe(Path source) {
+        try {
+            return Optional.of(resolve(source));
+        } catch (CorruptContainerException unresolved) {
+            return Optional.empty();
+        }
     }
 
     /**

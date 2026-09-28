@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jdom2.Document;
@@ -45,7 +46,11 @@ final class OpfParser {
                 readFirstText(root, "creator"),
                 List.copyOf(manifest.values()),
                 spine,
-                doc);
+                doc,
+                root.getAttributeValue("version"),
+                coverMetaContentOf(root),
+                guideReferencesOf(root),
+                spineTocOf(root));
     }
 
     private static Document parseXml(byte[] content) {
@@ -75,7 +80,67 @@ final class OpfParser {
             throw new CorruptContainerException("OPF <manifest> item is missing id or href");
         }
         final String mediaType = item.getAttributeValue("media-type");
-        items.put(id, new ManifestItem(href, mediaType == null ? DEFAULT_MEDIA_TYPE : mediaType));
+        items.put(
+                id,
+                new ManifestItem(
+                        id,
+                        href,
+                        mediaType == null ? DEFAULT_MEDIA_TYPE : mediaType,
+                        propertiesOf(item.getAttributeValue("properties"))));
+    }
+
+    /**
+     * Splits a manifest item's {@code properties} attribute on whitespace — {@code "nav scripted"} names two
+     * properties, {@code "cover-image"} names one, and a missing or blank attribute names none (task 4.2).
+     */
+    private static Set<String> propertiesOf(@Nullable String rawProperties) {
+        if (rawProperties == null || rawProperties.isBlank()) {
+            return Set.of();
+        }
+        return Set.of(rawProperties.trim().split("\\s+"));
+    }
+
+    /**
+     * The EPUB 2 {@code <meta name="cover" content="…">} element's {@code content} value — a manifest id or, in
+     * some packages, an href directly ({@link EpubInspection}'s second cover rule tries both, task 4.3).
+     */
+    private static @Nullable String coverMetaContentOf(Element root) {
+        final Element metadata = root.getChild("metadata", OPF_NS);
+        if (metadata == null) {
+            return null;
+        }
+        for (final Element meta : metadata.getChildren("meta", OPF_NS)) {
+            if ("cover".equals(meta.getAttributeValue("name"))) {
+                return meta.getAttributeValue("content");
+            }
+        }
+        return null;
+    }
+
+    private static List<GuideReference> guideReferencesOf(Element root) {
+        final Element guide = root.getChild("guide", OPF_NS);
+        if (guide == null) {
+            return List.of();
+        }
+        final List<GuideReference> references = new ArrayList<>();
+        for (final Element reference : guide.getChildren("reference", OPF_NS)) {
+            addGuideReference(reference, references);
+        }
+        return references;
+    }
+
+    private static void addGuideReference(Element reference, List<GuideReference> references) {
+        final String type = reference.getAttributeValue("type");
+        final String href = reference.getAttributeValue("href");
+        if (type != null && href != null) {
+            references.add(new GuideReference(type, href));
+        }
+    }
+
+    /** The EPUB 2 spine's own {@code toc} attribute — the manifest id of the NCX. */
+    private static @Nullable String spineTocOf(Element root) {
+        final Element spineEl = root.getChild("spine", OPF_NS);
+        return spineEl == null ? null : spineEl.getAttributeValue("toc");
     }
 
     private static List<SpineItem> readSpine(Element root, Map<String, ManifestItem> manifest) {

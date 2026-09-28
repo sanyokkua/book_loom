@@ -13,18 +13,22 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.MetadataKey;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.document.inspect.LanguageEvidenceReader;
 import ua.bookloom.document.model.BlockSegmentWalker;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
 import ua.bookloom.document.model.JsoupTreeNode;
 import ua.bookloom.document.model.RawEntry;
 import ua.bookloom.document.model.TreeDialect;
+import ua.bookloom.document.model.TreeNode;
 import ua.bookloom.document.model.ZipEntryReader;
 import ua.bookloom.util.hash.HashUtil;
 
@@ -74,11 +78,16 @@ public final class EpubReader {
         final String documentId = UUID.randomUUID().toString();
         registry.put(documentId, new ParsedEpub(entries, opfPath, opf.jdomDocument(), unitsResult.jsoupTrees()));
 
+        final String declaredRaw =
+                opf.dcLanguages().isEmpty() ? null : opf.dcLanguages().get(0);
+        final LanguageEvidence evidence =
+                LanguageEvidenceReader.evaluate(declaredRaw, rootDeclarations(unitsResult.jsoupTrees()));
+
         return new Document(
                 documentId,
                 BookFormat.EPUB,
-                opf.dcLanguages().isEmpty() ? null : opf.dcLanguages().get(0),
-                null,
+                declaredRaw,
+                evidence.contentMajority(),
                 // A container format records no document-level encoding and no byte-order-mark flag: each spine
                 // document declares its own charset, so the container as a whole has no answer to give (design.md D5).
                 null,
@@ -168,6 +177,29 @@ public final class EpubReader {
         final Element body = doc.body();
         final List<Segment> segments = BlockSegmentWalker.walk(JsoupTreeNode.of(body), href, TreeDialect.XHTML);
         units.add(new Unit(href, order, href, item.mediaType(), new SkeletonHandle(handleId), segments));
+    }
+
+    /**
+     * Each spine document's own root-tag declaration — {@code xml:lang}, else {@code lang} — never the whole body:
+     * this reads only the root element, not any content, so filling {@code detectedSourceLang} adds no real work
+     * beyond the parse every spine document already gets for segmentation.
+     */
+    private static List<@Nullable String> rootDeclarations(Map<String, org.jsoup.nodes.Document> jsoupTrees) {
+        final List<@Nullable String> declarations = new ArrayList<>(jsoupTrees.size());
+        for (final org.jsoup.nodes.Document doc : jsoupTrees.values()) {
+            declarations.add(rootDeclaredLanguage(doc));
+        }
+        return declarations;
+    }
+
+    private static @Nullable String rootDeclaredLanguage(org.jsoup.nodes.Document doc) {
+        final Element html = doc.selectFirst("html");
+        if (html == null) {
+            return null;
+        }
+        final TreeNode root = JsoupTreeNode.of(html);
+        final String xmlLang = root.attribute("xml:lang");
+        return xmlLang != null ? xmlLang : root.attribute("lang");
     }
 
     private static Map<String, String> metadata(ParsedOpf opf) {

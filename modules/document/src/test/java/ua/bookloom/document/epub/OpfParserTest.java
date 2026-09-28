@@ -29,6 +29,71 @@ class OpfParserTest {
         assertThat(opf.author()).isEqualTo("A. Author");
     }
 
+    // a manifest item's id and its properties attribute — split on whitespace — are recorded
+    // alongside its href and media type (task 4.2).
+    @Test
+    void parse_manifestItemWithIdAndProperties_keepsIdAndBothProperties() {
+        final ParsedOpf opf = OpfParser.parse(
+                opf(
+                                "<item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\""
+                                        + " properties=\"nav scripted\"/>",
+                                "<itemref idref=\"nav\"/>")
+                        .getBytes(StandardCharsets.UTF_8),
+                OPF_PATH);
+
+        final ManifestItem item = opf.manifestItems().get(0);
+        assertThat(item.id()).isEqualTo("nav");
+        assertThat(item.properties()).containsExactlyInAnyOrder("nav", "scripted");
+    }
+
+    // the package element's own version attribute, the EPUB 2 cover meta, one guide
+    // reference and the spine's toc attribute are all recorded (task 4.2).
+    @Test
+    void parse_packageVersionCoverMetaGuideAndSpineToc_areRecorded() {
+        final String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="bookid">
+                  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                    <dc:title>Test Book</dc:title>
+                    <meta name="cover" content="cover-img"/>
+                  </metadata>
+                  <manifest>
+                    <item id="c01" href="c01.xhtml" media-type="application/xhtml+xml"/>
+                    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+                  </manifest>
+                  <spine toc="ncx">
+                    <itemref idref="c01"/>
+                  </spine>
+                  <guide>
+                    <reference type="cover" href="cover.xhtml"/>
+                  </guide>
+                </package>
+                """;
+
+        final ParsedOpf opf = OpfParser.parse(xml.getBytes(StandardCharsets.UTF_8), OPF_PATH);
+
+        assertThat(opf.version()).isEqualTo("2.0");
+        assertThat(opf.coverMetaContent()).isEqualTo("cover-img");
+        assertThat(opf.guideReferences()).containsExactly(new GuideReference("cover", "cover.xhtml"));
+        assertThat(opf.spineToc()).isEqualTo("ncx");
+    }
+
+    // a package declaring none of the optional cover meta, guide or spine toc reports
+    // them as absent rather than inventing a value.
+    @Test
+    void parse_noCoverMetaGuideOrSpineToc_reportsThemAbsent() {
+        final ParsedOpf opf = OpfParser.parse(
+                opf(
+                                "<item id=\"c01\" href=\"c01.xhtml\" media-type=\"application/xhtml+xml\"/>",
+                                "<itemref idref=\"c01\"/>")
+                        .getBytes(StandardCharsets.UTF_8),
+                OPF_PATH);
+
+        assertThat(opf.coverMetaContent()).isNull();
+        assertThat(opf.guideReferences()).isEmpty();
+        assertThat(opf.spineToc()).isNull();
+    }
+
     @Test
     void parse_manifestItemWithNoMediaType_defaultsToXhtml() {
         final ParsedOpf opf = OpfParser.parse(

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -28,7 +29,15 @@ class DrmAdjudicatorTest {
                 "Author",
                 List.of(items),
                 List.of(new SpineItem("c01", "c01.xhtml", "application/xhtml+xml")),
-                new org.jdom2.Document(new org.jdom2.Element("package")));
+                new org.jdom2.Document(new org.jdom2.Element("package")),
+                "2.0",
+                null,
+                List.of(),
+                null);
+    }
+
+    private static ManifestItem manifestItem(String href, String mediaType) {
+        return new ManifestItem(href, href, mediaType, Set.of());
     }
 
     private static RawEntry encryptionOf(String algorithm, String... cipherUris) {
@@ -65,7 +74,7 @@ class DrmAdjudicatorTest {
                 "urn:example:some-future-obfuscation"
             })
     void adjudicate_fontOnlyManifest_isAllowedWhateverTheAlgorithmIsCalled(String algorithm) {
-        final ParsedOpf opf = opfWith(new ManifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
+        final ParsedOpf opf = opfWith(manifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
 
         assertThatCode(() -> DrmAdjudicator.adjudicate(encryptionOf(algorithm, "OPS/fonts/Charter-Roman.ttf"), opf))
                 .doesNotThrowAnyException();
@@ -83,7 +92,7 @@ class DrmAdjudicatorTest {
                 "application/font-sfnt"
             })
     void adjudicate_fontUnderAnyDeclaredFontMediaType_isAllowed(String mediaType) {
-        final ParsedOpf opf = opfWith(new ManifestItem("fonts/00111.otf", mediaType));
+        final ParsedOpf opf = opfWith(manifestItem("fonts/00111.otf", mediaType));
 
         assertThatCode(() -> DrmAdjudicator.adjudicate(
                         encryptionOf("http://ns.adobe.com/pdf/enc#RC", "OPS/fonts/00111.otf"), opf))
@@ -94,7 +103,7 @@ class DrmAdjudicatorTest {
     // whole book is refused as protected and no part of it is imported.
     @Test
     void adjudicate_contentDocumentEncrypted_isRefused() {
-        final ParsedOpf opf = opfWith(new ManifestItem("chapter01.xhtml", "application/xhtml+xml"));
+        final ParsedOpf opf = opfWith(manifestItem("chapter01.xhtml", "application/xhtml+xml"));
 
         assertThatThrownBy(() -> DrmAdjudicator.adjudicate(
                         encryptionOf("http://www.idpf.org/2008/embedding", "OPS/chapter01.xhtml"), opf))
@@ -106,7 +115,7 @@ class DrmAdjudicatorTest {
     // rather than partially imported, because an unresolvable cipher reference is not something to guess about.
     @Test
     void adjudicate_encryptedResourceMissingFromTheManifest_isRefused() {
-        final ParsedOpf opf = opfWith(new ManifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
+        final ParsedOpf opf = opfWith(manifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
 
         assertThatThrownBy(() -> DrmAdjudicator.adjudicate(
                         encryptionOf("http://www.idpf.org/2008/embedding", "OPS/fonts/ghost.ttf"), opf))
@@ -122,7 +131,7 @@ class DrmAdjudicatorTest {
     // resource relative to a non-root OPF, THEN the two resolve to the same resource and the book is allowed.
     @Test
     void adjudicate_nonRootOpf_resolvesCipherAgainstTheContainerRootAndHrefAgainstTheOpfDirectory() {
-        final ParsedOpf opf = opfWith(new ManifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
+        final ParsedOpf opf = opfWith(manifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
 
         assertThatCode(() -> DrmAdjudicator.adjudicate(
                         encryptionOf("http://www.idpf.org/2008/embedding", "OPS/fonts/Charter-Roman.ttf"), opf))
@@ -132,7 +141,7 @@ class DrmAdjudicatorTest {
     /** Resolving the cipher URI OPF-relatively would produce {@code OPS/OPS/fonts/…} and refuse a clean book. */
     @Test
     void adjudicate_cipherUriResolvedAgainstTheOpfDirectory_wouldNotMatch() {
-        final ParsedOpf opf = opfWith(new ManifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
+        final ParsedOpf opf = opfWith(manifestItem("fonts/Charter-Roman.ttf", "application/vnd.ms-opentype"));
 
         assertThatThrownBy(() -> DrmAdjudicator.adjudicate(
                         encryptionOf("http://www.idpf.org/2008/embedding", "fonts/Charter-Roman.ttf"), opf))
@@ -141,7 +150,7 @@ class DrmAdjudicatorTest {
 
     @Test
     void adjudicate_percentEscapedCipherUri_matchesItsManifestItem() {
-        final ParsedOpf opf = opfWith(new ManifestItem("fonts/Charter Roman.ttf", "application/vnd.ms-opentype"));
+        final ParsedOpf opf = opfWith(manifestItem("fonts/Charter Roman.ttf", "application/vnd.ms-opentype"));
 
         assertThatCode(() -> DrmAdjudicator.adjudicate(
                         encryptionOf("http://www.idpf.org/2008/embedding", "OPS/fonts/Charter%20Roman.ttf"), opf))

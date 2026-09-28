@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 
 /**
@@ -25,6 +26,19 @@ class DocumentModuleTest {
         final DocumentPort port = injector.getInstance(DocumentPort.class);
 
         assertThat(port).isInstanceOf(DocumentService.class);
+    }
+
+    /**
+     * Without this binding, no other module's injector can reach any of group 4's work (task 4.5): a screen or
+     * pipeline service that asks for {@link BookInspector} would fail at injector-build time.
+     */
+    @Test
+    void configure_documentModule_buildsABookInspector() {
+        final Injector injector = Guice.createInjector(new DocumentModule());
+
+        final BookInspector inspector = injector.getInstance(BookInspector.class);
+
+        assertThat(inspector).isInstanceOf(ua.bookloom.document.inspect.BookInspectorService.class);
     }
 
     /**

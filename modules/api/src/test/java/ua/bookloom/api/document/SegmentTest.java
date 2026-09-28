@@ -117,6 +117,15 @@ class SegmentTest {
         assertThat(original.status()).isEqualTo(SegmentStatus.PENDING);
     }
 
+    // WHEN a segment is built through the pre-existing 14-argument constructor every other call
+    // site still uses, THEN it carries no declared language rather than requiring every caller to change.
+    @Test
+    void constructor_legacyFourteenArgumentForm_yieldsNullDeclaredLanguage() {
+        final Segment segment = segment("unit:0", "unit", 0, null, null);
+
+        assertThat(segment.declaredLanguage()).isNull();
+    }
+
     @ParameterizedTest
     @ValueSource(doubles = {-0.1, 1.1})
     void constructor_confidenceOutsideUnitRange_isRejected(double confidence) {

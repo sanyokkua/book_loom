@@ -1,11 +1,15 @@
 package ua.bookloom.document.model;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.NodeAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
@@ -49,6 +53,7 @@ import ua.bookloom.util.hash.HashUtil;
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class BlockSegmentWalker {
 
@@ -79,17 +84,34 @@ public final class BlockSegmentWalker {
         Objects.requireNonNull(unitId, "unitId");
         Objects.requireNonNull(dialect, "dialect");
         final List<Draft> drafts = new ArrayList<>();
-        collect(root, new ArrayList<>(), new ArrayList<>(), drafts, dialect);
-        return finalizeSegments(drafts, unitId);
+        collect(root, new ArrayList<>(), new ArrayList<>(), drafts, dialect, declaredLanguageOf(root));
+        final List<Segment> segments = finalizeSegments(drafts, unitId);
+        logDeclaredLanguageCounts(unitId, segments);
+        return segments;
+    }
+
+    /**
+     * This node's own {@code xml:lang}, else its {@code lang}, exactly as written — the one attribute lookup every
+     * level of the walk uses to decide whether a block inherits its enclosing declaration or overrides it (D11).
+     */
+    private static @Nullable String declaredLanguageOf(TreeNode node) {
+        final String xmlLang = node.attribute("xml:lang");
+        return xmlLang != null ? xmlLang : node.attribute("lang");
     }
 
     /**
      * Descends {@code parent}'s element children, maintaining the root-to-block element-sibling path and the
      * enclosing tag names. Non-element children are stepped over rather than descended into: they carry no
-     * position in the path and cannot contain a block.
+     * position in the path and cannot contain a block. {@code inheritedLanguage} is {@code parent}'s own resolved
+     * declaration — each child either overrides it with its own or inherits it unchanged.
      */
     private static void collect(
-            TreeNode parent, List<Integer> path, List<String> ancestors, List<Draft> drafts, TreeDialect dialect) {
+            TreeNode parent,
+            List<Integer> path,
+            List<String> ancestors,
+            List<Draft> drafts,
+            TreeDialect dialect,
+            @Nullable String inheritedLanguage) {
         int elementIndex = 0;
         for (final TreeNode child : parent.childNodes()) {
             final String tag = child.tagName();
@@ -105,7 +127,15 @@ public final class BlockSegmentWalker {
                 continue;
             }
             path.add(index);
-            descendOrEmit(child, tag, path, ancestors, drafts, dialect);
+            final String childLanguage = declaredLanguageOf(child);
+            descendOrEmit(
+                    child,
+                    tag,
+                    path,
+                    ancestors,
+                    drafts,
+                    dialect,
+                    childLanguage != null ? childLanguage : inheritedLanguage);
             path.removeLast();
         }
     }
@@ -116,13 +146,14 @@ public final class BlockSegmentWalker {
             List<Integer> path,
             List<String> ancestors,
             List<Draft> drafts,
-            TreeDialect dialect) {
+            TreeDialect dialect,
+            @Nullable String declaredLanguage) {
         if (ownsDirectText(block)) {
-            emitRuns(block, SegmentKinds.of(tag, ancestors), path, drafts, dialect);
+            emitRuns(block, SegmentKinds.of(tag, ancestors), path, drafts, dialect, declaredLanguage);
             return;
         }
         ancestors.add(tag);
-        collect(block, path, ancestors, drafts, dialect);
+        collect(block, path, ancestors, drafts, dialect, declaredLanguage);
         ancestors.removeLast();
     }
 
@@ -161,7 +192,12 @@ public final class BlockSegmentWalker {
      * shape one level up, at the block, and cannot see a run.
      */
     private static void emitRuns(
-            TreeNode block, SegmentKind kind, List<Integer> path, List<Draft> drafts, TreeDialect dialect) {
+            TreeNode block,
+            SegmentKind kind,
+            List<Integer> path,
+            List<Draft> drafts,
+            TreeDialect dialect,
+            @Nullable String declaredLanguage) {
         final List<TreeNode> children = block.childNodes();
         for (final BlockRuns.Run run : BlockRuns.split(block)) {
             final List<TreeNode> runNodes = children.subList(run.fromInclusive(), run.toExclusive());
@@ -169,7 +205,12 @@ public final class BlockSegmentWalker {
                 continue;
             }
             drafts.add(new Draft(
-                    kind, List.copyOf(path), run.index(), markupOf(runNodes), TreeMasker.mask(runNodes, dialect)));
+                    kind,
+                    List.copyOf(path),
+                    run.index(),
+                    markupOf(runNodes),
+                    TreeMasker.mask(runNodes, dialect),
+                    declaredLanguage));
         }
     }
 
@@ -210,9 +251,28 @@ public final class BlockSegmentWalker {
                 new NodeAnchor(draft.nodePath(), draft.runIndex()),
                 null,
                 SegmentStatus.PENDING,
-                INITIAL_CONFIDENCE);
+                INITIAL_CONFIDENCE,
+                draft.declaredLanguage());
+    }
+
+    /** DEBUG-logs, per unit, how many segments declared each language — codes and counts, never text. */
+    private static void logDeclaredLanguageCounts(String unitId, List<Segment> segments) {
+        if (!log.isDebugEnabled()) {
+            return;
+        }
+        final Map<String, Integer> counts = new LinkedHashMap<>();
+        for (final Segment segment : segments) {
+            final String declared = segment.declaredLanguage() == null ? "(none)" : segment.declaredLanguage();
+            counts.merge(declared, 1, Integer::sum);
+        }
+        log.debug("unit {}: segment count by declared language {}", unitId, counts);
     }
 
     private record Draft(
-            SegmentKind kind, List<Integer> nodePath, int runIndex, String sourceInner, MaskedContent masked) {}
+            SegmentKind kind,
+            List<Integer> nodePath,
+            int runIndex,
+            String sourceInner,
+            MaskedContent masked,
+            @Nullable String declaredLanguage) {}
 }

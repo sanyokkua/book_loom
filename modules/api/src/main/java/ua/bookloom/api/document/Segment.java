@@ -40,6 +40,10 @@ import org.jspecify.annotations.Nullable;
  *     later pipeline stages may advance it
  * @param confidence the QA/judge confidence in {@code [0,1]}; parsers produce {@code 0.0} until a quality stage fills
  *     it
+ * @param declaredLanguage the {@code xml:lang} (else {@code lang}) value, as written, of the nearest element that
+ *     encloses this segment's text and lies below the document's root element, the segment's own block included —
+ *     or {@code null} when no such element declares one, or the source format carries no such notion (Markdown,
+ *     TXT); a declaration, never compared against any other language while parsing
  */
 public record Segment(
         String id,
@@ -55,7 +59,8 @@ public record Segment(
         SkeletonAnchor anchor,
         @Nullable String targetInner,
         SegmentStatus status,
-        double confidence) {
+        double confidence,
+        @Nullable String declaredLanguage) {
 
     private static final double MIN_CONFIDENCE = 0.0;
     private static final double MAX_CONFIDENCE = 1.0;
@@ -85,6 +90,59 @@ public record Segment(
     }
 
     /**
+     * The shape every caller before this change already builds, kept compiling unchanged with no declared language
+     * recorded — Markdown and TXT parsers never carry one, and this is also the shape every test fixture and
+     * pipeline-stage rebuild across the codebase already uses.
+     *
+     * @param id the stable segment id, shaped {@code {unitId}:{ordinal}}
+     * @param unit the owning unit's id
+     * @param order this segment's position within its unit, in document order; never negative
+     * @param kind what block this segment was parsed from
+     * @param sourceInner the block's raw inner content, exactly as parsed
+     * @param masked {@code sourceInner} with every protected span replaced by a {@code ⟦gN⟧} token
+     * @param placeholders the ordered map from each token's bare key form to the exact source fragment it replaced
+     * @param sourceHash the SHA-256 hash over the exact pre-mask {@code sourceInner}
+     * @param prevKey the document-order previous segment's id, or {@code null} at the start of the unit
+     * @param nextKey the document-order next segment's id, or {@code null} at the end of the unit
+     * @param anchor where this segment's source text lives in its unit's immutable skeleton
+     * @param targetInner the translated inner content after unmask, or {@code null} until translated
+     * @param status this segment's position in the status machine
+     * @param confidence the QA/judge confidence in {@code [0,1]}
+     */
+    public Segment(
+            String id,
+            String unit,
+            int order,
+            SegmentKind kind,
+            String sourceInner,
+            String masked,
+            Map<String, String> placeholders,
+            String sourceHash,
+            @Nullable String prevKey,
+            @Nullable String nextKey,
+            SkeletonAnchor anchor,
+            @Nullable String targetInner,
+            SegmentStatus status,
+            double confidence) {
+        this(
+                id,
+                unit,
+                order,
+                kind,
+                sourceInner,
+                masked,
+                placeholders,
+                sourceHash,
+                prevKey,
+                nextKey,
+                anchor,
+                targetInner,
+                status,
+                confidence,
+                null);
+    }
+
+    /**
      * Returns a segment with only its translation decision changed, preserving its source and skeleton identity.
      *
      * @param status the non-null new status
@@ -107,6 +165,7 @@ public record Segment(
                 anchor,
                 targetInner,
                 status,
-                confidence);
+                confidence,
+                declaredLanguage);
     }
 }

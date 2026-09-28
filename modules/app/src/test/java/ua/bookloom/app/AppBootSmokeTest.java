@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.api.FxToolkit;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.IoExecutor;
 import ua.bookloom.util.paths.AppEnvironment;
@@ -117,6 +118,7 @@ class AppBootSmokeTest {
         assertThat(app.injector().getInstance(AppEnvironment.class)).isEqualTo(AppEnvironment.DEV);
         assertThat(app.injector().getInstance(com.google.inject.Key.get(ExecutorService.class, IoExecutor.class)))
                 .isNotNull();
+        assertThat(app.injector().getInstance(SegmentRepository.class)).isNotNull();
         assertThat(app.injector().getInstance(TranslationEngine.class)).isNotNull();
         assertThat(app.injector().getInstance(ChatModelFactory.class)).isNotNull();
     }

@@ -137,6 +137,15 @@ class MarkdownRoundTripTest {
         assertThat(innersOf(document)).contains("Prose one.", "Prose two.");
     }
 
+    // Markdown carries no per-block language notion, so no segment ever records a declared
+    // language, whatever the frontmatter declares.
+    @Test
+    void read_anyMarkdownSegment_recordsNoDeclaredLanguage() {
+        assertThat(segmentsOf(openPrimary()))
+                .extracting(Segment::declaredLanguage)
+                .containsOnlyNulls();
+    }
+
     // the unit's id, href and media type identify a single-unit format.
     @Test
     void read_markdownFile_yieldsOneUnitNamedForTheFile() {

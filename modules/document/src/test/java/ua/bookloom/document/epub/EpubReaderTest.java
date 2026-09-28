@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.model.CorruptContainerException;
 
@@ -230,6 +232,122 @@ class EpubReaderTest {
 
     private static EpubReader newReader() {
         return new EpubReader(new OpenEpubRegistry());
+    }
+
+    // WHEN more than half of an EPUB's content documents declare a language the package does not,
+    // THEN detectedSourceLang carries that content majority.
+    @Test
+    void read_majorityOfContentDocumentsDeclareUkrainian_reportsUkrainianDetectedSourceLang() {
+        final Path epub = tempDir.resolve("book.epub");
+        final EpubZipBuilder builder = new EpubZipBuilder().mimetype().entry("META-INF/container.xml", CONTAINER_XML);
+        final String[] ids = new String[24];
+        for (int i = 0; i < ids.length; i++) {
+            ids[i] = "c" + i;
+            builder.entry("OEBPS/" + ids[i] + ".xhtml", chapterDeclaringHtmlLang("uk"));
+        }
+        builder.entry("OEBPS/content.opf", opfWithSpine(ids)).writeTo(epub);
+
+        assertThat(newReader().read(epub).detectedSourceLang()).isEqualTo("uk");
+    }
+
+    // WHEN a paragraph itself declares xml:lang, THEN its segment carries that declaration.
+    @Test
+    void read_paragraphDeclaringXmlLang_recordsItAsTheSegmentsDeclaredLanguage() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", opfWithSpine("c01"))
+                .entry("OEBPS/c01.xhtml", chapterBody("<p xml:lang=\"fr\">Bonjour, mon ami.</p>"))
+                .writeTo(epub);
+
+        final Segment segment = onlySegment(newReader().read(epub));
+
+        assertThat(segment.declaredLanguage()).isEqualTo("fr");
+    }
+
+    // WHEN a paragraph declares no language itself but its enclosing body does, THEN its segment
+    // inherits the body's declaration.
+    @Test
+    void read_paragraphInsideBodyDeclaringLang_inheritsTheBodysDeclaration() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", opfWithSpine("c01"))
+                .entry("OEBPS/c01.xhtml", """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <html xmlns="http://www.w3.org/1999/xhtml">
+                        <head><title>Chapter</title></head>
+                        <body xml:lang="uk"><p>Привіт.</p></body>
+                        </html>
+                        """)
+                .writeTo(epub);
+
+        final Segment segment = onlySegment(newReader().read(epub));
+
+        assertThat(segment.declaredLanguage()).isEqualTo("uk");
+    }
+
+    // WHEN the only declaration in a document sits on its <html> root, THEN no segment below it
+    // inherits it — the root itself lies above what a segment's declared language may read.
+    @Test
+    void read_onlyHtmlRootDeclaresLang_segmentRecordsNoDeclaredLanguage() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", opfWithSpine("c01"))
+                .entry("OEBPS/c01.xhtml", chapterDeclaringHtmlLang("uk"))
+                .writeTo(epub);
+
+        final Segment segment = onlySegment(newReader().read(epub));
+
+        assertThat(segment.declaredLanguage()).isNull();
+    }
+
+    // WHEN neither a paragraph nor any of its ancestors declares a language, THEN its segment
+    // records none.
+    @Test
+    void read_noAncestorDeclaresLang_segmentRecordsNoDeclaredLanguage() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", opfWithSpine("c01"))
+                .entry("OEBPS/c01.xhtml", chapterBody("<p>Prose.</p>"))
+                .writeTo(epub);
+
+        final Segment segment = onlySegment(newReader().read(epub));
+
+        assertThat(segment.declaredLanguage()).isNull();
+    }
+
+    private static Segment onlySegment(Document document) {
+        final List<Segment> segments =
+                document.units().stream().flatMap(u -> u.segments().stream()).toList();
+        assertThat(segments).hasSize(1);
+        return segments.get(0);
+    }
+
+    private static String chapterDeclaringHtmlLang(String lang) {
+        return """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="%s">
+                <head><title>Chapter</title></head>
+                <body><p>Prose.</p></body>
+                </html>
+                """.formatted(lang);
+    }
+
+    private static String chapterBody(String bodyHtml) {
+        return """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <html xmlns="http://www.w3.org/1999/xhtml">
+                <head><title>Chapter</title></head>
+                <body>%s</body>
+                </html>
+                """.formatted(bodyHtml);
     }
 
     private static String opf(boolean withNcxToc) {

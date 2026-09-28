@@ -1,7 +1,9 @@
 package ua.bookloom.document;
 
 import com.google.inject.AbstractModule;
+import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.document.inspect.BookInspectorService;
 
 /**
  * Guice bindings owned by {@code :document} — the port-to-implementation wiring for document parsing, masking and
@@ -17,5 +19,6 @@ public final class DocumentModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(DocumentPort.class).to(DocumentService.class);
+        bind(BookInspector.class).to(BookInspectorService.class);
     }
 }
