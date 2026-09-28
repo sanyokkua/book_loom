@@ -143,7 +143,7 @@ Each soft check is made **testable** by an explicit threshold. Defaults:
 | untranslated-echo               | similarity(target, source) **≥ 0.90** → fail                                                                                 | `1 − Levenshtein / max(length)` over the NFC-normalized, `toLowerCase(Locale.ROOT)` display texts, with every token removed and whitespace collapsed |
 | repetition-loop                 | any **m-gram (m = 3)** repeated **≥ k = 3** consecutive times → fail                                                          | m/k tunable; guards against decode loops                                                                                        |
 | omission by length ratio        | `len(target)/len(source)` (chars) **outside the per-pair band** → fail                                                        | band is **per script / language-pair** (below), **widened for short segments**                                                  |
-| target-script (gate condition)  | check fires **only** when the source display text is **≥ 20 code points** and the pair's two languages use **different scripts**; fails when fewer than **0.60** of the target's letters sit in the target script | below the floor, or when source and target share a script, the check is skipped (treated as pass) so short/ambiguous fragments are not mis-flagged |
+| target-script (gate condition)  | check fires **only** when the source display text is **≥ 20 code points** and the pair's two languages use **different scripts**; fails when fewer than **0.60** of the target's letters sit in the target script | below the floor, when source and target share a script, when the target has no letters (counted after the keep-original name removal below) or when the target language is not catalogued, the check is skipped (treated as pass) so short/ambiguous fragments are not mis-flagged |
 | glossary compliance             | every locked in-chunk term present in the target per its dictionary rendering                                                | binary per term; margin = fraction of locked terms honoured                                                                     |
 
 **Omission length-ratio bands** (`target/source` char ratio; widen the lower/upper bound outward by ×0.5 / ×2 for
@@ -160,11 +160,11 @@ Each soft check is made **testable** by an explicit threshold. Defaults:
 **Echo floor.** When the source display text holds **fewer than 20 code points**, a failed untranslated-echo check does
 not fail the segment outright — it contributes its `0.0` margin to `confidence` and raises only a `low` finding, so a
 very short fragment (a two-word title, a one-word exclamation) is never blocked on echo alone (`design.md` D8,
-ADR-0038).
+ADR-0038). A source whose display text is empty (a segment that is all tokens) skips the echo and length-ratio checks.
 
 **Keep-original name policy.** Under the "keep original" name policy, every whole-word occurrence of a glossary term is
-removed from **both** the source and target display texts before the target-script share and the untranslated-echo
-similarity are computed — in addition to the protected-span removal already applied to display texts — so a line that
+removed from **both** the source and target display texts before any skip rule is decided and before the
+target-script share, the untranslated-echo similarity and the echo floor are computed — in addition to the protected-span removal already applied to display texts — so a line that
 is mostly kept names is never scored as an echo or a wrong script on their account.
 
 **Refusal phrases.** The refusal hard gate's phrase list is a set of **anchored prefixes** compared
@@ -210,6 +210,9 @@ separate `judgeScore ≥ τ_judge` term in the accept rule (`#tiered-loop`).
 repetition check, `omission` for a failed length-ratio check, `glossary` for a failed glossary-compliance check —
 except the **echo floor** above, where a failed echo under 20 code points contributes only its `0.0` margin and a
 `low` finding without blocking. The blend decides only the close calls that no check failed outright (ADR-0038).
+Every finding also records what raised it — the check (`script`, `echo`, `repetition`, `length`, `glossary`,
+`refusal`, `placeholder`, `locked-term`, `kept-run`) or `judge` — so a review can tell a length-ratio omission from a
+judge's.
 
 ## name-term-dictionary {#name-term-dictionary}
 

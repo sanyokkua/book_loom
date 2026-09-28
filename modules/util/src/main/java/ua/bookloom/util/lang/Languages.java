@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Read-only access to the {@link Language} catalogue for the Book Brief's searchable list and every caller that
@@ -33,5 +34,17 @@ public final class Languages {
     public static Optional<Language> byTag(String tag) {
         Objects.requireNonNull(tag, "tag");
         return all().stream().filter(language -> language.tag().equals(tag)).findFirst();
+    }
+
+    /**
+     * Normalizes a raw tag and looks its script up in one step — the one place every caller that only needs a
+     * language's script (the token estimator, the length band, the quality checks) goes, instead of each keeping
+     * its own normalize-then-lookup copy.
+     *
+     * @param tag the raw tag, possibly {@code null}, blank, or naming no catalogued language
+     * @return the tag's {@link Script}, or empty when {@code tag} normalizes to no catalogued {@link Language}
+     */
+    public static Optional<Script> scriptOf(@Nullable final String tag) {
+        return LanguageTags.normalize(tag).flatMap(Languages::byTag).map(Language::script);
     }
 }

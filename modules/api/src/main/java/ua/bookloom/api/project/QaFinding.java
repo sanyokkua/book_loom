@@ -6,11 +6,15 @@ import java.util.Objects;
  * One quality-gate finding recorded against a segment, for review and repair
  * ({@code specs/quality-gates/spec.md} "Record each segment's findings for review and repair").
  *
- * @param kind the finding's kind (e.g. a hard-gate check name)
+ * @param kind what kind of defect it is — {@code language}, {@code fluency}, {@code omission}, {@code glossary},
+ *     {@code meaning}, {@code markup}, or the type a judge reply names
  * @param severity how serious the finding is
  * @param note a human-readable explanation of the finding
+ * @param raisedBy which check or the judge raised the finding — one of {@code script}, {@code echo},
+ *     {@code repetition}, {@code length}, {@code glossary}, {@code refusal}, {@code placeholder},
+ *     {@code locked-term}, {@code kept-run} or {@code judge}
  */
-public record QaFinding(String kind, Severity severity, String note) {
+public record QaFinding(String kind, Severity severity, String note, String raisedBy) {
 
     /**
      * Validates the invariants a caller is entitled to assume.
@@ -19,5 +23,6 @@ public record QaFinding(String kind, Severity severity, String note) {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(severity, "severity");
         Objects.requireNonNull(note, "note");
+        Objects.requireNonNull(raisedBy, "raisedBy");
     }
 }

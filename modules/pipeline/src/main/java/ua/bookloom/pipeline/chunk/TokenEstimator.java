@@ -4,7 +4,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.qa.LengthBand;
-import ua.bookloom.util.lang.LanguageTags;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 
@@ -47,10 +46,6 @@ public final class TokenEstimator {
     }
 
     static double charsPerToken(@Nullable final String tag) {
-        return LanguageTags.normalize(tag)
-                .flatMap(Languages::byTag)
-                .map(language -> language.script())
-                .orElse(Script.UNKNOWN)
-                .charsPerToken();
+        return Languages.scriptOf(tag).orElse(Script.UNKNOWN).charsPerToken();
     }
 }

@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.qa;
 import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.util.lang.LanguageTags;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 
@@ -31,8 +30,8 @@ public record LengthBand(double lower, double upper) {
      * @return the pair's unwidened band; the widest default when either language is unrecognized
      */
     public static LengthBand forPair(@Nullable final String sourceTag, @Nullable final String targetTag) {
-        final Optional<Script> source = scriptOf(sourceTag);
-        final Optional<Script> target = scriptOf(targetTag);
+        final Optional<Script> source = Languages.scriptOf(sourceTag);
+        final Optional<Script> target = Languages.scriptOf(targetTag);
         if (source.isEmpty() || target.isEmpty()) {
             return OTHER;
         }
@@ -50,10 +49,6 @@ public record LengthBand(double lower, double upper) {
             return LATIN_TO_CJK;
         }
         return CJK.contains(source) && target == Script.LATIN ? CJK_TO_LATIN : OTHER;
-    }
-
-    private static Optional<Script> scriptOf(@Nullable final String tag) {
-        return LanguageTags.normalize(tag).flatMap(Languages::byTag).map(language -> language.script());
     }
 
     /**

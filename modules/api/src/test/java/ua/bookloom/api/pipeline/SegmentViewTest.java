@@ -18,7 +18,7 @@ class SegmentViewTest {
 
     @Test
     void constructor_findingsList_isDefensivelyCopied() {
-        final QaFinding finding = new QaFinding("placeholder", Severity.HIGH, "missing token");
+        final QaFinding finding = new QaFinding("placeholder", Severity.HIGH, "missing token", "placeholder");
         final List<QaFinding> findings = new ArrayList<>(List.of(finding));
 
         final SegmentView view = new SegmentView(

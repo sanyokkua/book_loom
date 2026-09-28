@@ -57,4 +57,20 @@ class LanguagesTest {
     void byTag_unnormalizedTagWithRegion_isEmpty() {
         assertThat(Languages.byTag("en-US")).isEmpty();
     }
+
+    @ParameterizedTest
+    @CsvSource({"uk,CYRILLIC", "EN,LATIN", "en-US,LATIN", "zh-TW,HAN", "ja,JAPANESE"})
+    void scriptOf_catalogedTag_returnsItsScript(String tag, Script expected) {
+        assertThat(Languages.scriptOf(tag)).isPresent().hasValue(expected);
+    }
+
+    @Test
+    void scriptOf_null_isEmpty() {
+        assertThat(Languages.scriptOf(null)).isEmpty();
+    }
+
+    @Test
+    void scriptOf_unrecognizedTag_isEmpty() {
+        assertThat(Languages.scriptOf("xx")).isEmpty();
+    }
 }

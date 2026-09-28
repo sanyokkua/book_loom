@@ -66,7 +66,7 @@ class SegmentRecordTest {
     @Test
     void constructor_findingsListMutatedAfterConstruction_doesNotChangeRecord() {
         final List<QaFinding> findings = new ArrayList<>();
-        findings.add(new QaFinding("tag-mismatch", Severity.HIGH, "note"));
+        findings.add(new QaFinding("tag-mismatch", Severity.HIGH, "note", "placeholder"));
         final SegmentRecord record = new SegmentRecord(
                 "p1",
                 "ch1:0",
@@ -86,7 +86,7 @@ class SegmentRecordTest {
                 false,
                 null);
 
-        findings.add(new QaFinding("other", Severity.LOW, "note2"));
+        findings.add(new QaFinding("other", Severity.LOW, "note2", "judge"));
 
         assertThat(record.findings()).hasSize(1);
     }
