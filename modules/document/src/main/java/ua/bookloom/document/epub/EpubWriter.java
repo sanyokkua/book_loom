@@ -354,7 +354,8 @@ public final class EpubWriter {
      */
     private static byte[] serializeContentDocument(org.jsoup.nodes.Document tree) {
         final org.jsoup.nodes.Document serializable = PreformattedLineFeedRestorer.forSerialization(tree);
-        return serializable.outerHtml().getBytes(tree.outputSettings().charset());
+        return AttributeLineFeedEscaper.outerHtml(serializable)
+                .getBytes(tree.outputSettings().charset());
     }
 
     /**

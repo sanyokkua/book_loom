@@ -65,6 +65,8 @@ public final class EpubCanonicalAssert {
     private static final Pattern SELF_CLOSED_ELEMENT =
             Pattern.compile("<([a-zA-Z][a-zA-Z0-9-]*)\\b((?:\"[^\"]*\"|'[^']*'|[^\"'>])*?)/>");
 
+    private static final Pattern QUOTED_VALUE = Pattern.compile("=\\s*(?:\"[^\"]*\"|'[^']*')");
+
     /**
      * Asserts that {@code output} is canonical-equal to {@code source}: same entry order apart from where the source
      * kept {@code mimetype} (a real book stores it third; the writer rightly moves it first), {@code mimetype} first
@@ -168,11 +170,28 @@ public final class EpubCanonicalAssert {
      * GoldenComparisonMetaTest}).
      */
     private static String canonicalXhtml(byte[] content) {
-        final String normalized = expandSelfClosedNonVoidElement(new String(content, StandardCharsets.UTF_8));
+        final String normalized = normalizeAttributeWhitespace(
+                expandSelfClosedNonVoidElement(new String(content, StandardCharsets.UTF_8)));
         final Document parsed = Jsoup.parse(normalized);
         clearSeenSelfCloseOnNonVoidElements(parsed);
         parsed.outputSettings().prettyPrint(false).syntax(Document.OutputSettings.Syntax.xml);
         return parsed.outerHtml();
+    }
+
+    /**
+     * Turns a raw line feed, carriage return or tab inside a quoted attribute value into a space, as an XML reader
+     * does (a carriage-return-line-feed pair counts once), while leaving a character reference for jsoup to decode
+     * — so a raw line feed and the reference no longer compare equal.
+     */
+    private static String normalizeAttributeWhitespace(String xhtml) {
+        final Matcher matcher = QUOTED_VALUE.matcher(xhtml);
+        final StringBuilder normalized = new StringBuilder();
+        while (matcher.find()) {
+            final String value = matcher.group().replace("\r\n", " ").replaceAll("[\\n\\r\\t]", " ");
+            matcher.appendReplacement(normalized, Matcher.quoteReplacement(value));
+        }
+        matcher.appendTail(normalized);
+        return normalized.toString();
     }
 
     private static String expandSelfClosedNonVoidElement(String xhtml) {
