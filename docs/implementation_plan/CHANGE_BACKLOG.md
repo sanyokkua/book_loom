@@ -263,18 +263,19 @@ segment's target to a marker plus its own source text and so exercises exactly t
 
 | format | behaviour on unrepresentable target text |
 |---|---|
-| TXT | **refuses** — `CorruptContainerException` → `ErrorCode.validation` (`TxtWriter.encode`) |
-| FB2 | **silently switches the whole document to UTF-8** and re-declares the encoding (`Fb2Writer.serialize`) |
-| Markdown | **silently substitutes `?`** and returns success |
-| EPUB | **silently substitutes `?`** — `tree.outerHtml().getBytes(charset)` replaces unmappable characters |
+| TXT | **switches the whole file to UTF-8** (task 5.5; it refused with `CorruptContainerException` → `ErrorCode.validation`) |
+| FB2 | **switches the whole document to UTF-8** and re-declares the encoding (`Fb2Writer.serialize`) |
+| Markdown | **switches the whole file to UTF-8** (task 5.5; it silently substituted `?`) |
+| EPUB | **writes a numeric character reference**, so nothing is lost — jsoup spells a character the charset cannot encode as `&#x…;`, never `?` (`EpubWriterEncodingTest`) |
 
-Four formats, three policies, two of them silent. So this was never "`MarkdownWriter` is missing a guard" — adding
-`TxtWriter`'s guard there would have cemented one of three competing behaviours with no requirement to justify it, and
-left EPUB corrupting silently regardless. It is latent only while `:pipeline` is a stub; it stops being latent the
-moment the first run exports a book whose source charset cannot hold the target language, which for a `windows-1252`
-source translated into Ukrainian is **every single segment**. **Settled by ADR-0029: transcode the whole output
-document to UTF-8 and re-declare the encoding**, uniformly across all four formats, generalising the rule
-FR-DOC-FB2-3 already mandates for FB2. The ADR tabulates the four frozen-spec clauses it deviates from.
+Before this change: four formats, three policies, two of them silent. So this was never "`MarkdownWriter` is missing a guard" — adding
+`TxtWriter`'s guard there would have cemented one of three competing behaviours with no requirement to justify it. It
+is latent only while `:pipeline` is a stub; it stops being latent the moment the first run exports a book whose source
+charset cannot hold the target language, which for a `windows-1252` source translated into Ukrainian is **every single
+segment**. **Settled by ADR-0029: no format refuses and none loses a character** — TXT, Markdown and FB2 write the whole
+document as UTF-8 (FB2 re-declares the encoding; TXT and Markdown cannot declare one, so the byte-order mark stays as the
+source had it), and EPUB, whose content documents can carry a numeric reference, needs no switch. The ADR tabulates the
+frozen-spec clauses it deviates from.
 
 **D2 — the reader accepts EPUBs the writer can never export.** `EpubReader` imposes no `mimetype` requirement;
 `EpubWriter` requires one, because DD-43 mandates mimetype-first-and-STORED on output. `aliceDynamic.epub` has 68
