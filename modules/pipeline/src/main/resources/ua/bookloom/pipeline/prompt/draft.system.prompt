@@ -14,7 +14,7 @@ Rules:
   whitespace. If a task-list marker placeholder begins <Text>, keep it first in the target.
 - Apply the glossary renderings exactly, respecting gender and agreement.
 - Continue the voice and terminology of the preceding translated text; keep names consistent with it.
-- If a passage is deliberately in a language other than {{source}}, keep it verbatim; do not translate it.
+- {{foreignPassageRule}}
 - Follow any extra instruction under [Extra instruction] exactly, without breaking the rules above.
 - Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 

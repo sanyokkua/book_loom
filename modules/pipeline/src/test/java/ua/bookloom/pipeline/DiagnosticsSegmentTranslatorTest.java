@@ -157,7 +157,13 @@ class DiagnosticsSegmentTranslatorTest {
                 documents,
                 model,
                 format,
-                new DraftPromptBuilder(new PromptTemplates(), sourceLanguage, targetLanguage),
+                new DraftPromptBuilder(
+                        new PromptTemplates(),
+                        sourceLanguage,
+                        targetLanguage,
+                        ua.bookloom.pipeline.prompt.StyleSheet.from(
+                                ua.bookloom.api.project.BookBrief.defaults(sourceLanguage)),
+                        ua.bookloom.api.project.ForeignPassagePolicy.KEEP),
                 new DraftReplyParser(new ObjectMapper()));
     }
 

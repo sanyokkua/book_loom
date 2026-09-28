@@ -21,7 +21,7 @@ public enum PromptName {
             "draft",
             0.2,
             0.1,
-            new Slots(Set.of("source", "target", "styleSheet"), Set.of()),
+            new Slots(Set.of("source", "target", "styleSheet", "foreignPassageRule"), Set.of()),
             new Slots(
                     Set.of("source", "target", "tokens", "text"),
                     Set.of("summary", "glossaryTerms", "memoryHint", "precedingTargets"))),

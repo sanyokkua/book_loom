@@ -4,11 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.AlsoTranslate;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.FootnotePolicy;
+import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.UnitPolicy;
 
 /** Verifies the single-segment draft prompt follows the catalog contract. */
 class DraftPromptBuilderTest {
@@ -16,7 +25,7 @@ class DraftPromptBuilderTest {
     // A BCP-47 language pair must reach the model as unambiguous English names plus its raw tags.
     @Test
     void messagesFor_knownLanguages_rendersReadableLanguageDescriptions() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
 
         final var messages = builder.messagesFor(segment("He opened the ⟦g0⟧old⟦g1⟧ door."));
 
@@ -31,7 +40,7 @@ class DraftPromptBuilderTest {
     // An absent source language must tell the model to infer the segment language rather than leave it vague.
     @Test
     void messagesFor_unknownSourceLanguage_instructsModelToInferItFromSegmentText() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), null, "uk");
+        final DraftPromptBuilder builder = builder(null, "uk", BookBrief.defaults(null));
 
         final String system = builder.messagesFor(segment("Hello.")).getFirst().content();
 
@@ -43,7 +52,7 @@ class DraftPromptBuilderTest {
     // A BCP-47 variant must give the model both the English locale description and exact tag.
     @Test
     void messagesFor_variantLanguageTag_rendersEnglishDescriptionAndTag() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "zh-Hant", "uk");
+        final DraftPromptBuilder builder = builder("zh-Hant", "uk", BookBrief.defaults("zh-Hant"));
 
         final String system = builder.messagesFor(segment("你好。")).getFirst().content();
 
@@ -53,7 +62,7 @@ class DraftPromptBuilderTest {
     // An unregistered BCP-47 tag must stay explicit instead of being mistaken for a language name.
     @Test
     void messagesFor_unregisteredLanguageTag_rendersQuotedTagFallback() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "qaa");
+        final DraftPromptBuilder builder = builder("en", "qaa", BookBrief.defaults("en"));
 
         final String system = builder.messagesFor(segment("Hello.")).getFirst().content();
 
@@ -63,7 +72,7 @@ class DraftPromptBuilderTest {
     // One source segment is delimited as prose, while absent context is omitted rather than distracting the model.
     @Test
     void messagesFor_emptyContext_rendersDelimitedSourceAndRepeatedTokenRule() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
 
         final String user = builder.messagesFor(segment("He opened the ⟦g0⟧old⟦g1⟧ door."), DraftContext.empty())
                 .get(1)
@@ -81,7 +90,7 @@ class DraftPromptBuilderTest {
     // The system teaches placeholder placement structurally without biasing the requested target language.
     @Test
     void messagesFor_anyLanguage_rendersLanguageNeutralPlaceholderShots() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
 
         final String system = builder.messagesFor(segment("Hello."), DraftContext.empty())
                 .getFirst()
@@ -98,7 +107,7 @@ class DraftPromptBuilderTest {
     // Previous accepted targets are the only context rendered today and retain their document order.
     @Test
     void messagesFor_precedingTargets_rendersOnlyDelimitedContext() {
-        final DraftPromptBuilder builder = new DraftPromptBuilder(new PromptTemplates(), "en", "uk");
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
 
         final String user = builder.messagesFor(segment("Hello."), new DraftContext(List.of("One.", "Two.")))
                 .get(1)
@@ -108,6 +117,81 @@ class DraftPromptBuilderTest {
                 .contains("<PreviousTranslations>\nOne.\n\nTwo.\n</PreviousTranslations>")
                 .doesNotContain("[Glossary")
                 .doesNotContain("[Book so far");
+    }
+
+    // Every brief control reaches the model through the system message's style guidance.
+    @Test
+    void messagesFor_detectiveBrief_systemCarriesEntriesAndPhrases() {
+        final BookBrief brief = new BookBrief(
+                "en",
+                "uk",
+                "Detective fiction",
+                Register.FORMAL_LITERARY,
+                "Victorian, first person",
+                "Adults",
+                NamePolicy.TRANSLITERATE,
+                ForeignPassagePolicy.KEEP,
+                FootnotePolicy.TRANSLATE,
+                UnitPolicy.METRIC,
+                55,
+                AlsoTranslate.defaults(),
+                QualityDial.BALANCED);
+
+        final String system = builder("en", "uk", brief)
+                .messagesFor(segment("Hello."))
+                .getFirst()
+                .content();
+
+        assertThat(system)
+                .contains("Genre: Detective fiction")
+                .contains("Narrative voice / era: Victorian, first person")
+                .contains("Audience: Adults")
+                .contains("Names: transliterate personal and place names")
+                .contains("Units: convert measurements given in prose to metric units.");
+    }
+
+    @Test
+    void messagesFor_translateForeignPolicy_replacesKeepSentence() {
+        final BookBrief base = BookBrief.defaults("en");
+        final BookBrief brief = new BookBrief(
+                "en",
+                "uk",
+                null,
+                base.register(),
+                null,
+                null,
+                base.names(),
+                ForeignPassagePolicy.TRANSLATE,
+                base.footnotes(),
+                base.units(),
+                base.balance(),
+                base.alsoTranslate(),
+                base.dial());
+
+        final String system = builder("en", "uk", brief)
+                .messagesFor(segment("Hello."))
+                .getFirst()
+                .content();
+
+        assertThat(system)
+                .doesNotContain("keep it verbatim")
+                .contains("Translate any passage written in another language");
+    }
+
+    @Test
+    void messagesFor_defaultBriefMarkdownToUk_keepsForeignPassagesVerbatim() {
+        final String system = builder("en", "uk", BookBrief.defaults("en"))
+                .messagesFor(segment("Hello."))
+                .getFirst()
+                .content();
+
+        assertThat(system).contains("keep it verbatim");
+    }
+
+    private static DraftPromptBuilder builder(
+            @Nullable final String source, final String target, final BookBrief brief) {
+        return new DraftPromptBuilder(
+                new PromptTemplates(), source, target, StyleSheet.from(brief), brief.foreignPassages());
     }
 
     private static Segment segment(final String masked) {

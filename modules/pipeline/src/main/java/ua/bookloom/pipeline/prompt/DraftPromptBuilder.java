@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.project.ForeignPassagePolicy;
 
 /** Renders the catalog's one-segment draft-translation prompt with the currently available context. */
 @Slf4j
@@ -23,13 +24,21 @@ public final class DraftPromptBuilder {
     private final PromptTemplates templates;
     private final @Nullable String sourceLanguage;
     private final String targetLanguage;
+    private final StyleSheet styleSheet;
+    private final ForeignPassagePolicy foreignPassages;
 
-    /** Creates a builder for one job's resolved languages. */
+    /** Creates a builder for one job's resolved languages, style sheet and foreign-passage policy. */
     public DraftPromptBuilder(
-            final PromptTemplates templates, @Nullable final String sourceLanguage, final String targetLanguage) {
+            final PromptTemplates templates,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final StyleSheet styleSheet,
+            final ForeignPassagePolicy foreignPassages) {
         this.templates = Objects.requireNonNull(templates, "templates");
         this.sourceLanguage = sourceLanguage;
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
+        this.styleSheet = Objects.requireNonNull(styleSheet, "styleSheet");
+        this.foreignPassages = Objects.requireNonNull(foreignPassages, "foreignPassages");
     }
 
     /** Builds the catalog system and user messages for one masked segment. */
@@ -93,7 +102,15 @@ public final class DraftPromptBuilder {
         return templates
                 .renderSystem(
                         PromptName.DRAFT,
-                        Map.of("source", source, "target", target, "styleSheet", DefaultStyleSheet.TEXT))
+                        Map.of(
+                                "source",
+                                source,
+                                "target",
+                                target,
+                                "styleSheet",
+                                styleSheet.text(),
+                                "foreignPassageRule",
+                                StyleSheet.foreignPassageRule(foreignPassages, source)))
                 .strip();
     }
 
