@@ -22,7 +22,10 @@ import org.jspecify.annotations.Nullable;
  * @param bodiesByHandleId each {@code <body>} element, keyed by its unit's {@code SkeletonHandle} id
  * @param crlfLineEndings whether the source bytes used {@code \r\n} line endings, so the writer emits the same
  *     style instead of JDOM's default — an LF book must not come back with every line ending doubled
+ * @param byteOrderMark the mark the source began with, exactly as found, or empty when it had none — written back
+ *     first, because some readers rely on it to choose the encoding
  */
+@SuppressWarnings("ArrayRecordComponent") // a small immutable-by-convention byte prefix, copied on entry and on read
 record ParsedFb2(
         org.jdom2.Document document,
         String sourceName,
@@ -30,13 +33,21 @@ record ParsedFb2(
         Charset charset,
         @Nullable String declaredEncodingName,
         Map<String, Element> bodiesByHandleId,
-        boolean crlfLineEndings) {
+        boolean crlfLineEndings,
+        byte[] byteOrderMark) {
 
     ParsedFb2 {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(sourceName, "sourceName");
         Objects.requireNonNull(charset, "charset");
         Objects.requireNonNull(bodiesByHandleId, "bodiesByHandleId");
+        Objects.requireNonNull(byteOrderMark, "byteOrderMark");
         bodiesByHandleId = Map.copyOf(bodiesByHandleId);
+        byteOrderMark = byteOrderMark.clone();
+    }
+
+    @Override
+    public byte[] byteOrderMark() {
+        return byteOrderMark.clone();
     }
 }

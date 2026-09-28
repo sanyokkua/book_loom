@@ -69,6 +69,27 @@ class FormatGoldenRoundTripTest {
                 .anySatisfy(segment -> assertThat(segment.placeholders()).isNotEmpty());
     }
 
+    // WHEN an FB2 book that begins with a UTF-8 byte-order mark is reassembled with no edits, THEN the output is
+    // canonical-equal to it and begins with the same mark.
+    @Test
+    void golden_fb2WithByteOrderMark_isCanonicalEqualAndKeepsTheMark() throws IOException {
+        final Path source = tempDir.resolve("Bom.fb2");
+        Fb2Fixtures.writeFb2(
+                source,
+                Fb2Fixtures.PRIMARY_XML.replace("encoding=\"windows-1251\"", "encoding=\"utf-8\""),
+                StandardCharsets.UTF_8);
+        final byte[] body = Files.readAllBytes(source);
+        final byte[] marked = new byte[body.length + 3];
+        System.arraycopy(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}, 0, marked, 0, 3);
+        System.arraycopy(body, 0, marked, 3, body.length);
+        Files.write(source, marked);
+
+        final RoundTrip result = roundTrip(source);
+
+        Fb2CanonicalAssert.assertCanonicalEqual(result.source(), result.output(), result.targetLanguage());
+        assertThat(Files.readAllBytes(result.output())).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
+    }
+
     // WHERE the source's title information declares no language element, THEN the output
     // SHALL carry one declaring the target language, and the golden comparison SHALL treat that single added
     // element as expected rather than as a difference.

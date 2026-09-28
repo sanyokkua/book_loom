@@ -360,7 +360,7 @@ planned and applied in a session that remembers nothing about the others. These 
   - **Log:** DEBUG per document whether a prolog was recorded and its length in bytes.
   - **Done when:** `./gradlew :document:test --tests 'ua.bookloom.document.golden.*'` and `./gradlew :document:check` are green.
 
-- [ ] 5.4 Record an FB2 book's byte-order mark and write it back, and add none to a book that had none. The encoding rules already say a mark is recorded and re-emitted exactly as found; plain text does that and FB2 dropped it, and some readers rely on the mark to choose the encoding (`docs/next_features.md` §5). → `:document`
+- [x] 5.4 Record an FB2 book's byte-order mark and write it back, and add none to a book that had none. The encoding rules already say a mark is recorded and re-emitted exactly as found; plain text does that and FB2 dropped it, and some readers rely on the mark to choose the encoding (`docs/next_features.md` §5). → `:document`
   - **Depends on:** task 5.3 (group 5 is sequential).
   - **Excludes:** any other FB2 encoding policy (backlog D11, a non-goal).
   - **Read:** `specs/document-round-trip/spec.md` "Write an FB2 byte-order mark back" (both scenarios); `docs/specification/01_Product/03_DOCUMENT_FORMATS.md#encoding-and-bom`; `docs/next_features.md` §5; `modules/document/src/main/java/ua/bookloom/document/fb2/{Fb2Reader,ParsedFb2,Fb2Writer,Fb2Encoding}.java` (the reader already passes `resolution.hasBom()` into `Document.hasBom`; the writer ignores it); `modules/document/src/main/java/ua/bookloom/document/txt/{TxtReader,TxtWriter}.java` (the pattern to copy).

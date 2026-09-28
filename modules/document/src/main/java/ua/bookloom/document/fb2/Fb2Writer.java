@@ -13,11 +13,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jdom2.output.Format;
 import org.jdom2.output.LineSeparator;
@@ -39,11 +41,13 @@ import ua.bookloom.document.model.SkeletonAnchors;
  * declaration is kept exactly as the source spelled it, or it does not, and the document is written UTF-8 with a
  * rewritten declaration.
  */
+@Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class Fb2Writer {
 
     private static final String TITLE_INFO = "title-info";
     private static final String LANG = "lang";
+    private static final byte[] UTF_8_BYTE_ORDER_MARK = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
     private final OpenFb2Registry registry;
 
@@ -161,7 +165,7 @@ public final class Fb2Writer {
     }
 
     private static void writeBytes(Path destination, Serialized serialized, ParsedFb2 parsed) {
-        final byte[] fb2Bytes = renderWithDeclaration(serialized);
+        final byte[] fb2Bytes = withByteOrderMark(renderWithDeclaration(serialized), serialized, parsed);
         try {
             if (parsed.zipMemberName() == null) {
                 Files.write(destination, fb2Bytes);
@@ -183,6 +187,21 @@ public final class Fb2Writer {
         final String withoutDeclaration = stripDeclaration(serialized.xml());
         final String declaration = "<?xml version=\"1.0\" encoding=\"" + serialized.declaredName() + "\"?>";
         return (declaration + withoutDeclaration).getBytes(serialized.charset());
+    }
+
+    /**
+     * Puts the source's byte-order mark back in front of the bytes: exactly as found when the encoding is kept,
+     * and the UTF-8 mark when an unrepresentable character switched the file to UTF-8 (the old mark named an
+     * encoding no longer in use). A source with no mark gets none.
+     */
+    private static byte[] withByteOrderMark(byte[] fb2Bytes, Serialized serialized, ParsedFb2 parsed) {
+        final byte[] recorded = parsed.byteOrderMark();
+        final boolean switched = !serialized.charset().equals(parsed.charset());
+        final byte[] mark = switched && recorded.length > 0 ? UTF_8_BYTE_ORDER_MARK : recorded;
+        log.debug("FB2 byte-order mark recorded={} written={}", recorded.length > 0, mark.length > 0);
+        final byte[] marked = Arrays.copyOf(mark, mark.length + fb2Bytes.length);
+        System.arraycopy(fb2Bytes, 0, marked, mark.length, fb2Bytes.length);
+        return marked;
     }
 
     private static String stripDeclaration(String xml) {

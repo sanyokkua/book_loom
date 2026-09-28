@@ -48,6 +48,43 @@ class Fb2WriterTest {
         }
     }
 
+    private Document openWithBom(Path file, boolean withBom) {
+        final String utf8Xml = Fb2Fixtures.PRIMARY_XML.replace("encoding=\"windows-1251\"", "encoding=\"utf-8\"");
+        Fb2Fixtures.writeFb2(file, utf8Xml, StandardCharsets.UTF_8);
+        if (withBom) {
+            final byte[] body = bytesOf(file);
+            final byte[] marked = new byte[body.length + 3];
+            System.arraycopy(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF}, 0, marked, 0, 3);
+            System.arraycopy(body, 0, marked, 3, body.length);
+            try {
+                Files.write(file, marked);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+        return new Fb2Reader(registry).read(file);
+    }
+
+    // WHEN the source began with a UTF-8 byte-order mark, THEN the written file begins with the same three bytes.
+    @Test
+    void write_sourceWithByteOrderMark_writesTheMarkFirst() {
+        final Document document = openWithBom(tempDir.resolve("Bom.fb2"), true);
+
+        final byte[] written = bytesOf(writeOut(document, "uk"));
+
+        assertThat(written).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF, (byte) '<', (byte) '?');
+    }
+
+    // WHEN the source had no byte-order mark, THEN the written file begins with the declaration and no mark.
+    @Test
+    void write_sourceWithoutByteOrderMark_addsNone() {
+        final Document document = openWithBom(tempDir.resolve("NoBom.fb2"), false);
+
+        final byte[] written = bytesOf(writeOut(document, "uk"));
+
+        assertThat(new String(written, 0, 5, StandardCharsets.UTF_8)).isEqualTo("<?xml");
+    }
+
     /**
      * JDOM's raw format defaults to {@code \r\n}, so an LF book came back with every line ending doubled — an XML
      * parser normalizes it away on re-import, which is exactly why nothing noticed (decision debt D11).

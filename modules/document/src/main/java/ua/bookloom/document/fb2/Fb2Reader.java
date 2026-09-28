@@ -7,6 +7,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -157,7 +158,8 @@ public final class Fb2Reader {
                         resolution.charset(),
                         declaredEncodingName,
                         units.bodiesByHandleId(),
-                        hasCrLf(source.bytes())));
+                        hasCrLf(source.bytes()),
+                        Arrays.copyOf(source.bytes(), resolution.bomLength())));
         return new Document(
                 documentId,
                 BookFormat.FB2,

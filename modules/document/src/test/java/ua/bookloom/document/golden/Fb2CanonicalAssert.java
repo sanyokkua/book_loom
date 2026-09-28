@@ -183,7 +183,10 @@ final class Fb2CanonicalAssert {
         final byte[] bytes = readAll(file);
         final String prolog = new String(bytes, 0, Math.min(bytes.length, 256), StandardCharsets.ISO_8859_1);
         final Matcher matcher = ENCODING_DECLARATION.matcher(prolog);
-        return new String(bytes, matcher.find() ? Charset.forName(matcher.group(1)) : StandardCharsets.UTF_8);
+        final String text =
+                new String(bytes, matcher.find() ? Charset.forName(matcher.group(1)) : StandardCharsets.UTF_8);
+        // A byte-order mark is not XML content; the tests that care about it assert the bytes directly.
+        return text.startsWith("\uFEFF") ? text.substring(1) : text;
     }
 
     /** The encoding as a value, normalized for case, so {@code utf-8} and {@code UTF-8} are the same answer. */
