@@ -28,4 +28,6 @@ module ua.bookloom.pipeline {
             com.google.guice;
     opens ua.bookloom.pipeline.prompt to
             com.google.guice;
+    opens ua.bookloom.pipeline.project to
+            com.google.guice;
 }

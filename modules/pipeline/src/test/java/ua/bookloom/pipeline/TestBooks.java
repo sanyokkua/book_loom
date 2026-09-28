@@ -13,28 +13,29 @@ import java.util.zip.ZipOutputStream;
 import org.jspecify.annotations.Nullable;
 
 /** Small real book files used by pipeline tests. */
-final class TestBooks {
+public final class TestBooks {
 
     private TestBooks() {}
 
-    static Path markdown(final Path destination, final String content) {
+    public static Path markdown(final Path destination, final String content) {
         return write(destination, content);
     }
 
-    static Path markdown(final Path destination, final String content, @Nullable final String language) {
+    public static Path markdown(final Path destination, final String content, @Nullable final String language) {
         final String frontmatter = language == null ? "" : "---\nlang: " + language + "\n---\n\n";
         return write(destination, frontmatter + content);
     }
 
-    static Path txt(final Path destination, final String content) {
+    public static Path txt(final Path destination, final String content) {
         return write(destination, content);
     }
 
-    static Path fb2(final Path destination, final List<String> paragraphs, @Nullable final String language) {
+    public static Path fb2(final Path destination, final List<String> paragraphs, @Nullable final String language) {
         return write(destination, fb2Xml(paragraphs, language));
     }
 
-    static Path zippedFb2(final Path destination, final List<String> paragraphs, @Nullable final String language) {
+    public static Path zippedFb2(
+            final Path destination, final List<String> paragraphs, @Nullable final String language) {
         try (OutputStream output = Files.newOutputStream(destination);
                 ZipOutputStream zip = new ZipOutputStream(output)) {
             put(zip, "book.fb2", fb2Xml(paragraphs, language), ZipEntry.DEFLATED);
@@ -44,20 +45,64 @@ final class TestBooks {
         }
     }
 
-    static Path epub(
+    public static Path epub(
             final Path destination, final List<List<String>> spineParagraphs, @Nullable final String language) {
+        return epub(destination, spineParagraphs, language, null);
+    }
+
+    /** An EPUB whose content documents each declare {@code contentLanguage} as {@code xml:lang} on their root. */
+    public static Path epub(
+            final Path destination,
+            final List<List<String>> spineParagraphs,
+            @Nullable final String language,
+            @Nullable final String contentLanguage) {
         try (OutputStream output = Files.newOutputStream(destination);
                 ZipOutputStream zip = new ZipOutputStream(output)) {
-            put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
-            put(zip, "META-INF/container.xml", containerXml(), ZipEntry.DEFLATED);
-            put(zip, "OEBPS/content.opf", opf(spineParagraphs.size(), language), ZipEntry.DEFLATED);
-            for (int index = 0; index < spineParagraphs.size(); index++) {
-                put(zip, "OEBPS/ch" + index + ".xhtml", xhtml(spineParagraphs.get(index)), ZipEntry.DEFLATED);
-            }
+            writeEpub(zip, spineParagraphs, language, contentLanguage);
             return destination;
         } catch (IOException cause) {
             throw new UncheckedIOException(cause);
         }
+    }
+
+    /** An EPUB whose first chapter is encrypted under an Adobe ADEPT manifest. */
+    public static Path encryptedEpub(final Path destination, final List<List<String>> spineParagraphs) {
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            writeEpub(zip, spineParagraphs, "en", null);
+            put(zip, "META-INF/encryption.xml", encryptionXml(), ZipEntry.DEFLATED);
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
+    private static void writeEpub(
+            final ZipOutputStream zip,
+            final List<List<String>> spineParagraphs,
+            @Nullable final String language,
+            @Nullable final String contentLanguage)
+            throws IOException {
+        put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
+        put(zip, "META-INF/container.xml", containerXml(), ZipEntry.DEFLATED);
+        put(zip, "OEBPS/content.opf", opf(spineParagraphs.size(), language), ZipEntry.DEFLATED);
+        for (int index = 0; index < spineParagraphs.size(); index++) {
+            put(
+                    zip,
+                    "OEBPS/ch" + index + ".xhtml",
+                    xhtml(spineParagraphs.get(index), contentLanguage),
+                    ZipEntry.DEFLATED);
+        }
+    }
+
+    private static String encryptionXml() {
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<encryption xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\""
+                + " xmlns:enc=\"http://www.w3.org/2001/04/xmlenc#\" xmlns:adept=\"http://ns.adobe.com/adept\">"
+                + "<enc:EncryptedData><enc:EncryptionMethod Algorithm=\"http://ns.adobe.com/pdf/enc#RC\"/>"
+                + "<adept:KeyInfo/>"
+                + "<enc:CipherData><enc:CipherReference URI=\"OEBPS/ch0.xhtml\"/></enc:CipherData>"
+                + "</enc:EncryptedData></encryption>";
     }
 
     private static Path write(final Path destination, final String content) {
@@ -112,11 +157,12 @@ final class TestBooks {
                 + "</spine></package>";
     }
 
-    private static String xhtml(final List<String> paragraphs) {
+    private static String xhtml(final List<String> paragraphs, @Nullable final String contentLanguage) {
+        final String lang = contentLanguage == null ? "" : " xml:lang=\"" + contentLanguage + "\"";
         final String body =
                 paragraphs.stream().map(text -> "<p>" + text + "</p>").reduce("", String::concat);
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                + "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>Test</title></head><body>"
+                + "<html xmlns=\"http://www.w3.org/1999/xhtml\"" + lang + "><head><title>Test</title></head><body>"
                 + body
                 + "</body></html>";
     }
