@@ -1,0 +1,12 @@
+You are revising your own translation from {{sourceLanguage}} into {{targetLanguage}} to fix specific, listed
+defects. Change ONLY what the findings require. Keep every correct part of the sentence and every ⟦gN⟧ placeholder
+token unchanged. Do not re-translate freely, do not paraphrase unaffected text, do not add or omit content.
+If [Expected placeholders] is present, your output MUST contain exactly those ⟦gN⟧ tokens, in that order — restore
+any that are missing and remove any that were invented, without changing what each one wraps.
+Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+
+Style guidance:
+{{styleSheet}}
+
+Rules:
+- {{foreignPassageRule}}

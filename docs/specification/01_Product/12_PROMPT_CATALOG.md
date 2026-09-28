@@ -231,31 +231,26 @@ Self-heal path when concrete findings exist (deterministic QA finding or judge f
 You are revising your own {{sourceLang}} → {{targetLang}} translation to fix specific, listed defects.
 Change ONLY what the findings require. Keep every correct part of the sentence and every ⟦gN⟧ placeholder unchanged.
 Do not re-translate freely, do not paraphrase unaffected text, do not add or omit content.
-If [Expected placeholders] is present, your output MUST contain exactly that multiset of ⟦gN⟧ tokens — restore
+If [Expected placeholders] is present, your output MUST contain exactly those ⟦gN⟧ tokens, in that order — restore
 any that are missing and remove any that were invented, without changing what each one wraps.
-Follow any [Extra instruction] exactly, without breaking these rules.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+
+[Style sheet]
+{{styleSheet}}
+{{foreignPassageRule}}
 ```
 
 **USER**
 
 ```
-[Style + glossary]
-{{styleSheet}}
-{{glossaryTerms}}
-{{foreignPassageRule}}
-
-[Source — for reference only, outside the text to rewrite]
+[Source]
 {{sourceSegment}}
 
 [Defects to fix — address each exactly]
 {{findings}}
 
-[Expected placeholders — restore exactly this multiset]
+[Expected placeholders — restore exactly this sequence]
 {{expectedPlaceholders}}
-
-[Extra instruction — retry-with-note; follow exactly]
-{{userNote}}
 
 <Text>
 {{textToRewrite}}
@@ -269,10 +264,10 @@ Return exactly one JSON object matching this schema: {"target":"<corrected trans
 | `{{textToRewrite}}`                        | Required  | The single `<Text>` block: the rejected target, or the masked source when the finding is a refusal or an empty target.            |
 | `{{sourceSegment}}`                        | Required  | The masked source, shown under `[Source]` outside `<Text>` for reference.                                                          |
 | `{{findings}}`                             | Required  | Concrete findings for this one segment (type, note).                                                                               |
-| `{{styleSheet}}`, `{{foreignPassageRule}}` | Required  | Same frame as the draft.                                                                                                            |
-| `{{glossaryTerms}}`                        | Optional  | Terms in the segment; `(none)` if empty.                                                                                            |
-| `{{expectedPlaceholders}}`                 | Optional  | On a **tag-multiset mismatch** finding, the exact expected multiset of `⟦gN⟧` tokens (e.g. `⟦g1⟧ ⟦g2⟧ ⟦g3⟧`); `(none)` otherwise. |
-| `{{userNote}}`                             | Optional  | Retry-with-note free-text; `(none)` in normal runs.                                                                                 |
+| `{{styleSheet}}`, `{{foreignPassageRule}}` | Required  | Same frame as the draft, in the SYSTEM message.                                                                                     |
+| `{{expectedPlaceholders}}`                 | Optional  | On a placeholder or protected-span failure, the expected `⟦gN⟧` tokens in source order (e.g. `⟦g1⟧ ⟦g2⟧ ⟦g3⟧`); omitted otherwise. |
+
+A review panel "Retry with note" is a draft with the note under `[Extra instruction]`, not a directed fix (`#draft-translation`).
 
 **Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off.
 

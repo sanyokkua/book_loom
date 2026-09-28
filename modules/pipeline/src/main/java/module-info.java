@@ -32,4 +32,6 @@ module ua.bookloom.pipeline {
             com.google.guice;
     opens ua.bookloom.pipeline.judge to
             com.google.guice;
+    opens ua.bookloom.pipeline.heal to
+            com.google.guice;
 }

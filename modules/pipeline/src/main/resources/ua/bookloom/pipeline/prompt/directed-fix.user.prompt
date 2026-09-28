@@ -1,0 +1,16 @@
+[Source]
+{{source}}
+
+[Defects to fix — address each exactly]
+{{findings}}
+
+{{#expectedTokens}}
+[Expected placeholders — restore exactly this sequence]
+{{expectedTokens}}
+{{/expectedTokens}}
+
+<Text>
+{{text}}
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<corrected translation>"}

@@ -58,7 +58,18 @@ public enum PromptName {
             0.1,
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
-            new Slots(Set.of("pairs"), Set.of("glossaryTerms")));
+            new Slots(Set.of("pairs"), Set.of("glossaryTerms"))),
+
+    /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
+    DIRECTED_FIX(
+            "directed-fix",
+            CallKind.DIRECTED_FIX,
+            "directed-fix",
+            DraftSchema.SCHEMA,
+            0.2,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
+            new Slots(Set.of("source", "text", "findings"), Set.of("expectedTokens")));
 
     private final String resourceBaseName;
     private final CallKind callKind;

@@ -24,7 +24,8 @@ class PromptNameTest {
         "DRAFT,draft,DRAFT,draft,0.2",
         "STRUCTURAL_REPAIR,structural-repair,STRUCTURAL_REPAIR,structural-repair,0.2",
         "PLACEHOLDER_REPAIR,placeholder-repair,PLACEHOLDER_REPAIR,placeholder-repair,0.2",
-        "JUDGE,judge,JUDGE,judge,0.1"
+        "JUDGE,judge,JUDGE,judge,0.1",
+        "DIRECTED_FIX,directed-fix,DIRECTED_FIX,directed-fix,0.2"
     })
     void constants_declared_carryListedValues(
             final PromptName name,
@@ -44,7 +45,7 @@ class PromptNameTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR", "JUDGE"})
+    @CsvSource({"STRUCTURAL_REPAIR", "PLACEHOLDER_REPAIR", "JUDGE", "DIRECTED_FIX"})
     void temperature_lowerNotDefined_throws(final PromptName name) {
         assertThatThrownBy(() -> name.temperature(true)).isInstanceOf(IllegalArgumentException.class);
     }

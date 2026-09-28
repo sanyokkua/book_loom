@@ -138,7 +138,17 @@ public final class DraftPromptBuilder {
 
     /** Returns every placeholder in source order for the user-facing integrity reminder and repair request. */
     public static String expectedTokenSequence(final Segment segment) {
-        final Matcher matcher = PLACEHOLDER.matcher(segment.masked());
+        return expectedTokenSequence(segment.masked());
+    }
+
+    /**
+     * Returns every placeholder in source order within an already-masked text, for a repair call built from a
+     * masked source rather than a {@link Segment} (the directed fix, whose expected sequence comes from the source,
+     * not the rejected target).
+     */
+    public static String expectedTokenSequence(final String masked) {
+        Objects.requireNonNull(masked, "masked");
+        final Matcher matcher = PLACEHOLDER.matcher(masked);
         final List<String> tokens = new ArrayList<>();
         while (matcher.find()) {
             tokens.add(matcher.group());
