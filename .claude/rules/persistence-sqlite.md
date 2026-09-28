@@ -1,11 +1,16 @@
----
-paths:
-  - "modules/persistence/**"
----
-
 # Persistence (SQLite)
 
 Scope: `:persistence` (`ua.bookloom.persistence..`). Spec: `docs/specification/02_Architecture/06_DATA_MODEL_SQLITE.md`. Stack: `org.xerial:sqlite-jdbc` (WAL) + Flyway + JDBI 3. FX-free. Implements the repository ports.
+
+## Current status
+
+Today `:persistence` binds every `:api` repository port to an in-memory adapter in
+`modules/persistence/src/main/java/ua/bookloom/persistence/memory/` (wired in `PersistenceModule`, ADR-0034),
+proven by the abstract `modules/persistence/src/test/java/ua/bookloom/persistence/contract/RepositoryContractTest.java`
+run against each adapter. Nothing survives a restart — no SQLite database, no Flyway migration, no JDBI DAO exists
+yet. The rules below are the target for the SQLite adapter that will replace these in-memory bindings without
+changing the ports; until then, treat this file as the design for that later change, not as a description of what
+runs today.
 
 ## MUST
 

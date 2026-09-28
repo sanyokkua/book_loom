@@ -59,7 +59,9 @@ The full gate — what pre-push and CI run — is:
 ./gradlew clean build check spotlessCheck
 ```
 
-About one minute with a warm daemon. Note your own baseline: a run materially longer than it is treated as hung.
+About 8½–9½ minutes on the owner's machine (measured 2026-09-28: `BUILD SUCCESSFUL in 8m 39s`, 118 tasks), of which
+roughly seven are `:ui`'s ~2,300 TestFX tests; every other module's tests take under 20 seconds. Note your own
+baseline: a run materially longer than it is treated as hung.
 
 ---
 
@@ -69,7 +71,7 @@ About one minute with a warm daemon. Note your own baseline: a run materially lo
 AGENTS.md                  operating manual (agents)         docs/Architecture.md   what is built, how to verify it
 docs/specification/        the spec — editable reference     docs/adr/              decisions (ADR-0001 …)
 docs/implementation_plan/  CHANGE_BACKLOG.md (order of work), 01_MODULE_INVENTORY.md (as-built log), 07_ROADMAP.md,
-                           notes-corpus-verification.md (216-book sweep results), 04_ADR_FORMAT.md
+                           notes-corpus-verification.md (235-book sweep results), 04_ADR_FORMAT.md
 openspec/                  changes/<name>/ = a unit of work; specs/ = ledger of built behaviour; archive/ = history
 modules/                   all code (see below)              scripts/               jpackage per OS, launch smoke, agent-file sync
 config/                    checkstyle, spotbugs, licence allowlist
@@ -80,12 +82,12 @@ Gradle project names are `:api` … `:app` even though the directories sit under
 
 | Module | Directory | Status | Holds |
 |---|---|---|---|
-| `:api` | `modules/api` | real | `Result`, `AppError`, `ErrorCode`, `SafeDetails`, the document model, `DocumentPort`, the chat-model and translation-engine contracts (`ua.bookloom.api.llm`, `ua.bookloom.api.pipeline`) |
-| `:util` | `modules/util` | real | per-OS paths, dev/prod environment, hashing |
-| `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close |
+| `:api` | `modules/api` | real | `Result`, `AppError`, `ErrorCode`, `SafeDetails`, the document model (incl. book inspection), `DocumentPort`, the chat-model, translation-engine, project and storage-port contracts (`ua.bookloom.api.llm`, `ua.bookloom.api.pipeline`, `ua.bookloom.api.project`, `ua.bookloom.api.persistence`) |
+| `:util` | `modules/util` | real | per-OS paths, dev/prod environment, hashing, the language catalogue (`util.lang`) |
+| `:document` | `modules/document` | real | EPUB/FB2/Markdown/TXT parse → mask → unmask → write back → close; book inspection, sentence splitting, auxiliary text units; the placeholder gate checks the multiset and the order/nesting of paired placeholders (ADR-0040) |
 | `:llm` | `modules/llm` | real | the `pseudo` model, the Ollama-native and OpenAI-compatible clients (retry, single-flight gate, three-stage verification), model discovery |
-| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export |
-| `:persistence` | `modules/persistence` | empty | one Guice module with no bindings |
+| `:pipeline` | `modules/pipeline` | real | the translation engine, the pausable job (pause/resume/cancel, which also abort a model request in flight), checked export; prompt templates, chunking, the stored-project service, deterministic QA checks, the judge and self-heal — built and tested but not yet wired into a run |
+| `:persistence` | `modules/persistence` | real | in-memory adapters behind every `:api` storage port (ADR-0034), proven by `RepositoryContractTest`; SQLite + Flyway + JDBI planned |
 | `:ui` | `modules/ui` | real | the shell, six screens (Import, Book Brief, Structure, Translating, Export, Settings), the state mirror and viewmodels, `en`/`uk` bundles, the theme — six of eight planned packages |
 | `:app` | `modules/app` | real | launcher, logging bootstrap, single-instance lock, Guice root, the command-line translator, the `archTest` suite |
 | `build-logic` | `modules/build-logic` | — | the five convention plugins; an **included build**, not a subproject |
@@ -156,9 +158,12 @@ progress, the four counts the engine emits and a log; after 10 s without an answ
 m:ss". Pause and Stop abort the request in flight, and a stopped run is final and writes nothing. When a run
 finishes, the Export screen has a button that shows the written file in the operating system's file manager.
 
-**What it cannot do yet.** Persist anything (`:persistence` is empty, so a run cannot be resumed after a restart and
-the theme is not remembered), detect the book's source language (the selector is read-only), switch language inside
-the app, or open the Projects, Names & style and Review entries, which are greyed and have no screen.
+**What it cannot do yet.** Persist anything across a restart (`:persistence` binds every repository port to an
+in-memory adapter, ADR-0034, so a run cannot be resumed after a restart and the theme is not remembered), detect the
+book's source language (the selector is read-only), switch language inside the app, or open the Projects, Names &
+style and Review entries, which are greyed and have no screen. The chunking, deterministic QA, judge and self-heal
+logic that exists in `:pipeline` is likewise not wired into this run yet — the job still accepts a segment once its
+markup restores.
 
 **Ukrainian interface.** The language follows the operating system: a Ukrainian locale shows `uk`, anything else
 shows `en`, and there is no switch in the app. To see Ukrainian without changing the OS, run
@@ -202,7 +207,7 @@ third-party library never drowns BookLoom's own lines. Book text, prompts and mo
 
 **Where the log goes.** A development or packaged run writes the `bookloom.log` from the table above — on macOS
 `~/Library/Logs/BookLoom-Dev/bookloom.log` for a dev run. A **test** run writes its own log instead:
-`modules/<module>/build/test-logs/test.log`, configured today for `:document`, `:llm` and `:pipeline`
+`modules/<module>/build/test-logs/test.log`, configured today for `:app`, `:document`, `:llm` and `:pipeline`
 (`src/test/resources/logback-test.xml`; the other modules have none yet). Read one at `TRACE` with
 `BOOKLOOM_LOG_LEVEL=TRACE ./gradlew :<module>:test --tests '<class>' --rerun`.
 
@@ -283,7 +288,7 @@ Distribution) — switch it back to the Gradle Wrapper.
 green (`failOnNoDiscoveredTests = false`):
 
 ```bash
-BOOKLOOM_CORPUS_DIR=/path/to/books ./gradlew :document:corpus      # the 216-book sweep (never up-to-date)
+BOOKLOOM_CORPUS_DIR=/path/to/books ./gradlew :document:corpus      # the 235-book sweep (never up-to-date)
 BOOKLOOM_CORPUS_REPORT_DIR=/path ...                                 # optional: where the JSONL/TSV report lands
 BOOKLOOM_LIVE_OLLAMA_URL=http://localhost:11434 \
   BOOKLOOM_LIVE_OLLAMA_MODEL=<model-id> ./gradlew :llm:liveLocal :app:liveLocal

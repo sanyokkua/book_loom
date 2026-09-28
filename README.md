@@ -25,7 +25,7 @@ docs/Architecture.md          What is built, what is not, and how to verify each
 CLAUDE.md                     Pointer to AGENTS.md; holds no rules of its own
 .claude/                      Claude Code config: rules, skills, agents, slash commands
 docs/
-  DEVELOPMENT.md              Human developer guide: prerequisites, build, run, debug, IDE, troubleshooting
+  DEVELOPMENT.md               Human developer guide: prerequisites, build, run, debug, IDE, troubleshooting
   specification/              The spec: requirements, architecture, decisions, mockup, diagrams (editable)
     INDEX.md                    Start here for the spec map
     00_Foundation/ … 05_Dependencies/
@@ -41,11 +41,13 @@ openspec/
   specs/<capability>/         The ledger of what is actually BUILT — grows on archive
 modules/                      ALL the code lives here (ADR-0021) — the root stays prose + build config
   api/                        Contracts: interfaces, records/DTOs, Result/AppError — the dependency floor
-  util/                       Per-OS paths, shared helpers
+  util/                       Per-OS paths, shared helpers, the language catalogue
   document/                   EPUB/FB2/Markdown/TXT parsing, masking, reassembly
   llm/                        Provider clients (Ollama-native, OpenAI-compatible), the pseudo model, model discovery
-  pipeline/                   Translation engine: the pausable job, checked export (QA, judge and repair are planned)
-  persistence/                (planned) SQLite + Flyway + JDBI — empty today
+  pipeline/                   Translation engine: the pausable job, checked export; prompts, chunking, QA, the judge
+                              and self-heal are built and tested but not yet wired into a run
+  persistence/                In-memory adapters behind the `:api` storage ports (ADR-0034); SQLite + Flyway + JDBI
+                              planned
   ui/                         JavaFX shell, screens, state mirror, en/uk bundles, theme (only ui/ and app/ see JavaFX)
   app/                        Launcher, Application, Guice composition root, the arch-test suite
   build-logic/                Gradle convention plugins (an included build)
@@ -96,7 +98,7 @@ What each stage does, and why (`docs/specification/04_Build_and_Release/02_QUALI
 |---|---|---|
 | `pre-commit` | Spotless on staged Java (auto-fixes and re-stages), gitleaks on the staged diff, a 4 MB file-size guard | < 10 s, no tests |
 | `commit-msg` | Conventional Commits validation | instant |
-| `pre-push` | `./gradlew clean build check spotlessCheck` | slow — the full gate |
+| `pre-push` | `./gradlew clean build check spotlessCheck`, then the agent-file sync check (`python3 scripts/sync-agent-files.py --check`) | slow — the full gate |
 
 Pre-push runs **exactly** the command the CI quality job runs, deliberately — no faster hook-only subset — so a
 green push implies a green CI quality job for the same tree. CI adds one gate (the license report); it never
@@ -112,12 +114,16 @@ LEFTHOOK=0 git <cmd>     # skip every lefthook hook for one command
 
 ## Status
 
-**A book can be translated from the window.** `:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:ui` and `:app` carry
-real code. `./gradlew :app:run` opens the desktop window: open an EPUB, FB2, Markdown or TXT book, choose a target
-language and destination, verify an Ollama or LM Studio provider, pick a model, then start, pause, resume or stop the
-run and show the written file in your file manager. The same pipeline runs from the command line
+**A book can be translated from the window.** `:api`, `:util`, `:document`, `:llm`, `:persistence`, `:pipeline`, `:ui`
+and `:app` carry real code. `./gradlew :app:run` opens the desktop window: open an EPUB, FB2, Markdown or TXT book,
+choose a target language and destination, verify an Ollama or LM Studio provider, pick a model, then start, pause,
+resume or stop the run and show the written file in your file manager. The same pipeline runs from the command line
 (`./gradlew :app:translate`, see `docs/DEVELOPMENT.md`). Every segment is masked to `⟦gN⟧` placeholders and restored
-behind a placeholder-multiset hard gate — verified canonical-equal on a 216-book local corpus. The interface is English
-or Ukrainian, chosen from the operating system's language. `:persistence` is still empty, so nothing is saved: a run
-cannot be resumed after a restart, and the theme is not remembered. Next: persistence, then source-language
-detection, quality checks and the glossary.
+behind a placeholder hard gate that checks the multiset and the order of paired placeholders — verified canonical-equal
+on a 235-book local corpus. The interface is English or Ukrainian, chosen from the operating system's language.
+`:persistence` binds every storage port to an in-memory adapter (ADR-0034), so nothing survives a restart: a run
+cannot be resumed, and the theme is not remembered. `:pipeline` already has prompt templates, chunking, the
+deterministic quality checks, the judge and self-heal built and tested, but the running job still accepts a segment
+once its markup restores — none of that is wired in yet. Next: re-plan groups 9–15 of
+`openspec/changes/complete-translation-workflow`, then memory (glossary, translation memory, rolling summary), the
+run on a stored project, and the screens that show it.

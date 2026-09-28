@@ -40,8 +40,8 @@ what it proves; the test was observed red before the implementation (ADR-0032).
 
 | Tier | Scope | Tools |
 |---|---|---|
-| Unit | one class, ports mocked | JUnit 5, AssertJ, Mockito 5 |
-| Persistence integration | DAO + real DB, Flyway applied | JUnit 5, temp SQLite / `:memory:` |
+| Unit | one class, ports faked | JUnit 5, AssertJ, hand-written fakes (Mockito 5 is on the classpath and unused by policy) |
+| Persistence integration | repository ports + in-memory adapters today (ADR-0034); real DB, Flyway applied, arrives with the SQLite adapter | JUnit 5, temp SQLite / `:memory:` |
 | Provider integration | provider + HTTP, both dialects | JUnit 5, WireMock (LLM) |
 | Pipeline e2e | small whole book through the engine | JUnit 5, stub/WireMock provider |
 | ArchUnit | module boundaries, FX-free core, ports-not-concretes, cycles | ArchUnit (`archTest` source set) |
@@ -49,8 +49,8 @@ what it proves; the test was observed red before the implementation (ADR-0032).
 | UI widget | one control's state + bindings | TestFX, built-in headless platform |
 | UI screen/state | each screen's enumerated states/dialogs | TestFX, built-in headless platform |
 | UI conformance | matches the mockup: structure, palette tokens, coverage checklist (P6) | TestFX, built-in headless platform |
-| i18n | EN default + UK bundle completeness, locale selection, DB switch | JUnit 5 over resource bundles |
-| Smoke | app boots (injector + two-phase init); jpackage image launches | JUnit 5 (boot), packaging matrix |
+| i18n | EN default + UK bundle completeness, locale selection, planned DB switch | JUnit 5 over resource bundles |
+| Smoke | app boots (injector + two-phase init, no database today); jpackage image launches | JUnit 5 (boot), packaging matrix |
 | Live-local (`liveLocal`) | real prompt/request/response vs real servers | JUnit 5, real Ollama + LM Studio (env-gated, NOT CI) |
 | Prompt eval (`promptEval`) | production prompt builder vs real model, embedding-scored rubric | JUnit 5, real local model (env-gated, NOT CI) |
 | Visual (`visual`) | pinned-env snapshot + tolerant diff of key screens × themes | TestFX snapshot (nightly/on-demand, NOT the merge gate) |
@@ -80,9 +80,13 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
    retryable errors (`timeout`/`rateLimited`/`unreachable`/`upstream`), Retry-After handling,
    per-attempt timeout, and each HTTP -> `ErrorCode` mapping. This is the ONLY network seam in
    the automated suite.
-5. **Test persistence against a temp DB.** Use a temp SQLite file or `:memory:` with Flyway
-   migrations applied (as in two-phase init); assert settings KV round-trips including the
-   `ui.language` key and the per-project provider/model snapshot. No Testcontainers.
+5. **Test persistence against the repository contract.** Today, persistence integration means
+   the abstract `RepositoryContractTest` (and its siblings,
+   `modules/persistence/src/test/java/ua/bookloom/persistence/contract/`) exercised against the
+   in-memory adapters (`ua.bookloom.persistence.memory`, ADR-0034) — nothing to migrate yet.
+   A temp SQLite file or `:memory:` with Flyway migrations applied, asserting settings KV
+   round-trips including the planned `ui.language` key and the per-project provider/model
+   snapshot, arrives with the SQLite adapter. No Testcontainers.
 6. **Test documents with golden fixtures.** Parse -> reassemble without changing target
    text -> assert **canonical equality** with the fixture (DD-43): compare canonicalized
    forms — re-parse-equal / canonical-XML equal; EPUB by decompressed canonical content +
@@ -108,7 +112,9 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
      type) with "**wired**" asserted **behaviourally**, not by inspecting bindings:
      property → node (drive the viewmodel property / `publish*` and assert the node
      updates) and node → command (fire the control with TestFX and assert the viewmodel
-     command/port was invoked via a Mockito spy). Add **looked-up-colour** assertions that
+     command/port was invoked via a hand-written recording fake, e.g.
+     `modules/ui/src/test/java/ua/bookloom/ui/state/RecordingJob.java`). Add
+     **looked-up-colour** assertions that
      `.root` tokens resolve to the full token catalogue (`09_THEMING.md#token-catalog`:
      Charcoal `#3a4a52`, Slate `#b2babd`, Sand Dollar `#e7d6c0`, Cognac `#a58075`
      + desaturated status colours, per-role light AND dark values) in both value blocks.
@@ -120,10 +126,12 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
    identical key sets with no missing keys; ICU MessageFormat patterns are valid and UK
    plural keys cover **one/few/many/other**; every key referenced via the typed message-key
    registry is defined (and no dead keys); first-start OS-locale selection through the
-   **injectable `Locale` provider** (Ukrainian OS -> `uk`, else English); and the Settings
-   -> Appearance switch persists to the `ui.language` KV key. These are hard gates.
-10. **Smoke the boot + package.** A boot test builds the injector, runs two-phase init against
-    a temp DB, and reaches ready headlessly; the jpackage-image launch check runs in the
+   **injectable `Locale` provider** (Ukrainian OS -> `uk`, else English). These are hard gates
+   today; the Settings -> Appearance switch persisting to a `ui.language` KV key is planned,
+   not yet built — there is no settings store today.
+10. **Smoke the boot + package.** A boot test builds the injector, runs two-phase init, and
+    reaches ready headlessly — with no database today (persistence is in-memory, ADR-0034; a
+    temp DB arrives with the SQLite adapter); the jpackage-image launch check runs in the
     packaging matrix (`03_PACKAGING_JPACKAGE.md#verification`).
 11. **Add `liveLocal` per provider feature (NOT CI).** For any client/prompt/response-handling
     change, add a `liveLocal`-tagged test against a real local Ollama + LM Studio; env-gate it
@@ -169,7 +177,8 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 
 - `./gradlew test` — full automated suite including headless TestFX (CI runs the same);
   excludes `liveLocal`, `promptEval`, and `visual`.
-- pre-push runs unit tests excluding UI/TestFX + the fast ArchUnit subset (< 60s).
+- pre-push runs the full mechanical gate (`./gradlew clean build check spotlessCheck`),
+  identical to CI's quality job — not a faster subset (`lefthook.yml`).
 - `./gradlew liveLocal` — the local-only live-provider set against a real Ollama + LM Studio;
   env-gated, skips when unconfigured, NOT part of `check`/CI.
 
@@ -191,15 +200,18 @@ Full taxonomy and CI-vs-local split: `docs/specification/04_Build_and_Release/06
 - [ ] LLM interactions use WireMock only, stubbing BOTH the OpenAI-compatible and Ollama-native
       endpoints; response handling (`<think>`-strip, tolerant parse, repair, text fallback) is
       covered; no real network in the automated suite; offline invariant intact.
-- [ ] Persistence uses temp SQLite / `:memory:` with Flyway applied; no Testcontainers.
+- [ ] Persistence uses the repository contract tests over the in-memory adapters today
+      (ADR-0034); a temp SQLite / `:memory:` DB with Flyway applied arrives with the SQLite
+      adapter; no Testcontainers.
 - [ ] Document golden round-trip (per format, canonical-equal; TXT exact bytes) and a
       pipeline e2e (accepted/flagged + first-PENDING resume + same-format export) exist.
 - [ ] Core-module tests are FX-free; UI widget, screen/state, and mockup-conformance tests are
       TestFX headless, with palette-token/looked-up-colour and coverage-checklist
       assertions.
-- [ ] i18n: `messages_en` + `messages_uk` key sets identical, OS-locale first-start selection,
-      `ui.language` DB switch.
-- [ ] Smoke: app boots (injector + two-phase init) and jpackage image launches headlessly.
+- [ ] i18n: `messages_en` + `messages_uk` key sets identical, OS-locale first-start selection;
+      the `ui.language` DB switch is planned, not yet built.
+- [ ] Smoke: app boots (injector + two-phase init, no database today) and jpackage image
+      launches headlessly.
 - [ ] `liveLocal`/`promptEval`/`visual` tests (if added) are env-gated, skip when
       unconfigured, and excluded from `check`/CI; a11y checks are advisory, not gating.
 - [ ] ArchUnit boundary tests are green.

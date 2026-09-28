@@ -1,8 +1,9 @@
 ---
 name: llm-provider-integration
 description: >-
-  Use when adding or using an LLM provider in the `:llm` module — the `Provider` port +
-  `ProviderFactory` hiding two concrete clients (Ollama-native and OpenAI-compatible), the
+  Use when adding or using an LLM provider in the `:llm` module — the `ChatModel` port +
+  `ChatModelFactory` (hiding the internal `ProviderClient`/`ProviderClientFactory` seam)
+  behind two concrete clients (Ollama-native and OpenAI-compatible), the
   JSON-first tolerant response pipeline (structured output, sanitize, repair, text
   fallback), per-project provider/model binding with preflight verification, model
   discovery with first-class manual model-ID entry, the three-stage verification
@@ -32,16 +33,18 @@ resolution, and verification. It is FX-free and reaches the network only through
 ## When NOT to use
 
 - Do NOT let callers branch on provider kind or touch a concrete client. Everything goes
-  through the `Provider` port + `ProviderFactory`. Two clients exist today
+  through the `ChatModel` port + `ChatModelFactory`, which hide the internal
+  `ProviderClient`/`ProviderClientFactory` seam. Two clients exist today
   (Ollama-native, OpenAI-compatible); a future kind (Gemini/Claude) is a new
-  implementation registered in the factory — NOT required in this scope.
+  implementation registered in `ProviderClientFactory` — NOT required in this scope.
 - Do NOT drive Ollama through the OpenAI-compatible `/v1/*` shim — use its native API so
   `num_ctx`, `keep_alive`, `format`, and `think` are honored.
 - Do NOT introduce an embedding slot or vector store — only translator + judge/helper
   slots exist; consistency is dictionary + string-similarity TM + rolling summary.
 - Do NOT put retry in `:pipeline` or `:ui` — retry is owned by `:llm`.
-- Do NOT store, log, or echo a secret or full book text — store a `CredentialRef`, resolve
-  at call time.
+- Do NOT store, log, or echo a secret or full book text. Credential resolution is planned
+  but not yet built (`ProviderConfig` has no credential field today); the design is a
+  reference only, resolved at call time, never persisted/logged.
 - Do NOT call `chat` outside the `InferenceGate` — a local model serves one request.
 - Do NOT run inference without preflight-verifying the project's bound provider/model, and
   never silently switch provider/model — fall back only on user confirmation.
@@ -50,14 +53,14 @@ resolution, and verification. It is FX-free and reaches the network only through
 
 ## Workflow
 
-1. **Pick the client by kind, behind the factory.** `ProviderFactory.create(config)` maps
+1. **Pick the client by kind, behind the factory.** `ProviderClientFactory.create(config)` maps
    `config.kind()` to a concrete client: `OLLAMA` → the Ollama-native client (`/api/chat`,
    `/api/tags`, `/api/show`, native `options`), `OPENAI_COMPATIBLE` → the OpenAI-compatible
-   client (`/v1/chat/completions`, `/v1/models`, `response_format`). The `ProviderProfile`
-   carries per-kind data: `kind`, `defaultAuthScheme` (NONE | BEARER | API_KEY_HEADER),
-   `defaultBaseUrl`, `discoveryStrategy` (OLLAMA_TAGS | OPENAI_MODELS | NONE),
-   `supportsModelDiscovery`, and `capabilities`. A new kind is a new implementation + enum
-   constant + factory entry — callers never change and never branch on kind.
+   client (`/v1/chat/completions`, `/v1/models`, `response_format`). `ProviderConfig` carries
+   the per-provider data that exists today: `id`, `kind`, `baseUrl`, `connectTimeout`,
+   `requestTimeout` — no per-kind auth-scheme/discovery-strategy/capability fields exist yet.
+   A new kind is a new implementation + enum constant + factory entry — callers never change
+   and never branch on kind.
 2. **Build the request.** `chat` is **synchronous**, returning `Result<ChatResponse>`
    (whole body) — streaming is deferred from v1, so there is NO `ChatRequest.stream`
    field or streaming path (cancellation = request timeout + cooperative interrupt at
@@ -77,26 +80,28 @@ resolution, and verification. It is FX-free and reaches the network only through
    (`FAIL_ON_UNKNOWN_PROPERTIES=false`, missing defaulted, trimmed). On malformed JSON do
    ONE repair retry ("return only valid JSON matching …"); if still unparseable, treat the
    sanitized text as the plain translation and flag the chunk only if it then fails QA.
-5. **Discover models, with manual entry as a first-class override.** `listModels()` follows
-   the profile's `discoveryStrategy` (Ollama `/api/tags`, OpenAI `/v1/models`). When
-   `supportsModelDiscovery` is false, or discovery fails, is unauthorized, or returns empty,
-   use a free-text model-ID field (pre-filled with any remembered model) — an offline or
-   permission-limited endpoint never blocks configuration; a hard discovery failure maps to
-   `discoveryFailed`. Persist translator + judge/helper slots (no embedding slot), the
-   remembered model, and the per-provider **effective context (tokens)** value — resolved
-   Ollama `num_ctx`/`/api/show` → discovery → manual field → conservative default; the
-   chunk packer budgets `min(effectiveContext − reservedHeadroom, chunkBudgetSetting)`
-   (DD-44).
+5. **Discover models, with manual entry as a first-class override.** `ModelCatalog.listModels(providerId)`
+   (backed by each dialect's `ProviderClient.listModels()`) queries the endpoint directly —
+   Ollama `/api/tags`, OpenAI `/v1/models` — there is no separate discovery-strategy flag today.
+   When discovery fails, is unauthorized, or returns empty, use a free-text model-ID field
+   (pre-filled with any remembered model) — an offline or permission-limited endpoint never
+   blocks configuration; a hard discovery failure maps to `discoveryFailed`. Persist
+   translator + judge/helper slots (no embedding slot), the remembered model, and the
+   per-provider **effective context (tokens)** value — resolved Ollama `num_ctx`/`/api/show`
+   → discovery → manual field → conservative default; the chunk packer budgets
+   `min(effectiveContext − reservedHeadroom, chunkBudgetSetting)` (DD-44).
 6. **Bind provider/model per project and preflight before ANY inference.** Settings are
    defaults for new projects only; a project persists and reuses its own bound provider +
    models. Before real runs and diagnostics, verify connection + bound-model availability
    (reuse three-stage verification); on unavailability prompt and fall back to the current
    default only on confirmation; when settings differ from the project's last-used binding,
    prompt (default: continue with previous). Never switch silently.
-7. **Resolve credentials as a reference.** `ProviderConfig` holds a `CredentialRef` — an
-   env-var name or an OS-keychain entry id, never a secret. At request time resolve it,
-   use it for that one call, never persist/log/echo it. A reference resolving to nothing ->
-   `ErrorCode.missingCredential`. Local kinds default to `AuthScheme.NONE`.
+7. **Resolve credentials as a reference (planned).** Credential resolution is not built yet —
+   `ProviderConfig` (`id`, `kind`, `baseUrl`, `connectTimeout`, `requestTimeout`) carries no
+   credential field today. The design is a reference only — an env-var name or an
+   OS-keychain entry id, never a secret — resolved at request time, used for that one call,
+   never persisted/logged/echoed. A reference resolving to nothing maps to the
+   already-defined `ErrorCode.missingCredential`.
 8. **Wrap inference in the gate.** `InferenceGate.run(...)` (blocking, fair semaphore
    permit=1) is the gate's only entry point — it acquires before every `chat` and releases
    in `finally`, and simply waits when a call is already in flight; there is no
@@ -149,8 +154,9 @@ empty-after-sanitize repair retry, then an empty text-fallback result that QA fl
 
 ## Mandatory validation checklist
 
-- [ ] Callers use only the `Provider` port + `ProviderFactory`; no caller branches on kind
-      or touches a concrete client.
+- [ ] Callers use only the `ChatModel` port + `ChatModelFactory`; no caller branches on kind
+      or touches a concrete client (the per-dialect `ProviderClient`/`ProviderClientFactory`
+      seam stays internal to `:llm`).
 - [ ] Ollama is driven natively (`options.num_ctx`, `keep_alive`, `format`, `think`), never
       through the `/v1/*` shim.
 - [ ] Structured output requested where supported; reasoning set low/off for translate/judge.
@@ -159,7 +165,7 @@ empty-after-sanitize repair retry, then an empty text-fallback result that QA fl
       if QA then fails.
 - [ ] Only translator + judge/helper slots exist — no embedding slot or vector store.
 - [ ] Discovery degrades to first-class manual model-ID entry on
-      no-discovery/failure/empty/unauthorized (`supportsModelDiscovery`).
+      no-discovery/failure/empty/unauthorized.
 - [ ] Provider/model bound per project; connection + model availability preflighted before
       any inference; no silent switch (fallback only on user confirmation).
 - [ ] One injected `HttpClient`, fresh per-request timeout, record DTOs in internal `dto`
@@ -167,7 +173,8 @@ empty-after-sanitize repair retry, then an empty text-fallback result that QA fl
 - [ ] Nullable `ChatRequest` params are omitted from JSON when null; there is no
       `ChatRequest.stream` field or streaming path (`chat` is synchronous; streaming
       FR-INFER-04 is deferred from v1).
-- [ ] Credentials are `CredentialRef` only; secrets never stored/logged/echoed.
+- [ ] Credential resolution (planned) will store a reference only, never the secret; today no
+      secret is stored/logged/echoed because no credential mechanism exists yet.
 - [ ] Every `chat` call goes through the `InferenceGate`'s blocking `run`; a review retry's
       `busy` comes from the run record, never from the gate.
 - [ ] Retry only on the typed retryable set; Retry-After honored; fresh per-attempt timeout.

@@ -15,6 +15,13 @@ The ordered list of OpenSpec changes that build BookLoom, grouped into the five 
 > comes**, against the codebase as it actually is at that moment rather than as it was imagined months earlier. The
 > "covers" column names the material a proposal should draw on; it is not a scope contract.
 
+**One exception exists today.** `complete-translation-workflow` (`openspec/changes/complete-translation-workflow/`,
+not yet archived) is in flight with a real proposal, specs and tasks, built directly against the code — the same
+pattern `add-translation-engine-and-cli` and its siblings used ahead of their planned slot. Its own tasks name three
+rows of `#decision-debt` it addresses: D5 (oversized-segment splitting, tasks 5.9/7.5), D7/D8 (pair order and
+nesting, task 5.8, ADR-0040) and D17 (language-tag normalization, task 1.1) — see each row below for its current
+status. The numbered Stage C rows further down have not been reconciled against it.
+
 ## where-this-stands {#where-this-stands}
 
 **Ten changes are authored and archived** (`openspec/changes/archive/`). **Stage A is complete and Stage B is three
@@ -50,7 +57,7 @@ persistence, so nothing survives a restart.
 |---|---|
 | Capabilities with a built-behaviour spec | Thirteen in `openspec/specs/`: `app-shell`, `book-brief`, `book-import`, `document-round-trip`, `export`, `inference`, `llm-provider`, `localization`, `notifications`, `resume`, `settings`, `theming`, `translation-pipeline` |
 | Tests | **616** at the 2026-09-11 archive, plus the suites shipped by the archived `add-translation-engine-and-cli` change across `:llm`, `:pipeline` and `:app`, and by `add-real-llm-clients` and the not-yet-archived `add-ui-translation-workspace` (which adds the `:ui` suites) — a test's name and one-line comment say what it proves; requirement-id markers were retired on 2026-09-11 (ADR-0032) |
-| Modules carrying real production logic | **7 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:ui`, `:app`) — only `:persistence` is still empty; `add-ui-translation-workspace` made `:ui` real |
+| Modules carrying real production logic | **8 of 8** (`:api`, `:util`, `:document`, `:llm`, `:pipeline`, `:persistence`, `:ui`, `:app`) — `add-ui-translation-workspace` made `:ui` real; `:persistence` now binds every repository port to an in-memory adapter (ADR-0034), with SQLite still to come; `complete-translation-workflow` (in flight) is adding real chunking, QA, judge and self-heal logic to `:pipeline`, not yet wired into a run |
 | Stages complete | **A only**, of A · B · B′ · C · D · E |
 
 **Inline masking now exists — the previous edition of this section said it did not.**
@@ -238,10 +245,10 @@ moment it is found.
 | D2 | The reader accepts EPUBs the writer can never export | **Settled** — synthesize the `mimetype` entry on write (**ADR-0030**) | `settle-writer-policy-and-document-lifetime` |
 | D3 | No `close()` or eviction seam on the four `Open*Registry` singletons | **Resolved** in `add-translation-engine-and-cli` — `DocumentPort.close(Document)` releases an opened book through its reader's registry | `add-translation-engine-and-cli` |
 | D4 | `EpubWriter` mutates the registry-held tree in place | Open — fix, or document as a contract | `settle-writer-policy-and-document-lifetime` |
-| D5 | One 26,306-character segment; 15 books over 5,000 | Open **by design** — the safety net belongs to the chunker | change 12 · `add-chunking-and-context-assembly` |
+| D5 | One 26,306-character segment; 15 books over 5,000 | **Addressed** — `complete-translation-workflow` (in flight) splits an oversized segment at sentence boundaries (`document.split.IcuSentenceSplitter`, task 5.9; `pipeline.chunk.OversizedSplit`, task 7.5); not yet wired into the running job | `complete-translation-workflow` |
 | D6 | An FB2 entity reference is emitted twice: the skipped reference plus the characters it expands to | Open — the one-line fix is a no-op; expanding entities changes how the offline invariant is enforced | `settle-writer-policy-and-document-lifetime` |
-| D7 | A model that returns a masked pair's tokens swapped or concatenated satisfies the placeholder-multiset gate and restores to broken or empty markup | Open **by design** — `FR-DOC-05` specifies a multiset comparison, order-insensitive by definition | change 12 · `add-chunking-and-context-assembly` |
-| D8 | The flat token→fragment map does not say which two tokens are partners in a masked pair | Open **by design** — the chunker's "never split a pair" obligation needs pairing information this change does not expose | change 12 · `add-chunking-and-context-assembly` |
+| D7 | A model that returns a masked pair's tokens swapped or concatenated satisfies the placeholder-multiset gate and restores to broken or empty markup | **Addressed** — `complete-translation-workflow` (in flight, task 5.8) records each pair's open/close tokens and checks order and nesting after the multiset (ADR-0040) | `complete-translation-workflow` |
+| D8 | The flat token→fragment map does not say which two tokens are partners in a masked pair | **Addressed** — `complete-translation-workflow` (in flight, task 5.8) adds `Segment.pairs()` (`PlaceholderPair`, ADR-0040), exposing pairing information | `complete-translation-workflow` |
 | D9 | A Markdown shortcut reference link (`[t]`) whose translated label matches no definition silently becomes literal text on the next parse | Open — reachable only once translation runs | Unowned — needs a change |
 | D10 | A `\|` written into a translated Markdown table cell splits its row on the next parse | **Resolved** in change 5's round-2 audit — an unescaped pipe the source did not have is now `validation` | change 5 |
 | D11 | `Fb2Writer` re-serializes every line feed in an FB2 document as `\r\n` | Open — the adapter half is fixed; the document-write half is a writer-policy decision | `settle-writer-policy-and-document-lifetime` |
@@ -250,7 +257,7 @@ moment it is found.
 | D14 | `DocumentService.unmask` routes on a ternary where an exhaustive `switch` is the mechanism two Javadocs promise | **Resolved** in change 5's round-2 audit — replaced by an exhaustive `switch` over all four `BookFormat` constants | change 5 |
 | D15 | Markdown emits segments whose masked form is exactly one token — 46 code-only table cells corpus-wide | Open — wasted model calls, not corruption | `translate-markdown-raw-html-blocks` |
 | D16 | The Markdown structure check is per-segment, so document-level block structure is unguarded | Open — measured, one book re-opened with 28 segments where it had 31 | `add-chunking-and-context-assembly` (change 12) |
-| D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | Open — found by the 2026-09-12 `Books_Examples` sweep; owned by `add-metadata-units-and-language-detection` |
+| D17 | Declared language codes arrive unnormalized (`ua`, `EN`, `en-US`) | **Addressed** — `complete-translation-workflow` (in flight, task 1.1) added `util.lang.LanguageTags.normalize` (case-folds, `ua`→`uk`, region-tag handling); found by the 2026-09-12 `Books_Examples` sweep |
 | D18 | `:document` logs only at its port boundary: its readers, writers and maskers write no DEBUG or TRACE lines | Open — left out of `add-translation-engine-and-cli` by design (its design.md, Non-Goals) | Unowned — the next `:document` change |
 | D19 | A provider HTTP error (for example LM Studio's `400` "Model unloaded") is flagged as a `validation` segment and counted as processed, so the run carries on and finishes with every remaining segment flagged; it should end the run | Open — found in `add-ui-translation-workspace`'s hand run | Unowned — the next `:pipeline` change |
 
@@ -303,8 +310,11 @@ forced every write probe to open a fresh service and a fresh document. Advisory 
 `:document` is behaving correctly and splitting them would violate the skeleton invariant. The spec already
 anticipates it (`02_GLOSSARY.md`: "oversized single paragraphs are sentence-split only on overflow", FR-ALGO-02/DD-44)
 but `:pipeline` is a stub, so the safety net does not exist. Against the settings' 512-token minimum `num_ctx`, that
-one segment overflows by 15–20×. **Stays with the chunker at change 12**, with this corpus as its proof case — moving
-it earlier would put a chunking decision inside a document change.
+one segment overflows by 15–20×. **Addressed by `complete-translation-workflow`** (in flight): `document.split.IcuSentenceSplitter`
+(task 5.9) splits an oversized masked segment at ICU sentence boundaries without cutting a placeholder pair, and
+`pipeline.chunk.OversizedSplit` (task 7.5) drafts it in sentence-aligned pieces joined back into one segment. Neither
+is yet wired into `TranslationJobImpl`'s running path, which still calls `SegmentTranslator.translate` rather than
+`translateSplit`.
 
 **D6 — an FB2 entity reference is emitted twice.** **Resolved 2026-09-12** — entities are expanded on read (book header or the bundled standard list, never fetched); `Fb2EntityExpansionTest` covers the internal, custom, external-DTD and `file:` cases. Found while building change 5. With entity expansion left off (as
 `SecureXml` requires for the offline invariant), the XML parser reports both the skipped reference and the characters
@@ -322,8 +332,11 @@ not positions: a model that returns `⟦g1⟧old⟦g0⟧` for a source that mask
 and restores as `</em>old<em>`, and a model that concatenates the two tokens instead of separating them (`⟦g0⟧⟦g1⟧`
 where the source held text between them) also passes and restores to an empty `<em></em>`, deleting the words.
 Neither is a bug in the gate — the frozen spec's placeholder-multiset requirement (`FR-DOC-05`) is order-insensitive
-by definition — it is a hole the gate does not close. Open **by design**: closing it needs the chunker's own
-machinery, so it stays with `add-chunking-and-context-assembly` (change 12).
+by definition — it is a hole the gate does not close. **Addressed by `complete-translation-workflow`** (in flight,
+task 5.8, ADR-0040): `MaskWriter` now records each pair's opening and closing tokens, and `PlaceholderGate.compare`
+walks the target's pair tokens with a stack after the multiset check, failing a close before its open, overlapping
+pairs, or a pair emptied of text the source held. `SegmentTranslator` still calls `translate`, not the chunker this
+row originally named, so the closure comes from the document gate itself rather than from chunking machinery.
 
 **What that entry understated, measured against the corpus during change 5's review: the two tree formats behave
 differently, and the more common one is the unsafe one.** `Jsoup.parseBodyFragment` silently repairs a malformed
@@ -331,16 +344,18 @@ fragment, while `Jdom2TreeNode.parseFragment` refuses it — so the *identical* 
 rejected on FB2 with `ErrorCode.validation`. Swapping only the first two tokens of every segment, the write succeeds
 on every EPUB tried and fails on every FB2 one; with the token sequence reversed outright, one EPUB re-opened with
 **4,733 segments where it had 5,096**, having reported success. So the failure mode on 193 of the 213 corpus books is
-not "restores to broken markup a reader would notice" but "silently drops content and reports success". Change 12
-owns the fix; whoever takes it should know the EPUB write path currently has no structural guard of its own behind
-the placeholder gate.
+not "restores to broken markup a reader would notice" but "silently drops content and reports success". The pair-order
+gate above (task 5.8) is what closes this for EPUB too, since `PlaceholderGate.compare` runs the same order/nesting
+check regardless of format.
 
 **D8 — the flat token→fragment map does not say which two tokens are partners.** `add-chunking-and-context-assembly`'s
 own obligation — never split a masked opening/closing pair across a chunk boundary (`DD-19`,
 `02_Architecture/05_PIPELINE_ENGINE.md`) — needs to know which token closes which, and `Segment.placeholders` is a
 flat map from token to fragment with no pairing information; for Markdown, both fragments of an emphasis pair are the
-literal `*`, so pairing cannot even be inferred from the fragment text. Open **by design**: exposing pair membership
-is the job of the change that needs it, not this one.
+literal `*`, so pairing cannot even be inferred from the fragment text. **Addressed by `complete-translation-workflow`**
+(in flight, task 5.8, ADR-0040): `Segment` now carries a `List<PlaceholderPair>` (open token, close token, and the
+element's own declared language) and a `List<String>` of line-break tokens, so pairing information is exposed at the
+`:api` boundary for the chunker and quality gates to read.
 
 **D9 — a Markdown shortcut reference link can silently become literal text.** `[t][r]` and `[t][]` mask as a pair and
 restore correctly, but a *shortcut* reference `[t]` masks to `[` and `]`, and if the translated label no longer
@@ -387,9 +402,10 @@ recorded here so none of them is rediscovered from scratch.
 
 **D17 — declared language codes arrive unnormalized.** Found by the 2026-09-12 `Books_Examples` sweep (216 books):
 one EPUB declares `ua` (not a valid code; the book is Ukrainian, `uk`), one FB2 declares `EN`, two EPUBs `en-US`.
-Nothing normalizes these yet; the language-handling change owns case-folding, region-tag handling and the `ua`→`uk`
-alias. Recorded, not fixed. The same sweep fixed one product defect (a spine item whose file is absent is now skipped,
-not refused) and two harness artefacts — see `notes-corpus-verification.md`.
+**Addressed by `complete-translation-workflow`** (in flight, task 1.1): `util.lang.LanguageTags.normalize` folds case,
+reads `_` as `-`, maps `ua`→`uk`, drops a region tag and splits Chinese into Simplified/Traditional. The same sweep
+fixed one product defect (a spine item whose file is absent is now skipped, not refused) and two harness artefacts —
+see `notes-corpus-verification.md`.
 
 **D12's first half is RESOLVED in change 5's round-2 audit; its second half stands.** `SafeDetails` deliberately
 lifted its 120-character cap so a forty-placeholder segment's report is not truncated — but the *observed* multiset
@@ -576,6 +592,8 @@ expected. Built directly against the code as it stood, it created `inference`, `
 (`:llm`), and a pausable `TranslationEngine`/`TranslationJob` that translates a book segment by segment and exports
 it only after the written file re-opens with the source's segment count (`:pipeline`) — driven today from
 `./gradlew :app:translate` (ADR-0033). It takes no number of its own, the same way every other interstitial does not.
+**`complete-translation-workflow` is running the same way now**, against changes 8–16's territory in a different
+shape than this table plans — see the note under `#where-this-stands` and each addressed `#decision-debt` row.
 
 Seams established here: **F6/F7** (checkpoints, settings KV) by 8–9; **F3** (provider abstraction) by 10; **F4**
 (single-flight gate) by 11; **F5** (context-package assembler) by 12.

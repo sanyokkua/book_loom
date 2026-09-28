@@ -1,5 +1,7 @@
 /**
- * SQLite storage: Flyway migrations, JDBI DAOs, the typed settings KV store, atomic checkpoints. FX-free.
+ * Storage behind the {@code :api} repository and checkpoint ports. Today these are in-memory adapters
+ * ({@code ua.bookloom.persistence.memory}, ADR-0034), so nothing survives a restart; the SQLite adapter (Flyway
+ * migrations, JDBI DAOs, the typed settings KV store) replaces them behind the same ports. FX-free.
  *
  * <p>The only module permitted to import {@code java.sql}. Note it does NOT own the process single-instance lock —
  * that is acquired pre-injector by {@code :app} using the path resolved by {@code ua.bookloom.util.paths}

@@ -1,6 +1,8 @@
 # BookLoom — Architecture and Current Capabilities
 
-*Generated from the code as of 2026-09-26 (branch `feature/add-ui-translation-workspace`). Sections are
+*Generated from the code as of 2026-09-26 (branch `feature/add-ui-translation-workspace`); §1, §4.4, §6–§9 refreshed
+at the group-8 checkpoint of `complete-translation-workflow` (2026-09-28) — a full regeneration is that change's last
+task. Sections are
 numbered and stable so a prompt or a review can say "per §4.3". When the code changes, change this file in the same
 commit. `docs/DEVELOPMENT.md` says how to build and run; `AGENTS.md` is the operating manual.*
 
@@ -20,12 +22,13 @@ manager (§5, §6). `./gradlew -q :app:translate --args="'<book>' [--to <lang>] 
 Ollama-native and OpenAI-compatible clients, and a pausable `TranslationEngine`/`TranslationJob` that accepts, flags or
 stops on each segment, aborts a model request in flight on Pause or Stop, and exports only after the written file
 re-opens with the source's segment count (§3.5). `:ui` is real too: the shell, six screens, the state mirror, English
-and Ukrainian bundles chosen by the operating system, and a light/dark theme. Only `:persistence` is empty, so nothing
-is persisted — no resume across a restart, no remembered theme (§6). The next unit of work is persistence (§9).
+and Ukrainian bundles chosen by the operating system, and a light/dark theme. `:persistence` binds every `:api`
+repository port to an in-memory adapter (ADR-0034, §2), so nothing survives a restart — no resume, no remembered
+theme (§6). The next unit of work is re-planning the remaining groups of `complete-translation-workflow` (§9).
 
 | | |
 |---|---|
-| Production Java | 8 JPMS modules; seven carry real code, `:persistence` is one Guice module with no bindings. Line counts are not recorded here, so they cannot drift |
+| Production Java | 8 JPMS modules, all carrying real code; `:persistence` binds in-memory adapters (ADR-0034), SQLite still to come. Line counts are not recorded here, so they cannot drift |
 | Tests | JUnit 5 + AssertJ in every module (`:ui` under TestFX on the headless platform), WireMock at the provider HTTP seam, zero Mockito throughout; fixtures are real bytes in temp dirs. Run `./gradlew test` for the current count |
 | Stack | Java 25, JavaFX 26, Gradle 9 (Kotlin DSL), Guice 7, jsoup + JDOM2 + commonmark + ICU4J, JUnit 5 + AssertJ |
 
@@ -36,7 +39,7 @@ is persisted — no resume across a restart, no remembered theme (§6). The next
           │
        :pipeline                            orchestration — TranslationEngine, the pausable job, checked export
        /   │    \
- :document :llm :persistence                services — implement :api ports; FX-free (:persistence still empty)
+ :document :llm :persistence                services — implement :api ports; FX-free (:persistence: in-memory adapters, ADR-0034)
        \   │    /
         :util                               foundation
           │
@@ -65,7 +68,8 @@ Guice wiring: `AppModule` (paths, environment, startup context, a background poo
 `ModelCatalog` and `ProviderConfigs`, resolving the offline `pseudo` provider and the in-memory `ollama`/`lmstudio`
 presets) and `PipelineModule` (`TranslationEngine` → `TranslationEngineImpl`). `ua.bookloom.app.CoreModules` installs
 all five and is what the desktop app and `./gradlew :app:translate` share, so the two entry points never wire
-different graphs (§5); the desktop app adds `UiModule` on top. `PersistenceModule` still binds nothing.
+different graphs (§5); the desktop app adds `UiModule` on top. `PersistenceModule` binds every repository port to its
+in-memory adapter (ADR-0034).
 
 ## 3. Contracts (`:api`, package `ua.bookloom.api`)
 
@@ -211,10 +215,11 @@ place that converts them to `Result`/`AppError` (§4.7).
 
 ### 4.4 The placeholder gate
 
-`PlaceholderGate.compare` treats the tokens as a multiset: any token missing, duplicated or invented in the
-translation is `ErrorCode.validation`, nothing is restored, and the translation is returned unaltered. `SafeDetails`
-carries the expected tokens in full and the observed ones bounded. Order is deliberately not checked (a swapped or
-concatenated pair passes — debt D7/D8, owned by the future chunker).
+`PlaceholderGate.compare` checks the tokens as a multiset — any token missing, duplicated or invented is
+`ErrorCode.validation` — and then the pairing recorded at mask time (ADR-0040 as amended, `mask/GateRule`): every
+pair opens before it closes and nests with the others, a pair that held text still holds text, and a line-break token
+keeps its innermost pair; atomic tokens stay free to move. On any failure nothing is restored and the translation is
+returned unaltered. `SafeDetails` carries the expected tokens in full and the observed ones bounded.
 
 ### 4.5 Markdown restore: escaping and the structure check
 
@@ -307,13 +312,15 @@ LM Studio preset), choose a model, start / pause / resume / stop / start again, 
 and show the written file in the file manager. Pause and Stop abort the request in flight; a stopped run is final and
 writes nothing.
 
-**Cannot yet:** persist anything (no resume across a restart, no remembered theme), detect the source language (the
-selector is read-only), switch the interface language in the app (the OS chooses `en` or `uk`), open the Projects,
-Names & style or Review entries, or chunk long segments. `:persistence` still holds one empty Guice module.
+**Cannot yet:** persist anything across a restart (no resume, no remembered theme — `:persistence` binds every
+repository port to an in-memory adapter, ADR-0034, not yet SQLite), detect the source language (the selector is
+read-only), switch the interface language in the app (the OS chooses `en` or `uk`), open the Projects, Names & style
+or Review entries, or chunk long segments.
 
-**Text the walker never reaches** — everything outside a content document's `<body>` or an FB2 `<body>`; after a
-translation these stay in the source language until the metadata-units change lands. Counted on the owner's 216-book
-corpus: NCX table-of-contents labels (11,997 across all 197 EPUBs), EPUB 3 nav documents (20 books), each content
+**Text outside the body** — the metadata and navigation text outside a content document's `<body>` or an FB2
+`<body>` is read into one auxiliary unit per book and written back (ADR-0041), but the job leaves that unit out until
+the Book Brief's switches reach the run, so after a translation it stays in the source language. Counted on the
+owner's corpus at 216 books: NCX table-of-contents labels (11,997 across all 197 EPUBs), EPUB 3 nav documents (20 books), each content
 document's `<head><title>` (7,450), OPF `dc:title` (197) and `dc:description` (106), FB2 `annotation` (6 books,
 24 paragraphs) and `book-title` (9), `img@alt` (1). Everything that *is* inside a body is covered by the structural
 rule — the same census found no text-owning body element the walker does not handle.
@@ -329,9 +336,9 @@ Code-visible today:
 - FB2: a non-breaking space inside translatable text is now a plain character the model sees; a translation that
   replaces it with an ordinary space is accepted (the QA gate could count them later if it ever matters).
 - Long segments (one of 26,306 chars; 15 books over 5,000) and placeholder-dense ones (248 tokens in one segment of a
-  technical book) are passed through whole; splitting is the chunker's job (D5).
-- The gate is order-insensitive (D7) and the flat token map carries no pairing information (D8) — both by design
-  until chunking exists.
+  technical book) are still sent whole by the running job: sentence-aligned splitting exists
+  (`document.split.IcuSentenceSplitter`, `pipeline.chunk.OversizedSplit`, D5) but is not wired into a run yet.
+- D7/D8 are closed: pairs are recorded at mask time and their order and nesting are gated (§4.4, ADR-0040).
 - `EpubWriter` mutates the registry-held tree in place on write (D4).
 
 Resolved on 2026-09-11/12: D2 (missing `mimetype` synthesized on write), D11 (FB2 line endings echoed), D13
@@ -366,10 +373,10 @@ All test paths are under `modules/<module>/src/test/java/ua/bookloom/<module>/`.
 `./gradlew :document:test --tests 'ua.bookloom.document.golden.FormatGoldenRoundTripTest'`.
 
 **The corpus sweep** (`golden/CorpusVerificationTest`, tag `corpus`):
-`BOOKLOOM_CORPUS_DIR=/path ./gradlew :document:corpus`. Last recorded run (2026-09-12, the owner's 216-book
-`Books_Examples` set: 197 EPUB, 9 FB2, 9 TXT, 1 Markdown, 367 MB): 216/216 opened, 216/216 canonical-equal on the
-zero-edit identity and fixed-point probes, 216/216 mutation and idempotence, 216/216 mask-probe pass; 725,542
-segments and 272,817 placeholders; text coverage per book (words of visible body text reached by segments) min
+`BOOKLOOM_CORPUS_DIR=/path ./gradlew :document:corpus`. Last recorded run (2026-09-28, the owner's
+`Books_Examples` set, now 235 books): 235/235 opened, 235/235 canonical-equal on the zero-edit identity and
+fixed-point probes, 235/235 mutation, marker-strip and idempotence, 235/235 mask/unmask; 826,298 segments and 322,208
+placeholders. The earlier 216-book run (2026-09-12, 197 EPUB, 9 FB2, 9 TXT, 1 Markdown, 367 MB) recorded text coverage per book (words of visible body text reached by segments) min
 0.9808, median 1.0, the two lowest being a word-boundary counting artefact on span-built paragraphs; 2 min 39 s. Details and the defects it found: `docs/implementation_plan/notes-corpus-verification.md`.
 
 **The running app**: `./gradlew :app:run` prints `app started`, `injector built and two-phase init complete`,
@@ -379,6 +386,9 @@ segments and 272,817 placeholders; text coverage per book (words of visible body
 
 The walking skeleton is done and so is the face on it: a book of any of the four formats goes through the whole
 pipeline from the command line and from the window, with the offline `pseudo` model or a real local provider (§1, §5,
-§6). Next: `:persistence` — projects, settings and per-chunk checkpoints, which is what makes resume across a restart,
-a remembered theme and a language switch possible. Chunking, source-language detection, QA, judge and glossary follow,
-one small change each; the order is `docs/implementation_plan/CHANGE_BACKLOG.md`.
+§6). `:persistence` now binds every repository port to an in-memory adapter (ADR-0034) and `:pipeline` has built and
+tested prompt templates, chunking, the stored-project service, the deterministic quality checks, the judge and
+self-heal — none of it wired into the running job yet, which still accepts a segment once its markup restores. Next:
+re-plan the remaining groups of `openspec/changes/complete-translation-workflow` (memory, the run on a stored
+project, and the screens that show it), then the SQLite adapter behind `:persistence`'s ports; the order beyond that
+is `docs/implementation_plan/CHANGE_BACKLOG.md`.

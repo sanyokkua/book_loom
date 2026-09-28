@@ -12,25 +12,33 @@ Flyway planned. Full inventory: `gradle/libs.versions.toml`.
 
 ## Where it stands — keep this paragraph current
 
-Real: `:api` (`Result`/`AppError`, document model, `DocumentPort`), `:util`, `:document` (four-format round trip,
-inline masking to `⟦gN⟧`, unmask behind a placeholder-multiset hard gate — verified on the owner's 216-book local corpus),
-`:llm` (chat-model contract, factory, pseudo model, gated/retried Ollama-native and OpenAI-compatible clients,
-verification, model discovery), `:pipeline` (translation engine, pausable and interruptible job, checked export), `:ui`
+Real: `:api` (`Result`/`AppError`, document model, `DocumentPort`, project and brief records, storage and service
+ports), `:util` (paths, hashing, the language catalogue), `:document` (four-format round trip, inline masking to
+`⟦gN⟧`, unmask behind a placeholder hard gate that checks the multiset and the order of paired placeholders, book
+inspection, sentence splitting, auxiliary text units — verified on the owner's local corpus, 235 books at the last
+sweep), `:llm` (chat-model contract, factory, pseudo model, gated/retried Ollama-native and OpenAI-compatible clients,
+token usage, verification, model discovery), `:persistence` (in-memory adapters behind the storage ports), `:pipeline`
+(translation engine, pausable and interruptible job, checked export; prompt templates, style sheet, quality dial, chunk
+packing, oversized-segment splitting, the stored-project service; the quality gates — deterministic checks, refusal
+gate, confidence, per-chunk judge, directed fix, reflect → improve, polish, acceptance rule and quality loop), `:ui`
 (the shell, six screens, the state mirror, English and Ukrainian bundles chosen by the OS, light/dark theme) and `:app`
 (boot, logging, single-instance lock, DI, the window). A book of any of the four formats goes through the whole
-pipeline from the window or the command line, with the pseudo model or a configured real provider. Empty:
-`:persistence` — nothing is saved, so no resume across a restart and no remembered settings. Next comes persistence,
-then remaining breadth (QA, glossary, source-language detection).
+pipeline from the window or the command line, with the pseudo model or a configured real provider — on the job's
+original path, which accepts a segment once its markup restores: the stored project, chunking, the brief-driven style
+sheet, the judge and the quality loop are built and tested but not yet wired into a run. Not built: saving (nothing
+survives a restart, no resume, no remembered settings), glossary, translation memory, rolling summary. Next: re-plan
+groups 9–15 of `openspec/changes/complete-translation-workflow` (inputs in its `replan-notes.md`), then memory, the
+run on a stored project, and the screens that show it.
 
 ## Commands
 
 ```bash
 ./gradlew build                                   # compile + lint + test
-./gradlew clean build check spotlessCheck         # THE GATE — exactly what pre-push and CI run (≈1–2 min warm)
+./gradlew clean build check spotlessCheck         # THE GATE — exactly what pre-push and CI run (≈9 min; ~7 is :ui TestFX)
 ./gradlew :document:test --tests 'ua.bookloom.document.golden.*'   # one class or package
 ./gradlew :app:run                                # launch the app
 ./gradlew spotlessApply                           # fix formatting
-BOOKLOOM_CORPUS_DIR=/path ./gradlew :document:corpus   # 216-book sweep, local only
+BOOKLOOM_CORPUS_DIR=/path ./gradlew :document:corpus   # the owner's corpus sweep, local only
 ./gradlew liveLocal | promptEval | visual         # local-only tagged sets, never in check
 ```
 
@@ -46,11 +54,11 @@ diagnose; never run two gates at once.
 | Module | Holds | Layer |
 |---|---|---|
 | `:api` | contracts, records, `Result`/`AppError`/`ErrorCode`, ports | foundation (framework-free) |
-| `:util` | paths, hashing | foundation |
+| `:util` | paths, hashing, language catalogue | foundation |
 | `:document` | parse / mask / unmask / reassemble, per format | service |
 | `:llm` | provider port + Ollama-native and OpenAI-compatible clients | service |
-| `:persistence` | SQLite + Flyway + JDBI | service |
-| `:pipeline` | translation engine: chunking, QA, judge, repair | orchestration |
+| `:persistence` | in-memory adapters behind the `:api` storage ports (ADR-0034); SQLite + Flyway + JDBI planned | service |
+| `:pipeline` | translation engine: prompts, chunking, QA, judge, self-heal | orchestration |
 | `:ui` | JavaFX views, theming | presentation |
 | `:app` | launcher, composition root, the `archTest` suite | presentation |
 

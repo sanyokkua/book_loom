@@ -27,7 +27,7 @@ context: |
 
   ## Stack
 
-  Java 25 (LTS) - JavaFX 25 (LTS) - Gradle (Kotlin DSL) + version catalog (`gradle/libs.versions.toml`)
+  Java 25 (LTS) - JavaFX 26 - Gradle (Kotlin DSL) + version catalog (`gradle/libs.versions.toml`)
   + dependency locking - Guice DI (constructor injection only) - SQLite (sqlite-jdbc, WAL) + Flyway
   (additive `V{ver}__desc.sql` migrations) + JDBI 3 (no ORM) - JDOM2/dom4j + jsoup + `java.util.zip`
   (documents) + a CommonMark library (Markdown) - `java.net.http` + Jackson (LLM HTTP/JSON) - ICU4J for
@@ -89,10 +89,11 @@ context: |
   - **UI thread discipline.** Scene graph only on the JavaFX Application Thread; long work in `Task`/
     `Service` on an injected daemon executor; `Platform.runLater` (via the singleton state mirror) to
     bridge; virtual threads for I/O fan-out.
-  - **Persistence.** SQLite (WAL) via JDBI, Flyway additive migrations, a generic typed KV settings table,
-    atomic per-chunk commits (process-crash-safe and forced-quit-safe; NOT power-loss-proof, DD-20). The
-    single-instance lock `bookloom.lock` is acquired pre-injector by `:app`/`:util`, never by
-    `:persistence`.
+  - **Persistence.** Today, every `:api` repository port (`ua.bookloom.api.persistence`) is bound to an
+    in-memory adapter (ADR-0034) — nothing survives a restart. SQLite (WAL) via JDBI, Flyway additive
+    migrations, a generic typed KV settings table, and atomic per-chunk commits (process-crash-safe and
+    forced-quit-safe; NOT power-loss-proof, DD-20) are the planned SQLite adapter. The single-instance lock
+    `bookloom.lock` is acquired pre-injector by `:app`/`:util`, never by `:persistence`.
   - **Paths first.** A `:util` resolver picks the per-OS data/log dirs and runs BEFORE logging and SQLite
     (DD-39, ADR-0015).
   - **Green gate, no exceptions.** Every change leaves `./gradlew clean build check spotlessCheck` green
@@ -125,7 +126,7 @@ context: |
   | `book-import`          | fr-import                      |
   | `document-round-trip`  | fr-doc                         |
   | `book-brief`           | fr-brief                       |
-  | `llm-provider`         | fr-prov, fr-model              |
+  | `llm-provider`         | fr-prov, fr-model               |
   | `inference`            | fr-infer                       |
   | `translation-pipeline` | fr-algo                        |
   | `quality-gates`        | fr-qa                          |

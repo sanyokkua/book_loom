@@ -2,10 +2,11 @@
 name: document-pipeline
 description: >-
   Use when working in `:document` — parsing EPUB/FB2/Markdown/TXT into the skeleton +
-  ordered segment model, inline masking to `⟦gN⟧` placeholders, unmask + tag-multiset
+  ordered segment model, inline masking to `⟦gN⟧` placeholders, unmask + placeholder-gate
   validation, reassembly and repackaging, and the per-format round-trip golden test.
   Covers the per-format rules (EPUB mimetype-first / IDs / fonts, FB2 XML / encoding /
-  binary, Markdown AST, TXT), detecting the real source language, and refusing DRM.
+  binary, Markdown AST, TXT), taking language evidence from the book's metadata (ADR-0037),
+  and refusing DRM.
 allowed-tools: Read, Write, Bash, Glob, Grep
 ---
 
@@ -16,17 +17,17 @@ individually-addressable segment list**; translate text nodes only; reassemble
 **structure-and-text-preserving (canonical-equal)** — export re-serializes the parsed model,
 so exact bytes may differ under jsoup/CommonMark/zip normalization, but structure, nesting,
 IDs, images, fonts, encoding, and all text are preserved. The skeleton is NEVER sent to the
-model and NEVER semantically regenerated — only text nodes change, so formatting is
-preserved by construction. `:document` is FX-free and implements the `DocumentPort` port
-from `:api`.
+model and NEVER semantically regenerated — only text nodes and the attribute values DD-47
+lists (image alt text, ADR-0041) change, so formatting is preserved by construction.
+`:document` is FX-free and implements the `DocumentPort` port from `:api`.
 
 ## When to use
 
 - Adding or fixing a format parser (EPUB, FB2, Markdown, TXT) or its reassembly.
-- Implementing inline masking / unmasking / the tag-multiset validation gate.
+- Implementing inline masking / unmasking / the placeholder-gate validation.
 - Writing or updating a per-format round-trip golden test.
 - Handling a format edge case (DRM, encoding, verse, notes, images, fonts).
-- Detecting the real source language of an imported book.
+- Reading the source language from the book's declared metadata (ADR-0037).
 
 ## When NOT to use
 
@@ -40,7 +41,9 @@ from `:api`.
   atomic protected placeholders (text kept exactly); `<pre>`/block code and block math are
   non-translatable blocks excluded from segmentation and the token budget.
 - Do NOT add PDF/DOCX — scope is EPUB/FB2/MD/TXT only (DD-08).
-- Do NOT trust declared language metadata — detect the real content language.
+- Do NOT add a text-based language detector — the source language comes from the book's
+  declared metadata only (ADR-0037); a wrong declaration is fixed by the person editing the
+  source language on the Book Brief.
 - Do NOT attempt to decrypt DRM — detect and refuse.
 - Do NOT `requires javafx.*` (FX-free core).
 
@@ -63,10 +66,15 @@ from `:api`.
      translatable only via the "Also translate" toggle, DD-47).
    - **TXT:** paragraph-delimited segments (blank-line separated); preserve line endings,
      whitespace/indentation, and encoding.
-2. **Detect the real source language** (Lingua), ignoring declared metadata. If declared
-   disagrees with detected, surface a language-mismatch state (EC-LANG-1) for user confirm.
-   Detect a multi-language book's dominant language; per-segment foreign passages follow
-   the foreign-passage policy (default keep-as-is, DD-26).
+2. **Take the source language from the book's declared metadata** (ADR-0037), normalized
+   (`ua`→`uk`, `EN`→`en`, `en-US`→`en`, `zh-TW`→`zh-Hant`), preselected on the Book Brief and
+   editable there; where an EPUB's package language and its content documents disagree, or
+   the package declares nothing, the content documents' majority language is preselected
+   instead, and a plain-text book (which declares nothing) leaves the choice to the person.
+   The language-mismatch state (EC-LANG-1) is raised by that metadata disagreement itself,
+   never by a detector. Each block records its own declared `xml:lang`/`lang`; a block whose
+   declaration differs from the brief's source language is a pre-detected foreign span for
+   the foreign-passage policy (default keep-as-is, DD-26). No detection library is added.
 3. **Refuse DRM.** Detect encryption (`META-INF/encryption.xml` or vendor DRM in EPUB;
    container encryption in FB2) and refuse with a DRM-blocked state — no partial import
    (EC-EPUB-1, EC-DRM-1). Reject malformed/corrupt files (missing container/OPF/spine declaration,
@@ -83,9 +91,12 @@ from `:api`.
    placeholder set and restore exact nesting; mask only the intended span for a locked term
    inside a longer word (avoid partial-word substitution).
 5. **Unmask + validate (hard gate).** After translation, restore placeholders and run the
-   **tag-multiset check**: the placeholder multiset in the output MUST equal the input's.
-   A dropped/duplicated placeholder HARD-FAILS the chunk (never export a broken set) — the
-   pipeline routes it to self-heal/flag (EC-INLINE-2).
+   **placeholder gate** (`PlaceholderGate`): the placeholder multiset in the output MUST equal
+   the input's, every **paired** token MUST come back opening-before-closing and properly
+   nested with the other pairs, a pair that held text in the source MUST still hold text in
+   the target, and a line-break token MUST keep its innermost enclosing pair — an **atomic**
+   token may move freely (ADR-0040 as amended). A violation HARD-FAILS the chunk (never export
+   a broken set) — the pipeline routes it to self-heal/flag (EC-INLINE-2).
 6. **Reassemble + repackage** per format:
    - **EPUB:** write `mimetype` FIRST and STORED (uncompressed); preserve all other ZIP
      entries and their identity; keep all element IDs, cross-reference targets, images, and
@@ -122,10 +133,13 @@ from `:api`.
 - [ ] Inline `<code>`/inline MathML are atomic protected placeholders; `<pre>`/block
       code/block math excluded from segmentation and the token budget; anchor ids
       preserved, link text translatable (DD-49).
-- [ ] Tag-multiset hard gate fails a dropped/duplicated placeholder; no broken export.
+- [ ] The placeholder gate fails a dropped/duplicated placeholder, a misordered or
+      overlapping pair, an emptied pair, or a moved line break; no broken export
+      (ADR-0040 as amended).
 - [ ] EPUB repackage writes `mimetype` first + stored; `dc:language` updated on export.
 - [ ] FB2 preserves declared encoding (incl. `windows-1251`) and binary images.
-- [ ] Real source language detected (Lingua); language-mismatch surfaced; DRM refused.
+- [ ] Source language taken from the book's declared metadata (ADR-0037, no detector);
+      language-mismatch surfaced; DRM refused.
 - [ ] Per-format round-trip golden test is canonical-equal — canonicalized compare, TXT
       exact bytes (minus intentional lang metadata, DD-43).
 - [ ] `:document` remains FX-free (ArchUnit green).

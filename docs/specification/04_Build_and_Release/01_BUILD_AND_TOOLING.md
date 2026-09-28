@@ -13,7 +13,7 @@ assumes.
 ## build-system {#build-system}
 
 | Decision                 | Value                                                                                                                                                                                                                                                                 |
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|--------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Build tool               | Gradle, **Kotlin DSL** (`*.gradle.kts`)                                                                                                                                                                                                                               |
 | Wrapper                  | committed (`gradlew`, `gradle/wrapper/`); pinned Gradle version + checksum                                                                                                                                                                                            |
 | Toolchain                | Java **25** via `java.toolchain.languageVersion = 25` (contributors need no manual JDK)                                                                                                                                                                               |
@@ -25,7 +25,7 @@ assumes.
 ## project-layout {#project-layout}
 
 ```
-tranlator_app/
+book_loom/
 ├─ settings.gradle.kts           // includes :api :util :document :llm :pipeline :persistence :ui :app + build-logic
 ├─ gradle/libs.versions.toml     // version catalog (single source of dependency versions)
 ├─ gradle.lockfile / *.lockfile  // committed dependency locks
@@ -35,7 +35,7 @@ tranlator_app/
 │       ├─ bookloom.spotless-conventions.gradle.kts // Palantir format
 │       ├─ bookloom.test-conventions.gradle.kts     // JUnit5, AssertJ, Mockito, JaCoCo
 │       └─ bookloom.javafx-conventions.gradle.kts   // openjfx plugin, module opens (ui/app only)
-├─ api/ util/ document/ llm/ pipeline/ persistence/ ui/ app/
+├─ modules/                      // api/ util/ document/ llm/ pipeline/ persistence/ ui/ app/ (ADR-0021)
 └─ docs/
 ```
 
@@ -73,7 +73,7 @@ pipeline as:
 
 ## javafx-plugin {#javafx-plugin}
 
-`org.openjfx.javafxplugin` (variant-aware) declares the JavaFX 25 modules (`controls`, `fxml`, `graphics`) for `:ui`/
+`org.openjfx.javafxplugin` (variant-aware) declares the JavaFX 26 modules (`controls`, `fxml`, `graphics`) for `:ui`/
 `:app` and resolves the correct per-OS artifacts. Packaging uses **no Gradle plugin**: `./gradlew :app:collectDist` (a
 plain `Sync` task) stages the app jar + `runtimeClasspath` into `app/build/dist/libs/`, and the committed
 `scripts/package-<os>` scripts drive the `jpackage` CLI from there — see `03_PACKAGING_JPACKAGE.md#approach` (DD-24).
@@ -123,9 +123,9 @@ over the platform-classified JavaFX configs.
 `./gradlew` tasks the workflow relies on:
 
 | Task                   | Purpose                                                                                                                                                                                                                                                                                                                                                                                                             |
-|------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `build`                | compile + test + all verification for touched code                                                                                                                                                                                                                                                                                                                                                                  |
-| `test`                 | unit tests (UI/TestFX excluded from the fast set)                                                                                                                                                                                                                                                                                                                                                                   |
+| `test`                 | unit tests (UI/TestFX excluded from the fast set)                                                                                                                                                                                                                                                                                                                                                                  |
 | `spotlessApply`        | apply Palantir formatting (pre-commit hook)                                                                                                                                                                                                                                                                                                                                                                         |
 | `spotlessCheck`        | verify formatting (CI)                                                                                                                                                                                                                                                                                                                                                                                              |
 | `check`                | run all verification tasks (lint, ArchUnit, SpotBugs, tests, coverage)                                                                                                                                                                                                                                                                                                                                              |

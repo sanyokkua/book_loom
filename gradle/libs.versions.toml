@@ -5,7 +5,7 @@
 # (docs/specification/05_Dependencies/02_DEPENDENCY_POLICY.md#exact-versions).
 #
 # Populated by change `bootstrap-gradle-and-quality-toolchain`. Runtime libraries the application itself needs
-# (sqlite-jdbc, Flyway, JDBI, Lingua) are NOT here yet — each arrives with the change that first uses it, at the
+# (sqlite-jdbc, Flyway, JDBI) are NOT here yet — each arrives with the change that first uses it, at the
 # narrowest scope, per 02_DEPENDENCY_POLICY.md#adding-a-dependency. AtlantaFX is declined outright, not deferred
 # (add-ui-translation-workspace design.md D7).
 
