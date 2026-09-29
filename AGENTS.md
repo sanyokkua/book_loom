@@ -28,10 +28,14 @@ pipeline from the window or the command line, with the pseudo model or a configu
 stored project that starts at its first pending segment and stores each decision there: preparation derives the brief's
 style sheet and scans an empty glossary for names, each unit is packed into chunks, and every segment is drafted,
 judged when the dial enables the judge, and decided by the acceptance rule and the quality loop, so an untranslated
-echo is repaired or flagged. Protected spans, memory reuse, the summary, deferrals and context assembly are built and
-tested but not yet wired into a run. Not built: saving (nothing survives a restart, no resume, no remembered
-settings). Next: the rest of group 10 of `openspec/changes/complete-translation-workflow` (the "Also translate"
-switches on), then review and export (11) and the screens (12–15).
+echo is repaired or flagged. The "Also translate" switches decide what is translated, a segment drafted in pieces is repaired by redrafting
+its pieces, locked names and kept foreign runs are protected behind tokens, each draft carries its context package
+and every record its snapshot, repeated passages reuse the translation memory, the rolling summary, new names and
+deferrals are kept as the run goes, and it pauses for review as the review mode says, announcing each segment and
+model call as events. Not built: saving (nothing survives a restart, no remembered settings), the window's real
+start and resume on a project (the window still runs through an interim import-and-export bridge), review actions
+and backward revision. Next: group 11 of `openspec/changes/complete-translation-workflow` (review desk, revision,
+export and the command line), then the screens (12–15).
 
 ## Commands
 
