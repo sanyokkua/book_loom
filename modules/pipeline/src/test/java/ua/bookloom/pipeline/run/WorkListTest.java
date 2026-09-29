@@ -24,6 +24,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.QualityDial;
@@ -53,7 +54,8 @@ class WorkListTest {
                 injector.getInstance(OpenProjects.class),
                 injector.getInstance(RunRepository.class),
                 injector.getInstance(GlossaryRepository.class),
-                injector.getInstance(TmRepository.class));
+                injector.getInstance(TmRepository.class),
+                injector.getInstance(SummaryRepository.class));
     }
 
     // A draft's preceding targets come from its whole unit, so the segments decided before this run must be listed too.
@@ -143,6 +145,38 @@ class WorkListTest {
 
         assertThat(work.remaining().getFirst().segment().id()).isEqualTo("one:3");
         assertThat(pendingIds(work)).containsExactly("one:3", "two:0");
+    }
+
+    // The unit-end name scan reads everything decided so far, an earlier run's decisions and a flagged one included.
+    @Test
+    void decidedSegments_storedDecisions_listsEveryDecidedSegmentInDocumentOrder() {
+        final WorkList work = read(
+                document(),
+                Map.of(
+                        "one:2", SegmentStatus.FLAGGED,
+                        "one:0", SegmentStatus.ACCEPTED,
+                        "one:1", SegmentStatus.REVISED));
+
+        assertThat(work.decidedSegments()).extracting(Segment::id).containsExactly("one:0", "one:1", "one:2");
+    }
+
+    // The summary's unit end also comes at the auxiliary unit's end, which is never a section end.
+    @Test
+    void endsUnit_auxiliaryItem_endsItsUnit() {
+        final WorkList work = read(
+                documentWithAuxiliary(),
+                Map.of(
+                        "one:0", SegmentStatus.ACCEPTED,
+                        "one:1", SegmentStatus.ACCEPTED,
+                        "one:2", SegmentStatus.ACCEPTED,
+                        "one:3", SegmentStatus.ACCEPTED,
+                        "two:0", SegmentStatus.ACCEPTED));
+        final WorkItem title = work.remaining().getFirst();
+
+        work.apply(title, SegmentStatus.ACCEPTED);
+
+        assertThat(work.endsUnit(title)).isTrue();
+        assertThat(work.isBody(title)).isFalse();
     }
 
     // Counting only this run's decisions would show 0 accepted at the start of a run that resumes a stopped one.

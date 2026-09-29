@@ -27,10 +27,12 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.CheckpointPort;
+import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -62,8 +64,11 @@ final class TranslationJobTestSupport {
             Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class);
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
 
-    /** A book imported through a real {@code ProjectServiceImpl} over the in-memory repositories. */
-    record TestProject(String id, RunStores stores, DocumentPort documents) {}
+    /**
+     * A book imported through a real {@code ProjectServiceImpl} over the in-memory repositories, with the deferral
+     * store the run's commits write to, which the job itself never reads.
+     */
+    record TestProject(String id, RunStores stores, DocumentPort documents, DeferralRepository deferrals) {}
 
     static TestProject project(final Path book, final BookBrief brief) {
         return project(UnaryOperator.identity(), book, brief);
@@ -83,7 +88,8 @@ final class TranslationJobTestSupport {
                 injector.getInstance(OpenProjects.class),
                 injector.getInstance(RunRepository.class),
                 injector.getInstance(GlossaryRepository.class),
-                injector.getInstance(TmRepository.class));
+                injector.getInstance(TmRepository.class),
+                injector.getInstance(SummaryRepository.class));
         final ProjectServiceImpl service = new ProjectServiceImpl(
                 injector.getInstance(BookInspector.class),
                 documents,
@@ -95,7 +101,7 @@ final class TranslationJobTestSupport {
                 Objects.requireNonNull(importResult.data(), () -> "imported book: " + importResult.error());
         final String id = Objects.requireNonNull(imported.projectId(), "project id");
         service.updateBrief(id, brief);
-        return new TestProject(id, stores, documents);
+        return new TestProject(id, stores, documents, injector.getInstance(DeferralRepository.class));
     }
 
     /** The brief the job tests run with: the Fast dial and the given languages, everything else at its default. */

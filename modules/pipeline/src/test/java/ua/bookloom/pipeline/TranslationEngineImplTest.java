@@ -126,6 +126,7 @@ class TranslationEngineImplTest {
                 project.stores().runs(),
                 project.stores().glossary(),
                 project.stores().tm(),
+                project.stores().summaries(),
                 TranslationJobTestSupport.qualityLoop(),
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
                 Clock.systemUTC());

@@ -4,11 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
-import org.slf4j.MDC;
-import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
@@ -39,7 +35,8 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * segments are all drafted before its one judge call and only then decided one at a time, because the judge reads the
  * whole chunk; with it off each segment is drafted and decided before the next is drafted. The judge on or off is this
  * one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
- * place and is decided in its turn with neither a draft nor the judge.
+ * place and is decided in its turn with neither a draft nor the judge. What follows each decision — its deferrals, the
+ * rolling summary and a unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
  * aborted — a draft, the judge, or a segment's rounds from the first. A stop drops the undecided drafts: those segments
@@ -59,6 +56,8 @@ public final class ChunkRunner {
     private final RunSinks sinks;
     private final PrecedingTargets preceding;
     private final MemoryReuse memory;
+    private final RoutedCalls calls;
+    private final DecisionFollowUp followUp;
     private final int fixedHeadroom;
 
     /**
@@ -82,6 +81,8 @@ public final class ChunkRunner {
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
         this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
+        this.calls = new RoutedCalls(sinks.boundaries());
+        this.followUp = new DecisionFollowUp(settings.projectId(), steps.summary(), stores, sinks, calls);
         final CallFrame frame = settings.frame();
         this.fixedHeadroom = TokenEstimator.estimate(frame.styleSheet().text(), PROMPT_LANGUAGE)
                 + TokenBudget.fullChunkAllowance(frame.sourceLanguage(), frame.targetLanguage());
@@ -96,6 +97,10 @@ public final class ChunkRunner {
      */
     public RunEnd run(final WorkList work) {
         Objects.requireNonNull(work, "work");
+        final Optional<RunEnd> unread = followUp.readSummary();
+        if (unread.isPresent()) {
+            return unread.get();
+        }
         while (work.hasPending()) {
             final Optional<RunEnd> end = runUnit(work, work.nextSection());
             if (end.isPresent()) {
@@ -103,21 +108,21 @@ public final class ChunkRunner {
             }
             final Result<Integer> refreshed = work.refresh();
             if (refreshed.isErr()) {
-                return failedBy(Objects.requireNonNull(refreshed.error(), "error"));
+                return RoutedCalls.failedBy(Objects.requireNonNull(refreshed.error(), "error"));
             }
         }
         return new RunEnd(JobState.COMPLETED, null);
     }
 
-    // The unit's glossary lines are reserved as they stand when it is packed; a chunk re-reads the glossary anyway.
+    // The unit's glossary lines and summary are reserved as they stand when it is packed; a chunk re-reads the
+    // glossary anyway, and a summary refreshed inside the unit is estimated when the next unit is packed.
     private Optional<RunEnd> runUnit(final WorkList work, final List<WorkItem> items) {
         final List<Segment> segments = items.stream().map(WorkItem::segment).toList();
         final Result<List<GlossaryEntry>> glossary = stores.glossary().all(settings.projectId());
         if (glossary.isErr()) {
-            return Optional.of(failedBy(Objects.requireNonNull(glossary.error(), "error")));
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), "error")));
         }
-        final int headroom = fixedHeadroom
-                + ChunkContext.termsEstimate(segments, Objects.requireNonNull(glossary.data(), "glossary"));
+        final int headroom = headroomOf(segments, Objects.requireNonNull(glossary.data(), "glossary"));
         final int budget = TokenBudget.chunkTokens(headroom);
         final int cap = settings.dial().chunkCap(settings.mode());
         final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);
@@ -141,11 +146,18 @@ public final class ChunkRunner {
         return Optional.empty();
     }
 
+    private int headroomOf(final List<Segment> segments, final List<GlossaryEntry> glossary) {
+        final String summary = followUp.summary();
+        return fixedHeadroom
+                + ChunkContext.termsEstimate(segments, glossary)
+                + (summary == null ? 0 : TokenEstimator.estimate(summary, null));
+    }
+
     private Optional<RunEnd> runChunk(
             final WorkList work, final Chunk chunk, final List<WorkItem> items, final int index, final int budget) {
         final Result<ChunkContext> read = ChunkContext.read(stores.glossary(), settings, chunk, steps.gate());
         if (read.isErr()) {
-            return Optional.of(failedBy(Objects.requireNonNull(read.error(), "error")));
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), "error")));
         }
         final ChunkContext context = Objects.requireNonNull(read.data(), "context");
         final Current current = new Current(
@@ -195,7 +207,7 @@ public final class ChunkRunner {
     /** Starts the quality loop over the outcomes — the judge call, when the dial enables it — then decides them. */
     private Optional<RunEnd> decideWith(
             final Current current, final List<WorkItem> items, final List<DraftOutcome> outcomes) {
-        final Step<ChunkDecider> decider = untilAnswered(
+        final Step<ChunkDecider> decider = calls.untilAnswered(
                 current.work(),
                 null,
                 () -> steps.loop()
@@ -216,20 +228,20 @@ public final class ChunkRunner {
         final Result<List<String>> earlierMaskedTargets = preceding.earlierMaskedTargets(
                 unitSegments, segment, settings.dial().precedingTargets(), current.drafts());
         if (earlierMaskedTargets.isErr()) {
-            return new Step.Stopped<>(failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), "error")));
+            return new Step.Stopped<>(
+                    RoutedCalls.failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), "error")));
         }
         final ProtectedMask mask = current.context().mask(segment);
         final MemoryReuse.Offer offer =
                 memory.offer(segment, unitSegments, mask, current.context().gate(), current.loop());
-        final ContextPackage context = current.context()
-                .contextFor(segment, Objects.requireNonNull(earlierMaskedTargets.data(), "targets"), offer.lookup());
-        logPreceding(segment, context);
+        final ContextPackage context =
+                contextOf(current, segment, Objects.requireNonNull(earlierMaskedTargets.data(), "targets"), offer);
         final DraftOutcome.Reused reused = offer.reused();
         if (reused != null) {
             current.drafts().drafted(reused, context.snapshot());
             return new Step.Done<>(reused);
         }
-        final Step<DraftOutcome> drafted = untilAnswered(
+        final Step<DraftOutcome> drafted = calls.untilAnswered(
                 current.work(),
                 segment.id(),
                 () -> current.translator()
@@ -240,23 +252,28 @@ public final class ChunkRunner {
         return drafted;
     }
 
-    private static void logPreceding(final Segment segment, final ContextPackage context) {
+    private ContextPackage contextOf(
+            final Current current, final Segment segment, final List<String> targets, final MemoryReuse.Offer offer) {
+        final ContextPackage context =
+                current.context().contextFor(segment, targets, offer.lookup(), followUp.summary());
         if (log.isTraceEnabled()) {
             log.trace(
                     "Preceding targets segmentId={} targets={}",
                     segment.id(),
                     context.draftContext().precedingTargets());
         }
+        return context;
     }
 
     private Optional<RunEnd> decideEach(final Current current, final List<WorkItem> items, final ChunkDecider decider) {
         for (final WorkItem item : items) {
             final Step<SegmentOutcome> decided =
-                    untilAnswered(current.work(), item.segment().id(), decider::nextDecision);
+                    calls.untilAnswered(current.work(), item.segment().id(), decider::nextDecision);
             final Optional<RunEnd> end =
                     switch (decided) {
                         case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
-                        case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome);
+                        case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) ->
+                            record(current, item, outcome, decider);
                     };
             if (end.isPresent()) {
                 return end;
@@ -265,7 +282,8 @@ public final class ChunkRunner {
         return Optional.empty();
     }
 
-    private Optional<RunEnd> record(final Current current, final WorkItem item, final SegmentOutcome outcome) {
+    private Optional<RunEnd> record(
+            final Current current, final WorkItem item, final SegmentOutcome outcome, final ChunkDecider decider) {
         final SegmentRecord record = OutcomeRecords.decided(
                 item.record(), outcome, current.drafts().snapshot(item.segment().id()));
         sinks.pending()
@@ -287,8 +305,10 @@ public final class ChunkRunner {
         if (record.path() == SegmentPath.TM_REUSE) {
             sinks.emit().accept(memory.announced(record.segmentId()));
         }
-        return sinks.boundaries()
-                .afterDecision(current.work().endsSection(item), current.work().isComplete(), progress);
+        return followUp.decided(current.work(), item, record, current.context().glossary(), decider.deferrals())
+                .or(() -> sinks.boundaries()
+                        .afterDecision(
+                                current.work().endsSection(item), current.work().isComplete(), progress));
     }
 
     private Optional<RunEnd> commitChunk(final int index, final int decided) {
@@ -297,67 +317,6 @@ public final class ChunkRunner {
         return committed.isErr()
                 ? Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(committed.error(), "error")))
                 : Optional.empty();
-    }
-
-    /**
-     * Makes a call until it answers, routing each error it answers by design D3: a stop or a pause aborting it, and a
-     * provider error the run pauses on, are answered by the job's boundaries, which either end the run or send the
-     * call again once the person resumes.
-     */
-    private <T> Step<T> untilAnswered(
-            final WorkList work, @Nullable final String segmentId, final Supplier<Result<T>> call) {
-        while (true) {
-            final Result<T> result = withSegment(segmentId, call);
-            if (result.isOk()) {
-                return new Step.Done<>(Objects.requireNonNull(result.data(), "data"));
-            }
-            final AppError error = Objects.requireNonNull(result.error(), "error");
-            final Optional<RunEnd> end = afterError(error, work.currentTranslationProgress());
-            if (end.isPresent()) {
-                return new Step.Stopped<>(end.get());
-            }
-            log.debug("Making the call again segmentId={} after code={}", segmentId, error.code());
-        }
-    }
-
-    private Optional<RunEnd> afterError(final AppError error, final JobProgress progress) {
-        return switch (PauseDecider.route(error.code())) {
-            case CANCELLED -> sinks.boundaries().afterAbortedCall(progress);
-            case PAUSE_OR_FAIL -> sinks.boundaries().afterRoutedError(error, progress);
-            case FLAG_AT_ONCE, FAIL -> Optional.of(failedBy(endingError(error)));
-        };
-    }
-
-    private static <T> Result<T> withSegment(@Nullable final String segmentId, final Supplier<Result<T>> call) {
-        if (segmentId != null) {
-            MDC.put("segment", segmentId);
-        }
-        try {
-            return Objects.requireNonNull(call.get(), "call result");
-        } finally {
-            MDC.remove("segment");
-        }
-    }
-
-    // A model error the run cannot recover from is an application fault, never a provider error that Retry now
-    // could fix, so it ends the run as internal. An internal error was already logged where it was built.
-    private static AppError endingError(final AppError error) {
-        if (error.code() == ErrorCode.internal) {
-            return error;
-        }
-        final IllegalStateException cause = new IllegalStateException(
-                "A model call answered " + error.code() + ", which a run cannot recover from");
-        log.error("Translation job stopped by a model error it cannot recover from code={}", error.code(), cause);
-        return AppError.of(
-                ErrorCode.internal,
-                "Translation job failed",
-                "An unexpected failure stopped this translation job.",
-                null,
-                cause);
-    }
-
-    private static RunEnd failedBy(final AppError error) {
-        return new RunEnd(JobState.FAILED, error);
     }
 
     /**
@@ -371,12 +330,4 @@ public final class ChunkRunner {
             LoopSettings loop,
             SegmentTranslator translator,
             int budget) {}
-
-    /** A call's answer once the run went on, or how the run ended while it waited for one. */
-    private sealed interface Step<T> {
-
-        record Done<T>(T value) implements Step<T> {}
-
-        record Stopped<T>(RunEnd end) implements Step<T> {}
-    }
 }

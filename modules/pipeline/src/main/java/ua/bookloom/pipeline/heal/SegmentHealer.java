@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.heal;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.judge.JudgeCall;
+import ua.bookloom.pipeline.judge.JudgeDeferral;
 import ua.bookloom.pipeline.judge.JudgeVerdict;
 import ua.bookloom.pipeline.judge.JudgedPair;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -20,7 +22,8 @@ import ua.bookloom.pipeline.qa.QaResult;
  * of self-heal rounds — a directed fix for a concrete finding, otherwise reflect then improve, with a polish pass
  * when the improved target is borderline — deciding ACCEPTED or FLAGGED with every finding recorded
  * ({@code specs/quality-gates/spec.md} "Repair a failing segment within the dial's repair budget before flagging
- * it"). Built fresh per chunk by {@link QualityLoop}; never Guice-constructed.
+ * it"). Built fresh per chunk by {@link QualityLoop}; never Guice-constructed, so it keeps the chunk's re-judge
+ * deferrals for {@link ChunkDecider#deferrals()} to hand up.
  */
 @Slf4j
 final class SegmentHealer {
@@ -32,6 +35,7 @@ final class SegmentHealer {
     private final LoopSettings settings;
     private final RoundEvaluator evaluator;
     private final ModelCalls calls;
+    private final List<JudgeDeferral> rejudgeDeferrals = new ArrayList<>();
 
     SegmentHealer(
             final JudgeCall judgeCall,
@@ -193,7 +197,8 @@ final class SegmentHealer {
         if (rejudge.isErr()) {
             return RoundStep.terminal(Result.err(Objects.requireNonNull(rejudge.error())));
         }
-        final JudgeVerdict verdict = rejudge.data();
+        final JudgeVerdict verdict = Objects.requireNonNull(rejudge.data());
+        keepDeferrals(segmentId, verdict);
         final boolean accepted = AcceptanceRule.accepts(qa, verdict, segmentId, tau);
         SegmentHealerLogging.logAcceptanceDecision(segmentId, tau, qa, verdict, accepted);
         if (accepted) {
@@ -202,6 +207,22 @@ final class SegmentHealer {
         }
         // Re-judged: both the routing and the recorded verdict become this fresh one.
         return RoundStep.continueWith(new RoundState(qa, verdict, verdict, machine, evaluated.maskedCandidate(), null));
+    }
+
+    /**
+     * The deferrals every re-judge of this chunk reported, in the order they came. A round sent again after a pause
+     * may repeat one; the caller's commit keys deferrals by segment, reason and text, so a repeat stores nothing.
+     */
+    List<JudgeDeferral> rejudgeDeferrals() {
+        return List.copyOf(rejudgeDeferrals);
+    }
+
+    private void keepDeferrals(final String segmentId, final JudgeVerdict verdict) {
+        log.debug(
+                "Re-judge deferrals segment={} count={}",
+                segmentId,
+                verdict.deferrals().size());
+        rejudgeDeferrals.addAll(verdict.deferrals());
     }
 
     private boolean eligibleForRejudge(final QaResult qa, final double tau) {

@@ -16,8 +16,13 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.ChunkCommit;
+import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.persistence.PersistenceModule;
 
@@ -118,6 +123,42 @@ class PendingCommitTest {
         pending.flush();
 
         assertThat(commits.getLast().tmEntries()).extracting(TmEntry::id).containsExactly("s1-entry");
+    }
+
+    // A deferral held twice under one id, as a round sent again after a pause reports it, is committed once.
+    @Test
+    void flush_deferralsAndProposals_committedWithTheDecisions() {
+        final Deferral judge =
+                new Deferral("p1:s0:JUDGE:why", PROJECT, "s0", DeferralReason.JUDGE, "why", null, null, null);
+        final GlossaryEntry moreau =
+                new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false);
+        pending.decided(record("s0", SegmentStatus.ACCEPTED), null);
+        pending.deferred(List.of(judge));
+        pending.deferred(List.of(judge));
+        pending.proposed(List.of(moreau));
+
+        pending.flush();
+
+        assertThat(commits).singleElement().satisfies(commit -> {
+            assertThat(commit.deferrals()).containsExactly(judge);
+            assertThat(commit.glossaryAdditions()).containsExactly(moreau);
+        });
+    }
+
+    // A unit-end scan may find names after its last decision was already committed; they must still be stored.
+    @Test
+    void flush_onlyProposals_stillCommits() {
+        final GlossaryEntry moreau =
+                new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false);
+        pending.proposed(List.of(moreau));
+
+        final Result<Integer> flushed = pending.flush();
+
+        assertThat(flushed.data()).isEqualTo(1);
+        assertThat(commits)
+                .singleElement()
+                .extracting(ChunkCommit::glossaryAdditions)
+                .isEqualTo(List.of(moreau));
     }
 
     private static TmEntry entry(final String segmentId) {

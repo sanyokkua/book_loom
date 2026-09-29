@@ -185,6 +185,22 @@ class RollingSummaryKeeperMaxTest {
                 .hasSize(1);
     }
 
+    // The run makes a failed summary call again once the person resumes, so the chapter must still be there to send.
+    @Test
+    void onUnitEnd_calledAgainAfterAnError_sendsTheSameChapter() {
+        decideAccepted(keeper, "ch02.xhtml", 0, 3);
+        model.answer(Result.err(AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.")))
+                .answer(ok(GOOD_REPLY));
+        keeper.onUnitEnd("ch02.xhtml");
+
+        final Result<Optional<RollingSummary>> again = keeper.onUnitEnd("ch02.xhtml");
+
+        assertThat(model.requests().getLast().messages().getLast().content())
+                .contains("Sentence 0.\nSentence 1.\nSentence 2.");
+        assertThat(again.data())
+                .hasValueSatisfying(summary -> assertThat(summary.target()).isEqualTo("Гейл прибуває."));
+    }
+
     @Test
     void onUnitEnd_maxModelThrows_returnsInternalError() {
         decideAccepted(keeper, "ch02.xhtml", 0, 3);

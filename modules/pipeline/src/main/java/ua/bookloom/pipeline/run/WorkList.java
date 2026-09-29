@@ -40,6 +40,7 @@ public final class WorkList {
     private final int bodyUnits;
     private final int segments;
     private List<WorkItem> pending = List.of();
+    private List<Segment> decided = List.of();
     private int next;
     private int accepted;
     private int flagged;
@@ -121,21 +122,34 @@ public final class WorkList {
             addPending(queued, units.get(section), section, byId, kept);
         }
         pending = List.copyOf(queued);
+        decided = decidedOf(byId, kept);
         next = 0;
         accepted = counts.accepted() + counts.revised();
         flagged = counts.flagged();
         pendingCount = counts.pending();
         log.debug(
-                "Read work list occasion={} keptKinds={} keptRecords={} sections={} segments={} pending={} accepted={} flagged={}",
+                "Read work list occasion={} keptKinds={} keptRecords={} sections={} segments={} pending={} decided={}"
+                        + " accepted={} flagged={}",
                 occasion,
                 kept,
                 counts.sourceKept(),
                 bodyUnits,
                 segments,
                 pending.size(),
+                decided.size(),
                 accepted,
                 flagged);
         return pending.size();
+    }
+
+    private List<Segment> decidedOf(final Map<String, SegmentRecord> byId, final Set<SegmentKind> kept) {
+        return units.stream()
+                .flatMap(unit -> unit.segments().stream())
+                .filter(segment -> {
+                    final SegmentRecord record = byId.get(segment.id());
+                    return record != null && record.status() != SegmentStatus.PENDING && !record.isKeptAsSource(kept);
+                })
+                .toList();
     }
 
     private static void addPending(
@@ -259,14 +273,51 @@ public final class WorkList {
      * @return {@code true} if nothing follows it in its section, {@code false} otherwise
      */
     public boolean endsSection(final WorkItem item) {
-        final boolean endsSection = item.section() < bodyUnits
-                && (!hasPending() || pending.get(next).section() != item.section());
+        final boolean endsSection = isBody(item) && endsUnit(item);
         log.debug(
                 "Checked section boundary segmentId={} section={} endsSection={}",
                 item.segment().id(),
                 item.section(),
                 endsSection);
         return endsSection;
+    }
+
+    /**
+     * Reports whether an item, once decided, is the last of its unit to decide — the auxiliary unit included, which
+     * {@link #endsSection} leaves out.
+     *
+     * @param item the non-null item just decided
+     * @return {@code true} if nothing follows it in its unit, {@code false} otherwise
+     */
+    public boolean endsUnit(final WorkItem item) {
+        Objects.requireNonNull(item, "item");
+        final boolean endsUnit = !hasPending() || pending.get(next).section() != item.section();
+        log.debug(
+                "Checked unit end segmentId={} section={} endsUnit={}",
+                item.segment().id(),
+                item.section(),
+                endsUnit);
+        return endsUnit;
+    }
+
+    /**
+     * Reports whether an item's unit is one of the book's body units.
+     *
+     * @param item the non-null item asked about
+     * @return {@code true} for a body unit, {@code false} for the auxiliary unit
+     */
+    public boolean isBody(final WorkItem item) {
+        return Objects.requireNonNull(item, "item").section() < bodyUnits;
+    }
+
+    /**
+     * Returns the segments decided when the list was last read, whatever their status, in document order; a segment
+     * kept as source by choice is not one.
+     *
+     * @return never null; empty when nothing was decided
+     */
+    public List<Segment> decidedSegments() {
+        return decided;
     }
 
     /**

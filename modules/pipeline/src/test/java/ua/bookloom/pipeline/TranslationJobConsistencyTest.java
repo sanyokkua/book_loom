@@ -204,7 +204,7 @@ class TranslationJobConsistencyTest {
                         SegmentRecord::confidence)
                 .containsExactly(SegmentStatus.ACCEPTED, "Так.", SegmentPath.TM_REUSE, 1.0);
         assertThat(reused.context()).isNotNull();
-        assertThat(memory).containsExactly(new MemoryUpdated(MemoryKind.TM, "ch2 · p03"));
+        assertThat(memory).containsExactlyElementsOf(reuseBetweenSummaries());
         assertThat(drafts.get(4)).contains("He paused. → " + PAUSED);
         assertThat(drafts.get(5)).contains("She smiled. → " + SMILED);
         assertThat(messagesOf(model, JUDGE).get(1))
@@ -294,6 +294,14 @@ class TranslationJobConsistencyTest {
         awaitPaused(paused);
         translation.resume();
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
+    }
+
+    /** The one reuse, announced between the summaries refreshed at the end of each chapter. */
+    private static List<MemoryUpdated> reuseBetweenSummaries() {
+        return List.of(
+                new MemoryUpdated(MemoryKind.SUMMARY, "1"),
+                new MemoryUpdated(MemoryKind.TM, "ch2 · p03"),
+                new MemoryUpdated(MemoryKind.SUMMARY, "2"));
     }
 
     private static List<MemoryUpdated> memoryEvents(final TranslationJobImpl translation) {

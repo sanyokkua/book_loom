@@ -4,11 +4,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.pipeline.judge.JudgeDeferral;
 import ua.bookloom.pipeline.judge.JudgeVerdict;
 import ua.bookloom.pipeline.qa.QaResult;
 
@@ -74,6 +76,19 @@ public final class ChunkDecider {
             index++;
         }
         return decision;
+    }
+
+    /**
+     * Every judge deferral of the chunk so far: the chunk judge's, then each re-judge's of a repaired segment, without
+     * a repeat.
+     *
+     * @return never null; empty when the judge is off or reported none
+     */
+    public List<JudgeDeferral> deferrals() {
+        final List<JudgeDeferral> chunk = chunkVerdict == null ? List.of() : chunkVerdict.deferrals();
+        return Stream.concat(chunk.stream(), healer.rejudgeDeferrals().stream())
+                .distinct()
+                .toList();
     }
 
     // Checked in full when the run found it, so it is accepted as it stands, with no judge score and no round.

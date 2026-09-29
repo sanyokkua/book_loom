@@ -16,6 +16,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -56,13 +57,14 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final RunRepository runs,
             final GlossaryRepository glossary,
             final TmRepository tm,
+            final SummaryRepository summaries,
             final QualityLoop qualityLoop,
             final SentenceSplitter splitter,
             final Clock clock) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
-        this.stores = new RunStores(projects, segments, checkpoint, openProjects, runs, glossary, tm);
+        this.stores = new RunStores(projects, segments, checkpoint, openProjects, runs, glossary, tm, summaries);
         this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
         this.splitter = Objects.requireNonNull(splitter, "splitter");
         this.clock = Objects.requireNonNull(clock, "clock");

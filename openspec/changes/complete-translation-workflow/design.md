@@ -597,7 +597,8 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   the decided source text so far (term → target, type, gender), then the latest heading texts; condensed by dropping
   the oldest headings first, then the entries with the fewest occurrences, until it estimates ≤ 300 tokens. Refreshed
   after every 20 ACCEPTED segments and at every unit end; the counter resets at each refresh, not per unit. On Max the
-  unit-end refresh is one `summary` model call and the every-20 refresh stays deterministic. An unreadable summary
+  unit-end refresh is one `summary` model call and the every-20 refresh stays deterministic; the chapter text it sends
+  is capped per side, its middle dropped (Tuning constants). An unreadable summary
   reply — an empty `summary.target` included — keeps the previous version with one WARN; a model-call error routes by
   D3. `RollingSummary` fields: `source` the deterministic text, `target` the model's summary (Max, unit end) — carried unchanged through the deterministic every-20 refreshes that follow, so a later refresh never erases it — or empty when none was written (the record's field is non-null),
   `version` the latest plus one (assigned by the keeper), `lastSummarizedKey` the last decided segment id,
@@ -960,6 +961,7 @@ starting points, each in one place.
 | fuzzy TM suggestion | similarity ≥ 0.85 | chosen here | `memory.TranslationMemory` |
 | summary refresh | every 20 ACCEPTED segments and at unit end | reference `05_PIPELINE_ENGINE.md#rolling-summary` (K = 20) | `memory.RollingSummaryKeeper` |
 | summary size | ≤ 300 estimated tokens | chosen here | `memory.RollingSummaryKeeper` |
+| summary call's chapter text | each side — the unit's accepted source, its accepted targets — ≤ 2048 estimated tokens (a quarter of the 8192 context, so both take half and the rest is left for the instructions, the previous summary and the reply); a longer side keeps its beginning and end around a `[…]` line | chosen here | `memory.ChapterText` |
 | deterministic scan | ≥ 3 occurrences | chosen here | `glossary.FrequencyScan` |
 | pre-scan batch | 40 candidates per call | chosen here | `glossary.PreScan` |
 | temperature: draft | 0.2 | reference `12_PROMPT_CATALOG.md#draft-translation` | `prompt.PromptName` |

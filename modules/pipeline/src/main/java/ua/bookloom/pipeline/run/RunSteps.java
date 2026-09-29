@@ -5,6 +5,7 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
@@ -15,13 +16,15 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * @param gate the document's placeholder gate, which each chunk's protected-span gate wraps
  * @param calls the seam every call goes through
  * @param splitter the sentence splitter an oversized segment is drafted in pieces with
+ * @param summary the rolling summary's keeper, whose unit-end refresh is a model call where the dial asks for one
  */
 public record RunSteps(
         SegmentTranslator translator,
         QualityLoop loop,
         GateFunction gate,
         ModelCalls calls,
-        SentenceSplitter splitter) {
+        SentenceSplitter splitter,
+        RollingSummaryKeeper summary) {
 
     /** Rejects a missing step. */
     public RunSteps {
@@ -30,5 +33,6 @@ public record RunSteps(
         Objects.requireNonNull(gate, "gate");
         Objects.requireNonNull(calls, "calls");
         Objects.requireNonNull(splitter, "splitter");
+        Objects.requireNonNull(summary, "summary");
     }
 }

@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -103,6 +104,11 @@ final class ChunkContext {
         return gate;
     }
 
+    /** The glossary as it stood when the chunk started, which a decided segment's unknown-gender check reads. */
+    List<GlossaryEntry> glossary() {
+        return glossary;
+    }
+
     /** The terms of the glossary entries that occur in the chunk, read by the checks' name removal. */
     List<String> terms() {
         final List<String> terms = occurringIn(chunk.segments(), glossary).stream()
@@ -119,12 +125,17 @@ final class ChunkContext {
      * @param segment the segment about to be drafted
      * @param earlierMaskedTargets the masked targets of the unit's earlier segments, in document order
      * @param memory what the translation memory offers the segment
+     * @param summary the latest rolling summary's text, or {@code null} while there is none
      * @return the draft's context and its snapshot
      */
-    ContextPackage contextFor(final Segment segment, final List<String> earlierMaskedTargets, final TmLookup memory) {
+    ContextPackage contextFor(
+            final Segment segment,
+            final List<String> earlierMaskedTargets,
+            final TmLookup memory,
+            @Nullable final String summary) {
         final ContextInputs inputs = new ContextInputs(
                 settings.frame().styleSheet(),
-                null,
+                summary,
                 settings.dial().precedingTargets(),
                 glossary,
                 earlierMaskedTargets);

@@ -30,6 +30,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -39,6 +40,7 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.JobModelCalls;
+import ua.bookloom.pipeline.run.MemoryEvents;
 import ua.bookloom.pipeline.run.PendingCommit;
 import ua.bookloom.pipeline.run.PrepStage;
 import ua.bookloom.pipeline.run.RunEnd;
@@ -184,6 +186,10 @@ final class TranslationJobImpl implements TranslationJob {
         if (prepared.isErr()) {
             return finish(JobState.FAILED, run, errorOf(prepared));
         }
+        final int proposed = dataOf(prepared).proposed();
+        if (proposed > 0) {
+            emit(MemoryEvents.namesAdded(proposed));
+        }
         log.debug("Translation job stage change stage={} project={}", JobStage.TRANSLATE, request.projectId());
         emit(new StageStarted(JobStage.TRANSLATE, work.currentTranslationProgress()));
         final RunEnd end = runner(run, dataOf(prepared).styleSheet()).run(work);
@@ -206,10 +212,12 @@ final class TranslationJobImpl implements TranslationJob {
                 run.document().format(),
                 new DraftPromptBuilder(templates, frame),
                 new DraftReplyParser(mapper));
+        final DialParameters dial = DialParameters.of(brief.dial());
+        final RollingSummaryKeeper summary =
+                new RollingSummaryKeeper(stores.summaries(), stores.glossary(), templates, mapper, frame, dial, calls);
         return new ChunkRunner(
-                new RunSteps(translator, qualityLoop, gate, calls, splitter),
-                new RunSettings(
-                        request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names()),
+                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary),
+                new RunSettings(request.projectId(), request.mode(), dial, frame, brief.names()),
                 stores,
                 new RunSinks(pending, recorder, this::emit, new JobBoundaries(control, pending, recorder, this::emit)),
                 SegmentLocators.of(run.document()));

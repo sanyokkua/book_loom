@@ -48,6 +48,8 @@ public final class RollingSummaryKeeper {
     private final GlossaryRepository glossary;
     private final SummaryModelCall modelCall;
     private final boolean llmSummary;
+    private final @Nullable String sourceLanguage;
+    private final String targetLanguage;
 
     private final DecidedSource decided = new DecidedSource();
     private final List<String> headings = new ArrayList<>();
@@ -85,6 +87,8 @@ public final class RollingSummaryKeeper {
                 Objects.requireNonNull(frame, "frame"),
                 Objects.requireNonNull(calls, "calls"));
         this.llmSummary = Objects.requireNonNull(dial, "dial").llmSummary();
+        this.sourceLanguage = frame.sourceLanguage();
+        this.targetLanguage = frame.targetLanguage();
     }
 
     /**
@@ -101,7 +105,8 @@ public final class RollingSummaryKeeper {
     }
 
     /**
-     * Ends a unit: refreshes the summary, by the model where the dial asks for it, and forgets the unit's texts.
+     * Ends a unit: refreshes the summary, by the model where the dial asks for it, and forgets the unit's texts. An
+     * error keeps them, so the run can make the same call again once the person resumes.
      *
      * @param unitId the unit that ended; never null
      * @return the new version when a refresh happened, empty when the unit had no accepted segment or the model's reply
@@ -109,13 +114,15 @@ public final class RollingSummaryKeeper {
      */
     public Result<Optional<RollingSummary>> onUnitEnd(final String unitId) {
         Objects.requireNonNull(unitId, "unitId");
-        try {
-            return guarded("unit end " + unitId, () -> unitEnded(unitId));
-        } finally {
+        final Result<Optional<RollingSummary>> ended = guarded("unit end " + unitId, () -> unitEnded(unitId));
+        if (ended.isOk()) {
             acceptedInUnit = 0;
             unitSources.clear();
             unitTargets.clear();
+        } else {
+            log.debug("Summary keeper unit end {} kept the unit's texts for the call made again", unitId);
         }
+        return ended;
     }
 
     private Result<Optional<RollingSummary>> decided(final Segment segment, final SegmentRecord record) {
@@ -189,8 +196,8 @@ public final class RollingSummaryKeeper {
         }
         final Result<Optional<String>> asked = modelCall.summarize(
                 previous.map(RollingSummaryKeeper::textOf).orElse(""),
-                String.join("\n", unitSources),
-                String.join("\n", unitTargets));
+                ChapterText.capped(unitSources, sourceLanguage, ChapterText.MAX_TOKENS),
+                ChapterText.capped(unitTargets, targetLanguage, ChapterText.MAX_TOKENS));
         if (asked.isErr()) {
             log.warn(
                     "Summary call failed, previous version kept code={}",

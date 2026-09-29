@@ -254,8 +254,10 @@ class DiagnosticsTranslationJobTest {
                         stores.openProjects(),
                         stores.runs(),
                         stores.glossary(),
-                        stores.tm()),
-                project.documents());
+                        stores.tm(),
+                        stores.summaries()),
+                project.documents(),
+                project.deferrals());
     }
 
     private void assertLifecycleLogs(final TestProject project) {

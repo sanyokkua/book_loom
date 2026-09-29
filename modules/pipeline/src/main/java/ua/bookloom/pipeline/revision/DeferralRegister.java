@@ -6,15 +6,21 @@ import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.WholeWord;
+import ua.bookloom.pipeline.judge.JudgeDeferral;
 
 /**
  * Works out which deferrals a fact leaves behind, so backward revision fixes only what was recorded. Two changed
- * terms in one segment stay two deferrals because each is keyed by the term it waits on.
+ * terms in one segment stay two deferrals because each is keyed by the term it waits on. Nothing here writes; the
+ * caller stores what each producer returns.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -48,9 +54,78 @@ public final class DeferralRegister {
                 .filter(record -> holdsWholeWord(record, previous))
                 .map(record -> termDeferral(after, record, previous))
                 .toList();
-        deferrals.forEach(d -> log.debug(
-                "Deferral recorded segmentId={} reason={} waitingOn={}", d.segmentId(), d.reason(), d.waitingOn()));
+        deferrals.forEach(DeferralRegister::logRecorded);
         return deferrals;
+    }
+
+    /**
+     * The JUDGE deferrals the judge reported. They are recorded and shown, never resolved, so the judge's own words are
+     * all they wait on.
+     *
+     * @param projectId the owning project's id; never null
+     * @param judged the judge's deferrals, each on a segment id; never null
+     * @return one deferral per judge deferral, in order; never null, empty when the judge reported none
+     */
+    public static List<Deferral> fromJudge(final String projectId, final List<JudgeDeferral> judged) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(judged, "judged");
+        final List<Deferral> deferrals = judged.stream()
+                .map(judge -> deferral(projectId, judge.segmentId(), DeferralReason.JUDGE, judge.reason()))
+                .toList();
+        deferrals.forEach(DeferralRegister::logRecorded);
+        return deferrals;
+    }
+
+    /**
+     * The GENDER_UNKNOWN deferrals a segment leaves: one per character it names whose gender nobody has set yet,
+     * because the words that agree with that character may have to change once the gender is known.
+     *
+     * @param projectId the owning project's id; never null
+     * @param segment the decided segment, whose display text is searched; never null
+     * @param glossary the glossary the segment was drafted with; never null
+     * @return one deferral per character entry of unknown gender whose term occurs whole-word, in glossary order;
+     *     never null, empty when there is none
+     */
+    public static List<Deferral> unknownGender(
+            final String projectId, final Segment segment, final List<GlossaryEntry> glossary) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(glossary, "glossary");
+        final String text = DisplayText.of(segment.masked());
+        final List<Deferral> deferrals = glossary.stream()
+                .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() == Gender.UNKNOWN)
+                .filter(entry -> !entry.term().isBlank())
+                .filter(entry -> WholeWord.pattern(entry.term()).matcher(text).find())
+                .map(entry -> deferral(projectId, segment.id(), DeferralReason.GENDER_UNKNOWN, entry.term()))
+                .toList();
+        log.debug(
+                "Unknown-gender check segmentId={} glossaryEntries={} deferrals={}",
+                segment.id(),
+                glossary.size(),
+                deferrals.size());
+        deferrals.forEach(DeferralRegister::logRecorded);
+        return deferrals;
+    }
+
+    private static Deferral deferral(
+            final String projectId, final String segmentId, final DeferralReason reason, final String waitingOn) {
+        return new Deferral(
+                projectId + ":" + segmentId + ":" + reason.name() + ":" + waitingOn,
+                projectId,
+                segmentId,
+                reason,
+                waitingOn,
+                null,
+                null,
+                null);
+    }
+
+    private static void logRecorded(final Deferral deferral) {
+        log.debug(
+                "Deferral recorded segmentId={} reason={} waitingOn={}",
+                deferral.segmentId(),
+                deferral.reason(),
+                deferral.waitingOn());
     }
 
     private static Optional<String> notRecordedBecause(final String previous, final GlossaryEntry after) {

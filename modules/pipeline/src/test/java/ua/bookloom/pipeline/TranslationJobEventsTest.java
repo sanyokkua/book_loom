@@ -74,6 +74,7 @@ class TranslationJobEventsTest {
                         "SegmentDecided",
                         "SegmentDecided",
                         "SegmentDecided",
+                        "MemoryUpdated",
                         "Finished");
         assertThat(events)
                 .filteredOn(SegmentDecided.class::isInstance)
@@ -150,7 +151,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(5);
+        assertThat(healthy).hasSize(6);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -187,7 +188,13 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "StageStarted", "ModelCallStarted", "SegmentDecided", "Finished");
+                .containsExactly(
+                        "StageStarted",
+                        "StageStarted",
+                        "ModelCallStarted",
+                        "SegmentDecided",
+                        "MemoryUpdated",
+                        "Finished");
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -217,6 +224,7 @@ class TranslationJobEventsTest {
                         "Resumed",
                         "ModelCallStarted",
                         "SegmentDecided",
+                        "MemoryUpdated",
                         "Finished");
         shutdown(workers);
     }
