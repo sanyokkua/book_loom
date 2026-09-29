@@ -37,6 +37,7 @@ class TranslationJobModelCallEventTest {
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactly(
                         "StageStarted",
+                        "StageStarted",
                         "ModelCallStarted",
                         "SegmentDecided",
                         "ModelCallStarted",

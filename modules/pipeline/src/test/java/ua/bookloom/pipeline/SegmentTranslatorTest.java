@@ -22,14 +22,16 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.prompt.DraftSchema;
 
-/** The per-segment prompt, whitespace, placeholder gate and reply decision table. */
+/** The draft step's prompt, whitespace, placeholder gate and reply precedence table. */
 class SegmentTranslatorTest {
 
     private static final String MARKED_SOURCE = "He opened the *old* door.";
@@ -50,7 +52,7 @@ class SegmentTranslatorTest {
     void translate_knownSource_recordsExactSystemAndUserMessages() {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
         final ScriptedChatModel model = acceptingModel();
-        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
+        DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
         assertThat(model.requests()).singleElement().satisfies(request -> {
             assertThat(request.messages().getFirst().content()).contains("from English (en) into Ukrainian (uk)");
@@ -65,7 +67,7 @@ class SegmentTranslatorTest {
     void translate_unknownSource_recordsExactSystemPromptWithoutSource() {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
         final ScriptedChatModel model = acceptingModel();
-        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null)
+        DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null)
                 .translate(segment);
         assertThat(model.requests().getFirst().messages().getFirst().content())
                 .contains("from the language of this segment (infer it from its text) into Ukrainian (uk)");
@@ -76,7 +78,7 @@ class SegmentTranslatorTest {
     void translate_resolvedRequestedSource_recordsRequestedLanguageInsteadOfDeclaredLanguage() {
         final Segment segment = markdownSegment(MARKED_SOURCE, "en");
         final ScriptedChatModel model = acceptingModel();
-        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "de")
+        DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "de")
                 .translate(segment);
         assertThat(model.requests().getFirst().messages().getFirst().content())
                 .contains("from German (de) into Ukrainian (uk)")
@@ -88,7 +90,7 @@ class SegmentTranslatorTest {
     void translate_segment_requestsDraftTemperatureAndSchema() {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
         final ScriptedChatModel model = acceptingModel();
-        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
+        DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
         assertThat(model.requests()).singleElement().satisfies(request -> {
             assertThat(request.temperature()).isEqualTo(0.2);
@@ -99,26 +101,26 @@ class SegmentTranslatorTest {
 
     // The required target JSON is parsed before the existing placeholder restoration gate runs.
     @Test
-    void translate_documentedJsonReply_restoresAndAcceptsTranslation() {
+    void translate_documentedJsonReply_restoresTheDraft() {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
         final ScriptedChatModel model = response("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", FinishReason.STOP);
-        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+        final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
-        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(decisionOf(result).segment().targetInner()).isEqualTo("Він відчинив *старі* двері.");
+        assertThat(DraftStepFixtures.drafted(result))
+                .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::maskedForm)
+                .containsExactly("Він відчинив *старі* двері.", "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.");
     }
 
     // A second strict target reply also restores its protected markdown range.
     @Test
-    void translate_mapReply_restoresAndAcceptsTranslation() {
+    void translate_mapReply_restoresTheDraft() {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
         final ScriptedChatModel model = response("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", FinishReason.STOP);
-        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+        final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
-        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(decisionOf(result).segment().targetInner()).isEqualTo("Він відчинив *старі* двері.");
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("Він відчинив *старі* двері.");
     }
 
     // Source leading and trailing whitespace wins over the model reply's surrounding whitespace.
@@ -127,25 +129,25 @@ class SegmentTranslatorTest {
         final Segment segment = txtSegment("  Hello world\n");
         final ScriptedChatModel model = response("\nHELLO WORLD  ", FinishReason.STOP);
 
-        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+        final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.TXT, "uk", "en")
                 .translate(segment);
 
-        assertThat(decisionOf(result).segment().targetInner()).isEqualTo("  HELLO WORLD\n");
-        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("  HELLO WORLD\n");
     }
 
-    // Each D4 row either accepts restored markup, flags and discards a candidate, or stops with the original error.
+    // Each row either restores the draft, keeps a draft whose markup still fails for self-heal, flags the segment at
+    // once, or answers the call's own error for the run to route.
     @ParameterizedTest(name = "{0}")
     @MethodSource("decisionCases")
     void translate_replyDecisionTable_returnsExpectedOutcome(
             final String name,
             final ScriptedChatModel model,
             final UnaryOperator<DocumentPort> portDecorator,
-            final Consumer<Result<Decision>> expectation) {
+            final Consumer<Result<DraftOutcome>> expectation) {
         final Segment segment = markdownSegment(MARKED_SOURCE, null);
 
-        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+        final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         portDecorator.apply(documents), model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
@@ -166,15 +168,15 @@ class SegmentTranslatorTest {
                 .answer(Result.ok(
                         new ChatResponse(TranslationJobTestSupport.targetReply("THIRD."), FinishReason.STOP)));
         final SegmentTranslator translator =
-                TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null);
+                DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", null);
 
-        final Result<Decision> firstResult = translator.translate(first);
-        final Result<Decision> secondResult = translator.translate(second);
-        final Result<Decision> thirdResult = translator.translate(third);
+        final Result<DraftOutcome> firstResult = translator.translate(first);
+        final Result<DraftOutcome> secondResult = translator.translate(second);
+        final Result<DraftOutcome> thirdResult = translator.translate(third);
 
-        assertThat(decisionOf(firstResult).segment().targetInner()).isEqualTo("FIRST.");
+        assertThat(DraftStepFixtures.drafted(firstResult).restoredTarget()).isEqualTo("FIRST.");
         assertThat(Objects.requireNonNull(secondResult.error()).cause()).isSameAs(failure);
-        assertThat(decisionOf(thirdResult).segment().targetInner()).isEqualTo("THIRD.");
+        assertThat(DraftStepFixtures.drafted(thirdResult).restoredTarget()).isEqualTo("THIRD.");
         assertThat(model.requests())
                 .extracting(request -> request.messages().get(1).content())
                 .allSatisfy(message -> assertThat(message).contains("<Text>"));
@@ -192,12 +194,12 @@ class SegmentTranslatorTest {
                         "valid STOP",
                         response("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.", FinishReason.STOP),
                         UnaryOperator.identity(),
-                        accepted("HE OPENED THE *OLD* DOOR.")),
+                        restored("HE OPENED THE *OLD* DOOR.")),
                 arguments(
                         "missing g1",
                         responseThen("HE OPENED THE ⟦g0⟧OLD DOOR.", "HE OPENED THE ⟦g0⟧OLD DOOR."),
                         UnaryOperator.identity(),
-                        flagged(ErrorCode.validation)));
+                        SegmentTranslatorTest::assertMarkupStillFailing));
     }
 
     private static Stream<Arguments> invalidResponseCases() {
@@ -321,50 +323,46 @@ class SegmentTranslatorTest {
             final String name,
             final ScriptedChatModel model,
             final UnaryOperator<DocumentPort> decorator,
-            final Consumer<Result<Decision>> expectation) {
+            final Consumer<Result<DraftOutcome>> expectation) {
         return Arguments.of(name, model, decorator, expectation);
     }
 
-    private static Consumer<Result<Decision>> accepted(final String target) {
+    private static Consumer<Result<DraftOutcome>> restored(final String target) {
         return result -> {
-            assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
-            assertThat(decisionOf(result).segment().targetInner()).isEqualTo(target);
-            assertThat(decisionOf(result).flagReason()).isNull();
+            assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo(target);
+            assertThat(DraftStepFixtures.drafted(result).gateFinding()).isNull();
         };
     }
 
-    private static Consumer<Result<Decision>> flagged(final ErrorCode code) {
-        return result -> {
-            assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.FLAGGED);
-            assertThat(decisionOf(result).segment().targetInner()).isNull();
-            assertThat(decisionOf(result).flagReason()).hasFieldOrPropertyWithValue("code", code);
-        };
+    // Design D3 rule 5: after its one placeholder repair the draft goes to self-heal with the gate's markup finding.
+    private static void assertMarkupStillFailing(final Result<DraftOutcome> result) {
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNull();
+        assertThat(DraftStepFixtures.drafted(result).gateFinding())
+                .extracting(QaFinding::kind, QaFinding::severity)
+                .containsExactly("markup", Severity.HIGH);
     }
 
-    private static Consumer<Result<Decision>> flaggedSame(final AppError error) {
-        return result -> {
-            flagged(error.code()).accept(result);
-            assertThat(decisionOf(result).flagReason()).isSameAs(error);
-        };
+    private static Consumer<Result<DraftOutcome>> flagged(final ErrorCode code) {
+        return result -> assertThat(DraftStepFixtures.flaggedAtOnce(result)).hasFieldOrPropertyWithValue("code", code);
     }
 
-    private static Consumer<Result<Decision>> terminalSame(final AppError error) {
+    private static Consumer<Result<DraftOutcome>> flaggedSame(final AppError error) {
+        return result -> assertThat(DraftStepFixtures.flaggedAtOnce(result)).isSameAs(error);
+    }
+
+    private static Consumer<Result<DraftOutcome>> terminalSame(final AppError error) {
         return result -> {
             assertThat(result.data()).isNull();
             assertThat(result.error()).isSameAs(error);
         };
     }
 
-    private static Consumer<Result<Decision>> terminalInternalWithCause(final Throwable cause) {
+    private static Consumer<Result<DraftOutcome>> terminalInternalWithCause(final Throwable cause) {
         return result -> {
             assertThat(result.data()).isNull();
             assertThat(result.error()).hasFieldOrPropertyWithValue("code", ErrorCode.internal);
             assertThat(Objects.requireNonNull(result.error()).cause()).isSameAs(cause);
         };
-    }
-
-    private static Decision decisionOf(final Result<Decision> result) {
-        return Objects.requireNonNull(result.data(), "decision");
     }
 
     private static DocumentPort failingUnmask(final DocumentPort delegate, final AppError error) {

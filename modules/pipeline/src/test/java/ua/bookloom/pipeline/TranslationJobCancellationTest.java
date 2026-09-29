@@ -91,8 +91,7 @@ class TranslationJobCancellationTest {
     @Test
     void cancel_duringModelCall_decidesCompletedAnswerThenStopsAtBoundary() {
         final ScriptedChatModel scripted = replies("ONE.", "TWO.", "THREE.");
-        final TranslationJobTestSupport.BlockingChatModel model =
-                new TranslationJobTestSupport.BlockingChatModel(scripted);
+        final BlockingModels.BlockingChatModel model = new BlockingModels.BlockingChatModel(scripted);
         final TranslationJobImpl translation = markdownJob(model, "One.\n\nTwo.\n\nThree.");
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
@@ -116,8 +115,7 @@ class TranslationJobCancellationTest {
     void cancel_duringFailingModelCall_winsOverPauseOnError() {
         final AppError unreachable = AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.");
         final ScriptedChatModel scripted = replies().answer(Result.err(unreachable));
-        final TranslationJobTestSupport.BlockingChatModel model =
-                new TranslationJobTestSupport.BlockingChatModel(scripted);
+        final BlockingModels.BlockingChatModel model = new BlockingModels.BlockingChatModel(scripted);
         final TranslationJobImpl translation = markdownJob(model, "One.");
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);

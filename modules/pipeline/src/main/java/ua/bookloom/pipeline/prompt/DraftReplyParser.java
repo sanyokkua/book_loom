@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,7 +15,8 @@ public final class DraftReplyParser {
     private static final String INVALID_OBJECT = "was not one JSON object with exactly a nonblank target field";
     private final ObjectMapper mapper;
 
-    /** Creates a parser with the application's tolerant JSON mapper. */
+    /** Creates a parser with the application's tolerant JSON mapper; Guice builds it for the self-heal calls. */
+    @Inject
     public DraftReplyParser(final ObjectMapper mapper) {
         this.mapper = Objects.requireNonNull(mapper, "mapper");
     }

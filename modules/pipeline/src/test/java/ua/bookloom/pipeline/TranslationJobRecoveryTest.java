@@ -102,8 +102,7 @@ class TranslationJobRecoveryTest {
                 .answer(Result.err(unreachable))
                 .answer(Result.ok(response("TWO.")))
                 .answer(Result.ok(response("THREE.")));
-        final TranslationJobTestSupport.SecondBlockingChatModel model =
-                new TranslationJobTestSupport.SecondBlockingChatModel(scripted);
+        final BlockingModels.SecondBlockingChatModel model = new BlockingModels.SecondBlockingChatModel(scripted);
         final TranslationJobImpl translation = markdownJob(model, "One.\n\nTwo.\n\nThree.");
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));

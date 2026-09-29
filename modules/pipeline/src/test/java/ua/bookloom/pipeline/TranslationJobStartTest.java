@@ -164,7 +164,7 @@ class TranslationJobStartTest {
     void run_epubWithAuxiliaryUnit_leavesItOutOfWorkAndCounts() {
         final Path source =
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
-        final TestProject project = project(source, brief("en", "uk"));
+        final TestProject project = project(source, TranslationJobTestSupport.epubBrief());
         final ScriptedChatModel model = replies("ONE.", "TWO.", "THREE.");
 
         final JobReport completed = report(job(project, model).run());

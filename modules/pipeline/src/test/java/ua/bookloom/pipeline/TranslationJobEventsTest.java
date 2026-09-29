@@ -68,7 +68,13 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(namesWithoutRequests(events))
-                .containsExactly("StageStarted", "SegmentDecided", "SegmentDecided", "SegmentDecided", "Finished");
+                .containsExactly(
+                        "StageStarted",
+                        "StageStarted",
+                        "SegmentDecided",
+                        "SegmentDecided",
+                        "SegmentDecided",
+                        "Finished");
         assertThat(events)
                 .filteredOn(SegmentDecided.class::isInstance)
                 .extracting(event -> ((SegmentDecided) event).progress().pending())
@@ -82,7 +88,7 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 3));
+                .containsExactly(tuple(JobStage.PREP, 0, 1, 0, 0, 3), tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 3));
     }
 
     // Building the Finished event from other counts than the returned report would let a screen show one outcome while
@@ -144,7 +150,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(4);
+        assertThat(healthy).hasSize(5);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -181,7 +187,7 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "ModelCallStarted", "SegmentDecided", "Finished");
+                .containsExactly("StageStarted", "StageStarted", "ModelCallStarted", "SegmentDecided", "Finished");
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -203,6 +209,7 @@ class TranslationJobEventsTest {
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactly(
+                        "StageStarted",
                         "StageStarted",
                         "ModelCallStarted",
                         "SegmentDecided",
@@ -237,7 +244,7 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 0));
+                .containsExactly(tuple(JobStage.PREP, 0, 1, 0, 0, 0), tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 0));
         assertThat(events).noneMatch(SegmentDecided.class::isInstance);
         assertThat(model.requests()).isEmpty();
     }
@@ -246,8 +253,7 @@ class TranslationJobEventsTest {
     @Test
     void run_concurrentCallers_onlyOneClaimsExecution() {
         final ScriptedChatModel scripted = replies("ONE.");
-        final TranslationJobTestSupport.BlockingChatModel model =
-                new TranslationJobTestSupport.BlockingChatModel(scripted);
+        final BlockingModels.BlockingChatModel model = new BlockingModels.BlockingChatModel(scripted);
         final TranslationJobImpl translation = markdownJob(model, "One.");
         final CountDownLatch start = new CountDownLatch(1);
         final CountDownLatch loserFinished = new CountDownLatch(1);

@@ -9,13 +9,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.prompt.ChatRequests;
@@ -29,9 +29,13 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.run.PauseDecider;
 
-/** Makes one model call and decides one segment. */
+/**
+ * The draft step: one draft call, with at most one structural and one placeholder repair, whose reply is read by
+ * design D3's reply precedence. It decides nothing — a reply it can use goes to the quality loop, which accepts,
+ * repairs or flags it — so the chunk runner and a review retry share one draft step.
+ */
 @Slf4j
-final class SegmentTranslator {
+public final class SegmentTranslator {
 
     private final GateFunction gate;
     private final ModelCalls calls;
@@ -39,7 +43,16 @@ final class SegmentTranslator {
     private final DraftPromptBuilder promptBuilder;
     private final DraftReplyParser replyParser;
 
-    SegmentTranslator(
+    /**
+     * Creates the draft step of one run.
+     *
+     * @param gate the non-null placeholder gate every reply is restored through
+     * @param calls the non-null seam every call of the step goes through
+     * @param format the non-null book format
+     * @param promptBuilder the non-null builder of the run's draft and repair prompts
+     * @param replyParser the non-null strict reader of a draft reply
+     */
+    public SegmentTranslator(
             final GateFunction gate,
             final ModelCalls calls,
             final BookFormat format,
@@ -52,22 +65,35 @@ final class SegmentTranslator {
         this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
     }
 
-    Result<Decision> translate(final Segment segment) {
+    Result<DraftOutcome> translate(final Segment segment) {
         return translate(segment, DraftContext.empty());
     }
 
-    /** Translates one segment with previously accepted targets supplied solely as context. */
-    Result<Decision> translate(final Segment segment, final DraftContext context) {
+    /**
+     * Drafts one segment.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the non-null context the draft is shown, preceding targets included
+     * @return the draft's outcome, or the error a call answered, which the run routes
+     */
+    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context) {
         Objects.requireNonNull(segment, "segment");
         return translate(segment, context, segment.masked());
     }
 
     /**
-     * Translates one segment showing the model {@code shownText} — the segment's masked text with its protected
-     * spans hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text.
+     * Drafts one segment showing the model {@code shownText} — the segment's masked text with its protected spans
+     * hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the non-null context the draft is shown
+     * @param shownText the non-null text the model translates; it carries every token the reply must return
+     * @return the draft's outcome, or the error a call answered, which the run routes
      */
-    Result<Decision> translate(final Segment segment, final DraftContext context, final String shownText) {
+    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final String shownText) {
         Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(shownText, "shownText");
         final DraftAttempt attempt = new DraftAttempt(segment, context, shownText);
         log.debug("Translating segment id={} format={} shownLength={}", segment.id(), format, shownText.length());
         final ChatRequest request = requestFor(attempt, DraftStep.DRAFT, "", "");
@@ -79,10 +105,16 @@ final class SegmentTranslator {
     }
 
     /**
-     * Translates a segment, in sentence-aligned pieces when its masked text alone is above the budget. The pieces are
+     * Drafts a segment, in sentence-aligned pieces when its masked text alone is above the budget. The pieces are
      * joined and gated once as that one segment, because the translation goes back into the node it came from.
+     *
+     * @param segment the non-null segment to draft
+     * @param context the non-null context each piece is shown
+     * @param splitter the non-null sentence splitter of the source language
+     * @param budgetTokens the chunk budget a piece must fit
+     * @return the draft's outcome, or the error a call answered, which the run routes
      */
-    Result<Decision> translateSplit(
+    public Result<DraftOutcome> translateSplit(
             final Segment segment,
             final DraftContext context,
             final SentenceSplitter splitter,
@@ -110,8 +142,8 @@ final class SegmentTranslator {
         };
     }
 
-    /** Drafts each piece with the segment's own context, joins the replies in order and decides once. */
-    Result<Decision> translatePieces(final Segment segment, final DraftContext context, final List<String> pieces) {
+    /** Drafts each piece with the segment's own context, joins the replies in order and gates them once. */
+    Result<DraftOutcome> translatePieces(final Segment segment, final DraftContext context, final List<String> pieces) {
         log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
         final PieceDrafter drafter = new PieceDrafter(this, replyParser);
         final DraftAttempt whole = DraftAttempt.showingItsOwnMaskedText(segment, context);
@@ -123,7 +155,7 @@ final class SegmentTranslator {
             }
             final PieceDrafter.Piece drafts = Objects.requireNonNull(drafted.data());
             if (drafts instanceof PieceDrafter.Unusable(final AppError unusable)) {
-                return flag(whole, unusable, FinishReason.STOP.name(), "[]");
+                return DraftOutcomes.flaggedAtOnce(whole, unusable, FinishReason.STOP.name(), "[]");
             }
             if (drafts instanceof PieceDrafter.Text(final String text)) {
                 replies.add(WhitespaceRestoration.restore(piece, text));
@@ -195,23 +227,25 @@ final class SegmentTranslator {
         }
     }
 
-    private Result<Decision> decideModelError(final DraftAttempt attempt, final AppError error) {
+    // Design D3 rule 1: an error the routing table flags at once is the segment's, every other one is the run's.
+    private Result<DraftOutcome> decideModelError(final DraftAttempt attempt, final AppError error) {
         final Segment segment = attempt.segment();
         log.debug("Model reply segment={} kind=error code={}", segment.id(), error.code());
         return switch (PauseDecider.route(error.code())) {
-            case FLAG_AT_ONCE -> flag(attempt, error, "model-error", "[]");
-            case CANCELLED, PAUSE_OR_FAIL, FAIL -> terminal(segment, error, "model-error");
+            case FLAG_AT_ONCE -> DraftOutcomes.flaggedAtOnce(attempt, error, "model-error", "[]");
+            case CANCELLED, PAUSE_OR_FAIL, FAIL -> DraftOutcomes.routed(segment, error, "model-error");
         };
     }
 
-    private Result<Decision> decideResponse(
+    // Design D3 rules 2-4, in their order: blank content, then an abnormal finish, then a reply that is not the JSON
+    // object — so a cut-off reply is flagged at once rather than sent to a structural repair.
+    private Result<DraftOutcome> decideResponse(
             final DraftAttempt attempt,
             final ChatResponse response,
             final boolean structuralRepairUsed,
             final boolean placeholderRepairUsed) {
-        final Segment segment = attempt.segment();
-        if (response.content().isBlank()) {
-            return flag(attempt, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
+        if (response.content().isBlank() || response.finishReason() != FinishReason.STOP) {
+            return unfinished(attempt, response);
         }
         final ParsedReply parsed = replyParser.parse(response.content());
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED) {
@@ -223,20 +257,23 @@ final class SegmentTranslator {
         logTraceReply(response.content(), trimmed);
         log.debug(
                 "Model reply segment={} kind={} finish={} empty={}",
-                segment.id(),
+                attempt.segment().id(),
                 parsed.kind(),
                 response.finishReason(),
                 trimmed.isEmpty());
-        if (trimmed.isEmpty()) {
-            return flag(attempt, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
-        }
-        if (response.finishReason() != FinishReason.STOP) {
-            return flag(attempt, invalidFinish(), response.finishReason().name(), observedTokens(response.content()));
-        }
-        return restore(attempt, trimmed, placeholderRepairUsed);
+        return trimmed.isEmpty() ? unfinished(attempt, response) : restore(attempt, trimmed, placeholderRepairUsed);
     }
 
-    private Result<Decision> repairStructured(
+    private static Result<DraftOutcome> unfinished(final DraftAttempt attempt, final ChatResponse response) {
+        final boolean empty = response.content().isBlank() || response.finishReason() == FinishReason.STOP;
+        return DraftOutcomes.flaggedAtOnce(
+                attempt,
+                empty ? DraftOutcomes.emptyCompletion() : DraftOutcomes.invalidFinish(),
+                response.finishReason().name(),
+                DraftOutcomes.observedTokens(response.content()));
+    }
+
+    private Result<DraftOutcome> repairStructured(
             final DraftAttempt attempt, final String rejectedReply, final String diagnostic) {
         final Segment segment = attempt.segment();
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
@@ -248,33 +285,33 @@ final class SegmentTranslator {
         return decideResponse(attempt, Objects.requireNonNull(reply.data()), true, false);
     }
 
-    private Result<Decision> invalidStructuredReply(final DraftAttempt attempt, final ChatResponse response) {
+    private Result<DraftOutcome> invalidStructuredReply(final DraftAttempt attempt, final ChatResponse response) {
         logTraceReply(response.content(), "");
-        return flag(
+        return DraftOutcomes.flaggedAtOnce(
                 attempt,
                 AppError.of(
                         ErrorCode.validation,
                         "Invalid structured model response",
                         "The model did not return the required translation JSON object."),
                 response.finishReason().name(),
-                observedTokens(response.content()));
+                DraftOutcomes.observedTokens(response.content()));
     }
 
-    private Result<Decision> restore(
+    private Result<DraftOutcome> restore(
             final DraftAttempt attempt, final String trimmed, final boolean placeholderRepairUsed) {
         final Segment segment = attempt.segment();
         log.debug("Restoring segment id={} format={} trimmedLength={}", segment.id(), format, trimmed.length());
         final String restoredWhitespace = WhitespaceRestoration.restore(segment.masked(), trimmed);
         logTraceRestoration(restoredWhitespace);
         return switch (gate.restore(segment, restoredWhitespace)) {
-            case GateResult.Restored restored -> accepted(segment, restored);
+            case GateResult.Restored restored -> DraftOutcomes.drafted(attempt, restoredWhitespace, restored);
             case GateResult.GateFailed failed -> {
                 log.debug(
                         "Gate completed segmentId={} result=GateFailed code={}",
                         segment.id(),
                         failed.error().code());
                 yield placeholderRepairUsed
-                        ? flag(attempt, failed.error(), FinishReason.STOP.name(), observedTokens(restoredWhitespace))
+                        ? DraftOutcomes.stillFailingTheGate(attempt, restoredWhitespace, failed)
                         : repairPlaceholder(
                                 attempt, restoredWhitespace, failed.finding().note());
             }
@@ -283,24 +320,12 @@ final class SegmentTranslator {
                         "Gate completed segmentId={} result=StepError code={}",
                         segment.id(),
                         stepError.error().code());
-                yield terminal(segment, stepError.error(), "unmask");
+                yield DraftOutcomes.routed(segment, stepError.error(), "unmask");
             }
         };
     }
 
-    private static Result<Decision> accepted(final Segment segment, final GateResult.Restored restored) {
-        log.debug(
-                "Gate completed segmentId={} result=Restored targetLength={}",
-                segment.id(),
-                restored.restored().length());
-        logTraceUnmask(restored.maskedForm(), restored.restored());
-        final Decision decision = new Decision(
-                segment.withDecision(SegmentStatus.ACCEPTED, restored.restored()), null, restored.maskedForm());
-        log.debug("Segment decision id={} decision={} errorCode={}", segment.id(), SegmentStatus.ACCEPTED, null);
-        return Result.ok(decision);
-    }
-
-    private Result<Decision> repairPlaceholder(
+    private Result<DraftOutcome> repairPlaceholder(
             final DraftAttempt attempt, final String rejectedTarget, final String gateNote) {
         final Segment segment = attempt.segment();
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
@@ -312,58 +337,6 @@ final class SegmentTranslator {
         return decideResponse(attempt, Objects.requireNonNull(reply.data()), true, true);
     }
 
-    private Result<Decision> flag(
-            final DraftAttempt attempt, final AppError error, final String finish, final String observedTokens) {
-        final Segment segment = attempt.segment();
-        final String expectedTokens = expectedTokens(attempt);
-        log.warn(
-                "Flagged segment id={} code={} expectedTokens={} observedTokens={}",
-                segment.id(),
-                error.code(),
-                expectedTokens,
-                observedTokens);
-        log.debug(
-                "Segment decision id={} replyFinish={} decision={} errorCode={}",
-                segment.id(),
-                finish,
-                SegmentStatus.FLAGGED,
-                error.code());
-        return Result.ok(new Decision(segment.withDecision(SegmentStatus.FLAGGED, null), error, null));
-    }
-
-    private static Result<Decision> terminal(final Segment segment, final AppError error, final String replyKind) {
-        log.debug(
-                "Segment decision id={} replyKind={} decision=terminal errorCode={}",
-                segment.id(),
-                replyKind,
-                error.code());
-        return Result.err(error);
-    }
-
-    private static String expectedTokens(final DraftAttempt attempt) {
-        final String segmentId = attempt.segment().id();
-        final int placeholderCount = Tokens.inOrder(attempt.shownText()).size();
-        log.debug("Collected expected tokens segmentId={} placeholderCount={}", segmentId, placeholderCount);
-        return DraftPromptBuilder.expectedTokenSequence(attempt.shownText());
-    }
-
-    private static String observedTokens(final String text) {
-        final List<String> tokens = Tokens.inOrder(text);
-        log.debug("Collected observed tokens textLength={} tokenCount={}", text.length(), tokens.size());
-        return tokens.toString();
-    }
-
-    private static AppError emptyCompletion() {
-        log.debug("Creating segment error code={} reason=empty-reply", ErrorCode.emptyCompletion);
-        return AppError.of(ErrorCode.emptyCompletion, "Empty model response", "The model returned no translated text.");
-    }
-
-    private static AppError invalidFinish() {
-        log.debug("Creating segment error code={} reason=non-stop-finish", ErrorCode.validation);
-        return AppError.of(
-                ErrorCode.validation, "Incomplete model response", "The model response did not finish normally.");
-    }
-
     private static void logTraceReply(final String raw, final String trimmed) {
         if (log.isTraceEnabled()) {
             log.trace("Segment reply raw={} trimmed={}", raw, trimmed);
@@ -373,12 +346,6 @@ final class SegmentTranslator {
     private static void logTraceRestoration(final String restored) {
         if (log.isTraceEnabled()) {
             log.trace("Segment reply restored={}", restored);
-        }
-    }
-
-    private static void logTraceUnmask(final String input, final String output) {
-        if (log.isTraceEnabled()) {
-            log.trace("Segment unmask input={} output={}", input, output);
         }
     }
 }

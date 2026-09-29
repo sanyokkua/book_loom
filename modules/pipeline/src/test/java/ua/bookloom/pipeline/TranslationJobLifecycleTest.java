@@ -64,7 +64,7 @@ class TranslationJobLifecycleTest {
     void run_acceptedAndFlaggedMarkdown_storesEachDecisionInItsRecord() {
         final Path source = markdown("He opened the *old* door.\n\nKeep *this* paragraph.");
         final ScriptedChatModel model =
-                replies("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.").answer(TranslationJobTestSupport.cutOffReply());
+                replies("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.").answer(TranslationJobTestSupport.cutOffReply());
         final TestProject project = project(source, brief("en", "uk"));
 
         final JobReport completed = report(job(project, model).run());
@@ -75,7 +75,7 @@ class TranslationJobLifecycleTest {
         assertThat(stored(project, "Book.md:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::maskedMachineTarget)
                 .containsExactly(
-                        SegmentStatus.ACCEPTED, "HE OPENED THE *OLD* DOOR.", "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
+                        SegmentStatus.ACCEPTED, "Він відчинив *старі* двері.", "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.");
         assertThat(stored(project, "Book.md:1"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.FLAGGED, null);

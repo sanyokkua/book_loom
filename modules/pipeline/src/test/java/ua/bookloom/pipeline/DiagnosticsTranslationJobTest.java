@@ -247,7 +247,13 @@ class DiagnosticsTranslationJobTest {
         final RunStores stores = project.stores();
         return new TestProject(
                 project.id(),
-                new RunStores(stores.projects(), stores.segments(), throwing, stores.openProjects(), stores.runs()),
+                new RunStores(
+                        stores.projects(),
+                        stores.segments(),
+                        throwing,
+                        stores.openProjects(),
+                        stores.runs(),
+                        stores.glossary()),
                 project.documents());
     }
 
@@ -294,6 +300,7 @@ class DiagnosticsTranslationJobTest {
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
                 .containsExactly(
+                        "StageStarted",
                         "StageStarted",
                         "ModelCallStarted",
                         "SegmentDecided",

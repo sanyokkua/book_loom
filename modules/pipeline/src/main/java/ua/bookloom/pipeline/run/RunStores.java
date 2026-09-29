@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.run;
 
 import java.util.Objects;
 import ua.bookloom.api.persistence.CheckpointPort;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -15,13 +16,15 @@ import ua.bookloom.pipeline.project.OpenProjects;
  * @param checkpoint where each decided segment is committed
  * @param openProjects the opened books
  * @param runs where the run's state is written
+ * @param glossary the project's glossary, which preparation scans into when it is empty and each chunk reads
  */
 public record RunStores(
         ProjectRepository projects,
         SegmentRepository segments,
         CheckpointPort checkpoint,
         OpenProjects openProjects,
-        RunRepository runs) {
+        RunRepository runs,
+        GlossaryRepository glossary) {
 
     /** Rejects a missing store. */
     public RunStores {
@@ -30,5 +33,6 @@ public record RunStores(
         Objects.requireNonNull(checkpoint, "checkpoint");
         Objects.requireNonNull(openProjects, "openProjects");
         Objects.requireNonNull(runs, "runs");
+        Objects.requireNonNull(glossary, "glossary");
     }
 }

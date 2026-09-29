@@ -58,7 +58,7 @@ class SegmentTranslatorCallKindTest {
     }
 
     private SegmentTranslator translator(final ScriptedChatModel model) {
-        return TranslationJobTestSupport.segmentTranslator(
+        return DraftStepFixtures.segmentTranslator(
                 GateFunction.of(documents, BookFormat.MARKDOWN),
                 (kind, segmentId, request) -> {
                     calls.add(kind + " " + segmentId);

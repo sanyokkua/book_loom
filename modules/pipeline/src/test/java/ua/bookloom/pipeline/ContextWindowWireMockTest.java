@@ -62,7 +62,7 @@ class ContextWindowWireMockTest {
                 .getFirst();
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubAlways(provider.target("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", Duration.ZERO));
-            final SegmentTranslator translator = TranslationJobTestSupport.segmentTranslator(
+            final SegmentTranslator translator = DraftStepFixtures.segmentTranslator(
                     documents, provider.model(Duration.ofSeconds(5), duration -> {}), BookFormat.MARKDOWN, "uk", "en");
             translator.translate(segment);
             return provider.chatBodies().getFirst();

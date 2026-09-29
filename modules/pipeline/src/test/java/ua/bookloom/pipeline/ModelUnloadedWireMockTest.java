@@ -61,7 +61,7 @@ class ModelUnloadedWireMockTest {
         final WireMockProvider provider = new WireMockProvider(ProviderKind.OPENAI_COMPATIBLE);
         started = provider;
         provider.stubSequence(List.of(
-                provider.target("ONE.", Duration.ZERO),
+                provider.target("Абзац номер 0.", Duration.ZERO),
                 aResponse().withStatus(400).withBody("{\"error\":\"Model unloaded\"}")));
         final String content = IntStream.range(0, PARAGRAPHS)
                 .mapToObj(index -> "Paragraph " + index + ".")

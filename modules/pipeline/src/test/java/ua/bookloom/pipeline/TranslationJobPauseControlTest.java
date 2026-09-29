@@ -7,6 +7,7 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
@@ -66,7 +67,8 @@ class TranslationJobPauseControlTest {
     void pauseAt_afterSectionAndSegment_usesSectionAtSectionEnd() {
         final Path source =
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
-        final TranslationJobImpl translation = job(source, replies("ONE.", "TWO.", "THREE."));
+        final TranslationJobImpl translation =
+                job(project(source, TranslationJobTestSupport.epubBrief()), replies("ONE.", "TWO.", "THREE."));
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.AFTER_SEGMENT, PausePoint.AFTER_SECTION));
@@ -109,8 +111,8 @@ class TranslationJobPauseControlTest {
     // Reading pause points before the model returns would miss this live AFTER_SEGMENT update.
     @Test
     void pauseAt_enabledDuringModelCall_appliesAtNextBoundary() {
-        final TranslationJobTestSupport.BlockingChatModel model =
-                new TranslationJobTestSupport.BlockingChatModel(replies("ONE.", "TWO.", "THREE."));
+        final BlockingModels.BlockingChatModel model =
+                new BlockingModels.BlockingChatModel(replies("ONE.", "TWO.", "THREE."));
         final TranslationJobImpl translation = markdownJob(model, "One.\n\nTwo.\n\nThree.");
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));

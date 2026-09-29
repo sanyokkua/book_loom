@@ -171,8 +171,8 @@ class TranslateLauncherTest {
         assertThat(logLines)
                 .anyMatch(line -> atLevel(line, "DEBUG")
                         && line.contains("translate command report state=COMPLETED")
-                        && line.contains("accepted=1")
-                        && line.contains("flagged=0"));
+                        && line.contains("accepted=0")
+                        && line.contains("flagged=1"));
         assertThat(logLines).anyMatch(line -> atLevel(line, "INFO") && line.contains("translate command exitCode=0"));
         assertThat(logLines).anyMatch(line -> atLevel(line, "INFO") && line.contains("translate launcher exitCode=0"));
     }
@@ -185,7 +185,8 @@ class TranslateLauncherTest {
         assertThat(logLines)
                 .anyMatch(line -> atLevel(line, "INFO") && line.contains("Translation job ended state=COMPLETED"));
         assertThat(logLines)
-                .anyMatch(line -> atLevel(line, "DEBUG") && line.contains("Book.md:0") && line.contains("ACCEPTED"));
+                .anyMatch(line -> atLevel(line, "DEBUG") && line.contains("Book.md:0") && line.contains("FLAGGED"));
+        assertThat(logLines).anyMatch(line -> atLevel(line, "WARN") && line.contains("Book.md:0"));
         assertThat(logLines).anyMatch(line -> atLevel(line, "TRACE") && line.contains("Pseudo chat lastUserMessage="));
         assertThat(String.join("\n", logLines))
                 .contains("He opened the ⟦g0⟧old⟦g1⟧ door.")

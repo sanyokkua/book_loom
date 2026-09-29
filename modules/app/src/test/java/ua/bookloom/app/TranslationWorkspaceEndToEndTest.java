@@ -129,10 +129,13 @@ class TranslationWorkspaceEndToEndTest {
         chooseModel();
         runToTheEnd();
 
+        // The pseudo model's echo of "It was a dark night." (20 code points) and of "The rain fell on the old house."
+        // is
+        // flagged by the echo check; "Nobody came." is below the echo floor and accepted at 0.85.
         assertThat(onFx(() -> injector.getInstance(StateMirror.class).accepted().get()))
-                .isEqualTo(SEGMENT_COUNT);
+                .isEqualTo(1);
         assertThat(onFx(() -> injector.getInstance(StateMirror.class).flagged().get()))
-                .isEqualTo(0);
+                .isEqualTo(2);
         assertThat(onFx(() -> injector.getInstance(StateMirror.class).total().get()))
                 .isEqualTo(SEGMENT_COUNT);
         assertThat(onFx(() ->
@@ -193,8 +196,8 @@ class TranslationWorkspaceEndToEndTest {
     private void assertExportReport(final Path written) {
         onFx(() -> shell.activate(ViewNames.EXPORT));
         assertThat(exportText("#export-path .kv-value")).isEqualTo(written.toString());
-        assertThat(exportText("#export-count-accepted")).isEqualTo("3");
-        assertThat(exportText("#export-count-flagged")).isEqualTo("0");
+        assertThat(exportText("#export-count-accepted")).isEqualTo("1");
+        assertThat(exportText("#export-count-flagged")).isEqualTo("2");
         assertThat(onFx(() -> exportNode("#export-reveal")))
                 .as("the reveal action is offered for the written file (never pressed here: it opens a file browser)")
                 .isNotNull();

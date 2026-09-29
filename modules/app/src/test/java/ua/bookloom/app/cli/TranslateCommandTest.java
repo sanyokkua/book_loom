@@ -63,7 +63,7 @@ class TranslateCommandTest {
         assertThat(exit).isEqualTo(0);
         assertThat(Files.readString(destination)).isEqualTo("HE OPENED THE *OLD* DOOR.\n");
         assertThat(consoleText(console).lines())
-                .containsExactly("Completed: " + destination + " (accepted=1, flagged=0)");
+                .containsExactly("Completed: " + destination + " (accepted=0, flagged=1)");
     }
 
     // Pseudo remains offline: it creates the fixed model but neither registers nor verifies a provider.
@@ -107,7 +107,7 @@ class TranslateCommandTest {
                         "connection: ok",
                         "models: ok",
                         "inference: ok (structured output: supported)",
-                        "Completed: " + tempDir.resolve("Book.uk.md") + " (accepted=1, flagged=0)");
+                        "Completed: " + tempDir.resolve("Book.uk.md") + " (accepted=0, flagged=1)");
     }
 
     // Explicit endpoint and timeout flags alter only the configuration registered for this command run.

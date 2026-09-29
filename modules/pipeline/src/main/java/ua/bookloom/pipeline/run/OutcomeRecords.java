@@ -9,16 +9,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.pipeline.Decision;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 
 /**
- * Turns a decision into the record a project stores, and reads a flagged record's reason back.
+ * Turns the quality loop's outcome for a segment into the record a project stores, and reads a flagged record's
+ * reason back.
  *
  * <p>A segment flagged at once has no error field of its own: its reason is kept as a finding whose kind is the
  * error code's name, so the review desk and the report show it like any other finding.
@@ -31,42 +29,6 @@ import ua.bookloom.pipeline.heal.SegmentOutcome;
 public final class OutcomeRecords {
 
     static final String REPLY = "reply";
-
-    /**
-     * Applies a decision to the record it decides.
-     *
-     * @param stored the non-null pending record
-     * @param decision the non-null decision made for it
-     * @return the record with its status, machine target in plain and masked form, confidence and path set
-     */
-    public static SegmentRecord decided(final SegmentRecord stored, final Decision decision) {
-        Objects.requireNonNull(stored, "stored");
-        Objects.requireNonNull(decision, "decision");
-        log.debug(
-                "Converting decision segmentId={} status={}",
-                stored.segmentId(),
-                decision.segment().status());
-        final Segment segment = decision.segment();
-        final AppError reason = decision.flagReason();
-        return new SegmentRecord(
-                stored.projectId(),
-                stored.segmentId(),
-                stored.unitId(),
-                stored.ord(),
-                stored.kind(),
-                segment.status(),
-                segment.targetInner(),
-                decision.maskedTarget(),
-                stored.userTarget(),
-                stored.maskedUserTarget(),
-                segment.confidence(),
-                stored.judgeScore(),
-                reason == null ? List.of() : List.of(replyFinding(reason)),
-                SegmentPath.DRAFT,
-                stored.repairRounds(),
-                stored.reviewed(),
-                stored.context());
-    }
 
     /**
      * Applies the quality loop's outcome for a segment to the record it decides.

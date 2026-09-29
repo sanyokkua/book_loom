@@ -3,31 +3,36 @@ package ua.bookloom.pipeline.run;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.document.ByteSpanAnchor;
-import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.pipeline.Decision;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 
-/** What a decision becomes in storage, and what a stored flag reads back as. */
+/** What a segment's outcome becomes in storage, and what a stored flag reads back as. */
 class OutcomeRecordsTest {
 
     // Storing only the plain target would leave the review editor without the masked form it shows and saves.
     @Test
-    void decided_acceptedDecision_storesBothTargetFormsAndTheDraftPath() {
-        final Segment segment = segment().withDecision(SegmentStatus.ACCEPTED, "HE *OLD* DOOR.");
-        final Decision decision = new Decision(segment, null, "HE ⟦g0⟧OLD⟦g1⟧ DOOR.");
+    void decided_acceptedDraft_storesBothTargetFormsAndTheDraftPath() {
+        final SegmentOutcome outcome = new SegmentOutcome(
+                "Book.md:0",
+                SegmentStatus.ACCEPTED,
+                "HE *OLD* DOOR.",
+                "HE ⟦g0⟧OLD⟦g1⟧ DOOR.",
+                0.85,
+                null,
+                List.of(),
+                SegmentPath.DRAFT,
+                0,
+                null);
 
-        final SegmentRecord record = OutcomeRecords.decided(pending(), decision);
+        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome);
 
         assertThat(record)
                 .extracting(
@@ -48,11 +53,10 @@ class OutcomeRecordsTest {
 
     // A flagged draft has no target to keep, and its reason must survive as the finding the review desk shows.
     @Test
-    void decided_flaggedDecision_storesItsReasonAsAHighReplyFinding() {
+    void decided_flaggedAtOnce_storesItsReasonAsAHighReplyFinding() {
         final AppError reason = AppError.of(ErrorCode.contextWindow, "Too long", "The segment exceeds the window.");
-        final Segment segment = segment().withDecision(SegmentStatus.FLAGGED, null);
 
-        final SegmentRecord record = OutcomeRecords.decided(pending(), new Decision(segment, reason, null));
+        final SegmentRecord record = OutcomeRecords.decided(pending(), flaggedAtOnce(reason));
 
         assertThat(record.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(record.machineTarget()).isNull();
@@ -65,8 +69,7 @@ class OutcomeRecordsTest {
     @Test
     void reportCode_contextWindowFlag_readsBackContextWindow() {
         final AppError reason = AppError.of(ErrorCode.contextWindow, "Too long", "The segment exceeds the window.");
-        final Segment segment = segment().withDecision(SegmentStatus.FLAGGED, null);
-        final SegmentRecord flagged = OutcomeRecords.decided(pending(), new Decision(segment, reason, null));
+        final SegmentRecord flagged = OutcomeRecords.decided(pending(), flaggedAtOnce(reason));
 
         assertThat(OutcomeRecords.reportCode(flagged)).isEqualTo(ErrorCode.contextWindow);
     }
@@ -145,6 +148,11 @@ class OutcomeRecordsTest {
         assertThat(OutcomeRecords.reportCode(record)).isEqualTo(ErrorCode.emptyCompletion);
     }
 
+    private static SegmentOutcome flaggedAtOnce(final AppError reason) {
+        return new SegmentOutcome(
+                "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, 0, reason);
+    }
+
     private static SegmentOutcome acceptedAfterOneRepair() {
         return new SegmentOutcome(
                 "Book.md:0",
@@ -178,23 +186,5 @@ class OutcomeRecordsTest {
                 0,
                 false,
                 null);
-    }
-
-    private static Segment segment() {
-        return new Segment(
-                "Book.md:0",
-                "Book.md",
-                0,
-                SegmentKind.PARAGRAPH,
-                "He *old* door.",
-                "He ⟦g0⟧old⟦g1⟧ door.",
-                Map.of(),
-                "hash",
-                null,
-                null,
-                new ByteSpanAnchor(0, 4),
-                null,
-                SegmentStatus.PENDING,
-                0.0);
     }
 }

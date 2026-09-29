@@ -197,7 +197,8 @@ chunk's segments in document order" says.
 `openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
 In plain words: a repair round that was interrupted has no answer to build on, and the rounds before it are not kept,
 so the segment starts its repair again from the first round instead of resuming half-way. What the run already paid for
-at the chunk level — the judge's verdict — is kept, so a pause never costs a second judge call.
+at the chunk level — the judge's verdict — is kept, so a pause never costs a second judge call for the chunk (a repaired segment is still judged once on its own, as the
+quality gates say).
 
 #### Scenario: A pause during the second repair round
 
@@ -206,14 +207,16 @@ at the chunk level — the judge's verdict — is kept, so a pause never costs a
   directed fix is in flight, and after resume the first directed fix is answered with the echo and the second with
   `Він відчинив старі двері.`
 - **THEN** the provider has received 4 requests before the pause — draft, judge, first fix, second fix
-- **AND** it has received 6 in total, only one of them a judge call, and the segment ends ACCEPTED
+- **AND** it has received 7 in total — the chunk's judge call is not repeated, and the one further judge call is the
+  repaired segment's own re-judge — and the segment ends ACCEPTED
 
 #### Scenario: An unreachable provider during the second repair round
 
 - **WHEN** the same run's second directed fix is answered with `ErrorCode.unreachable` with pause on error enabled, and
   after resume the first directed fix is answered with the echo and the second with `Він відчинив старі двері.`
 - **THEN** the run pauses with `ErrorCode.unreachable` after 4 requests
-- **AND** it has received 6 in total, only one of them a judge call
+- **AND** it has received 7 in total — the chunk's judge call is not repeated, and the one further judge call is the
+  repaired segment's own re-judge
 
 ## MODIFIED Requirements
 

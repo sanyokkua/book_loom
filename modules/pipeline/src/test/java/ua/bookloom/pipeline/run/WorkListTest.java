@@ -19,6 +19,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.CheckpointPort;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -27,7 +28,6 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
-import ua.bookloom.pipeline.Decision;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /** What the run still has to decide, read from the stored records, and the counts that move as it decides. */
@@ -45,23 +45,23 @@ class WorkListTest {
                 injector.getInstance(SegmentRepository.class),
                 injector.getInstance(CheckpointPort.class),
                 injector.getInstance(OpenProjects.class),
-                injector.getInstance(RunRepository.class));
+                injector.getInstance(RunRepository.class),
+                injector.getInstance(GlossaryRepository.class));
     }
 
-    // Accepted targets retain only the newest three within their unit and never cross to the next unit.
+    // A draft's preceding targets come from its whole unit, so the segments decided before this run must be listed too.
     @Test
-    void draftContextFor_acceptedTargets_areBoundedAndResetAtSectionBoundary() {
-        final WorkList work = read(document(), Map.of());
+    void unitSegments_firstPendingAfterStoredDecisions_listsItsWholeUnit() {
+        final WorkList work = read(
+                document(),
+                Map.of(
+                        "one:0", SegmentStatus.ACCEPTED,
+                        "one:1", SegmentStatus.REVISED,
+                        "one:2", SegmentStatus.FLAGGED));
 
-        accept(work, "Target 1.");
-        assertThat(work.draftContextFor(work.next()).precedingTargets()).containsExactly("Target 1.");
-        accept(work, "Target 2.");
-        accept(work, "Target 3.");
-        assertThat(work.draftContextFor(work.next()).precedingTargets())
-                .containsExactly("Target 1.", "Target 2.", "Target 3.");
-        accept(work, "Target 4.");
-
-        assertThat(work.draftContextFor(work.next()).precedingTargets()).isEmpty();
+        assertThat(work.unitSegments(work.remaining().getFirst()))
+                .extracting(Segment::id)
+                .containsExactly("one:0", "one:1", "one:2", "one:3");
     }
 
     // The auxiliary unit is never the run's work until the brief's switches reach it.
@@ -86,7 +86,7 @@ class WorkListTest {
                         "one:1", SegmentStatus.REVISED,
                         "one:2", SegmentStatus.FLAGGED));
 
-        assertThat(work.next().segment().id()).isEqualTo("one:3");
+        assertThat(work.remaining().getFirst().segment().id()).isEqualTo("one:3");
         assertThat(pendingIds(work)).containsExactly("one:3", "two:0");
     }
 
@@ -113,27 +113,15 @@ class WorkListTest {
     void apply_acceptedDecision_movesOneSegmentFromPendingToAccepted() {
         final WorkList work = read(document(), Map.of());
 
-        final JobProgress progress = accept(work, "Target 1.");
+        final JobProgress progress = work.apply(work.remaining().getFirst(), SegmentStatus.ACCEPTED);
 
         assertThat(progress)
                 .extracting(JobProgress::accepted, JobProgress::flagged, JobProgress::pending)
                 .containsExactly(1, 0, 4);
     }
 
-    private JobProgress accept(final WorkList work, final String target) {
-        final WorkItem item = work.next();
-        return work.apply(
-                item, new Decision(item.segment().withDecision(SegmentStatus.ACCEPTED, target), null, target));
-    }
-
     private static List<String> pendingIds(final WorkList work) {
-        final List<String> ids = new ArrayList<>();
-        while (work.hasPending()) {
-            final WorkItem item = work.next();
-            ids.add(item.segment().id());
-            work.apply(item, new Decision(item.segment().withDecision(SegmentStatus.ACCEPTED, "T."), null, "T."));
-        }
-        return ids;
+        return work.remaining().stream().map(item -> item.segment().id()).toList();
     }
 
     private WorkList read(final Document document, final Map<String, SegmentStatus> stored) {

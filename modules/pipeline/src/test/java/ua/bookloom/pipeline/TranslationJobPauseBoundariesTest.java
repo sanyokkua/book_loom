@@ -6,6 +6,7 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
@@ -90,7 +91,7 @@ class TranslationJobPauseBoundariesTest {
                 .containsExactly(0, 0, 3);
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "Paused");
+                .containsExactly("StageStarted", "StageStarted", "Paused");
         assertThat(model.requests()).isEmpty();
         translation.resume();
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
@@ -117,8 +118,7 @@ class TranslationJobPauseBoundariesTest {
     // Keeping a request raised during model work after resume would pause this completed first answer.
     @Test
     void resume_requestedWhileModelRuns_clearsPendingPause() {
-        final TranslationJobTestSupport.BlockingChatModel model =
-                new TranslationJobTestSupport.BlockingChatModel(replies("ONE."));
+        final BlockingModels.BlockingChatModel model = new BlockingModels.BlockingChatModel(replies("ONE."));
         final TranslationJobImpl translation = markdownJob(model, "One.");
         final List<JobEvent> events = new java.util.ArrayList<>();
         translation.subscribe(events::add);
@@ -175,7 +175,7 @@ class TranslationJobPauseBoundariesTest {
         final Path source =
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
         final ScriptedChatModel model = replies("ONE.", "TWO.", "THREE.");
-        final TranslationJobImpl translation = job(source, model);
+        final TranslationJobImpl translation = job(project(source, TranslationJobTestSupport.epubBrief()), model);
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.AFTER_SECTION));
@@ -205,7 +205,8 @@ class TranslationJobPauseBoundariesTest {
     void pauseAt_afterSection_emptyThenTwo_skipsEmptySection() {
         final Path source =
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of(), List.of("One.", "Two.")), "en");
-        final TranslationJobImpl translation = job(source, replies("ONE.", "TWO."));
+        final TranslationJobImpl translation =
+                job(project(source, TranslationJobTestSupport.epubBrief()), replies("ONE.", "TWO."));
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.AFTER_SECTION));

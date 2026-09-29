@@ -26,9 +26,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 /**
  * The per-chunk judge call: one call scoring every drafted pair that passed its hard gates and was not reused,
  * labelled {@code s1}..{@code sk} in document order so a small model never has to keep a real segment id straight
- * (design D8, "Judge each chunk once when the quality dial enables the judge"). Guice-constructed (task 10.2 binds
- * and injects it); {@code templates} is the module's existing eager singleton, {@code parser} its own tolerant
- * reader.
+ * (design D8, "Judge each chunk once when the quality dial enables the judge"). Guice constructs it for the
+ * {@link ua.bookloom.pipeline.heal.QualityLoop} the engine injects; {@code templates} is the module's eager singleton,
+ * {@code parser} its own tolerant reader.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})

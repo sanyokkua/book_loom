@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobReport;
@@ -123,6 +124,9 @@ class TranslationEngineImplTest {
                 project.stores().checkpoint(),
                 project.stores().openProjects(),
                 project.stores().runs(),
+                project.stores().glossary(),
+                TranslationJobTestSupport.qualityLoop(),
+                Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
                 Clock.systemUTC());
     }
 

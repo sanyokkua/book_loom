@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
@@ -47,6 +48,20 @@ public final class PendingCommit {
     public void decided(final SegmentRecord record) {
         Objects.requireNonNull(record, "record");
         decided.add(record);
+    }
+
+    /**
+     * Finds a record decided since the last flush, so a later draft of the same chunk reads the decision the run has
+     * made but not yet stored.
+     *
+     * @param segmentId the non-null segment id
+     * @return the decided record if one is held, or empty when none is — never held again once flushed
+     */
+    public Optional<SegmentRecord> held(final String segmentId) {
+        Objects.requireNonNull(segmentId, "segmentId");
+        return decided.stream()
+                .filter(record -> record.segmentId().equals(segmentId))
+                .reduce((earlier, later) -> later);
     }
 
     /**

@@ -15,8 +15,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * {@code ProjectService} ports bound to their implementations, the clock a run times itself with, and the prompt
  * templates, loaded and slot-checked once at injector creation so a broken template fails the start, not a run.
  *
- * <p>The judge and the self-heal calls ({@code judge}, {@code heal}) carry {@code @Inject} constructors but no
- * binding yet: nothing a run does calls them. The deterministic checks in {@code qa} are static functions.
+ * <p>The quality loop, the judge and the self-heal calls ({@code heal}, {@code judge}) need no binding: each carries
+ * an {@code @Inject} constructor, so Guice builds them for the engine, which hands the quality loop to every run. The
+ * deterministic checks in {@code qa} are static functions.
  */
 public final class PipelineModule extends AbstractModule {
 

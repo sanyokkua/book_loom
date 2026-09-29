@@ -15,7 +15,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -23,11 +22,12 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.CheckpointPort;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -44,12 +44,9 @@ import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
-import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
-import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
-import ua.bookloom.pipeline.prompt.DraftReplyParser;
-import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.RunStores;
 
@@ -60,6 +57,8 @@ final class TranslationJobTestSupport {
 
     private static final long WAIT_SECONDS = 5;
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final SentenceSplitter SPLITTER =
+            Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class);
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
 
     /** A book imported through a real {@code ProjectServiceImpl} over the in-memory repositories. */
@@ -81,7 +80,8 @@ final class TranslationJobTestSupport {
                 injector.getInstance(SegmentRepository.class),
                 injector.getInstance(CheckpointPort.class),
                 injector.getInstance(OpenProjects.class),
-                injector.getInstance(RunRepository.class));
+                injector.getInstance(RunRepository.class),
+                injector.getInstance(GlossaryRepository.class));
         final ProjectServiceImpl service = new ProjectServiceImpl(
                 injector.getInstance(BookInspector.class),
                 documents,
@@ -115,6 +115,52 @@ final class TranslationJobTestSupport {
                 QualityDial.FAST);
     }
 
+    /** The job-test brief on another dial. */
+    static BookBrief brief(
+            @Nullable final String sourceLanguage, @Nullable final String targetLanguage, final QualityDial dial) {
+        final BookBrief fast = brief(sourceLanguage, targetLanguage);
+        return new BookBrief(
+                fast.sourceLanguage(),
+                fast.targetLanguage(),
+                fast.genre(),
+                fast.register(),
+                fast.voiceEra(),
+                fast.audience(),
+                fast.names(),
+                fast.foreignPassages(),
+                fast.footnotes(),
+                fast.units(),
+                fast.balance(),
+                fast.alsoTranslate(),
+                dial);
+    }
+
+    /**
+     * The job-test brief with the book's metadata and navigation labels left untranslated, so a test that scripts one
+     * reply per body segment of an EPUB never has an auxiliary segment ask for one.
+     */
+    static BookBrief epubBrief() {
+        final BookBrief fast = brief("en", "uk");
+        return new BookBrief(
+                fast.sourceLanguage(),
+                fast.targetLanguage(),
+                fast.genre(),
+                fast.register(),
+                fast.voiceEra(),
+                fast.audience(),
+                fast.names(),
+                fast.foreignPassages(),
+                fast.footnotes(),
+                fast.units(),
+                fast.balance(),
+                new AlsoTranslate(
+                        false,
+                        fast.alsoTranslate().altText(),
+                        false,
+                        fast.alsoTranslate().frontmatter()),
+                fast.dial());
+    }
+
     static BookBrief withTarget(final BookBrief brief, final String targetLanguage) {
         return new BookBrief(
                 brief.sourceLanguage(),
@@ -138,14 +184,30 @@ final class TranslationJobTestSupport {
 
     /** A job asked to run a project id that may not be the imported one. */
     static TranslationJobImpl job(final TestProject project, final String projectId, final ChatModel model) {
+        return job(project, projectId, model, ReviewMode.UNATTENDED);
+    }
+
+    static TranslationJobImpl job(final TestProject project, final ChatModel model, final ReviewMode mode) {
+        return job(project, project.id(), model, mode);
+    }
+
+    private static TranslationJobImpl job(
+            final TestProject project, final String projectId, final ChatModel model, final ReviewMode mode) {
         return new TranslationJobImpl(
                 project.documents(),
-                new RunRequest(projectId, ReviewMode.UNATTENDED),
+                new RunRequest(projectId, mode),
                 model,
                 new ObjectMapper(),
                 new PromptTemplates(),
                 project.stores(),
+                qualityLoop(),
+                SPLITTER,
                 Clock.systemUTC());
+    }
+
+    /** The real quality loop over the real judge and self-heal calls, as Guice builds it for a run. */
+    static QualityLoop qualityLoop() {
+        return Guice.createInjector().getInstance(QualityLoop.class);
     }
 
     static TranslationJobImpl job(final Path source, final ChatModel model) {
@@ -174,41 +236,6 @@ final class TranslationJobTestSupport {
                                 .data(),
                         "find result")
                 .orElseThrow();
-    }
-
-    static SegmentTranslator segmentTranslator(
-            final DocumentPort documents,
-            final ChatModel model,
-            final ua.bookloom.api.document.BookFormat format,
-            final String targetLanguage,
-            @Nullable final String sourceLanguage) {
-        return segmentTranslator(
-                GateFunction.of(documents, format),
-                (kind, segmentId, request) -> model.chat(request),
-                format,
-                targetLanguage,
-                sourceLanguage);
-    }
-
-    static SegmentTranslator segmentTranslator(
-            final GateFunction gate,
-            final ModelCalls calls,
-            final ua.bookloom.api.document.BookFormat format,
-            final String targetLanguage,
-            @Nullable final String sourceLanguage) {
-        return new SegmentTranslator(
-                gate,
-                calls,
-                format,
-                new DraftPromptBuilder(
-                        new PromptTemplates(),
-                        new ua.bookloom.pipeline.prompt.CallFrame(
-                                sourceLanguage,
-                                targetLanguage,
-                                ua.bookloom.pipeline.prompt.StyleSheet.from(
-                                        ua.bookloom.api.project.BookBrief.defaults(sourceLanguage)),
-                                ua.bookloom.api.project.ForeignPassagePolicy.KEEP)),
-                new DraftReplyParser(new ObjectMapper()));
     }
 
     static ScriptedChatModel replies(final String... content) {
@@ -312,7 +339,7 @@ final class TranslationJobTestSupport {
      * Waits like a provider that does not honour an interrupt: the call keeps waiting and returns its answer, which
      * is what the boundary tests need, because they prove what the job does with an answer that arrives anyway.
      */
-    private static void awaitIgnoringInterrupt(final CountDownLatch latch, final String what) {
+    static void awaitIgnoringInterrupt(final CountDownLatch latch, final String what) {
         boolean interrupted = false;
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         try {
@@ -331,69 +358,6 @@ final class TranslationJobTestSupport {
             if (interrupted) {
                 Thread.currentThread().interrupt();
             }
-        }
-    }
-
-    static final class BlockingChatModel implements ChatModel {
-
-        private final ChatModel delegate;
-        private final CountDownLatch entered = new CountDownLatch(1);
-        private final CountDownLatch released = new CountDownLatch(1);
-
-        BlockingChatModel(final ChatModel delegate) {
-            this.delegate = java.util.Objects.requireNonNull(delegate, "delegate");
-        }
-
-        @Override
-        public Result<ChatResponse> chat(final ChatRequest request) {
-            entered.countDown();
-            await(released);
-            return delegate.chat(request);
-        }
-
-        void awaitEntered() {
-            await(entered);
-        }
-
-        void release() {
-            released.countDown();
-        }
-
-        private void await(final CountDownLatch latch) {
-            awaitIgnoringInterrupt(latch, "controlled model");
-        }
-    }
-
-    static final class SecondBlockingChatModel implements ChatModel {
-
-        private final ChatModel delegate;
-        private final AtomicInteger calls = new AtomicInteger();
-        private final CountDownLatch entered = new CountDownLatch(1);
-        private final CountDownLatch released = new CountDownLatch(1);
-
-        SecondBlockingChatModel(final ChatModel delegate) {
-            this.delegate = java.util.Objects.requireNonNull(delegate, "delegate");
-        }
-
-        @Override
-        public Result<ChatResponse> chat(final ChatRequest request) {
-            if (calls.incrementAndGet() == 2) {
-                entered.countDown();
-                await(released);
-            }
-            return delegate.chat(request);
-        }
-
-        void awaitSecondCall() {
-            await(entered);
-        }
-
-        void releaseSecondCall() {
-            released.countDown();
-        }
-
-        private static void await(final CountDownLatch latch) {
-            awaitIgnoringInterrupt(latch, "second model call");
         }
     }
 }

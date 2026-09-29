@@ -58,7 +58,7 @@ class TranslationJobRunRecordTest {
         translation.resume();
         report(await(run));
 
-        assertThat(observed).containsExactly(JobState.RUNNING, JobState.PAUSED, JobState.RUNNING);
+        assertThat(observed).containsExactly(JobState.RUNNING, JobState.RUNNING, JobState.PAUSED, JobState.RUNNING);
         final RunRecord record = latest(project);
         assertThat(record.state()).isEqualTo(JobState.COMPLETED);
         assertThat(record.endedAt()).isNotNull();

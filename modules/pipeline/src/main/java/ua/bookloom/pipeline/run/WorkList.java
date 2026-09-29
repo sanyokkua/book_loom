@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.run;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,8 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
@@ -21,8 +18,6 @@ import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.Decision;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /**
  * The segments a run still has to decide, in document order, and the counts that move as it decides them.
@@ -34,8 +29,6 @@ import ua.bookloom.pipeline.prompt.DraftContext;
 @Slf4j
 public final class WorkList {
 
-    private static final int PRECEDING_TARGETS = 3;
-
     /**
      * The auxiliary kinds the run leaves out until the Book Brief's switches reach it: with every switch off, the
      * whole auxiliary unit is kept as source. It is never removed from the book, because the export compares full
@@ -43,19 +36,18 @@ public final class WorkList {
      */
     static final Set<SegmentKind> KEPT_AS_SOURCE = new AlsoTranslate(false, false, false, false).keptKinds();
 
-    private final int sections;
+    private final List<Unit> body;
     private final int segments;
     private final List<WorkItem> pending;
-    private final ArrayDeque<String> precedingTargets = new ArrayDeque<>();
     private int next;
     private int accepted;
     private int flagged;
     private int pendingCount;
     private int lastSection;
-    private int contextSection = -1;
 
-    private WorkList(final int sections, final int segments, final List<WorkItem> pending, final SegmentCounts counts) {
-        this.sections = sections;
+    private WorkList(
+            final List<Unit> body, final int segments, final List<WorkItem> pending, final SegmentCounts counts) {
+        this.body = List.copyOf(body);
         this.segments = segments;
         this.pending = List.copyOf(pending);
         accepted = counts.accepted() + counts.revised();
@@ -63,7 +55,7 @@ public final class WorkList {
         pendingCount = counts.pending();
         log.debug(
                 "Built work list sections={} segments={} pending={} accepted={} flagged={}",
-                sections,
+                body.size(),
                 segments,
                 this.pending.size(),
                 accepted,
@@ -105,7 +97,7 @@ public final class WorkList {
             total += body.get(section).segments().size();
             addPending(pending, body.get(section), section, byId);
         }
-        return new WorkList(body.size(), total, pending, counts);
+        return new WorkList(body, total, pending, counts);
     }
 
     private static void addPending(
@@ -136,18 +128,23 @@ public final class WorkList {
     }
 
     /**
-     * Returns the segment the run decides next, without moving past it.
+     * Returns the segments still to decide, in document order.
      *
-     * @return the first undecided item; only valid while {@link #hasPending()}
+     * @return never null; empty when every segment is decided
      */
-    public WorkItem next() {
-        final WorkItem item = pending.get(next);
-        log.debug(
-                "Selected pending segment id={} index={} section={}",
-                item.segment().id(),
-                next,
-                item.section());
-        return item;
+    public List<WorkItem> remaining() {
+        return pending.subList(next, pending.size());
+    }
+
+    /**
+     * Returns every segment of an item's unit, decided ones included, in document order — the segments a draft's
+     * preceding targets are taken from.
+     *
+     * @param item the non-null item whose unit is asked for
+     * @return never null; holds the item's own segment
+     */
+    public List<Segment> unitSegments(final WorkItem item) {
+        return body.get(Objects.requireNonNull(item, "item").section()).segments();
     }
 
     /**
@@ -156,45 +153,42 @@ public final class WorkList {
      * @return the counts with the section of the next undecided segment, or of the last decided one at the end
      */
     public JobProgress currentTranslationProgress() {
-        return progress(hasPending() ? pending.get(next).section() : lastSection);
+        return progress(JobStage.TRANSLATE, hasPending() ? pending.get(next).section() : lastSection);
     }
 
     /**
-     * Moves past a decided item and updates the counts and the preceding-target context.
+     * Returns the counts as preparation starts, before any segment of this run is decided.
      *
-     * @param item the non-null item just decided, which must be {@link #next()}
-     * @param decision the non-null decision made for it
+     * @return the counts under the {@code PREP} stage, at the section of the first undecided segment
+     */
+    public JobProgress preparationProgress() {
+        return progress(JobStage.PREP, hasPending() ? pending.get(next).section() : lastSection);
+    }
+
+    /**
+     * Moves past a decided item and updates the counts.
+     *
+     * @param item the non-null item just decided, which must be the first of {@link #remaining()}
+     * @param status the non-null status it was decided with, {@code ACCEPTED} or {@code FLAGGED}
      * @return the progress after the decision
      */
-    public JobProgress apply(final WorkItem item, final Decision decision) {
+    public JobProgress apply(final WorkItem item, final SegmentStatus status) {
         Objects.requireNonNull(item, "item");
-        Objects.requireNonNull(decision, "decision");
+        Objects.requireNonNull(status, "status");
         log.debug(
                 "Applying decision segmentId={} status={} section={}",
                 item.segment().id(),
-                decision.segment().status(),
+                status,
                 item.section());
         lastSection = item.section();
         next++;
         pendingCount--;
-        recordCount(decision);
-        recordPrecedingTarget(item, decision);
-        return progress(lastSection);
-    }
-
-    /**
-     * Returns the targets accepted just before an item in its own section, at most three and never across a section
-     * boundary.
-     *
-     * @param item the non-null item about to be drafted
-     * @return the context, empty when the item opens its section or the run
-     */
-    public DraftContext draftContextFor(final WorkItem item) {
-        Objects.requireNonNull(item, "item");
-        if (contextSection != item.section()) {
-            return DraftContext.empty();
+        if (status == SegmentStatus.ACCEPTED) {
+            accepted++;
+        } else {
+            flagged++;
         }
-        return new DraftContext(List.copyOf(precedingTargets));
+        return progress(JobStage.TRANSLATE, lastSection);
     }
 
     /**
@@ -230,7 +224,7 @@ public final class WorkList {
      * @return the section count
      */
     public int sectionCount() {
-        return sections;
+        return body.size();
     }
 
     /**
@@ -242,43 +236,16 @@ public final class WorkList {
         return segments;
     }
 
-    private JobProgress progress(final int section) {
-        final JobProgress progress =
-                new JobProgress(JobStage.TRANSLATE, section, sections, accepted, flagged, pendingCount);
+    private JobProgress progress(final JobStage stage, final int section) {
+        final JobProgress progress = new JobProgress(stage, section, body.size(), accepted, flagged, pendingCount);
         log.debug(
-                "Built progress section={}/{} accepted={} flagged={} pending={}",
+                "Built progress stage={} section={}/{} accepted={} flagged={} pending={}",
+                stage,
                 section,
-                sections,
+                body.size(),
                 accepted,
                 flagged,
                 pendingCount);
         return progress;
-    }
-
-    private void recordCount(final Decision decision) {
-        if (decision.segment().status() == SegmentStatus.ACCEPTED) {
-            accepted++;
-            return;
-        }
-        flagged++;
-        final @Nullable AppError reason = decision.flagReason();
-        log.debug(
-                "Recorded flagged decision segmentId={} reason={}",
-                decision.segment().id(),
-                reason == null ? null : reason.code());
-    }
-
-    private void recordPrecedingTarget(final WorkItem item, final Decision decision) {
-        if (contextSection != item.section()) {
-            precedingTargets.clear();
-            contextSection = item.section();
-        }
-        if (decision.segment().status() != SegmentStatus.ACCEPTED) {
-            return;
-        }
-        precedingTargets.addLast(Objects.requireNonNull(decision.segment().targetInner(), "accepted target"));
-        if (precedingTargets.size() > PRECEDING_TARGETS) {
-            precedingTargets.removeFirst();
-        }
     }
 }

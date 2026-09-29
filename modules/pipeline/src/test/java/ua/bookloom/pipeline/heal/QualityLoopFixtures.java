@@ -33,8 +33,8 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 /**
  * Real collaborators and small builders shared by the {@code QualityLoopTest} theme classes: a real
  * {@link DocumentPort} (real placeholder gate), a real {@link QualityLoop} wired over the real self-heal calls, and
- * a {@link DraftOutcome.Drafted} builder that replays design D3 rule 5 (the draft step's own placeholder repair)
- * the way task 10.2's draft step will.
+ * a {@link DraftOutcome.Drafted} builder that replays what the draft step answers under design D3 rule 5: a reply
+ * restored through the placeholder gate, or one whose markup still fails it and carries the gate's markup finding.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

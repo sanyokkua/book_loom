@@ -9,14 +9,17 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.CheckpointPort;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
+import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.RunStores;
@@ -32,9 +35,14 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final ObjectMapper mapper;
     private final PromptTemplates templates;
     private final RunStores stores;
+    private final QualityLoop qualityLoop;
+    private final SentenceSplitter splitter;
     private final Clock clock;
 
-    /** Creates an engine with the application-wide tolerant JSON mapper. */
+    /**
+     * Creates an engine with the application-wide tolerant JSON mapper, the quality loop every run decides through,
+     * and the sentence splitter an oversized segment is drafted in pieces with.
+     */
     @Inject
     public TranslationEngineImpl(
             final DocumentPort documents,
@@ -45,11 +53,16 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final CheckpointPort checkpoint,
             final OpenProjects openProjects,
             final RunRepository runs,
+            final GlossaryRepository glossary,
+            final QualityLoop qualityLoop,
+            final SentenceSplitter splitter,
             final Clock clock) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
-        this.stores = new RunStores(projects, segments, checkpoint, openProjects, runs);
+        this.stores = new RunStores(projects, segments, checkpoint, openProjects, runs, glossary);
+        this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
+        this.splitter = Objects.requireNonNull(splitter, "splitter");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -59,7 +72,8 @@ public final class TranslationEngineImpl implements TranslationEngine {
             Objects.requireNonNull(request, "request");
             Objects.requireNonNull(model, "model");
             log.debug("Preparing translation job project={} mode={}", request.projectId(), request.mode());
-            return Result.ok(new TranslationJobImpl(documents, request, model, mapper, templates, stores, clock));
+            return Result.ok(new TranslationJobImpl(
+                    documents, request, model, mapper, templates, stores, qualityLoop, splitter, clock));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,

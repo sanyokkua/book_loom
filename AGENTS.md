@@ -24,13 +24,14 @@ gate, confidence, per-chunk judge, directed fix, reflect → improve, polish, ac
 translation memory, rolling summary, context assembly, the deferral register, the glossary service with CSV), `:ui`
 (the shell, six screens, the state mirror, English and Ukrainian bundles chosen by the OS, light/dark theme) and `:app`
 (boot, logging, single-instance lock, DI, the window). A book of any of the four formats goes through the whole
-pipeline from the window or the command line, with the pseudo model or a configured real provider — on the job's
-original path, which accepts a segment once its markup restores, stores each decision on the stored project and starts at
-that project's first pending segment: chunking, the brief-driven style sheet, the judge, the quality loop, protected
-spans, memory, summary and context assembly are built and tested but not yet wired into a run. Not built: saving
-(nothing survives a restart, no resume, no remembered settings). Next: the rest of group 10 of
-`openspec/changes/complete-translation-workflow` (failure routing, the chunked run), then review and export (11) and
-the screens (12–15).
+pipeline from the window or the command line, with the pseudo model or a configured real provider — as a run on the
+stored project that starts at its first pending segment and stores each decision there: preparation derives the brief's
+style sheet and scans an empty glossary for names, each unit is packed into chunks, and every segment is drafted,
+judged when the dial enables the judge, and decided by the acceptance rule and the quality loop, so an untranslated
+echo is repaired or flagged. Protected spans, memory reuse, the summary, deferrals and context assembly are built and
+tested but not yet wired into a run. Not built: saving (nothing survives a restart, no resume, no remembered
+settings). Next: the rest of group 10 of `openspec/changes/complete-translation-workflow` (the "Also translate"
+switches on), then review and export (11) and the screens (12–15).
 
 ## Commands
 

@@ -52,7 +52,7 @@ class JudgeTemperatureWireMockTest {
             provider.stubSequence(
                     List.of(provider.target(DRAFT_TARGET, Duration.ZERO), provider.reply(JUDGE_REPLY, Duration.ZERO)));
             final ChatModel model = provider.model(Duration.ofSeconds(5), duration -> {});
-            TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
+            DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
                     .translate(segment);
             JUDGE_CALL.judge(
                     List.of(new JudgedPair(segment.id(), segment.masked(), DRAFT_TARGET)),

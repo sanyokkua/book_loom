@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.util.function.UnaryOperator;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ class TranslationJobDecisionGapsTest {
     @Test
     void run_briefSourceLanguage_beatsTheDeclaredLanguage() {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.", "en");
-        final ScriptedChatModel model = TranslationJobTestSupport.replies("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
+        final ScriptedChatModel model = TranslationJobTestSupport.replies("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.");
 
         final JobReport report = report(job(UnaryOperator.identity(), source, "de", model));
 
@@ -68,12 +69,13 @@ class TranslationJobDecisionGapsTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("flaggingReplies")
     void run_flaggedFirstSegment_stillSendsAndAcceptsTheSecond(
-            final String label, final Result<ChatResponse> firstReply, final ErrorCode reason) {
+            final String label,
+            final Result<ChatResponse> firstReply,
+            final int firstSegmentCalls,
+            final ErrorCode reason) {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.\n\nShe left.\n");
-        final ScriptedChatModel model = new ScriptedChatModel().answer(firstReply);
-        if (label.equals("missing token")) {
-            model.answer(firstReply);
-        }
+        final ScriptedChatModel model = new ScriptedChatModel();
+        IntStream.range(0, firstSegmentCalls).forEach(call -> model.answer(firstReply));
         model.answer(
                 Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("SHE LEFT."), FinishReason.STOP)));
 
@@ -82,18 +84,26 @@ class TranslationJobDecisionGapsTest {
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(report.accepted()).isEqualTo(1);
         assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.md:0", reason));
-        assertThat(model.requests()).hasSize(label.equals("missing token") ? 3 : 2);
+        assertThat(model.requests()).hasSize(firstSegmentCalls + 1);
     }
 
+    // A missing token is flagged only after the draft, its placeholder repair and the one directed fix of Fast; the
+    // other replies flag the segment at once, after its one call.
     private static Stream<Arguments> flaggingReplies() {
         return Stream.of(
                 Arguments.of(
-                        "missing token", reply("HE OPENED THE ⟦g0⟧OLD DOOR.", FinishReason.STOP), ErrorCode.validation),
+                        "missing token",
+                        reply("HE OPENED THE ⟦g0⟧OLD DOOR.", FinishReason.STOP),
+                        3,
+                        ErrorCode.validation),
                 Arguments.of(
-                        "whitespace with a normal finish", reply("  \n", FinishReason.STOP), ErrorCode.emptyCompletion),
-                Arguments.of("cut off by length", reply("HE OPENED", FinishReason.LENGTH), ErrorCode.validation),
-                Arguments.of("model emptyCompletion", refusal(ErrorCode.emptyCompletion), ErrorCode.emptyCompletion),
-                Arguments.of("model contextWindow", refusal(ErrorCode.contextWindow), ErrorCode.contextWindow));
+                        "whitespace with a normal finish",
+                        reply("  \n", FinishReason.STOP),
+                        1,
+                        ErrorCode.emptyCompletion),
+                Arguments.of("cut off by length", reply("HE OPENED", FinishReason.LENGTH), 1, ErrorCode.validation),
+                Arguments.of("model emptyCompletion", refusal(ErrorCode.emptyCompletion), 1, ErrorCode.emptyCompletion),
+                Arguments.of("model contextWindow", refusal(ErrorCode.contextWindow), 1, ErrorCode.contextWindow));
     }
 
     // Reporting a thrown model call under any other code would hide an unexpected fault behind a known outcome.

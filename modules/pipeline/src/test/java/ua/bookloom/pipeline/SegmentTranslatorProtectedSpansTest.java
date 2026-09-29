@@ -15,7 +15,6 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.project.ForeignPassagePolicy;
@@ -23,6 +22,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
@@ -50,16 +50,14 @@ class SegmentTranslatorProtectedSpansTest {
         final ProtectedMask mask = ProtectedSpans.mask(segment, "en", ForeignPassagePolicy.KEEP, List.of(HALE));
         final ScriptedChatModel model = TranslationJobTestSupport.replies("⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері.");
 
-        final Result<Decision> result = translator(segment, mask, model, BookFormat.MARKDOWN)
+        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.MARKDOWN)
                 .translate(segment, DraftContext.empty(), mask.maskedText());
 
         assertThat(model.requests().getFirst().messages().get(1).content())
                 .contains("Copy this exact ordered sequence unchanged: ⟦g2⟧ ⟦g0⟧ ⟦g1⟧")
                 .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
                 .doesNotContain("Hale opened");
-        final Decision decision = Objects.requireNonNull(result.data());
-        assertThat(decision.segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(decision.segment().targetInner()).isEqualTo("Гейл відчинив *старі* двері.");
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("Гейл відчинив *старі* двері.");
     }
 
     @Test
@@ -69,7 +67,7 @@ class SegmentTranslatorProtectedSpansTest {
         final ScriptedChatModel model = TranslationJobTestSupport.replies(
                 "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", "⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері.");
 
-        final Result<Decision> result = translator(segment, mask, model, BookFormat.MARKDOWN)
+        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.MARKDOWN)
                 .translate(segment, DraftContext.empty(), mask.maskedText());
 
         assertThat(model.requests()).hasSize(2);
@@ -79,8 +77,7 @@ class SegmentTranslatorProtectedSpansTest {
                 .contains("came back 0 times");
         assertThat(model.requests().get(1).expectedOutputTokens())
                 .isEqualTo(model.requests().getFirst().expectedOutputTokens());
-        assertThat(Objects.requireNonNull(result.data()).segment().targetInner())
-                .isEqualTo("Гейл відчинив *старі* двері.");
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("Гейл відчинив *старі* двері.");
     }
 
     @Test
@@ -93,13 +90,13 @@ class SegmentTranslatorProtectedSpansTest {
                         TranslationJobTestSupport.targetReply("⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері."),
                         FinishReason.STOP)));
 
-        final Result<Decision> result = translator(segment, mask, model, BookFormat.MARKDOWN)
+        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.MARKDOWN)
                 .translate(segment, DraftContext.empty(), mask.maskedText());
 
         assertThat(model.requests().get(1).messages().get(1).content())
                 .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
                 .doesNotContain("Hale opened");
-        assertThat(Objects.requireNonNull(result.data()).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
     }
 
     @Test
@@ -113,20 +110,20 @@ class SegmentTranslatorProtectedSpansTest {
         final ProtectedMask mask = ProtectedSpans.mask(segment, "en", ForeignPassagePolicy.KEEP, List.of());
         final ScriptedChatModel model = TranslationJobTestSupport.replies("Вона прошепотіла ⟦g2⟧ і пішла.");
 
-        final Result<Decision> result = translator(segment, mask, model, BookFormat.EPUB)
+        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.EPUB)
                 .translate(segment, DraftContext.empty(), mask.maskedText());
 
         assertThat(model.requests().getFirst().messages().get(1).content())
                 .contains("<Text>\nShe whispered ⟦g2⟧ and left.\n</Text>")
                 .doesNotContain("au revoir");
-        assertThat(Objects.requireNonNull(result.data()).segment().targetInner())
+        assertThat(DraftStepFixtures.drafted(result).restoredTarget())
                 .isEqualTo("Вона прошепотіла <i xml:lang=\"fr\">au revoir</i> і пішла.");
     }
 
     private SegmentTranslator translator(
             final Segment segment, final ProtectedMask mask, final ScriptedChatModel model, final BookFormat format) {
         final GateFunction gate = ProtectedSpans.gate(Map.of(segment.id(), mask), GateFunction.of(documents, format));
-        return TranslationJobTestSupport.segmentTranslator(
+        return DraftStepFixtures.segmentTranslator(
                 gate, (kind, segmentId, request) -> model.chat(request), format, "uk", "en");
     }
 

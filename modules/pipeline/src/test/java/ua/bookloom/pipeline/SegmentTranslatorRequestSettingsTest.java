@@ -38,7 +38,7 @@ class SegmentTranslatorRequestSettingsTest {
                         TranslationJobTestSupport.targetReply("Він відчинив ⟦g0⟧старі⟦g1⟧ двері."),
                         FinishReason.STOP)));
 
-        TranslationJobTestSupport.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
+        DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
         assertThat(model.requests())
