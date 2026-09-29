@@ -28,13 +28,19 @@ class LanguageTagsTest {
         "nb-NO,nb",
         "' de ',de"
     })
-    void normalize_recognizedTag_returnsCatalogueTag(String raw, String expected) {
+    void normalize_catalogueTag_returnsCatalogueTag(String raw, String expected) {
+        assertThat(LanguageTags.normalize(raw)).isPresent().hasValue(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"la,la", "la-VA,la", "LA_va,la", "haw,haw", "ar,ar", "he,he", "iw,he", "AR-eg,ar", "' Haw ',haw"})
+    void normalize_uncataloguedLanguageTheJdkNames_returnsItsLowerCasePrimaryTag(String raw, String expected) {
         assertThat(LanguageTags.normalize(raw)).isPresent().hasValue(expected);
     }
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"xx-yy", "xx", "ar", "he", "  "})
+    @ValueSource(strings = {"xx-yy", "xx", "q", "  ", "und", "mul", "zxx", "mis", "x-foo", "latin", "la--VA"})
     void normalize_unrecognizedOrBlankTag_returnsEmpty(String raw) {
         assertThat(LanguageTags.normalize(raw)).isEmpty();
     }

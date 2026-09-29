@@ -15,7 +15,7 @@ import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.util.lang.LanguageTags;
 
 /**
- * Rewrites the language a translated EPUB declares (task 4.6, design.md D14 §1): the package's {@code dc:language},
+ * Rewrites the language a translated EPUB declares (design.md D14 §1): the package's {@code dc:language},
  * its {@code dcterms:language} meta and {@code xml:lang}, and the {@code html}/{@code body} language attributes of
  * every spine document and of the navigation document outside the spine.
  */
@@ -28,7 +28,7 @@ final class EpubLanguageRewriter {
     private static final Namespace OPF_NS = Namespace.getNamespace("http://www.idpf.org/2007/opf");
     // A prefixed namespace, not Namespace.getNamespace(uri) alone (which chooses no-prefix/default): an appended
     // <language> element must serialize as <dc:language>, not <language xmlns="…">, however Namespace.equals
-    // (URI-only) still matches an existing dc:-prefixed element when reading (task 4.6, the reported bug).
+    // (URI-only) still matches an existing dc:-prefixed element when reading.
     private static final Namespace DC_NS = Namespace.getNamespace("dc", "http://purl.org/dc/elements/1.1/");
     private static final String LANGUAGE_ELEMENT_NAME = "language";
     private static final String LEGACY_DC_METADATA_ELEMENT_NAME = "dc-metadata";
@@ -38,11 +38,12 @@ final class EpubLanguageRewriter {
      * Replaces the first {@code dc:language} in the OPF's metadata with {@code targetLanguage} — found directly
      * under {@code metadata} or, failing that, nested inside a legacy {@code dc-metadata} wrapper — adding one
      * (with its {@code dc:} prefix) when none is present anywhere, then rewrites every other language-carrying
-     * attribute the spec names wherever its value equals the effective source language (task 4.6, design.md D14
-     * §1): the {@code dcterms:language} meta, the package's own {@code xml:lang}, and each XHTML spine content
-     * document's {@code html}/{@code body} {@code xml:lang}/{@code lang}. The navigation document is out of this
-     * task's scope (task 6.3 continues it). The effective source language is {@code sourceLanguage} when given,
-     * else the package's own {@code dc:language} value read <strong>before</strong> the replacement above.
+     * attribute the spec names wherever its value equals the effective source language (design.md D14 §1): the
+     * {@code dcterms:language} meta, the package's own {@code xml:lang}, and the {@code html}/{@code body}
+     * {@code xml:lang}/{@code lang} of each XHTML spine content document and of the navigation document. Values are
+     * compared by language, so any language the JDK can name works, not only a catalogued one. The effective source
+     * language is {@code sourceLanguage} when given, else the package's own {@code dc:language} value read
+     * <strong>before</strong> the replacement above.
      */
     static void rewrite(
             ParsedEpub parsed,
@@ -191,10 +192,9 @@ final class EpubLanguageRewriter {
     }
 
     /**
-     * Compares a language value against the effective source language after {@link LanguageTags#normalize}, so
-     * {@code en-US} and {@code en} match; falls back to a direct case-insensitive comparison of the raw values when
-     * either side names no catalogued language (e.g. {@code la}), so two uncatalogued tags are never spuriously
-     * treated as equal to each other or to the source merely because both fail to normalize.
+     * Compares two language values after {@link LanguageTags#normalize}, so {@code en-US} and {@code en} match, and
+     * so does any language the JDK can name ({@code la-VA} and {@code la}). A value no language names ({@code xx})
+     * is compared as raw text ignoring case, so two such values match only when they are the same text.
      */
     private static boolean sameLanguage(@Nullable String effectiveSource, @Nullable String candidate) {
         if (effectiveSource == null || candidate == null) {

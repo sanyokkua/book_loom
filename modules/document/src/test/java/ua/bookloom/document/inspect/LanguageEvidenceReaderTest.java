@@ -80,10 +80,21 @@ class LanguageEvidenceReaderTest {
         assertThat(evidence.verdict()).isEqualTo(LanguageEvidence.Verdict.MATCH);
     }
 
-    // a Markdown frontmatter lang value that names no catalogued language is UNRECOGNIZED, not
+    // a language outside the 34-language catalogue that the JDK can name is recognized, not UNRECOGNIZED.
+    @Test
+    void evaluate_uncataloguedButNameableTag_reportsMatch() {
+        final LanguageEvidence evidence = LanguageEvidenceReader.evaluate("la", List.of());
+
+        assertThat(evidence.declaredRaw()).isEqualTo("la");
+        assertThat(evidence.declared()).isEqualTo("la");
+        assertThat(evidence.contentMajority()).isNull();
+        assertThat(evidence.verdict()).isEqualTo(LanguageEvidence.Verdict.MATCH);
+    }
+
+    // a Markdown frontmatter lang value that no language names is UNRECOGNIZED, not
     // ABSENT — it was declared, just not to a language this system knows.
     @Test
-    void evaluate_markdownUncatalogedTag_reportsUnrecognized() {
+    void evaluate_markdownTagNoLanguageNames_reportsUnrecognized() {
         final LanguageEvidence evidence = LanguageEvidenceReader.evaluate("xx-yy", List.of());
 
         assertThat(evidence.declaredRaw()).isEqualTo("xx-yy");

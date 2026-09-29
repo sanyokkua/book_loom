@@ -3,11 +3,11 @@ package ua.bookloom.util.lang;
 import java.util.Objects;
 
 /**
- * The 34 languages the Book Brief offers as source or target, each carrying its BCP-47 tag, its English display
- * name and its {@link Script}.
+ * The 34 languages the Book Brief lists for convenience, each carrying its BCP-47 tag, its English display name and
+ * its {@link Script}. The list is not a limit: {@link LanguageTags#normalize(String)} recognizes any language the JDK
+ * can name, but only these have a script.
  *
- * <p>Declaration order is {@link Languages#all()}'s order — the same order the Book Brief's searchable list shows
- * before task 11.8 layers ICU-localized names over it.
+ * <p>Declaration order is {@link Languages#all()}'s order — the order the Book Brief's searchable list shows.
  */
 public enum Language {
 

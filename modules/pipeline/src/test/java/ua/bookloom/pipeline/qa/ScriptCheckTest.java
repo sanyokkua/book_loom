@@ -73,6 +73,33 @@ class ScriptCheckTest {
             ForeignPassagePolicy.TRANSLATE,
             null,
             List.of());
+    private static final SoftCheckInput LATIN_SOURCE_TO_LATIN_TARGET_SKIPS = SoftCheckFixtures.scriptEcho(
+            "He opened the old door.",
+            "Ianuam veterem aperuit.",
+            "en",
+            "la",
+            NamePolicy.TRANSLITERATE,
+            ForeignPassagePolicy.TRANSLATE,
+            null,
+            List.of());
+    private static final SoftCheckInput LATIN_SOURCE_CYRILLIC_REPLY_PASSES = SoftCheckFixtures.scriptEcho(
+            "Ianuam veterem aperuit et in atrium tenebrosum ingressus est.",
+            "Він відчинив старі двері та увійшов до темної зали.",
+            "la",
+            "uk",
+            NamePolicy.TRANSLITERATE,
+            ForeignPassagePolicy.TRANSLATE,
+            null,
+            List.of());
+    private static final SoftCheckInput LATIN_SOURCE_LATIN_REPLY_FAILS = SoftCheckFixtures.scriptEcho(
+            "Ianuam veterem aperuit et in atrium tenebrosum ingressus est.",
+            "Vin vidchynyv stari dveri ta uvijshov do temnoi zaly.",
+            "la",
+            "uk",
+            NamePolicy.TRANSLITERATE,
+            ForeignPassagePolicy.TRANSLATE,
+            null,
+            List.of());
     private static final SoftCheckInput UNKNOWN_SOURCE_STILL_RUNS_PASSES = SoftCheckFixtures.scriptEcho(
             "He opened the old door.",
             "Він відчинив старі двері.",
@@ -151,6 +178,12 @@ class ScriptCheckTest {
                 Arguments.of("uncatalogued target language skips the check", UNCATALOGUED_TARGET_SKIPS, true),
                 Arguments.of("unknown source language still runs the check", UNKNOWN_SOURCE_STILL_RUNS_PASSES, false),
                 Arguments.of(
+                        "Latin target for an English source skips the check", LATIN_SOURCE_TO_LATIN_TARGET_SKIPS, true),
+                Arguments.of(
+                        "Cyrillic reply for a Latin source passes the check",
+                        LATIN_SOURCE_CYRILLIC_REPLY_PASSES,
+                        false),
+                Arguments.of(
                         "a names-only line kept by policy leaves the target with no letters",
                         NAMES_ONLY_NO_LETTERS_SKIPS,
                         true),
@@ -176,6 +209,7 @@ class ScriptCheckTest {
     private static Stream<Arguments> failCases() {
         return Stream.of(
                 Arguments.of("a Latin target for a Ukrainian book fails", LATIN_TARGET_FAILS),
+                Arguments.of("a Latin-script reply for a Latin source fails", LATIN_SOURCE_LATIN_REPLY_FAILS),
                 Arguments.of("under Transliterate the same target's share fails", TRANSLITERATE_SHARE_FAILS));
     }
 

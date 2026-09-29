@@ -69,6 +69,12 @@ class LanguagesTest {
         assertThat(Languages.scriptOf(null)).isEmpty();
     }
 
+    @ParameterizedTest
+    @CsvSource({"la", "haw", "ar"})
+    void scriptOf_uncataloguedLanguage_isEmpty(String tag) {
+        assertThat(Languages.scriptOf(tag)).isEmpty();
+    }
+
     @Test
     void scriptOf_unrecognizedTag_isEmpty() {
         assertThat(Languages.scriptOf("xx")).isEmpty();

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.document.Document;
 
-/** Language values that already name the target language are not rewritten (task 4.6 follow-up). */
+/** Which language values a write leaves alone: those already naming the target, and those of another language. */
 class EpubWriterLanguageKeptTest {
 
     @TempDir
@@ -65,6 +65,28 @@ class EpubWriterLanguageKeptTest {
         assertThat(textOf(output, "OEBPS/c01.xhtml"))
                 .contains("xml:lang=\"en-US\"", " lang=\"en-US\"")
                 .doesNotContain("lang=\"en\"");
+    }
+
+    // A language outside the 34-language catalogue is compared like any other: Latin declared as la-VA follows a
+    // run whose source language is la, and a value naming another language stays.
+    @Test
+    void write_uncataloguedSourceLanguage_isRewrittenToTheTarget() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", OPF.replace("en-US", "la"))
+                .entry("OEBPS/c01.xhtml", CHAPTER.replace("en-US", "la-VA"))
+                .writeTo(epub);
+        final OpenEpubRegistry registry = new OpenEpubRegistry();
+        final Document document = new EpubReader(registry).read(epub);
+
+        final Path output = new EpubWriter(registry).write(document, tempDir.resolve("out.epub"), "la", "uk");
+
+        assertThat(textOf(output, "OEBPS/content.opf")).contains("<dc:language>uk</dc:language>");
+        assertThat(textOf(output, "OEBPS/c01.xhtml"))
+                .contains("xml:lang=\"uk\"", " lang=\"uk\"")
+                .doesNotContain("la-VA");
     }
 
     private static String textOf(Path zip, String name) {

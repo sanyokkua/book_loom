@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 
@@ -14,6 +15,7 @@ import ua.bookloom.util.lang.Script;
  * The target-script check: whether the target's letters are written in the target language's own script — the only
  * reliable signal with no language detector in play (ADR-0037).
  */
+@Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ScriptCheck {
@@ -29,11 +31,20 @@ final class ScriptCheck {
         }
         final Optional<Script> targetScript = Languages.scriptOf(input.targetLanguage());
         final Optional<Script> sourceScript = Languages.scriptOf(input.sourceLanguage());
-        if (targetScript.isEmpty() || sameScript(sourceScript, targetScript)) {
+        if (targetScript.isEmpty()) {
+            log.debug("script check skipped: target {} has no known script", input.targetLanguage());
+            return CheckResult.skip(SCRIPT);
+        }
+        if (sameScript(sourceScript, targetScript)) {
+            log.debug("script check skipped: source and target {} share a script", targetScript.get());
             return CheckResult.skip(SCRIPT);
         }
         final String source = NameRemoval.sourceWithoutNames(input);
         if (codePointCount(source) < SOURCE_FLOOR_CODE_POINTS) {
+            log.debug(
+                    "script check skipped: source has {} code points, under {}",
+                    codePointCount(source),
+                    SOURCE_FLOOR_CODE_POINTS);
             return CheckResult.skip(SCRIPT);
         }
         final String target = NameRemoval.targetWithoutNames(input);

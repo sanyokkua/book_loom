@@ -91,6 +91,13 @@ class ProjectServiceImplTest {
     }
 
     @Test
+    void importBook_epubDeclaringLatin_preselectsLatin() {
+        final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, "la");
+
+        assertThat(briefOf(importOk(book)).sourceLanguage()).isEqualTo("la");
+    }
+
+    @Test
     void importBook_unrecognizedDeclaration_preselectsNothing() {
         final Path book = TestBooks.epub(tempDir.resolve("book.epub"), TWO_CHAPTERS, "xx-yy");
 

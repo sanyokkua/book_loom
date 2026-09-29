@@ -4,9 +4,10 @@ import java.util.Set;
 
 /**
  * The writing systems the language catalogue distinguishes, each carrying the characters-per-token figure the token
- * estimator (task 7.3) reads and the {@link Character.UnicodeScript} values that count as one of its letters.
+ * estimator reads and the {@link Character.UnicodeScript} values that count as one of its letters.
  *
- * <p>There is no Arabic or Hebrew constant, because neither language is in the {@link Language} catalogue.
+ * <p>There is no constant for a script outside these, Arabic and Hebrew among them, so a pair naming such a language
+ * skips the script check and takes the default characters-per-token figure.
  */
 // Each constant's Set.of(...) is genuinely immutable at runtime; Error Prone's ImmutableEnumChecker only
 // inspects the declared field type, which it cannot prove immutable for the general java.util.Set interface.
