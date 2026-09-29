@@ -524,7 +524,7 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   document order (records kept as source appear only under `ALL_SEGMENTS`, with path `SOURCE_KEPT`); `segment(projectId,
   segmentId) → SegmentView(segmentId, locator, kind, status, maskedSource, displaySource, maskedMachineTarget,
   userTarget, maskedUserTarget, findings, judgeScore, path, reviewed, context, proposal)`; `counts(projectId) →
-  ReviewCounts(total, autoAccepted, repairedAccepted, flagged, reviewed, pending, sourceKept)`. `NAMES` = a `glossary`
+  ReviewCounts(total, autoAccepted, repairedAccepted, flagged, reviewed, pending, sourceKept, flaggedWithoutTarget)`. `NAMES` = a `glossary`
   finding; `OMISSIONS` = an `omission` finding; `FOREIGN_KEPT` = a segment marked foreign or holding a kept foreign run.
 - The review editor shows `maskedUserTarget` when present, else `maskedMachineTarget`, else the masked source when the
   segment has neither, with its `⟦gN⟧` tokens visible, so an edit that deletes or reorders one is refused on Save with

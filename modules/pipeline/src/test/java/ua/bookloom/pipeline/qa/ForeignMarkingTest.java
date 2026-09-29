@@ -3,9 +3,14 @@ package ua.bookloom.pipeline.qa;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.document.ByteSpanAnchor;
+import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 
@@ -61,5 +66,39 @@ class ForeignMarkingTest {
             String source, @Nullable String declared) {
         assertThat(ForeignMarking.isMarked(input(source, declared, ForeignPassagePolicy.KEEP)))
                 .isFalse();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"en,la,true", "en,en-US,false", "en,,false"})
+    void isMarked_overStoredSegmentDeclaringALanguage_appliesTheSameRuleAsTheChecks(
+            String source, @Nullable String declared, boolean expected) {
+        assertThat(ForeignMarking.isMarked(segment(ENGLISH_TEXT, declared), source, ForeignPassagePolicy.KEEP))
+                .isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"Привіт світе.,true", "He opened the ⟦g0⟧old⟦g1⟧ door.,false"})
+    void isMarked_overStoredSegmentWrittenInAnotherScript_readsTheDisplayText(String masked, boolean expected) {
+        assertThat(ForeignMarking.isMarked(segment(masked, null), "en", ForeignPassagePolicy.KEEP))
+                .isEqualTo(expected);
+    }
+
+    private static Segment segment(String masked, @Nullable String declaredLanguage) {
+        return new Segment(
+                "Book.md:0",
+                "Book.md",
+                0,
+                SegmentKind.PARAGRAPH,
+                masked,
+                masked,
+                Map.of(),
+                "h",
+                null,
+                null,
+                new ByteSpanAnchor(0, masked.length()),
+                null,
+                SegmentStatus.PENDING,
+                0.0,
+                declaredLanguage);
     }
 }

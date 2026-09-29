@@ -1,11 +1,14 @@
 package ua.bookloom.pipeline.qa;
 
+import java.util.Objects;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.util.lang.Language;
 import ua.bookloom.util.lang.LanguageTags;
 import ua.bookloom.util.lang.Languages;
@@ -21,7 +24,7 @@ import ua.bookloom.util.lang.Languages;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class ForeignMarking {
+public final class ForeignMarking {
 
     /**
      * Whether {@code input}'s segment is a kept foreign passage.
@@ -31,18 +34,47 @@ final class ForeignMarking {
      *     Brief's source language is not a recognized language
      */
     static boolean isMarked(final SoftCheckInput input) {
-        if (input.foreignPassagePolicy() != ForeignPassagePolicy.KEEP) {
+        return isMarked(
+                input.foreignPassagePolicy(),
+                input.sourceLanguage(),
+                input.declaredLanguage(),
+                input.sourceDisplayText());
+    }
+
+    /**
+     * Whether a segment counts as a kept foreign passage — the same rule the soft checks apply, asked of a stored
+     * segment by the review queue's {@code foreign · kept} filter.
+     *
+     * @param segment the non-null segment; its declared language and its masked text are read
+     * @param sourceLanguage the Book Brief's source language tag, or {@code null} when none is known
+     * @param policy the non-null foreign-passage policy
+     * @return {@code false} under any policy other than {@link ForeignPassagePolicy#KEEP}, or when the source
+     *     language is not a recognized language
+     */
+    public static boolean isMarked(
+            final Segment segment, @Nullable final String sourceLanguage, final ForeignPassagePolicy policy) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(policy, "policy");
+        return isMarked(policy, sourceLanguage, segment.declaredLanguage(), DisplayText.of(segment.masked()));
+    }
+
+    private static boolean isMarked(
+            final ForeignPassagePolicy policy,
+            @Nullable final String sourceLanguage,
+            @Nullable final String declaredLanguage,
+            final String sourceDisplayText) {
+        if (policy != ForeignPassagePolicy.KEEP) {
             return false;
         }
-        final Optional<String> source = LanguageTags.normalize(input.sourceLanguage());
+        final Optional<String> source = LanguageTags.normalize(sourceLanguage);
         if (source.isEmpty()) {
-            log.debug("foreign marking: source language {} not recognized, not marked", input.sourceLanguage());
+            log.debug("foreign marking: source language {} not recognized, not marked", sourceLanguage);
             return false;
         }
-        if (declaredLanguageDiffers(input.declaredLanguage(), source.get())) {
+        if (declaredLanguageDiffers(declaredLanguage, source.get())) {
             return true;
         }
-        return dominantScriptDiffers(input, source.get());
+        return dominantScriptDiffers(sourceDisplayText, source.get());
     }
 
     private static boolean declaredLanguageDiffers(@Nullable final String declared, final String source) {
@@ -55,14 +87,14 @@ final class ForeignMarking {
         return differs;
     }
 
-    private static boolean dominantScriptDiffers(final SoftCheckInput input, final String source) {
+    private static boolean dominantScriptDiffers(final String sourceDisplayText, final String source) {
         final Optional<Language> catalogued = Languages.byTag(source);
         if (catalogued.isEmpty()) {
             log.debug("foreign marking: source {} has no known script, dominant-script test skipped", source);
             return false;
         }
         final boolean differs =
-                DominantScript.of(input.sourceDisplayText(), catalogued.get().script())
+                DominantScript.of(sourceDisplayText, catalogued.get().script())
                         != catalogued.get().script();
         log.debug("foreign marking: dominant script differs from source {}: {}", source, differs);
         return differs;

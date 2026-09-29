@@ -55,11 +55,12 @@ public interface ReviewDesk {
             String projectId, String segmentId, @Nullable String note, boolean lowerTemperature, ChatModel model);
 
     /**
-     * Skips a segment, leaving it without a stored translation.
+     * Skips a segment: nothing about it changes and it is not marked reviewed, and the record answered is the next
+     * flagged segment the queue moves on to.
      *
      * @param projectId the non-null project id
      * @param segmentId the non-null segment id
-     * @return the segment's stored record after the action
+     * @return the next flagged segment's stored record, or the skipped segment's own when no other is flagged
      */
     Result<SegmentRecord> skip(String projectId, String segmentId);
 
