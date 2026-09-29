@@ -36,11 +36,12 @@ final class InjectedTerms {
             if (!occursIn(entry.term(), searchTexts)) {
                 continue;
             }
-            final List<String> lines = lines(entry, mask);
+            final SnapshotTerm term = snapshotOf(entry);
+            final List<String> lines = lines(term, mask);
             if (lines.isEmpty()) {
                 log.debug("Glossary term {} is locked and hidden only in other segments; left out", entry.term());
             } else {
-                selected.add(new InjectedTerm(snapshotOf(entry), lines));
+                selected.add(new InjectedTerm(term, lines));
             }
         }
         return selected;
@@ -57,7 +58,11 @@ final class InjectedTerms {
                         .anyMatch(text -> WholeWord.pattern(term).matcher(text).find());
     }
 
-    private static List<String> lines(final GlossaryEntry entry, final ProtectedMask mask) {
+    /**
+     * The prompt lines of one term: its rendering and facts, or — for a locked term — one line per token it hides
+     * behind in {@code mask}, none when it is hidden only in other segments.
+     */
+    static List<String> lines(final SnapshotTerm entry, final ProtectedMask mask) {
         final String target = entry.target();
         final String facts = entry.type().name().toLowerCase(Locale.ROOT) + ", "
                 + entry.gender().name().toLowerCase(Locale.ROOT);

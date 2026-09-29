@@ -1,8 +1,10 @@
 package ua.bookloom.pipeline.review;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
@@ -14,20 +16,28 @@ import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.DeferralRepository;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * A real book imported through {@code ProjectServiceImpl} over the in-memory stores, with the review desk's parts
@@ -43,9 +53,11 @@ final class ReviewFixtures {
     static final String DOOR_ID = "ch07.xhtml:40";
     static final String FOREIGN_ID = "ch11.xhtml:1";
     static final String FOREIGN_SOURCE = "She whispered <i xml:lang=\"fr\">au revoir</i> and left.";
+    static final String RAIN_SOURCE = "The rain stopped only in the evening.";
     static final String MONSTER_SOURCE = "The monster met me at midnight.";
     static final String MONSTER_TARGET = "Чудовисько зустріло мене опівночі.";
 
+    private static final Instant RUN_START = Instant.parse("2026-01-01T00:00:00Z");
     private static final int CHAPTERS = 11;
     private static final int PARAGRAPHS = 42;
 
@@ -57,11 +69,33 @@ final class ReviewFixtures {
             SegmentRepository segments,
             DeferralRepository deferrals,
             ProjectRepository projects,
-            OpenProjects openProjects) {
+            OpenProjects openProjects,
+            DocumentPort documents,
+            RunRepository runs,
+            GlossaryRepository glossary) {
 
         /** Queries over the same stores whose opened books are forgotten. */
         ReviewQueries queriesWithoutOpenBook() {
             return new ReviewQueries(new OpenProjects(), projects, segments, deferrals);
+        }
+
+        /** The retry over the same stores, deciding with {@code mode}'s threshold. */
+        RetryDraft retryDraft(final ReviewMode mode) {
+            return new RetryDraft(
+                    documents,
+                    openProjects,
+                    projects,
+                    segments,
+                    runs,
+                    new PromptTemplates(),
+                    new ObjectMapper(),
+                    Guice.createInjector().getInstance(QualityLoop.class),
+                    mode);
+        }
+
+        /** The port over the real parts and the same stores. */
+        ReviewDeskImpl reviewDesk(final ReviewMode mode) {
+            return new ReviewDeskImpl(actions, queries, retryDraft(mode), projects, segments);
         }
     }
 
@@ -101,7 +135,11 @@ final class ReviewFixtures {
 
     /** A Markdown book of five paragraphs whose fifth, {@code Book.md:4}, has an emphasised word. */
     static Desk markdown(final Path directory) {
-        final String text = "One.\n\nTwo.\n\nThree.\n\nFour.\n\nHe opened the *old* door.\n";
+        return markdown(directory, "One.\n\nTwo.\n\nThree.\n\nFour.\n\nHe opened the *old* door.\n");
+    }
+
+    /** A Markdown book of {@code text}, whose paragraphs read {@code Book.md:0}, {@code Book.md:1}…. */
+    static Desk markdown(final Path directory, final String text) {
         return open(TestBooks.markdown(directory.resolve("Book.md"), text), brief(AlsoTranslate.defaults()));
     }
 
@@ -149,6 +187,42 @@ final class ReviewFixtures {
                 .orElseThrow();
     }
 
+    /** Stores {@code id} with the snapshot of what its first draft saw. */
+    static void withContext(final Desk desk, final String id, final ContextSnapshot context) {
+        update(
+                desk,
+                id,
+                record -> new SegmentRecord(
+                        record.projectId(),
+                        record.segmentId(),
+                        record.unitId(),
+                        record.ord(),
+                        record.kind(),
+                        record.status(),
+                        record.machineTarget(),
+                        record.maskedMachineTarget(),
+                        record.userTarget(),
+                        record.maskedUserTarget(),
+                        record.confidence(),
+                        record.judgeScore(),
+                        record.findings(),
+                        record.path(),
+                        record.repairRounds(),
+                        record.reviewed(),
+                        context));
+    }
+
+    /** Records the project's latest run in {@code state}; an ended run ends when it started. */
+    static void latestRun(final Desk desk, final JobState state) {
+        final boolean ended = state != JobState.RUNNING && state != JobState.PAUSED;
+        Objects.requireNonNull(
+                desk.runs()
+                        .save(new RunRecord(
+                                "run-1", desk.projectId(), RUN_START, ended ? RUN_START : null, state, 0, 0))
+                        .data(),
+                "saved run");
+    }
+
     static QaFinding finding(final String kind, final String raisedBy) {
         return new QaFinding(kind, Severity.MEDIUM, "note", raisedBy);
     }
@@ -161,6 +235,7 @@ final class ReviewFixtures {
 
     private static String paragraph(final int chapter, final int index) {
         return switch (chapter + ":" + index) {
+            case "2:3" -> RAIN_SOURCE;
             case "5:11" -> MONSTER_SOURCE;
             case "7:40" -> "He opened the <em>old</em> door.";
             case "8:5" -> "He went away.";
@@ -189,6 +264,9 @@ final class ReviewFixtures {
                 segments,
                 deferrals,
                 projects,
-                openProjects);
+                openProjects,
+                documents,
+                injector.getInstance(RunRepository.class),
+                injector.getInstance(GlossaryRepository.class));
     }
 }

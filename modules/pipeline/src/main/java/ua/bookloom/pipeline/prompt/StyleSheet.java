@@ -45,7 +45,7 @@ public record StyleSheet(String text, String hash) {
         final int band = StylePhrases.bandOf(brief.balance());
         final boolean isDefault = isAllDefault(brief);
         final String text = isDefault ? phrases.defaultLine() : String.join("\n", lines(brief, phrases, band));
-        final StyleSheet sheet = new StyleSheet(text, HashUtil.sha256Hex(text.getBytes(StandardCharsets.UTF_8)));
+        final StyleSheet sheet = ofText(text);
         log.debug(
                 "Derived style sheet register={} names={} foreign={} footnotes={} units={} balance={} band={} "
                         + "genreSet={} voiceEraSet={} audienceSet={} allDefault={} hash={}",
@@ -63,6 +63,18 @@ public record StyleSheet(String text, String hash) {
                 sheet.hash());
         log.trace("Style sheet text {}", sheet.text());
         return sheet;
+    }
+
+    /**
+     * Rebuilds a sheet from its text alone, as a context snapshot records it, so a retry sends the guidance its first
+     * draft was sent even after the brief changed.
+     *
+     * @param text the non-null guidance text
+     * @return the sheet with the text's hash
+     */
+    public static StyleSheet ofText(final String text) {
+        Objects.requireNonNull(text, "text");
+        return new StyleSheet(text, HashUtil.sha256Hex(text.getBytes(StandardCharsets.UTF_8)));
     }
 
     /**

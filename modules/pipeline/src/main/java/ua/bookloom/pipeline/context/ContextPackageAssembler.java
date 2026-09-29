@@ -66,6 +66,33 @@ public final class ContextPackageAssembler {
         return new ContextPackage(context, snapshot);
     }
 
+    /**
+     * Rebuilds a draft's context from the texts its snapshot recorded, so a retry is shown what the first draft was
+     * shown even after the glossary, the memory or the summary changed. Nothing is looked up.
+     *
+     * @param snapshot the non-null snapshot the first draft's record stores
+     * @param mask the segment's non-null mask, built from the snapshot's terms, which decides how a locked term is
+     *     described
+     * @return the same preceding targets, term lines, memory lines and summary the snapshot was assembled with
+     */
+    public static DraftContext replay(final ContextSnapshot snapshot, final ProtectedMask mask) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(mask, "mask");
+        final List<String> glossaryLines = snapshot.glossary().stream()
+                .flatMap(term -> InjectedTerms.lines(term, mask).stream())
+                .toList();
+        final DraftContext context = new DraftContext(
+                snapshot.precedingTargets(), snapshot.summary(), glossaryLines, memoryLines(snapshot.tmHits()));
+        log.debug(
+                "Replayed context preceding={} terms={} glossaryLines={} memoryLines={} summary={}",
+                context.precedingTargets().size(),
+                snapshot.glossary().size(),
+                glossaryLines.size(),
+                context.memoryLines().size(),
+                snapshot.summary() != null);
+        return context;
+    }
+
     private static List<String> memoryLines(final List<SnapshotTmHit> hits) {
         return hits.stream()
                 .filter(hit -> hit.kind() != TmHitKind.CONTEXT)

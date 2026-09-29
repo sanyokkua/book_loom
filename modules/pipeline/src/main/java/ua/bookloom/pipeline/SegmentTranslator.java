@@ -47,15 +47,7 @@ public final class SegmentTranslator {
     private final DraftPromptBuilder promptBuilder;
     private final DraftReplyParser replyParser;
 
-    /**
-     * Creates the draft step of one run.
-     *
-     * @param gate the non-null placeholder gate every reply is restored through
-     * @param calls the non-null seam every call of the step goes through
-     * @param format the non-null book format
-     * @param promptBuilder the non-null builder of the run's draft and repair prompts
-     * @param replyParser the non-null strict reader of a draft reply
-     */
+    /** Creates the draft step of one run over its placeholder gate, call seam, format, prompts and reply reader. */
     public SegmentTranslator(
             final GateFunction gate,
             final ModelCalls calls,
@@ -85,31 +77,59 @@ public final class SegmentTranslator {
                 Objects.requireNonNull(chunkGate, "chunkGate"), calls, format, promptBuilder, replyParser);
     }
 
+    /** The run's draft of one segment: no extra instruction, at the draft's own temperature. */
+    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final ProtectedMask mask) {
+        return translate(segment, context, mask, "", false);
+    }
+
     /**
      * Drafts one segment showing the model its mask's text — the segment's masked text with its protected spans
-     * hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text.
+     * hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text. A review retry
+     * passes the person's note, which the draft and its repairs carry, and may ask the draft call alone for its lower
+     * temperature.
      *
      * @param segment the non-null segment to draft
      * @param context the non-null context the draft is shown
      * @param mask the non-null spans hidden in the segment; its text carries every token the reply must return
+     * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
+     * @param lowerTemperature whether the draft call asks for its lower temperature
      * @return the draft's outcome, or the error a call answered, which the run routes
      */
-    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final ProtectedMask mask) {
+    public Result<DraftOutcome> translate(
+            final Segment segment,
+            final DraftContext context,
+            final ProtectedMask mask,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(mask, "mask");
-        final DraftAttempt attempt = DraftAttempt.of(segment, context, mask);
+        Objects.requireNonNull(extraInstruction, "extraInstruction");
+        final DraftAttempt attempt = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
         log.debug(
-                "Translating segment id={} format={} shownLength={}",
+                "Translating segment id={} format={} shownLength={} extraInstruction={} lowerTemperature={}",
                 segment.id(),
                 format,
-                attempt.shownText().length());
-        final ChatRequest request = requestFor(attempt, DraftStep.DRAFT, "", "");
-        final Result<ChatResponse> reply = callModel(DraftStep.DRAFT, segment, request);
+                attempt.shownText().length(),
+                !extraInstruction.isEmpty(),
+                lowerTemperature);
+        return send(attempt, DraftStep.DRAFT, "", "");
+    }
+
+    // A structural repair follows only a draft, a placeholder repair a draft or a structural repair, so the step tells
+    // which repairs are already used.
+    private Result<DraftOutcome> send(
+            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
+        final ChatRequest request = requestFor(attempt, step, rejected, diagnostic);
+        final Result<ChatResponse> reply = callModel(step, attempt.segment(), request, calls);
         if (reply.isErr()) {
             return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
-        return decideResponse(attempt, Objects.requireNonNull(reply.data()), false, false);
+        return decideResponse(
+                attempt,
+                Objects.requireNonNull(reply.data()),
+                step != DraftStep.DRAFT,
+                step == DraftStep.PLACEHOLDER_REPAIR);
     }
 
     /**
@@ -211,8 +231,9 @@ public final class SegmentTranslator {
             final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
         final OutputLimit limit = OutputLimit.forSource(
                 attempt.shownText(), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
+        final boolean lower = step == DraftStep.DRAFT && attempt.lowerTemperature();
         final ChatRequest request =
-                ChatRequests.build(step.promptName(), messagesFor(attempt, step, rejected, diagnostic), limit, false);
+                ChatRequests.build(step.promptName(), messagesFor(attempt, step, rejected, diagnostic), limit, lower);
         log.debug(
                 "Built chat request segmentId={} maskedLength={} messageCount={} expectedTokens={} capTokens={}",
                 attempt.segment().id(),
@@ -237,10 +258,6 @@ public final class SegmentTranslator {
                 promptBuilder.messagesForPlaceholderRepair(
                         segment, context, shown, extra, rejected, diagnostic.isEmpty() ? null : diagnostic);
         };
-    }
-
-    Result<ChatResponse> callModel(final DraftStep step, final Segment segment, final ChatRequest request) {
-        return callModel(step, segment, request, calls);
     }
 
     Result<ChatResponse> callModel(
@@ -317,12 +334,7 @@ public final class SegmentTranslator {
             final DraftAttempt attempt, final String rejectedReply, final String diagnostic) {
         final Segment segment = attempt.segment();
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
-        final ChatRequest request = requestFor(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
-        final Result<ChatResponse> reply = callModel(DraftStep.STRUCTURAL_REPAIR, segment, request);
-        if (reply.isErr()) {
-            return decideModelError(attempt, Objects.requireNonNull(reply.error()));
-        }
-        return decideResponse(attempt, Objects.requireNonNull(reply.data()), true, false);
+        return send(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
     }
 
     private Result<DraftOutcome> invalidStructuredReply(final DraftAttempt attempt, final ChatResponse response) {
@@ -369,12 +381,7 @@ public final class SegmentTranslator {
             final DraftAttempt attempt, final String rejectedTarget, final String gateNote) {
         final Segment segment = attempt.segment();
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final ChatRequest request = requestFor(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, gateNote);
-        final Result<ChatResponse> reply = callModel(DraftStep.PLACEHOLDER_REPAIR, segment, request);
-        if (reply.isErr()) {
-            return decideModelError(attempt, Objects.requireNonNull(reply.error()));
-        }
-        return decideResponse(attempt, Objects.requireNonNull(reply.data()), true, true);
+        return send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, gateNote);
     }
 
     private static void logTraceReply(final String raw, final String trimmed) {

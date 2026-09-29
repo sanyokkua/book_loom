@@ -39,6 +39,16 @@ public record DialParameters(
     }
 
     /**
+     * This row with no repair round: a review retry is one attempt the person asked for, decided by the same checks
+     * and judge, never followed by an automatic repair.
+     *
+     * @return the same row with {@code repairRounds} 0
+     */
+    public DialParameters withoutRepairRounds() {
+        return new DialParameters(precedingTargets, 0, judge, backwardRevision, llmSummary, chunkCap);
+    }
+
+    /**
      * The chunk cap for a review mode: Manual review shows one segment at a time.
      *
      * @param mode the run's review mode; never null

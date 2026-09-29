@@ -383,7 +383,7 @@ final class SegmentHealer {
                 qa.confidence(),
                 SegmentFindings.judgeScoreOf(verdict),
                 findings,
-                SegmentPath.REPAIRED,
+                rounds > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT,
                 rounds,
                 flagReason);
     }

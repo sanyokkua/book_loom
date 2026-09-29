@@ -20,6 +20,8 @@ import ua.bookloom.pipeline.qa.LockedRendering;
  * @param extraInstruction what a repair asks of the draft, or empty for a plain draft
  * @param pieceRedraft how the segment's pieces are drafted again, or null when it is not drafted in pieces
  * @param lockedRenderings the locked glossary terms hidden in the shown text, which the glossary check looks for
+ * @param lowerTemperature whether the draft call itself asks for its lower temperature, as a review retry may; a
+ *     repair call has none and ignores it
  */
 record DraftAttempt(
         Segment segment,
@@ -27,7 +29,8 @@ record DraftAttempt(
         String shownText,
         String extraInstruction,
         @Nullable PieceRedraft pieceRedraft,
-        List<LockedRendering> lockedRenderings) {
+        List<LockedRendering> lockedRenderings,
+        boolean lowerTemperature) {
 
     DraftAttempt {
         Objects.requireNonNull(segment, "segment");
@@ -38,14 +41,25 @@ record DraftAttempt(
     }
 
     static DraftAttempt of(final Segment segment, final DraftContext context, final ProtectedMask mask) {
-        return new DraftAttempt(segment, context, mask.maskedText(), "", null, mask.presentLocked());
+        return of(segment, context, mask, "", false);
+    }
+
+    static DraftAttempt of(
+            final Segment segment,
+            final DraftContext context,
+            final ProtectedMask mask,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
+        return new DraftAttempt(
+                segment, context, mask.maskedText(), extraInstruction, null, mask.presentLocked(), lowerTemperature);
     }
 
     static DraftAttempt ofPiece(final Segment piece, final DraftContext context, final String extraInstruction) {
-        return new DraftAttempt(piece, context, piece.masked(), extraInstruction, null, List.of());
+        return new DraftAttempt(piece, context, piece.masked(), extraInstruction, null, List.of(), false);
     }
 
     DraftAttempt redraftedBy(final PieceRedraft redraft) {
-        return new DraftAttempt(segment, context, shownText, extraInstruction, redraft, lockedRenderings);
+        return new DraftAttempt(
+                segment, context, shownText, extraInstruction, redraft, lockedRenderings, lowerTemperature);
     }
 }
