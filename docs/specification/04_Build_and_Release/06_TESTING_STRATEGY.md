@@ -51,7 +51,7 @@ after the fact. No Testcontainers, no external database. Runs in CI.
 ### provider-integration-wiremock {#provider-integration-wiremock}
 
 Provider integration tests exercise `:llm` at the **HTTP seam with WireMock**, mocking the transport rather than the
-`Provider`/client class, so request shaping, response parsing, retry, `Retry-After`, per-attempt timeout, and every
+`ChatModel`/`ProviderClient` class, so request shaping, response parsing, retry, `Retry-After`, per-attempt timeout, and every
 HTTP→`ErrorCode` mapping are covered against a real HTTP client. The seam is stubbed for **both** dialects
 (`04_LLM_INTEGRATION.md`):
 

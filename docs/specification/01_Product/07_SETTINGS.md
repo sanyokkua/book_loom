@@ -21,7 +21,7 @@ The Settings screen has six tabs (`TabPane`): Providers, Models, Generation, App
 | Current provider           | reference    | none                     | must reference an existing, verified provider                 | FR-PROV-04              |
 | Provider endpoint          | string (URL) | per preset               | valid URL; scheme http/https                                  | FR-PROV-03              |
 | Auth scheme                | enum         | none                     | none / bearer / custom-header                                 | FR-PROV-03              |
-| Credential reference       | string       | none                     | env-var name or keychain key; never a secret value            | FR-PROV-05              |
+| Credential reference       | string       | none                     | env-var name or keychain key (resolution planned); never a secret value | FR-PROV-05              |
 | Effective context (tokens) | integer      | 8192 (fixed in this build) | not editable in this build; a per-provider value with its own validation range arrives with the Generation settings (future work) | FR-PROV-03, FR-INFER-02 |
 
 **This build sends a fixed effective context of 8192 tokens** to Ollama's `num_ctx`; an OpenAI-compatible server

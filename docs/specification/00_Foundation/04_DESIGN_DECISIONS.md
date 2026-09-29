@@ -98,10 +98,10 @@ FR-INFER-02.
 
 ### DD-10 — Provider abstraction with two client implementations
 
-**Decision:** A `Provider` port + `ProviderFactory` hide two concrete client implementations selected by provider
+**Decision:** A `ChatModel` port + `ChatModelFactory` (over the internal `ProviderClient` seam and its `ProviderClientFactory`) hide two concrete client implementations selected by provider
 **kind** (`OLLAMA | OPENAI_COMPATIBLE`): an **Ollama-native** client (Ollama's own `/api/*` and native `options`) and an
-**OpenAI-compatible** client (`/v1/*`, for LM Studio and any OpenAI-shaped server). Per-kind `ProviderProfile` data
-still carries endpoint/credential/model details. The abstraction already admits future providers (e.g. Gemini, Claude)
+**OpenAI-compatible** client (`/v1/*`, for LM Studio and any OpenAI-shaped server). A `ProviderConfig` carries the
+endpoint and timeouts (credential and model details are planned). The abstraction already admits future providers (e.g. Gemini, Claude)
 as new implementations without changing callers; those are not implemented in this scope. **Why:** Ollama's
 OpenAI-compatible endpoint does not fully honour options such as num_ctx, so Ollama needs its native API; other servers
 are well served by the OpenAI-compatible client. **Consequences:** Two client classes behind one interface plus a
@@ -324,7 +324,7 @@ provider/model. **ADR:** ADR-0012 **Requirements:** FR-PROV-08, FR-PROV-09, FR-P
 
 ### DD-32 — Two LLM client implementations behind one abstraction
 
-**Decision:** Inference is issued through a `Provider` port with a `ProviderFactory` selecting one of two client
+**Decision:** Inference is issued through a `ChatModel` port with a `ChatModelFactory` selecting one of two client
 implementations by kind: an **Ollama-native** client and an **OpenAI-compatible** client. The abstraction is defined so
 future providers (Gemini, Claude, …) can be added as new implementations without changing callers; none are implemented
 in this scope. **Why:** Ollama's OpenAI-compatible endpoint is not fully faithful (e.g. `num_ctx`), so Ollama uses its
@@ -396,7 +396,7 @@ template, injected variables, required/optional fields, parameters, and output s
 
 ### DD-38 — Manual model-ID entry when discovery is unavailable
 
-**Decision:** `ProviderProfile` carries a `supportsModelDiscovery` capability. When discovery is absent, fails, is
+**Decision:** A provider's capability data (`supportsModelDiscovery`, planned) says whether discovery is available. When discovery is absent, fails, is
 unauthenticated, or returns empty, the user enters model IDs **manually** (free-text), and manual entry is always
 available as an override. **Why:** Some providers expose no model-listing endpoint; configuration must never be blocked.
 **Consequences:** The Models UI and add/edit-provider dialog always allow manual model IDs; discovery is a convenience,

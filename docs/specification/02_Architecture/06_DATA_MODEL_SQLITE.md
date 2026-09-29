@@ -313,7 +313,7 @@ Rules:
 ## secret-references {#secret-references}
 
 `providers.credential_ref` holds only a reference: `ENV:<VAR_NAME>` (an environment-variable name) or `KEYCHAIN:<id>`
-(an OS-keychain entry). The plaintext secret is resolved at request time by `:llm` and is never written to any table,
+(an OS-keychain entry). The plaintext secret is resolved at request time by `:llm` (credential resolution is planned, not built) and is never written to any table,
 log, or export (`04_LLM_INTEGRATION.md#credentials-as-reference`). A row whose reference resolves to nothing yields
 `ErrorCode.missingCredential`.
 

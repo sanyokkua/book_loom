@@ -71,7 +71,7 @@ internal client without changing callers of the three public ports.
 
 ### provider-profile {#provider-profile}
 
-This change has no `ProviderProfile` or capability cache. Provider configuration is deliberately minimal while
+There is no per-kind profile type or capability cache; `ProviderConfig` carries only endpoint and timeouts. Provider configuration is deliberately minimal while
 persistence, credentials, reasoning control, structured-output capability detection and context-window sizing remain
 future work.
 
@@ -205,7 +205,7 @@ structured-output rejection is currently surfaced through the normal HTTP mappin
 
 ## credentials-as-reference {#credentials-as-reference}
 
-Authentication is deferred. The future Bearer path will hold an environment-variable name as a credential reference,
+Credential resolution is planned, not built; authentication is deferred. The future Bearer path will hold an environment-variable name as a credential reference,
 resolve it immediately before a request and never persist or log the secret; keychain support is not part of that path.
 
 ## three-stage-verification {#three-stage-verification}

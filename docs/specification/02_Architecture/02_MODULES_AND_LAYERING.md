@@ -38,15 +38,15 @@ module ua.bookloom.api {
     requires static org.jspecify;        // annotations only
     exports ua.bookloom.api;            // Result, AppError, ErrorCode
     exports ua.bookloom.api.document;   // DocumentPort, Segment, Unit records
-    exports ua.bookloom.api.llm;        // built: ChatModel, ChatRequest/Response, ChatModelFactory, ModelSelection — Provider/ProviderProfile follow with the real clients (04_LLM_INTEGRATION.md#chat-contracts)
+    exports ua.bookloom.api.llm;        // built: ChatModel, ChatRequest/Response, ChatModelFactory, ProviderConfig, ModelSelection (04_LLM_INTEGRATION.md#chat-contracts)
     exports ua.bookloom.api.pipeline;   // built: TranslationEngine, TranslationJob, JobEvent, JobProgress, JobReport — QualityDial follows with the quality dial
     exports ua.bookloom.api.persistence;// repositories: ProjectRepo, SegmentRepo, ...
 }
 ```
 
 **Ports declared here, implemented elsewhere:** `DocumentPort` (→ `:document`), `ChatModelFactory` (→ `:llm`; today
-`ChatModelFactoryImpl` resolves only the built-in offline `pseudo` provider — `Provider`/`ProviderFactory` follow with
-the real clients, `04_LLM_INTEGRATION.md#provider-architecture`), `TranslationEngine` (→ `:pipeline`), the repository
+`ChatModelFactoryImpl` resolves the built-in offline `pseudo` provider and every registered real provider, through the
+`InferenceGate`, `04_LLM_INTEGRATION.md#provider-architecture`), `TranslationEngine` (→ `:pipeline`), the repository
 interfaces (→ `:persistence`).
 
 ### util {#module-util}
@@ -88,17 +88,19 @@ module ua.bookloom.document {
 
 ### llm {#module-llm}
 
-**Responsibility:** provider abstraction (`Provider` + `ProviderProfile` + `ProviderFactory`), model discovery,
+**Responsibility:** provider abstraction (`ChatModel` + `ProviderConfig` + `ProviderClient`/`ProviderClientFactory`), model discovery,
 inference (`ChatRequest`/`ChatResponse`), `InferenceGate`, retry, HTTP→typed `AppError` mapping, three-stage
 verification. FX-free.
 
 **Built so far** (`add-translation-engine-and-cli`, ADR-0033): the engine-facing `ChatModel`/`ChatModelFactory`
 contract lives in `:api.llm`; `ua.bookloom.llm.ChatModelFactoryImpl` resolves the provider id `pseudo` to
 `ua.bookloom.llm.pseudo.PseudoChatModel` — a deterministic, offline model that upper-cases the last user message and
-finishes `STOP` — and any other provider id, or a blank model id, to `ErrorCode.validation`. `ua.bookloom.llm.pseudo`
+finishes `STOP` — and every registered real provider id to its Ollama-native or OpenAI-compatible `ProviderClient`
+(wrapped so calls pass through the `InferenceGate`); an unknown provider id or a blank model id is
+`ErrorCode.validation`. `ua.bookloom.llm.pseudo`
 is deliberately **neither exported nor opened**, so JPMS (not just `ports-not-concretes`) stops `:pipeline` from
-naming the concrete class. Everything below this point — the `Provider` port, real clients, discovery, the gate,
-retry, HTTP mapping and verification — is not built yet.
+naming the concrete class. The clients, discovery, the gate, retry, HTTP mapping and verification are built;
+credential resolution is planned.
 
 ```
 module ua.bookloom.llm {
