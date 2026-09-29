@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.run;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -16,6 +17,8 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.SegmentLocator;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.chunk.Chunk;
@@ -28,13 +31,15 @@ import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.memory.ProtectedMask;
+import ua.bookloom.pipeline.memory.TranslationMemory;
 import ua.bookloom.pipeline.prompt.CallFrame;
 
 /**
  * Takes each unit's pending segments through chunks, in document order (design D4a). With the judge on, a chunk's
  * segments are all drafted before its one judge call and only then decided one at a time, because the judge reads the
  * whole chunk; with it off each segment is drafted and decided before the next is drafted. The judge on or off is this
- * one branch, not a strategy.
+ * one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
+ * place and is decided in its turn with neither a draft nor the judge.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
  * aborted — a draft, the judge, or a segment's rounds from the first. A stop drops the undecided drafts: those segments
@@ -53,6 +58,7 @@ public final class ChunkRunner {
     private final RunStores stores;
     private final RunSinks sinks;
     private final PrecedingTargets preceding;
+    private final MemoryReuse memory;
     private final int fixedHeadroom;
 
     /**
@@ -62,13 +68,20 @@ public final class ChunkRunner {
      * @param settings the non-null brief and review mode of the run
      * @param stores the non-null stores the glossary and earlier decisions are read from
      * @param sinks the non-null places every decision goes
+     * @param locators the non-null locator of every segment of the opened book
      */
-    public ChunkRunner(final RunSteps steps, final RunSettings settings, final RunStores stores, final RunSinks sinks) {
+    public ChunkRunner(
+            final RunSteps steps,
+            final RunSettings settings,
+            final RunStores stores,
+            final RunSinks sinks,
+            final Map<String, SegmentLocator> locators) {
         this.steps = Objects.requireNonNull(steps, "steps");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.stores = Objects.requireNonNull(stores, "stores");
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
+        this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
         final CallFrame frame = settings.frame();
         this.fixedHeadroom = TokenEstimator.estimate(frame.styleSheet().text(), PROMPT_LANGUAGE)
                 + TokenBudget.fullChunkAllowance(frame.sourceLanguage(), frame.targetLanguage());
@@ -193,23 +206,29 @@ public final class ChunkRunner {
         };
     }
 
-    /** Drafts one segment behind its protected spans and with its context package, keeping the draft in the chunk. */
+    /**
+     * Drafts one segment behind its protected spans and with its context package, keeping the draft in the chunk —
+     * unless a context-matched memory target passes its checks, which stands in for the draft.
+     */
     private Step<DraftOutcome> draft(final Current current, final WorkItem item) {
         final Segment segment = item.segment();
+        final List<Segment> unitSegments = current.work().unitSegments(item);
         final Result<List<String>> earlierMaskedTargets = preceding.earlierMaskedTargets(
-                current.work().unitSegments(item), segment, settings.dial().precedingTargets(), current.drafts());
+                unitSegments, segment, settings.dial().precedingTargets(), current.drafts());
         if (earlierMaskedTargets.isErr()) {
             return new Step.Stopped<>(failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), "error")));
         }
-        final ContextPackage context =
-                current.context().contextFor(segment, Objects.requireNonNull(earlierMaskedTargets.data(), "targets"));
-        if (log.isTraceEnabled()) {
-            log.trace(
-                    "Preceding targets segmentId={} targets={}",
-                    segment.id(),
-                    context.draftContext().precedingTargets());
-        }
         final ProtectedMask mask = current.context().mask(segment);
+        final MemoryReuse.Offer offer =
+                memory.offer(segment, unitSegments, mask, current.context().gate(), current.loop());
+        final ContextPackage context = current.context()
+                .contextFor(segment, Objects.requireNonNull(earlierMaskedTargets.data(), "targets"), offer.lookup());
+        logPreceding(segment, context);
+        final DraftOutcome.Reused reused = offer.reused();
+        if (reused != null) {
+            current.drafts().drafted(reused, context.snapshot());
+            return new Step.Done<>(reused);
+        }
         final Step<DraftOutcome> drafted = untilAnswered(
                 current.work(),
                 segment.id(),
@@ -219,6 +238,15 @@ public final class ChunkRunner {
             current.drafts().drafted(outcome, context.snapshot());
         }
         return drafted;
+    }
+
+    private static void logPreceding(final Segment segment, final ContextPackage context) {
+        if (log.isTraceEnabled()) {
+            log.trace(
+                    "Preceding targets segmentId={} targets={}",
+                    segment.id(),
+                    context.draftContext().precedingTargets());
+        }
     }
 
     private Optional<RunEnd> decideEach(final Current current, final List<WorkItem> items, final ChunkDecider decider) {
@@ -240,7 +268,10 @@ public final class ChunkRunner {
     private Optional<RunEnd> record(final Current current, final WorkItem item, final SegmentOutcome outcome) {
         final SegmentRecord record = OutcomeRecords.decided(
                 item.record(), outcome, current.drafts().snapshot(item.segment().id()));
-        sinks.pending().decided(record);
+        sinks.pending()
+                .decided(
+                        record,
+                        memory.entryFor(record, item.segment(), current.work().unitSegments(item)));
         current.drafts().decided(record.segmentId());
         sinks.recorder().decided(record.status());
         final JobProgress progress = current.work().apply(item, record.status());
@@ -253,6 +284,9 @@ public final class ChunkRunner {
                 record.path(),
                 record.repairRounds());
         sinks.emit().accept(new SegmentDecided(record.segmentId(), record.status(), reason, progress));
+        if (record.path() == SegmentPath.TM_REUSE) {
+            sinks.emit().accept(memory.announced(record.segmentId()));
+        }
         return sinks.boundaries()
                 .afterDecision(current.work().endsSection(item), current.work().isComplete(), progress);
     }

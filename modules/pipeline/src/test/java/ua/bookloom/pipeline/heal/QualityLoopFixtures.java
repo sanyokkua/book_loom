@@ -29,6 +29,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * Real collaborators and small builders shared by the {@code QualityLoopTest} theme classes: a real
@@ -103,6 +104,17 @@ final class QualityLoopFixtures {
                 throw new IllegalStateException("fixture segment failed the gate unexpectedly: "
                         + stepError.error().code());
         };
+    }
+
+    /** A context-matched memory reuse already checked at full confidence, as the run hands it to the loop. */
+    static DraftOutcome.Reused reused(final Segment segment, final String target) {
+        return new DraftOutcome.Reused(
+                segment,
+                segment.masked(),
+                List.of(),
+                target,
+                target,
+                new QaResult(List.of(), List.of(), 1.0, List.of(), false));
     }
 
     static DraftOutcome.FlaggedAtOnce flaggedAtOnce(final Segment segment, final AppError error) {

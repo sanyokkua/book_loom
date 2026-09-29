@@ -18,9 +18,13 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.persistence.PersistenceModule;
 
-/** The decisions a run has made and not yet stored, and the promise that a stored one is never stored again. */
+/**
+ * The decisions a run has made and not yet stored, with the memory entries they write, and the promise that a stored
+ * one is never stored again.
+ */
 class PendingCommitTest {
 
     private static final String PROJECT = "p1";
@@ -42,11 +46,11 @@ class PendingCommitTest {
     // Committing s0 again with its old whole record would erase the edit the person saved while the run was paused.
     @Test
     void flush_afterCommittedId_neverIncludesItAgain() {
-        pending.decided(record("s0", SegmentStatus.ACCEPTED));
+        pending.decided(record("s0", SegmentStatus.ACCEPTED), null);
         pending.flush();
         segments.update(
                 PROJECT, "s0", stored -> stored.withUserTarget(EDIT, EDIT).withStatus(SegmentStatus.REVISED));
-        pending.decided(record("s1", SegmentStatus.ACCEPTED));
+        pending.decided(record("s1", SegmentStatus.ACCEPTED), null);
 
         pending.flush();
 
@@ -62,9 +66,9 @@ class PendingCommitTest {
     // A decision made twice for one id must not overwrite what the first commit and any later edit left.
     @Test
     void flush_committedIdDecidedAgain_withholdsIt() {
-        pending.decided(record("s0", SegmentStatus.ACCEPTED));
+        pending.decided(record("s0", SegmentStatus.ACCEPTED), null);
         pending.flush();
-        pending.decided(record("s0", SegmentStatus.FLAGGED));
+        pending.decided(record("s0", SegmentStatus.FLAGGED), null);
 
         final Result<Integer> flushed = pending.flush();
 
@@ -83,8 +87,8 @@ class PendingCommitTest {
 
     @Test
     void flush_twoDecisions_commitsBothInOneCommitInDecisionOrder() {
-        pending.decided(record("s1", SegmentStatus.ACCEPTED));
-        pending.decided(record("s0", SegmentStatus.FLAGGED));
+        pending.decided(record("s1", SegmentStatus.ACCEPTED), null);
+        pending.decided(record("s0", SegmentStatus.FLAGGED), null);
 
         pending.flush();
 
@@ -92,6 +96,32 @@ class PendingCommitTest {
         assertThat(commits.getFirst().segments())
                 .extracting(SegmentRecord::segmentId)
                 .containsExactly("s1", "s0");
+    }
+
+    @Test
+    void flush_decisionsWithMemoryEntries_commitsTheEntriesWithTheirRecords() {
+        pending.decided(record("s0", SegmentStatus.ACCEPTED), entry("s0"));
+        pending.decided(record("s1", SegmentStatus.FLAGGED), null);
+
+        pending.flush();
+
+        assertThat(commits.getFirst().tmEntries()).extracting(TmEntry::id).containsExactly("s0-entry");
+    }
+
+    @Test
+    void flush_committedIdDecidedAgain_withholdsItsMemoryEntryToo() {
+        pending.decided(record("s0", SegmentStatus.ACCEPTED), entry("s0"));
+        pending.flush();
+        pending.decided(record("s0", SegmentStatus.ACCEPTED), entry("s0"));
+        pending.decided(record("s1", SegmentStatus.ACCEPTED), entry("s1"));
+
+        pending.flush();
+
+        assertThat(commits.getLast().tmEntries()).extracting(TmEntry::id).containsExactly("s1-entry");
+    }
+
+    private static TmEntry entry(final String segmentId) {
+        return new TmEntry(segmentId + "-entry", PROJECT, segmentId + "-hash", "context", "Yes.", "Так.");
     }
 
     private SegmentRecord stored(final String segmentId) {

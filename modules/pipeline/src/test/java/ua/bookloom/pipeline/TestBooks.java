@@ -79,6 +79,35 @@ public final class TestBooks {
         }
     }
 
+    /** An EPUB whose navigation document, outside the spine, lists {@code labels}, each linking the first chapter. */
+    public static Path epubWithNavigation(
+            final Path destination, final List<List<String>> spineParagraphs, final List<String> labels) {
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
+            put(zip, "META-INF/container.xml", containerXml(), ZipEntry.DEFLATED);
+            final String navItem =
+                    "<item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>";
+            put(zip, "OEBPS/content.opf", opf(spineParagraphs.size(), "en", navItem), ZipEntry.DEFLATED);
+            putChapters(zip, spineParagraphs, null, DEFAULT_PAGE_TITLE);
+            put(zip, "OEBPS/nav.xhtml", navigation(labels), ZipEntry.DEFLATED);
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
+    private static String navigation(final List<String> labels) {
+        final String items = labels.stream()
+                .map(label -> "<li><a href=\"ch0.xhtml\">" + label + "</a></li>")
+                .reduce("", String::concat);
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<html xmlns=\"http://www.w3.org/1999/xhtml\" xmlns:epub=\"http://www.idpf.org/2007/ops\">"
+                + "<head><title>Contents</title></head><body><nav epub:type=\"toc\"><ol>"
+                + items
+                + "</ol></nav></body></html>";
+    }
+
     /** An EPUB whose first chapter is encrypted under an Adobe ADEPT manifest. */
     public static Path encryptedEpub(final Path destination, final List<List<String>> spineParagraphs) {
         try (OutputStream output = Files.newOutputStream(destination);
@@ -100,7 +129,16 @@ public final class TestBooks {
             throws IOException {
         put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
         put(zip, "META-INF/container.xml", containerXml(), ZipEntry.DEFLATED);
-        put(zip, "OEBPS/content.opf", opf(spineParagraphs.size(), language), ZipEntry.DEFLATED);
+        put(zip, "OEBPS/content.opf", opf(spineParagraphs.size(), language, ""), ZipEntry.DEFLATED);
+        putChapters(zip, spineParagraphs, contentLanguage, pageTitle);
+    }
+
+    private static void putChapters(
+            final ZipOutputStream zip,
+            final List<List<String>> spineParagraphs,
+            @Nullable final String contentLanguage,
+            final String pageTitle)
+            throws IOException {
         for (int index = 0; index < spineParagraphs.size(); index++) {
             put(
                     zip,
@@ -148,7 +186,7 @@ public final class TestBooks {
                 + "</rootfiles></container>";
     }
 
-    private static String opf(final int spineCount, @Nullable final String language) {
+    private static String opf(final int spineCount, @Nullable final String language, final String extraManifest) {
         final String lang = language == null ? "" : "<dc:language>" + language + "</dc:language>";
         final StringBuilder manifest = new StringBuilder();
         final StringBuilder spine = new StringBuilder();
@@ -167,6 +205,7 @@ public final class TestBooks {
                 + lang
                 + "</metadata><manifest>"
                 + manifest
+                + extraManifest
                 + "</manifest><spine>"
                 + spine
                 + "</spine></package>";

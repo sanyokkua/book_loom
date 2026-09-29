@@ -5,12 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -188,5 +191,49 @@ class ProtectedSpansTest {
                 ProtectedSpans.gate(Map.of(segment.id(), mask(segment.masked(), HALE)), (given, reply) -> refusal);
 
         assertThat(gate.restore(segment, "⟦g0⟧ відчинив двері.")).isSameAs(refusal);
+    }
+
+    @Test
+    void checkRestored_storedTargetMissingTheLockedRendering_failsAHighGlossaryFinding() {
+        final Result<String> checked = ProtectedSpans.checkRestored("Хейл кивнув.", mask("Hale nodded.", HALE));
+
+        assertThat(checked.isErr()).isTrue();
+        final AppError error = Objects.requireNonNull(checked.error(), "error");
+        assertThat(error.code()).isEqualTo(ErrorCode.validation);
+        assertThat(error.details()).contains("glossary").doesNotContain("Хейл", "Гейл");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("storedTargetsThatKeepTheirSpans")
+    void checkRestored_storedTargetHoldingEachSpan_answersItReMasked(
+            final String source, final String storedTarget, final String remasked) {
+        final Result<String> checked = ProtectedSpans.checkRestored(
+                storedTarget, mask(source, HALE, ProtectedSpansFixtures.locked("Baker Street", "Бейкер-стріт")));
+
+        assertThat(checked.data()).isEqualTo(remasked);
+    }
+
+    private static Stream<Arguments> storedTargetsThatKeepTheirSpans() {
+        return Stream.of(
+                Arguments.of("Hale nodded.", "Гейл кивнув.", "⟦g0⟧ кивнув."),
+                Arguments.of("Hale saw Hale.", "Гейл бачив Гейл.", "⟦g0⟧ бачив ⟦g1⟧."),
+                Arguments.of("Hale left Baker Street.", "Гейл покинув Бейкер-стріт.", "⟦g0⟧ покинув ⟦g1⟧."),
+                Arguments.of("No name here.", "Тут немає імені.", "Тут немає імені."));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("storedTargetsThatBreakASpan")
+    void checkRestored_renderingCountDiffersFromTheSource_fails(
+            final String name, final String source, final String storedTarget) {
+        assertThat(ProtectedSpans.checkRestored(storedTarget, mask(source, HALE))
+                        .isErr())
+                .isTrue();
+    }
+
+    private static Stream<Arguments> storedTargetsThatBreakASpan() {
+        return Stream.of(
+                Arguments.of("one of two occurrences inflected", "Hale saw Hale.", "Гейл бачив Гейла."),
+                Arguments.of("an extra occurrence", "Hale nodded.", "Гейл кивнув, Гейл пішов."),
+                Arguments.of("inside a longer word only", "Hale nodded.", "Гейлові кивнули."));
     }
 }

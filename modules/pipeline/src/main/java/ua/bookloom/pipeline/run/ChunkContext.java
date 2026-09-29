@@ -35,9 +35,6 @@ import ua.bookloom.pipeline.qa.CheckName;
 @Slf4j
 final class ChunkContext {
 
-    // No translation memory is consulted yet, so every draft is offered none.
-    private static final TmLookup NO_MEMORY = new TmLookup(null, List.of(), List.of());
-
     private final Chunk chunk;
     private final RunSettings settings;
     private final List<GlossaryEntry> glossary;
@@ -116,20 +113,22 @@ final class ChunkContext {
     }
 
     /**
-     * Assembles what one draft is shown besides its source, and the snapshot of it its record stores.
+     * Assembles what one draft is shown besides its source, and the snapshot of it its record stores — a memory
+     * reuse's too, though no draft is made for it.
      *
      * @param segment the segment about to be drafted
      * @param earlierMaskedTargets the masked targets of the unit's earlier segments, in document order
+     * @param memory what the translation memory offers the segment
      * @return the draft's context and its snapshot
      */
-    ContextPackage contextFor(final Segment segment, final List<String> earlierMaskedTargets) {
+    ContextPackage contextFor(final Segment segment, final List<String> earlierMaskedTargets, final TmLookup memory) {
         final ContextInputs inputs = new ContextInputs(
                 settings.frame().styleSheet(),
                 null,
                 settings.dial().precedingTargets(),
                 glossary,
                 earlierMaskedTargets);
-        return ContextPackageAssembler.assemble(chunk, segment, mask(segment), NO_MEMORY, inputs);
+        return ContextPackageAssembler.assemble(chunk, segment, mask(segment), memory, inputs);
     }
 
     private static ProtectedMask maskOf(

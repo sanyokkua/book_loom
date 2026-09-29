@@ -9,13 +9,17 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.judge.JudgeFinding;
 import ua.bookloom.pipeline.judge.JudgeVerdict;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.CheckResult;
+import ua.bookloom.pipeline.qa.QaEvaluator;
 import ua.bookloom.pipeline.qa.QaResult;
+import ua.bookloom.pipeline.qa.SoftCheckInput;
 
 /**
  * {@link AcceptanceRule#accepts}: every condition must hold at once, the verdict string never decides, and τ/τ_judge
@@ -147,6 +151,39 @@ class AcceptanceRuleTest {
                 .isFalse();
         assertThat(AcceptanceRule.accepts(qa, null, SEGMENT_ID, ReviewMode.MANUAL.threshold()))
                 .isFalse();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ReviewMode.class)
+    void acceptsReuse_contextMatchedTargetAtFullConfidence_acceptedInEveryMode(final ReviewMode mode) {
+        final QaResult qa = QaEvaluator.evaluate(List.of(), reuse("Yes.", "Так."));
+
+        assertThat(qa.confidence()).isEqualTo(1.0);
+        assertThat(AcceptanceRule.acceptsReuse(qa, mode.threshold())).isTrue();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ReviewMode.class)
+    void acceptsReuse_targetFailingItsProtectedSpanGate_notAccepted(final ReviewMode mode) {
+        final CheckResult spanGate =
+                CheckResult.hardGateFailed(CheckName.LOCKED_TERM, "The locked rendering of ⟦g0⟧ is missing.");
+        final QaResult qa = QaEvaluator.evaluate(List.of(spanGate), reuse("Hale nodded.", "Хейл кивнув."));
+
+        assertThat(AcceptanceRule.acceptsReuse(qa, mode.threshold())).isFalse();
+    }
+
+    private static SoftCheckInput reuse(final String source, final String target) {
+        return new SoftCheckInput(
+                source,
+                target,
+                target,
+                "en",
+                "uk",
+                ForeignPassagePolicy.KEEP,
+                NamePolicy.TRANSLITERATE,
+                null,
+                List.of(),
+                List.of());
     }
 
     private static QaResult passingQa(final double confidence) {

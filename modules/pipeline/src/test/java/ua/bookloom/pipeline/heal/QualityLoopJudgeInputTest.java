@@ -13,17 +13,19 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * {@link QualityLoop#start}: which pairs the chunk's one judge call shows — only {@link DraftOutcome.Drafted}
- * outcomes whose hard gates passed — and how a judge-call failure ends the step
+ * outcomes whose hard gates passed, never a {@link DraftOutcome.Reused} one — and how a judge-call failure ends the step
  * ({@code specs/quality-gates/spec.md} "Judge each chunk once when the quality dial enables the judge").
  */
 class QualityLoopJudgeInputTest {
@@ -127,6 +129,77 @@ class QualityLoopJudgeInputTest {
 
         assertThat(started.isErr()).isTrue();
         assertThat(Objects.requireNonNull(started.error()).code()).isEqualTo(ErrorCode.unreachable);
+    }
+
+    @Test
+    void start_balancedChunkWithAReusedThirdOutcome_judgesTheOtherThreeOnly() {
+        final Segment first = QualityLoopFixtures.markdownSegment(tempDir.resolve("r1.md"), "It was late.");
+        final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("r2.md"), "He paused.");
+        final Segment third = QualityLoopFixtures.markdownSegment(tempDir.resolve("r3.md"), "Yes.");
+        final Segment fourth = QualityLoopFixtures.markdownSegment(tempDir.resolve("r4.md"), "She smiled.");
+        final List<DraftOutcome> outcomes = List.of(
+                QualityLoopFixtures.drafted(first, documents, "Було пізно."),
+                QualityLoopFixtures.drafted(second, documents, "Він зупинився."),
+                QualityLoopFixtures.reused(third, "Так."),
+                QualityLoopFixtures.drafted(fourth, documents, "Вона всміхнулася."));
+        final ScriptedChatModel model = new ScriptedChatModel().answer(judgeReply());
+
+        final Result<ChunkDecider> started = loop.start(
+                outcomes,
+                QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
+                QualityLoopFixtures.PASSTHROUGH_GATE,
+                calls(model));
+
+        assertThat(started.isOk()).isTrue();
+        assertThat(model.requests()).hasSize(1);
+        assertThat(model.requests().getFirst().messages().getLast().content())
+                .contains("[s1]\nSource: It was late.", "[s2]\nSource: He paused.", "[s3]\nSource: She smiled.")
+                .doesNotContain("Yes.", "Так.", "[s4]");
+    }
+
+    @Test
+    void start_everyOutcomeReused_makesNoJudgeCall() {
+        final Segment first = QualityLoopFixtures.markdownSegment(tempDir.resolve("y1.md"), "Yes.");
+        final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("y2.md"), "No.");
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        final Result<ChunkDecider> started = loop.start(
+                List.of(QualityLoopFixtures.reused(first, "Так."), QualityLoopFixtures.reused(second, "Ні.")),
+                QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
+                QualityLoopFixtures.PASSTHROUGH_GATE,
+                calls(model));
+
+        assertThat(started.isOk()).isTrue();
+        assertThat(model.requests()).isEmpty();
+    }
+
+    @Test
+    void nextDecision_reusedOutcome_isAcceptedAsReusedWithItsConfidenceAndNoCall() {
+        final Segment segment = QualityLoopFixtures.markdownSegment(tempDir.resolve("y.md"), "Yes.");
+        final ScriptedChatModel model = new ScriptedChatModel();
+        final ChunkDecider decider = Objects.requireNonNull(
+                loop.start(
+                                List.of(QualityLoopFixtures.reused(segment, "Так.")),
+                                QualityLoopFixtures.settings(ReviewMode.MANUAL, QualityDial.MAX),
+                                QualityLoopFixtures.PASSTHROUGH_GATE,
+                                calls(model))
+                        .data(),
+                "decider");
+
+        final SegmentOutcome decided =
+                Objects.requireNonNull(decider.nextDecision().data(), "decision");
+
+        assertThat(decided)
+                .extracting(
+                        SegmentOutcome::status,
+                        SegmentOutcome::path,
+                        SegmentOutcome::machineTarget,
+                        SegmentOutcome::maskedMachineTarget,
+                        SegmentOutcome::confidence,
+                        SegmentOutcome::judgeScore,
+                        SegmentOutcome::repairRounds)
+                .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.TM_REUSE, "Так.", "Так.", 1.0, null, 0);
+        assertThat(model.requests()).isEmpty();
     }
 
     private static AppError emptyCompletion() {

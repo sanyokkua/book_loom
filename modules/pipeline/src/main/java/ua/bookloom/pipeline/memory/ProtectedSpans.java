@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -81,6 +82,28 @@ public final class ProtectedSpans {
      */
     public static GateFunction gate(final Map<String, ProtectedMask> masksBySegmentId, final GateFunction inner) {
         return new ProtectedGate(masksBySegmentId, inner);
+    }
+
+    /**
+     * Checks a translation-memory target against the spans a segment is masked with now, before it is reused: each
+     * span's text must occur in the target as many times as its token occurs in the masked source — whole-word for a
+     * locked rendering, verbatim for a kept run — because the entry may predate a term's lock.
+     *
+     * @param storedMaskedTarget the entry's masked target, spans restored and the document's own tokens in place;
+     *     never null
+     * @param mask the segment's mask for the chunk; never null
+     * @return the target with each span hidden again behind its token, ready for the span gate; or {@code validation}
+     *     naming the finding the span gate raises for that span — {@code glossary} for a locked term, {@code markup}
+     *     for a kept run
+     */
+    public static Result<String> checkRestored(final String storedMaskedTarget, final ProtectedMask mask) {
+        Objects.requireNonNull(storedMaskedTarget, "storedMaskedTarget");
+        Objects.requireNonNull(mask, "mask");
+        log.debug(
+                "Checking a stored target against spans={} tokens={}",
+                mask.spans().size(),
+                mask.spans().stream().map(ProtectedSpan::token).toList());
+        return RestoredCheck.check(storedMaskedTarget, mask);
     }
 
     private static ProtectedMask build(final String text, final List<Found> ordered, final List<Found> terms) {

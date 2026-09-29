@@ -31,6 +31,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
@@ -81,7 +82,8 @@ final class TranslationJobTestSupport {
                 injector.getInstance(CheckpointPort.class),
                 injector.getInstance(OpenProjects.class),
                 injector.getInstance(RunRepository.class),
-                injector.getInstance(GlossaryRepository.class));
+                injector.getInstance(GlossaryRepository.class),
+                injector.getInstance(TmRepository.class));
         final ProjectServiceImpl service = new ProjectServiceImpl(
                 injector.getInstance(BookInspector.class),
                 documents,

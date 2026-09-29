@@ -1,16 +1,20 @@
 package ua.bookloom.pipeline.run;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TmEntry;
 
 /**
  * The records a run has decided and not yet stored, and the ids it has already stored.
@@ -27,6 +31,7 @@ public final class PendingCommit {
     private final CheckpointPort checkpoint;
     private final String projectId;
     private final List<SegmentRecord> decided = new ArrayList<>();
+    private final Map<String, TmEntry> memoryEntries = new HashMap<>();
     private final Set<String> committed = new HashSet<>();
 
     /**
@@ -41,13 +46,17 @@ public final class PendingCommit {
     }
 
     /**
-     * Holds a decided record until the next flush.
+     * Holds a decided record, and the memory entry its acceptance writes, until the next flush.
      *
      * @param record the non-null decided record
+     * @param memoryEntry the translation-memory entry committed with the record, or {@code null} when it writes none
      */
-    public void decided(final SegmentRecord record) {
+    public void decided(final SegmentRecord record, @Nullable final TmEntry memoryEntry) {
         Objects.requireNonNull(record, "record");
         decided.add(record);
+        if (memoryEntry != null) {
+            memoryEntries.put(record.segmentId(), memoryEntry);
+        }
     }
 
     /**
@@ -65,8 +74,8 @@ public final class PendingCommit {
     }
 
     /**
-     * Commits everything decided since the last flush, in the order it was decided, except a record whose id an
-     * earlier flush already committed.
+     * Commits everything decided since the last flush, in the order it was decided, with the memory entries those
+     * decisions write, except a record whose id an earlier flush already committed and its entry.
      *
      * <p>The records leave the pending set before the port is called, so a commit that fails is not retried by the
      * flush that ends the run: a run that cannot store its decisions ends, and must not fail a second time doing so.
@@ -75,14 +84,18 @@ public final class PendingCommit {
      */
     public Result<Integer> flush() {
         final List<SegmentRecord> taken = List.copyOf(decided);
+        final Map<String, TmEntry> entries = Map.copyOf(memoryEntries);
         decided.clear();
+        memoryEntries.clear();
         final List<SegmentRecord> due = taken.stream()
                 .filter(record -> !committed.contains(record.segmentId()))
                 .toList();
+        final List<TmEntry> dueEntries = entriesOf(due, entries);
         log.debug(
-                "Flushing decisions projectId={} decided={} withheldAsCommitted={}",
+                "Flushing decisions projectId={} decided={} tmEntries={} withheldAsCommitted={}",
                 projectId,
                 due.size(),
+                dueEntries.size(),
                 taken.stream()
                         .map(SegmentRecord::segmentId)
                         .filter(committed::contains)
@@ -91,10 +104,18 @@ public final class PendingCommit {
             return Result.ok(0);
         }
         final Result<Integer> result =
-                checkpoint.commit(new ChunkCommit(projectId, due, List.of(), List.of(), List.of()));
+                checkpoint.commit(new ChunkCommit(projectId, due, dueEntries, List.of(), List.of()));
         if (result.isOk()) {
             due.forEach(record -> committed.add(record.segmentId()));
         }
         return result;
+    }
+
+    private static List<TmEntry> entriesOf(final List<SegmentRecord> due, final Map<String, TmEntry> entries) {
+        return due.stream()
+                .map(record -> entries.get(record.segmentId()))
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 }

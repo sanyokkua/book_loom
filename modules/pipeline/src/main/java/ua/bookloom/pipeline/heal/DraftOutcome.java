@@ -7,12 +7,13 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.qa.LockedRendering;
+import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * One chunk segment's outcome from the draft step: either a reply the quality loop can evaluate, or content design
- * D3's rules 2-4 (or a model {@code emptyCompletion}/{@code contextWindow} reply) already flagged without a
- * self-heal round ({@code specs/translation-pipeline/spec.md} "Flag a segment whose reply cannot be used,
- * and continue").
+ * One chunk segment's outcome from the draft phase: a reply the quality loop can evaluate, content design D3's rules
+ * 2-4 (or a model {@code emptyCompletion}/{@code contextWindow} reply) already flagged without a self-heal round
+ * ({@code specs/translation-pipeline/spec.md} "Flag a segment whose reply cannot be used, and continue"), or a
+ * context-matched memory reuse that already passed its checks and is neither drafted nor judged.
  */
 public sealed interface DraftOutcome {
 
@@ -116,6 +117,39 @@ public sealed interface DraftOutcome {
             Objects.requireNonNull(maskedSource, "maskedSource");
             Objects.requireNonNull(lockedRenderings, "lockedRenderings");
             Objects.requireNonNull(error, "error");
+            lockedRenderings = List.copyOf(lockedRenderings);
+        }
+    }
+
+    /**
+     * A translation-memory target reused because the segment's source and both neighbours match the entry's; it
+     * already passed its hard gates, checks and τ when the run found it, so it is accepted in its turn with no call
+     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the judge").
+     *
+     * @param segment the segment this outcome is about
+     * @param maskedSource the text a draft would have been shown, protected spans behind tokens
+     * @param lockedRenderings the locked glossary terms present in this segment
+     * @param maskedTarget the stored masked target, protected spans restored and the document's own tokens in place
+     * @param restoredTarget {@code maskedTarget} restored into the segment's markup
+     * @param qa the reused target's hard-gate and soft outcome, whose confidence its record stores
+     */
+    record Reused(
+            Segment segment,
+            String maskedSource,
+            List<LockedRendering> lockedRenderings,
+            String maskedTarget,
+            String restoredTarget,
+            QaResult qa)
+            implements DraftOutcome {
+
+        /** Rejects a missing component and copies the list. */
+        public Reused {
+            Objects.requireNonNull(segment, "segment");
+            Objects.requireNonNull(maskedSource, "maskedSource");
+            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(maskedTarget, "maskedTarget");
+            Objects.requireNonNull(restoredTarget, "restoredTarget");
+            Objects.requireNonNull(qa, "qa");
             lockedRenderings = List.copyOf(lockedRenderings);
         }
     }

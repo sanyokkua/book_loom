@@ -38,15 +38,23 @@ public final class AcceptanceRule {
      */
     public static boolean accepts(
             final QaResult qa, @Nullable final JudgeVerdict verdict, final String segmentId, final double tau) {
-        Objects.requireNonNull(qa, "qa");
         Objects.requireNonNull(segmentId, "segmentId");
-        if (!qa.hardGatesPass() || qa.failedOutright()) {
-            return false;
-        }
-        if (qa.confidence() < tau - ACCEPTANCE_TOLERANCE) {
-            return false;
-        }
-        return verdict == null || acceptedByJudge(verdict, segmentId, tau);
+        return acceptsReuse(qa, tau) && (verdict == null || acceptedByJudge(verdict, segmentId, tau));
+    }
+
+    /**
+     * Decides whether a context-matched memory target may be reused: the rule above without its judge term, the
+     * one exception to it, because the same target was already accepted between the same neighbours
+     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the judge").
+     *
+     * @param qa the reused target's hard-gate and soft outcome
+     * @param tau the review mode's threshold
+     * @return {@code true} when hard gates pass, no soft check failed outright and confidence reaches
+     *     {@code tau - }{@link #ACCEPTANCE_TOLERANCE}; {@code false} otherwise
+     */
+    public static boolean acceptsReuse(final QaResult qa, final double tau) {
+        Objects.requireNonNull(qa, "qa");
+        return qa.hardGatesPass() && !qa.failedOutright() && qa.confidence() >= tau - ACCEPTANCE_TOLERANCE;
     }
 
     private static boolean acceptedByJudge(final JudgeVerdict verdict, final String segmentId, final double tau) {

@@ -30,6 +30,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -210,7 +211,8 @@ final class TranslationJobImpl implements TranslationJob {
                 new RunSettings(
                         request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names()),
                 stores,
-                new RunSinks(pending, recorder, this::emit, new JobBoundaries(control, pending, recorder, this::emit)));
+                new RunSinks(pending, recorder, this::emit, new JobBoundaries(control, pending, recorder, this::emit)),
+                SegmentLocators.of(run.document()));
     }
 
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {

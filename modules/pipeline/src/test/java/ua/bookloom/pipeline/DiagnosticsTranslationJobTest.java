@@ -253,7 +253,8 @@ class DiagnosticsTranslationJobTest {
                         throwing,
                         stores.openProjects(),
                         stores.runs(),
-                        stores.glossary()),
+                        stores.glossary(),
+                        stores.tm()),
                 project.documents());
     }
 

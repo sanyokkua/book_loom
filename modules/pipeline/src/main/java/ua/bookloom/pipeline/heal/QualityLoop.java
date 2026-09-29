@@ -22,8 +22,9 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * Starts one chunk's quality loop: evaluates every drafted outcome, makes the chunk's one judge call when the dial
- * enables it, and hands both to a {@link ChunkDecider} that decides one segment per call
- * ({@code specs/quality-gates/spec.md} "Judge each chunk once when the quality dial enables the judge").
+ * enables it — over the drafted pairs only, never a memory reuse — and hands both to a {@link ChunkDecider} that
+ * decides one segment per call ({@code specs/quality-gates/spec.md} "Judge each chunk once when the quality dial
+ * enables the judge").
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -157,6 +158,8 @@ public final class QualityLoop {
                 }
             }
             case DraftOutcome.FlaggedAtOnce ignored -> {}
+            // Already accepted once between the same neighbours; the judge never sees a reuse.
+            case DraftOutcome.Reused ignored -> {}
         }
     }
 
@@ -180,6 +183,8 @@ public final class QualityLoop {
             final List<String> excluded, final DraftOutcome outcome, @Nullable final QaResult qa) {
         if (outcome instanceof DraftOutcome.FlaggedAtOnce flaggedAtOnce) {
             excluded.add(flaggedAtOnce.segment().id() + ":flagged-at-once");
+        } else if (outcome instanceof DraftOutcome.Reused reused) {
+            excluded.add(reused.segment().id() + ":reused");
         } else if (qa != null && !qa.hardGatesPass()) {
             excluded.add(outcome.segment().id() + ":hard-gate-failed");
         }

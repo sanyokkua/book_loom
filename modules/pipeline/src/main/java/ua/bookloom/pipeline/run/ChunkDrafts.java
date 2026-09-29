@@ -10,9 +10,9 @@ import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 
 /**
- * One chunk's drafts, kept in memory until each is decided: the quality loop reads them all, a later draft of the
- * same chunk reads an undecided one as its preceding target, and each decided record stores the snapshot of what its
- * draft saw. A stop drops what is still undecided here.
+ * One chunk's drafts and memory reuses, kept in memory until each is decided: the quality loop reads them all, a
+ * later draft of the same chunk reads an undecided one as its preceding target, and each decided record stores the
+ * snapshot of what its draft saw. A stop drops what is still undecided here.
  *
  * <p>Used from the job thread only, which is why the state is plain collections.
  */
@@ -44,10 +44,21 @@ final class ChunkDrafts {
         return undecided.containsKey(segmentId);
     }
 
-    /** The masked target an undecided draft offers, or null when its markup did not restore or it was flagged. */
+    /**
+     * The masked target an undecided draft or memory reuse offers, or null when the draft's markup did not restore or
+     * it was flagged.
+     */
     @Nullable
     String maskedTarget(final String segmentId) {
-        return undecided.get(segmentId) instanceof DraftOutcome.Drafted drafted ? drafted.maskedForm() : null;
+        final DraftOutcome outcome = undecided.get(segmentId);
+        if (outcome == null) {
+            return null;
+        }
+        return switch (outcome) {
+            case DraftOutcome.Drafted drafted -> drafted.maskedForm();
+            case DraftOutcome.Reused reused -> reused.maskedTarget();
+            case DraftOutcome.FlaggedAtOnce ignored -> null;
+        };
     }
 
     List<String> undecidedIds() {

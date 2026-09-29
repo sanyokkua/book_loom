@@ -14,7 +14,8 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * Decides a chunk's segments one at a time, in document order — a {@link DraftOutcome.FlaggedAtOnce} outcome
- * becomes FLAGGED immediately, a {@link DraftOutcome.Drafted} one goes through {@link SegmentHealer}
+ * becomes FLAGGED immediately, a {@link DraftOutcome.Reused} one ACCEPTED from memory, a {@link DraftOutcome.Drafted}
+ * one goes through {@link SegmentHealer}
  * ({@code specs/translation-pipeline/spec.md} "Decide a chunk's segments in document order"). Built only by
  * {@link QualityLoop#start}.
  */
@@ -65,6 +66,7 @@ public final class ChunkDecider {
         final Result<SegmentOutcome> decision =
                 switch (outcomes.get(index)) {
                     case DraftOutcome.FlaggedAtOnce flaggedAtOnce -> Result.ok(flaggedOutcome(flaggedAtOnce));
+                    case DraftOutcome.Reused reused -> Result.ok(reusedOutcome(reused));
                     case DraftOutcome.Drafted drafted ->
                         healer.decide(drafted, Objects.requireNonNull(initialQa.get(index)), chunkVerdict);
                 };
@@ -72,6 +74,25 @@ public final class ChunkDecider {
             index++;
         }
         return decision;
+    }
+
+    // Checked in full when the run found it, so it is accepted as it stands, with no judge score and no round.
+    private static SegmentOutcome reusedOutcome(final DraftOutcome.Reused reused) {
+        log.debug(
+                "Segment {} accepted from memory confidence={}",
+                reused.segment().id(),
+                reused.qa().confidence());
+        return new SegmentOutcome(
+                reused.segment().id(),
+                SegmentStatus.ACCEPTED,
+                reused.restoredTarget(),
+                reused.maskedTarget(),
+                reused.qa().confidence(),
+                null,
+                reused.qa().findings(),
+                SegmentPath.TM_REUSE,
+                0,
+                null);
     }
 
     private static SegmentOutcome flaggedOutcome(final DraftOutcome.FlaggedAtOnce flaggedAtOnce) {

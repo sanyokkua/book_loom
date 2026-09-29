@@ -165,4 +165,22 @@ class ProtectedSpansKeptRunTest {
         assertThat(mask.spans())
                 .containsExactly(new ProtectedSpan("⟦g4⟧", "⟦g0⟧un ⟦g1⟧petit⟦g2⟧ chat⟦g3⟧", CheckName.KEPT_RUN));
     }
+
+    @Test
+    void checkRestored_storedTargetHoldingTheRunVerbatim_answersItReMasked() {
+        final ProtectedMask mask = mask(FRENCH_MASKED, FRENCH, "en", ForeignPassagePolicy.KEEP, List.of());
+
+        assertThat(ProtectedSpans.checkRestored("Вона прошепотіла ⟦g0⟧au revoir⟦g1⟧ і пішла.", mask)
+                        .data())
+                .isEqualTo("Вона прошепотіла ⟦g2⟧ і пішла.");
+    }
+
+    @Test
+    void checkRestored_storedTargetWithTheRunTranslated_fails() {
+        final ProtectedMask mask = mask(FRENCH_MASKED, FRENCH, "en", ForeignPassagePolicy.KEEP, List.of());
+
+        assertThat(ProtectedSpans.checkRestored("Вона прошепотіла ⟦g0⟧до побачення⟦g1⟧ і пішла.", mask)
+                        .isErr())
+                .isTrue();
+    }
 }
