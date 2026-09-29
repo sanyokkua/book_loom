@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -101,7 +102,7 @@ final class ExportView {
         final Label number = new Label(count);
         number.setId("export-count-" + name);
         number.getStyleClass().add("stat-number");
-        return TranslatingView.tile("export-" + name, number, messages.get(caption));
+        return new StatTile("export-" + name, number, messages.get(caption));
     }
 
     private static Button revealButton(final Messages messages, final Runnable reveal) {

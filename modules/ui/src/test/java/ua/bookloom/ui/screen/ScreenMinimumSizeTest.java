@@ -35,7 +35,7 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"IMPORT", "BOOK_BRIEF", "STRUCTURE", "TRANSLATING", "EXPORT", "SETTINGS"})
+            names = {"IMPORT", "BOOK_BRIEF", "STRUCTURE", "NAMES_STYLE", "TRANSLATING", "EXPORT", "SETTINGS"})
     void screen_noBookOpen_atMinimumWidth_needsNoSidewaysScrolling(final ViewNames view) {
         assertFitsTheWidth(view);
     }
@@ -44,7 +44,7 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"IMPORT", "BOOK_BRIEF", "STRUCTURE", "TRANSLATING", "EXPORT"})
+            names = {"IMPORT", "BOOK_BRIEF", "STRUCTURE", "NAMES_STYLE", "TRANSLATING", "EXPORT"})
     void screen_bookOpen_atMinimumWidth_needsNoSidewaysScrolling(final ViewNames view) throws TimeoutException {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();

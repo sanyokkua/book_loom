@@ -73,6 +73,15 @@ class ViewNamesTest extends ApplicationTest {
                 .isNotNull();
     }
 
+    // IF the names and style constant pointed at a misspelt path, THEN navigating to it would load nothing.
+    @Test
+    void resource_namesStyle_isItsFxmlFileAndTheConstantIsAvailable() {
+        assertThat(ViewNames.NAMES_STYLE.resource()).hasValue("/ua/bookloom/ui/screen/names-style.fxml");
+        assertThat(ViewNames.NAMES_STYLE.isAvailable()).isTrue();
+        assertThat(ViewNames.class.getResource("/ua/bookloom/ui/screen/names-style.fxml"))
+                .isNotNull();
+    }
+
     // IF the settings constant pointed at a misspelt path, THEN navigating to it would load nothing. (Its file is no
     // longer a placeholder: it names a controller that only the application's injector can supply, so it is not loaded
     // here.)
@@ -88,7 +97,7 @@ class ViewNamesTest extends ApplicationTest {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"PROJECTS", "NAMES_STYLE"})
+            names = {"PROJECTS"})
     void resource_inertConstant_isAbsentAndTheConstantIsUnavailable(final ViewNames view) {
         assertThat(view.resource()).isEmpty();
         assertThat(view.isAvailable()).isFalse();

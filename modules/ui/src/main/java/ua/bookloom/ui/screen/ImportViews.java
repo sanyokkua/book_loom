@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookCard;
@@ -86,26 +87,26 @@ final class ImportViews {
         code.getStyleClass().addAll("chip", "chip-err");
         final Label file = new Label(messages.get(MessageKey.IMPORT_REFUSAL_FILE, fileName));
         file.getStyleClass().add("hint");
-        return banner(
-                "import-refusal",
-                "banner-err",
-                ERROR_GLYPH,
-                List.of(wrapped(error.title(), "banner-title"), wrapped(error.message(), "banner-text"), code, file));
+        final Banner banner =
+                new Banner("import-refusal", Banner.Role.ERR, ERROR_GLYPH, error.title(), error.message());
+        banner.addDetail(code);
+        banner.addDetail(file);
+        banner.setMaxWidth(CARD_MAX_WIDTH);
+        return banner;
     }
 
     static Node mismatch(final Messages messages, final String declaredLang, final String detectedLang) {
-        return banner(
+        final Banner banner = new Banner(
                 "import-mismatch",
-                "banner-warn",
+                Banner.Role.WARN,
                 WARNING_GLYPH,
-                List.of(
-                        wrapped(messages.get(MessageKey.IMPORT_MISMATCH_TITLE), "banner-title"),
-                        wrapped(
-                                messages.get(
-                                        MessageKey.IMPORT_MISMATCH_TEXT,
-                                        languageLabel(messages, declaredLang),
-                                        languageLabel(messages, detectedLang)),
-                                "banner-text")));
+                messages.get(MessageKey.IMPORT_MISMATCH_TITLE),
+                messages.get(
+                        MessageKey.IMPORT_MISMATCH_TEXT,
+                        languageLabel(messages, declaredLang),
+                        languageLabel(messages, detectedLang)));
+        banner.setMaxWidth(CARD_MAX_WIDTH);
+        return banner;
     }
 
     /** The language's name in the display language with its code, or the code alone when the JDK knows no name for it. */

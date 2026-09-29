@@ -25,6 +25,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ControlState;
@@ -55,7 +57,6 @@ final class TranslatingView {
     private static final double CARD_SPACING = 8;
     private static final double TILE_SPACING = 12;
     private static final double ACTION_SPACING = 10;
-    private static final double BANNER_SPACING = 2;
     private static final double LOG_HEIGHT = 220;
     private static final List<String> ROLE_CLASSES =
             Arrays.stream(StatusRole.values()).map(StatusRole::styleClass).toList();
@@ -82,11 +83,11 @@ final class TranslatingView {
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(openSettings, "openSettings");
         log.debug("building the translating dashboard");
-        final TranslatingDashboard.Banner banner = banner(messages, openSettings);
+        final TranslatingDashboard.LiveBanner banner = banner(messages, openSettings);
         final ListView<LogEntry> logList = logList(mirror, messages);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
-                banner.box(),
+                banner.banner(),
                 progressCard(mirror, messages),
                 tiles(mirror, messages),
                 logCard(logList, messages),
@@ -94,24 +95,12 @@ final class TranslatingView {
         return new TranslatingDashboard(screen, banner, logList, messages);
     }
 
-    private static TranslatingDashboard.Banner banner(final Messages messages, final Runnable openSettings) {
-        final Label icon = new Label();
-        icon.getStyleClass().add("banner-icon");
-        final Label title = wrapped("banner-title");
-        final Label text = wrapped("banner-text");
-        final Button settings = new Button(messages.get(MessageKey.TRANSLATING_OPEN_SETTINGS));
-        settings.setId("translating-open-settings");
-        settings.getStyleClass().add("btn-secondary");
-        settings.setOnAction(event -> openSettings.run());
-        settings.setVisible(false);
-        settings.setManaged(false);
-        final HBox box = new HBox(icon, new VBox(BANNER_SPACING, title, text, settings));
-        box.setId("translating-banner");
-        title.setId("translating-banner-title");
-        text.setId("translating-banner-text");
-        box.setAlignment(Pos.TOP_LEFT);
-        box.getStyleClass().add("banner");
-        return new TranslatingDashboard.Banner(box, icon, title, text, settings);
+    private static TranslatingDashboard.LiveBanner banner(final Messages messages, final Runnable openSettings) {
+        final Banner banner = new Banner("translating-banner", Banner.Role.INFO, "", "", "");
+        final Button settings = banner.addAction(
+                "translating-open-settings", messages.get(MessageKey.TRANSLATING_OPEN_SETTINGS), openSettings);
+        Banner.setActionShown(settings, false);
+        return new TranslatingDashboard.LiveBanner(banner, settings);
     }
 
     private static Node progressCard(final StateMirror mirror, final Messages messages) {
@@ -160,19 +149,7 @@ final class TranslatingView {
         final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
         final Label number =
                 boundLabel("translating-count-" + name, "stat-number", () -> grouping.format(count.get()), count);
-        return tile("translating-tile-" + name, number, messages.get(caption));
-    }
-
-    /** A count tile: the number above its caption, on the stat surface, sharing its row equally. */
-    static VBox tile(final String id, final Label number, final String caption) {
-        final Label label = new Label(caption);
-        label.getStyleClass().add("stat-caption");
-        final VBox tile = new VBox(number, label);
-        tile.setId(id);
-        tile.getStyleClass().add("stat");
-        HBox.setHgrow(tile, Priority.ALWAYS);
-        tile.setMaxWidth(Double.MAX_VALUE);
-        return tile;
+        return new StatTile("translating-tile-" + name, number, messages.get(caption));
     }
 
     private static Node logCard(final ListView<LogEntry> logList, final Messages messages) {
@@ -236,13 +213,6 @@ final class TranslatingView {
         label.setId(id);
         label.getStyleClass().add(styleClass);
         label.textProperty().bind(Bindings.createStringBinding(text, sources));
-        return label;
-    }
-
-    private static Label wrapped(final String styleClass) {
-        final Label label = new Label();
-        label.setWrapText(true);
-        label.getStyleClass().add(styleClass);
         return label;
     }
 

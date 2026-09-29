@@ -22,8 +22,8 @@ public enum ViewNames {
     BOOK_BRIEF(MessageKey.NAV_BRIEF, NavGroup.WORKFLOW, 2, "/ua/bookloom/ui/screen/book-brief.fxml", null),
     /** Choosing which parts of the book to translate. */
     STRUCTURE(MessageKey.NAV_STRUCTURE, NavGroup.WORKFLOW, 3, "/ua/bookloom/ui/screen/structure.fxml", null),
-    /** Glossary and style; has no screen yet. */
-    NAMES_STYLE(MessageKey.NAV_NAMES_AND_STYLE, NavGroup.WORKFLOW, 4, null, null),
+    /** Glossary and style, where a run is started. */
+    NAMES_STYLE(MessageKey.NAV_NAMES_AND_STYLE, NavGroup.WORKFLOW, 4, "/ua/bookloom/ui/screen/names-style.fxml", null),
     /** The running translation dashboard. */
     TRANSLATING(MessageKey.NAV_TRANSLATING, NavGroup.WORKFLOW, 5, "/ua/bookloom/ui/screen/translating.fxml", null),
     /** Writing the translated book out. */

@@ -184,6 +184,15 @@ final class ConformanceCases {
                     List.of(
                             new Part("#nobook-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#nobook-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // The skip note is the info role, light and dark.
+            new Screen(
+                    "NAMES_STYLE",
+                    ViewNames.NAMES_STYLE,
+                    Preparation.BOOK_OPENED,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#names-style-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part("#names-style-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
             // Ready to translate: the banner is the info role, the bar's track surface-2 and its fill the primary.
             new Screen(
                     "TRANSLATING",

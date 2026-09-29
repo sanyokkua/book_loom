@@ -205,14 +205,14 @@ class StructureScreenTest extends StructureScreenTestBase {
         assertThat(currentView()).isEqualTo(ViewNames.BOOK_BRIEF);
     }
 
-    // IF Continue stopped at the inert names-and-style step, THEN the path would end at a wall.
+    // IF Continue skipped past names and style, THEN the run would start without the step the reference puts first.
     @Test
-    void continueControl_bookOpened_firingItMovesToTheTranslatingScreen() throws TimeoutException {
+    void continueControl_bookOpened_firingItMovesToTheNamesAndStyleScreen() throws TimeoutException {
         openBookThenShowStructure(dir.resolve("book.epub"), elevenUnitBook());
 
         onFx(() -> button("structure-continue").fire());
 
-        assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
+        assertThat(currentView()).isEqualTo(ViewNames.NAMES_STYLE);
     }
 
     // IF the actions sat inside the card, THEN the card would no longer be the read-only list it is specified as.

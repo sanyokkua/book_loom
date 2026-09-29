@@ -4,7 +4,6 @@ import java.util.Objects;
 import java.util.Optional;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.TreeCell;
@@ -20,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StructureListing;
@@ -45,7 +45,6 @@ final class StructureView {
     private static final double CARD_SPACING = 10;
     private static final double ROW_SPACING = 12;
     private static final double SCREEN_SPACING = 14;
-    private static final double ACTION_SPACING = 10;
 
     static Node build(final StructureListing listing, final Messages messages, final Navigator navigator) {
         Objects.requireNonNull(listing, "listing");
@@ -70,17 +69,17 @@ final class StructureView {
     }
 
     private static Node actions(final Messages messages, final Navigator navigator) {
-        final Button back = new Button(messages.get(MessageKey.BRIEF_BACK));
-        back.setId("structure-back");
-        back.getStyleClass().add("btn-ghost");
-        back.setOnAction(event -> navigator.navigate(ViewNames.BOOK_BRIEF));
-        final Button next = new Button(messages.get(MessageKey.STRUCTURE_CONTINUE));
-        next.setId("structure-continue");
-        next.getStyleClass().add("btn-primary");
-        next.setOnAction(event -> onContinue(navigator));
-        final HBox row = new HBox(ACTION_SPACING, back, next);
-        row.setAlignment(Pos.CENTER_LEFT);
-        return row;
+        return StepFooter.of(
+                new StepFooter.Action(
+                        "structure-back",
+                        messages.get(MessageKey.BRIEF_BACK),
+                        "btn-ghost",
+                        () -> navigator.navigate(ViewNames.BOOK_BRIEF)),
+                new StepFooter.Action(
+                        "structure-continue",
+                        messages.get(MessageKey.STRUCTURE_CONTINUE),
+                        "btn-primary",
+                        () -> onContinue(navigator)));
     }
 
     private static void onContinue(final Navigator navigator) {

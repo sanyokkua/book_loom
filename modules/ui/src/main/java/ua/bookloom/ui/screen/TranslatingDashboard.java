@@ -1,14 +1,12 @@
 package ua.bookloom.ui.screen;
 
-import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.layout.HBox;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -28,25 +26,25 @@ import ua.bookloom.ui.state.StateMirror;
  */
 final class TranslatingDashboard {
 
-    private static final String INFO = "banner-info";
-    private static final String OK = "banner-ok";
-    private static final String WARN = "banner-warn";
-    private static final String ERR = "banner-err";
-    private static final List<String> ROLE_CLASSES = List.of(INFO, OK, WARN, ERR);
+    private static final Banner.Role INFO = Banner.Role.INFO;
+    private static final Banner.Role OK = Banner.Role.OK;
+    private static final Banner.Role WARN = Banner.Role.WARN;
+    private static final Banner.Role ERR = Banner.Role.ERR;
 
     /** How the banner is told: its glyph, its role class, its words and whether it offers the provider settings. */
-    private record Look(String glyph, String roleClass, String title, String text, boolean offersSettings) {}
+    private record Look(String glyph, Banner.Role role, String title, String text, boolean offersSettings) {}
 
-    /** The nodes of the banner, which {@link #render(RunState, RunNotice, int)} rewrites. */
-    record Banner(HBox box, Label icon, Label title, Label text, Button settings) {}
+    /** The banner, which {@link #render(RunState, RunNotice, int)} rewrites, and its provider-settings action. */
+    record LiveBanner(Banner banner, Button settings) {}
 
     private final Node root;
-    private final Banner banner;
+    private final LiveBanner banner;
     private final ListView<LogEntry> log;
     private final Messages messages;
     private boolean scrollQueued;
 
-    TranslatingDashboard(final Node root, final Banner banner, final ListView<LogEntry> log, final Messages messages) {
+    TranslatingDashboard(
+            final Node root, final LiveBanner banner, final ListView<LogEntry> log, final Messages messages) {
         this.root = Objects.requireNonNull(root, "root");
         this.banner = Objects.requireNonNull(banner, "banner");
         this.log = Objects.requireNonNull(log, "log");
@@ -70,13 +68,11 @@ final class TranslatingDashboard {
     void render(final RunState state, final @Nullable RunNotice notice, final int waitingSeconds) {
         Objects.requireNonNull(state, "state");
         final Look look = lookOf(state, notice, waitingSeconds);
-        banner.icon().setText(look.glyph());
-        banner.title().setText(look.title());
-        banner.text().setText(look.text());
-        banner.box().getStyleClass().removeAll(ROLE_CLASSES);
-        banner.box().getStyleClass().add(look.roleClass());
-        banner.settings().setVisible(look.offersSettings());
-        banner.settings().setManaged(look.offersSettings());
+        banner.banner().setGlyph(look.glyph());
+        banner.banner().setTitle(look.title());
+        banner.banner().setText(look.text());
+        banner.banner().setRole(look.role());
+        Banner.setActionShown(banner.settings(), look.offersSettings());
     }
 
     /**
@@ -108,7 +104,7 @@ final class TranslatingDashboard {
         }
         return new Look(
                 plain.glyph(),
-                plain.roleClass(),
+                plain.role(),
                 plain.title(),
                 messages.get(MessageKey.TRANSLATING_WAITING_FOR_MODEL, DurationText.clock(waitingSeconds)),
                 false);
@@ -157,10 +153,10 @@ final class TranslatingDashboard {
         };
     }
 
-    private Look stateLook(final String glyph, final String roleClass, final String token) {
+    private Look stateLook(final String glyph, final Banner.Role role, final String token) {
         return new Look(
                 glyph,
-                roleClass,
+                role,
                 messages.get(MessageKey.TRANSLATING_STATE_TITLE, token),
                 messages.get(MessageKey.TRANSLATING_STATE_TEXT, token),
                 false);

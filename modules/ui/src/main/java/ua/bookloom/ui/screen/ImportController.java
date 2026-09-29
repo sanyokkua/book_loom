@@ -9,19 +9,18 @@ import java.util.Optional;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.stage.FileChooser;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ImportGuard;
@@ -177,41 +176,30 @@ public final class ImportController {
             case ImportState.Idle idle -> List.of();
             case ImportState.Opening opening -> List.of(ImportViews.progress(messages, opening.fileName()));
             case ImportState.Detected detected ->
-                List.of(
-                        ImportViews.card(messages, detected.card()),
-                        actions(continueButton(MessageKey.IMPORT_CONTINUE)));
+                List.of(ImportViews.card(messages, detected.card()), continueFooter(MessageKey.IMPORT_CONTINUE));
             case ImportState.Refused refused ->
-                List.of(
-                        ImportViews.refusal(messages, refused.fileName(), refused.error()),
-                        actions(chooseAnotherButton()));
+                List.of(ImportViews.refusal(messages, refused.fileName(), refused.error()), chooseAnotherFooter());
             case ImportState.LanguageMismatch mismatch ->
                 List.of(
                         ImportViews.mismatch(messages, mismatch.declaredLang(), mismatch.detectedLang()),
                         ImportViews.card(messages, mismatch.card()),
-                        actions(continueButton(MessageKey.IMPORT_CONTINUE_ANYWAY)));
+                        continueFooter(MessageKey.IMPORT_CONTINUE_ANYWAY));
         };
     }
 
-    private Button continueButton(final MessageKey label) {
-        final Button button = new Button(messages.get(label));
-        button.setId("import-continue");
-        button.getStyleClass().add("btn-primary");
-        button.setOnAction(event -> onContinue());
-        return button;
+    private Node continueFooter(final MessageKey label) {
+        return StepFooter.of(
+                null, new StepFooter.Action("import-continue", messages.get(label), "btn-primary", this::onContinue));
     }
 
-    private Button chooseAnotherButton() {
-        final Button button = new Button(messages.get(MessageKey.IMPORT_CHOOSE_ANOTHER));
-        button.setId("import-choose-another");
-        button.getStyleClass().add("btn-secondary");
-        button.setOnAction(event -> chooseFile());
-        return button;
-    }
-
-    private static Node actions(final Button button) {
-        final HBox row = new HBox(button);
-        row.setAlignment(Pos.CENTER_LEFT);
-        return row;
+    private Node chooseAnotherFooter() {
+        return StepFooter.of(
+                null,
+                new StepFooter.Action(
+                        "import-choose-another",
+                        messages.get(MessageKey.IMPORT_CHOOSE_ANOTHER),
+                        "btn-secondary",
+                        this::chooseFile));
     }
 
     private void onContinue() {

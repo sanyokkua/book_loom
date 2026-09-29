@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -51,7 +52,7 @@ final class BriefView {
     private final ComboBox<String> target = new ComboBox<>();
     private final TextField destination = new TextField();
     private final ToggleSwitch overwrite = new ToggleSwitch();
-    private final Button continueButton = new Button();
+    private final StepFooter footer;
     private final Node root;
     private final ChangeListener<String> onTarget = (observed, was, now) -> showTarget(now);
     private final ChangeListener<String> onDestination = (observed, was, now) -> showDestination(now);
@@ -64,6 +65,7 @@ final class BriefView {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.footer = footer();
         log.debug("building the brief");
         this.root = build();
         wire();
@@ -83,7 +85,7 @@ final class BriefView {
         final VBox right =
                 column(BriefCards.policies(messages), BriefCards.alsoTranslate(messages), BriefCards.quality(messages));
         final HBox columns = new HBox(COLUMN_SPACING, left, right);
-        return new VBox(CARD_SPACING, subtitle, columns, actions());
+        return new VBox(CARD_SPACING, subtitle, columns, footer);
     }
 
     private static VBox column(final Node... cards) {
@@ -167,18 +169,15 @@ final class BriefView {
         return banner;
     }
 
-    private Node actions() {
-        final Button back = new Button(messages.get(MessageKey.BRIEF_BACK));
-        back.setId("brief-back");
-        back.getStyleClass().add("btn-ghost");
-        back.setOnAction(event -> navigator.navigate(ViewNames.IMPORT));
-        continueButton.setText(messages.get(MessageKey.BRIEF_CONTINUE));
-        continueButton.setId("brief-continue");
-        continueButton.getStyleClass().add("btn-primary");
-        continueButton.setOnAction(event -> onContinue());
-        final HBox row = new HBox(ACTION_SPACING, back, continueButton);
-        row.setAlignment(Pos.CENTER_LEFT);
-        return row;
+    private StepFooter footer() {
+        return StepFooter.of(
+                new StepFooter.Action(
+                        "brief-back",
+                        messages.get(MessageKey.BRIEF_BACK),
+                        "btn-ghost",
+                        () -> navigator.navigate(ViewNames.IMPORT)),
+                new StepFooter.Action(
+                        "brief-continue", messages.get(MessageKey.BRIEF_CONTINUE), "btn-primary", this::onContinue));
     }
 
     private void wire() {
@@ -238,7 +237,7 @@ final class BriefView {
         }
         final boolean usable = viewModel.request().isPresent();
         log.debug("destination shown, continue available: {}", usable);
-        continueButton.setDisable(!usable);
+        footer.forwardButton().setDisable(!usable);
     }
 
     private void showOverwrite(final boolean allowed) {

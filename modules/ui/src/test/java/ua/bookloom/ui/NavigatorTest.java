@@ -68,7 +68,7 @@ class NavigatorTest extends ApplicationTest {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"PROJECTS", "NAMES_STYLE"})
+            names = {"PROJECTS"})
     void navigate_inertView_isRefusedAndNothingChanges(final ViewNames inert) {
         navigateOnFxThread(navigator, ViewNames.IMPORT);
         final Parent before = navigator.content().get();
@@ -83,7 +83,7 @@ class NavigatorTest extends ApplicationTest {
     @Test
     void navigate_inertViewBeforeAnyNavigation_leavesTheCurrentViewEmpty() {
         // IF a refusal recorded its target, THEN the shell would mark an inert entry as current.
-        final boolean accepted = navigateOnFxThread(navigator, ViewNames.NAMES_STYLE);
+        final boolean accepted = navigateOnFxThread(navigator, ViewNames.PROJECTS);
 
         assertThat(accepted).isFalse();
         assertThat(navigator.currentView().get()).isNull();
@@ -124,7 +124,7 @@ class NavigatorTest extends ApplicationTest {
         navigator.currentView().addListener((observable, previous, current) -> seen.add(current));
 
         navigateOnFxThread(navigator, ViewNames.IMPORT);
-        navigateOnFxThread(navigator, ViewNames.NAMES_STYLE);
+        navigateOnFxThread(navigator, ViewNames.PROJECTS);
         navigateOnFxThread(navigator, ViewNames.IMPORT);
         navigateOnFxThread(navigator, ViewNames.BOOK_BRIEF);
 
@@ -153,7 +153,8 @@ class NavigatorTest extends ApplicationTest {
     @CsvSource({
         "IMPORT, BOOK_BRIEF",
         "BOOK_BRIEF, STRUCTURE",
-        "STRUCTURE, TRANSLATING",
+        "STRUCTURE, NAMES_STYLE",
+        "NAMES_STYLE, TRANSLATING",
         "TRANSLATING, EXPORT",
     })
     void nextAvailableStep_workflowEntry_skipsInertEntries(final ViewNames after, final ViewNames expected) {

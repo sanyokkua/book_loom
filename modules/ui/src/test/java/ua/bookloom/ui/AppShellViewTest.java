@@ -203,7 +203,7 @@ class AppShellViewTest extends ShellTestBase {
         "nav-import, false",
         "nav-book-brief, false",
         "nav-structure, false",
-        "nav-names-style, true",
+        "nav-names-style, false",
         "nav-translating, false",
         "nav-export, false",
         "nav-settings, false"
@@ -222,7 +222,7 @@ class AppShellViewTest extends ShellTestBase {
     // IF activating an inert entry (through the shell or by pressing its button) moved the screen or the mark, THEN a
     // screen that does not exist would be shown or claimed as current.
     @ParameterizedTest
-    @CsvSource({"PROJECTS, nav-projects", "NAMES_STYLE, nav-names-style"})
+    @CsvSource({"PROJECTS, nav-projects"})
     void activate_inertEntry_changesNeitherTheScreenAreaNorTheCurrentMark(final ViewNames inert, final String id) {
         onFx(() -> shell.activate(ViewNames.IMPORT));
         final List<Node> contentBefore = List.copyOf(contentHost().getChildren());
@@ -247,6 +247,7 @@ class AppShellViewTest extends ShellTestBase {
             IMPORT      | nav-import      | Workflow / Import book · step 1 of 6
             BOOK_BRIEF  | nav-book-brief  | Workflow / Book Brief · step 2 of 6
             STRUCTURE   | nav-structure   | Workflow / Structure · step 3 of 6
+            NAMES_STYLE | nav-names-style | Workflow / Names & style · step 4 of 6
             TRANSLATING | nav-translating | Workflow / Translating · step 5 of 6
             EXPORT      | nav-export      | Workflow / Export · step 6 of 6
             SETTINGS    | nav-settings    | Application / Settings

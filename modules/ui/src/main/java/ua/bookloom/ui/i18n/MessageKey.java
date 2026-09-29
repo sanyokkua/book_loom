@@ -365,6 +365,16 @@ public enum MessageKey {
     STRUCTURE_TOTAL("structure.total"),
     /** Button that moves on from the structure screen to the next available step. */
     STRUCTURE_CONTINUE("structure.continue"),
+    /** Heading of the names and style screen. */
+    NAMES_STYLE_TITLE("namesStyle.title"),
+    /** One line under the heading saying what the screen is for. */
+    NAMES_STYLE_SUBTITLE("namesStyle.subtitle"),
+    /** Information banner saying the step can be skipped. */
+    NAMES_STYLE_SKIP("namesStyle.skip"),
+    /** Button that returns from names and style to the structure screen. */
+    NAMES_STYLE_BACK("namesStyle.back"),
+    /** Button that starts the run from names and style. */
+    NAMES_STYLE_START("namesStyle.start"),
     /** Heading of the translating dashboard. */
     TRANSLATING_TITLE("translating.title"),
     /** Button that starts the first run from the dashboard. */
