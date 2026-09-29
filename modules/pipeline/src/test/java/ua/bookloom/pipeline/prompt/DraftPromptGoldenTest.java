@@ -30,10 +30,11 @@ class DraftPromptGoldenTest {
                 name,
                 (source, target) -> new DraftPromptBuilder(
                         TEMPLATES,
-                        source,
-                        target,
-                        StyleSheet.from(BookBrief.defaults(source)),
-                        ForeignPassagePolicy.KEEP));
+                        new CallFrame(
+                                source,
+                                target,
+                                StyleSheet.from(BookBrief.defaults(source)),
+                                ForeignPassagePolicy.KEEP)));
 
         assertThat(messages.get(0).content()).isEqualTo(golden(name + ".system.txt"));
         assertThat(messages.get(1).content()).isEqualTo(golden(name + ".user.txt"));

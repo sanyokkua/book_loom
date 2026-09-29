@@ -24,6 +24,35 @@ import ua.bookloom.api.project.UnitPolicy;
 /** Verifies the single-segment draft prompt follows the catalog contract. */
 class DraftPromptBuilderTest {
 
+    private static final String FULL_CONTEXT_USER_MESSAGE = """
+                        [Book so far — context only; do NOT re-translate it]
+                        Гейл шукає брата.
+
+                        [Glossary — apply these renderings exactly]
+                        Hale → Гейл (character, male)
+
+                        [Earlier decisions — keep consistent]
+                        He left. → Він пішов.
+
+                        [Previous translated text — context only; do NOT re-translate it]
+                        <PreviousTranslations>
+                        Один.
+
+                        Два.
+                        </PreviousTranslations>
+
+                        Translate from English (en) to Ukrainian (uk).
+
+                        [Immutable tokens for this text]
+                        Copy this exact ordered sequence unchanged: (none; do not invent placeholders)
+                        Do not add, reorder, split, translate, or omit these tokens.
+
+                        <Text>
+                        Hello.
+                        </Text>
+
+                        Return exactly one JSON object matching this schema: {"target":"<translation>"}""";
+
     // A BCP-47 language pair must reach the model as unambiguous English names plus its raw tags.
     @Test
     void messagesFor_knownLanguages_rendersReadableLanguageDescriptions() {
@@ -119,6 +148,37 @@ class DraftPromptBuilderTest {
                 .contains("<PreviousTranslations>\nOne.\n\nTwo.\n</PreviousTranslations>")
                 .doesNotContain("[Glossary")
                 .doesNotContain("[Book so far");
+    }
+
+    // The load-bearing items sit at the edges: the rules in the system message, the source last in the user one.
+    @Test
+    void messagesFor_fullContext_ordersSummaryTermsHintsPrecedingThenTheSourceLast() {
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
+        final DraftContext context = new DraftContext(
+                List.of("Один.", "Два."),
+                "Гейл шукає брата.",
+                List.of("Hale → Гейл (character, male)"),
+                List.of("He left. → Він пішов."));
+
+        final String user =
+                builder.messagesFor(segment("Hello."), context).get(1).content();
+
+        assertThat(user).isEqualTo(FULL_CONTEXT_USER_MESSAGE);
+    }
+
+    // A context with nothing in it renders exactly what a draft with no context always did.
+    @Test
+    void messagesFor_contextWithEmptyParts_rendersTheSameAsNoContext() {
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
+        final Segment segment = segment("Hello.");
+
+        final var withEmptyParts =
+                builder.messagesFor(segment, new DraftContext(List.of(), null, List.of(), List.of()));
+
+        assertThat(withEmptyParts).isEqualTo(builder.messagesFor(segment));
+        assertThat(withEmptyParts.get(1).content())
+                .doesNotContain("[Book so far")
+                .doesNotContain("[Glossary");
     }
 
     // Every brief control reaches the model through the system message's style guidance.
@@ -235,7 +295,7 @@ class DraftPromptBuilderTest {
     private static DraftPromptBuilder builder(
             @Nullable final String source, final String target, final BookBrief brief) {
         return new DraftPromptBuilder(
-                new PromptTemplates(), source, target, StyleSheet.from(brief), brief.foreignPassages());
+                new PromptTemplates(), new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages()));
     }
 
     private static Segment segment(final String masked) {

@@ -32,13 +32,10 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
-import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
-import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /** The single-run translation lifecycle, including pause and cancellation boundaries. */
 @Slf4j
@@ -161,11 +158,7 @@ final class TranslationJobImpl implements TranslationJob {
                 new CancellableChatModel(model, control, this::announceModelCall),
                 tracker.format(),
                 new DraftPromptBuilder(
-                        templates,
-                        TranslationJobRequestContext.sourceLanguage(request, tracker.declaredLanguage()),
-                        request.targetLanguage(),
-                        StyleSheet.from(BookBrief.defaults(null)),
-                        ForeignPassagePolicy.KEEP),
+                        templates, TranslationJobRequestContext.callFrame(request, tracker.declaredLanguage())),
                 new DraftReplyParser(mapper));
         while (tracker.hasPending()) {
             final Result<JobReport> before =

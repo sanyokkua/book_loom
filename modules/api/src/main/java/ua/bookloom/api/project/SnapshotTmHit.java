@@ -24,10 +24,10 @@ public record SnapshotTmHit(TmHitKind kind, String source, String target) {
     /** How closely a translation-memory hit matched the segment being translated. */
     public enum TmHitKind {
 
-        /** An exact source-text and context-key match. */
+        /** The same source text stored under a different context key — offered to the model as a hint. */
         EXACT,
 
-        /** A same source text matched under a different context key. */
+        /** The source text and the context key both match — the entry a run reuses without a model call. */
         CONTEXT,
 
         /** A similar-but-not-identical source text, matched by fuzzy scoring. */

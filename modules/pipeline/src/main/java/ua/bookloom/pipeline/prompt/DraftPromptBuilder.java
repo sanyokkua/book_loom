@@ -9,7 +9,6 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
-import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.pipeline.Tokens;
 
 /** Renders the catalog's one-segment draft-translation prompt with the currently available context. */
@@ -17,33 +16,22 @@ import ua.bookloom.pipeline.Tokens;
 public final class DraftPromptBuilder {
 
     private final PromptTemplates templates;
-    private final @Nullable String sourceLanguage;
-    private final String targetLanguage;
-    private final StyleSheet styleSheet;
-    private final ForeignPassagePolicy foreignPassages;
+    private final CallFrame frame;
 
-    /** Creates a builder for one job's resolved languages, style sheet and foreign-passage policy. */
-    public DraftPromptBuilder(
-            final PromptTemplates templates,
-            @Nullable final String sourceLanguage,
-            final String targetLanguage,
-            final StyleSheet styleSheet,
-            final ForeignPassagePolicy foreignPassages) {
+    /** Creates a builder for one job's templates and its call frame: languages, style sheet and policy. */
+    public DraftPromptBuilder(final PromptTemplates templates, final CallFrame frame) {
         this.templates = Objects.requireNonNull(templates, "templates");
-        this.sourceLanguage = sourceLanguage;
-        this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
-        this.styleSheet = Objects.requireNonNull(styleSheet, "styleSheet");
-        this.foreignPassages = Objects.requireNonNull(foreignPassages, "foreignPassages");
+        this.frame = Objects.requireNonNull(frame, "frame");
     }
 
     /** The job's source language tag, or null when it is inferred from the text. */
     public @Nullable String sourceLanguage() {
-        return sourceLanguage;
+        return frame.sourceLanguage();
     }
 
     /** The job's target language tag. */
     public String targetLanguage() {
-        return targetLanguage;
+        return frame.targetLanguage();
     }
 
     /** Builds the catalog system and user messages for one masked segment. */
@@ -67,15 +55,15 @@ public final class DraftPromptBuilder {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(shownText, "shownText");
-        final String source = resolvedSourceLanguage();
-        final String target = PromptLanguages.describe(targetLanguage);
+        final String source = PromptLanguages.describe(frame.sourceLanguage());
+        final String target = PromptLanguages.describe(frame.targetLanguage());
         log.debug(
                 "Building draft prompt sourceLanguage={} targetLanguage={} segmentId={} shownLength={}",
                 source,
                 target,
                 segment.id(),
                 shownText.length());
-        final String system = systemMessage(source, target);
+        final String system = systemMessage();
         final String user = userMessage(source, target, shownText, context);
         if (log.isTraceEnabled()) {
             log.trace("Draft prompt system={} user={}", system, user);
@@ -144,37 +132,42 @@ public final class DraftPromptBuilder {
                 new ChatMessage(ChatRole.USER, original.get(1).content() + "\n" + correction));
     }
 
-    private String resolvedSourceLanguage() {
-        return PromptLanguages.describe(sourceLanguage);
-    }
-
-    private String systemMessage(final String source, final String target) {
+    private String systemMessage() {
+        final Map<String, String> slots = frame.systemSlotValues();
         return templates
                 .renderSystem(
+                        PromptName.DRAFT,
+                        Map.of(
+                                "source", slots.get("sourceLanguage"),
+                                "target", slots.get("targetLanguage"),
+                                "styleSheet", slots.get("styleSheet"),
+                                "foreignPassageRule", slots.get("foreignPassageRule")))
+                .strip();
+    }
+
+    private String userMessage(
+            final String source, final String target, final String shownText, final DraftContext context) {
+        final String summary = context.summary();
+        return templates
+                .renderUser(
                         PromptName.DRAFT,
                         Map.of(
                                 "source",
                                 source,
                                 "target",
                                 target,
-                                "styleSheet",
-                                styleSheet.text(),
-                                "foreignPassageRule",
-                                StyleSheet.foreignPassageRule(foreignPassages, source)))
-                .strip();
-    }
-
-    private String userMessage(
-            final String source, final String target, final String shownText, final DraftContext context) {
-        return templates
-                .renderUser(
-                        PromptName.DRAFT,
-                        Map.of(
-                                "source", source,
-                                "target", target,
-                                "tokens", expectedTokenSequence(shownText),
-                                "text", shownText,
-                                "precedingTargets", String.join("\n\n", context.precedingTargets())))
+                                "tokens",
+                                expectedTokenSequence(shownText),
+                                "text",
+                                shownText,
+                                "summary",
+                                summary == null || summary.isBlank() ? "" : summary,
+                                "glossaryTerms",
+                                String.join("\n", context.glossaryLines()),
+                                "memoryHint",
+                                String.join("\n", context.memoryLines()),
+                                "precedingTargets",
+                                String.join("\n\n", context.precedingTargets())))
                 .strip();
     }
 

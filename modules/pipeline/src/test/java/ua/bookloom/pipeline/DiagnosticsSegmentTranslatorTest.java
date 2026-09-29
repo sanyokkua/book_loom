@@ -160,11 +160,12 @@ class DiagnosticsSegmentTranslatorTest {
                 format,
                 new DraftPromptBuilder(
                         new PromptTemplates(),
-                        sourceLanguage,
-                        targetLanguage,
-                        ua.bookloom.pipeline.prompt.StyleSheet.from(
-                                ua.bookloom.api.project.BookBrief.defaults(sourceLanguage)),
-                        ua.bookloom.api.project.ForeignPassagePolicy.KEEP),
+                        new ua.bookloom.pipeline.prompt.CallFrame(
+                                sourceLanguage,
+                                targetLanguage,
+                                ua.bookloom.pipeline.prompt.StyleSheet.from(
+                                        ua.bookloom.api.project.BookBrief.defaults(sourceLanguage)),
+                                ua.bookloom.api.project.ForeignPassagePolicy.KEEP)),
                 new DraftReplyParser(new ObjectMapper()));
     }
 
