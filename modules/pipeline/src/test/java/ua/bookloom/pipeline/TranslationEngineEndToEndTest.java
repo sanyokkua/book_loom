@@ -129,7 +129,11 @@ class TranslationEngineEndToEndTest {
 
     private ExportedBook translate(final Path source, final Path destination) {
         final Injector injector = Guice.createInjector(
-                new DocumentModule(), new LlmModule(), new PersistenceModule(), new PipelineModule());
+                new DocumentModule(),
+                new LlmModule(),
+                new PersistenceModule(),
+                new PipelineModule(),
+                new ReviewModeTestModule());
         final ProjectService projects = injector.getInstance(ProjectService.class);
         final ImportedBook imported = dataOf(projects.importBook(source));
         final String projectId = Objects.requireNonNull(imported.projectId(), "project id");
@@ -184,7 +188,11 @@ class TranslationEngineEndToEndTest {
         assertThat(Files.notExists(destination.resolveSibling("." + destination.getFileName())))
                 .isTrue();
         final Injector injector = Guice.createInjector(
-                new DocumentModule(), new LlmModule(), new PersistenceModule(), new PipelineModule());
+                new DocumentModule(),
+                new LlmModule(),
+                new PersistenceModule(),
+                new PipelineModule(),
+                new ReviewModeTestModule());
         final DocumentPort documents = injector.getInstance(DocumentPort.class);
         final Document sourceDocument = dataOf(documents.open(source));
         try {

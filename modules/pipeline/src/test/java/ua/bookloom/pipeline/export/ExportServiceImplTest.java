@@ -38,6 +38,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
+import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.BlockingClosePort;
@@ -83,7 +84,7 @@ class ExportServiceImplTest {
     @Test
     void injector_pipelineModule_resolvesExportServiceImpl() {
         final ExportService bound = Guice.createInjector(
-                        new DocumentModule(), new PersistenceModule(), new PipelineModule())
+                        new DocumentModule(), new PersistenceModule(), new PipelineModule(), new ReviewModeTestModule())
                 .getInstance(ExportService.class);
 
         assertThat(bound).isInstanceOf(ExportServiceImpl.class);

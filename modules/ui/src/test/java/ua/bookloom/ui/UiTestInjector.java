@@ -17,7 +17,10 @@ import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.state.FileRevealer;
@@ -218,26 +221,38 @@ public final class UiTestInjector {
         Objects.requireNonNull(documents, "documents");
         Objects.requireNonNull(models, "models");
         Objects.requireNonNull(engine, "engine");
-        return Guice.createInjector(Modules.override(new UiModule()).with(new AbstractModule() {
-            @Override
-            protected void configure() {
-                bind(LocaleProvider.class).toInstance(() -> locale);
-                bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
-                bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
-                bind(ExecutorService.class)
-                        .annotatedWith(BackgroundExecutor.class)
-                        .toInstance(daemonExecutor());
-                bind(ProviderConfigs.class).toInstance(configs);
-                bind(ProviderVerifier.class).toInstance(verifier);
-                bind(ModelCatalog.class).toInstance(catalog);
-                bind(DocumentPort.class).toInstance(documents);
-                bind(ChatModelFactory.class).toInstance(models);
-                bind(TranslationEngine.class).toInstance(engine);
-                bind(ProjectService.class).toInstance(projects);
-                bind(ExportService.class).toInstance(exports);
-                bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
-            }
-        }));
+        return Guice.createInjector(Modules.override(new UiModule())
+                .with(new ReviewPortsModule(), new AbstractModule() {
+                    @Override
+                    protected void configure() {
+                        bind(LocaleProvider.class).toInstance(() -> locale);
+                        bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
+                        bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
+                        bind(ExecutorService.class)
+                                .annotatedWith(BackgroundExecutor.class)
+                                .toInstance(daemonExecutor());
+                        bind(ProviderConfigs.class).toInstance(configs);
+                        bind(ProviderVerifier.class).toInstance(verifier);
+                        bind(ModelCatalog.class).toInstance(catalog);
+                        bind(DocumentPort.class).toInstance(documents);
+                        bind(ChatModelFactory.class).toInstance(models);
+                        bind(TranslationEngine.class).toInstance(engine);
+                        bind(ProjectService.class).toInstance(projects);
+                        bind(ExportService.class).toInstance(exports);
+                        bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
+                    }
+                }));
+    }
+
+    /** The review-side ports and the launch-time review mode, which no test of the window scripts yet. */
+    private static final class ReviewPortsModule extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(GlossaryService.class).toInstance(new ScriptedGlossaryService());
+            bind(ReviewDesk.class).toInstance(new ScriptedReviewDesk());
+            bind(ReviewMode.class).toInstance(ReviewMode.UNATTENDED);
+        }
     }
 
     private static ExecutorService daemonExecutor() {

@@ -40,6 +40,7 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.UiModule;
@@ -92,7 +93,10 @@ class TranslationWorkspaceEndToEndTest {
     @BeforeEach
     void startWorkspace() throws Exception {
         final Path logDir = Files.createDirectories(dataDir.resolve("logs"));
-        final StartupContext startup = new StartupContext(AppPaths.of(dataDir, logDir), AppEnvironment.DEV);
+        final StartupContext startup = new StartupContext(
+                AppPaths.of(dataDir, logDir),
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(name -> null, name -> null));
         final Stage stage = FxToolkit.registerPrimaryStage();
         // Built here, not through BookLoomApplication.init(): that hard-codes its modules, and this test needs to
         // replace one. It therefore skips AppLifecycle's two phases, which hold nothing yet; when persistence fills

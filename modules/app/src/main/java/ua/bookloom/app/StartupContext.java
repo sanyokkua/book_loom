@@ -2,6 +2,7 @@ package ua.bookloom.app;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import ua.bookloom.app.bootstrap.ResolvedReviewMode;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -21,15 +22,17 @@ import ua.bookloom.util.paths.AppPaths;
  *
  * @param paths the resolved, created data and log directories
  * @param environment whether this is a development or a packaged production run
+ * @param reviewMode how much of a run a person confirms, chosen by the launch flag
  */
-public record StartupContext(AppPaths paths, AppEnvironment environment) {
+public record StartupContext(AppPaths paths, AppEnvironment environment, ResolvedReviewMode reviewMode) {
 
     private static final AtomicReference<StartupContext> PENDING = new AtomicReference<>();
 
-    /** Validates that both halves are present. */
+    /** Validates that every part is present. */
     public StartupContext {
         Objects.requireNonNull(paths, "paths");
         Objects.requireNonNull(environment, "environment");
+        Objects.requireNonNull(reviewMode, "reviewMode");
     }
 
     /**

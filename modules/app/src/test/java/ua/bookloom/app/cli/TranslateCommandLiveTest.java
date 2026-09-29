@@ -25,6 +25,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -128,7 +129,8 @@ class TranslateCommandLiveTest {
     private StartupContext startup() throws IOException {
         return new StartupContext(
                 AppPaths.of(tempDir.resolve("data"), Files.createDirectories(tempDir.resolve("logs"))),
-                AppEnvironment.DEV);
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(name -> null, name -> null));
     }
 
     private static URI environmentUrl(final String variable) {

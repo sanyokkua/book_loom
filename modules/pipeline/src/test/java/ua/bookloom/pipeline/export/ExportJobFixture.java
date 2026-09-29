@@ -41,6 +41,7 @@ import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
+import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 
@@ -52,8 +53,12 @@ final class ExportJobFixture {
 
     static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final Injector injector =
-            Guice.createInjector(new DocumentModule(), new LlmModule(), new PersistenceModule(), new PipelineModule());
+    private final Injector injector = Guice.createInjector(
+            new DocumentModule(),
+            new LlmModule(),
+            new PersistenceModule(),
+            new PipelineModule(),
+            new ReviewModeTestModule());
 
     DocumentPort documents() {
         return injector.getInstance(DocumentPort.class);

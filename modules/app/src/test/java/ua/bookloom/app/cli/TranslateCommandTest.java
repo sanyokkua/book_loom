@@ -40,6 +40,7 @@ import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -302,7 +303,10 @@ class TranslateCommandTest {
 
     private Injector core() throws IOException {
         final Path logDir = Files.createDirectories(tempDir.resolve("test-logs"));
-        final StartupContext startup = new StartupContext(AppPaths.of(tempDir, logDir), AppEnvironment.DEV);
+        final StartupContext startup = new StartupContext(
+                AppPaths.of(tempDir, logDir),
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(name -> null, name -> null));
         return Guice.createInjector(new CoreModules(startup));
     }
 

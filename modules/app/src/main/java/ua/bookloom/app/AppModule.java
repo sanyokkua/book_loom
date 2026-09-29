@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.BuildVersion;
 import ua.bookloom.ui.IoExecutor;
@@ -15,7 +16,7 @@ import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
 /**
- * The application-scoped bindings: the two executors and the already-resolved startup state.
+ * The application-scoped bindings: the two executors, the already-resolved startup state and the review mode.
  *
  * <p>Constructor injection only. Nothing here is a static holder or a service locator — the one static handoff in
  * this module ({@link StartupContext}) exists because the JavaFX launcher constructs the application reflectively,
@@ -47,6 +48,8 @@ public final class AppModule extends AbstractModule {
         bind(AppPaths.class).toInstance(startup.paths());
         bind(AppEnvironment.class).toInstance(startup.environment());
         bind(StartupContext.class).toInstance(startup);
+        // The mode is chosen once at launch and never re-read, so the review desk and the window see the same answer.
+        bind(ReviewMode.class).toInstance(startup.reviewMode().mode());
         // The one read of the build version: the launcher's startup line and the About dialog must report the same
         // string, and `:ui` cannot see this module's reader, so the value crosses the edge as a binding.
         bind(String.class).annotatedWith(BuildVersion.class).toInstance(AppVersion.current());

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -114,8 +115,10 @@ class TranslateCommandWireMockTest {
 
     private int run(List<String> arguments, ByteArrayOutputStream console) throws IOException {
         final Path logDir = Files.createDirectories(tempDir.resolve("test-logs"));
-        final StartupContext startup =
-                new StartupContext(AppPaths.of(tempDir.resolve("data"), logDir), AppEnvironment.DEV);
+        final StartupContext startup = new StartupContext(
+                AppPaths.of(tempDir.resolve("data"), logDir),
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(name -> null, name -> null));
         return Guice.createInjector(new CoreModules(startup))
                 .getInstance(TranslateCommand.class)
                 .run(arguments, new PrintStream(console, true, StandardCharsets.UTF_8));

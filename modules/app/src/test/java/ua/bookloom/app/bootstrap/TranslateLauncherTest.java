@@ -213,6 +213,43 @@ class TranslateLauncherTest {
         assertThat(logLines).noneMatch(line -> line.contains("He opened"));
     }
 
+    // WHEN a review mode is set for the command line, THEN the run still finishes with one console line and the
+    // log records once that the flag was ignored.
+    @Test
+    void run_reviewModeSet_logsOnceThatTheCommandLineIgnoresIt() throws IOException {
+        final Path source = writeMarkdown(tempDir.resolve("Book.md"));
+        final Path dataDir = tempDir.resolve("mode-data");
+        final ByteArrayOutputStream console = new ByteArrayOutputStream();
+
+        final int exit = TranslateLauncher.run(
+                List.of(source.toString()),
+                Map.of("BOOKLOOM_DATA_DIR", dataDir.toString(), "BOOKLOOM_REVIEW_MODE", "manual")::get,
+                emptyProperties(),
+                printStream(console));
+        final List<String> logLines = readLog(dataDir.resolve("logs/bookloom.log"));
+
+        assertThat(exit).isEqualTo(0);
+        assertThat(consoleText(console).lines()).hasSize(1);
+        assertThat(logLines)
+                .filteredOn(line -> line.contains("review mode ignored by the command line"))
+                .hasSize(1)
+                .allMatch(line -> line.contains("value=manual"));
+    }
+
+    // WHEN no review mode is set, THEN the command line says nothing about one.
+    @Test
+    void run_noReviewMode_logsNothingAboutIt() throws IOException {
+        final Path source = writeMarkdown(tempDir.resolve("Book.md"));
+        final Path dataDir = tempDir.resolve("no-mode-data");
+        final ByteArrayOutputStream console = new ByteArrayOutputStream();
+
+        final int exit = TranslateLauncher.run(
+                List.of(source.toString()), environment(dataDir), emptyProperties(), printStream(console));
+
+        assertThat(exit).isEqualTo(0);
+        assertThat(readLog(dataDir.resolve("logs/bookloom.log"))).noneMatch(line -> line.contains("review mode"));
+    }
+
     // WHEN an invalid parser branch is selected, THEN DEBUG and WARN explain the reason, and the console shows only the
     // reason and the usage.
     @ParameterizedTest(name = "{0}")

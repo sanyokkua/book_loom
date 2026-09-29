@@ -83,10 +83,12 @@ public final class Launcher {
                     LoggingLevelResolver.resolve(System::getenv, System::getProperty, environment);
             LoggingBootstrap.configure(paths.logDir(), environment.isDev(), logLevel);
 
+            final ResolvedReviewMode reviewMode = ReviewModeResolver.resolve(System::getenv, System::getProperty);
             warnIfOnNetworkFilesystem(paths);
             logStartup(paths, environment);
+            logReviewMode(reviewMode);
 
-            StartupContext.publish(new StartupContext(paths, environment));
+            StartupContext.publish(new StartupContext(paths, environment, reviewMode));
             Application.launch(BookLoomApplication.class, args);
 
             // Reached when the last window closes. The lock is released by the try-with-resources immediately
@@ -115,6 +117,21 @@ public final class Launcher {
                 environment,
                 paths.dataDir(),
                 paths.logDir());
+    }
+
+    /**
+     * Says which review mode this launch resolved, and once which configured text named no mode.
+     *
+     * <p>The rejection is data the resolver could not report (it runs where a logger may not exist yet); it is a
+     * warning of its own rather than a field on the info line, so a typo in the flag is not read past.
+     */
+    static void logReviewMode(ResolvedReviewMode resolved) {
+        final Logger log = LoggerFactory.getLogger(Launcher.class);
+        log.info("review mode resolved mode={} source={}", resolved.mode(), resolved.source());
+        final String rejected = resolved.rejectedValue();
+        if (rejected != null) {
+            log.warn("rejected review mode value={}; using {}", rejected, resolved.mode());
+        }
     }
 
     /**

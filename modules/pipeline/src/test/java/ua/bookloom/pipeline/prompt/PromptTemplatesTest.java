@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.PipelineModule;
+import ua.bookloom.pipeline.ReviewModeTestModule;
 
 /** Verifies template loading, slot checking and optional-block rendering. */
 class PromptTemplatesTest {
@@ -177,7 +178,8 @@ class PromptTemplatesTest {
 
     @Test
     void injector_pipelineModule_loadsEveryTemplate() {
-        final var injector = Guice.createInjector(new PipelineModule(), new DocumentModule(), new PersistenceModule());
+        final var injector = Guice.createInjector(
+                new PipelineModule(), new ReviewModeTestModule(), new DocumentModule(), new PersistenceModule());
 
         assertThat(injector.getInstance(PromptTemplates.class)).isNotNull();
     }

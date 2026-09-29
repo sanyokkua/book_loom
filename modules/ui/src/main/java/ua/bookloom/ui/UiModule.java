@@ -8,6 +8,11 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.OsLocaleProvider;
@@ -39,13 +44,13 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  * {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
  * {@link FileRevealer} that shows a written book in the file manager.
  * The singletons are bound explicitly rather than left to JIT so the composition root's graph lists everything the
- * window depends on. The {@link BuildVersion} value, the
- * {@link BackgroundExecutor} pool and the {@link DocumentPort}, {@link ProviderConfigs}, {@link ProviderVerifier},
- * {@link ModelCatalog}, {@link ChatModelFactory} and {@link TranslationEngine} ports are deliberately absent: the
- * composition root owns the first two, the {@code :document} and {@code :llm} modules implement the next five and
- * {@code :pipeline} the last, so this module requires all eight and a root that forgets one fails at injector-build
- * time rather than when About is first opened, a book is first imported, a run is started or the settings screen is
- * first shown.
+ * window depends on. The {@link BuildVersion} value, the {@link BackgroundExecutor} pool, the ports ({@link
+ * DocumentPort}, {@link ProviderConfigs}, {@link ProviderVerifier}, {@link ModelCatalog}, {@link ChatModelFactory},
+ * {@link TranslationEngine}, {@link ProjectService}, {@link GlossaryService}, {@link ReviewDesk} and
+ * {@link ExportService}) and the {@link ReviewMode} are deliberately absent: the composition root owns the value, the
+ * pool and the mode, and {@code :document}, {@code :llm} and {@code :pipeline} implement the ports. This module
+ * requires all of them, so a root that forgets one fails at injector-build time rather than when About is first
+ * opened, a book is first imported, a run is started or the settings screen is first shown.
  */
 public final class UiModule extends AbstractModule {
 
@@ -79,8 +84,17 @@ public final class UiModule extends AbstractModule {
         requireBinding(ProviderVerifier.class);
         requireBinding(ModelCatalog.class);
         requireBinding(ChatModelFactory.class);
-        requireBinding(TranslationEngine.class);
         requireBinding(Key.get(String.class, BuildVersion.class));
         requireBinding(Key.get(ExecutorService.class, BackgroundExecutor.class));
+        requirePipelineBindings();
+    }
+
+    private void requirePipelineBindings() {
+        requireBinding(TranslationEngine.class);
+        requireBinding(ProjectService.class);
+        requireBinding(GlossaryService.class);
+        requireBinding(ReviewDesk.class);
+        requireBinding(ExportService.class);
+        requireBinding(ReviewMode.class);
     }
 }

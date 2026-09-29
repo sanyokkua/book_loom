@@ -38,7 +38,7 @@ class TranslationEngineImplTest {
     @Test
     void injector_pipelineModule_resolvesTranslationEngineImpl() {
         final TranslationEngine engine = Guice.createInjector(
-                        new DocumentModule(), new PersistenceModule(), new PipelineModule())
+                        new DocumentModule(), new PersistenceModule(), new PipelineModule(), new ReviewModeTestModule())
                 .getInstance(TranslationEngine.class);
 
         assertThat(engine).isInstanceOf(TranslationEngineImpl.class);

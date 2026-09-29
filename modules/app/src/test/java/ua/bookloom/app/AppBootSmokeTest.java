@@ -2,6 +2,8 @@ package ua.bookloom.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
@@ -14,8 +16,15 @@ import org.junit.jupiter.api.io.TempDir;
 import org.testfx.api.FxToolkit;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.ui.IoExecutor;
+import ua.bookloom.ui.UiModule;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -49,9 +58,14 @@ class AppBootSmokeTest {
         return AppPaths.of(dataDir, logDir);
     }
 
+    private StartupContext startup() throws Exception {
+        return new StartupContext(
+                tempPaths(), AppEnvironment.DEV, ReviewModeResolver.resolve(name -> null, name -> null));
+    }
+
     @Test
     void start_realApplication_buildsTheInjectorRunsBothPhasesAndShowsTheStage() throws Exception {
-        StartupContext.publish(new StartupContext(tempPaths(), AppEnvironment.DEV));
+        StartupContext.publish(startup());
         FxToolkit.registerPrimaryStage();
 
         final BookLoomApplication app = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
@@ -79,7 +93,7 @@ class AppBootSmokeTest {
     // IF the real stage had no minimum, THEN a person could shrink the window until nothing was visible.
     @Test
     void start_realApplication_setsTheWindowMinimum() throws Exception {
-        StartupContext.publish(new StartupContext(tempPaths(), AppEnvironment.DEV));
+        StartupContext.publish(startup());
         FxToolkit.registerPrimaryStage();
 
         FxToolkit.setupApplication(BookLoomApplication.class);
@@ -93,7 +107,7 @@ class AppBootSmokeTest {
     // area with no entry marked; the first available view is Import.
     @Test
     void start_realApplication_opensOnTheFirstAvailableViewWithItsBreadcrumb() throws Exception {
-        StartupContext.publish(new StartupContext(tempPaths(), AppEnvironment.DEV));
+        StartupContext.publish(startup());
         FxToolkit.registerPrimaryStage();
 
         FxToolkit.setupApplication(BookLoomApplication.class);
@@ -109,7 +123,7 @@ class AppBootSmokeTest {
      */
     @Test
     void injector_afterBoot_suppliesTheApplicationScopedBindings() throws Exception {
-        StartupContext.publish(new StartupContext(tempPaths(), AppEnvironment.DEV));
+        StartupContext.publish(startup());
         FxToolkit.registerPrimaryStage();
 
         final BookLoomApplication app = (BookLoomApplication) FxToolkit.setupApplication(BookLoomApplication.class);
@@ -121,5 +135,19 @@ class AppBootSmokeTest {
         assertThat(app.injector().getInstance(SegmentRepository.class)).isNotNull();
         assertThat(app.injector().getInstance(TranslationEngine.class)).isNotNull();
         assertThat(app.injector().getInstance(ChatModelFactory.class)).isNotNull();
+    }
+
+    // IF a port the window needs were left unbound, THEN it would fail when a screen first asked for it; the injector
+    // built the way BookLoomApplication.init builds it must resolve every service port up front.
+    @Test
+    void injector_coreModulesAndUiModule_resolveEveryServicePort() throws Exception {
+        final Injector injector = Guice.createInjector(new CoreModules(startup()), new UiModule());
+
+        assertThat(injector.getInstance(ProjectService.class)).isNotNull();
+        assertThat(injector.getInstance(GlossaryService.class)).isNotNull();
+        assertThat(injector.getInstance(ReviewDesk.class)).isNotNull();
+        assertThat(injector.getInstance(ExportService.class)).isNotNull();
+        assertThat(injector.getInstance(TranslationEngine.class)).isNotNull();
+        assertThat(injector.getInstance(ReviewMode.class)).isEqualTo(ReviewMode.UNATTENDED);
     }
 }

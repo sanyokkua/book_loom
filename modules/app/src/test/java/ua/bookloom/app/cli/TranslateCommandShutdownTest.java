@@ -29,6 +29,7 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -66,7 +67,9 @@ class TranslateCommandShutdownTest {
     private Injector core() throws IOException {
         final Path logDir = Files.createDirectories(tempDir.resolve("test-logs"));
         final StartupContext startup = new StartupContext(
-                AppPaths.of(Files.createDirectories(tempDir.resolve("data")), logDir), AppEnvironment.DEV);
+                AppPaths.of(Files.createDirectories(tempDir.resolve("data")), logDir),
+                AppEnvironment.DEV,
+                ReviewModeResolver.resolve(name -> null, name -> null));
         return Guice.createInjector(new CoreModules(startup));
     }
 

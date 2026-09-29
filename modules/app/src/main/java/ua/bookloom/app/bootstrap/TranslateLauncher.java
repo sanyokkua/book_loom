@@ -4,6 +4,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.PrintStream;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
 import lombok.AccessLevel;
@@ -102,7 +103,9 @@ public final class TranslateLauncher {
                 level.level(),
                 level.source());
         try {
-            final Injector injector = Guice.createInjector(new CoreModules(new StartupContext(paths, environment)));
+            final ResolvedReviewMode reviewMode = resolveIgnoredReviewMode(log, getEnv, getProperty);
+            final Injector injector =
+                    Guice.createInjector(new CoreModules(new StartupContext(paths, environment, reviewMode)));
             final AppLifecycle lifecycle = new AppLifecycle();
             lifecycle.phaseOne(injector);
             lifecycle.phaseTwo(injector);
@@ -116,6 +119,21 @@ public final class TranslateLauncher {
             log.info("translate launcher exitCode={}", exit);
             return exit;
         }
+    }
+
+    /** A run here has no window to pause in, so a configured mode changes nothing; say so once instead of silently. */
+    private static ResolvedReviewMode resolveIgnoredReviewMode(
+            Logger log, Function<String, @Nullable String> getEnv, Function<String, @Nullable String> getProperty) {
+        final ResolvedReviewMode reviewMode = ReviewModeResolver.resolve(getEnv, getProperty);
+        final String rejected = reviewMode.rejectedValue();
+        if (rejected != null) {
+            log.info("review mode ignored by the command line value={}", rejected);
+        } else if (reviewMode.source() != ResolvedReviewMode.Source.DEFAULT) {
+            log.info(
+                    "review mode ignored by the command line value={}",
+                    reviewMode.mode().name().toLowerCase(Locale.ROOT));
+        }
+        return reviewMode;
     }
 
     /** Lets Ctrl+C cancel the running job or export and wait for it, then removes the hook so a caller can run again. */

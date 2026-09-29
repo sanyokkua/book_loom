@@ -1,10 +1,20 @@
 package ua.bookloom.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.google.inject.CreationException;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
@@ -17,21 +27,49 @@ import ua.bookloom.ui.state.TranslationRunner;
 /** The bindings {@link UiModule} contributes to the composition root. */
 class UiModuleTest extends ShellTestBase {
 
-    @Test
-    void navigator_requestedTwice_isTheSameInstance() {
-        // IF the navigator were not a singleton, THEN the shell and a screen's Continue would navigate different hosts.
+    @ParameterizedTest
+    @ValueSource(
+            classes = {
+                Navigator.class,
+                GuiceControllerFactory.class,
+                ErrorPresenter.class,
+                StateMirror.class,
+                TranslationRunner.class,
+                SettingsViewModel.class,
+                ImportViewModel.class,
+                TranslatingViewModel.class
+            })
+    void singletonBinding_requestedTwice_isTheSameInstance(final Class<?> type) {
+        // IF a type were rebuilt per request, THEN two screens would each hold their own copy of its state.
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
 
-        assertThat(injector.getInstance(Navigator.class)).isSameAs(injector.getInstance(Navigator.class));
+        assertThat(injector.getInstance(type)).isSameAs(injector.getInstance(type));
     }
 
-    @Test
-    void controllerFactory_requestedTwice_isTheSameInstance() {
-        // IF the factory were rebuilt per request, THEN the "one sanctioned injector consumer" would be many.
+    // IF a required port were missing from the test graph, THEN a screen test would fail on first use, not at boot.
+    @ParameterizedTest
+    @ValueSource(classes = {ProjectService.class, GlossaryService.class, ReviewDesk.class, ExportService.class})
+    void uiTestInjector_requiredBindings_resolveTheFakes(final Class<?> port) {
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
 
-        assertThat(injector.getInstance(GuiceControllerFactory.class))
-                .isSameAs(injector.getInstance(GuiceControllerFactory.class));
+        assertThat(injector.getInstance(port)).isNotNull().isSameAs(injector.getInstance(port));
+    }
+
+    // WHEN a test builds the graph, THEN the review mode is the Unattended default no run pauses for.
+    @Test
+    void uiTestInjector_reviewMode_isUnattended() {
+        assertThat(UiTestInjector.create(Locale.ENGLISH).getInstance(ReviewMode.class))
+                .isEqualTo(ReviewMode.UNATTENDED);
+    }
+
+    // IF the composition root forgot a port, THEN the injector fails to build and names it, instead of the window
+    // failing when a screen first asks for it.
+    @ParameterizedTest
+    @ValueSource(strings = {"ProjectService", "GlossaryService", "ReviewDesk", "ExportService", "ReviewMode"})
+    void uiModule_portNotBound_failsWhenTheInjectorIsBuilt(final String port) {
+        assertThatThrownBy(() -> Guice.createInjector(new UiModule()))
+                .isInstanceOf(CreationException.class)
+                .hasMessageContaining(port);
     }
 
     @Test
@@ -49,60 +87,6 @@ class UiModuleTest extends ShellTestBase {
         assertThat(injector.getInstance(Toasts.class))
                 .isSameAs(injector.getInstance(Toasts.class))
                 .isSameAs(injector.getInstance(ToastStack.class));
-    }
-
-    @Test
-    void errorPresenter_requestedTwice_isTheSameInstance() {
-        // IF the presenter were rebuilt per request, THEN two screens would each hold their own dialog logic.
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
-
-        assertThat(injector.getInstance(ErrorPresenter.class)).isSameAs(injector.getInstance(ErrorPresenter.class));
-    }
-
-    @Test
-    void stateMirror_requestedTwice_isTheSameInstance() {
-        // IF the mirror were rebuilt per request, THEN the runner would publish into a mirror no screen observes.
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
-
-        assertThat(injector.getInstance(StateMirror.class)).isSameAs(injector.getInstance(StateMirror.class));
-    }
-
-    @Test
-    void translationRunner_requestedTwice_isTheSameInstance() {
-        // IF the runner were rebuilt per request, THEN a second screen could start a run beside the first one.
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
-
-        assertThat(injector.getInstance(TranslationRunner.class))
-                .isSameAs(injector.getInstance(TranslationRunner.class));
-    }
-
-    @Test
-    void settingsViewModel_requestedTwice_isTheSameInstance() {
-        // IF the view model were rebuilt per request, THEN the chosen provider would be lost on every visit to
-        // settings.
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
-
-        assertThat(injector.getInstance(SettingsViewModel.class))
-                .isSameAs(injector.getInstance(SettingsViewModel.class));
-    }
-
-    @Test
-    void importViewModel_requestedTwice_isTheSameInstance() {
-        // IF the view model were rebuilt per request, THEN the open book would be lost every time the import screen
-        // is rebuilt, and the screens after it would read nothing.
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
-
-        assertThat(injector.getInstance(ImportViewModel.class)).isSameAs(injector.getInstance(ImportViewModel.class));
-    }
-
-    @Test
-    void translatingViewModel_requestedTwice_isTheSameInstance() {
-        // IF the view model were rebuilt per request, THEN a second screen visit would register a second completion
-        // listener on the mirror and raise every toast twice.
-        final Injector injector = UiTestInjector.create(Locale.ENGLISH);
-
-        assertThat(injector.getInstance(TranslatingViewModel.class))
-                .isSameAs(injector.getInstance(TranslatingViewModel.class));
     }
 
     @Test
