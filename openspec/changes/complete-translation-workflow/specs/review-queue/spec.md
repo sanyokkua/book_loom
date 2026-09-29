@@ -150,7 +150,9 @@ The application SHALL start every segment as PENDING and move it only through th
   segment reviewed, or by a passing retry, which replaces the machine target; ACCEPTED → ACCEPTED unchanged, by a
   failing retry, which keeps the previous target and reports the new findings; ACCEPTED → REVISED, by a saved edit;
 - REVISED → ACCEPTED, by revert; REVISED → REVISED, by another saved edit or an accepted backward-revision proposal;
-- ACCEPTED or FLAGGED → REVISED, by backward revision.
+- ACCEPTED → REVISED, by backward revision; FLAGGED → REVISED, by backward revision only when every finding the segment
+  carries is one the revision fixes (a `glossary` finding when the revision swaps the name it names); a FLAGGED segment
+  with any other finding takes the revised target and stays FLAGGED, keeping its findings.
 
 No segment SHALL return to PENDING, a retry SHALL never lower a segment's status, and a FLAGGED segment SHALL stay
 FLAGGED for the rest of its run unless the person acts on it. An action on a segment whose status it does not start
@@ -418,6 +420,20 @@ edited again like any other edit.
 - **THEN** the panel shows the proposal and the segment keeps `Вона пішла.`
 - **AND** when the person accepts the proposal the segment reads `Він пішов.`, stays REVISED, and opens in the editor as
   `Він пішов.`
+
+#### Scenario: A saved edit or a revert withdraws the proposal built on the old wording
+
+- **WHEN** `ch2 · p07` holds the proposal `Він пішов.` built on the person's `Вона пішла.`, and the person saves
+  `Вона вийшла.`
+- **THEN** the panel shows no proposal for `ch2 · p07`
+- **AND** the deferral behind the proposal stays open, so the next pass builds a new proposal from `Вона вийшла.`
+- **AND** pressing Revert on a REVISED segment withdraws its waiting proposal the same way
+
+#### Scenario: A flagged segment with a problem the name swap cannot fix stays flagged
+
+- **WHEN** `ch5 · p12` is FLAGGED with an `omission` finding and backward revision swaps `Хейл` for `Гейл` in it
+- **THEN** the segment holds the swapped name, stays FLAGGED and stays in the review list with its `omission` finding
+- **AND** a FLAGGED segment whose only finding is a `glossary` finding about that name becomes REVISED
 
 ### Requirement: Keep review decisions for the session only
 

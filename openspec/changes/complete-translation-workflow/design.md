@@ -630,6 +630,13 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
 - **Sweep limit:** the deterministic sweep replaces a rendering only when the glossary held a previous target for that
   term — recorded as the TERM deferral's `replacedRendering`. A rendering the model chose for a term that had no target
   is not known to the sweep; only the judge or a person catches it.
+- **Known limit — a term renamed twice:** a proposal waiting on a person-edited segment is kept and built on by later
+  passes, so if the same locked term is renamed again before the person applies it (`Хейл`→`Гейл`→`Гаїл`), the proposal
+  keeps `Гейл`: the second rename records no deferral, because the person's text never held `Гейл`. Owner's decision:
+  accepted as it is; the person ignores the proposal or edits by hand.
+- **A flagged segment keeps its flag:** backward revision replaces the target of a FLAGGED segment but moves it to
+  REVISED only when every finding it carries is one the revision fixes (a `glossary` finding about the swapped name);
+  otherwise it stays FLAGGED with its findings, so a name swap never hides a real problem.
 
 ### D11 — Book inspection and profile (ADR-0037, ADR-0039)
 
