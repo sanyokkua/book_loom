@@ -205,6 +205,17 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
     }
 
     @Test
+    void add_sameSegmentAndReasonDifferentWaitingOn_keepsBothOpenDeferrals() {
+        final DeferralRepository repository = deferralRepository();
+        repository.add(new Deferral("d1", "p1", "ch1:4", DeferralReason.TERM, "Hale", "Хейл", null, null));
+
+        repository.add(new Deferral("d2", "p1", "ch1:4", DeferralReason.TERM, "Milton", "Мілтон", null, null));
+        repository.add(new Deferral("d3", "p1", "ch1:4", DeferralReason.TERM, "Hale", "Хейл", null, null));
+
+        assertThat(repository.open("p1").data()).extracting(Deferral::id).containsExactlyInAnyOrder("d1", "d2");
+    }
+
+    @Test
     void resolve_removesTheDeferralFromOpen() {
         final DeferralRepository repository = deferralRepository();
         repository.add(new Deferral("d1", "p1", "ch1:4", DeferralReason.GENDER_UNKNOWN, null, null, null, null));

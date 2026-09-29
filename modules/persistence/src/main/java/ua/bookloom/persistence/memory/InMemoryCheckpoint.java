@@ -93,7 +93,8 @@ public final class InMemoryCheckpoint implements CheckpointPort {
         }
         final Map<String, Deferral> deferrals = store.deferrals(commit.projectId());
         for (final Deferral deferral : commit.deferrals()) {
-            deferrals.putIfAbsent(InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason()), deferral);
+            deferrals.putIfAbsent(
+                    InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason(), deferral.waitingOn()), deferral);
         }
     }
 

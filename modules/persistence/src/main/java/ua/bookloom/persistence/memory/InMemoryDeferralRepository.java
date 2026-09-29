@@ -13,8 +13,8 @@ import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.project.Deferral;
 
 /**
- * Stores a project's open deferrals over the shared {@link InMemoryStore}, idempotent on project, segment and
- * reason.
+ * Stores a project's open deferrals over the shared {@link InMemoryStore}, idempotent on project, segment, reason
+ * and waiting-on.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -27,8 +27,8 @@ public final class InMemoryDeferralRepository implements DeferralRepository {
         Objects.requireNonNull(deferral, "deferral");
         try {
             final Map<String, Deferral> table = store.deferrals(deferral.projectId());
-            final Deferral existing =
-                    table.putIfAbsent(InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason()), deferral);
+            final Deferral existing = table.putIfAbsent(
+                    InMemoryStore.deferralKey(deferral.segmentId(), deferral.reason(), deferral.waitingOn()), deferral);
             final Deferral result = existing != null ? existing : deferral;
             log.debug(
                     "Deferral add projectId={} segmentId={} reason={} added={}",

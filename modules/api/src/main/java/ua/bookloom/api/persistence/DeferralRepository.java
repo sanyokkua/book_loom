@@ -11,8 +11,8 @@ import ua.bookloom.api.project.Deferral;
 public interface DeferralRepository {
 
     /**
-     * Adds a deferral, idempotent on project, segment and reason — adding one already open for that combination is
-     * a no-op that returns the existing deferral.
+     * Adds a deferral, idempotent on project, segment, reason and waiting-on — adding one already open for that
+     * combination is a no-op that returns the existing deferral.
      *
      * @param deferral the non-null deferral to add
      * @return the added or already-open deferral

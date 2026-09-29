@@ -66,6 +66,27 @@ public abstract class CheckpointContractTest extends GlossaryTmSummaryDeferralRu
     }
 
     @Test
+    void commit_twoTermDeferralsOnOneSegment_keepsBothOpenAndRepeatingLeavesTwo() {
+        segmentRepository().saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));
+        final ChunkCommit commit = new ChunkCommit(
+                "p1",
+                List.of(accepted("ch1:0", "ch1")),
+                List.of(),
+                List.of(),
+                List.of(
+                        new Deferral("d1", "p1", "ch1:0", DeferralReason.TERM, "Hale", "Хейл", null, null),
+                        new Deferral("d2", "p1", "ch1:0", DeferralReason.TERM, "Milton", "Мілтон", null, null)));
+
+        checkpointPort().commit(commit);
+        assertThat(deferralRepository().open("p1").data())
+                .extracting(Deferral::id)
+                .containsExactlyInAnyOrder("d1", "d2");
+
+        checkpointPort().commit(commit);
+        assertThat(deferralRepository().open("p1").data()).hasSize(2);
+    }
+
+    @Test
     void commit_unknownSegmentId_answersValidationAndAppliesNothing() {
         final SegmentRepository segments = segmentRepository();
         segments.saveAll("p1", List.of(pending("p1", "ch1:0", "ch1", 0, SegmentKind.PARAGRAPH)));

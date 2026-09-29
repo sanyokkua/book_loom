@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -103,11 +104,11 @@ final class InMemoryStore {
     }
 
     /**
-     * The deferral key one project's segment id and reason are stored under, the pair a deferral add is idempotent
-     * on.
+     * The deferral key one project's segment id, reason and waiting-on are stored under, the triple a deferral add is
+     * idempotent on. A missing waiting-on is empty, so two changed terms in one segment stay two deferrals.
      */
-    static String deferralKey(final String segmentId, final DeferralReason reason) {
-        return segmentId + '\u0000' + reason.name();
+    static String deferralKey(final String segmentId, final DeferralReason reason, @Nullable final String waitingOn) {
+        return segmentId + '\u0000' + reason.name() + '\u0000' + (waitingOn == null ? "" : waitingOn);
     }
 
     /**

@@ -3,8 +3,8 @@ package ua.bookloom.pipeline.judge;
 import java.util.Objects;
 
 /**
- * A fact the judge says a segment needs, revealed later in the book — recorded here only; task 9.7 turns it into a
- * stored deferral.
+ * A fact the judge says a segment needs, revealed later in the book — a judge deferral is recorded and shown, never
+ * resolved.
  *
  * @param segmentId the segment the deferral is against
  * @param reason the judge's short explanation of what is missing
