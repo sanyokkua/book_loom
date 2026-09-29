@@ -8,8 +8,6 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.ResponseFormat;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 
 /** Every generation request carries its temperature, format, reasoning off, context size and expected output. */
 class ChatRequestsTest {
@@ -19,9 +17,8 @@ class ChatRequestsTest {
 
     @Test
     void build_draft_carriesContextWindowOutputAllowanceAndDraftSettings() {
-        final int allowance = TokenEstimator.outputAllowance(DisplayText.of(SOURCE), "en", "uk");
-
-        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, allowance, false);
+        final ChatRequest request =
+                ChatRequests.build(PromptName.DRAFT, MESSAGES, OutputLimit.forSource(SOURCE, "en", "uk"), false);
 
         assertThat(request.contextWindow()).isEqualTo(8192);
         assertThat(request.expectedOutputTokens()).isEqualTo(16);
@@ -32,22 +29,35 @@ class ChatRequestsTest {
 
     @Test
     void build_lowerTemperature_carriesTheLowerOne() {
-        assertThat(ChatRequests.build(PromptName.DRAFT, MESSAGES, 16, true).temperature())
+        assertThat(ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(16, 64), true)
+                        .temperature())
                 .isEqualTo(0.1);
     }
 
     @Test
     void build_structuralRepairOfThatDraft_statesTheDraftsAllowance() {
-        final int allowance = TokenEstimator.outputAllowance(DisplayText.of(SOURCE), "en", "uk");
-
-        assertThat(ChatRequests.build(PromptName.STRUCTURAL_REPAIR, MESSAGES, allowance, false)
+        assertThat(ChatRequests.build(
+                                PromptName.STRUCTURAL_REPAIR,
+                                MESSAGES,
+                                OutputLimit.forSource(SOURCE, "en", "uk"),
+                                false)
                         .expectedOutputTokens())
                 .isEqualTo(16);
     }
 
     @Test
-    void build_noExpectedOutput_carriesNone() {
-        assertThat(ChatRequests.build(PromptName.DRAFT, MESSAGES, null, false).expectedOutputTokens())
-                .isNull();
+    void build_limit_carriesExpectedAndCap() {
+        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, new OutputLimit(414, 661), false);
+
+        assertThat(request.expectedOutputTokens()).isEqualTo(414);
+        assertThat(request.maxOutputTokens()).isEqualTo(661);
+    }
+
+    @Test
+    void build_noLimit_carriesNeither() {
+        final ChatRequest request = ChatRequests.build(PromptName.DRAFT, MESSAGES, null, false);
+
+        assertThat(request.expectedOutputTokens()).isNull();
+        assertThat(request.maxOutputTokens()).isNull();
     }
 }

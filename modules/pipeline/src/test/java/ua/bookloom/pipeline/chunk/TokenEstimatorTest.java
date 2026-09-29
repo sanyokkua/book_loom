@@ -26,4 +26,10 @@ class TokenEstimatorTest {
     void outputAllowance_longLatinSource_isTwoThousandEightHundredEighty() {
         assertThat(TokenEstimator.outputAllowance("a".repeat(4173), "en", "uk")).isEqualTo(2880);
     }
+
+    @ParameterizedTest
+    @CsvSource({"16,0,64", "41,2,90", "100,0,166", "414,4,661", "2880,0,4336"})
+    void outputCap_allowanceAndTokens_matchesTheFormula(final int allowance, final int tokenCount, final int expected) {
+        assertThat(TokenEstimator.outputCap(allowance, tokenCount)).isEqualTo(expected);
+    }
 }

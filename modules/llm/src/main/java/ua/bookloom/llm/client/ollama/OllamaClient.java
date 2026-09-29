@@ -96,13 +96,14 @@ public final class OllamaClient implements ProviderClient {
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(request, "request");
         log.debug(
-                "Ollama chat started provider={} host={} model={} messageCount={} temperature={} contextWindow={} responseFormatPresent={}",
+                "Ollama chat started provider={} host={} model={} messageCount={} temperature={} contextWindow={} maxOutputTokens={} responseFormatPresent={}",
                 config.id(),
                 config.baseUrl().getHost(),
                 modelId,
                 request.messages().size(),
                 request.temperature(),
                 request.contextWindow(),
+                request.maxOutputTokens() == null ? "none" : request.maxOutputTokens(),
                 request.responseFormat() != null);
         try {
             return chatWithParsedFormat(modelId, request);
@@ -174,9 +175,8 @@ public final class OllamaClient implements ProviderClient {
     private Result<String> serializeRequest(String modelId, ChatRequest request, @Nullable JsonNode schema) {
         final List<OllamaChatRequest.Message> messages =
                 request.messages().stream().map(this::toOllamaMessage).toList();
-        final OllamaChatRequest.Options options = request.temperature() == null && request.contextWindow() == null
-                ? null
-                : new OllamaChatRequest.Options(request.temperature(), request.contextWindow());
+        final OllamaChatRequest.Options options = new OllamaChatRequest.Options(
+                request.temperature(), request.contextWindow(), request.maxOutputTokens());
         try {
             final OllamaChatRequest payload =
                     new OllamaChatRequest(modelId, messages, false, options, schema, request.reasoningEnabled());

@@ -50,10 +50,13 @@ class ImproveWireMockTest {
     private static void assertBody(final ProviderKind kind, final String body) {
         switch (kind) {
             case OLLAMA ->
-                assertThat(body).contains("\"options\":{\"temperature\":0.35,\"num_ctx\":8192}", "\"think\":false");
+                assertThat(body)
+                        .contains(
+                                "\"options\":{\"temperature\":0.35,\"num_ctx\":8192,\"num_predict\":64}",
+                                "\"think\":false");
             case OPENAI_COMPATIBLE ->
                 assertThat(body)
-                        .contains("\"temperature\":0.35")
+                        .contains("\"temperature\":0.35", "\"max_tokens\":64")
                         .doesNotContain("\"num_ctx\"", "\"think\"", "\"reasoning\"");
         }
     }

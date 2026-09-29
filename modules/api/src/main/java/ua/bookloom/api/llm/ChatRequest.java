@@ -15,6 +15,8 @@ import org.jspecify.annotations.Nullable;
  * @param contextWindow the provider context-window size to request, or null when the provider default applies
  * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null when not
  *     known
+ * @param maxOutputTokens the hard cap on the completion length, or null when the provider should not be told one; a
+ *     positive count when set
  */
 public record ChatRequest(
         List<ChatMessage> messages,
@@ -22,7 +24,8 @@ public record ChatRequest(
         @Nullable ResponseFormat responseFormat,
         @Nullable Boolean reasoningEnabled,
         @Nullable Integer contextWindow,
-        @Nullable Integer expectedOutputTokens) {
+        @Nullable Integer expectedOutputTokens,
+        @Nullable Integer maxOutputTokens) {
 
     /**
      * Preserves the original message-only construction form, with no per-call settings.
@@ -30,7 +33,7 @@ public record ChatRequest(
      * @param messages the conversation in wire order; never null and defensively copied
      */
     public ChatRequest(List<ChatMessage> messages) {
-        this(messages, null, null, null, null, null);
+        this(messages, null, null, null, null, null, null);
     }
 
     /**
@@ -42,7 +45,7 @@ public record ChatRequest(
      */
     public ChatRequest(
             List<ChatMessage> messages, @Nullable Double temperature, @Nullable ResponseFormat responseFormat) {
-        this(messages, temperature, responseFormat, null, null, null);
+        this(messages, temperature, responseFormat, null, null, null, null);
     }
 
     /**
@@ -59,12 +62,34 @@ public record ChatRequest(
             @Nullable Double temperature,
             @Nullable ResponseFormat responseFormat,
             @Nullable Boolean reasoningEnabled) {
-        this(messages, temperature, responseFormat, reasoningEnabled, null, null);
+        this(messages, temperature, responseFormat, reasoningEnabled, null, null, null);
+    }
+
+    /**
+     * Preserves the six-argument construction form, with no output cap.
+     *
+     * @param messages the conversation in wire order; never null and defensively copied
+     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
+     * @param responseFormat the requested structured response format, or null when no format is requested
+     * @param reasoningEnabled null when the provider should use its default, false when supported reasoning output
+     *     should be disabled
+     * @param contextWindow the provider context-window size to request, or null when the provider default applies
+     * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null when not
+     *     known
+     */
+    public ChatRequest(
+            List<ChatMessage> messages,
+            @Nullable Double temperature,
+            @Nullable ResponseFormat responseFormat,
+            @Nullable Boolean reasoningEnabled,
+            @Nullable Integer contextWindow,
+            @Nullable Integer expectedOutputTokens) {
+        this(messages, temperature, responseFormat, reasoningEnabled, contextWindow, expectedOutputTokens, null);
     }
 
     /**
      * Keeps a request independent from the mutable collection supplied by its caller, and rejects a non-positive
-     * context window or expected-output-token count.
+     * context window, expected-output-token count or output cap.
      */
     public ChatRequest {
         Objects.requireNonNull(messages, "messages");
@@ -75,6 +100,9 @@ public record ChatRequest(
         if (expectedOutputTokens != null && expectedOutputTokens <= 0) {
             throw new IllegalArgumentException("expectedOutputTokens must be positive: " + expectedOutputTokens);
         }
+        if (maxOutputTokens != null && maxOutputTokens <= 0) {
+            throw new IllegalArgumentException("maxOutputTokens must be positive: " + maxOutputTokens);
+        }
     }
 
     /**
@@ -83,7 +111,8 @@ public record ChatRequest(
      * @return a copy with {@code responseFormat} null and every other field unchanged
      */
     public ChatRequest withoutResponseFormat() {
-        return new ChatRequest(messages, temperature, null, reasoningEnabled, contextWindow, expectedOutputTokens);
+        return new ChatRequest(
+                messages, temperature, null, reasoningEnabled, contextWindow, expectedOutputTokens, maxOutputTokens);
     }
 
     /**
@@ -92,6 +121,7 @@ public record ChatRequest(
      * @return a copy with {@code reasoningEnabled} null and every other field unchanged
      */
     public ChatRequest withoutReasoning() {
-        return new ChatRequest(messages, temperature, responseFormat, null, contextWindow, expectedOutputTokens);
+        return new ChatRequest(
+                messages, temperature, responseFormat, null, contextWindow, expectedOutputTokens, maxOutputTokens);
     }
 }

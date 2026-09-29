@@ -139,8 +139,8 @@ public final class ReflectImprove {
             final List<String> issues,
             final ModelCalls calls) {
         final List<ChatMessage> messages = improveMessages(frame, maskedSource, maskedTarget, issues);
-        final ChatRequest request = ChatRequests.build(
-                PromptName.IMPROVE, messages, SelfHealCalls.outputAllowance(maskedSource, frame), false);
+        final ChatRequest request =
+                ChatRequests.build(PromptName.IMPROVE, messages, SelfHealCalls.outputLimit(maskedSource, frame), false);
         SelfHealCalls.logTraceMessages(log, IMPROVE_LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.IMPROVE, segment.id(), request);
         SelfHealCalls.logTraceReply(log, IMPROVE_LABEL, reply);

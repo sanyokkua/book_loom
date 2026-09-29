@@ -14,6 +14,11 @@ public final class TokenEstimator {
 
     private static final double SAFETY_FACTOR = 1.15;
     private static final double ROUNDING_TOLERANCE = 1e-9;
+    private static final int CAP_FLOOR = 64;
+    private static final int CAP_ALLOWANCE_NUMERATOR = 3;
+    private static final int CAP_ALLOWANCE_DENOMINATOR = 2;
+    private static final int CAP_FIXED_HEADROOM = 16;
+    private static final int CAP_TOKENS_PER_PLACEHOLDER = 6;
 
     /**
      * Estimates the tokens of a text.
@@ -39,6 +44,19 @@ public final class TokenEstimator {
         final double upper = LengthBand.forPair(sourceTag, targetTag).upper();
         final int chars = sourceDisplayText.codePointCount(0, sourceDisplayText.length());
         return ceil(chars * upper / charsPerToken(targetTag) * SAFETY_FACTOR);
+    }
+
+    /**
+     * The hard cap on a reply that is expected to take {@code allowance} tokens: half as much again, a fixed
+     * headroom and room for each placeholder token, never below a floor that keeps a short reply from being cut.
+     *
+     * @param allowance the expected output tokens from {@link #outputAllowance}; not negative
+     * @param placeholderTokens how many {@code ⟦gN⟧} tokens the source holds; not negative
+     * @return the cap in tokens; at least 64
+     */
+    public static int outputCap(final int allowance, final int placeholderTokens) {
+        final int scaled = Math.ceilDiv(allowance * CAP_ALLOWANCE_NUMERATOR, CAP_ALLOWANCE_DENOMINATOR);
+        return Math.max(CAP_FLOOR, scaled + CAP_FIXED_HEADROOM + CAP_TOKENS_PER_PLACEHOLDER * placeholderTokens);
     }
 
     private static int ceil(final double value) {

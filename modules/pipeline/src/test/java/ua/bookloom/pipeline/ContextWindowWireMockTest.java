@@ -14,7 +14,10 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.document.DocumentModule;
 
-/** The context size reaches an Ollama server as num_ctx and never reaches an OpenAI-compatible one. */
+/**
+ * The context size reaches an Ollama server as num_ctx and never reaches an OpenAI-compatible one; the output cap
+ * reaches each in its own dialect.
+ */
 class ContextWindowWireMockTest {
 
     @TempDir
@@ -29,6 +32,22 @@ class ContextWindowWireMockTest {
     void translate_draftToOpenAiCompatible_sendsNoContextSize() {
         assertThat(draftBody(ProviderKind.OPENAI_COMPATIBLE))
                 .doesNotContain("num_ctx", "n_ctx", "context_length", "\"options\"");
+    }
+
+    // A two-placeholder short source hits the 64-token floor of the cap.
+    @Test
+    void translate_draftToOllama_postsNumPredictInsideOptions() {
+        assertThat(draftBody(ProviderKind.OLLAMA))
+                .contains("\"options\":{")
+                .contains("\"num_predict\":64")
+                .doesNotContain("max_tokens");
+    }
+
+    @Test
+    void translate_draftToOpenAiCompatible_postsMaxTokens() {
+        assertThat(draftBody(ProviderKind.OPENAI_COMPATIBLE))
+                .contains("\"max_tokens\":64")
+                .doesNotContain("num_predict", "\"options\"");
     }
 
     private String draftBody(final ProviderKind kind) {

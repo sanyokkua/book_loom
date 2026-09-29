@@ -20,14 +20,14 @@ public final class ChatRequests {
      *
      * @param name the call's template name; never null
      * @param messages the conversation; never null
-     * @param expectedOutputTokens the expected completion length that scales the timeout, or null when unknown
+     * @param limit the expected completion length and its cap, or null when the call states no expected output
      * @param lowerTemperature whether a retry asks for the name's lower temperature
-     * @return the request, with reasoning off and the effective context size
+     * @return the request, with reasoning off, the effective context size and the output limit
      */
     public static ChatRequest build(
             final PromptName name,
             final List<ChatMessage> messages,
-            @Nullable final Integer expectedOutputTokens,
+            @Nullable final OutputLimit limit,
             final boolean lowerTemperature) {
         Objects.requireNonNull(name, "name");
         return new ChatRequest(
@@ -36,6 +36,7 @@ public final class ChatRequests {
                 new ResponseFormat(name.responseFormatName(), name.responseSchema()),
                 false,
                 TokenBudget.EFFECTIVE_CONTEXT,
-                expectedOutputTokens);
+                limit == null ? null : limit.expectedTokens(),
+                limit == null ? null : limit.capTokens());
     }
 }

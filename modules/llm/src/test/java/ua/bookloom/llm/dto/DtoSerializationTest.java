@@ -13,6 +13,8 @@ import com.google.inject.Injector;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.llm.LlmModule;
 
 /** Serialization contracts for the provider-wire DTOs and their shared mapper. */
@@ -26,7 +28,7 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(null, null),
+                new OllamaChatRequest.Options(null, null, null),
                 null,
                 null));
         final JsonNode bodyWithoutOptions = mapper.valueToTree(new OllamaChatRequest(
@@ -45,7 +47,7 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(0.2, null),
+                new OllamaChatRequest.Options(0.2, null, null),
                 null,
                 null));
 
@@ -59,11 +61,44 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(null, 8192),
+                new OllamaChatRequest.Options(null, 8192, null),
                 null,
                 null));
 
         assertThat(body.path("options").toString()).isEqualTo("{\"num_ctx\":8192}");
+    }
+
+    // The output cap serializes as num_predict beside num_ctx, and alone it still keeps the options object.
+    @ParameterizedTest
+    @CsvSource({"8192,80,'{\"num_ctx\":8192,\"num_predict\":80}'", ",80,'{\"num_predict\":80}'"})
+    void ollamaChatRequest_withOutputCap_serializesNumPredict(
+            final Integer numCtx, final Integer numPredict, final String expectedOptions) {
+        final JsonNode body = mapper().valueToTree(new OllamaChatRequest(
+                "gemma4:e4b-mlx",
+                List.of(new OllamaChatRequest.Message("user", "hello")),
+                false,
+                new OllamaChatRequest.Options(null, numCtx, numPredict),
+                null,
+                null));
+
+        assertThat(body.path("options").toString()).isEqualTo(expectedOptions);
+    }
+
+    // The OpenAI-compatible body carries max_tokens only when a cap is set.
+    @ParameterizedTest
+    @CsvSource({"80,true", ",false"})
+    void openAiChatRequest_outputCap_serializesMaxTokensOnlyWhenSet(
+            final Integer maxTokens, final boolean expectedPresent) {
+        final JsonNode body = mapper().valueToTree(new OpenAiChatRequest(
+                "google/gemma-4-e4b",
+                List.of(new OpenAiChatRequest.Message("user", "hello")),
+                false,
+                null,
+                null,
+                maxTokens));
+
+        assertThat(body.has("max_tokens")).isEqualTo(expectedPresent);
+        assertThat(body.path("max_tokens").asInt(-1)).isEqualTo(expectedPresent ? 80 : -1);
     }
 
     // The native thinking control is top-level and remains absent unless a caller explicitly requests it.

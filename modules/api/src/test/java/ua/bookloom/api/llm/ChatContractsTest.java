@@ -37,6 +37,7 @@ class ChatContractsTest {
         assertThat(request.reasoningEnabled()).isNull();
         assertThat(request.contextWindow()).isNull();
         assertThat(request.expectedOutputTokens()).isNull();
+        assertThat(request.maxOutputTokens()).isNull();
     }
 
     @Test
@@ -81,6 +82,38 @@ class ChatContractsTest {
 
         assertThatThrownBy(() -> new ChatRequest(messages, null, null, null, null, expectedOutputTokens))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0", "-1"})
+    void request_nonPositiveMaxOutputTokens_isRejected(int maxOutputTokens) {
+        final List<ChatMessage> messages = List.of(new ChatMessage(ChatRole.USER, "hello"));
+
+        assertThatThrownBy(() -> new ChatRequest(messages, null, null, null, null, null, maxOutputTokens))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void request_sixArgumentConstructor_leavesTheCapUnset() {
+        final ChatRequest request =
+                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), 0.2, null, false, 8192, 400);
+
+        assertThat(request.maxOutputTokens()).isNull();
+    }
+
+    @Test
+    void withoutResponseFormatAndWithoutReasoning_keepTheOutputCap() {
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "hello")),
+                0.2,
+                new ResponseFormat("draft", "{\"type\":\"object\"}"),
+                false,
+                8192,
+                400,
+                661);
+
+        assertThat(request.withoutResponseFormat().maxOutputTokens()).isEqualTo(661);
+        assertThat(request.withoutReasoning().maxOutputTokens()).isEqualTo(661);
     }
 
     @Test

@@ -90,6 +90,25 @@ class PseudoChatModelTest {
         assertThat(response.content()).isEqualTo("{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}");
     }
 
+    // The cap is a provider-side control the pseudo model has no use for; the reply is the same with it set.
+    @Test
+    void chat_requestWithOutputCap_repliesAsWithoutOne() {
+        final PseudoChatModel model = new PseudoChatModel(mapper());
+        final ChatRequest request = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "<Text>\nhello\n</Text>")),
+                null,
+                new ResponseFormat("draft", SCHEMA),
+                null,
+                null,
+                null,
+                661);
+
+        final Result<ChatResponse> result = model.chat(request);
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(Objects.requireNonNull(result.data()).content()).isEqualTo("{\"target\":\"HELLO\"}");
+    }
+
     private static ChatResponse send(String message, String formatName) {
         final PseudoChatModel model = new PseudoChatModel(mapper());
         final ChatRequest request = new ChatRequest(

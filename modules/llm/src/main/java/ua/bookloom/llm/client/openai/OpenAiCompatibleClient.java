@@ -1,11 +1,9 @@
 package ua.bookloom.llm.client.openai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
@@ -14,17 +12,14 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.SafeDetails;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.api.llm.TokenUsage;
-import ua.bookloom.llm.dto.OpenAiChatRequest;
-import ua.bookloom.llm.dto.OpenAiChatRequest.ResponseFormatDto;
+import ua.bookloom.llm.client.openai.OpenAiRequestMapper.ParsedFormat;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
 import ua.bookloom.llm.dto.OpenAiModelsResponse;
 import ua.bookloom.llm.dto.OpenAiModelsResponse.Model;
@@ -44,11 +39,11 @@ import ua.bookloom.llm.response.ReplySanitizer;
 public final class OpenAiCompatibleClient implements ProviderClient {
     private static final String MODELS_PATH = "/models";
     private static final String CHAT_PATH = "/chat/completions";
-    private static final String FORMAT_TYPE = "json_schema";
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
     private final LongSupplier nanoTime;
+    private final OpenAiRequestMapper requestMapper;
 
     /** Binds one client to an endpoint while sharing the application's HTTP, JSON, and time infrastructure. */
     public OpenAiCompatibleClient(
@@ -57,6 +52,8 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+        this.requestMapper = new OpenAiRequestMapper(
+                config, mapper, (modelId, failure) -> unexpectedError("serialize chat request", modelId, failure));
     }
 
     @Override
@@ -100,12 +97,13 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         Objects.requireNonNull(modelId, "modelId");
         Objects.requireNonNull(request, "request");
         log.debug(
-                "OpenAI-compatible chat started provider={} host={} model={} messageCount={} temperature={} responseFormatPresent={}",
+                "OpenAI-compatible chat started provider={} host={} model={} messageCount={} temperature={} maxOutputTokens={} responseFormatPresent={}",
                 config.id(),
                 config.baseUrl().getHost(),
                 modelId,
                 request.messages().size(),
                 request.temperature(),
+                request.maxOutputTokens() == null ? "none" : request.maxOutputTokens(),
                 request.responseFormat() != null);
         try {
             return chatWithParsedFormat(modelId, request);
@@ -120,12 +118,12 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private ProviderCallResult<ChatResponse> chatWithParsedFormat(String modelId, ChatRequest request) {
-        final Result<ParsedFormat> parsedFormat = parseFormat(request.responseFormat(), modelId);
+        final Result<ParsedFormat> parsedFormat = requestMapper.parseFormat(request.responseFormat(), modelId);
         if (parsedFormat.isErr()) {
             return ProviderCallResult.withoutRetryAfter(
                     Result.err(Objects.requireNonNull(parsedFormat.error(), "error")));
         }
-        final Result<String> requestBody = serializeRequest(
+        final Result<String> requestBody = requestMapper.serializeRequest(
                 modelId,
                 request,
                 Objects.requireNonNull(parsedFormat.data(), "parsed format").format());
@@ -146,53 +144,6 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         return new ProviderCallResult<>(
                 readChatResponse(modelId, Objects.requireNonNull(response.data(), "reply"), elapsed),
                 call.retryAfter());
-    }
-
-    private Result<ParsedFormat> parseFormat(@Nullable ResponseFormat format, String modelId) {
-        if (format == null) {
-            return Result.ok(new ParsedFormat(null));
-        }
-        try {
-            final JsonNode schema = mapper.readTree(format.jsonSchema());
-            if (schema == null || !schema.isObject()) {
-                return invalidFormat(modelId, null);
-            }
-            return Result.ok(new ParsedFormat(new OpenAiChatRequest.ResponseFormatDto(
-                    FORMAT_TYPE, new OpenAiChatRequest.JsonSchemaDto(format.name(), true, schema))));
-        } catch (JsonProcessingException failure) {
-            return invalidFormat(modelId, failure);
-        }
-    }
-
-    private Result<ParsedFormat> invalidFormat(String modelId, @Nullable Throwable cause) {
-        log.warn(
-                "OpenAI-compatible request rejected locally provider={} model={} code={}",
-                config.id(),
-                modelId,
-                ErrorCode.validation);
-        return Result.err(AppError.of(
-                ErrorCode.validation,
-                "Invalid response schema",
-                "The response format must contain a JSON schema object.",
-                details(modelId),
-                cause));
-    }
-
-    private Result<String> serializeRequest(
-            String modelId, ChatRequest request, @Nullable ResponseFormatDto responseFormat) {
-        final List<OpenAiChatRequest.Message> messages =
-                request.messages().stream().map(this::toOpenAiMessage).toList();
-        try {
-            final OpenAiChatRequest payload =
-                    new OpenAiChatRequest(modelId, messages, false, request.temperature(), responseFormat);
-            return Result.ok(mapper.writeValueAsString(payload));
-        } catch (JsonProcessingException failure) {
-            return Result.err(unexpectedError("serialize chat request", modelId, failure));
-        }
-    }
-
-    private OpenAiChatRequest.Message toOpenAiMessage(ChatMessage message) {
-        return new OpenAiChatRequest.Message(message.role().name().toLowerCase(Locale.ROOT), message.content());
     }
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
@@ -391,6 +342,4 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             default -> FinishReason.OTHER;
         };
     }
-
-    private record ParsedFormat(@Nullable ResponseFormatDto format) {}
 }

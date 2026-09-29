@@ -12,15 +12,14 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * What {@link DirectedFix}, {@link ReflectImprove#improve} and {@link Polish} otherwise each repeated: rendering a
- * call's system/user messages from the catalogue, computing its output-token allowance, and reading a classified
+ * call's system/user messages from the catalogue, computing its output limit, and reading a classified
  * {@link RepairReply} back into one consistent set of log lines. Each caller passes its own {@code @Slf4j} logger
  * so a log line still names the class that made the call, not this shared helper.
  */
@@ -49,16 +48,14 @@ final class SelfHealCalls {
     }
 
     /**
-     * The output-token allowance for a call whose source is {@code maskedSource}.
+     * The expected output and its cap for a call whose source is {@code maskedSource}.
      *
      * @param maskedSource the segment's masked source
      * @param frame the run's language pair
-     * @return the allowance, or {@code null} when it computes to zero or less (no expected-output constraint sent)
+     * @return the limit, or {@code null} when the source has no display text (no expected-output constraint sent)
      */
-    static @Nullable Integer outputAllowance(final String maskedSource, final CallFrame frame) {
-        final int allowance = TokenEstimator.outputAllowance(
-                DisplayText.of(maskedSource), frame.sourceLanguage(), frame.targetLanguage());
-        return allowance > 0 ? allowance : null;
+    static @Nullable OutputLimit outputLimit(final String maskedSource, final CallFrame frame) {
+        return OutputLimit.forSource(maskedSource, frame.sourceLanguage(), frame.targetLanguage());
     }
 
     /** Logs {@code request}'s messages at TRACE, prefixed with {@code label}. */

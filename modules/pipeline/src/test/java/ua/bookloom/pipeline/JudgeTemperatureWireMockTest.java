@@ -26,7 +26,10 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
-/** A draft then a judge call each reach the wire at their own temperature, reasoning off, and their own schema. */
+/**
+ * A draft then a judge call each reach the wire at their own temperature, reasoning off, and their own schema; the
+ * draft states an output cap and the judge none.
+ */
 class JudgeTemperatureWireMockTest {
 
     private static final JudgeCall JUDGE_CALL =
@@ -65,6 +68,8 @@ class JudgeTemperatureWireMockTest {
                     .contains("\"temperature\":0.1", "\"score\"")
                     .doesNotContain("\"target\"");
             assertReasoningOff(kind, bodies);
+            assertThat(bodies.get(0)).contains(capField(kind));
+            assertThat(bodies.get(1)).doesNotContain("num_predict", "max_tokens");
         }
     }
 
@@ -76,6 +81,13 @@ class JudgeTemperatureWireMockTest {
                 .getFirst()
                 .segments()
                 .getFirst();
+    }
+
+    private static String capField(final ProviderKind kind) {
+        return switch (kind) {
+            case OLLAMA -> "\"num_predict\":64";
+            case OPENAI_COMPATIBLE -> "\"max_tokens\":64";
+        };
     }
 
     private static void assertReasoningOff(final ProviderKind kind, final List<String> bodies) {

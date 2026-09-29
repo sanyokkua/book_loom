@@ -75,8 +75,8 @@ public final class Polish {
             final String maskedTarget,
             final ModelCalls calls) {
         final List<ChatMessage> messages = messagesFor(frame, maskedSource, maskedTarget);
-        final ChatRequest request = ChatRequests.build(
-                PromptName.POLISH, messages, SelfHealCalls.outputAllowance(maskedSource, frame), false);
+        final ChatRequest request =
+                ChatRequests.build(PromptName.POLISH, messages, SelfHealCalls.outputLimit(maskedSource, frame), false);
         SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.POLISH, segment.id(), request);
         SelfHealCalls.logTraceReply(log, LABEL, reply);

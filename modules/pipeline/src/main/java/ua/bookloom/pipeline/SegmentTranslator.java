@@ -26,6 +26,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
+import ua.bookloom.pipeline.prompt.OutputLimit;
 
 /** Makes one model call and decides one segment. */
 @Slf4j
@@ -140,17 +141,16 @@ final class SegmentTranslator {
                 "Building chat request segmentId={} maskedLength={}",
                 segment.id(),
                 attempt.shownText().length());
-        final int allowance = TokenEstimator.outputAllowance(
-                DisplayText.of(attempt.shownText()), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
-        final ChatRequest request = ChatRequests.build(
-                step.promptName(),
-                messagesFor(attempt, step, rejected, diagnostic),
-                allowance > 0 ? allowance : null,
-                false);
+        final OutputLimit limit = OutputLimit.forSource(
+                attempt.shownText(), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
+        final ChatRequest request =
+                ChatRequests.build(step.promptName(), messagesFor(attempt, step, rejected, diagnostic), limit, false);
         log.debug(
-                "Built chat request segmentId={} messageCount={}",
+                "Built chat request segmentId={} messageCount={} expectedTokens={} capTokens={}",
                 segment.id(),
-                request.messages().size());
+                request.messages().size(),
+                request.expectedOutputTokens() == null ? "none" : request.expectedOutputTokens(),
+                request.maxOutputTokens() == null ? "none" : request.maxOutputTokens());
         return request;
     }
 
