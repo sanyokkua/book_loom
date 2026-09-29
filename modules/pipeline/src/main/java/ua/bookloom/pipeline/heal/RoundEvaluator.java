@@ -79,6 +79,7 @@ final class RoundEvaluator {
                 List.of(),
                 outcome.segment(),
                 outcome.maskedSource(),
+                maskedCandidate,
                 restored.maskedForm(),
                 settings,
                 outcome.lockedRenderings());

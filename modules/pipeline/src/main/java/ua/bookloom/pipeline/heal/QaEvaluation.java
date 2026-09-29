@@ -27,10 +27,12 @@ final class QaEvaluation {
      *     the gate passed
      * @param segment the segment being evaluated, read here only for its declared language
      * @param maskedSource the segment's masked source
-     * @param maskedCandidate the candidate's masked form — protected spans restored, the document's own tokens still
-     *     in place
+     * @param maskedCandidate the candidate as the model wrote it, protected-span tokens still in it, so a hidden name
+     *     never counts toward the script, echo or length checks
+     * @param maskedForm the candidate with every protected span restored and the document's own tokens still in
+     *     place, where the glossary check looks for each locked rendering
      * @param settings the chunk's languages, policies and glossary terms
-     * @param lockedRenderings the locked terms and kept foreign runs masked in this segment
+     * @param lockedRenderings the locked glossary terms present in this segment
      * @return the candidate's hard-gate and soft outcome
      */
     static QaResult evaluate(
@@ -38,17 +40,20 @@ final class QaEvaluation {
             final Segment segment,
             final String maskedSource,
             final String maskedCandidate,
+            final String maskedForm,
             final LoopSettings settings,
             final List<LockedRendering> lockedRenderings) {
         Objects.requireNonNull(givenHardGates, "givenHardGates");
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(maskedSource, "maskedSource");
         Objects.requireNonNull(maskedCandidate, "maskedCandidate");
+        Objects.requireNonNull(maskedForm, "maskedForm");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(lockedRenderings, "lockedRenderings");
         final SoftCheckInput input = new SoftCheckInput(
                 DisplayText.of(maskedSource),
                 DisplayText.of(maskedCandidate),
+                DisplayText.of(maskedForm),
                 settings.frame().sourceLanguage(),
                 settings.frame().targetLanguage(),
                 settings.frame().foreignPassagePolicy(),

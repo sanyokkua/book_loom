@@ -54,17 +54,29 @@ public final class DraftPromptBuilder {
     /** Builds the catalog system and user messages for one masked segment with its available prior targets. */
     public List<ChatMessage> messagesFor(final Segment segment, final DraftContext context) {
         Objects.requireNonNull(segment, "segment");
+        return messagesFor(segment, context, segment.masked());
+    }
+
+    /**
+     * Builds the catalog system and user messages, showing the model {@code shownText} instead of the segment's own
+     * masked text — the text with its protected spans hidden behind tokens.
+     *
+     * @param shownText the text the model translates and whose tokens it must copy; never null
+     */
+    public List<ChatMessage> messagesFor(final Segment segment, final DraftContext context, final String shownText) {
+        Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(shownText, "shownText");
         final String source = resolvedSourceLanguage();
         final String target = PromptLanguages.describe(targetLanguage);
         log.debug(
-                "Building draft prompt sourceLanguage={} targetLanguage={} segmentId={} maskedLength={}",
+                "Building draft prompt sourceLanguage={} targetLanguage={} segmentId={} shownLength={}",
                 source,
                 target,
                 segment.id(),
-                segment.masked().length());
+                shownText.length());
         final String system = systemMessage(source, target);
-        final String user = userMessage(source, target, segment, context);
+        final String user = userMessage(source, target, shownText, context);
         if (log.isTraceEnabled()) {
             log.trace("Draft prompt system={} user={}", system, user);
         }
@@ -74,11 +86,22 @@ public final class DraftPromptBuilder {
     /** Builds a correction request after a reply does not match the required response object. */
     public List<ChatMessage> messagesForStructuredRepair(
             final Segment segment, final DraftContext context, final String rejectedReply, final String diagnostic) {
+        Objects.requireNonNull(segment, "segment");
+        return messagesForStructuredRepair(segment, context, segment.masked(), rejectedReply, diagnostic);
+    }
+
+    /** As {@link #messagesForStructuredRepair(Segment, DraftContext, String, String)}, over {@code shownText}. */
+    public List<ChatMessage> messagesForStructuredRepair(
+            final Segment segment,
+            final DraftContext context,
+            final String shownText,
+            final String rejectedReply,
+            final String diagnostic) {
         Objects.requireNonNull(rejectedReply, "rejectedReply");
         Objects.requireNonNull(diagnostic, "diagnostic");
         final String correction = templates.renderUser(
                 PromptName.STRUCTURAL_REPAIR, Map.of("rejectedReply", rejectedReply, "diagnostic", diagnostic));
-        return withCorrection(segment, context, correction);
+        return withCorrection(segment, context, shownText, correction);
     }
 
     /**
@@ -92,19 +115,30 @@ public final class DraftPromptBuilder {
             final DraftContext context,
             final String rejectedTarget,
             @Nullable final String gateNote) {
+        Objects.requireNonNull(segment, "segment");
+        return messagesForPlaceholderRepair(segment, context, segment.masked(), rejectedTarget, gateNote);
+    }
+
+    /** As {@link #messagesForPlaceholderRepair(Segment, DraftContext, String, String)}, over {@code shownText}. */
+    public List<ChatMessage> messagesForPlaceholderRepair(
+            final Segment segment,
+            final DraftContext context,
+            final String shownText,
+            final String rejectedTarget,
+            @Nullable final String gateNote) {
         Objects.requireNonNull(rejectedTarget, "rejectedTarget");
         final Map<String, String> values = new HashMap<>();
         values.put("rejectedTarget", rejectedTarget);
-        values.put("tokens", expectedTokenSequence(segment));
+        values.put("tokens", expectedTokenSequence(shownText));
         if (gateNote != null) {
             values.put("gateNote", gateNote);
         }
-        return withCorrection(segment, context, templates.renderUser(PromptName.PLACEHOLDER_REPAIR, values));
+        return withCorrection(segment, context, shownText, templates.renderUser(PromptName.PLACEHOLDER_REPAIR, values));
     }
 
     private List<ChatMessage> withCorrection(
-            final Segment segment, final DraftContext context, final String correction) {
-        final List<ChatMessage> original = messagesFor(segment, context);
+            final Segment segment, final DraftContext context, final String shownText, final String correction) {
+        final List<ChatMessage> original = messagesFor(segment, context, shownText);
         return List.of(
                 original.getFirst(),
                 new ChatMessage(ChatRole.USER, original.get(1).content() + "\n" + correction));
@@ -131,28 +165,22 @@ public final class DraftPromptBuilder {
     }
 
     private String userMessage(
-            final String source, final String target, final Segment segment, final DraftContext context) {
+            final String source, final String target, final String shownText, final DraftContext context) {
         return templates
                 .renderUser(
                         PromptName.DRAFT,
                         Map.of(
                                 "source", source,
                                 "target", target,
-                                "tokens", expectedTokenSequence(segment),
-                                "text", segment.masked(),
+                                "tokens", expectedTokenSequence(shownText),
+                                "text", shownText,
                                 "precedingTargets", String.join("\n\n", context.precedingTargets())))
                 .strip();
     }
 
-    /** Returns every placeholder in source order for the user-facing integrity reminder and repair request. */
-    public static String expectedTokenSequence(final Segment segment) {
-        return expectedTokenSequence(segment.masked());
-    }
-
     /**
-     * Returns every placeholder in source order within an already-masked text, for a repair call built from a
-     * masked source rather than a {@link Segment} (the directed fix, whose expected sequence comes from the source,
-     * not the rejected target).
+     * Returns every placeholder in source order within an already-masked text, for the draft prompt, its repairs
+     * and the directed fix, whose expected sequence comes from the source rather than the rejected target.
      */
     public static String expectedTokenSequence(final String masked) {
         Objects.requireNonNull(masked, "masked");

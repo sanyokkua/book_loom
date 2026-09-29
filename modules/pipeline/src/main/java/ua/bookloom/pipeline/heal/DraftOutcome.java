@@ -22,7 +22,7 @@ public sealed interface DraftOutcome {
     /** The segment's masked source, shown to every self-heal call under {@code [Source]}. */
     String maskedSource();
 
-    /** The locked glossary terms and kept foreign runs masked in this segment; empty when none is protected. */
+    /** The locked glossary terms present in this segment; empty when none is protected. */
     List<LockedRendering> lockedRenderings();
 
     /**
@@ -30,7 +30,7 @@ public sealed interface DraftOutcome {
      *
      * @param segment the segment this outcome is about
      * @param maskedSource the segment's masked source
-     * @param lockedRenderings the locked terms and kept foreign runs masked in this segment
+     * @param lockedRenderings the locked glossary terms present in this segment
      * @param maskedReply the draft's masked reply, already trimmed and restored into its segment's own whitespace —
      *     the text the model returns to when a round rewrites it
      * @param maskedForm the reply with every protected span restored and the document's own tokens still in place,
@@ -81,7 +81,7 @@ public sealed interface DraftOutcome {
      *
      * @param segment the segment this outcome is about
      * @param maskedSource the segment's masked source
-     * @param lockedRenderings the locked terms and kept foreign runs masked in this segment
+     * @param lockedRenderings the locked glossary terms present in this segment
      * @param error the reason the segment was flagged at once
      */
     record FlaggedAtOnce(Segment segment, String maskedSource, List<LockedRendering> lockedRenderings, AppError error)

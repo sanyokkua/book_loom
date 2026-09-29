@@ -86,6 +86,7 @@ public final class QualityLoop {
                 given,
                 outcome.segment(),
                 outcome.maskedSource(),
+                outcome.maskedReply(),
                 Objects.requireNonNullElse(outcome.maskedForm(), outcome.maskedReply()),
                 settings,
                 outcome.lockedRenderings());
@@ -148,7 +149,10 @@ public final class QualityLoop {
         switch (outcome) {
             case DraftOutcome.Drafted drafted -> {
                 if (Objects.requireNonNull(qa).hardGatesPass()) {
-                    pairs.add(new JudgedPair(drafted.segment().id(), drafted.maskedSource(), drafted.maskedReply()));
+                    pairs.add(new JudgedPair(
+                            drafted.segment().id(),
+                            drafted.maskedSource(),
+                            Objects.requireNonNullElse(drafted.maskedForm(), drafted.maskedReply())));
                 }
             }
             case DraftOutcome.FlaggedAtOnce ignored -> {}

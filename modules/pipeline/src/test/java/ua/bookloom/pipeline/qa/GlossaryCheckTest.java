@@ -58,4 +58,24 @@ class GlossaryCheckTest {
         assertThat(result.finding().severity()).isEqualTo(Severity.MEDIUM);
         assertThat(result.finding().raisedBy()).isEqualTo("glossary");
     }
+
+    @Test
+    void run_renderingOnlyInTheMaskedFormNotTheReplysDisplayText_passes() {
+        final CheckResult result = GlossaryCheck.run(SoftCheckFixtures.glossary(
+                "відчинив двері.", "Гейл відчинив двері.", List.of(new LockedRendering("Hale", "Гейл"))));
+
+        assertThat(result.margin()).isCloseTo(1.0, within(1e-9));
+        assertThat(result.passed()).isTrue();
+        assertThat(result.skipped()).isFalse();
+    }
+
+    @Test
+    void run_renderingOnlyInsideALongerWord_doesNotCount() {
+        final CheckResult result = GlossaryCheck.run(SoftCheckFixtures.glossary(
+                "Гейлові відчинили двері.", "Гейлові відчинили двері.", List.of(new LockedRendering("Hale", "Гейл"))));
+
+        assertThat(result.passed()).isFalse();
+        assertThat(result.finding()).isNotNull();
+        assertThat(result.finding().raisedBy()).isEqualTo("glossary");
+    }
 }

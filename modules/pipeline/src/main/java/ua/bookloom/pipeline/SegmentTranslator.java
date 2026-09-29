@@ -57,14 +57,23 @@ final class SegmentTranslator {
     /** Translates one segment with previously accepted targets supplied solely as context. */
     Result<Decision> translate(final Segment segment, final DraftContext context) {
         Objects.requireNonNull(segment, "segment");
-        Objects.requireNonNull(context, "context");
-        log.debug("Translating segment id={} format={}", segment.id(), format);
-        final ChatRequest request = requestFor(segment, context, DraftStep.DRAFT, "", "");
+        return translate(segment, context, segment.masked());
+    }
+
+    /**
+     * Translates one segment showing the model {@code shownText} — the segment's masked text with its protected
+     * spans hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text.
+     */
+    Result<Decision> translate(final Segment segment, final DraftContext context, final String shownText) {
+        Objects.requireNonNull(segment, "segment");
+        final DraftAttempt attempt = new DraftAttempt(segment, context, shownText);
+        log.debug("Translating segment id={} format={} shownLength={}", segment.id(), format, shownText.length());
+        final ChatRequest request = requestFor(attempt, DraftStep.DRAFT, "", "");
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
-            return decideModelError(segment, Objects.requireNonNull(reply.error()));
+            return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
-        return decideResponse(segment, context, Objects.requireNonNull(reply.data()), false, false);
+        return decideResponse(attempt, Objects.requireNonNull(reply.data()), false, false);
     }
 
     /**
@@ -103,15 +112,16 @@ final class SegmentTranslator {
     Result<Decision> translatePieces(final Segment segment, final DraftContext context, final List<String> pieces) {
         log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
         final PieceDrafter drafter = new PieceDrafter(this, replyParser);
+        final DraftAttempt whole = DraftAttempt.showingItsOwnMaskedText(segment, context);
         final List<String> replies = new ArrayList<>();
         for (final String piece : pieces) {
             final Result<String> drafted = drafter.draft(PieceDrafter.pieceOf(segment, piece), context);
             if (drafted.isErr()) {
-                return decideModelError(segment, Objects.requireNonNull(drafted.error()));
+                return decideModelError(whole, Objects.requireNonNull(drafted.error()));
             }
             replies.add(WhitespaceRestoration.restore(piece, Objects.requireNonNull(drafted.data())));
         }
-        return restore(segment, context, String.join("", replies).strip(), true);
+        return restore(whole, String.join("", replies).strip(), true);
     }
 
     ChatRequest requestFor(
@@ -120,15 +130,21 @@ final class SegmentTranslator {
             final DraftStep step,
             final String rejected,
             final String diagnostic) {
+        return requestFor(DraftAttempt.showingItsOwnMaskedText(segment, context), step, rejected, diagnostic);
+    }
+
+    private ChatRequest requestFor(
+            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
+        final Segment segment = attempt.segment();
         log.debug(
                 "Building chat request segmentId={} maskedLength={}",
                 segment.id(),
-                segment.masked().length());
+                attempt.shownText().length());
         final int allowance = TokenEstimator.outputAllowance(
-                DisplayText.of(segment.masked()), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
+                DisplayText.of(attempt.shownText()), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
         final ChatRequest request = ChatRequests.build(
                 step.promptName(),
-                messagesFor(segment, context, step, rejected, diagnostic),
+                messagesFor(attempt, step, rejected, diagnostic),
                 allowance > 0 ? allowance : null,
                 false);
         log.debug(
@@ -139,17 +155,17 @@ final class SegmentTranslator {
     }
 
     private List<ua.bookloom.api.llm.ChatMessage> messagesFor(
-            final Segment segment,
-            final DraftContext context,
-            final DraftStep step,
-            final String rejected,
-            final String diagnostic) {
+            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
+        final Segment segment = attempt.segment();
+        final DraftContext context = attempt.context();
+        final String shown = attempt.shownText();
         return switch (step) {
-            case DRAFT -> promptBuilder.messagesFor(segment, context);
-            case STRUCTURAL_REPAIR -> promptBuilder.messagesForStructuredRepair(segment, context, rejected, diagnostic);
+            case DRAFT -> promptBuilder.messagesFor(segment, context, shown);
+            case STRUCTURAL_REPAIR ->
+                promptBuilder.messagesForStructuredRepair(segment, context, shown, rejected, diagnostic);
             case PLACEHOLDER_REPAIR ->
                 promptBuilder.messagesForPlaceholderRepair(
-                        segment, context, rejected, diagnostic.isEmpty() ? null : diagnostic);
+                        segment, context, shown, rejected, diagnostic.isEmpty() ? null : diagnostic);
         };
     }
 
@@ -175,28 +191,29 @@ final class SegmentTranslator {
         }
     }
 
-    private Result<Decision> decideModelError(final Segment segment, final AppError error) {
+    private Result<Decision> decideModelError(final DraftAttempt attempt, final AppError error) {
+        final Segment segment = attempt.segment();
         log.debug("Model reply segment={} kind=error code={}", segment.id(), error.code());
         return switch (error.code()) {
-            case validation, emptyCompletion, contextWindow -> flag(segment, error, "model-error", "[]");
+            case validation, emptyCompletion, contextWindow -> flag(attempt, error, "model-error", "[]");
             default -> terminal(segment, error, "model-error");
         };
     }
 
     private Result<Decision> decideResponse(
-            final Segment segment,
-            final DraftContext context,
+            final DraftAttempt attempt,
             final ChatResponse response,
             final boolean structuralRepairUsed,
             final boolean placeholderRepairUsed) {
+        final Segment segment = attempt.segment();
         if (response.content().isBlank()) {
-            return flag(segment, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
+            return flag(attempt, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
         }
         final ParsedReply parsed = replyParser.parse(response.content());
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED) {
             return structuralRepairUsed
-                    ? invalidStructuredReply(segment, response)
-                    : repairStructured(segment, context, response.content(), parsed.diagnostic());
+                    ? invalidStructuredReply(attempt, response)
+                    : repairStructured(attempt, response.content(), parsed.diagnostic());
         }
         final String trimmed = parsed.translation().strip();
         logTraceReply(response.content(), trimmed);
@@ -207,30 +224,30 @@ final class SegmentTranslator {
                 response.finishReason(),
                 trimmed.isEmpty());
         if (trimmed.isEmpty()) {
-            return flag(segment, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
+            return flag(attempt, emptyCompletion(), response.finishReason().name(), observedTokens(response.content()));
         }
         if (response.finishReason() != FinishReason.STOP) {
-            return flag(segment, invalidFinish(), response.finishReason().name(), observedTokens(response.content()));
+            return flag(attempt, invalidFinish(), response.finishReason().name(), observedTokens(response.content()));
         }
-        return restore(segment, context, trimmed, placeholderRepairUsed);
+        return restore(attempt, trimmed, placeholderRepairUsed);
     }
 
     private Result<Decision> repairStructured(
-            final Segment segment, final DraftContext context, final String rejectedReply, final String diagnostic) {
+            final DraftAttempt attempt, final String rejectedReply, final String diagnostic) {
+        final Segment segment = attempt.segment();
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
-        final ChatRequest request =
-                requestFor(segment, context, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
+        final ChatRequest request = requestFor(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
-            return decideModelError(segment, Objects.requireNonNull(reply.error()));
+            return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
-        return decideResponse(segment, context, Objects.requireNonNull(reply.data()), true, false);
+        return decideResponse(attempt, Objects.requireNonNull(reply.data()), true, false);
     }
 
-    private Result<Decision> invalidStructuredReply(final Segment segment, final ChatResponse response) {
+    private Result<Decision> invalidStructuredReply(final DraftAttempt attempt, final ChatResponse response) {
         logTraceReply(response.content(), "");
         return flag(
-                segment,
+                attempt,
                 AppError.of(
                         ErrorCode.validation,
                         "Invalid structured model response",
@@ -240,10 +257,8 @@ final class SegmentTranslator {
     }
 
     private Result<Decision> restore(
-            final Segment segment,
-            final DraftContext context,
-            final String trimmed,
-            final boolean placeholderRepairUsed) {
+            final DraftAttempt attempt, final String trimmed, final boolean placeholderRepairUsed) {
+        final Segment segment = attempt.segment();
         log.debug("Restoring segment id={} format={} trimmedLength={}", segment.id(), format, trimmed.length());
         final String restoredWhitespace = WhitespaceRestoration.restore(segment.masked(), trimmed);
         logTraceRestoration(restoredWhitespace);
@@ -255,12 +270,9 @@ final class SegmentTranslator {
                         segment.id(),
                         failed.error().code());
                 yield placeholderRepairUsed
-                        ? flag(segment, failed.error(), FinishReason.STOP.name(), observedTokens(restoredWhitespace))
+                        ? flag(attempt, failed.error(), FinishReason.STOP.name(), observedTokens(restoredWhitespace))
                         : repairPlaceholder(
-                                segment,
-                                context,
-                                restoredWhitespace,
-                                failed.finding().note());
+                                attempt, restoredWhitespace, failed.finding().note());
             }
             case GateResult.StepError stepError -> {
                 log.debug(
@@ -284,20 +296,21 @@ final class SegmentTranslator {
     }
 
     private Result<Decision> repairPlaceholder(
-            final Segment segment, final DraftContext context, final String rejectedTarget, final String gateNote) {
+            final DraftAttempt attempt, final String rejectedTarget, final String gateNote) {
+        final Segment segment = attempt.segment();
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final ChatRequest request =
-                requestFor(segment, context, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, gateNote);
+        final ChatRequest request = requestFor(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, gateNote);
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
-            return decideModelError(segment, Objects.requireNonNull(reply.error()));
+            return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
-        return decideResponse(segment, context, Objects.requireNonNull(reply.data()), true, true);
+        return decideResponse(attempt, Objects.requireNonNull(reply.data()), true, true);
     }
 
     private Result<Decision> flag(
-            final Segment segment, final AppError error, final String finish, final String observedTokens) {
-        final String expectedTokens = expectedTokens(segment);
+            final DraftAttempt attempt, final AppError error, final String finish, final String observedTokens) {
+        final Segment segment = attempt.segment();
+        final String expectedTokens = expectedTokens(attempt);
         log.warn(
                 "Flagged segment id={} code={} expectedTokens={} observedTokens={}",
                 segment.id(),
@@ -322,16 +335,12 @@ final class SegmentTranslator {
         return Result.err(error);
     }
 
-    private static String expectedTokens(final Segment segment) {
-        log.debug(
-                "Collecting expected tokens segmentId={} placeholderCount={}",
-                segment.id(),
-                segment.placeholders().size());
-        final String tokens = DraftPromptBuilder.expectedTokenSequence(segment);
-        log.debug(
-                "Collected expected tokens segmentId={} tokenCount={}",
-                segment.id(),
-                segment.placeholders().size());
+    private static String expectedTokens(final DraftAttempt attempt) {
+        final String segmentId = attempt.segment().id();
+        final int placeholderCount = Tokens.inOrder(attempt.shownText()).size();
+        log.debug("Collecting expected tokens segmentId={} placeholderCount={}", segmentId, placeholderCount);
+        final String tokens = DraftPromptBuilder.expectedTokenSequence(attempt.shownText());
+        log.debug("Collected expected tokens segmentId={} tokenCount={}", segmentId, placeholderCount);
         return tokens;
     }
 

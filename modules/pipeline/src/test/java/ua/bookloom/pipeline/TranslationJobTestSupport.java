@@ -61,8 +61,17 @@ final class TranslationJobTestSupport {
             final ua.bookloom.api.document.BookFormat format,
             final String targetLanguage,
             @Nullable final String sourceLanguage) {
+        return segmentTranslator(GateFunction.of(documents, format), model, format, targetLanguage, sourceLanguage);
+    }
+
+    static SegmentTranslator segmentTranslator(
+            final GateFunction gate,
+            final ChatModel model,
+            final ua.bookloom.api.document.BookFormat format,
+            final String targetLanguage,
+            @Nullable final String sourceLanguage) {
         return new SegmentTranslator(
-                GateFunction.of(documents, format),
+                gate,
                 model,
                 format,
                 new DraftPromptBuilder(

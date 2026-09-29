@@ -25,6 +25,7 @@ final class SoftCheckFixtures {
         return new SoftCheckInput(
                 source,
                 target,
+                target,
                 sourceLang,
                 targetLang,
                 foreignPolicy,
@@ -40,6 +41,7 @@ final class SoftCheckFixtures {
         return new SoftCheckInput(
                 source,
                 target,
+                target,
                 sourceLang,
                 targetLang,
                 ForeignPassagePolicy.TRANSLATE,
@@ -53,6 +55,7 @@ final class SoftCheckFixtures {
     static SoftCheckInput repetition(final String target) {
         return new SoftCheckInput(
                 "source",
+                target,
                 target,
                 "en",
                 "uk",
@@ -69,6 +72,7 @@ final class SoftCheckFixtures {
         return new SoftCheckInput(
                 source,
                 target,
+                target,
                 sourceLang,
                 targetLang,
                 ForeignPassagePolicy.TRANSLATE,
@@ -78,11 +82,21 @@ final class SoftCheckFixtures {
                 List.of());
     }
 
-    /** An input for {@link GlossaryCheck}, which reads only the target display text and the locked renderings. */
+    /** An input for {@link GlossaryCheck} whose reply and masked form read alike. */
     static SoftCheckInput glossary(final String target, final List<LockedRendering> lockedRenderings) {
+        return glossary(target, target, lockedRenderings);
+    }
+
+    /**
+     * An input for {@link GlossaryCheck}, which reads only the display text of the masked form and the locked
+     * renderings; {@code target} is the reply's display text, protected tokens stripped.
+     */
+    static SoftCheckInput glossary(
+            final String target, final String targetWithRenderings, final List<LockedRendering> lockedRenderings) {
         return new SoftCheckInput(
                 "source",
                 target,
+                targetWithRenderings,
                 "en",
                 "uk",
                 ForeignPassagePolicy.TRANSLATE,

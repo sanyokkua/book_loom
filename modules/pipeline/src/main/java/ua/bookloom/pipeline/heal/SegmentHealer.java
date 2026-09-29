@@ -188,7 +188,7 @@ final class SegmentHealer {
             final RoundOutcome.Evaluated evaluated) {
         final QaResult qa = evaluated.qa();
         final Result<JudgeVerdict> rejudge = judgeCall.judge(
-                List.of(new JudgedPair(segmentId, outcome.maskedSource(), evaluated.maskedCandidate())),
+                List.of(new JudgedPair(segmentId, outcome.maskedSource(), evaluated.maskedForm())),
                 settings.frame(),
                 settings.glossaryTerms(),
                 calls);
