@@ -19,6 +19,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
@@ -45,7 +46,8 @@ class RunStartTest {
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),
                 injector.getInstance(CheckpointPort.class),
-                injector.getInstance(OpenProjects.class));
+                injector.getInstance(OpenProjects.class),
+                injector.getInstance(RunRepository.class));
         final Path book = Files.writeString(tempDir.resolve("Book.md"), "Hello.");
         projectId = Objects.requireNonNull(
                 Objects.requireNonNull(service.importBook(book).data()).projectId());

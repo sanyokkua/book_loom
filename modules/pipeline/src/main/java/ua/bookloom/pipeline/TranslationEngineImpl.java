@@ -12,6 +12,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -43,11 +44,12 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final SegmentRepository segments,
             final CheckpointPort checkpoint,
             final OpenProjects openProjects,
+            final RunRepository runs,
             final Clock clock) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
-        this.stores = new RunStores(projects, segments, checkpoint, openProjects);
+        this.stores = new RunStores(projects, segments, checkpoint, openProjects, runs);
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 

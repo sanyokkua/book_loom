@@ -92,7 +92,6 @@ class TranslationJobDecisionGapsTest {
                 Arguments.of(
                         "whitespace with a normal finish", reply("  \n", FinishReason.STOP), ErrorCode.emptyCompletion),
                 Arguments.of("cut off by length", reply("HE OPENED", FinishReason.LENGTH), ErrorCode.validation),
-                Arguments.of("model validation", refusal(ErrorCode.validation), ErrorCode.validation),
                 Arguments.of("model emptyCompletion", refusal(ErrorCode.emptyCompletion), ErrorCode.emptyCompletion),
                 Arguments.of("model contextWindow", refusal(ErrorCode.contextWindow), ErrorCode.contextWindow));
     }

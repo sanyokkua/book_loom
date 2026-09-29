@@ -27,6 +27,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
 import ua.bookloom.pipeline.prompt.OutputLimit;
+import ua.bookloom.pipeline.run.PauseDecider;
 
 /** Makes one model call and decides one segment. */
 @Slf4j
@@ -116,11 +117,17 @@ final class SegmentTranslator {
         final DraftAttempt whole = DraftAttempt.showingItsOwnMaskedText(segment, context);
         final List<String> replies = new ArrayList<>();
         for (final String piece : pieces) {
-            final Result<String> drafted = drafter.draft(PieceDrafter.pieceOf(segment, piece), context);
+            final Result<PieceDrafter.Piece> drafted = drafter.draft(PieceDrafter.pieceOf(segment, piece), context);
             if (drafted.isErr()) {
                 return decideModelError(whole, Objects.requireNonNull(drafted.error()));
             }
-            replies.add(WhitespaceRestoration.restore(piece, Objects.requireNonNull(drafted.data())));
+            final PieceDrafter.Piece drafts = Objects.requireNonNull(drafted.data());
+            if (drafts instanceof PieceDrafter.Unusable(final AppError unusable)) {
+                return flag(whole, unusable, FinishReason.STOP.name(), "[]");
+            }
+            if (drafts instanceof PieceDrafter.Text(final String text)) {
+                replies.add(WhitespaceRestoration.restore(piece, text));
+            }
         }
         return restore(whole, String.join("", replies).strip(), true);
     }
@@ -194,9 +201,9 @@ final class SegmentTranslator {
     private Result<Decision> decideModelError(final DraftAttempt attempt, final AppError error) {
         final Segment segment = attempt.segment();
         log.debug("Model reply segment={} kind=error code={}", segment.id(), error.code());
-        return switch (error.code()) {
-            case validation, emptyCompletion, contextWindow -> flag(attempt, error, "model-error", "[]");
-            default -> terminal(segment, error, "model-error");
+        return switch (PauseDecider.route(error.code())) {
+            case FLAG_AT_ONCE -> flag(attempt, error, "model-error", "[]");
+            case CANCELLED, PAUSE_OR_FAIL, FAIL -> terminal(segment, error, "model-error");
         };
     }
 

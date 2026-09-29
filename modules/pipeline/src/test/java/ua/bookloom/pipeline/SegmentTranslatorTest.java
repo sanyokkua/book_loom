@@ -233,7 +233,7 @@ class SegmentTranslatorTest {
         final AppError auth = error(ErrorCode.auth);
         return Stream.of(
                 arguments(
-                        "model validation", modelError(validation), UnaryOperator.identity(), flaggedSame(validation)),
+                        "model validation", modelError(validation), UnaryOperator.identity(), terminalSame(validation)),
                 arguments("model empty completion", modelError(empty), UnaryOperator.identity(), flaggedSame(empty)),
                 arguments("model context window", modelError(context), UnaryOperator.identity(), flaggedSame(context)),
                 arguments("model cancelled", modelError(cancelled), UnaryOperator.identity(), terminalSame(cancelled)),

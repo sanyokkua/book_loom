@@ -81,8 +81,8 @@ class TranslationJobStartTest {
     void run_flaggedSegment_notPickedUpBySecondRun() {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n\nTwo.");
         final TestProject project = project(source, brief("en", "uk"));
-        final AppError invalid = AppError.of(ErrorCode.validation, "Invalid", "The reply is invalid.");
-        final TranslationJobImpl first = job(project, new ScriptedChatModel().answer(Result.err(invalid)));
+        final TranslationJobImpl first =
+                job(project, new ScriptedChatModel().answer(TranslationJobTestSupport.cutOffReply()));
         first.subscribe(event -> cancelAfterFirstDecision(first, event));
         first.run();
         final ScriptedChatModel second = replies("TWO.");

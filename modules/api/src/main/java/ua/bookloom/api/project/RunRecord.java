@@ -7,7 +7,8 @@ import ua.bookloom.api.pipeline.JobState;
 
 /**
  * A translation run's current state, upserted by run id so every state change of one run lands in one record — read
- * by resume and by review to allow or refuse a retry (task 10.6).
+ * by the review desk to allow or refuse a retry while a run is still going, and by a resume to see how the last run
+ * ended.
  *
  * @param runId the run's stable id
  * @param projectId the owning project's id

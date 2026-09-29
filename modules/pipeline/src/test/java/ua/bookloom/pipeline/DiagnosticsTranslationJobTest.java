@@ -189,12 +189,11 @@ class DiagnosticsTranslationJobTest {
     @Test
     void run_unmaskThrowAfterPriorDecisions_preservesProgressAndCause() {
         final IllegalStateException cause = new IllegalStateException("unmask fault");
-        final AppError invalid = AppError.of(ErrorCode.validation, "Invalid", "The reply is invalid.");
         final TranslationJobImpl translation = job(
                 documents -> new ThrowingUnmaskPort(documents, 2, cause),
                 markdown("One.\n\nTwo.\n\nThree."),
                 replies("ONE.")
-                        .answer(Result.err(invalid))
+                        .answer(TranslationJobTestSupport.cutOffReply())
                         .answer(Result.ok(new ChatResponse(
                                 TranslationJobTestSupport.targetReply("THREE."),
                                 ua.bookloom.api.llm.FinishReason.STOP))));
@@ -248,7 +247,7 @@ class DiagnosticsTranslationJobTest {
         final RunStores stores = project.stores();
         return new TestProject(
                 project.id(),
-                new RunStores(stores.projects(), stores.segments(), throwing, stores.openProjects()),
+                new RunStores(stores.projects(), stores.segments(), throwing, stores.openProjects(), stores.runs()),
                 project.documents());
     }
 

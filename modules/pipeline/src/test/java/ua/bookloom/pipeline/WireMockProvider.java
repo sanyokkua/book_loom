@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
@@ -53,17 +54,36 @@ final class WireMockProvider implements AutoCloseable {
     }
 
     ChatModel model(final Duration requestTimeout, final RetryPolicy.Sleeper sleeper) {
+        return chatModels(requestTimeout, sleeper, 1).getFirst();
+    }
+
+    /**
+     * Two chat models built from one injector, so both go through the one {@code InferenceGate} that a real run and
+     * a review retry share.
+     */
+    TwoModels twoModels(final Duration requestTimeout) {
+        final List<ChatModel> models = chatModels(requestTimeout, ignored -> {}, 2);
+        return new TwoModels(models.get(0), models.get(1));
+    }
+
+    /** The two models of {@link #twoModels(Duration)}. */
+    record TwoModels(ChatModel first, ChatModel second) {}
+
+    private List<ChatModel> chatModels(
+            final Duration requestTimeout, final RetryPolicy.Sleeper sleeper, final int count) {
         final URI base = URI.create(kind == ProviderKind.OLLAMA ? server.baseUrl() : server.baseUrl() + "/v1");
         final RetryPolicy policy = new RetryPolicy(Clock.systemUTC(), () -> 0.5, sleeper);
         final Injector injector = Guice.createInjector(Modules.override(new LlmModule())
                 .with(binder -> binder.bind(RetryPolicy.class).toInstance(policy)));
         injector.getInstance(ProviderConfigs.class)
                 .register(new ProviderConfig(PROVIDER_ID, kind, base, Duration.ofSeconds(2), requestTimeout));
-        return Objects.requireNonNull(
-                injector.getInstance(ChatModelFactory.class)
-                        .create(new ModelSelection(PROVIDER_ID, "test-model"))
-                        .data(),
-                "chat model");
+        final ChatModelFactory factory = injector.getInstance(ChatModelFactory.class);
+        return IntStream.range(0, count)
+                .mapToObj(index -> Objects.requireNonNull(
+                        factory.create(new ModelSelection(PROVIDER_ID, "test-model"))
+                                .data(),
+                        "chat model"))
+                .toList();
     }
 
     /** A reply carrying {@code content} as the assistant message, after a delay. */

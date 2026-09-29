@@ -45,6 +45,8 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.run.OutcomeRecords;
+import ua.bookloom.pipeline.run.PauseDecider;
+import ua.bookloom.pipeline.run.RunRecorder;
 import ua.bookloom.pipeline.run.RunReports;
 import ua.bookloom.pipeline.run.RunStart;
 import ua.bookloom.pipeline.run.RunStores;
@@ -65,6 +67,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final JobControl control = new JobControl();
     private final JobSubscribers subscribers = new JobSubscribers();
     private final String jobId = UUID.randomUUID().toString();
+    private final RunRecorder recorder;
     // Read and written only on the job thread: decide sets it, and the model decorator runs inside decide.
     private @Nullable String decidingSegment;
     // Written and read only on the job thread, from the claim on.
@@ -85,6 +88,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.templates = Objects.requireNonNull(templates, "templates");
         this.stores = Objects.requireNonNull(stores, "stores");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock);
         this.startedAt = clock.instant();
     }
 
@@ -150,6 +154,7 @@ final class TranslationJobImpl implements TranslationJob {
             return Result.err(errorOf(started));
         }
         final RunStart.Started run = dataOf(started);
+        recorder.started();
         try {
             if (control.isCancellationRequested()) {
                 return finish(JobState.CANCELLED, run, null);
@@ -203,6 +208,7 @@ final class TranslationJobImpl implements TranslationJob {
         if (storeFailure != null) {
             return finish(JobState.FAILED, run, storeFailure);
         }
+        recorder.decided(decision.segment().status());
         final JobProgress progress = work.apply(item, decision);
         emit(new SegmentDecided(decision.segment().id(), decision.segment().status(), flagCode(decision), progress));
         return honorBoundary(control.boundary(true, work.endsSection(item), work.isComplete()), progress, run);
@@ -222,9 +228,15 @@ final class TranslationJobImpl implements TranslationJob {
 
     private @Nullable Result<JobReport> recoverOrFail(
             final AppError error, final RunStart.Started run, final WorkList work) {
-        if (error.code() == ErrorCode.cancelled) {
-            return finish(JobState.CANCELLED, run, null);
-        }
+        return switch (PauseDecider.route(error.code())) {
+            case CANCELLED -> finish(JobState.CANCELLED, run, null);
+            case PAUSE_OR_FAIL -> pauseOrFail(error, run, work);
+            case FLAG_AT_ONCE, FAIL -> finish(JobState.FAILED, run, endingError(error));
+        };
+    }
+
+    private @Nullable Result<JobReport> pauseOrFail(
+            final AppError error, final RunStart.Started run, final WorkList work) {
         final BoundaryDecision decision = control.failureBoundary(error);
         if (decision.cancelled()) {
             return finish(JobState.CANCELLED, run, null);
@@ -235,6 +247,23 @@ final class TranslationJobImpl implements TranslationJob {
             return pause(decision.pauseReason(), error, progress, run);
         }
         return finish(JobState.FAILED, run, error);
+    }
+
+    // A model error the run cannot recover from is an application fault, never a provider error that Retry now
+    // could fix, so it ends the run as internal. An internal error was already logged where it was built.
+    private AppError endingError(final AppError error) {
+        if (error.code() == ErrorCode.internal) {
+            return error;
+        }
+        final IllegalStateException cause = new IllegalStateException(
+                "A model call answered " + error.code() + ", which a run cannot recover from");
+        log.error("Translation job stopped by a model error it cannot recover from code={}", error.code(), cause);
+        return AppError.of(
+                ErrorCode.internal,
+                "Translation job failed",
+                "An unexpected failure stopped this translation job.",
+                null,
+                cause);
     }
 
     private @Nullable Result<JobReport> honorBoundary(
@@ -250,10 +279,12 @@ final class TranslationJobImpl implements TranslationJob {
             @Nullable final AppError error,
             final JobProgress progress,
             final RunStart.Started run) {
+        recorder.paused();
         emit(new Paused(reason, error, progress));
         if (control.awaitPause() == PauseWait.CANCELLED) {
             return finish(JobState.CANCELLED, run, null);
         }
+        recorder.resumed();
         emit(new Resumed(progress));
         return null;
     }
@@ -277,6 +308,7 @@ final class TranslationJobImpl implements TranslationJob {
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {
         final JobReport report =
                 RunReports.of(stores, run.project().id(), run.document().format(), end, error);
+        recorder.ended(report.end());
         control.finish(report.end());
         if (report.end() == JobState.FAILED) {
             log.warn(

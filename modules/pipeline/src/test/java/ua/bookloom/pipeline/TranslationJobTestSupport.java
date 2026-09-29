@@ -29,6 +29,7 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -78,7 +79,8 @@ final class TranslationJobTestSupport {
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),
                 injector.getInstance(CheckpointPort.class),
-                injector.getInstance(OpenProjects.class));
+                injector.getInstance(OpenProjects.class),
+                injector.getInstance(RunRepository.class));
         final ProjectServiceImpl service = new ProjectServiceImpl(
                 injector.getInstance(BookInspector.class),
                 documents,
@@ -209,6 +211,11 @@ final class TranslationJobTestSupport {
             model.answer(Result.ok(new ChatResponse(targetReply(reply), FinishReason.STOP)));
         }
         return model;
+    }
+
+    /** A reply cut off by the length limit, which the run flags as {@code validation} without a repair call. */
+    static Result<ChatResponse> cutOffReply() {
+        return Result.ok(new ChatResponse(targetReply("HE OPENED"), FinishReason.LENGTH));
     }
 
     static String targetReply(final String target) {

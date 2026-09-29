@@ -114,9 +114,8 @@ class TranslationJobEventsTest {
     // Losing a flag reason or its segment order would change this preserved report list.
     @Test
     void report_flaggedSegments_retainsOrderedIdsAndReasons() {
-        final AppError validation = AppError.of(ErrorCode.validation, "Invalid", "The reply is invalid.");
         final ScriptedChatModel model = replies("ONE.")
-                .answer(Result.err(validation))
+                .answer(TranslationJobTestSupport.cutOffReply())
                 .answer(Result.ok(new ChatResponse("", FinishReason.STOP)));
 
         final JobReport result =

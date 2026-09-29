@@ -28,6 +28,9 @@ final class JobControl {
     // Set when pause() aborts a call, so that a resume pressed before the job thread notices does not turn the
     // aborted call into a cancellation.
     private boolean pauseAbortedCall;
+    // Set only when this control interrupted the model-call thread, so exitModelCall clears that interrupt and
+    // never one somebody else sent, such as an executor shutdown, which must still end the run.
+    private boolean interruptSent;
 
     boolean claimRun() {
         final boolean claimedNow;
@@ -146,19 +149,23 @@ final class JobControl {
     }
 
     /**
-     * Ends the claim and clears an interrupt left on the calling thread, which is what stops any later work — the
-     * pause wait, the export — from ever seeing the interrupt that aborted a call.
+     * Ends the claim and clears the interrupt this control sent to the calling thread, which is what stops the pause
+     * wait from ever seeing the interrupt that aborted a call. An interrupt from anywhere else is left in place.
      */
     void exitModelCall() {
-        final boolean stale;
+        final boolean cleared;
         lock.lock();
         try {
             modelCallThread = null;
-            stale = Thread.interrupted();
+            cleared = interruptSent;
+            interruptSent = false;
+            if (cleared) {
+                Thread.interrupted();
+            }
         } finally {
             lock.unlock();
         }
-        log.debug("Model call exit staleInterruptCleared={}", stale);
+        log.debug("Model call exit interruptCleared={}", cleared);
     }
 
     /**
@@ -341,6 +348,7 @@ final class JobControl {
             return false;
         }
         modelCallThread.interrupt();
+        interruptSent = true;
         return true;
     }
 

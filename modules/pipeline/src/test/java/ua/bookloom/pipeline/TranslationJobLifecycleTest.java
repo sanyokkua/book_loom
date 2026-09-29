@@ -63,9 +63,8 @@ class TranslationJobLifecycleTest {
     @Test
     void run_acceptedAndFlaggedMarkdown_storesEachDecisionInItsRecord() {
         final Path source = markdown("He opened the *old* door.\n\nKeep *this* paragraph.");
-        final AppError invalid = AppError.of(ErrorCode.validation, "Invalid", "The reply is invalid.");
         final ScriptedChatModel model =
-                replies("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.").answer(Result.err(invalid));
+                replies("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.").answer(TranslationJobTestSupport.cutOffReply());
         final TestProject project = project(source, brief("en", "uk"));
 
         final JobReport completed = report(job(project, model).run());

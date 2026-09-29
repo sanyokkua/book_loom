@@ -71,13 +71,24 @@ class JobControlModelCallTest {
 
     // A stale interrupt left after the call would abort the next blocking operation, such as the pause wait.
     @Test
-    void exitModelCall_afterInterrupt_clearsTheInterrupt() {
+    void exitModelCall_interruptSentByPause_clearsIt() {
         control.enterModelCall();
         control.pause();
 
         control.exitModelCall();
 
         assertThat(Thread.currentThread().isInterrupted()).isFalse();
+    }
+
+    // An interrupt somebody else sent, such as an executor shutdown, must still reach the pause wait and end the run.
+    @Test
+    void exitModelCall_outsideInterruptDuringAGoodCall_keepsTheInterrupt() {
+        control.enterModelCall();
+        Thread.currentThread().interrupt();
+
+        control.exitModelCall();
+
+        assertThat(Thread.currentThread().isInterrupted()).isTrue();
     }
 
     @Test

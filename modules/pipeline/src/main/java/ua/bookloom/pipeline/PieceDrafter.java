@@ -22,6 +22,18 @@ import ua.bookloom.pipeline.prompt.DraftStep;
 @Slf4j
 final class PieceDrafter {
 
+    /** What one piece's draft came to: text to join, or a reply the step itself found unusable. */
+    sealed interface Piece permits Text, Unusable {}
+
+    /** The piece's trimmed translation. */
+    record Text(String value) implements Piece {}
+
+    /**
+     * A reply the model gave but the step cannot use, so the segment is flagged. It is kept apart from a model-call
+     * error, which the run's routing decides, because a piece's own {@code validation} must still flag.
+     */
+    record Unusable(AppError error) implements Piece {}
+
     private final SegmentTranslator owner;
     private final DraftReplyParser replyParser;
 
@@ -52,8 +64,8 @@ final class PieceDrafter {
                 segment.lineBreakTokens());
     }
 
-    /** The piece's trimmed translation, or the error that flags or ends the segment. */
-    Result<String> draft(final Segment piece, final DraftContext context) {
+    /** The piece's draft, or the error the model call answered. */
+    Result<Piece> draft(final Segment piece, final DraftContext context) {
         log.debug(
                 "Drafting piece segmentId={} pieceLength={}",
                 piece.id(),
@@ -69,7 +81,7 @@ final class PieceDrafter {
                 false);
     }
 
-    private Result<String> answer(
+    private Result<Piece> answer(
             final Segment piece,
             final DraftContext context,
             final Result<ChatResponse> reply,
@@ -94,7 +106,7 @@ final class PieceDrafter {
         return accept(piece, context, response, parsed.translation().strip(), placeholderUsed);
     }
 
-    private Result<String> accept(
+    private Result<Piece> accept(
             final Segment piece,
             final DraftContext context,
             final ChatResponse response,
@@ -110,14 +122,14 @@ final class PieceDrafter {
             return failed(piece, ErrorCode.validation, "The model response did not finish normally.");
         }
         if (Tokens.inOrder(trimmed).equals(Tokens.inOrder(piece.masked()))) {
-            return Result.ok(trimmed);
+            return Result.ok(new Text(trimmed));
         }
         return placeholderUsed
                 ? failed(piece, ErrorCode.validation, "The piece's placeholder tokens do not match its source.")
                 : repair(piece, context, DraftStep.PLACEHOLDER_REPAIR, trimmed, "", false);
     }
 
-    private Result<String> repair(
+    private Result<Piece> repair(
             final Segment piece,
             final DraftContext context,
             final DraftStep step,
@@ -135,8 +147,8 @@ final class PieceDrafter {
                 isPlaceholder || placeholderUsed);
     }
 
-    private static Result<String> failed(final Segment piece, final ErrorCode code, final String message) {
+    private static Result<Piece> failed(final Segment piece, final ErrorCode code, final String message) {
         log.debug("Piece failed segmentId={} code={}", piece.id(), code);
-        return Result.err(AppError.of(code, "Piece translation failed", message));
+        return Result.ok(new Unusable(AppError.of(code, "Piece translation failed", message)));
     }
 }

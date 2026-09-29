@@ -122,6 +122,7 @@ class TranslationEngineImplTest {
                 project.stores().segments(),
                 project.stores().checkpoint(),
                 project.stores().openProjects(),
+                project.stores().runs(),
                 Clock.systemUTC());
     }
 

@@ -75,46 +75,15 @@ class OllamaClientUsageTest {
         assertThat(sendChat(messageOnlyRequest()).usage()).isEqualTo(expected);
     }
 
-    // A configured 1 s timeout is replaced by the 200 s a 400-token expectation scales to.
+    // The timeout arithmetic is proven in RequestTimeoutsTest; this proves the wire honours it: a reply five
+    // times slower than the configured second is abandoned at that second.
     @Test
-    void chat_expectedOutputScalesTimeoutPastAShortConfiguredFloor_getsItsReply() {
+    void chat_replySlowerThanTheConfiguredTimeout_failsAtTheConfiguredTimeout() {
         server.stubFor(post(urlEqualTo(CHAT_PATH))
-                .willReturn(aResponse()
-                        .withFixedDelay(1500)
-                        .withBody(
-                                "{\"model\":\"gemma4:e4b-mlx\",\"message\":{\"content\":\"reply\"},\"done_reason\":\"stop\"}")
-                        .withHeader("Content-Type", "application/json")));
-
-        final ChatResponse response = sendChat(
-                client(Duration.ofSeconds(1)),
-                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, null, 400));
-
-        assertThat(response.content()).isEqualTo("reply");
-    }
-
-    // With no expected output, a 1 s configured timeout is kept exactly, so the delayed reply is never seen.
-    @Test
-    void chat_noExpectedOutputWithShortConfiguredTimeout_failsAtTheConfiguredFloor() {
-        server.stubFor(post(urlEqualTo(CHAT_PATH))
-                .willReturn(aResponse().withFixedDelay(1500).withBody("{}")));
+                .willReturn(aResponse().withFixedDelay(5000).withBody("{}")));
 
         final Result<ChatResponse> result = client(Duration.ofSeconds(1))
                 .chat(MODEL_ID, messageOnlyRequest())
-                .result();
-
-        assertTimedOutAtOneSecond(result);
-    }
-
-    // A one-token expectation still scales to less than the 1 s floor, so the floor still applies.
-    @Test
-    void chat_tinyExpectedOutputWithShortConfiguredTimeout_failsAtTheConfiguredFloor() {
-        server.stubFor(post(urlEqualTo(CHAT_PATH))
-                .willReturn(aResponse().withFixedDelay(1500).withBody("{}")));
-
-        final Result<ChatResponse> result = client(Duration.ofSeconds(1))
-                .chat(
-                        MODEL_ID,
-                        new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, null, 1))
                 .result();
 
         assertTimedOutAtOneSecond(result);

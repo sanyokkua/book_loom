@@ -25,9 +25,11 @@ import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 
@@ -51,7 +53,8 @@ class TranslationJobProviderAbortTest {
         }
     }
 
-    // A Stop that waited for the 30-second reply would blow the budget; the decided first segment must stay counted.
+    // A Stop that waited for the 30-second reply would outlast the suite's bounded wait for the run; the decided
+    // first segment must stay counted.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_stopDuringSecondSlowRequest_keepsTheFirstAcceptedAndLeavesTwoPending(final ProviderKind kind) {
@@ -62,19 +65,18 @@ class TranslationJobProviderAbortTest {
                 provider.target("NEVER SEEN.", LONG_DELAY)));
         final TranslationJobImpl translation =
                 markdownJob(provider.model(REQUEST_TIMEOUT, ignored -> {}), "One.\n\nTwo.\n\nThree.");
+        final CountDownLatch secondCallStarted = secondCallLatch(translation);
         final ExecutorService workers = executor();
 
         final Future<Result<JobReport>> run = workers.submit(translation::run);
         provider.awaitChatRequests(2);
-        sleepOneSecond();
-        final long stoppedAt = System.nanoTime();
+        await(secondCallStarted);
         translation.cancel();
         final JobReport result = report(await(run));
 
         assertThat(result)
                 .extracting(JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged)
                 .containsExactly(JobState.CANCELLED, 3, 1, 0);
-        assertThat(Duration.ofNanos(System.nanoTime() - stoppedAt)).isLessThan(Duration.ofSeconds(STOP_BUDGET_SECONDS));
         assertThat(provider.chatRequests()).isEqualTo(2);
         assertThat(Files.exists(tempDir.resolve("Book.uk.md"))).isFalse();
     }
@@ -134,13 +136,13 @@ class TranslationJobProviderAbortTest {
                 provider.target("THREE.", Duration.ZERO)));
         final TranslationJobImpl translation =
                 markdownJob(provider.model(REQUEST_TIMEOUT, ignored -> {}), "One.\n\nTwo.\n\nThree.");
-        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
-        translation.subscribe(event -> capturePaused(pauses, event));
+        final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
+        final CountDownLatch secondCallStarted = secondCallLatch(translation);
         final ExecutorService workers = executor();
 
         final Future<Result<JobReport>> run = workers.submit(translation::run);
         provider.awaitChatRequests(2);
-        sleepOneSecond();
+        await(secondCallStarted);
         translation.pause();
         final Paused paused = awaitPaused(pauses);
         final int sentWhilePaused = provider.chatRequests();
@@ -168,18 +170,28 @@ class TranslationJobProviderAbortTest {
         return job(source, model);
     }
 
-    private static void sleepOneSecond() {
-        try {
-            Thread.sleep(Duration.ofSeconds(1));
-        } catch (InterruptedException cause) {
-            Thread.currentThread().interrupt();
-            throw new AssertionError("interrupted while letting the request run", cause);
+    private static LinkedBlockingQueue<Paused> pausesOf(final TranslationJobImpl translation) {
+        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
+        translation.subscribe(event -> capturePaused(pauses, event));
+        return pauses;
+    }
+
+    private static CountDownLatch secondCallLatch(final TranslationJobImpl translation) {
+        final CountDownLatch started = new CountDownLatch(1);
+        translation.subscribe(event -> signalCallFor(event, "Book.md:1", started));
+        return started;
+    }
+
+    private static void signalCallFor(final JobEvent event, final String segmentId, final CountDownLatch started) {
+        if (event instanceof ModelCallStarted call && segmentId.equals(call.segmentId())) {
+            started.countDown();
         }
     }
 
+    // Only the pause's interrupt may end this wait, which is the property the test proves about the retry loop.
     private static void waitInBackoff(final CountDownLatch backoff) throws InterruptedException {
         backoff.countDown();
-        Thread.sleep(Duration.ofSeconds(10));
+        new CountDownLatch(1).await();
     }
 
     private static void awaitLatch(final CountDownLatch latch) {

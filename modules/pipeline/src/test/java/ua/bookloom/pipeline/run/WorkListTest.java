@@ -20,6 +20,7 @@ import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.project.SegmentPath;
@@ -43,7 +44,8 @@ class WorkListTest {
                 injector.getInstance(ProjectRepository.class),
                 injector.getInstance(SegmentRepository.class),
                 injector.getInstance(CheckpointPort.class),
-                injector.getInstance(OpenProjects.class));
+                injector.getInstance(OpenProjects.class),
+                injector.getInstance(RunRepository.class));
     }
 
     // Accepted targets retain only the newest three within their unit and never cross to the next unit.
