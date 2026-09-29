@@ -102,7 +102,18 @@ public enum PromptName {
             0.2,
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
-            new Slots(Set.of("source", "text"), Set.of()));
+            new Slots(Set.of("source", "text"), Set.of())),
+
+    /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
+    PRESCAN(
+            "prescan",
+            CallKind.PRESCAN,
+            "prescan",
+            PrescanSchema.SCHEMA,
+            0.2,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("candidates"), Set.of("existingTerms")));
 
     private final String resourceBaseName;
     private final CallKind callKind;

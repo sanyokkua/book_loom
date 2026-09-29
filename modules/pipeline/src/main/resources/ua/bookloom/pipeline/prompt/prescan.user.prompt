@@ -1,0 +1,11 @@
+[Candidates — a capitalised word or run from the book, then the first sentence that holds it]
+{{candidates}}
+
+{{#existingTerms}}
+[Existing glossary terms — do not duplicate these]
+{{existingTerms}}
+{{/existingTerms}}
+
+Return JSON exactly as:
+{"terms":[{"term":"<source form as listed>","type":"person|place|org|term|other",
+ "gender":"male|female|neuter|unknown","note":"<short context/disambiguation>","confidence":<0.0-1.0>}]}

@@ -544,33 +544,38 @@ the candidate lists are merged/deduplicated deterministically before display.
 **SYSTEM**
 
 ```
-You are extracting a name and terminology list for a {{sourceLang}} → {{targetLang}} book translation.
-Identify recurring proper names (people, places, organizations) and domain-specific terms that must be
-translated consistently. For each, give its type and — for persons — your best guess of grammatical/character
-gender for target-language agreement, with a confidence. Do not translate the terms; propose the source form.
-If gender is not inferable, use "unknown". Do not invent entries that are not in the text.
+You are extracting a name and terminology list for a {{sourceLanguage}} → {{targetLanguage}} book translation.
+You receive candidates taken from the book, one per line: a capitalised word or run of words, then the first
+sentence that holds it. Choose the recurring proper names (people, places, organizations) and domain-specific
+terms that must be translated consistently, and give each one its type and — for a person — your best guess of
+the gender that target-language agreement needs, with a confidence.
+Do not translate the terms; propose the source form exactly as listed.
+Propose only terms from the candidate list; do not invent entries.
+If gender is not inferable, use "unknown".
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 ```
 
 **USER**
 
 ```
-[Book text or representative excerpt to scan]
-{{scanText}}
+[Candidates — a capitalised word or run from the book, then the first sentence that holds it]
+{{candidates}}
 
+{{#existingTerms}}
 [Existing glossary terms — do not duplicate these]
 {{existingTerms}}
+{{/existingTerms}}
 
 Return JSON exactly as:
-{"terms":[{"term":"<source form>","type":"person|place|org|term|other",
+{"terms":[{"term":"<source form as listed>","type":"person|place|org|term|other",
  "gender":"male|female|neuter|unknown","note":"<short context/disambiguation>","confidence":<0.0-1.0>}]}
 ```
 
-| Variable                           | Required? | Source / notes                                                             |
-|------------------------------------|-----------|------------------------------------------------------------------------------|
-| `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages (`FR-BRIEF-01`).                                         |
-| `{{scanText}}`                     | Required  | The book text (or a representative excerpt / current batch) to scan.       |
-| `{{existingTerms}}`                | Optional  | Already-known glossary terms to avoid duplicating; `(none)` on first scan. |
+| Variable                                 | Required? | Source / notes                                                                                |
+|------------------------------------------|-----------|-----------------------------------------------------------------------------------------------|
+| `{{sourceLanguage}}`, `{{targetLanguage}}` | Required  | System message; the project's languages (`FR-BRIEF-01`).                                      |
+| `{{candidates}}`                         | Required  | The batch's candidates, one `term — first sentence` line each (deterministic scan, at most 40). |
+| `{{existingTerms}}`                      | Optional  | Terms the glossary already holds, comma-separated; the whole block is dropped when there are none. |
 
 **Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
 
