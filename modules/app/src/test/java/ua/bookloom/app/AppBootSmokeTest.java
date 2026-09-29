@@ -114,7 +114,7 @@ class AppBootSmokeTest {
 
         final Scene scene = FxToolkit.toolkitContext().getRegisteredStage().getScene();
         assertThat(((Label) scene.lookup("#shell-breadcrumb")).getText())
-                .isEqualTo("Workflow / Import book · step 1 of 7");
+                .isEqualTo("Workflow / Import book · step 1 of 6");
     }
 
     /**

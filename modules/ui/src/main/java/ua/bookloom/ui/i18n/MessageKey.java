@@ -25,12 +25,14 @@ public enum MessageKey {
     NAV_NAMES_AND_STYLE("nav.namesAndStyle"),
     /** Navigation entry and breadcrumb of the translating dashboard. */
     NAV_TRANSLATING("nav.translating"),
-    /** Navigation entry and breadcrumb of the review queue. */
-    NAV_REVIEW("nav.review"),
     /** Navigation entry and breadcrumb of the export screen. */
     NAV_EXPORT("nav.export"),
     /** Navigation entry and breadcrumb of the settings screen. */
     NAV_SETTINGS("nav.settings"),
+    /** The navigation footer naming the chosen provider and model: provider, model. */
+    NAV_FOOTER_SELECTION("nav.footer.selection"),
+    /** The navigation footer while no model is chosen. */
+    NAV_FOOTER_NO_MODEL("nav.footer.noModel"),
     /** The product name in the title bar; the same in every language. */
     SHELL_TITLE("shell.title"),
     /** Title-bar control label offered while the light block is in force. */

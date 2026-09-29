@@ -68,7 +68,7 @@ class NavigatorTest extends ApplicationTest {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"PROJECTS", "NAMES_STYLE", "REVIEW"})
+            names = {"PROJECTS", "NAMES_STYLE"})
     void navigate_inertView_isRefusedAndNothingChanges(final ViewNames inert) {
         navigateOnFxThread(navigator, ViewNames.IMPORT);
         final Parent before = navigator.content().get();
@@ -83,7 +83,7 @@ class NavigatorTest extends ApplicationTest {
     @Test
     void navigate_inertViewBeforeAnyNavigation_leavesTheCurrentViewEmpty() {
         // IF a refusal recorded its target, THEN the shell would mark an inert entry as current.
-        final boolean accepted = navigateOnFxThread(navigator, ViewNames.REVIEW);
+        final boolean accepted = navigateOnFxThread(navigator, ViewNames.NAMES_STYLE);
 
         assertThat(accepted).isFalse();
         assertThat(navigator.currentView().get()).isNull();
@@ -124,7 +124,7 @@ class NavigatorTest extends ApplicationTest {
         navigator.currentView().addListener((observable, previous, current) -> seen.add(current));
 
         navigateOnFxThread(navigator, ViewNames.IMPORT);
-        navigateOnFxThread(navigator, ViewNames.REVIEW);
+        navigateOnFxThread(navigator, ViewNames.NAMES_STYLE);
         navigateOnFxThread(navigator, ViewNames.IMPORT);
         navigateOnFxThread(navigator, ViewNames.BOOK_BRIEF);
 

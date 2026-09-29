@@ -26,10 +26,8 @@ public enum ViewNames {
     NAMES_STYLE(MessageKey.NAV_NAMES_AND_STYLE, NavGroup.WORKFLOW, 4, null, null),
     /** The running translation dashboard. */
     TRANSLATING(MessageKey.NAV_TRANSLATING, NavGroup.WORKFLOW, 5, "/ua/bookloom/ui/screen/translating.fxml", null),
-    /** Review queue; has no screen yet. */
-    REVIEW(MessageKey.NAV_REVIEW, NavGroup.WORKFLOW, 6, null, null),
     /** Writing the translated book out. */
-    EXPORT(MessageKey.NAV_EXPORT, NavGroup.WORKFLOW, 7, "/ua/bookloom/ui/screen/export.fxml", null),
+    EXPORT(MessageKey.NAV_EXPORT, NavGroup.WORKFLOW, 6, "/ua/bookloom/ui/screen/export.fxml", null),
     /** Provider and appearance settings. */
     SETTINGS(
             MessageKey.NAV_SETTINGS,
@@ -78,7 +76,7 @@ public enum ViewNames {
     /**
      * Returns the position in the workflow.
      *
-     * @return the step from 1 to 7, or empty for an entry outside the numbered workflow
+     * @return the step from 1 to 6, or empty for an entry outside the numbered workflow
      */
     public OptionalInt step() {
         return step == null ? OptionalInt.empty() : OptionalInt.of(step);

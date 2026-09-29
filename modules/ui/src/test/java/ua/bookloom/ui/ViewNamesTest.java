@@ -88,7 +88,7 @@ class ViewNamesTest extends ApplicationTest {
     @ParameterizedTest
     @EnumSource(
             value = ViewNames.class,
-            names = {"PROJECTS", "NAMES_STYLE", "REVIEW"})
+            names = {"PROJECTS", "NAMES_STYLE"})
     void resource_inertConstant_isAbsentAndTheConstantIsUnavailable(final ViewNames view) {
         assertThat(view.resource()).isEmpty();
         assertThat(view.isAvailable()).isFalse();
@@ -104,7 +104,6 @@ class ViewNamesTest extends ApplicationTest {
         "STRUCTURE, NAV_STRUCTURE",
         "NAMES_STYLE, NAV_NAMES_AND_STYLE",
         "TRANSLATING, NAV_TRANSLATING",
-        "REVIEW, NAV_REVIEW",
         "EXPORT, NAV_EXPORT",
         "SETTINGS, NAV_SETTINGS",
     })
@@ -120,8 +119,7 @@ class ViewNamesTest extends ApplicationTest {
         "STRUCTURE, 3",
         "NAMES_STYLE, 4",
         "TRANSLATING, 5",
-        "REVIEW, 6",
-        "EXPORT, 7",
+        "EXPORT, 6",
     })
     void step_workflowConstant_isItsPositionInTheWorkflow(final ViewNames view, final int expected) {
         assertThat(view.step()).isEqualTo(OptionalInt.of(expected));
@@ -141,7 +139,7 @@ class ViewNamesTest extends ApplicationTest {
     @CsvSource(
             delimiter = '|',
             value = {
-                "WORKFLOW | PROJECTS IMPORT BOOK_BRIEF STRUCTURE NAMES_STYLE TRANSLATING REVIEW EXPORT",
+                "WORKFLOW | PROJECTS IMPORT BOOK_BRIEF STRUCTURE NAMES_STYLE TRANSLATING EXPORT",
                 "APPLICATION | SETTINGS",
             })
     void group_everyConstant_belongsToExactlyItsGroupInReadingOrder(final NavGroup group, final String expected) {
@@ -162,7 +160,6 @@ class ViewNamesTest extends ApplicationTest {
                         "STRUCTURE",
                         "NAMES_STYLE",
                         "TRANSLATING",
-                        "REVIEW",
                         "EXPORT",
                         "SETTINGS");
     }

@@ -26,6 +26,8 @@ import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ToastStack;
+import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.WorkflowProgress;
 import ua.bookloom.ui.theme.ThemeBlock;
 import ua.bookloom.ui.theme.ThemeController;
 
@@ -85,6 +87,8 @@ public final class AppShellView {
      * @param modalHost the overlay the About dialog is shown in; shared so other dialogs use the same one
      * @param toasts the transient-message surface whose host the shell places above everything else
      * @param runStatus the run's status and control, placed between the product name and the theme control
+     * @param progress the completed steps the navigation marks
+     * @param settings the chosen provider and model the navigation footer names
      * @param version the build version the About dialog reports
      */
     @Inject
@@ -95,6 +99,8 @@ public final class AppShellView {
             final ModalHost modalHost,
             final ToastStack toasts,
             final RunStatusBar runStatus,
+            final WorkflowProgress progress,
+            final SettingsViewModel settings,
             final @BuildVersion String version) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -103,7 +109,7 @@ public final class AppShellView {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.runStatus = Objects.requireNonNull(runStatus, "runStatus");
         this.version = Objects.requireNonNull(version, "version");
-        this.navColumn = new NavColumn(messages, this::activate);
+        this.navColumn = new NavColumn(messages, this::activate, progress, settings);
     }
 
     /**
