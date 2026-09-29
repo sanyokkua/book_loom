@@ -35,6 +35,9 @@ module ua.bookloom.ui {
     opens ua.bookloom.ui to
             com.google.guice,
             javafx.fxml;
+    opens ua.bookloom.ui.control to
+            com.google.guice,
+            javafx.fxml;
     opens ua.bookloom.ui.i18n to
             com.google.guice,
             javafx.fxml;
