@@ -32,6 +32,9 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.pipeline.export.BookExporter;
+import ua.bookloom.pipeline.export.ExportMoveOperation;
+import ua.bookloom.pipeline.export.ExportPlan;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -212,8 +215,9 @@ final class TranslationJobImpl implements TranslationJob {
     }
 
     private @Nullable Result<JobReport> exportAttempt(final BookExporter exporter, final JobProgressTracker tracker) {
-        final Result<Path> result =
-                exporter.export(request, tracker.decidedDocument(), control::isCancellationRequested);
+        final ExportPlan plan =
+                new ExportPlan(request.source(), request.destination(), request.targetLanguage(), request.overwrite());
+        final Result<Path> result = exporter.export(plan, tracker.decidedDocument(), control::isCancellationRequested);
         if (result.isOk()) {
             return finish(JobState.COMPLETED, tracker, dataOf(result), null);
         }

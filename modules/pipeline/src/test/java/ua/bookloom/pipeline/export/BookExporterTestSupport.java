@@ -1,8 +1,7 @@
-package ua.bookloom.pipeline;
+package ua.bookloom.pipeline.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.inject.Guice;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -12,6 +11,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.zip.ZipFile;
@@ -21,24 +22,19 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.TestDocuments;
 
 /** Shared real-document setup and narrow failure seams for exporter tests. */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor,
 // so suppress only its source-level utility-constructor false positive.
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class BookExporterTestSupport {
-
-    static DocumentPort documents() {
-        return Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
-    }
+public final class BookExporterTestSupport {
 
     static Document opened(final DocumentPort documents, final Path source) {
         final Result<Document> result = documents.open(source);
@@ -87,43 +83,14 @@ final class BookExporterTestSupport {
         return Objects.requireNonNull(result.error(), "error");
     }
 
-    abstract static class ForwardingDocumentPort implements DocumentPort {
-
-        final DocumentPort delegate;
-
-        ForwardingDocumentPort(final DocumentPort delegate) {
-            this.delegate = Objects.requireNonNull(delegate, "delegate");
-        }
-
-        @Override
-        public Result<Document> open(final Path source) {
-            return delegate.open(source);
-        }
-
-        @Override
-        public Result<Path> write(final Document document, final Path destination, final String targetLanguage) {
-            return delegate.write(document, destination, targetLanguage);
-        }
-
-        @Override
-        public Result<Boolean> close(final Document document) {
-            return delegate.close(document);
-        }
-
-        @Override
-        public Result<String> unmask(final BookFormat format, final Segment segment, final String translatedMasked) {
-            return delegate.unmask(format, segment, translatedMasked);
-        }
-    }
-
-    static class RecordingDocumentPort extends ForwardingDocumentPort {
+    public static class RecordingDocumentPort extends TestDocuments.ForwardingPort {
 
         private final List<Document> opened = new ArrayList<>();
         private final List<Document> closed = new ArrayList<>();
         private final List<Document> written = new ArrayList<>();
         private final List<Path> writeDestinations = new ArrayList<>();
 
-        RecordingDocumentPort(final DocumentPort delegate) {
+        public RecordingDocumentPort(final DocumentPort delegate) {
             super(delegate);
         }
 
@@ -149,19 +116,19 @@ final class BookExporterTestSupport {
             return super.close(document);
         }
 
-        List<Document> openedDocuments() {
+        public List<Document> openedDocuments() {
             return List.copyOf(opened);
         }
 
-        List<Document> closedDocuments() {
+        public List<Document> closedDocuments() {
             return List.copyOf(closed);
         }
 
-        List<Document> writtenDocuments() {
+        public List<Document> writtenDocuments() {
             return List.copyOf(written);
         }
 
-        List<Path> writeDestinations() {
+        public List<Path> writeDestinations() {
             return List.copyOf(writeDestinations);
         }
     }
@@ -226,13 +193,13 @@ final class BookExporterTestSupport {
         }
     }
 
-    static final class SingleCloseFailurePort extends RecordingDocumentPort {
+    public static final class SingleCloseFailurePort extends RecordingDocumentPort {
 
         private final int failingIndex;
         private final AppError failure;
         private final AtomicInteger closeCount = new AtomicInteger();
 
-        SingleCloseFailurePort(final DocumentPort delegate, final int failingIndex, final AppError failure) {
+        public SingleCloseFailurePort(final DocumentPort delegate, final int failingIndex, final AppError failure) {
             super(delegate);
             this.failingIndex = failingIndex;
             this.failure = failure;
@@ -273,11 +240,11 @@ final class BookExporterTestSupport {
         }
     }
 
-    static final class OpenFailurePort extends ForwardingDocumentPort {
+    public static final class OpenFailurePort extends TestDocuments.ForwardingPort {
 
         private final AppError failure;
 
-        OpenFailurePort(final DocumentPort delegate, final AppError failure) {
+        public OpenFailurePort(final DocumentPort delegate, final AppError failure) {
             super(delegate);
             this.failure = failure;
         }
@@ -288,11 +255,11 @@ final class BookExporterTestSupport {
         }
     }
 
-    static final class ThrowingMoveOperation implements ExportMoveOperation {
+    public static final class ThrowingMoveOperation implements ExportMoveOperation {
 
         private final RuntimeException failure;
 
-        ThrowingMoveOperation(final RuntimeException failure) {
+        public ThrowingMoveOperation(final RuntimeException failure) {
             this.failure = failure;
         }
 
@@ -302,13 +269,13 @@ final class BookExporterTestSupport {
         }
     }
 
-    static final class ScriptedMoveOperation implements ExportMoveOperation {
+    public static final class ScriptedMoveOperation implements ExportMoveOperation {
 
         private final List<Result<Path>> results = new ArrayList<>();
         private final List<List<CopyOption>> optionCalls = new ArrayList<>();
         private int index;
 
-        ScriptedMoveOperation answer(final Result<Path> result) {
+        public ScriptedMoveOperation answer(final Result<Path> result) {
             results.add(result);
             return this;
         }
@@ -332,17 +299,17 @@ final class BookExporterTestSupport {
             throw new IllegalStateException("scripted move failure requires an IOException cause", cause);
         }
 
-        List<List<CopyOption>> optionCalls() {
+        public List<List<CopyOption>> optionCalls() {
             return List.copyOf(optionCalls);
         }
     }
 
-    static final class DestinationCreatingMoveOperation implements ExportMoveOperation {
+    public static final class DestinationCreatingMoveOperation implements ExportMoveOperation {
 
         private final String content;
         private final List<List<CopyOption>> optionCalls = new ArrayList<>();
 
-        DestinationCreatingMoveOperation(final String content) {
+        public DestinationCreatingMoveOperation(final String content) {
             this.content = content;
         }
 
@@ -357,8 +324,53 @@ final class BookExporterTestSupport {
             }
         }
 
-        List<List<CopyOption>> optionCalls() {
+        public List<List<CopyOption>> optionCalls() {
             return List.copyOf(optionCalls);
+        }
+    }
+
+    /** Blocks inside the n-th close so a test can act while the export holds its documents open. */
+    public static final class BlockingClosePort extends TestDocuments.ForwardingPort {
+
+        private static final long WAIT_SECONDS = 5;
+
+        private final AtomicInteger closes = new AtomicInteger();
+        private final int blockingClose;
+        private final CountDownLatch entered = new CountDownLatch(1);
+        private final CountDownLatch released = new CountDownLatch(1);
+
+        public BlockingClosePort(final DocumentPort delegate, final int blockingClose) {
+            super(delegate);
+            this.blockingClose = blockingClose;
+        }
+
+        @Override
+        public Result<Boolean> close(final Document document) {
+            final Result<Boolean> result = super.close(document);
+            if (closes.incrementAndGet() == blockingClose) {
+                entered.countDown();
+                await(released);
+            }
+            return result;
+        }
+
+        public void awaitBlockingClose() {
+            await(entered);
+        }
+
+        public void releaseClose() {
+            released.countDown();
+        }
+
+        private static void await(final CountDownLatch latch) {
+            try {
+                if (!latch.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
+                    throw new AssertionError("timed out waiting for export close");
+                }
+            } catch (InterruptedException cause) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("interrupted waiting for export close", cause);
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
@@ -32,7 +33,7 @@ class QualityLoopGateResultTest {
     @TempDir
     private Path tempDir;
 
-    private final DocumentPort documents = QualityLoopFixtures.documents();
+    private final DocumentPort documents = TestDocuments.documents();
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
     // A round whose reply fails the gate hands its finding to the next round in place of the same gate's older one.

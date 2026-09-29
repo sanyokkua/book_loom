@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline;
+package ua.bookloom.pipeline.export;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -8,7 +8,7 @@ import java.nio.file.Path;
 
 /** Internal filesystem seam for deterministic publication-failure tests. */
 @FunctionalInterface
-interface ExportMoveOperation {
+public interface ExportMoveOperation {
 
     Path move(Path source, Path destination, CopyOption... options);
 

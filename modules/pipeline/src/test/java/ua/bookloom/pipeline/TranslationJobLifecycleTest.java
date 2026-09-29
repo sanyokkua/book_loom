@@ -1,7 +1,7 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.documents;
+import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.pipeline.export.BookExporterTestSupport;
 
 /** Covers startup refusals, source release, terminal controls, and one-run claiming. */
 class TranslationJobLifecycleTest {

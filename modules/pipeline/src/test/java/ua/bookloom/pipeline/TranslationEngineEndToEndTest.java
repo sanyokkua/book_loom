@@ -33,6 +33,7 @@ import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
+import ua.bookloom.persistence.PersistenceModule;
 
 /** Proves the public engine translates every supported generated book through the real document module. */
 class TranslationEngineEndToEndTest {
@@ -118,7 +119,8 @@ class TranslationEngineEndToEndTest {
     }
 
     private JobReport translate(final Path source, final Path destination) {
-        final Injector injector = Guice.createInjector(new DocumentModule(), new LlmModule(), new PipelineModule());
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(), new LlmModule(), new PersistenceModule(), new PipelineModule());
         final TranslationEngine engine = injector.getInstance(TranslationEngine.class);
         final ChatModel model = jsonUppercaseModel();
         final TranslationJob job =
@@ -164,7 +166,8 @@ class TranslationEngineEndToEndTest {
     private void assertCheckedExport(final Path source, final Path destination) {
         assertThat(Files.notExists(destination.resolveSibling("." + destination.getFileName())))
                 .isTrue();
-        final Injector injector = Guice.createInjector(new DocumentModule(), new LlmModule(), new PipelineModule());
+        final Injector injector = Guice.createInjector(
+                new DocumentModule(), new LlmModule(), new PersistenceModule(), new PipelineModule());
         final DocumentPort documents = injector.getInstance(DocumentPort.class);
         final Document sourceDocument = dataOf(documents.open(source));
         try {

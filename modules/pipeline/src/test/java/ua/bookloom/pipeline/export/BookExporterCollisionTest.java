@@ -1,9 +1,9 @@
-package ua.bookloom.pipeline;
+package ua.bookloom.pipeline.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.BookExporterTestSupport.documents;
-import static ua.bookloom.pipeline.BookExporterTestSupport.errorOf;
-import static ua.bookloom.pipeline.BookExporterTestSupport.snapshot;
+import static ua.bookloom.pipeline.TestDocuments.documents;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.errorOf;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.snapshot;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,8 +15,8 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.pipeline.TranslationRequest;
-import ua.bookloom.pipeline.BookExporterTestSupport.RecordingDocumentPort;
+import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.RecordingDocumentPort;
 
 /** Collision preflight and fixed hidden-name behavior. */
 class BookExporterCollisionTest {
@@ -210,7 +210,7 @@ class BookExporterCollisionTest {
         assertThat(Files.exists(tempDir.resolve(".Book.uk.fb2.zip"))).isFalse();
     }
 
-    private static TranslationRequest request(final Path source, final Path destination) {
-        return new TranslationRequest(source, destination, "uk", "en", true);
+    private static ExportPlan request(final Path source, final Path destination) {
+        return new ExportPlan(source, destination, "uk", true);
     }
 }

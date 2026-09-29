@@ -2,7 +2,6 @@ package ua.bookloom.pipeline;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -26,7 +25,6 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.TranslationRequest;
-import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -40,10 +38,6 @@ final class TranslationJobTestSupport {
     private static final long WAIT_SECONDS = 5;
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
-
-    static DocumentPort documents() {
-        return Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
-    }
 
     static TranslationJobImpl job(
             final DocumentPort documents, final Path source, final Path destination, final ChatModel model) {
@@ -263,48 +257,6 @@ final class TranslationJobTestSupport {
 
         private static void await(final CountDownLatch latch) {
             awaitIgnoringInterrupt(latch, "second model call");
-        }
-    }
-
-    static final class BlockingClosePort extends BookExporterTestSupport.ForwardingDocumentPort {
-
-        private final AtomicInteger closes = new AtomicInteger();
-        private final int blockingClose;
-        private final CountDownLatch entered = new CountDownLatch(1);
-        private final CountDownLatch released = new CountDownLatch(1);
-
-        BlockingClosePort(final DocumentPort delegate, final int blockingClose) {
-            super(delegate);
-            this.blockingClose = blockingClose;
-        }
-
-        @Override
-        public Result<Boolean> close(final ua.bookloom.api.document.Document document) {
-            final Result<Boolean> result = super.close(document);
-            if (closes.incrementAndGet() == blockingClose) {
-                entered.countDown();
-                await(released);
-            }
-            return result;
-        }
-
-        void awaitBlockingClose() {
-            await(entered);
-        }
-
-        void releaseClose() {
-            released.countDown();
-        }
-
-        private static void await(final CountDownLatch latch) {
-            try {
-                if (!latch.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new AssertionError("timed out waiting for export close");
-                }
-            } catch (InterruptedException cause) {
-                Thread.currentThread().interrupt();
-                throw new AssertionError("interrupted waiting for export close", cause);
-            }
         }
     }
 }

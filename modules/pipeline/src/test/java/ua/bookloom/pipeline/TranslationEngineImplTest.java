@@ -34,6 +34,8 @@ import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.pipeline.export.DestinationChecks;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Covers the public engine boundary and the runtime checks owned by the job it creates. */
@@ -45,8 +47,9 @@ class TranslationEngineImplTest {
     // Removing the owning-module binding would make resolving the public port fail.
     @Test
     void injector_pipelineModule_resolvesTranslationEngineImpl() {
-        final TranslationEngine engine =
-                Guice.createInjector(new DocumentModule(), new PipelineModule()).getInstance(TranslationEngine.class);
+        final TranslationEngine engine = Guice.createInjector(
+                        new DocumentModule(), new PersistenceModule(), new PipelineModule())
+                .getInstance(TranslationEngine.class);
 
         assertThat(engine).isInstanceOf(TranslationEngineImpl.class);
     }
@@ -201,7 +204,7 @@ class TranslationEngineImplTest {
     }
 
     private Result<TranslationJob> newJobWithDestinationIdentityLog(final TranslationRequest request) {
-        final Logger logger = (Logger) LoggerFactory.getLogger(TranslationEngineImpl.class);
+        final Logger logger = (Logger) LoggerFactory.getLogger(DestinationChecks.class);
         final ListAppender<ILoggingEvent> appender = new ListAppender<>();
         appender.start();
         logger.addAppender(appender);

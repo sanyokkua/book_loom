@@ -18,6 +18,7 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
@@ -30,7 +31,7 @@ class QualityLoopJudgeInputTest {
     @TempDir
     private Path tempDir;
 
-    private final DocumentPort documents = QualityLoopFixtures.documents();
+    private final DocumentPort documents = TestDocuments.documents();
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
     // A chunk of four: the first still fails its placeholder gate (crossed pair) after the draft's own repair, the

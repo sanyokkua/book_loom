@@ -27,6 +27,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
@@ -41,7 +42,7 @@ class QualityLoopDirectedFixTest {
     @TempDir
     private Path tempDir;
 
-    private final DocumentPort documents = QualityLoopFixtures.documents();
+    private final DocumentPort documents = TestDocuments.documents();
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
     // A placeholder finding's directed fix names the full expected token sequence in its user message — on

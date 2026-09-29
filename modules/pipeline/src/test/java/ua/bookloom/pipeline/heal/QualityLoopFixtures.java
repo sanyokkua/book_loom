@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.heal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -20,8 +19,8 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.judge.JudgeCall;
@@ -57,10 +56,6 @@ final class QualityLoopFixtures {
     static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
-    static DocumentPort documents() {
-        return Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
-    }
-
     static QualityLoop loop() {
         final ObjectMapper mapper = new ObjectMapper();
         final PromptTemplates templates = new PromptTemplates();
@@ -78,7 +73,7 @@ final class QualityLoopFixtures {
 
     /** A one-paragraph Markdown segment, parsed by the real document module so its placeholder map is genuine. */
     static Segment markdownSegment(final Path destination, final String markedSource) {
-        final DocumentPort documents = documents();
+        final DocumentPort documents = TestDocuments.documents();
         final Path path = TestBooks.markdown(destination, markedSource);
         final Document document = Objects.requireNonNull(documents.open(path).data(), "opened document");
         return document.units().getFirst().segments().getFirst();

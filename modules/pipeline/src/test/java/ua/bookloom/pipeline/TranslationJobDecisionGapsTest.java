@@ -40,7 +40,7 @@ class TranslationJobDecisionGapsTest {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.", "en");
         final ScriptedChatModel model = TranslationJobTestSupport.replies("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
 
-        final JobReport report = report(job(TranslationJobTestSupport.documents(), source, "de", model));
+        final JobReport report = report(job(TestDocuments.documents(), source, "de", model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(model.requests().getFirst().messages().getFirst().content())
@@ -61,7 +61,7 @@ class TranslationJobDecisionGapsTest {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.", declared);
         final ScriptedChatModel model = TranslationJobTestSupport.replies("ONE.");
 
-        final JobReport report = report(job(TranslationJobTestSupport.documents(), source, null, model));
+        final JobReport report = report(job(TestDocuments.documents(), source, null, model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(model.requests().getFirst().messages().getFirst().content()).contains(expectedInstruction);
@@ -80,7 +80,7 @@ class TranslationJobDecisionGapsTest {
         model.answer(
                 Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("SHE LEFT."), FinishReason.STOP)));
 
-        final JobReport report = report(job(TranslationJobTestSupport.documents(), source, "en", model));
+        final JobReport report = report(job(TestDocuments.documents(), source, "en", model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(report.accepted()).isEqualTo(1);
@@ -106,7 +106,7 @@ class TranslationJobDecisionGapsTest {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n\nTwo.\n");
         final ScriptedChatModel model = new ScriptedChatModel().throwFailure(new IllegalStateException("model broke"));
 
-        final JobReport report = report(job(TranslationJobTestSupport.documents(), source, "en", model));
+        final JobReport report = report(job(TestDocuments.documents(), source, "en", model));
 
         assertThat(report.end()).isEqualTo(JobState.FAILED);
         assertThat(report.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
@@ -120,14 +120,12 @@ class TranslationJobDecisionGapsTest {
     void run_unmaskInternalErrorOnFirstSegment_endsFailedWithBothSegmentsPending() {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n\nTwo.\n");
         final AppError restoreFault = AppError.of(ErrorCode.internal, "Restore failed", "The restore broke.");
-        final DocumentPort port =
-                new BookExporterTestSupport.ForwardingDocumentPort(TranslationJobTestSupport.documents()) {
-                    @Override
-                    public Result<String> unmask(
-                            final BookFormat format, final Segment segment, final String translated) {
-                        return Result.err(restoreFault);
-                    }
-                };
+        final DocumentPort port = new TestDocuments.ForwardingPort(TestDocuments.documents()) {
+            @Override
+            public Result<String> unmask(final BookFormat format, final Segment segment, final String translated) {
+                return Result.err(restoreFault);
+            }
+        };
         final ScriptedChatModel model = TranslationJobTestSupport.replies("ONE.", "TWO.");
 
         final JobReport report = report(job(port, source, "en", model));
@@ -145,14 +143,12 @@ class TranslationJobDecisionGapsTest {
     void run_exportWriteFailsWithoutPauseOnError_endsFailedWithTheWriteError() {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n");
         final AppError writeFault = AppError.of(ErrorCode.internal, "Write failed", "The disk refused the book.");
-        final DocumentPort port =
-                new BookExporterTestSupport.ForwardingDocumentPort(TranslationJobTestSupport.documents()) {
-                    @Override
-                    public Result<Path> write(
-                            final Document document, final Path destination, final String targetLanguage) {
-                        return Result.err(writeFault);
-                    }
-                };
+        final DocumentPort port = new TestDocuments.ForwardingPort(TestDocuments.documents()) {
+            @Override
+            public Result<Path> write(final Document document, final Path destination, final String targetLanguage) {
+                return Result.err(writeFault);
+            }
+        };
 
         final JobReport report = report(job(port, source, "en", TranslationJobTestSupport.replies("ONE.")));
 

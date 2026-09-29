@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
+import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
@@ -33,7 +34,7 @@ class QualityLoopPseudoModelTest {
     @TempDir
     private Path tempDir;
 
-    private final DocumentPort documents = QualityLoopFixtures.documents();
+    private final DocumentPort documents = TestDocuments.documents();
     private final QualityLoop loop = QualityLoopFixtures.loop();
     private final List<ChatRequest> requests = new ArrayList<>();
     private final ModelCalls calls = recordingPseudoCalls(requests);

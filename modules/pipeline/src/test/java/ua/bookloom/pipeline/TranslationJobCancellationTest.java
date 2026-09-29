@@ -1,10 +1,10 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -37,6 +37,8 @@ import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.pipeline.export.BookExporterTestSupport;
+import ua.bookloom.pipeline.export.ExportMoveOperation;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Proves cooperative cancellation preserves decisions and reaches the exporter final check. */
@@ -156,8 +158,8 @@ class TranslationJobCancellationTest {
     void cancel_beforePublication_isObservedByExporterFinalCheck() {
         final Path source = markdown("One.");
         final Path destination = tempDir.resolve("Book.uk.md");
-        final TranslationJobTestSupport.BlockingClosePort port =
-                new TranslationJobTestSupport.BlockingClosePort(documents(), 3);
+        final BookExporterTestSupport.BlockingClosePort port =
+                new BookExporterTestSupport.BlockingClosePort(documents(), 3);
         final TranslationJobImpl translation = job(port, source, destination, replies("ONE."));
         translation.pauseAt(Set.of(PausePoint.ON_ERROR));
         final ExecutorService workers = executor();

@@ -36,4 +36,6 @@ module ua.bookloom.pipeline {
             com.google.guice;
     opens ua.bookloom.pipeline.glossary to
             com.google.guice;
+    opens ua.bookloom.pipeline.export to
+            com.google.guice;
 }

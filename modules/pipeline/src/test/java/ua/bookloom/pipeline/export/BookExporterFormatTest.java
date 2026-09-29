@@ -1,11 +1,11 @@
-package ua.bookloom.pipeline;
+package ua.bookloom.pipeline.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.BookExporterTestSupport.documents;
-import static ua.bookloom.pipeline.BookExporterTestSupport.onlyDecision;
-import static ua.bookloom.pipeline.BookExporterTestSupport.opened;
-import static ua.bookloom.pipeline.BookExporterTestSupport.segmentCount;
-import static ua.bookloom.pipeline.BookExporterTestSupport.zipEntry;
+import static ua.bookloom.pipeline.TestDocuments.documents;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.onlyDecision;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.opened;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.segmentCount;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.zipEntry;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +22,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.pipeline.TestBooks;
 
 /** Real same-format exports with decisions applied to freshly opened document state. */
 class BookExporterFormatTest {
@@ -167,7 +167,7 @@ class BookExporterFormatTest {
         return matcher.group();
     }
 
-    private static TranslationRequest request(final Path source, final Path destination, final boolean overwrite) {
-        return new TranslationRequest(source, destination, "uk", "en", overwrite);
+    private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {
+        return new ExportPlan(source, destination, "uk", overwrite);
     }
 }

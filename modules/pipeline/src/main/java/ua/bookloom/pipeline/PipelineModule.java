@@ -1,12 +1,15 @@
 package ua.bookloom.pipeline;
 
 import com.google.inject.AbstractModule;
+import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
- * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine} port bound to its implementation and the
- * prompt templates, loaded and slot-checked once at injector creation so a broken template fails the start, not a run.
+ * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine} and {@code ExportService} ports bound to
+ * their implementations and the prompt templates, loaded and slot-checked once at injector creation so a broken
+ * template fails the start, not a run.
  *
  * <p>The judge, the self-heal calls ({@code judge}, {@code heal}) and the stored-project service carry
  * {@code @Inject} constructors but no binding yet: the run that uses them, and the {@code ProjectService} binding,
@@ -23,5 +26,6 @@ public final class PipelineModule extends AbstractModule {
     protected void configure() {
         bind(PromptTemplates.class).asEagerSingleton();
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
+        bind(ExportService.class).to(ExportServiceImpl.class);
     }
 }

@@ -1,10 +1,10 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
@@ -243,7 +243,7 @@ class DiagnosticsTranslationJobTest {
     }
 
     private static DocumentPort throwingInitialClose(final DocumentPort delegate, final RuntimeException cause) {
-        return new BookExporterTestSupport.ForwardingDocumentPort(delegate) {
+        return new TestDocuments.ForwardingPort(delegate) {
             @Override
             public Result<Boolean> close(final Document document) {
                 throw cause;
@@ -343,7 +343,7 @@ class DiagnosticsTranslationJobTest {
     private record MdcObservation(
             @Nullable String job, @Nullable String segment) {}
 
-    private static final class ThrowingUnmaskPort extends BookExporterTestSupport.ForwardingDocumentPort {
+    private static final class ThrowingUnmaskPort extends TestDocuments.ForwardingPort {
 
         private final int failingCall;
         private final RuntimeException failure;

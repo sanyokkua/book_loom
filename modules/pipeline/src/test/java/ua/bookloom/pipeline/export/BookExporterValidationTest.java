@@ -1,13 +1,13 @@
-package ua.bookloom.pipeline;
+package ua.bookloom.pipeline.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.BookExporterTestSupport.documents;
-import static ua.bookloom.pipeline.BookExporterTestSupport.error;
-import static ua.bookloom.pipeline.BookExporterTestSupport.errorOf;
-import static ua.bookloom.pipeline.BookExporterTestSupport.onlyDecision;
-import static ua.bookloom.pipeline.BookExporterTestSupport.opened;
-import static ua.bookloom.pipeline.BookExporterTestSupport.snapshot;
-import static ua.bookloom.pipeline.BookExporterTestSupport.zipEntry;
+import static ua.bookloom.pipeline.TestDocuments.documents;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.error;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.errorOf;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.onlyDecision;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.opened;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.snapshot;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.zipEntry;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,12 +24,12 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.pipeline.TranslationRequest;
-import ua.bookloom.pipeline.BookExporterTestSupport.CloseFailurePort;
-import ua.bookloom.pipeline.BookExporterTestSupport.CountMismatchPort;
-import ua.bookloom.pipeline.BookExporterTestSupport.OpenFailurePort;
-import ua.bookloom.pipeline.BookExporterTestSupport.RecordingDocumentPort;
-import ua.bookloom.pipeline.BookExporterTestSupport.TemporaryOpenFailurePort;
+import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.CloseFailurePort;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.CountMismatchPort;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.OpenFailurePort;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.RecordingDocumentPort;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.TemporaryOpenFailurePort;
 
 /** Written-book validation, source-change detection, cleanup, and retry behavior. */
 class BookExporterValidationTest {
@@ -257,7 +257,7 @@ class BookExporterValidationTest {
         assertThat(Files.exists(tempDir.resolve(".Book.uk.epub"))).isFalse();
     }
 
-    private static TranslationRequest request(final Path source, final Path destination, final boolean overwrite) {
-        return new TranslationRequest(source, destination, "uk", "en", overwrite);
+    private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {
+        return new ExportPlan(source, destination, "uk", overwrite);
     }
 }

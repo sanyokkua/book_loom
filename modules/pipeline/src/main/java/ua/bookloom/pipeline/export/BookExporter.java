@@ -1,4 +1,4 @@
-package ua.bookloom.pipeline;
+package ua.bookloom.pipeline.export;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -27,50 +27,55 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.api.pipeline.TranslationRequest;
 
 @Slf4j
-final class BookExporter {
+public final class BookExporter {
 
     private final DocumentPort documents;
     private final ExportMoveOperation moves;
 
-    BookExporter(final DocumentPort documents) {
+    /** Writes through the real filesystem move. */
+    public BookExporter(final DocumentPort documents) {
         this(documents, ExportMoveOperation.nio());
     }
 
-    BookExporter(final DocumentPort documents, final ExportMoveOperation moves) {
+    /** Takes the publication move as a seam so a test can script its failure. */
+    public BookExporter(final DocumentPort documents, final ExportMoveOperation moves) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.moves = Objects.requireNonNull(moves, "moves");
     }
 
-    Result<Path> export(
-            final TranslationRequest request,
-            final Document decidedDocument,
-            final BooleanSupplier cancellationRequested) {
-        Objects.requireNonNull(request, "request");
+    /**
+     * Writes the decided document beside the destination, re-opens and checks it, then publishes it.
+     *
+     * @param plan where to read the source, where to publish and in which language
+     * @param decidedDocument the document whose segments carry the decisions to write
+     * @param cancellationRequested read once, after the check and before the publication move
+     * @return the published path, or a typed failure that leaves the destination and any temporary file untouched
+     */
+    public Result<Path> export(
+            final ExportPlan plan, final Document decidedDocument, final BooleanSupplier cancellationRequested) {
+        Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(decidedDocument, "decidedDocument");
         Objects.requireNonNull(cancellationRequested, "cancellationRequested");
         log.debug(
                 "Export requested from {} to {} in {} with overwrite {}",
-                request.source(),
-                request.destination(),
-                request.targetLanguage(),
-                request.overwrite());
+                plan.source(),
+                plan.destination(),
+                plan.targetLanguage(),
+                plan.overwrite());
         try {
-            return beginExport(request, decidedDocument, cancellationRequested);
+            return beginExport(plan, decidedDocument, cancellationRequested);
         } catch (Throwable cause) {
             return Result.err(unexpectedError("start export", cause));
         }
     }
 
     private Result<Path> beginExport(
-            final TranslationRequest request,
-            final Document decidedDocument,
-            final BooleanSupplier cancellationRequested) {
-        final Path temporary = temporaryPath(request.destination());
+            final ExportPlan plan, final Document decidedDocument, final BooleanSupplier cancellationRequested) {
+        final Path temporary = temporaryPath(plan.destination());
         log.debug("Export temporary path is {}", temporary);
-        final Result<Boolean> collision = hasTemporaryCollision(request, temporary);
+        final Result<Boolean> collision = hasTemporaryCollision(plan, temporary);
         if (collision.isErr()) {
             return Result.err(errorOf(collision));
         }
@@ -78,14 +83,14 @@ final class BookExporter {
             log.warn("Refused export because temporary path {} aliases source or destination", temporary);
             return Result.err(collisionError());
         }
-        return new Attempt(request, decidedDocument, cancellationRequested, temporary).run();
+        return new Attempt(plan, decidedDocument, cancellationRequested, temporary).run();
     }
 
-    private Result<Boolean> hasTemporaryCollision(final TranslationRequest request, final Path temporary) {
+    private Result<Boolean> hasTemporaryCollision(final ExportPlan plan, final Path temporary) {
         try {
             final boolean collision = Files.isSymbolicLink(temporary)
-                    || ExportPathAliases.aliases(temporary, request.source())
-                    || ExportPathAliases.aliases(temporary, request.destination());
+                    || ExportPathAliases.aliases(temporary, plan.source())
+                    || ExportPathAliases.aliases(temporary, plan.destination());
             log.debug("Export temporary collision check for {} returned {}", temporary, collision);
             return Result.ok(collision);
         } catch (Throwable cause) {
@@ -111,18 +116,18 @@ final class BookExporter {
 
     private final class Attempt {
 
-        private final TranslationRequest request;
+        private final ExportPlan plan;
         private final Document decidedDocument;
         private final BooleanSupplier cancellationRequested;
         private final Path temporary;
         private final List<Document> opened = new ArrayList<>();
 
         Attempt(
-                final TranslationRequest request,
+                final ExportPlan plan,
                 final Document decidedDocument,
                 final BooleanSupplier cancellationRequested,
                 final Path temporary) {
-            this.request = request;
+            this.plan = plan;
             this.decidedDocument = decidedDocument;
             this.cancellationRequested = cancellationRequested;
             this.temporary = temporary;
@@ -137,8 +142,8 @@ final class BookExporter {
         }
 
         private Result<Path> reopenAndWrite() {
-            log.debug("Opening export source {}", request.source());
-            final Result<Document> reopened = documents.open(request.source());
+            log.debug("Opening export source {}", plan.source());
+            final Result<Document> reopened = documents.open(plan.source());
             if (reopened.isErr()) {
                 log.debug(
                         "Opening export source failed with {}",
@@ -147,7 +152,7 @@ final class BookExporter {
             }
             final Document fresh = Objects.requireNonNull(reopened.data(), "reopened source");
             opened.add(fresh);
-            log.debug("Opened export source {} as document {}", request.source(), fresh.id());
+            log.debug("Opened export source {} as document {}", plan.source(), fresh.id());
             return validateSourceAndWrite(fresh);
         }
 
@@ -155,13 +160,13 @@ final class BookExporter {
             final boolean matches = fresh.contentHash().equals(decidedDocument.contentHash());
             log.debug("Export source hash match for document {} is {}", fresh.id(), matches);
             if (!matches) {
-                log.warn("Export source {} changed after translation began", request.source());
+                log.warn("Export source {} changed after translation began", plan.source());
                 return fail(sourceChangedError());
             }
             final Document applied = applyDecisions(fresh, decidedDocument);
             logDecisionCounts(applied);
             log.debug("Writing translated document {} to {}", fresh.id(), temporary);
-            final Result<Path> written = documents.write(applied, temporary, request.targetLanguage());
+            final Result<Path> written = documents.write(applied, temporary, plan.targetLanguage());
             log.debug("Temporary export write result is {}", outcomeOf(written));
             return written.isErr() ? fail(errorOf(written)) : reopenTemporary();
         }
@@ -200,16 +205,16 @@ final class BookExporter {
         }
 
         private Result<Path> publish() {
-            log.debug("Publishing {} to {} with overwrite {}", temporary, request.destination(), request.overwrite());
+            log.debug("Publishing {} to {} with overwrite {}", temporary, plan.destination(), plan.overwrite());
             try {
-                if (request.overwrite()) {
+                if (plan.overwrite()) {
                     moveWithOverwrite();
                 } else {
-                    moves.move(temporary, request.destination());
+                    moves.move(temporary, plan.destination());
                 }
-                log.debug("Published validated export at {}", request.destination());
+                log.debug("Published validated export at {}", plan.destination());
                 log.debug("Temporary export {} removed by publication move", temporary);
-                return Result.ok(request.destination());
+                return Result.ok(plan.destination());
             } catch (UncheckedIOException failure) {
                 return failAfterClose(moveError(Objects.requireNonNull(failure.getCause(), "move failure cause")));
             }
@@ -217,13 +222,13 @@ final class BookExporter {
 
         private void moveWithOverwrite() {
             try {
-                moves.move(temporary, request.destination(), ATOMIC_MOVE, REPLACE_EXISTING);
+                moves.move(temporary, plan.destination(), ATOMIC_MOVE, REPLACE_EXISTING);
             } catch (UncheckedIOException failure) {
                 if (!(failure.getCause() instanceof AtomicMoveNotSupportedException)) {
                     throw failure;
                 }
-                log.warn("Atomic move is unsupported for {}; falling back to replacement", request.destination());
-                moves.move(temporary, request.destination(), REPLACE_EXISTING);
+                log.warn("Atomic move is unsupported for {}; falling back to replacement", plan.destination());
+                moves.move(temporary, plan.destination(), REPLACE_EXISTING);
             }
         }
 

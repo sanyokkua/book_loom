@@ -13,6 +13,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.TestDocuments;
 
 /**
  * {@link GateFunction#of}: the real placeholder gate answers which gate failed and what it found, or the masked form
@@ -25,7 +26,7 @@ class GateFunctionTest {
     @TempDir
     private Path tempDir;
 
-    private final DocumentPort documents = QualityLoopFixtures.documents();
+    private final DocumentPort documents = TestDocuments.documents();
 
     @Test
     void restore_closingTokenDropped_answersGateFailedWithAHighMarkupFindingRaisedByPlaceholder() {

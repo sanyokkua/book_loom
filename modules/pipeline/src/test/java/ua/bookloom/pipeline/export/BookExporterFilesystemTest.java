@@ -1,12 +1,12 @@
-package ua.bookloom.pipeline;
+package ua.bookloom.pipeline.export;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.BookExporterTestSupport.documents;
-import static ua.bookloom.pipeline.BookExporterTestSupport.error;
-import static ua.bookloom.pipeline.BookExporterTestSupport.errorOf;
-import static ua.bookloom.pipeline.BookExporterTestSupport.snapshot;
+import static ua.bookloom.pipeline.TestDocuments.documents;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.error;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.errorOf;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.snapshot;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -24,14 +24,14 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.pipeline.TranslationRequest;
-import ua.bookloom.pipeline.BookExporterTestSupport.AbsentClosePort;
-import ua.bookloom.pipeline.BookExporterTestSupport.CloseFailurePort;
-import ua.bookloom.pipeline.BookExporterTestSupport.DestinationCreatingMoveOperation;
-import ua.bookloom.pipeline.BookExporterTestSupport.ScriptedMoveOperation;
-import ua.bookloom.pipeline.BookExporterTestSupport.SingleCloseFailurePort;
-import ua.bookloom.pipeline.BookExporterTestSupport.ThrowingMoveOperation;
-import ua.bookloom.pipeline.BookExporterTestSupport.WriteFailurePort;
+import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.AbsentClosePort;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.CloseFailurePort;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.DestinationCreatingMoveOperation;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.ScriptedMoveOperation;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.SingleCloseFailurePort;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.ThrowingMoveOperation;
+import ua.bookloom.pipeline.export.BookExporterTestSupport.WriteFailurePort;
 
 /** Publication modes, move/close failures, and temporary-path collision guards. */
 class BookExporterFilesystemTest {
@@ -285,7 +285,7 @@ class BookExporterFilesystemTest {
         assertThat(Files.isSymbolicLink(temporary)).isTrue();
     }
 
-    private static TranslationRequest request(final Path source, final Path destination, final boolean overwrite) {
-        return new TranslationRequest(source, destination, "uk", "en", overwrite);
+    private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {
+        return new ExportPlan(source, destination, "uk", overwrite);
     }
 }
