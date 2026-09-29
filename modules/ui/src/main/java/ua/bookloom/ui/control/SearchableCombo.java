@@ -1,8 +1,6 @@
 package ua.bookloom.ui.control;
 
-import java.text.Normalizer;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -131,13 +129,6 @@ public final class SearchableCombo<T> extends ComboBox<T> {
         commit(value, Source.PROGRAM);
     }
 
-    /** Normalises text for matching: NFD, combining marks removed, lower-cased with the root locale. */
-    static String normalize(final String text) {
-        return Normalizer.normalize(text, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
-                .toLowerCase(Locale.ROOT);
-    }
-
     private String displayName(final @Nullable T value) {
         return value == null ? "" : name.apply(value);
     }
@@ -147,12 +138,12 @@ public final class SearchableCombo<T> extends ComboBox<T> {
             return;
         }
         final String typed = text == null ? "" : text;
-        final String needle = normalize(typed);
+        final String needle = TextMatch.normalize(typed);
         // Changing the list makes the selection model pick another entry and rewrite the editor; neither is a choice.
         updating = true;
         try {
-            filtered.setPredicate(
-                    item -> needle.isEmpty() || normalize(displayName(item)).contains(needle));
+            filtered.setPredicate(item ->
+                    needle.isEmpty() || TextMatch.normalize(displayName(item)).contains(needle));
             if (!Objects.equals(getValue(), committed.get())) {
                 setValue(committed.get());
             }
@@ -194,9 +185,9 @@ public final class SearchableCombo<T> extends ComboBox<T> {
     }
 
     private void settleStrict(final String text) {
-        final String needle = normalize(text.strip());
+        final String needle = TextMatch.normalize(text.strip());
         final Optional<T> match = allItems.stream()
-                .filter(item -> normalize(displayName(item)).equals(needle))
+                .filter(item -> TextMatch.normalize(displayName(item)).equals(needle))
                 .findFirst();
         if (match.isPresent()) {
             commit(match.get(), Source.LIST);

@@ -14,6 +14,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.OsLocaleProvider;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -66,6 +67,7 @@ public final class UiModule extends AbstractModule {
         bind(GuiceControllerFactory.class);
         bind(Navigator.class);
         bind(ModalHost.class);
+        bind(LanguageNames.class);
         bind(ToastStack.class);
         bind(Toasts.class).to(ToastStack.class);
         bind(ModalErrorPresenter.class);

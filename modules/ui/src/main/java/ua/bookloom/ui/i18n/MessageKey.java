@@ -4,6 +4,9 @@ package ua.bookloom.ui.i18n;
  * Every key the interface displays, so a view names a constant instead of spelling a bundle key. A catalogue entry
  * with no constant is dead text and a constant with no entry would display as its raw key; the registry test fails on
  * both.
+ *
+ * <p>The file is longer than 400 lines because a registry has one entry per key, and splitting it would give
+ * {@link Messages#get} several key types.
  */
 public enum MessageKey {
     /** Heading of the navigation group holding the numbered workflow steps. */
@@ -403,7 +406,87 @@ public enum MessageKey {
     /** Heading of the card holding the unavailable final consistency pass. */
     EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
     /** Note under the consistency-pass switch saying what it would do. */
-    EXPORT_CONSISTENCY_NOTE("export.consistency.note");
+    EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
+    /** Display name of the literary fiction genre offered on the Book Brief. */
+    GENRE_LITERARY_FICTION("genre.literaryFiction"),
+    /** Display name of the classic literature genre offered on the Book Brief. */
+    GENRE_CLASSIC_LITERATURE("genre.classicLiterature"),
+    /** Display name of the historical fiction genre offered on the Book Brief. */
+    GENRE_HISTORICAL_FICTION("genre.historicalFiction"),
+    /** Display name of the gothic novel genre offered on the Book Brief. */
+    GENRE_GOTHIC_NOVEL("genre.gothicNovel"),
+    /** Display name of the romance genre offered on the Book Brief. */
+    GENRE_ROMANCE("genre.romance"),
+    /** Display name of the historical romance genre offered on the Book Brief. */
+    GENRE_HISTORICAL_ROMANCE("genre.historicalRomance"),
+    /** Display name of the mystery genre offered on the Book Brief. */
+    GENRE_MYSTERY("genre.mystery"),
+    /** Display name of the detective fiction genre offered on the Book Brief. */
+    GENRE_DETECTIVE_FICTION("genre.detectiveFiction"),
+    /** Display name of the crime fiction genre offered on the Book Brief. */
+    GENRE_CRIME_FICTION("genre.crimeFiction"),
+    /** Display name of the thriller genre offered on the Book Brief. */
+    GENRE_THRILLER("genre.thriller"),
+    /** Display name of the psychological thriller genre offered on the Book Brief. */
+    GENRE_PSYCHOLOGICAL_THRILLER("genre.psychologicalThriller"),
+    /** Display name of the horror genre offered on the Book Brief. */
+    GENRE_HORROR("genre.horror"),
+    /** Display name of the science fiction genre offered on the Book Brief. */
+    GENRE_SCIENCE_FICTION("genre.scienceFiction"),
+    /** Display name of the fantasy genre offered on the Book Brief. */
+    GENRE_FANTASY("genre.fantasy"),
+    /** Display name of the epic fantasy genre offered on the Book Brief. */
+    GENRE_EPIC_FANTASY("genre.epicFantasy"),
+    /** Display name of the dystopian fiction genre offered on the Book Brief. */
+    GENRE_DYSTOPIAN_FICTION("genre.dystopianFiction"),
+    /** Display name of the adventure genre offered on the Book Brief. */
+    GENRE_ADVENTURE("genre.adventure"),
+    /** Display name of the western genre offered on the Book Brief. */
+    GENRE_WESTERN("genre.western"),
+    /** Display name of the war fiction genre offered on the Book Brief. */
+    GENRE_WAR_FICTION("genre.warFiction"),
+    /** Display name of the humor genre offered on the Book Brief. */
+    GENRE_HUMOR("genre.humor"),
+    /** Display name of the satire genre offered on the Book Brief. */
+    GENRE_SATIRE("genre.satire"),
+    /** Display name of the young adult genre offered on the Book Brief. */
+    GENRE_YOUNG_ADULT("genre.youngAdult"),
+    /** Display name of the children's literature genre offered on the Book Brief. */
+    GENRE_CHILDRENS_LITERATURE("genre.childrensLiterature"),
+    /** Display name of the fairy tale genre offered on the Book Brief. */
+    GENRE_FAIRY_TALE("genre.fairyTale"),
+    /** Display name of the short stories genre offered on the Book Brief. */
+    GENRE_SHORT_STORIES("genre.shortStories"),
+    /** Display name of the poetry genre offered on the Book Brief. */
+    GENRE_POETRY("genre.poetry"),
+    /** Display name of the drama genre offered on the Book Brief. */
+    GENRE_DRAMA("genre.drama"),
+    /** Display name of the memoir genre offered on the Book Brief. */
+    GENRE_MEMOIR("genre.memoir"),
+    /** Display name of the biography genre offered on the Book Brief. */
+    GENRE_BIOGRAPHY("genre.biography"),
+    /** Display name of the autobiography genre offered on the Book Brief. */
+    GENRE_AUTOBIOGRAPHY("genre.autobiography"),
+    /** Display name of the essay genre offered on the Book Brief. */
+    GENRE_ESSAY("genre.essay"),
+    /** Display name of the travel writing genre offered on the Book Brief. */
+    GENRE_TRAVEL_WRITING("genre.travelWriting"),
+    /** Display name of the history genre offered on the Book Brief. */
+    GENRE_HISTORY("genre.history"),
+    /** Display name of the philosophy genre offered on the Book Brief. */
+    GENRE_PHILOSOPHY("genre.philosophy"),
+    /** Display name of the religion and spirituality genre offered on the Book Brief. */
+    GENRE_RELIGION_AND_SPIRITUALITY("genre.religionAndSpirituality"),
+    /** Display name of the popular science genre offered on the Book Brief. */
+    GENRE_POPULAR_SCIENCE("genre.popularScience"),
+    /** Display name of the self-help genre offered on the Book Brief. */
+    GENRE_SELF_HELP("genre.selfHelp"),
+    /** Display name of the business genre offered on the Book Brief. */
+    GENRE_BUSINESS("genre.business"),
+    /** Display name of the true crime genre offered on the Book Brief. */
+    GENRE_TRUE_CRIME("genre.trueCrime"),
+    /** Display name of the graphic novel genre offered on the Book Brief. */
+    GENRE_GRAPHIC_NOVEL("genre.graphicNovel");
 
     private final String key;
 
