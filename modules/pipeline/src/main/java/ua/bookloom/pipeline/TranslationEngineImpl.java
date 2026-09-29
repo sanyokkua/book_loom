@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
+import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -39,11 +40,13 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final RunStores stores;
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
+    private final ConsistencyPass revision;
     private final Clock clock;
 
     /**
      * Creates an engine with the application-wide tolerant JSON mapper, the quality loop every run decides through,
-     * and the sentence splitter an oversized segment is drafted in pieces with.
+     * the sentence splitter an oversized segment is drafted in pieces with, and the backward-revision pass a Max run
+     * ends with.
      */
     @Inject
     public TranslationEngineImpl(
@@ -60,6 +63,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final SummaryRepository summaries,
             final QualityLoop qualityLoop,
             final SentenceSplitter splitter,
+            final ConsistencyPass revision,
             final Clock clock) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
@@ -67,6 +71,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
         this.stores = new RunStores(projects, segments, checkpoint, openProjects, runs, glossary, tm, summaries);
         this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
         this.splitter = Objects.requireNonNull(splitter, "splitter");
+        this.revision = Objects.requireNonNull(revision, "revision");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -77,7 +82,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             Objects.requireNonNull(model, "model");
             log.debug("Preparing translation job project={} mode={}", request.projectId(), request.mode());
             return Result.ok(new TranslationJobImpl(
-                    documents, request, model, mapper, templates, stores, qualityLoop, splitter, clock));
+                    documents, request, model, mapper, templates, stores, qualityLoop, splitter, revision, clock));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,

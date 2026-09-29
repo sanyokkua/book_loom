@@ -38,6 +38,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.ChunkRunner;
 import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.MemoryEvents;
@@ -51,6 +52,7 @@ import ua.bookloom.pipeline.run.RunSinks;
 import ua.bookloom.pipeline.run.RunStart;
 import ua.bookloom.pipeline.run.RunSteps;
 import ua.bookloom.pipeline.run.RunStores;
+import ua.bookloom.pipeline.run.StageRunner;
 import ua.bookloom.pipeline.run.WorkList;
 
 /** The single-run translation lifecycle, including pause and cancellation boundaries. */
@@ -65,6 +67,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final RunStores stores;
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
+    private final ConsistencyPass revision;
     private final Clock clock;
     private final JobControl control;
     private final JobSubscribers subscribers = new JobSubscribers();
@@ -84,6 +87,7 @@ final class TranslationJobImpl implements TranslationJob {
             final RunStores stores,
             final QualityLoop qualityLoop,
             final SentenceSplitter splitter,
+            final ConsistencyPass revision,
             final Clock clock) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.request = Objects.requireNonNull(request, "request");
@@ -93,6 +97,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.stores = Objects.requireNonNull(stores, "stores");
         this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
         this.splitter = Objects.requireNonNull(splitter, "splitter");
+        this.revision = Objects.requireNonNull(revision, "revision");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.control = new JobControl(request.mode().pausePoints());
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock);
@@ -191,36 +196,41 @@ final class TranslationJobImpl implements TranslationJob {
         if (proposed > 0) {
             emit(MemoryEvents.namesAdded(proposed));
         }
-        log.debug("Translation job stage change stage={} project={}", JobStage.TRANSLATE, request.projectId());
-        emit(new StageStarted(JobStage.TRANSLATE, work.currentTranslationProgress()));
-        final RunEnd end = runner(run, dataOf(prepared).styleSheet()).run(work);
+        final RunEnd end = stages(run, dataOf(prepared).styleSheet()).run(work);
         return finish(end.state(), run, end.error());
     }
 
-    private ChunkRunner runner(final RunStart.Started run, final StyleSheet styleSheet) {
+    private StageRunner stages(final RunStart.Started run, final StyleSheet styleSheet) {
         final BookBrief brief = run.project().brief();
         final CallFrame frame = new CallFrame(
                 brief.sourceLanguage(),
                 Objects.requireNonNull(brief.targetLanguage(), "target language checked at the start"),
                 styleSheet,
                 brief.foreignPassages());
-        final GateFunction gate = GateFunction.of(documents, run.document().format());
         final ModelCalls calls = new JobModelCalls(
                 onSent -> new CancellableChatModel(model, control, onSent), this::emit, clock, frame.targetLanguage());
+        final RunSettings settings = new RunSettings(
+                request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names());
+        final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
+        return new StageRunner(chunkRunner(run, settings, sinks, calls), revision, settings, sinks, calls);
+    }
+
+    private ChunkRunner chunkRunner(
+            final RunStart.Started run, final RunSettings settings, final RunSinks sinks, final ModelCalls calls) {
+        final GateFunction gate = GateFunction.of(documents, run.document().format());
         final SegmentTranslator translator = new SegmentTranslator(
                 gate,
                 calls,
                 run.document().format(),
-                new DraftPromptBuilder(templates, frame),
+                new DraftPromptBuilder(templates, settings.frame()),
                 new DraftReplyParser(mapper));
-        final DialParameters dial = DialParameters.of(brief.dial());
-        final RollingSummaryKeeper summary =
-                new RollingSummaryKeeper(stores.summaries(), stores.glossary(), templates, mapper, frame, dial, calls);
+        final RollingSummaryKeeper summary = new RollingSummaryKeeper(
+                stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
         return new ChunkRunner(
                 new RunSteps(translator, qualityLoop, gate, calls, splitter, summary),
-                new RunSettings(request.projectId(), request.mode(), dial, frame, brief.names()),
+                settings,
                 stores,
-                new RunSinks(pending, recorder, this::emit, boundaries()),
+                sinks,
                 SegmentLocators.of(run.document()));
     }
 

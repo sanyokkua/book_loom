@@ -18,14 +18,15 @@ import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
- * What {@link DirectedFix}, {@link ReflectImprove#improve} and {@link Polish} otherwise each repeated: rendering a
+ * What {@link DirectedFix}, {@link ReflectImprove#improve}, {@link Polish} and backward revision's re-render
+ * otherwise each repeated: rendering a
  * call's system/user messages from the catalogue, computing its output limit, and reading a classified
  * {@link RepairReply} back into one consistent set of log lines. Each caller passes its own {@code @Slf4j} logger
  * so a log line still names the class that made the call, not this shared helper.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class SelfHealCalls {
+public final class SelfHealCalls {
 
     /**
      * Renders {@code name}'s system and user messages from the catalogue.
@@ -36,7 +37,7 @@ final class SelfHealCalls {
      * @param userValues the user template's slot values
      * @return the two-message list every self-heal call sends
      */
-    static List<ChatMessage> messagesFor(
+    public static List<ChatMessage> messagesFor(
             final PromptTemplates templates,
             final PromptName name,
             final CallFrame frame,
@@ -54,19 +55,19 @@ final class SelfHealCalls {
      * @param frame the run's language pair
      * @return the limit, or {@code null} when the source has no display text (no expected-output constraint sent)
      */
-    static @Nullable OutputLimit outputLimit(final String maskedSource, final CallFrame frame) {
+    public static @Nullable OutputLimit outputLimit(final String maskedSource, final CallFrame frame) {
         return OutputLimit.forSource(maskedSource, frame.sourceLanguage(), frame.targetLanguage());
     }
 
     /** Logs {@code request}'s messages at TRACE, prefixed with {@code label}. */
-    static void logTraceMessages(final Logger log, final String label, final ChatRequest request) {
+    public static void logTraceMessages(final Logger log, final String label, final ChatRequest request) {
         if (log.isTraceEnabled()) {
             log.trace("{} messages {}", label, request.messages());
         }
     }
 
     /** Logs a successful reply's raw content at TRACE, prefixed with {@code label}. */
-    static void logTraceReply(final Logger log, final String label, final Result<ChatResponse> reply) {
+    public static void logTraceReply(final Logger log, final String label, final Result<ChatResponse> reply) {
         if (log.isTraceEnabled() && reply.isOk()) {
             log.trace(
                     "{} raw reply {}",
@@ -76,7 +77,7 @@ final class SelfHealCalls {
     }
 
     /** Logs a classified {@link RepairReply} outcome at DEBUG, prefixed with {@code label}. */
-    static void logOutcome(
+    public static void logOutcome(
             final Logger log, final String label, final String segmentId, final Result<RepairReply> outcome) {
         if (outcome.isErr()) {
             log.debug(

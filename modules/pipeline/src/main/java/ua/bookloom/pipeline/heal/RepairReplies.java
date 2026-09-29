@@ -14,12 +14,12 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 
 /**
  * The one place a self-heal call's raw model reply becomes a {@link RepairReply}, applying design D3 rules 2-3 to
- * every self-heal call so {@link DirectedFix}, {@link ReflectImprove#improve} and {@link Polish} read a reply the
- * same way instead of each reimplementing the same checks.
+ * every self-heal call so {@link DirectedFix}, {@link ReflectImprove#improve}, {@link Polish} and backward
+ * revision's re-render read a reply the same way instead of each reimplementing the same checks.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class RepairReplies {
+public final class RepairReplies {
 
     /**
      * Classifies one self-heal call's outcome.
@@ -30,7 +30,7 @@ final class RepairReplies {
      *     {@link Result#ok}; the call's own error, unwrapped, when it was neither {@code emptyCompletion} nor
      *     {@code contextWindow}
      */
-    static Result<RepairReply> read(final Result<ChatResponse> reply, final DraftReplyParser parser) {
+    public static Result<RepairReply> read(final Result<ChatResponse> reply, final DraftReplyParser parser) {
         Objects.requireNonNull(reply, "reply");
         Objects.requireNonNull(parser, "parser");
         if (reply.isErr()) {

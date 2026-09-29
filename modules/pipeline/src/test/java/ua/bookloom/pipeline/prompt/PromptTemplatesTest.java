@@ -123,6 +123,58 @@ class PromptTemplatesTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    // The revision call holds one <Text> block with the masked target; the masked source sits outside it.
+    @Test
+    void renderUser_revisionWithoutFacts_holdsSourceAndOneTextBlock() {
+        final String user = new PromptTemplates()
+                .renderUser(
+                        PromptName.REVISION,
+                        Map.of(
+                                "source",
+                                "Sam opened the ⟦g0⟧old⟦g1⟧ door.",
+                                "text",
+                                "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері."));
+
+        assertThat(user)
+                .isEqualTo("[Source]\nSam opened the ⟦g0⟧old⟦g1⟧ door.\n\n<Text>\nСем відчинив ⟦g0⟧старі⟦g1⟧ двері.\n"
+                        + "</Text>\n\nReturn exactly one JSON object matching this schema: "
+                        + "{\"target\":\"<revised translation>\"}\n");
+    }
+
+    @Test
+    void renderUser_revisionWithFacts_namesThemBeforeTheSource() {
+        final String user = new PromptTemplates()
+                .renderUser(
+                        PromptName.REVISION,
+                        Map.of("source", "Sam left.", "text", "Сем пішов.", "resolvedFacts", "- Sam (Сем): female"));
+
+        assertThat(user)
+                .startsWith(
+                        "[Resolved facts revealed later in the book]\n- Sam (Сем): female\n\n[Source]\nSam left.\n");
+    }
+
+    @Test
+    void renderSystem_revision_fillsLanguagesAndStyle() {
+        final String system = new PromptTemplates()
+                .renderSystem(
+                        PromptName.REVISION,
+                        Map.of(
+                                "sourceLanguage",
+                                "English (en)",
+                                "targetLanguage",
+                                "Ukrainian (uk)",
+                                "styleSheet",
+                                "Neutral register.",
+                                "foreignPassageRule",
+                                "Keep foreign passages."));
+
+        assertThat(system)
+                .startsWith("You are performing a consistency revision on an already-translated book "
+                        + "(English (en) → Ukrainian (uk)).")
+                .contains("Style guidance:\nNeutral register.\n", "- Keep foreign passages.\n")
+                .doesNotContain("{{");
+    }
+
     @Test
     void injector_pipelineModule_loadsEveryTemplate() {
         final var injector = Guice.createInjector(new PipelineModule(), new DocumentModule(), new PersistenceModule());

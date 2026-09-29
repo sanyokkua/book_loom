@@ -42,10 +42,11 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 /**
  * A real book imported through {@code ProjectServiceImpl} over the in-memory stores, with the review desk's parts
  * built directly over them. Every record starts PENDING, as an import stores it; a test decides the ones it looks at.
+ * Public so backward revision's tests apply a proposal through the same real desk.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class ReviewFixtures {
+public final class ReviewFixtures {
 
     static final String FLAGGED_ID = "ch05.xhtml:11";
     static final String NAMES_ID = "ch07.xhtml:39";
@@ -62,7 +63,7 @@ final class ReviewFixtures {
     private static final int PARAGRAPHS = 42;
 
     /** Everything a test of the parts reads and writes, all over one set of stores. */
-    record Desk(
+    public record Desk(
             String projectId,
             SegmentActions actions,
             ReviewQueries queries,
@@ -94,7 +95,7 @@ final class ReviewFixtures {
         }
 
         /** The port over the real parts and the same stores. */
-        ReviewDeskImpl reviewDesk(final ReviewMode mode) {
+        public ReviewDeskImpl reviewDesk(final ReviewMode mode) {
             return new ReviewDeskImpl(actions, queries, retryDraft(mode), projects, segments);
         }
     }
@@ -124,6 +125,15 @@ final class ReviewFixtures {
                 .toList();
         final List<List<String>> spine = List.of(List.of("One.", "Two."), List.of("Three."));
         return open(TestBooks.epubWithNavigation(directory.resolve("Book.epub"), spine, labels), brief);
+    }
+
+    /** An EPUB of {@code ch01.xhtml}, {@code ch02.xhtml}… holding {@code chapters}, English to Ukrainian. */
+    public static Desk epubChapters(final Path directory, final List<List<String>> chapters) {
+        final List<String> names = IntStream.rangeClosed(1, chapters.size())
+                .mapToObj(number -> String.format("ch%02d.xhtml", number))
+                .toList();
+        return open(
+                TestBooks.epubAtRoot(directory.resolve("Book.epub"), names, chapters), brief(AlsoTranslate.defaults()));
     }
 
     /** An EPUB of one chapter holding {@code paragraphs}, English to Ukrainian. */
@@ -170,19 +180,19 @@ final class ReviewFixtures {
     }
 
     /** Stores {@code id} as ACCEPTED with the given machine target (both forms). */
-    static void accept(final Desk desk, final String id, final String machineTarget) {
+    public static void accept(final Desk desk, final String id, final String machineTarget) {
         update(
                 desk,
                 id,
                 record -> record.withStatus(SegmentStatus.ACCEPTED).withMachineTarget(machineTarget, machineTarget));
     }
 
-    static void update(final Desk desk, final String id, final UnaryOperator<SegmentRecord> change) {
+    public static void update(final Desk desk, final String id, final UnaryOperator<SegmentRecord> change) {
         Objects.requireNonNull(
                 desk.segments().update(desk.projectId(), id, change).data(), "updated " + id);
     }
 
-    static SegmentRecord stored(final Desk desk, final String id) {
+    public static SegmentRecord stored(final Desk desk, final String id) {
         return Objects.requireNonNull(desk.segments().find(desk.projectId(), id).data(), "find " + id)
                 .orElseThrow();
     }

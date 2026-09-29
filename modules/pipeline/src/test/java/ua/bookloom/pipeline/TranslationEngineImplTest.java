@@ -129,6 +129,7 @@ class TranslationEngineImplTest {
                 project.stores().summaries(),
                 TranslationJobTestSupport.qualityLoop(),
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
+                ConsistencyPassFixture.over(project),
                 Clock.systemUTC());
     }
 

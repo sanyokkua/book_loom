@@ -231,6 +231,15 @@ public final class WorkList {
     }
 
     /**
+     * Returns the counts as backward revision starts, after the last segment is decided.
+     *
+     * @return the counts under the {@code REVISE} stage, at the last section
+     */
+    public JobProgress revisionProgress() {
+        return progress(JobStage.REVISE, currentSection());
+    }
+
+    /**
      * Returns the counts as preparation starts, before any segment of this run is decided.
      *
      * @return the counts under the {@code PREP} stage, at the section of the first undecided segment

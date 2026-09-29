@@ -229,6 +229,7 @@ final class TranslationJobTestSupport {
                 project.stores(),
                 qualityLoop(),
                 SPLITTER,
+                ConsistencyPassFixture.over(project),
                 Clock.systemUTC());
     }
 

@@ -29,6 +29,7 @@ class PromptNameTest {
         "REFLECT,reflect,REFLECT,reflect,0.35",
         "IMPROVE,improve,IMPROVE,improve,0.35",
         "POLISH,polish,POLISH,polish,0.2",
+        "REVISION,revision,REVISION,revision,0.2",
         "PRESCAN,prescan,PRESCAN,prescan,0.2",
         "SUMMARY,summary,SUMMARY,summary,0.2"
     })
@@ -58,6 +59,7 @@ class PromptNameTest {
         "REFLECT",
         "IMPROVE",
         "POLISH",
+        "REVISION",
         "PRESCAN",
         "SUMMARY"
     })

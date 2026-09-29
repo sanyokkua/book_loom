@@ -104,6 +104,20 @@ public enum PromptName {
             new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
             new Slots(Set.of("source", "text"), Set.of())),
 
+    /**
+     * Backward revision's re-render of one decided segment whose character's gender became known after it was
+     * drafted; the facts block names each such character and gender, since the style sheet cannot.
+     */
+    REVISION(
+            "revision",
+            CallKind.REVISION,
+            "revision",
+            DraftSchema.SCHEMA,
+            0.2,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
+            new Slots(Set.of("source", "text"), Set.of("resolvedFacts"))),
+
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(
             "prescan",

@@ -43,13 +43,26 @@ final class RoutedCalls {
      * @return the answer, or how the run ended while the call was routed
      */
     <T> Step<T> untilAnswered(final WorkList work, @Nullable final String segmentId, final Supplier<Result<T>> call) {
+        return untilAnswered(work::currentTranslationProgress, segmentId, call);
+    }
+
+    /**
+     * Makes a call until it answers or the run ends, a pause reporting the progress {@code progress} gives.
+     *
+     * @param progress the progress a pause reports, read when the pause happens
+     * @param segmentId the segment the call is for, or {@code null} for a call of no single segment
+     * @param call the call
+     * @return the answer, or how the run ended while the call was routed
+     */
+    <T> Step<T> untilAnswered(
+            final Supplier<JobProgress> progress, @Nullable final String segmentId, final Supplier<Result<T>> call) {
         while (true) {
             final Result<T> result = withSegment(segmentId, call);
             if (result.isOk()) {
                 return new Step.Done<>(Objects.requireNonNull(result.data(), "data"));
             }
             final AppError error = Objects.requireNonNull(result.error(), "error");
-            final Optional<RunEnd> end = afterError(error, work.currentTranslationProgress());
+            final Optional<RunEnd> end = afterError(error, progress.get());
             if (end.isPresent()) {
                 return new Step.Stopped<>(end.get());
             }

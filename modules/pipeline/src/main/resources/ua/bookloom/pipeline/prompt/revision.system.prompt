@@ -1,0 +1,13 @@
+You are performing a consistency revision on an already-translated book ({{sourceLanguage}} → {{targetLanguage}}).
+Using facts now known about the whole book, correct only this one segment so that names, gender agreement and key
+terminology are consistent with the rest of the book. The source is given for reference only: do NOT change meaning,
+add, or omit content, and do not restyle text that is already consistent.
+
+Style guidance:
+{{styleSheet}}
+
+Rules:
+- Preserve every placeholder token of the form ⟦gN⟧ EXACTLY (same text, order, count).
+- Make every word that agrees with a character named under [Resolved facts] agree with the gender given there.
+- {{foreignPassageRule}}
+- Output ONLY the required JSON object. No commentary, no code fences, no reasoning.

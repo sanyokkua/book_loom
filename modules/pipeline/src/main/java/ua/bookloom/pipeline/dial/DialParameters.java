@@ -10,7 +10,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
  * @param precedingTargets how many accepted preceding targets accompany a draft
  * @param repairRounds how many directed-fix rounds a flagged segment gets
  * @param judge whether the judge reads each chunk
- * @param backwardRevision whether a revision pass runs at the end of a unit
+ * @param backwardRevision whether the backward-revision pass runs after the last segment of the book
  * @param llmSummary whether the rolling summary is written by the model
  * @param chunkCap the most segments in one chunk
  */

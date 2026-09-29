@@ -1,0 +1,13 @@
+{{#resolvedFacts}}
+[Resolved facts revealed later in the book]
+{{resolvedFacts}}
+{{/resolvedFacts}}
+
+[Source]
+{{source}}
+
+<Text>
+{{text}}
+</Text>
+
+Return exactly one JSON object matching this schema: {"target":"<revised translation>"}

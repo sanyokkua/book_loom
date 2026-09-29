@@ -442,22 +442,27 @@ explicit user opt-in.
 
 ```
 You are performing a consistency revision on an already-translated book ({{sourceLang}} → {{targetLang}}).
-Using now-known book-wide facts and the canonical glossary, correct only this one segment so that
-names, gender agreement, and key terminology are consistent with the rest of the book.
-Keep every ⟦gN⟧ placeholder exactly. Do not restyle text that is already consistent.
-Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+Using facts now known about the whole book, correct only this one segment so that names, gender agreement and key
+terminology are consistent with the rest of the book. The source is given for reference only: do NOT change meaning,
+add, or omit content, and do not restyle text that is already consistent.
+
+Style guidance:
+{{styleSheet}}
+
+Rules:
+- Preserve every placeholder token of the form ⟦gN⟧ EXACTLY (same text, order, count).
+- Make every word that agrees with a character named under [Resolved facts] agree with the gender given there.
+- {{foreignPassageRule}}
+- Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 ```
 
 **USER**
 
 ```
-[Canonical glossary / name dictionary — book-wide]
-{{canonicalGlossary}}
-
 [Resolved facts revealed later in the book]
 {{resolvedFacts}}
 
-[Source — for reference only, outside the text to revise]
+[Source]
 {{sourceSegment}}
 
 <Text>
@@ -469,11 +474,14 @@ Return exactly one JSON object matching this schema: {"target":"<revised transla
 
 | Variable                           | Required? | Source / notes                                                                                       |
 |-------------------------------------|-----------|--------------------------------------------------------------------------------------------------------|
-| `{{currentTarget}}`                | Required  | The single `<Text>` block: the segment's current translation.                                        |
+| `{{currentTarget}}`                | Required  | The single `<Text>` block: the segment's current masked target — the person's pending proposal or edit for an edited segment. |
 | `{{sourceSegment}}`                | Required  | The masked source, shown under `[Source]` outside `<Text>`.                                          |
-| `{{canonicalGlossary}}`            | Required  | Finalized name/term dictionary for the whole book.                                                    |
-| `{{resolvedFacts}}`                | Optional  | Deferred-resolution facts (e.g. a character's later-revealed gender); `(none)` if only a term sweep. |
+| `{{resolvedFacts}}`                | Optional  | One line per character whose gender became known, e.g. `- Sam (Сем): female`; the block is dropped when empty. |
 | `{{sourceLang}}`, `{{targetLang}}` | Required  | Project languages.                                                                                     |
+| `{{styleSheet}}`, `{{foreignPassageRule}}` | Required | The run's style frame, as every repair call carries it.                                          |
+
+No book-wide glossary block is sent: a locked term is already swept deterministically before any revision call, and
+the reply must still carry every locked rendering present in the segment (the glossary check).
 
 **Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
 
