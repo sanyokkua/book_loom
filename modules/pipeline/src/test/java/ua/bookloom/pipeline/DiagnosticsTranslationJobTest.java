@@ -105,7 +105,8 @@ class DiagnosticsTranslationJobTest {
         assertThat(model.observed()).extracting(MdcObservation::segment).containsExactly("Book.md:0", "Book.md:0");
         final String jobId = Objects.requireNonNull(model.observed().getFirst().job(), "job MDC");
         assertThat(model.observed()).extracting(MdcObservation::job).containsOnly(jobId);
-        assertThat(pausedMdc.get()).isEqualTo(new MdcObservation(jobId, null));
+        // The pause falls between the segment's start and its decision, so its lines name the segment too.
+        assertThat(pausedMdc.get()).isEqualTo(new MdcObservation(jobId, "Book.md:0"));
         assertThat(await(workers.submit(DiagnosticsTranslationJobTest::currentMdc)))
                 .isEqualTo(new MdcObservation(null, null));
         shutdown(workers);

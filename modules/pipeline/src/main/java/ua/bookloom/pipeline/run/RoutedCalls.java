@@ -5,7 +5,6 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.MDC;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -77,14 +76,7 @@ final class RoutedCalls {
     }
 
     private static <T> Result<T> withSegment(@Nullable final String segmentId, final Supplier<Result<T>> call) {
-        if (segmentId != null) {
-            MDC.put("segment", segmentId);
-        }
-        try {
-            return Objects.requireNonNull(call.get(), "call result");
-        } finally {
-            MDC.remove("segment");
-        }
+        return SegmentLogContext.within(segmentId, () -> Objects.requireNonNull(call.get(), "call result"));
     }
 
     // A model error the run cannot recover from is an application fault, never a provider error that Retry now

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.AppError;
@@ -169,6 +170,7 @@ class RollingSummaryKeeperMaxTest {
                 .hasSize(1);
     }
 
+    // The run routes this error to a pause or a failure, so a "previous version kept" warning would be untrue.
     @Test
     void onUnitEnd_maxCallAnswersUnreachable_returnsThatErrorAndKeepsThePreviousVersion() {
         decideAccepted(keeper, "ch02.xhtml", 0, 20);
@@ -182,7 +184,28 @@ class RollingSummaryKeeperMaxTest {
                 .hasValueSatisfying(summary -> assertThat(summary.version()).isEqualTo(1));
         assertThat(logEvents.list)
                 .filteredOn(event -> event.getLevel() == Level.WARN)
-                .hasSize(1);
+                .isEmpty();
+    }
+
+    // Design D3: an empty or over-long reply never fails a run; the summary simply keeps its previous version.
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"emptyCompletion", "contextWindow"})
+    void onUnitEnd_maxCallAnswersNoSummary_keepsThePreviousVersionAndWarnsOnce(final ErrorCode code) {
+        decideAccepted(keeper, "ch02.xhtml", 0, 20);
+        model.answer(Result.err(AppError.of(code, "No summary", "The model gave no summary.")));
+
+        final Result<Optional<RollingSummary>> atEnd = keeper.onUnitEnd("ch02.xhtml");
+
+        assertThat(atEnd.isOk()).isTrue();
+        assertThat(atEnd.data()).isEmpty();
+        assertThat(summaries.latest(PROJECT).data())
+                .hasValueSatisfying(summary -> assertThat(summary.version()).isEqualTo(1));
+        assertThat(logEvents.list)
+                .filteredOn(event -> event.getLevel() == Level.WARN)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly("Summary call gave no summary, previous version kept code=" + code);
     }
 
     // The run makes a failed summary call again once the person resumes, so the chapter must still be there to send.

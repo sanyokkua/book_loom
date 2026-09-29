@@ -110,7 +110,7 @@ public final class RollingSummaryKeeper {
      *
      * @param unitId the unit that ended; never null
      * @return the new version when a refresh happened, empty when the unit had no accepted segment or the model's reply
-     *     was unreadable (the previous version stays), or the error that stopped it
+     *     was unreadable, empty or too long for its context (the previous version stays), or the error that stopped it
      */
     public Result<Optional<RollingSummary>> onUnitEnd(final String unitId) {
         Objects.requireNonNull(unitId, "unitId");
@@ -199,13 +199,23 @@ public final class RollingSummaryKeeper {
                 ChapterText.capped(unitSources, sourceLanguage, ChapterText.MAX_TOKENS),
                 ChapterText.capped(unitTargets, targetLanguage, ChapterText.MAX_TOKENS));
         if (asked.isErr()) {
-            log.warn(
-                    "Summary call failed, previous version kept code={}",
-                    Objects.requireNonNull(asked.error()).code());
-        } else if (Objects.requireNonNull(asked.data(), "asked").isEmpty()) {
+            return unanswered(Objects.requireNonNull(asked.error(), "error"));
+        }
+        if (Objects.requireNonNull(asked.data(), "asked").isEmpty()) {
             log.warn("Summary reply unreadable or empty, previous version kept");
         }
         return asked;
+    }
+
+    // Design D3: an empty or over-long reply never fails a run, so the summary keeps its previous version, as the
+    // judge keeps its verdict unread. Every other error is the run's to route — a pause, a stop or a failure.
+    private static Result<Optional<String>> unanswered(final AppError error) {
+        if (error.code() == ErrorCode.emptyCompletion || error.code() == ErrorCode.contextWindow) {
+            log.warn("Summary call gave no summary, previous version kept code={}", error.code());
+            return Result.ok(Optional.empty());
+        }
+        log.debug("Summary call failed code={}; the run routes it", error.code());
+        return Result.err(error);
     }
 
     private static String textOf(final RollingSummary summary) {

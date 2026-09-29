@@ -120,12 +120,10 @@ public final class DeferralRegister {
                 null);
     }
 
+    // What a deferral waits on is the judge's own words or a name from the book, so it is TRACE-only (logging.md).
     private static void logRecorded(final Deferral deferral) {
-        log.debug(
-                "Deferral recorded segmentId={} reason={} waitingOn={}",
-                deferral.segmentId(),
-                deferral.reason(),
-                deferral.waitingOn());
+        log.debug("Deferral recorded segmentId={} reason={}", deferral.segmentId(), deferral.reason());
+        log.trace("Deferral recorded segmentId={} waitingOn={}", deferral.segmentId(), deferral.waitingOn());
     }
 
     private static Optional<String> notRecordedBecause(final String previous, final GlossaryEntry after) {

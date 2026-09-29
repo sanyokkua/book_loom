@@ -129,9 +129,8 @@ class TranslationWorkspaceEndToEndTest {
         chooseModel();
         runToTheEnd();
 
-        // The pseudo model's echo of "It was a dark night." (20 code points) and of "The rain fell on the old house."
-        // is
-        // flagged by the echo check; "Nobody came." is below the echo floor and accepted at 0.85.
+        // The pseudo model's echoes of "It was a dark night." (20 code points) and "The rain fell on the old house."
+        // are flagged by the echo check; "Nobody came." is below the echo floor and accepted at 0.85.
         assertThat(onFx(() -> injector.getInstance(StateMirror.class).accepted().get()))
                 .isEqualTo(1);
         assertThat(onFx(() -> injector.getInstance(StateMirror.class).flagged().get()))

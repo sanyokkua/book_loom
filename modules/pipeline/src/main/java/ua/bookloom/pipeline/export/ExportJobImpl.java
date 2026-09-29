@@ -188,10 +188,11 @@ final class ExportJobImpl implements ExportJob {
                 .orElseGet(() -> Result.err(unknownProject(request.projectId())));
     }
 
+    // A failure is logged once, where its AppError was built; this is the lifecycle line of the export's end.
     private void logOutcome(final Result<ExportReport> result) {
         if (result.isErr()) {
-            log.warn(
-                    "export ended project={} code={}",
+            log.info(
+                    "export ended project={} outcome=failed code={}",
                     request.projectId(),
                     errorOf(result).code());
             return;

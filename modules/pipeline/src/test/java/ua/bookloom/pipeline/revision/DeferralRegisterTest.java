@@ -3,16 +3,22 @@ package ua.bookloom.pipeline.revision;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
@@ -150,6 +156,43 @@ class DeferralRegisterTest {
                         null));
     }
 
+    static Stream<Arguments> deferralsWaitingOnBookOrModelText() {
+        return Stream.of(
+                Arguments.of(
+                        "a judge deferral",
+                        (Supplier<List<Deferral>>) () -> DeferralRegister.fromJudge(
+                                PROJECT, List.of(new JudgeDeferral("ch01.xhtml:9", "whether Sam is a woman"))),
+                        "whether Sam is a woman",
+                        "reason=JUDGE"),
+                Arguments.of(
+                        "an unknown-gender deferral",
+                        (Supplier<List<Deferral>>) () -> DeferralRegister.unknownGender(
+                                PROJECT, sam(), List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN))),
+                        "Sam",
+                        "reason=GENDER_UNKNOWN"));
+    }
+
+    // The judge's words and a character's name are model and book text, which the log holds at TRACE only.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("deferralsWaitingOnBookOrModelText")
+    void deferralRecorded_textWaitedOn_isLoggedAtTraceOnly(
+            final String description,
+            final Supplier<List<Deferral>> producer,
+            final String waitingOn,
+            final String reason) {
+        final List<ILoggingEvent> lines = loggedAtTrace(producer);
+
+        assertThat(lines)
+                .filteredOn(line -> line.getLevel().isGreaterOrEqual(Level.DEBUG))
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .noneMatch(line -> line.contains(waitingOn))
+                .anyMatch(line -> line.contains("segmentId=ch01.xhtml:9") && line.contains(reason));
+        assertThat(lines)
+                .filteredOn(line -> line.getLevel() == Level.TRACE)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .anyMatch(line -> line.contains(waitingOn));
+    }
+
     static Stream<Arguments> glossariesAndTheTermsWaitedOn() {
         return Stream.of(
                 Arguments.of(
@@ -180,6 +223,23 @@ class DeferralRegisterTest {
 
         assertThat(deferrals).allMatch(deferral -> deferral.reason() == DeferralReason.GENDER_UNKNOWN);
         assertThat(deferrals).extracting(Deferral::waitingOn).containsExactlyElementsOf(waitingOn);
+    }
+
+    private static List<ILoggingEvent> loggedAtTrace(final Supplier<List<Deferral>> producer) {
+        final Logger logger = (Logger) LoggerFactory.getLogger(DeferralRegister.class);
+        final Level previous = logger.getLevel();
+        final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        logger.setLevel(Level.TRACE);
+        try {
+            assertThat(producer.get()).hasSize(1);
+            return List.copyOf(appender.list);
+        } finally {
+            logger.detachAppender(appender);
+            logger.setLevel(previous);
+            appender.stop();
+        }
     }
 
     /** A segment naming Sam and Alex at the Harbour, with a footnote marker glued to Sam's name. */

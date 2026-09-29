@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
@@ -185,25 +186,24 @@ public final class ChunkRunner {
         return commitChunk(index, items.size());
     }
 
+    // The judge call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.
     private Optional<RunEnd> judgedChunk(final Current current, final List<WorkItem> items) {
         for (final WorkItem item : items) {
-            if (draft(current, item) instanceof Step.Stopped<DraftOutcome>(final RunEnd end)) {
+            final Step<DraftOutcome> drafted =
+                    SegmentLogContext.within(item.segment().id(), () -> draft(current, item));
+            if (drafted instanceof Step.Stopped<DraftOutcome>(final RunEnd end)) {
                 return Optional.of(end);
             }
         }
         log.debug("Chunk drafted segments={}; judging it once", items.size());
-        return decideWith(current, items, current.drafts().all());
+        return decideWith(current, null, items, current.drafts().all());
     }
 
     private Optional<RunEnd> unjudgedChunk(final Current current, final List<WorkItem> items) {
         log.debug("Chunk not judged segments={}: the dial turns the judge off", items.size());
         for (final WorkItem item : items) {
             final Optional<RunEnd> end =
-                    switch (draft(current, item)) {
-                        case Step.Stopped<DraftOutcome>(final RunEnd stopped) -> Optional.of(stopped);
-                        case Step.Done<DraftOutcome>(final DraftOutcome outcome) ->
-                            decideWith(current, List.of(item), List.of(outcome));
-                    };
+                    SegmentLogContext.within(item.segment().id(), () -> draftAndDecide(current, item));
             if (end.isPresent()) {
                 return end;
             }
@@ -211,12 +211,26 @@ public final class ChunkRunner {
         return Optional.empty();
     }
 
-    /** Starts the quality loop over the outcomes — the judge call, when the dial enables it — then decides them. */
+    private Optional<RunEnd> draftAndDecide(final Current current, final WorkItem item) {
+        return switch (draft(current, item)) {
+            case Step.Stopped<DraftOutcome>(final RunEnd stopped) -> Optional.of(stopped);
+            case Step.Done<DraftOutcome>(final DraftOutcome outcome) ->
+                decideWith(current, item.segment().id(), List.of(item), List.of(outcome));
+        };
+    }
+
+    /**
+     * Starts the quality loop over the outcomes — the judge call, when the dial enables it — then decides them.
+     * {@code segmentId} is the one segment an unjudged loop starts for, or {@code null} for a judged chunk.
+     */
     private Optional<RunEnd> decideWith(
-            final Current current, final List<WorkItem> items, final List<DraftOutcome> outcomes) {
+            final Current current,
+            @Nullable final String segmentId,
+            final List<WorkItem> items,
+            final List<DraftOutcome> outcomes) {
         final Step<ChunkDecider> decider = calls.untilAnswered(
                 current.work(),
-                null,
+                segmentId,
                 () -> steps.loop()
                         .start(outcomes, current.loop(), current.context().gate(), steps.calls()));
         return switch (decider) {
@@ -281,19 +295,20 @@ public final class ChunkRunner {
 
     private Optional<RunEnd> decideEach(final Current current, final List<WorkItem> items, final ChunkDecider decider) {
         for (final WorkItem item : items) {
-            final Step<SegmentOutcome> decided =
-                    calls.untilAnswered(current.work(), item.segment().id(), decider::nextDecision);
             final Optional<RunEnd> end =
-                    switch (decided) {
-                        case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
-                        case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) ->
-                            record(current, item, outcome, decider);
-                    };
+                    SegmentLogContext.within(item.segment().id(), () -> decideOne(current, item, decider));
             if (end.isPresent()) {
                 return end;
             }
         }
         return Optional.empty();
+    }
+
+    private Optional<RunEnd> decideOne(final Current current, final WorkItem item, final ChunkDecider decider) {
+        return switch (calls.untilAnswered(current.work(), item.segment().id(), decider::nextDecision)) {
+            case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
+            case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome, decider);
+        };
     }
 
     private Optional<RunEnd> record(

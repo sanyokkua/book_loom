@@ -28,11 +28,17 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.MemoryKind;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.QualityDial;
@@ -49,6 +55,7 @@ class TranslationJobSummaryTest {
     private static final String SUMMARY_BLOCK = "[Book so far — context only; do NOT re-translate it]";
     private static final String SUMMARY = "summary";
     private static final String MODEL_SUMMARY = "Старий чоловік іде до гавані, де стоїть маяк.";
+    private static final String EARLIER_SUMMARY = "Раніше: старий чоловік живе біля моря.";
 
     @TempDir
     private Path tempDir;
@@ -101,6 +108,37 @@ class TranslationJobSummaryTest {
         assertThat(memoryEvents(events)).containsExactly(new MemoryUpdated(MemoryKind.SUMMARY, "1"));
         assertThat(latestSummary(project))
                 .hasValueSatisfying(summary -> assertThat(summary.target()).isEqualTo(MODEL_SUMMARY));
+    }
+
+    // Design D3: an empty or over-long summary reply never fails a run; the version written before stays.
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"emptyCompletion", "contextWindow"})
+    void run_maxUnitEndSummaryUnanswerable_completesAndKeepsThePreviousVersion(final ErrorCode code) {
+        final TestProject project = project(
+                TestBooks.markdown(tempDir.resolve("Book.md"), S0 + "\n\n" + S1), brief("en", "uk", QualityDial.MAX));
+        project.stores()
+                .summaries()
+                .save(new RollingSummary(project.id(), null, "Earlier.", EARLIER_SUMMARY, 1, null, 0));
+        final ScriptedChatModel model = replies(T0, T1)
+                .answerTo(JUDGE, judged())
+                .answerTo(SUMMARY, Result.err(AppError.of(code, "Unanswerable", "The summary call gave nothing.")));
+        final TranslationJobImpl translation = job(project, model);
+        final List<JobEvent> events = recorded(translation);
+
+        final JobReport report = report(translation.run());
+
+        assertThat(report.end()).isEqualTo(JobState.COMPLETED);
+        assertThat(report.error()).isNull();
+        assertThat(report.accepted()).isEqualTo(2);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, JUDGE, SUMMARY);
+        assertThat(memoryEvents(events)).isEmpty();
+        assertThat(events.getLast()).isInstanceOf(Finished.class);
+        assertThat(latestSummary(project)).hasValueSatisfying(summary -> {
+            assertThat(summary.version()).isEqualTo(1);
+            assertThat(summary.target()).isEqualTo(EARLIER_SUMMARY);
+        });
     }
 
     @Test
