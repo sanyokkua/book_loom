@@ -100,6 +100,27 @@ class GlossaryCsvTest {
     }
 
     @Test
+    void importCsv_fileWithNoHeader_readsItsFirstLineAsARow() throws IOException {
+        final Path file = write("Hale,Гейл,character,male,true", "Milton,Мілтон");
+
+        final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
+
+        assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(2), List.of()));
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::term)
+                .containsExactly("Hale");
+    }
+
+    @Test
+    void importCsv_headerSpelledWithCapitals_isSkipped() throws IOException {
+        final Path file = write("Term,Target,Type,Gender,Locked", "Hale,Гейл,character,male,true");
+
+        final Result<GlossaryImportReport> report = service.importCsv(PROJECT, file);
+
+        assertThat(report.data()).isEqualTo(new GlossaryImportReport(1, List.of(), List.of()));
+    }
+
+    @Test
     void importCsv_lockedRowWithNoTarget_reportsItRefusedAndAddsNoEntry() throws IOException {
         final Path file = write(HEADER, "Hale,,character,male,true");
 

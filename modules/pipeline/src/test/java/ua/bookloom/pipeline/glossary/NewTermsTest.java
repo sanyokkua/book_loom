@@ -56,6 +56,16 @@ class NewTermsTest {
     }
 
     @Test
+    void newTerms_nameSeenInTwoCaseVariants_proposesOnlyTheFirstRankedVariant() {
+        final List<String> lines = new ArrayList<>(copies("We saw Hale at the door.", 3));
+        lines.addAll(copies("We saw HALE at the door.", 3));
+
+        final List<GlossaryEntry> entries = newTermsOf(GlossaryTestSegments.of(lines));
+
+        assertThat(entries).extracting(GlossaryEntry::term).containsExactly("Hale");
+    }
+
+    @Test
     void newTerms_personHoldsTheTermInAnotherCase_doesNotProposeIt() {
         glossary.add(new GlossaryEntry("e1", PROJECT, "hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
 

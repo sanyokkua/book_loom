@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.memory.ProtectedMask;
@@ -27,13 +27,13 @@ import ua.bookloom.pipeline.qa.LockedRendering;
 final class InjectedTerms {
 
     static List<InjectedTerm> select(final Chunk chunk, final ProtectedMask mask, final List<GlossaryEntry> glossary) {
-        final List<String> displayTexts = chunk.segments().stream()
+        final List<String> searchTexts = chunk.segments().stream()
                 .map(Segment::masked)
-                .map(DisplayText::of)
+                .map(masked -> Tokens.replace(masked, " "))
                 .toList();
         final List<InjectedTerm> selected = new ArrayList<>();
         for (final GlossaryEntry entry : glossary) {
-            if (!occursIn(entry.term(), displayTexts)) {
+            if (!occursIn(entry.term(), searchTexts)) {
                 continue;
             }
             final List<String> lines = lines(entry, mask);
@@ -51,9 +51,9 @@ final class InjectedTerms {
         return target != null && !target.isBlank();
     }
 
-    private static boolean occursIn(final String term, final List<String> displayTexts) {
+    private static boolean occursIn(final String term, final List<String> searchTexts) {
         return !term.isBlank()
-                && displayTexts.stream()
+                && searchTexts.stream()
                         .anyMatch(text -> WholeWord.pattern(term).matcher(text).find());
     }
 

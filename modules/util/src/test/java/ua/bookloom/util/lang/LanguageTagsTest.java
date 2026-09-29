@@ -2,6 +2,7 @@ package ua.bookloom.util.lang;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -26,16 +27,41 @@ class LanguageTagsTest {
         "zh-MO,zh-Hant",
         "zh-Hant-TW,zh-Hant",
         "nb-NO,nb",
-        "' de ',de"
+        "' de ',de",
+        "eng,en",
+        "ENG,en",
+        "eng-GB,en",
+        "ukr,uk",
+        "rus,ru",
+        "deu,de",
+        "fra_CA,fr",
+        "zho,zh-Hans"
     })
     void normalize_catalogueTag_returnsCatalogueTag(String raw, String expected) {
         assertThat(LanguageTags.normalize(raw)).isPresent().hasValue(expected);
     }
 
     @ParameterizedTest
-    @CsvSource({"la,la", "la-VA,la", "LA_va,la", "haw,haw", "ar,ar", "he,he", "iw,he", "AR-eg,ar", "' Haw ',haw"})
+    @CsvSource({
+        "la,la",
+        "la-VA,la",
+        "LA_va,la",
+        "haw,haw",
+        "ar,ar",
+        "he,he",
+        "iw,he",
+        "AR-eg,ar",
+        "' Haw ',haw",
+        "lat,la",
+        "heb,he"
+    })
     void normalize_uncataloguedLanguageTheJdkNames_returnsItsLowerCasePrimaryTag(String raw, String expected) {
         assertThat(LanguageTags.normalize(raw)).isPresent().hasValue(expected);
+    }
+
+    @Test
+    void normalize_threeLetterCode_isRecognizedAndEqualToItsTwoLetterCode() {
+        assertThat(LanguageTags.normalize("eng")).isPresent().isEqualTo(LanguageTags.normalize("en"));
     }
 
     @ParameterizedTest

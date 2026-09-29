@@ -90,6 +90,14 @@ class ContextPackageAssemblerTest {
     }
 
     @Test
+    void assemble_termNextToAFootnoteMarker_isStillFoundAndLockedOneStaysHidden() {
+        final Chunk chunk = ContextFixtures.chunk("Hale⟦g0⟧1⟦g1⟧ opened the door.");
+
+        assertThat(glossaryLines(chunk, 0, List.of(HALE_LOCKED))).containsExactly("⟦g2⟧ → Гейл, character, male");
+        assertThat(glossaryLines(chunk, 0, List.of(HALE))).containsExactly("Hale → Гейл (character, male)");
+    }
+
+    @Test
     void assemble_lockedEntryHiddenOnlyInAnotherSegment_isLeftOut() {
         final Chunk chunk = ContextFixtures.chunk("It was late.", "Hale opened the door.");
 

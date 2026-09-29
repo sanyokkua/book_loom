@@ -12,6 +12,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.lang.reflect.Proxy;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -179,6 +180,21 @@ class GlossaryServiceImplTest {
 
         final Result<List<GlossaryEntry>> added = service.scan(PROJECT);
 
+        assertThat(added.data()).extracting(GlossaryEntry::term).containsExactly("Hale");
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::term)
+                .containsExactly("Hale");
+    }
+
+    @Test
+    void scan_nameInTwoCaseVariants_storesOneEntry() {
+        final List<String> lines = new ArrayList<>(repeated("We saw Hale at the door.", 3));
+        lines.addAll(repeated("We saw HALE at the door.", 3));
+        openProjects.put(PROJECT, book(lines, "Title"));
+
+        final Result<List<GlossaryEntry>> added = service.scan(PROJECT);
+
+        assertThat(added.isOk()).isTrue();
         assertThat(added.data()).extracting(GlossaryEntry::term).containsExactly("Hale");
         assertThat(service.entries(PROJECT).data())
                 .extracting(GlossaryEntry::term)

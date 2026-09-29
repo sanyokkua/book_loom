@@ -61,7 +61,8 @@ public final class FrequencyScan {
     }
 
     /**
-     * The glossary entries a scan proposes, leaving out a term the glossary holds or the person removed.
+     * The glossary entries a scan proposes, leaving out a term the glossary holds or the person removed. Case variants
+     * of one name ({@code Hale}, {@code HALE}) share an entry id, so only the highest-ranked one is proposed.
      *
      * @param projectId the project whose glossary is read; never null
      * @param segments the segments to scan; never null
@@ -81,13 +82,13 @@ public final class FrequencyScan {
             final List<Segment> segments,
             final GlossaryRepository glossary,
             final List<GlossaryEntry> held) {
-        final Set<String> heldTerms = new HashSet<>();
-        held.forEach(entry -> heldTerms.add(entry.term().toLowerCase(Locale.ROOT)));
+        final Set<String> heldTerms = lowerCasedTerms(held);
         final List<GlossaryEntry> proposals = new ArrayList<>();
         int skippedHeld = 0;
         int skippedRemoved = 0;
         for (final NameCandidate candidate : candidates(segments, PROPOSAL_MIN_COUNT)) {
-            if (heldTerms.contains(candidate.term().toLowerCase(Locale.ROOT))) {
+            final String lowerCased = candidate.term().toLowerCase(Locale.ROOT);
+            if (heldTerms.contains(lowerCased)) {
                 skippedHeld++;
                 continue;
             }
@@ -100,14 +101,21 @@ public final class FrequencyScan {
                 continue;
             }
             proposals.add(entryFor(projectId, candidate));
+            heldTerms.add(lowerCased);
         }
         log.debug(
-                "Name proposals for project {}: {} made, {} skipped as held, {} as removed",
+                "Name proposals for project {}: {} made, {} skipped as held or a case variant already proposed, {} as removed",
                 projectId,
                 proposals.size(),
                 skippedHeld,
                 skippedRemoved);
         return Result.ok(proposals);
+    }
+
+    private static Set<String> lowerCasedTerms(final List<GlossaryEntry> entries) {
+        final Set<String> terms = new HashSet<>();
+        entries.forEach(entry -> terms.add(entry.term().toLowerCase(Locale.ROOT)));
+        return terms;
     }
 
     private static GlossaryEntry entryFor(final String projectId, final NameCandidate candidate) {

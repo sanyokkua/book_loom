@@ -174,6 +174,18 @@ class RollingSummaryKeeperTest {
     }
 
     @Test
+    void onDecided_termNextToAFootnoteMarker_isCounted() {
+        glossary.add(new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false));
+        final Segment noted = segment("ch01.xhtml", 0, SegmentKind.PARAGRAPH, "Hale⟦g0⟧1⟦g1⟧ opened the door.");
+        keeper.onDecided(noted, record(noted, SegmentStatus.ACCEPTED, "Гейл відчинив двері."));
+
+        decideAccepted(keeper, "ch01.xhtml", 1, 19);
+
+        assertThat(summaries.latest(PROJECT).data())
+                .hasValueSatisfying(summary -> assertThat(summary.source()).isEqualTo("Hale → Гейл (character, male)"));
+    }
+
+    @Test
     void onDecided_entryAddedAfterAnEarlierRefreshWhoseTermWasAlreadyDecided_isCountedFromTheStart() {
         final Segment mentions = segment("ch01.xhtml", 0, SegmentKind.PARAGRAPH, "Milton and Milton again.");
         keeper.onDecided(mentions, record(mentions, SegmentStatus.ACCEPTED, "Мілтон"));

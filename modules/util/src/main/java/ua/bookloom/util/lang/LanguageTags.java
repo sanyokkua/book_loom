@@ -1,7 +1,9 @@
 package ua.bookloom.util.lang;
 
+import java.util.HashMap;
 import java.util.IllformedLocaleException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.AccessLevel;
@@ -26,12 +28,14 @@ public final class LanguageTags {
     private static final String CHINESE_TRADITIONAL_TAG = "zh-Hant";
     // Codes the JDK names, but which say "no particular language" rather than name one.
     private static final Set<String> GENERIC_NON_LANGUAGES = Set.of("und", "mul", "zxx", "mis");
+    // A book may spell a language with its ISO 639-2/T code ("eng"); this table folds it to the two-letter code.
+    private static final Map<String, String> TWO_LETTER_BY_THREE_LETTER = twoLetterByThreeLetter();
 
     /**
      * Normalizes a raw declared or configured language tag to one canonical tag.
      *
      * <p>Trims the input, treats {@code _} as {@code -}, lower-cases the primary subtag, maps the retired
-     * {@code ua} to {@code uk}, folds every Chinese regional/script variant to {@code zh-Hans} or {@code zh-Hant},
+     * {@code ua} to {@code uk}, maps an ISO 639-2/T three-letter primary subtag ({@code eng}) to its two-letter code, folds every Chinese regional/script variant to {@code zh-Hans} or {@code zh-Hant},
      * and otherwise drops every subtag after the primary one. A tag outside the catalogue is accepted when it is
      * well-formed and the JDK names its language in English; the answer is then the JDK's lower-case language code.
      *
@@ -49,12 +53,21 @@ public final class LanguageTags {
         }
         final String hyphenated = trimmed.replace('_', '-');
         final String[] subtags = hyphenated.split("-");
-        final String primary = subtags[0].toLowerCase(Locale.ROOT);
+        final String written = subtags[0].toLowerCase(Locale.ROOT);
+        final String primary = TWO_LETTER_BY_THREE_LETTER.getOrDefault(written, written);
         final String candidate = candidateTag(primary, subtags);
         if (Languages.byTag(candidate).isPresent()) {
             return Optional.of(candidate);
         }
-        return jdkLanguage(hyphenated);
+        return jdkLanguage(primary + hyphenated.substring(subtags[0].length()));
+    }
+
+    private static Map<String, String> twoLetterByThreeLetter() {
+        final Map<String, String> table = new HashMap<>();
+        for (final String code : Locale.getISOLanguages()) {
+            table.putIfAbsent(Locale.of(code).getISO3Language(), code);
+        }
+        return Map.copyOf(table);
     }
 
     private static Optional<String> jdkLanguage(String hyphenated) {

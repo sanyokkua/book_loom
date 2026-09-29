@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ import ua.bookloom.pipeline.glossary.CsvRecords.CsvRecord;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class GlossaryCsv {
 
-    /** The header line, written first and skipped on import. */
+    /** The header line, written first and skipped on import when a file starts with it. */
     public static final String HEADER = "term,target,type,gender,locked";
 
     private static final String RECORD_END = "\r\n";
@@ -33,7 +34,7 @@ public final class GlossaryCsv {
     /**
      * One well-formed row of a file.
      *
-     * @param line the 1-based line the row starts on, the header being line 1
+     * @param line the 1-based line the row starts on, counting the header when the file has one
      * @param term the source term; never blank
      * @param target the target, or null when the field is empty
      * @param type the term's type
@@ -77,7 +78,8 @@ public final class GlossaryCsv {
     }
 
     /**
-     * Reads CSV text, skipping the header and any blank line and setting aside every row it cannot use.
+     * Reads CSV text, skipping the header when the file has one and any blank line, and setting aside every row it
+     * cannot use; a file with no header numbers its first record line 1.
      *
      * @param text the file's text; never null, a leading byte-order mark is ignored
      * @return the usable rows and the lines of the rest
@@ -90,12 +92,21 @@ public final class GlossaryCsv {
         final List<CsvRecord> records = CsvRecords.read(body).stream()
                 .filter(record -> !record.isBlankLine())
                 .toList();
-        for (final CsvRecord record : records.stream().skip(1).toList()) {
+        final boolean headed = !records.isEmpty() && isHeader(records.getFirst());
+        for (final CsvRecord record : records.stream().skip(headed ? 1 : 0).toList()) {
             final Optional<Row> row = rowOf(record);
             row.ifPresentOrElse(rows::add, () -> malformed.add(record.line()));
         }
         log.debug("Glossary CSV parsed: {} rows, {} malformed", rows.size(), malformed.size());
         return new Parsed(List.copyOf(rows), List.copyOf(malformed));
+    }
+
+    private static boolean isHeader(final CsvRecord record) {
+        final List<String> expected = List.of(HEADER.split(","));
+        final List<String> fields = record.fields();
+        return fields.size() == expected.size()
+                && IntStream.range(0, FIELD_COUNT)
+                        .allMatch(index -> fields.get(index).strip().equalsIgnoreCase(expected.get(index)));
     }
 
     private static Optional<Row> rowOf(final CsvRecord record) {

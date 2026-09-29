@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.qa.CheckResult;
 import ua.bookloom.pipeline.qa.LockedRendering;
 import ua.bookloom.pipeline.qa.QaEvaluator;
@@ -30,7 +31,8 @@ final class QaEvaluation {
      * @param maskedCandidate the candidate as the model wrote it, protected-span tokens still in it, so a hidden name
      *     never counts toward the script, echo or length checks
      * @param maskedForm the candidate with every protected span restored and the document's own tokens still in
-     *     place, where the glossary check looks for each locked rendering
+     *     place, where the glossary check looks for each locked rendering; each token reads as one space there, so a
+     *     footnote marker never glues the word before it to the digit after it
      * @param settings the chunk's languages, policies and glossary terms
      * @param lockedRenderings the locked glossary terms present in this segment
      * @return the candidate's hard-gate and soft outcome
@@ -53,7 +55,7 @@ final class QaEvaluation {
         final SoftCheckInput input = new SoftCheckInput(
                 DisplayText.of(maskedSource),
                 DisplayText.of(maskedCandidate),
-                DisplayText.of(maskedForm),
+                Tokens.replace(maskedForm, " "),
                 settings.frame().sourceLanguage(),
                 settings.frame().targetLanguage(),
                 settings.frame().foreignPassagePolicy(),

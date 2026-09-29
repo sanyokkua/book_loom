@@ -140,7 +140,7 @@ public final class RollingSummaryKeeper {
 
     private void remember(final Segment segment, final SegmentRecord record) {
         final String source = DisplayText.of(segment.masked());
-        decided.add(source);
+        decided.add(segment.masked());
         if (segment.kind() == SegmentKind.HEADING && !source.isEmpty()) {
             headings.add(source);
         }
