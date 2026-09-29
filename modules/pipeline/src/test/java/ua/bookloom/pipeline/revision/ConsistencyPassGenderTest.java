@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.judge.JudgeDeferral;
 
@@ -213,6 +214,35 @@ class ConsistencyPassGenderTest {
         assertThat(book.openDeferrals())
                 .extracting(Deferral::proposal, Deferral::maskedProposal)
                 .containsExactly(tuple(DOOR_REVISED_PLAIN, DOOR_REVISED));
+    }
+
+    // A term renamed after a gender proposal is swept into that proposal: one proposal waits and holds both fixes.
+    @Test
+    void run_termRenamedAfterGenderProposal_oneProposalHoldsBothFixes() {
+        book.add(book.character("Sam", "Сем", Gender.UNKNOWN, true));
+        book.edit(SAM_DOOR, DOOR_PLAIN, DOOR_MASKED);
+        book.recordUnknownGender(SAM_DOOR);
+        final GlossaryEntry female = book.character("Sam", "Сем", Gender.FEMALE, true);
+        book.glossaryUpdate(female);
+        book.model().answerTo(REVISION, reply(DOOR_REVISED)).answerTo(REVISION, reply(DOOR_REVISED));
+        ok(book.run(true));
+        book.change(female, book.character("Sam", "Саманта", Gender.FEMALE, true));
+
+        ok(book.run(true));
+
+        assertThat(book.model().requests()).hasSize(1);
+        assertThat(book.openDeferrals())
+                .filteredOn(deferral -> deferral.proposal() != null)
+                .extracting(Deferral::proposal, Deferral::maskedProposal)
+                .containsExactly(
+                        tuple("Саманта відчинила <em>старі</em> двері.", "Саманта відчинила ⟦g0⟧старі⟦g1⟧ двері."));
+        final SegmentRecord applied = ok(book.desk()
+                .reviewDesk(ReviewMode.UNATTENDED)
+                .acceptProposal(book.desk().projectId(), SAM_DOOR));
+        assertThat(applied.maskedUserTarget()).isEqualTo("Саманта відчинила ⟦g0⟧старі⟦g1⟧ двері.");
+        assertThat(book.openDeferrals())
+                .filteredOn(deferral -> deferral.segmentId().equals(SAM_DOOR))
+                .isEmpty();
     }
 
     private void samDoorWaitingOnGender() {

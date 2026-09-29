@@ -106,6 +106,25 @@ class ExportJobDestinationTest {
         assertThat(Files.readString(glossary)).isEqualTo("term\n");
     }
 
+    // X.md's report beside it is X.report.md, the source itself: refused even with overwrite, before anything is
+    // written.
+    @Test
+    void run_sideFileIsTheSourceBook_returnsValidationAndKeepsTheSource() {
+        final Path source = TestBooks.markdown(tempDir.resolve("X.report.md"), "One.");
+        final String id = fixture.importBook(source, "en");
+        final RecordingDocumentPort port = new RecordingDocumentPort(fixture.documents());
+        final Path destination = tempDir.resolve("X.md");
+
+        final Result<ExportReport> result = ExportJobFixture.export(
+                fixture.serviceOver(port), request(id, destination, true, Set.of(SideFile.QUALITY_REPORT)));
+
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(ExportJobFixture.read(source)).isEqualTo("One.");
+        assertThat(port.writtenDocuments()).isEmpty();
+        assertThat(destination).doesNotExist();
+        assertThat(ExportJobFixture.hiddenFiles(tempDir)).isEmpty();
+    }
+
     // An occupied side-file path that was not chosen is no reason to refuse.
     @Test
     void run_occupiedSideFileNotChosen_writesTheBook() throws IOException {

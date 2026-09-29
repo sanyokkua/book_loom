@@ -133,6 +133,21 @@ class ExportJobSideFilesTest {
         assertThat(hiddenFiles(tempDir)).isEmpty();
     }
 
+    // A side file's temporary path that is a link is refused, so the file it points at is never written through.
+    @Test
+    void run_sideFileTemporaryIsSymbolicLink_returnsValidationAndKeepsTheLinkedFile() throws IOException {
+        final String id = frankenstein();
+        final Path elsewhere = Files.writeString(tempDir.resolve("elsewhere.txt"), "kept");
+        Files.createSymbolicLink(tempDir.resolve(".Frankenstein.uk.report.md"), elsewhere);
+
+        final Result<ExportReport> result = fixture.export(
+                request(id, tempDir.resolve("Frankenstein.uk.epub"), true, Set.of(SideFile.QUALITY_REPORT)));
+
+        assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
+        assertThat(Files.readString(elsewhere)).isEqualTo("kept");
+        assertThat(tempDir.resolve("Frankenstein.uk.report.md")).doesNotExist();
+    }
+
     /** One chapter: an accepted paragraph with an ampersand, a flagged one with a finding, and a pending one. */
     private String frankenstein() {
         final String id = fixture.importBook(

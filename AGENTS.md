@@ -32,10 +32,13 @@ echo is repaired or flagged. The "Also translate" switches decide what is transl
 its pieces, locked names and kept foreign runs are protected behind tokens, each draft carries its context package
 and every record its snapshot, repeated passages reuse the translation memory, the rolling summary, new names and
 deferrals are kept as the run goes, and it pauses for review as the review mode says, announcing each segment and
-model call as events. Not built: saving (nothing survives a restart, no remembered settings), the window's real
-start and resume on a project (the window still runs through an interim import-and-export bridge), review actions
-and backward revision. Next: group 11 of `openspec/changes/complete-translation-workflow` (review desk, revision,
-export and the command line), then the screens (12–15).
+model call as events. The review desk acts on segments (accept, edit, revert, skip, apply a proposal, retry with the
+context the first draft saw), Max revises backwards after the last segment, export is checked per segment and writes
+the chosen side files, the command line refuses an existing destination before any model call and cancels cleanly, the
+review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam. Not built: saving
+(nothing survives a restart, no remembered settings) and the window's real start and resume on a project (the window
+still runs through an interim import-and-export bridge). Next: the screens, groups 12–15 of
+`openspec/changes/complete-translation-workflow`.
 
 ## Commands
 

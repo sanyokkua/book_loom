@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -126,15 +127,25 @@ final class SideFiles {
      * @param contents the non-null side files to write, in order
      * @param overwrite whether an existing file may be replaced
      * @param moves the non-null move seam
-     * @return the paths written; {@code internal} naming the first file that could not be put in place, whose
+     * @param cancellationRequested read before each file; once true, no further file is written
+     * @return the paths written; {@code cancelled} once a cancel is seen; {@code validation} when a file's temporary
+     *     path is a symbolic link; {@code internal} naming the first file that could not be put in place, whose
      *     temporary file is removed
      */
     static Result<List<Path>> write(
-            final List<Content> contents, final boolean overwrite, final ExportMoveOperation moves) {
+            final List<Content> contents,
+            final boolean overwrite,
+            final ExportMoveOperation moves,
+            final BooleanSupplier cancellationRequested) {
         Objects.requireNonNull(contents, "contents");
         Objects.requireNonNull(moves, "moves");
+        Objects.requireNonNull(cancellationRequested, "cancellationRequested");
         final List<Path> written = new ArrayList<>(contents.size());
         for (final Content content : contents) {
+            if (cancellationRequested.getAsBoolean()) {
+                log.debug("Side files stopped by a cancel before {} written={}", content.path(), written);
+                return Result.err(BookExporter.cancelledError());
+            }
             final Result<Path> one = writeOne(content, overwrite, moves);
             if (one.isErr()) {
                 return Result.err(Objects.requireNonNull(one.error(), "error"));
@@ -150,6 +161,15 @@ final class SideFiles {
         final Path fileName = Objects.requireNonNull(content.path().getFileName(), "file name");
         final Path temporary = content.path().resolveSibling("." + fileName);
         log.debug("Writing side file {} through {} overwrite={}", content.path(), temporary, overwrite);
+        final boolean linked = Files.isSymbolicLink(temporary);
+        log.debug("Side file temporary {} is a symbolic link: {}", temporary, linked);
+        if (linked) {
+            log.warn("Refused side file because temporary path {} is a symbolic link", temporary);
+            return Result.err(AppError.of(
+                    ErrorCode.validation,
+                    "This export path is unsafe",
+                    "The temporary path for " + fileName + " is a link to another file, so it was not written."));
+        }
         try {
             Files.writeString(temporary, content.text(), StandardCharsets.UTF_8);
             Publication.move(moves, temporary, content.path(), overwrite);

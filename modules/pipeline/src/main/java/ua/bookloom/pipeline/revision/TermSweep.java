@@ -27,7 +27,9 @@ import ua.bookloom.pipeline.heal.GateResult;
  * The deterministic half of backward revision: each TERM deferral's previous rendering is replaced, whole-word, by its
  * locked entry's current target in the segment's masked form, and the plain form is restored from it through the
  * document gate, so both forms stay consistent and no tag or token is touched. Every term deferral of one segment is
- * swept into one new target, so two renamed terms in one sentence both arrive. No model call is made.
+ * swept into one new target, so two renamed terms in one sentence both arrive. A person-edited segment is swept from
+ * the proposal already waiting on it, which the new one supersedes, so an earlier fix is never lost and one proposal
+ * waits. No model call is made.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -51,7 +53,7 @@ final class TermSweep {
                 .collect(Collectors.groupingBy(Deferral::segmentId, LinkedHashMap::new, Collectors.toList()));
         log.debug("Sweeping term deferrals project={} segments={}", inputs.projectId(), bySegment.size());
         for (final Map.Entry<String, List<Deferral>> segment : bySegment.entrySet()) {
-            final Result<Boolean> swept = sweepSegment(inputs, segment.getKey(), segment.getValue(), tally);
+            final Result<Boolean> swept = sweepSegment(inputs, segment.getKey(), segment.getValue(), open, tally);
             if (swept.isErr()) {
                 return swept;
             }
@@ -60,30 +62,43 @@ final class TermSweep {
     }
 
     private Result<Boolean> sweepSegment(
-            final PassInputs inputs, final String segmentId, final List<Deferral> terms, final PassTally tally) {
+            final PassInputs inputs,
+            final String segmentId,
+            final List<Deferral> terms,
+            final List<Deferral> open,
+            final PassTally tally) {
         final Result<Optional<SegmentRecord>> found = segments.find(inputs.projectId(), segmentId);
         if (found.isErr()) {
             return Result.err(Objects.requireNonNull(found.error(), "error"));
         }
         final SegmentRecord record =
                 Objects.requireNonNull(found.data(), "found").orElse(null);
-        final String masked = record == null ? null : maskedTarget(record);
+        final RevisionBase base = record == null ? null : RevisionBase.of(record, open);
         final Segment source = inputs.source(segmentId).orElse(null);
-        if (masked == null || source == null) {
+        final List<Deferral> pending = unswept(terms, base);
+        if (base == null || source == null) {
             log.debug("Term deferrals resolved unswept segmentId={}: no stored target or no such segment", segmentId);
-            return writer.resolveAll(terms);
+            return writer.resolveAll(pending);
         }
-        final Result<Sweep> applied = substitute(inputs.projectId(), segmentId, masked, terms);
+        final Result<Sweep> applied = substitute(inputs.projectId(), segmentId, base.masked(), pending);
         if (applied.isErr()) {
             return Result.err(Objects.requireNonNull(applied.error(), "error"));
         }
         final Sweep sweep = Objects.requireNonNull(applied.data(), "sweep");
-        return sweep.swept().isEmpty() ? Result.ok(true) : restoreAndStore(inputs, source, masked, sweep, tally);
+        return sweep.swept().isEmpty() ? Result.ok(true) : restoreAndStore(inputs, source, base, sweep, tally);
     }
 
-    // The person's own text is what a proposal starts from; a machine-owned segment's is its machine target.
-    private static @Nullable String maskedTarget(final SegmentRecord record) {
-        return record.userTarget() != null ? record.maskedUserTarget() : record.maskedMachineTarget();
+    // The deferral carrying the waiting proposal was swept into it already; sweeping it again would resolve it.
+    private static List<Deferral> unswept(final List<Deferral> terms, @Nullable final RevisionBase base) {
+        final Deferral carrier = base == null ? null : base.proposal();
+        final List<Deferral> pending =
+                terms.stream().filter(term -> !term.equals(carrier)).toList();
+        log.debug(
+                "Term deferrals to sweep terms={} pending={} fromProposal={}",
+                terms.size(),
+                pending.size(),
+                carrier != null);
+        return pending;
     }
 
     private Result<Sweep> substitute(
@@ -156,13 +171,13 @@ final class TermSweep {
     private Result<Boolean> restoreAndStore(
             final PassInputs inputs,
             final Segment source,
-            final String before,
+            final RevisionBase base,
             final Sweep sweep,
             final PassTally tally) {
         final String candidate =
                 WhitespaceRestoration.restore(source.masked(), sweep.masked().strip());
         return switch (inputs.gate().restore(source, candidate)) {
-            case GateResult.Restored restored -> store(inputs, source.id(), before, restored, sweep, tally);
+            case GateResult.Restored restored -> store(inputs, source.id(), base, restored, sweep, tally);
             case GateResult.GateFailed failed -> {
                 log.debug(
                         "Swept target kept unstored segmentId={}: the gate refused it raisedBy={}",
@@ -177,12 +192,12 @@ final class TermSweep {
     private Result<Boolean> store(
             final PassInputs inputs,
             final String segmentId,
-            final String before,
+            final RevisionBase base,
             final GateResult.Restored restored,
             final Sweep sweep,
             final PassTally tally) {
         final Result<RevisionWriter.Stored> stored =
-                writer.store(inputs.projectId(), segmentId, restored, sweep.swept());
+                writer.store(inputs.projectId(), segmentId, restored, base.answering(sweep.swept()));
         if (stored.isErr()) {
             return Result.err(Objects.requireNonNull(stored.error(), "error"));
         }
@@ -192,7 +207,7 @@ final class TermSweep {
                 segmentId,
                 sweep.swept().size(),
                 how);
-        log.trace("Term sweep segmentId={} before={} after={}", segmentId, before, restored.maskedForm());
+        log.trace("Term sweep segmentId={} before={} after={}", segmentId, base.masked(), restored.maskedForm());
         switch (how) {
             case MACHINE_TARGET ->
                 tally.swept(segmentId, inputs.locator(segmentId), sweep.swept().size());

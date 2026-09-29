@@ -329,7 +329,8 @@ public final class BookExporter {
                 "The source file changed after translation began, so this export was stopped.");
     }
 
-    private static AppError cancelledError() {
+    // The export job answers a cancel it sees earlier with this same error, so every caller reads one cancel outcome.
+    static AppError cancelledError() {
         return AppError.of(
                 ErrorCode.cancelled,
                 "Export cancelled",

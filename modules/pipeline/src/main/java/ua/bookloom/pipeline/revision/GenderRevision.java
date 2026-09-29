@@ -10,7 +10,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -22,7 +21,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.review.Proposals;
 
 /**
  * The model half of backward revision: a segment that waits on characters whose gender is now known is re-rendered by
@@ -90,7 +88,7 @@ final class GenderRevision {
         final SegmentRecord record =
                 Objects.requireNonNull(found.data(), "found").orElse(null);
         final Segment source = inputs.source(segmentId).orElse(null);
-        final Base base = record == null ? null : base(record, open);
+        final RevisionBase base = record == null ? null : RevisionBase.of(record, open);
         if (base == null || source == null) {
             log.debug("Gender deferral left open segmentId={}: no stored target or no such segment", segmentId);
             return Result.ok(false);
@@ -117,17 +115,6 @@ final class GenderRevision {
         return Result.ok(ready);
     }
 
-    // A person-edited segment builds on the proposal already waiting on it, else on the person's own text.
-    private static @Nullable Base base(final SegmentRecord record, final List<Deferral> open) {
-        if (record.userTarget() == null) {
-            final String machine = record.maskedMachineTarget();
-            return machine == null ? null : new Base(machine, null);
-        }
-        final Optional<Deferral> proposal = Proposals.waitingOn(open, record.segmentId());
-        final String masked = proposal.map(Deferral::maskedProposal).orElse(record.maskedUserTarget());
-        return masked == null ? null : new Base(masked, proposal.orElse(null));
-    }
-
     private static String facts(final List<Known> ready) {
         return ready.stream().map(GenderRevision::fact).collect(Collectors.joining("\n"));
     }
@@ -142,7 +129,7 @@ final class GenderRevision {
     private Result<Boolean> store(
             final PassInputs inputs,
             final String segmentId,
-            final Base base,
+            final RevisionBase base,
             final List<Known> ready,
             final Optional<GateResult.Restored> revised,
             final PassTally tally) {
@@ -151,11 +138,7 @@ final class GenderRevision {
             return Result.ok(false);
         }
         final List<Deferral> answered =
-                new ArrayList<>(ready.stream().map(Known::deferral).toList());
-        final Deferral superseded = base.proposal();
-        if (superseded != null && !answered.contains(superseded)) {
-            answered.add(superseded);
-        }
+                base.answering(ready.stream().map(Known::deferral).toList());
         final GateResult.Restored restored = revised.get();
         return writer.store(inputs.projectId(), segmentId, restored, answered).map(how -> {
             log.debug("Gender revision segmentId={} characters={} stored={}", segmentId, ready.size(), how);
@@ -171,12 +154,4 @@ final class GenderRevision {
 
     /** A gender deferral whose character now has a gender, with that character's entry. */
     private record Known(Deferral deferral, GlossaryEntry entry) {}
-
-    /**
-     * The target a revision starts from.
-     *
-     * @param masked the masked text sent as the one {@code <Text>} block
-     * @param proposal the waiting proposal the text came from, which the new one supersedes, or null
-     */
-    private record Base(String masked, @Nullable Deferral proposal) {}
 }

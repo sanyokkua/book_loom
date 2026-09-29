@@ -29,8 +29,10 @@ import ua.bookloom.pipeline.revision.ConsistencyReport;
 /**
  * Writes what a project stores: each segment record's effective target laid over a fresh read of the source by
  * {@link BookExporter}, so the file holds the best text every segment has today, then the chosen side files beside it.
- * An occupied path is refused before anything slow; the consistency pass, when asked, runs before the records are
- * read. The export never reads or changes a run's control state: it is the only writer, allowed at any time.
+ * An occupied path, or a side file that would land on the source or the book, is refused before anything slow; the
+ * consistency pass, when asked, runs before the records are read. A cancel is honoured at each step — before the pass,
+ * inside its model calls, before the book is written and before each side file — so a late cancel leaves nothing
+ * behind. The export never reads or changes a run's control state: it is the only writer, allowed at any time.
  */
 @Slf4j
 final class ExportJobImpl implements ExportJob {
@@ -56,7 +58,8 @@ final class ExportJobImpl implements ExportJob {
                     request.overwrite(),
                     chosenSideFiles(),
                     request.consistencyPass());
-            final Result<ExportReport> result = write();
+            final Result<ExportReport> result =
+                    isCancelledBefore("start") ? Result.err(BookExporter.cancelledError()) : write();
             logOutcome(result);
             return result;
         } catch (Throwable cause) {
@@ -77,15 +80,19 @@ final class ExportJobImpl implements ExportJob {
         }
         final Project project = Objects.requireNonNull(found.data(), "project");
         final Document opened = parts.openProjects().get(project.id());
-        final AppError refusal = refusal(opened, project.brief().targetLanguage());
+        final AppError refusal = refusal(project, opened);
         if (refusal != null) {
             return Result.err(refusal);
         }
         final Document book = Objects.requireNonNull(opened, "open book");
+        if (isCancelledBefore("consistency-pass")) {
+            return Result.err(BookExporter.cancelledError());
+        }
         return consistencyPass(project.id()).flatMap(pass -> writeStored(project, book, pass.orElse(null)));
     }
 
-    private @Nullable AppError refusal(@Nullable final Document opened, @Nullable final String targetLanguage) {
+    private @Nullable AppError refusal(final Project project, @Nullable final Document opened) {
+        final String targetLanguage = project.brief().targetLanguage();
         log.debug("export check=target-language value={}", targetLanguage);
         if (targetLanguage == null) {
             return refused("target-language", "No target language is chosen", "Choose the target language first.");
@@ -101,12 +108,18 @@ final class ExportJobImpl implements ExportJob {
                     "This destination already exists",
                     "Allow replacing it, or choose another file.");
         }
-        return occupiedSideFile(opened);
+        return occupiedSideFile(project.source(), opened);
     }
 
-    private @Nullable AppError occupiedSideFile(final Document opened) {
+    private @Nullable AppError occupiedSideFile(final Path source, final Document opened) {
         for (final SideFile sideFile : chosenSideFiles()) {
             final Path path = sideFile.pathBeside(request.destination(), opened.format());
+            if (isBookItself(path, source)) {
+                return refused(
+                        "side-file-is-book",
+                        "A side file would replace a book",
+                        path.getFileName() + " is the source book or the translated book. Choose another file.");
+            }
             if (isRefusedOccupied(path)) {
                 return refused(
                         "side-file-exists",
@@ -115,6 +128,22 @@ final class ExportJobImpl implements ExportJob {
             }
         }
         return null;
+    }
+
+    // The same alias test the book's own temporary file gets: one normalized path, the same existing file, or one link
+    // target — so neither a name clash nor a symbolic link lets a side file land on a book.
+    private boolean isBookItself(final Path sideFile, final Path source) {
+        final Path normalized = sideFile.toAbsolutePath().normalize();
+        final boolean isSource =
+                ExportPathAliases.aliases(normalized, source.toAbsolutePath().normalize());
+        final boolean isDestination = ExportPathAliases.aliases(
+                normalized, request.destination().toAbsolutePath().normalize());
+        log.debug(
+                "export check=side-file-is-book path={} isSource={} isDestination={}",
+                sideFile,
+                isSource,
+                isDestination);
+        return isSource || isDestination;
     }
 
     private boolean isRefusedOccupied(final Path path) {
@@ -136,7 +165,24 @@ final class ExportJobImpl implements ExportJob {
         if (!request.consistencyPass()) {
             return Result.ok(Optional.empty());
         }
-        return parts.consistencyPass().run(projectId, calls).map(Optional::of);
+        return parts.consistencyPass().run(projectId, cancellableCalls()).map(Optional::of);
+    }
+
+    // A cancel raised while the pass waits on the model stops every later revision call, which ends the pass.
+    private @Nullable ModelCalls cancellableCalls() {
+        final ModelCalls model = calls;
+        if (model == null) {
+            return null;
+        }
+        return (kind, segmentId, chat) -> isCancelledBefore("model-call")
+                ? Result.err(BookExporter.cancelledError())
+                : model.call(kind, segmentId, chat);
+    }
+
+    private boolean isCancelledBefore(final String step) {
+        final boolean isCancelled = cancelled.get();
+        log.debug("export check=cancelled before={} outcome={}", step, isCancelled ? "cancelled" : "go-on");
+        return isCancelled;
     }
 
     private Result<ExportReport> writeStored(
@@ -174,13 +220,16 @@ final class ExportJobImpl implements ExportJob {
                 project.brief().sourceLanguage(),
                 Objects.requireNonNull(project.brief().targetLanguage(), "target language"),
                 request.overwrite());
+        if (isCancelledBefore("write")) {
+            return Result.err(BookExporter.cancelledError());
+        }
         final Result<Path> written =
                 new BookExporter(parts.documents(), parts.moves()).export(plan, targets, cancelled::get);
         if (written.isErr()) {
             return Result.err(errorOf(written));
         }
         final Path destination = Objects.requireNonNull(written.data(), "written path");
-        return SideFiles.write(sideFiles, request.overwrite(), parts.moves())
+        return SideFiles.write(sideFiles, request.overwrite(), parts.moves(), () -> isCancelledBefore("side-file"))
                 .map(paths -> counts.report(destination, paths));
     }
 
