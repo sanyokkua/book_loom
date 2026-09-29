@@ -124,6 +124,11 @@ final class WireMockProvider implements AutoCloseable {
         }
     }
 
+    /** A status-only answer with no body, as an overloaded server or a proxy in front of it gives. */
+    ResponseDefinitionBuilder failure(final int status) {
+        return aResponse().withStatus(status);
+    }
+
     /** A reply carrying the strict one-field target object the engine asks for. */
     ResponseDefinitionBuilder target(final String target, final Duration delay) {
         return reply(TranslationJobTestSupport.targetReply(target), delay);
