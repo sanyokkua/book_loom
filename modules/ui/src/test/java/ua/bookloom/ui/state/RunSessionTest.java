@@ -37,7 +37,7 @@ class RunSessionTest extends RunnerTestBase {
     // left with a frozen dashboard; IF the next decision did not clear it, THEN a finished wait would still be shown.
     @Test
     void modelCallOutstanding_pastThreshold_showsWaitingBanner() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.onEvent(new ModelCallStarted("s-1"));
 
         tickAfter(session, 9);
@@ -54,7 +54,7 @@ class RunSessionTest extends RunnerTestBase {
     // that the new request has not had.
     @Test
     void modelCallStarted_afterAShownWait_clearsItAndRestartsTheClock() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.onEvent(new ModelCallStarted("s-1"));
         tickAfter(session, 11);
 
@@ -68,7 +68,7 @@ class RunSessionTest extends RunnerTestBase {
     // IF a wait were shown while paused, THEN the paused banner would say the model is being waited for.
     @Test
     void modelCallOutstanding_thenPaused_clearsTheWaitingBanner() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.onEvent(new ModelCallStarted("s-1"));
         tickAfter(session, 12);
 
@@ -81,7 +81,7 @@ class RunSessionTest extends RunnerTestBase {
     // IF the pausing banner kept the wait, THEN it would read as waiting for the model, not as a pause being honoured.
     @Test
     void modelCallOutstanding_thenPauseRequested_clearsTheWaitingBannerAndStaysClear() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.onEvent(new ModelCallStarted("s-1"));
         tickAfter(session, 12);
 
@@ -94,7 +94,7 @@ class RunSessionTest extends RunnerTestBase {
     // IF the stopping banner kept the wait, THEN Stop would look ignored.
     @Test
     void modelCallOutstanding_thenStopRequested_clearsTheWaitingBannerAndStaysClear() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.onEvent(new ModelCallStarted("s-1"));
         tickAfter(session, 12);
 
@@ -107,7 +107,7 @@ class RunSessionTest extends RunnerTestBase {
     // IF the finished run left the wait shown, THEN a completed banner would still say the model is being waited for.
     @Test
     void modelCallOutstanding_thenRunFinished_clearsTheWaitingBanner() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.onEvent(new ModelCallStarted("s-1"));
         tickAfter(session, 12);
 
@@ -120,11 +120,15 @@ class RunSessionTest extends RunnerTestBase {
     // IF a run with no request outstanding showed a wait, THEN export or the first segment would read as a slow model.
     @Test
     void tick_noModelCallStarted_publishesNoWaiting() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
 
         tickAfter(session, 30);
 
         assertThat(waits).isEmpty();
+    }
+
+    private RunSession session() {
+        return new RunSession(mirror, clock, runContext(), desk, executor);
     }
 
     private void tickAfter(final RunSession session, final long seconds) {
@@ -137,7 +141,7 @@ class RunSessionTest extends RunnerTestBase {
     // screen would read "stopping" after the run had completed.
     @Test
     void requests_afterFinish_areNoOpsAndTheTerminalStateStands() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.finish(Result.ok(completedReport(1)), () -> {});
 
         final boolean stop = session.requestStop();
@@ -156,7 +160,7 @@ class RunSessionTest extends RunnerTestBase {
     // IF a translate-stage start blocked pauses, THEN the person could not pause a normal run.
     @Test
     void requestPause_afterTheTranslateStageStarted_isAccepted() {
-        final RunSession session = new RunSession(mirror, clock);
+        final RunSession session = session();
         session.onEvent(new StageStarted(JobStage.TRANSLATE, progress(0, 0, 3)));
 
         final boolean pause = session.requestPause();

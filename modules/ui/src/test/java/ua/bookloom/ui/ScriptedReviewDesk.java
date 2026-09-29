@@ -23,10 +23,22 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     private final List<String> calls = new CopyOnWriteArrayList<>();
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
+    private volatile @Nullable Result<List<SegmentView>> queueView;
+    private volatile @Nullable Result<ReviewCounts> countsView;
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
     public void willAnswer(final Result<?> answer) {
         answers.add(answer);
+    }
+
+    /** Makes every {@code queue} call answer these views, whatever else was queued; the queue is not consumed. */
+    public void willAnswerQueue(final List<SegmentView> views) {
+        queueView = Result.ok(List.copyOf(views));
+    }
+
+    /** Makes every {@code counts} call answer these counts, whatever else was queued. */
+    public void willAnswerCounts(final ReviewCounts counts) {
+        countsView = Result.ok(counts);
     }
 
     /** Every call as {@code method(arguments)}, in order. */
@@ -71,6 +83,11 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     @Override
     public Result<List<SegmentView>> queue(final String projectId, final ReviewFilter filter) {
+        final Result<List<SegmentView>> view = queueView;
+        if (view != null) {
+            calls.add("queue(" + projectId + ", " + filter + ")");
+            return view;
+        }
         return answer("queue(" + projectId + ", " + filter + ")");
     }
 
@@ -81,6 +98,11 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     @Override
     public Result<ReviewCounts> counts(final String projectId) {
+        final Result<ReviewCounts> view = countsView;
+        if (view != null) {
+            calls.add("counts(" + projectId + ")");
+            return view;
+        }
         return answer("counts(" + projectId + ")");
     }
 

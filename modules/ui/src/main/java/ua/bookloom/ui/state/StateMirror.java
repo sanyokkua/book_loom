@@ -54,6 +54,7 @@ public final class StateMirror {
     private final ReadOnlyObjectWrapper<@Nullable Path> exportedFile = new ReadOnlyObjectWrapper<>();
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
+    private final LiveSection live = new LiveSection();
 
     /** Creates an idle, empty mirror. */
     public StateMirror() {
@@ -207,6 +208,15 @@ public final class StateMirror {
     }
 
     /**
+     * The live rows, pace, kept-as-source count and flagged queue.
+     *
+     * @return the section, whose properties are read on the FX thread
+     */
+    public LiveSection live() {
+        return live;
+    }
+
+    /**
      * Resets every figure, the log, the failure, the report and the written file for a fresh run, names the book it
      * runs on, and shows it running.
      *
@@ -338,6 +348,7 @@ public final class StateMirror {
         report.set(null);
         exportedFile.set(null);
         waitingSeconds.set(NOT_WAITING);
+        live.reset();
         runState.set(state);
     }
 

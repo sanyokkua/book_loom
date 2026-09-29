@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +33,30 @@ class LogKindTest {
             final LogKind kind, final StatusRole role, final MessageKey key) {
         assertThat(kind.role()).isEqualTo(role);
         assertThat(kind.messageKey()).isEqualTo(key);
+    }
+
+    // IF a kind carried the wrong tag, THEN the log's tag column would mislabel the entry.
+    @ParameterizedTest
+    @CsvSource({
+        "ACCEPTED, ok",
+        "REPAIRED, fix",
+        "GLOSSARY_APPLIED, mem",
+        "SUMMARY_UPDATED, sum",
+        "RETRIED, retry",
+        "SEGMENT_ERROR, err",
+        "MILESTONE, info"
+    })
+    void tag_eachOfTheSeven_isItsFixedWord(final LogKind kind, final String tag) {
+        assertThat(kind.tag()).isEqualTo(tag);
+    }
+
+    // IF two kinds shared a tag or one were not lower-case, THEN the column could not be read at a glance.
+    @Test
+    void tag_allKinds_areDistinctAndLowerCase() {
+        final List<String> tags =
+                Arrays.stream(LogKind.values()).map(LogKind::tag).collect(Collectors.toList());
+
+        assertThat(tags).doesNotHaveDuplicates().allMatch(tag -> tag.equals(tag.toLowerCase(Locale.ROOT)));
     }
 
     // IF a kind had no glyph, THEN its meaning would rest on colour alone, which a colour-blind reader cannot use.

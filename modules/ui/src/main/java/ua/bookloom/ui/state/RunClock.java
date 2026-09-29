@@ -1,0 +1,93 @@
+package ua.bookloom.ui.state;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * How long a run has been running and how long it has left.
+ *
+ * <p>The elapsed time leaves out the spans the run was paused, and so does the time each decided segment took, so a
+ * lunch break does not make the next estimate absurd. The time left is the moving average of those per-segment times
+ * times the segments still pending, and it stays unknown until enough segments of this run are decided for the average
+ * to mean something (the first ones include loading the model). Not thread-safe: {@link RunSession} calls it under its
+ * publish lock.
+ */
+@Slf4j
+final class RunClock {
+
+    /** Decided segments the run needs before an estimate is worth showing. */
+    static final int MIN_DECIDED = 5;
+
+    /** The weight the newest segment's time carries in the moving average. */
+    static final double NEWEST_WEIGHT = 0.2;
+
+    private static final double MILLIS_PER_SECOND = 1000.0;
+
+    private final Instant started;
+    private Duration pausedTotal = Duration.ZERO;
+    private @Nullable Instant pausedSince;
+    private @Nullable Instant ended;
+    private Duration activeAtLastDecision = Duration.ZERO;
+    private double averageSeconds;
+    private int decided;
+
+    RunClock(final Instant started) {
+        this.started = Objects.requireNonNull(started, "started");
+    }
+
+    void paused(final Instant now) {
+        if (pausedSince == null && ended == null) {
+            pausedSince = now;
+        }
+    }
+
+    void resumed(final Instant now) {
+        final Instant since = pausedSince;
+        if (since != null) {
+            pausedTotal = pausedTotal.plus(Duration.between(since, now));
+            pausedSince = null;
+        }
+    }
+
+    void ended(final Instant now) {
+        resumed(now);
+        if (ended == null) {
+            ended = now;
+        }
+    }
+
+    void decided(final Instant now) {
+        final Duration active = active(now);
+        final double seconds = active.minus(activeAtLastDecision).toMillis() / MILLIS_PER_SECOND;
+        activeAtLastDecision = active;
+        averageSeconds = decided == 0 ? seconds : NEWEST_WEIGHT * seconds + (1 - NEWEST_WEIGHT) * averageSeconds;
+        decided++;
+        if (decided == MIN_DECIDED) {
+            log.debug("time left: {} segments decided, the estimate is now shown", decided);
+        }
+    }
+
+    Duration elapsed(final Instant now) {
+        return active(now).truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    @Nullable
+    Duration timeLeft(final int pending) {
+        if (decided < MIN_DECIDED) {
+            return null;
+        }
+        return Duration.ofMillis(Math.round(averageSeconds * pending * MILLIS_PER_SECOND))
+                .truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private Duration active(final Instant now) {
+        final Instant end = ended == null ? now : ended;
+        final Instant since = pausedSince;
+        final Duration inPause = since == null ? Duration.ZERO : Duration.between(since, end);
+        return Duration.between(started, end).minus(pausedTotal).minus(inPause);
+    }
+}

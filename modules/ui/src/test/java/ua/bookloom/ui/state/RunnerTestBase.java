@@ -30,6 +30,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedExportService;
+import ua.bookloom.ui.ScriptedReviewDesk;
 
 /**
  * Shared fixtures for the {@link TranslationRunner} tests: a real mirror, a recording job, a cadence the test fires by
@@ -53,6 +54,7 @@ abstract class RunnerTestBase extends ApplicationTest {
     protected ExecutorService executor;
     protected TranslationRunner runner;
     protected ScriptedExportService exports;
+    protected ScriptedReviewDesk desk;
     protected List<RunState> states;
     protected AtomicInteger acceptedChanges;
     protected AtomicInteger flaggedChanges;
@@ -68,13 +70,14 @@ abstract class RunnerTestBase extends ApplicationTest {
     void setUpRunner() {
         mirror = new StateMirror();
         ticks = new ManualTicks();
-        executor = Executors.newSingleThreadExecutor(task -> {
+        executor = Executors.newFixedThreadPool(2, task -> {
             final Thread thread = new Thread(task, "runner-test-job");
             thread.setDaemon(true);
             return thread;
         });
         exports = new ScriptedExportService();
-        runner = new TranslationRunner(mirror, executor, ticks, exports);
+        desk = new ScriptedReviewDesk();
+        runner = new TranslationRunner(mirror, executor, ticks, exports, desk);
         states = new CopyOnWriteArrayList<>();
         acceptedChanges = new AtomicInteger();
         flaggedChanges = new AtomicInteger();

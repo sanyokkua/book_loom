@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -46,6 +47,7 @@ public final class TranslationRunner {
     private final ExecutorService executor;
     private final TickSource ticks;
     private final ExportService exports;
+    private final ReviewDesk desk;
     private final Clock clock;
     private final AtomicReference<@Nullable ActiveRun> active = new AtomicReference<>();
 
@@ -55,19 +57,15 @@ public final class TranslationRunner {
      * @param mirror the mirror every run publishes into
      * @param executor the daemon executor a job runs on, never the FX thread
      * @param exports the port a completed run's book is written through
+     * @param desk the review desk the run reads its flagged queue and kept-as-source count from
      */
     @Inject
     public TranslationRunner(
-            final StateMirror mirror, @BackgroundExecutor final ExecutorService executor, final ExportService exports) {
-        this(mirror, executor, new FixedRateTicks(), exports);
-    }
-
-    TranslationRunner(
             final StateMirror mirror,
-            final ExecutorService executor,
-            final TickSource ticks,
-            final ExportService exports) {
-        this(mirror, executor, ticks, exports, Clock.systemUTC());
+            @BackgroundExecutor final ExecutorService executor,
+            final ExportService exports,
+            final ReviewDesk desk) {
+        this(mirror, executor, new FixedRateTicks(), exports, desk);
     }
 
     TranslationRunner(
@@ -75,11 +73,22 @@ public final class TranslationRunner {
             final ExecutorService executor,
             final TickSource ticks,
             final ExportService exports,
+            final ReviewDesk desk) {
+        this(mirror, executor, ticks, exports, desk, Clock.systemUTC());
+    }
+
+    TranslationRunner(
+            final StateMirror mirror,
+            final ExecutorService executor,
+            final TickSource ticks,
+            final ExportService exports,
+            final ReviewDesk desk,
             final Clock clock) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.ticks = Objects.requireNonNull(ticks, "ticks");
         this.exports = Objects.requireNonNull(exports, "exports");
+        this.desk = Objects.requireNonNull(desk, "desk");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -96,7 +105,7 @@ public final class TranslationRunner {
     public boolean start(final TranslationJob job, final RunContext context) {
         Objects.requireNonNull(job, "job");
         Objects.requireNonNull(context, "context");
-        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock), context);
+        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock, context, desk, executor), context);
         if (!active.compareAndSet(null, run)) {
             log.warn("refusing to start a run: another run is active");
             return false;
