@@ -19,7 +19,11 @@ public sealed interface DraftOutcome {
     /** The segment this outcome is about. */
     Segment segment();
 
-    /** The segment's masked source, shown to every self-heal call under {@code [Source]}. */
+    /**
+     * The text the draft was shown — the segment's masked source with its protected spans behind tokens — which every
+     * self-heal rewrite shows under {@code [Source]}, because the span gate needs each token back exactly once. The
+     * judge reads {@link Segment#masked()} instead, beside a candidate whose names are back in place.
+     */
     String maskedSource();
 
     /** The locked glossary terms present in this segment; empty when none is protected. */
@@ -29,7 +33,7 @@ public sealed interface DraftOutcome {
      * A drafted reply ready for the quality loop.
      *
      * @param segment the segment this outcome is about
-     * @param maskedSource the segment's masked source
+     * @param maskedSource the text the draft was shown, protected spans behind tokens
      * @param lockedRenderings the locked glossary terms present in this segment
      * @param maskedReply the draft's masked reply, already trimmed and restored into its segment's own whitespace —
      *     the text the model returns to when a round rewrites it
@@ -99,7 +103,7 @@ public sealed interface DraftOutcome {
      * A segment design D3's rules 2-4 already flagged, with no self-heal round and no machine target.
      *
      * @param segment the segment this outcome is about
-     * @param maskedSource the segment's masked source
+     * @param maskedSource the text the draft was shown, protected spans behind tokens
      * @param lockedRenderings the locked glossary terms present in this segment
      * @param error the reason the segment was flagged at once
      */

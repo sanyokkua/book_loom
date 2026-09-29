@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
@@ -35,12 +36,15 @@ public final class OutcomeRecords {
      *
      * @param stored the non-null pending record
      * @param outcome the non-null outcome decided for it
-     * @return the record with its status, both machine forms, confidence, judge score, findings, path and repair
-     *     rounds set; a segment flagged at once also carries its reason as the {@code reply} finding
+     * @param context the non-null snapshot of what the segment's draft saw, which a retry replays
+     * @return the record with its status, both machine forms, confidence, judge score, findings, path, repair rounds
+     *     and context set; a segment flagged at once also carries its reason as the {@code reply} finding
      */
-    public static SegmentRecord decided(final SegmentRecord stored, final SegmentOutcome outcome) {
+    public static SegmentRecord decided(
+            final SegmentRecord stored, final SegmentOutcome outcome, final ContextSnapshot context) {
         Objects.requireNonNull(stored, "stored");
         Objects.requireNonNull(outcome, "outcome");
+        Objects.requireNonNull(context, "context");
         log.debug(
                 "Converting outcome segmentId={} status={} path={}",
                 outcome.segmentId(),
@@ -64,7 +68,7 @@ public final class OutcomeRecords {
                 outcome.path(),
                 outcome.repairRounds(),
                 stored.reviewed(),
-                stored.context());
+                context);
     }
 
     /**

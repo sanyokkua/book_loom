@@ -38,6 +38,7 @@ import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
+import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.DraftContext;
 
 /** A segment above the chunk budget is drafted in sentence-aligned pieces and decided once. */
@@ -105,8 +106,8 @@ class OversizedSegmentTest {
         final Segment segment = segments(text).getFirst();
         final UppercasingModel model = new UppercasingModel();
 
-        final Result<DraftOutcome> result =
-                translator(model).translateSplit(segment, DraftContext.empty(), splitter, BUDGET);
+        final Result<DraftOutcome> result = translator(model)
+                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET);
 
         assertThat(segment.masked()).hasSize(10_399);
         assertThat(TokenEstimator.estimate(segment.masked(), "en")).isEqualTo(2990);
@@ -129,8 +130,8 @@ class OversizedSegmentTest {
     void translateSplit_400Sentences_isDraftedInPieces() {
         final Segment segment = segments(SENTENCE.repeat(400).stripTrailing()).getFirst();
 
-        final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(
-                translator(new UppercasingModel()).translateSplit(segment, DraftContext.empty(), splitter, BUDGET));
+        final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(translator(new UppercasingModel())
+                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET));
 
         assertThat(drafted.inPieces()).isTrue();
     }
@@ -139,8 +140,8 @@ class OversizedSegmentTest {
     void translateSplit_withinTheBudget_isNotDraftedInPieces() {
         final Segment segment = segments("The sea was calm tonight.").getFirst();
 
-        final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(
-                translator(new UppercasingModel()).translateSplit(segment, DraftContext.empty(), splitter, BUDGET));
+        final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(translator(new UppercasingModel())
+                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET));
 
         assertThat(drafted.inPieces()).isFalse();
     }
@@ -152,8 +153,8 @@ class OversizedSegmentTest {
         final Segment segment = segments(text).getFirst();
         final UppercasingModel model = new UppercasingModel();
 
-        final Result<DraftOutcome> result =
-                translator(model).translateSplit(segment, DraftContext.empty(), splitter, BUDGET);
+        final Result<DraftOutcome> result = translator(model)
+                .translateSplit(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()), splitter, BUDGET);
 
         assertThat(segment.masked()).contains("⟦g0⟧Ends here. Starts there.⟦g1⟧");
         assertThat(model.textBodies()).hasSizeGreaterThan(1);
@@ -169,7 +170,12 @@ class OversizedSegmentTest {
         final UppercasingModel model = new UppercasingModel();
 
         final Result<DraftOutcome> result = translator(model)
-                .translateSplit(huge, new DraftContext(List.of("Попередній абзац.")), splitter, BUDGET);
+                .translateSplit(
+                        huge,
+                        new DraftContext(List.of("Попередній абзац.")),
+                        ProtectedMask.none(huge.masked()),
+                        splitter,
+                        BUDGET);
 
         assertThat(huge.id()).isEqualTo("Book.md:1");
         assertThat(model.requests()).hasSize(1);

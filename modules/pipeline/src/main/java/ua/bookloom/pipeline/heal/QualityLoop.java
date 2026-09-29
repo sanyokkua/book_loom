@@ -149,9 +149,10 @@ public final class QualityLoop {
         switch (outcome) {
             case DraftOutcome.Drafted drafted -> {
                 if (Objects.requireNonNull(qa).hardGatesPass()) {
+                    // The judge reads names, not the tokens the draft was shown them as.
                     pairs.add(new JudgedPair(
                             drafted.segment().id(),
-                            drafted.maskedSource(),
+                            drafted.segment().masked(),
                             Objects.requireNonNullElse(drafted.maskedForm(), drafted.maskedReply())));
                 }
             }

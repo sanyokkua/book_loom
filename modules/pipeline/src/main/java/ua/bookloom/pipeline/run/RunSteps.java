@@ -10,9 +10,9 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 /**
  * The calls a chunk is made of.
  *
- * @param translator the draft step
+ * @param translator the draft step, which each chunk gates through its own protected spans
  * @param loop the quality loop, holding the judge and the self-heal calls
- * @param gate the placeholder gate every self-heal candidate goes through
+ * @param gate the document's placeholder gate, which each chunk's protected-span gate wraps
  * @param calls the seam every call goes through
  * @param splitter the sentence splitter an oversized segment is drafted in pieces with
  */

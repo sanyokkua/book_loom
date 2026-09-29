@@ -8,14 +8,35 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.project.ContextSnapshot;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.api.project.SnapshotTerm;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 
 /** What a segment's outcome becomes in storage, and what a stored flag reads back as. */
 class OutcomeRecordsTest {
+
+    private static final ContextSnapshot SNAPSHOT = new ContextSnapshot(
+            List.of("Він пішов."),
+            List.of(new SnapshotTerm("Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true)),
+            List.of(),
+            null,
+            "Neutral, faithful literary prose.");
+
+    // A retry replays what the draft saw, so the record keeps the snapshot of the draft that decided it.
+    @Test
+    void decided_anyOutcome_storesTheDraftsSnapshot() {
+        final AppError reason = AppError.of(ErrorCode.contextWindow, "Too long", "The segment exceeds the window.");
+
+        final SegmentRecord record = OutcomeRecords.decided(pending(), flaggedAtOnce(reason), SNAPSHOT);
+
+        assertThat(record.context()).isEqualTo(SNAPSHOT);
+    }
 
     // Storing only the plain target would leave the review editor without the masked form it shows and saves.
     @Test
@@ -32,7 +53,7 @@ class OutcomeRecordsTest {
                 0,
                 null);
 
-        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome);
+        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
         assertThat(record)
                 .extracting(
@@ -56,7 +77,7 @@ class OutcomeRecordsTest {
     void decided_flaggedAtOnce_storesItsReasonAsAHighReplyFinding() {
         final AppError reason = AppError.of(ErrorCode.contextWindow, "Too long", "The segment exceeds the window.");
 
-        final SegmentRecord record = OutcomeRecords.decided(pending(), flaggedAtOnce(reason));
+        final SegmentRecord record = OutcomeRecords.decided(pending(), flaggedAtOnce(reason), SNAPSHOT);
 
         assertThat(record.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(record.machineTarget()).isNull();
@@ -69,7 +90,7 @@ class OutcomeRecordsTest {
     @Test
     void reportCode_contextWindowFlag_readsBackContextWindow() {
         final AppError reason = AppError.of(ErrorCode.contextWindow, "Too long", "The segment exceeds the window.");
-        final SegmentRecord flagged = OutcomeRecords.decided(pending(), flaggedAtOnce(reason));
+        final SegmentRecord flagged = OutcomeRecords.decided(pending(), flaggedAtOnce(reason), SNAPSHOT);
 
         assertThat(OutcomeRecords.reportCode(flagged)).isEqualTo(ErrorCode.contextWindow);
     }
@@ -89,7 +110,7 @@ class OutcomeRecordsTest {
     void decided_acceptedOutcomeAfterOneRepairRound_storesFormsScorePathAndRounds() {
         final SegmentOutcome outcome = acceptedAfterOneRepair();
 
-        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome);
+        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
         assertThat(record)
                 .extracting(
@@ -126,7 +147,7 @@ class OutcomeRecordsTest {
                 2,
                 null);
 
-        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome);
+        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
         assertThat(record.findings()).containsExactly(markup);
         assertThat(record.repairRounds()).isEqualTo(2);
@@ -140,7 +161,7 @@ class OutcomeRecordsTest {
         final SegmentOutcome outcome = new SegmentOutcome(
                 "Book.md:0", SegmentStatus.FLAGGED, null, null, 0.0, null, List.of(), SegmentPath.DRAFT, 0, reason);
 
-        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome);
+        final SegmentRecord record = OutcomeRecords.decided(pending(), outcome, SNAPSHOT);
 
         assertThat(record.findings())
                 .containsExactly(

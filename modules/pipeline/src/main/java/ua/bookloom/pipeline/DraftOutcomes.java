@@ -35,7 +35,7 @@ final class DraftOutcomes {
         return Result.ok(new DraftOutcome.Drafted(
                 segment,
                 attempt.shownText(),
-                List.of(),
+                attempt.lockedRenderings(),
                 maskedReply,
                 restored.maskedForm(),
                 restored.restored(),
@@ -57,7 +57,7 @@ final class DraftOutcomes {
         return Result.ok(new DraftOutcome.Drafted(
                 segment,
                 attempt.shownText(),
-                List.of(),
+                attempt.lockedRenderings(),
                 maskedReply,
                 null,
                 null,
@@ -80,7 +80,8 @@ final class DraftOutcomes {
                 segment.id(),
                 finish,
                 error.code());
-        return Result.ok(new DraftOutcome.FlaggedAtOnce(segment, attempt.shownText(), List.of(), error));
+        return Result.ok(
+                new DraftOutcome.FlaggedAtOnce(segment, attempt.shownText(), attempt.lockedRenderings(), error));
     }
 
     static Result<DraftOutcome> routed(final Segment segment, final AppError error, final String replyKind) {

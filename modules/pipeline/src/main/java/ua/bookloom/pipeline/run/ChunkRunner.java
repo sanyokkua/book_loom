@@ -17,19 +17,18 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.WholeWord;
+import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.chunk.TokenBudget;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
+import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.DraftContext;
 
 /**
  * Takes each unit's pending segments through chunks, in document order (design D4a). With the judge on, a chunk's
@@ -54,8 +53,7 @@ public final class ChunkRunner {
     private final RunStores stores;
     private final RunSinks sinks;
     private final PrecedingTargets preceding;
-    private final int headroom;
-    private final int budget;
+    private final int fixedHeadroom;
 
     /**
      * Creates the runner of one run.
@@ -72,9 +70,8 @@ public final class ChunkRunner {
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
         final CallFrame frame = settings.frame();
-        this.headroom = TokenEstimator.estimate(frame.styleSheet().text(), PROMPT_LANGUAGE)
+        this.fixedHeadroom = TokenEstimator.estimate(frame.styleSheet().text(), PROMPT_LANGUAGE)
                 + TokenBudget.fullChunkAllowance(frame.sourceLanguage(), frame.targetLanguage());
-        this.budget = TokenBudget.chunkTokens(headroom);
     }
 
     /**
@@ -99,8 +96,16 @@ public final class ChunkRunner {
         return new RunEnd(JobState.COMPLETED, null);
     }
 
+    // The unit's glossary lines are reserved as they stand when it is packed; a chunk re-reads the glossary anyway.
     private Optional<RunEnd> runUnit(final WorkList work, final List<WorkItem> items) {
         final List<Segment> segments = items.stream().map(WorkItem::segment).toList();
+        final Result<List<GlossaryEntry>> glossary = stores.glossary().all(settings.projectId());
+        if (glossary.isErr()) {
+            return Optional.of(failedBy(Objects.requireNonNull(glossary.error(), "error")));
+        }
+        final int headroom = fixedHeadroom
+                + ChunkContext.termsEstimate(segments, Objects.requireNonNull(glossary.data(), "glossary"));
+        final int budget = TokenBudget.chunkTokens(headroom);
         final int cap = settings.dial().chunkCap(settings.mode());
         final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);
         log.debug(
@@ -113,7 +118,8 @@ public final class ChunkRunner {
         int offset = 0;
         for (int index = 0; index < chunks.size(); index++) {
             final int size = chunks.get(index).segments().size();
-            final Optional<RunEnd> end = runChunk(work, chunks.get(index), items.subList(offset, offset + size), index);
+            final List<WorkItem> chunkItems = items.subList(offset, offset + size);
+            final Optional<RunEnd> end = runChunk(work, chunks.get(index), chunkItems, index, budget);
             if (end.isPresent()) {
                 return end;
             }
@@ -123,53 +129,48 @@ public final class ChunkRunner {
     }
 
     private Optional<RunEnd> runChunk(
-            final WorkList work, final Chunk chunk, final List<WorkItem> items, final int index) {
-        final Result<LoopSettings> loopSettings = loopSettingsFor(chunk);
-        if (loopSettings.isErr()) {
-            return Optional.of(failedBy(Objects.requireNonNull(loopSettings.error(), "error")));
+            final WorkList work, final Chunk chunk, final List<WorkItem> items, final int index, final int budget) {
+        final Result<ChunkContext> read = ChunkContext.read(stores.glossary(), settings, chunk, steps.gate());
+        if (read.isErr()) {
+            return Optional.of(failedBy(Objects.requireNonNull(read.error(), "error")));
         }
-        final ChunkDrafts drafts = new ChunkDrafts();
-        final LoopSettings chunkSettings = Objects.requireNonNull(loopSettings.data(), "settings");
-        final Optional<RunEnd> end = settings.dial().judge()
-                ? judgedChunk(work, items, drafts, chunkSettings)
-                : unjudgedChunk(work, items, drafts, chunkSettings);
+        final ChunkContext context = Objects.requireNonNull(read.data(), "context");
+        final Current current = new Current(
+                work,
+                new ChunkDrafts(),
+                context,
+                new LoopSettings(settings.mode(), settings.dial(), settings.frame(), settings.names(), context.terms()),
+                steps.translator().gatedBy(context.gate()),
+                budget);
+        final Optional<RunEnd> end =
+                settings.dial().judge() ? judgedChunk(current, items) : unjudgedChunk(current, items);
         if (end.isPresent()) {
-            log.debug(
-                    "Stopped inside chunk={} droppedDrafts={} ids={}",
-                    index,
-                    drafts.undecidedIds().size(),
-                    drafts.undecidedIds());
+            final List<String> dropped = current.drafts().undecidedIds();
+            log.debug("Stopped inside chunk={} droppedDrafts={} ids={}", index, dropped.size(), dropped);
             return end;
         }
         log.debug("Chunk decided chunk={} segments={}", index, items.size());
         return commitChunk(index, items.size());
     }
 
-    private Optional<RunEnd> judgedChunk(
-            final WorkList work, final List<WorkItem> items, final ChunkDrafts drafts, final LoopSettings chunk) {
+    private Optional<RunEnd> judgedChunk(final Current current, final List<WorkItem> items) {
         for (final WorkItem item : items) {
-            switch (draft(work, item, drafts)) {
-                case Step.Stopped<DraftOutcome>(final RunEnd end) -> {
-                    return Optional.of(end);
-                }
-                case Step.Done<DraftOutcome>(final DraftOutcome outcome) -> drafts.drafted(outcome);
+            if (draft(current, item) instanceof Step.Stopped<DraftOutcome>(final RunEnd end)) {
+                return Optional.of(end);
             }
         }
         log.debug("Chunk drafted segments={}; judging it once", items.size());
-        return decideWith(work, items, drafts, drafts.all(), chunk);
+        return decideWith(current, items, current.drafts().all());
     }
 
-    private Optional<RunEnd> unjudgedChunk(
-            final WorkList work, final List<WorkItem> items, final ChunkDrafts drafts, final LoopSettings chunk) {
+    private Optional<RunEnd> unjudgedChunk(final Current current, final List<WorkItem> items) {
         log.debug("Chunk not judged segments={}: the dial turns the judge off", items.size());
         for (final WorkItem item : items) {
             final Optional<RunEnd> end =
-                    switch (draft(work, item, drafts)) {
+                    switch (draft(current, item)) {
                         case Step.Stopped<DraftOutcome>(final RunEnd stopped) -> Optional.of(stopped);
-                        case Step.Done<DraftOutcome>(final DraftOutcome outcome) -> {
-                            drafts.drafted(outcome);
-                            yield decideWith(work, List.of(item), drafts, List.of(outcome), chunk);
-                        }
+                        case Step.Done<DraftOutcome>(final DraftOutcome outcome) ->
+                            decideWith(current, List.of(item), List.of(outcome));
                     };
             if (end.isPresent()) {
                 return end;
@@ -180,50 +181,54 @@ public final class ChunkRunner {
 
     /** Starts the quality loop over the outcomes — the judge call, when the dial enables it — then decides them. */
     private Optional<RunEnd> decideWith(
-            final WorkList work,
-            final List<WorkItem> items,
-            final ChunkDrafts drafts,
-            final List<DraftOutcome> outcomes,
-            final LoopSettings chunk) {
-        final Step<ChunkDecider> decider =
-                untilAnswered(work, null, () -> steps.loop().start(outcomes, chunk, steps.gate(), steps.calls()));
+            final Current current, final List<WorkItem> items, final List<DraftOutcome> outcomes) {
+        final Step<ChunkDecider> decider = untilAnswered(
+                current.work(),
+                null,
+                () -> steps.loop()
+                        .start(outcomes, current.loop(), current.context().gate(), steps.calls()));
         return switch (decider) {
             case Step.Stopped<ChunkDecider>(final RunEnd end) -> Optional.of(end);
-            case Step.Done<ChunkDecider>(final ChunkDecider started) -> decideEach(work, items, drafts, started);
+            case Step.Done<ChunkDecider>(final ChunkDecider started) -> decideEach(current, items, started);
         };
     }
 
-    private Step<DraftOutcome> draft(final WorkList work, final WorkItem item, final ChunkDrafts drafts) {
+    /** Drafts one segment behind its protected spans and with its context package, keeping the draft in the chunk. */
+    private Step<DraftOutcome> draft(final Current current, final WorkItem item) {
         final Segment segment = item.segment();
-        // Kept masked, as the context package takes them; the draft itself is shown only their display text.
         final Result<List<String>> earlierMaskedTargets = preceding.earlierMaskedTargets(
-                work.unitSegments(item), segment, settings.dial().precedingTargets(), drafts);
+                current.work().unitSegments(item), segment, settings.dial().precedingTargets(), current.drafts());
         if (earlierMaskedTargets.isErr()) {
             return new Step.Stopped<>(failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), "error")));
         }
-        final List<String> shown = Objects.requireNonNull(earlierMaskedTargets.data(), "targets").stream()
-                .map(DisplayText::of)
-                .toList();
+        final ContextPackage context =
+                current.context().contextFor(segment, Objects.requireNonNull(earlierMaskedTargets.data(), "targets"));
         if (log.isTraceEnabled()) {
-            log.trace("Preceding targets segmentId={} targets={}", segment.id(), shown);
+            log.trace(
+                    "Preceding targets segmentId={} targets={}",
+                    segment.id(),
+                    context.draftContext().precedingTargets());
         }
-        final DraftContext context = new DraftContext(shown);
-        return untilAnswered(
-                work,
+        final ProtectedMask mask = current.context().mask(segment);
+        final Step<DraftOutcome> drafted = untilAnswered(
+                current.work(),
                 segment.id(),
-                () -> steps.translator().translateSplit(segment, context, steps.splitter(), budget));
+                () -> current.translator()
+                        .translateSplit(segment, context.draftContext(), mask, steps.splitter(), current.budget()));
+        if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
+            current.drafts().drafted(outcome, context.snapshot());
+        }
+        return drafted;
     }
 
-    private Optional<RunEnd> decideEach(
-            final WorkList work, final List<WorkItem> items, final ChunkDrafts drafts, final ChunkDecider decider) {
+    private Optional<RunEnd> decideEach(final Current current, final List<WorkItem> items, final ChunkDecider decider) {
         for (final WorkItem item : items) {
             final Step<SegmentOutcome> decided =
-                    untilAnswered(work, item.segment().id(), decider::nextDecision);
+                    untilAnswered(current.work(), item.segment().id(), decider::nextDecision);
             final Optional<RunEnd> end =
                     switch (decided) {
                         case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
-                        case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) ->
-                            record(work, item, drafts, outcome);
+                        case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome);
                     };
             if (end.isPresent()) {
                 return end;
@@ -232,13 +237,13 @@ public final class ChunkRunner {
         return Optional.empty();
     }
 
-    private Optional<RunEnd> record(
-            final WorkList work, final WorkItem item, final ChunkDrafts drafts, final SegmentOutcome outcome) {
-        final SegmentRecord record = OutcomeRecords.decided(item.record(), outcome);
+    private Optional<RunEnd> record(final Current current, final WorkItem item, final SegmentOutcome outcome) {
+        final SegmentRecord record = OutcomeRecords.decided(
+                item.record(), outcome, current.drafts().snapshot(item.segment().id()));
         sinks.pending().decided(record);
-        drafts.decided(record.segmentId());
+        current.drafts().decided(record.segmentId());
         sinks.recorder().decided(record.status());
-        final JobProgress progress = work.apply(item, record.status());
+        final JobProgress progress = current.work().apply(item, record.status());
         final ErrorCode reason = record.status() == SegmentStatus.FLAGGED ? OutcomeRecords.reportCode(record) : null;
         log.debug(
                 "Decided segmentId={} status={} reason={} path={} rounds={}",
@@ -248,7 +253,8 @@ public final class ChunkRunner {
                 record.path(),
                 record.repairRounds());
         sinks.emit().accept(new SegmentDecided(record.segmentId(), record.status(), reason, progress));
-        return sinks.boundaries().afterDecision(work.endsSection(item), work.isComplete(), progress);
+        return sinks.boundaries()
+                .afterDecision(current.work().endsSection(item), current.work().isComplete(), progress);
     }
 
     private Optional<RunEnd> commitChunk(final int index, final int decided) {
@@ -299,27 +305,6 @@ public final class ChunkRunner {
         }
     }
 
-    private Result<LoopSettings> loopSettingsFor(final Chunk chunk) {
-        return stores.glossary()
-                .all(settings.projectId())
-                .map(entries -> new LoopSettings(
-                        settings.mode(), settings.dial(), settings.frame(), settings.names(), termsIn(chunk, entries)));
-    }
-
-    private static List<String> termsIn(final Chunk chunk, final List<GlossaryEntry> entries) {
-        final List<String> texts = chunk.segments().stream()
-                .map(segment -> Tokens.replace(segment.masked(), " "))
-                .toList();
-        final List<String> terms = entries.stream()
-                .map(GlossaryEntry::term)
-                .filter(term -> !term.isBlank())
-                .filter(term -> texts.stream()
-                        .anyMatch(text -> WholeWord.pattern(term).matcher(text).find()))
-                .toList();
-        log.debug("Read the glossary for a chunk entries={} inChunk={}", entries.size(), terms.size());
-        return terms;
-    }
-
     // A model error the run cannot recover from is an application fault, never a provider error that Retry now
     // could fix, so it ends the run as internal. An internal error was already logged where it was built.
     private static AppError endingError(final AppError error) {
@@ -340,6 +325,18 @@ public final class ChunkRunner {
     private static RunEnd failedBy(final AppError error) {
         return new RunEnd(JobState.FAILED, error);
     }
+
+    /**
+     * The chunk being decided: the unit's work, its drafts, the glossary it read, its loop settings, the draft step
+     * gated through its protected spans, and the unit's budget an oversized segment is split against.
+     */
+    private record Current(
+            WorkList work,
+            ChunkDrafts drafts,
+            ChunkContext context,
+            LoopSettings loop,
+            SegmentTranslator translator,
+            int budget) {}
 
     /** A call's answer once the run went on, or how the run ended while it waited for one. */
     private sealed interface Step<T> {

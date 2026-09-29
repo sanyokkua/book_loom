@@ -21,6 +21,7 @@ import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.PieceRedraft;
 import ua.bookloom.pipeline.heal.RepairReply;
+import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -69,36 +70,40 @@ public final class SegmentTranslator {
     }
 
     Result<DraftOutcome> translate(final Segment segment) {
-        return translate(segment, DraftContext.empty());
+        return translate(segment, DraftContext.empty(), ProtectedMask.none(segment.masked()));
     }
 
     /**
-     * Drafts one segment.
+     * The same draft step restoring every reply through {@code chunkGate}, which knows the protected spans of one
+     * chunk's segments.
      *
-     * @param segment the non-null segment to draft
-     * @param context the non-null context the draft is shown, preceding targets included
-     * @return the draft's outcome, or the error a call answered, which the run routes
+     * @param chunkGate the non-null gate of the chunk about to be drafted
+     * @return a draft step sharing this one's seam, format, prompts and reply reader
      */
-    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context) {
-        Objects.requireNonNull(segment, "segment");
-        return translate(segment, context, segment.masked());
+    public SegmentTranslator gatedBy(final GateFunction chunkGate) {
+        return new SegmentTranslator(
+                Objects.requireNonNull(chunkGate, "chunkGate"), calls, format, promptBuilder, replyParser);
     }
 
     /**
-     * Drafts one segment showing the model {@code shownText} — the segment's masked text with its protected spans
+     * Drafts one segment showing the model its mask's text — the segment's masked text with its protected spans
      * hidden behind tokens — so the prompt, its repairs and the output allowance all follow that text.
      *
      * @param segment the non-null segment to draft
      * @param context the non-null context the draft is shown
-     * @param shownText the non-null text the model translates; it carries every token the reply must return
+     * @param mask the non-null spans hidden in the segment; its text carries every token the reply must return
      * @return the draft's outcome, or the error a call answered, which the run routes
      */
-    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final String shownText) {
+    public Result<DraftOutcome> translate(final Segment segment, final DraftContext context, final ProtectedMask mask) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
-        Objects.requireNonNull(shownText, "shownText");
-        final DraftAttempt attempt = new DraftAttempt(segment, context, shownText);
-        log.debug("Translating segment id={} format={} shownLength={}", segment.id(), format, shownText.length());
+        Objects.requireNonNull(mask, "mask");
+        final DraftAttempt attempt = DraftAttempt.of(segment, context, mask);
+        log.debug(
+                "Translating segment id={} format={} shownLength={}",
+                segment.id(),
+                format,
+                attempt.shownText().length());
         final ChatRequest request = requestFor(attempt, DraftStep.DRAFT, "", "");
         final Result<ChatResponse> reply = callModel(DraftStep.DRAFT, segment, request);
         if (reply.isErr()) {
@@ -108,11 +113,12 @@ public final class SegmentTranslator {
     }
 
     /**
-     * Drafts a segment, in sentence-aligned pieces when its masked text alone is above the budget. The pieces are
+     * Drafts a segment, in sentence-aligned pieces when the text it is shown is alone above the budget. The pieces are
      * joined and gated once as that one segment, because the translation goes back into the node it came from.
      *
      * @param segment the non-null segment to draft
      * @param context the non-null context each piece is shown
+     * @param mask the non-null spans hidden in the segment; the pieces are cut from its text
      * @param splitter the non-null sentence splitter of the source language
      * @param budgetTokens the chunk budget a piece must fit
      * @return the draft's outcome, or the error a call answered, which the run routes
@@ -120,38 +126,44 @@ public final class SegmentTranslator {
     public Result<DraftOutcome> translateSplit(
             final Segment segment,
             final DraftContext context,
+            final ProtectedMask mask,
             final SentenceSplitter splitter,
             final int budgetTokens) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(mask, "mask");
         Objects.requireNonNull(splitter, "splitter");
-        final int estimate = TokenEstimator.estimate(segment.masked(), promptBuilder.sourceLanguage());
+        final String shown = mask.maskedText();
+        final int estimate = TokenEstimator.estimate(shown, promptBuilder.sourceLanguage());
         if (estimate <= budgetTokens) {
             log.debug(
                     "Segment id={} estimate={} within budget={}, drafted whole", segment.id(), estimate, budgetTokens);
-            return translate(segment, context);
+            return translate(segment, context, mask);
         }
-        return switch (OversizedSplit.plan(segment, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
-            case OversizedSplit.Pieces plan -> translatePieces(segment, context, plan.pieces());
+        return switch (OversizedSplit.plan(segment, shown, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
+            case OversizedSplit.Pieces plan -> translatePieces(segment, context, mask, plan.pieces());
             case OversizedSplit.Unsplittable none -> {
                 log.warn(
                         "Oversized segment {} cannot be split estimate={} budget={}; drafting it whole without"
-                                + " preceding targets",
+                                + " preceding targets or memory hits",
                         segment.id(),
                         estimate,
                         budgetTokens);
-                yield translate(segment, DraftContext.empty());
+                yield translate(
+                        segment,
+                        new DraftContext(List.of(), context.summary(), context.glossaryLines(), List.of()),
+                        mask);
             }
         };
     }
 
     /** Drafts each piece with the segment's own context, joins the replies in order and gates them once. */
-    Result<DraftOutcome> translatePieces(final Segment segment, final DraftContext context, final List<String> pieces) {
+    private Result<DraftOutcome> translatePieces(
+            final Segment segment, final DraftContext context, final ProtectedMask mask, final List<String> pieces) {
         log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
         final PieceRedraft redraft =
                 (findings, redraftCalls) -> redraftPieces(segment, context, pieces, findings, redraftCalls);
-        final DraftAttempt whole =
-                DraftAttempt.showingItsOwnMaskedText(segment, context).redraftedBy(redraft);
+        final DraftAttempt whole = DraftAttempt.of(segment, context, mask).redraftedBy(redraft);
         final Result<PieceDrafter.Piece> drafted =
                 new PieceDrafter(this, replyParser, calls, "").draftAll(segment, context, pieces);
         if (drafted.isErr()) {

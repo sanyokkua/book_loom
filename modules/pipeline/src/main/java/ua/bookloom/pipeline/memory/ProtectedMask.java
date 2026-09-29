@@ -22,4 +22,14 @@ public record ProtectedMask(String maskedText, List<ProtectedSpan> spans, List<L
         spans = List.copyOf(spans);
         presentLocked = List.copyOf(presentLocked);
     }
+
+    /**
+     * A text with nothing hidden, for a draft made outside a chunk's glossary.
+     *
+     * @param maskedText the non-null text the model is shown as it is
+     * @return the mask with no span and no locked term
+     */
+    public static ProtectedMask none(final String maskedText) {
+        return new ProtectedMask(maskedText, List.of(), List.of());
+    }
 }

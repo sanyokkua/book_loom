@@ -21,12 +21,14 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * The judge reads the masked form — a hidden name back in place — never the model's reply with its protected-span
- * tokens, which it cannot read.
+ * tokens, which it cannot read; and the segment's own source beside it, never the text the draft was shown.
  */
 class QualityLoopJudgeMaskedFormTest {
 
     private static final String SOURCE =
             "The lighthouse stood on the rocky shore, its beam sweeping across the still dark water tonight.";
+    private static final String SHOWN_SOURCE =
+            "The ⟦g5⟧ stood on the rocky shore, its beam sweeping across the still dark water tonight.";
     private static final String REPLY_WITH_TOKEN =
             "⟦g5⟧ стояв на прибережній скелі, його промінь ковзав по темній нерухомій воді цієї ночі.";
     private static final String MASKED_FORM =
@@ -45,7 +47,10 @@ class QualityLoopJudgeMaskedFormTest {
 
         final String judgeUser =
                 model.requests().getFirst().messages().getLast().content();
-        assertThat(judgeUser).contains("Candidate: " + MASKED_FORM).doesNotContain("⟦g5⟧");
+        assertThat(judgeUser)
+                .contains("Source: " + SOURCE)
+                .contains("Candidate: " + MASKED_FORM)
+                .doesNotContain("⟦g5⟧");
     }
 
     @Test
@@ -63,11 +68,15 @@ class QualityLoopJudgeMaskedFormTest {
 
         assertThat(model.requests()).hasSize(4);
         final String rejudgeUser = model.requests().get(3).messages().getLast().content();
-        assertThat(rejudgeUser).contains("Candidate: " + MASKED_FORM).doesNotContain("⟦g5⟧");
+        assertThat(rejudgeUser)
+                .contains("Source: " + SOURCE)
+                .contains("Candidate: " + MASKED_FORM)
+                .doesNotContain("⟦g5⟧");
     }
 
     private static DraftOutcome.Drafted drafted() {
-        return new DraftOutcome.Drafted(segment(), SOURCE, List.of(), REPLY_WITH_TOKEN, MASKED_FORM, MASKED_FORM, null);
+        return new DraftOutcome.Drafted(
+                segment(), SHOWN_SOURCE, List.of(), REPLY_WITH_TOKEN, MASKED_FORM, MASKED_FORM, null);
     }
 
     private static LoopSettings settings() {

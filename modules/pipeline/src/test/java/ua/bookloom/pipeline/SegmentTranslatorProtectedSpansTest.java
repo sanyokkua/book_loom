@@ -27,6 +27,7 @@ import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.prompt.DraftContext;
+import ua.bookloom.pipeline.qa.LockedRendering;
 
 /** A draft over the text with its protected spans hidden: what the model is shown, repaired with and accepted as. */
 class SegmentTranslatorProtectedSpansTest {
@@ -50,14 +51,16 @@ class SegmentTranslatorProtectedSpansTest {
         final ProtectedMask mask = ProtectedSpans.mask(segment, "en", ForeignPassagePolicy.KEEP, List.of(HALE));
         final ScriptedChatModel model = TranslationJobTestSupport.replies("⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері.");
 
-        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.MARKDOWN)
-                .translate(segment, DraftContext.empty(), mask.maskedText());
+        final Result<DraftOutcome> result =
+                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
                 .contains("Copy this exact ordered sequence unchanged: ⟦g2⟧ ⟦g0⟧ ⟦g1⟧")
                 .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
                 .doesNotContain("Hale opened");
-        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("Гейл відчинив *старі* двері.");
+        assertThat(DraftStepFixtures.drafted(result))
+                .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::lockedRenderings)
+                .containsExactly("Гейл відчинив *старі* двері.", List.of(new LockedRendering("Hale", "Гейл")));
     }
 
     @Test
@@ -67,8 +70,8 @@ class SegmentTranslatorProtectedSpansTest {
         final ScriptedChatModel model = TranslationJobTestSupport.replies(
                 "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.", "⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері.");
 
-        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.MARKDOWN)
-                .translate(segment, DraftContext.empty(), mask.maskedText());
+        final Result<DraftOutcome> result =
+                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
 
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().get(1).messages().get(1).content())
@@ -90,8 +93,8 @@ class SegmentTranslatorProtectedSpansTest {
                         TranslationJobTestSupport.targetReply("⟦g2⟧ відчинив ⟦g0⟧старі⟦g1⟧ двері."),
                         FinishReason.STOP)));
 
-        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.MARKDOWN)
-                .translate(segment, DraftContext.empty(), mask.maskedText());
+        final Result<DraftOutcome> result =
+                translator(segment, mask, model, BookFormat.MARKDOWN).translate(segment, DraftContext.empty(), mask);
 
         assertThat(model.requests().get(1).messages().get(1).content())
                 .contains("<Text>\n⟦g2⟧ opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>")
@@ -110,8 +113,8 @@ class SegmentTranslatorProtectedSpansTest {
         final ProtectedMask mask = ProtectedSpans.mask(segment, "en", ForeignPassagePolicy.KEEP, List.of());
         final ScriptedChatModel model = TranslationJobTestSupport.replies("Вона прошепотіла ⟦g2⟧ і пішла.");
 
-        final Result<DraftOutcome> result = translator(segment, mask, model, BookFormat.EPUB)
-                .translate(segment, DraftContext.empty(), mask.maskedText());
+        final Result<DraftOutcome> result =
+                translator(segment, mask, model, BookFormat.EPUB).translate(segment, DraftContext.empty(), mask);
 
         assertThat(model.requests().getFirst().messages().get(1).content())
                 .contains("<Text>\nShe whispered ⟦g2⟧ and left.\n</Text>")

@@ -29,7 +29,7 @@ public final class OversizedSplit {
     /**
      * Consecutive sentences merged greedily while each piece stays within the budget.
      *
-     * @param pieces the pieces in order; they concatenate to the segment's masked text
+     * @param pieces the pieces in order; they concatenate to the text the segment is shown as
      */
     public record Pieces(List<String> pieces) implements Plan {
 
@@ -45,7 +45,9 @@ public final class OversizedSplit {
     /**
      * Plans the pieces of one segment.
      *
-     * @param segment the segment whose masked text is above the budget; never null
+     * @param segment the segment whose text is above the budget; never null
+     * @param shownText the text the model is shown for the segment — its masked text, protected spans behind tokens
+     *     of their own — which the pieces are cut from; never null
      * @param sourceLanguage the source language tag, or null when unknown
      * @param budgetTokens the most tokens one piece may hold, unless one sentence alone exceeds it
      * @param splitter the sentence splitter; never null
@@ -53,12 +55,14 @@ public final class OversizedSplit {
      */
     public static Plan plan(
             final Segment segment,
+            final String shownText,
             @Nullable final String sourceLanguage,
             final int budgetTokens,
             final SentenceSplitter splitter) {
         Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(shownText, "shownText");
         Objects.requireNonNull(splitter, "splitter");
-        final int estimate = TokenEstimator.estimate(segment.masked(), sourceLanguage);
+        final int estimate = TokenEstimator.estimate(shownText, sourceLanguage);
         log.debug(
                 "Planning oversized split segment={} estimate={} budget={} language={}",
                 segment.id(),
@@ -66,7 +70,7 @@ public final class OversizedSplit {
                 budgetTokens,
                 sourceLanguage);
         final Result<List<String>> split =
-                splitter.split(segment.masked(), segment, sourceLanguage == null ? UNDETERMINED : sourceLanguage);
+                splitter.split(shownText, segment, sourceLanguage == null ? UNDETERMINED : sourceLanguage);
         if (split.isErr() || Objects.requireNonNull(split.data()).size() < 2) {
             log.debug("Oversized segment={} has no sentence boundary to cut at", segment.id());
             return new Unsplittable();
