@@ -20,16 +20,16 @@ sweep), `:llm` (chat-model contract, factory, pseudo model, gated/retried Ollama
 token usage, verification, model discovery), `:persistence` (in-memory adapters behind the storage ports), `:pipeline`
 (translation engine, pausable and interruptible job, checked export; prompt templates, style sheet, quality dial, chunk
 packing, oversized-segment splitting, the stored-project service; the quality gates — deterministic checks, refusal
-gate, confidence, per-chunk judge, directed fix, reflect → improve, polish, acceptance rule and quality loop), `:ui`
+gate, confidence, per-chunk judge, directed fix, reflect → improve, polish, acceptance rule and quality loop; open language tags, the deterministic and model name scans, protected spans,
+translation memory, rolling summary, context assembly, the deferral register, the glossary service with CSV), `:ui`
 (the shell, six screens, the state mirror, English and Ukrainian bundles chosen by the OS, light/dark theme) and `:app`
 (boot, logging, single-instance lock, DI, the window). A book of any of the four formats goes through the whole
 pipeline from the window or the command line, with the pseudo model or a configured real provider — on the job's
 original path, which accepts a segment once its markup restores: the stored project, chunking, the brief-driven style
-sheet, the judge and the quality loop are built and tested but not yet wired into a run. Not built: saving (nothing
-survives a restart, no resume, no remembered settings), glossary, translation memory, rolling summary. Next: group 9
-of `openspec/changes/complete-translation-workflow` (re-planned against the built code: shared helpers, open
-languages, the memory parts), then the run on a stored project (group 10), review and export (11), and the screens
-(12–15).
+sheet, the judge, the quality loop, protected spans, memory, summary and context assembly are built and tested but not
+yet wired into a run. Not built: saving (nothing survives a restart, no resume, no remembered settings). Next: group
+10 of `openspec/changes/complete-translation-workflow` (the run on a stored project), then review and export (11) and
+the screens (12–15).
 
 ## Commands
 
