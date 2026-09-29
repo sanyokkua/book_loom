@@ -49,6 +49,7 @@ import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.RunStores;
 
@@ -181,18 +182,23 @@ final class TranslationJobTestSupport {
             final ua.bookloom.api.document.BookFormat format,
             final String targetLanguage,
             @Nullable final String sourceLanguage) {
-        return segmentTranslator(GateFunction.of(documents, format), model, format, targetLanguage, sourceLanguage);
+        return segmentTranslator(
+                GateFunction.of(documents, format),
+                (kind, segmentId, request) -> model.chat(request),
+                format,
+                targetLanguage,
+                sourceLanguage);
     }
 
     static SegmentTranslator segmentTranslator(
             final GateFunction gate,
-            final ChatModel model,
+            final ModelCalls calls,
             final ua.bookloom.api.document.BookFormat format,
             final String targetLanguage,
             @Nullable final String sourceLanguage) {
         return new SegmentTranslator(
                 gate,
-                model,
+                calls,
                 format,
                 new DraftPromptBuilder(
                         new PromptTemplates(),

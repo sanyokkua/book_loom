@@ -32,7 +32,7 @@ public final class LoggingBootstrap {
     private static final String LOG_FILE_NAME = "bookloom.log";
     private static final String ARCHIVE_PATTERN = "bookloom.%d{yyyy-MM-dd}.%i.log";
     private static final String PATTERN =
-            "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [job=%X{job}] [%thread] %logger{36} - %msg%n";
+            "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [job=%X{job} segment=%X{segment}] [%thread] %logger{36} - %msg%n";
 
     private static final String MAX_FILE_SIZE = "10MB";
     private static final String TOTAL_SIZE_CAP = "200MB";

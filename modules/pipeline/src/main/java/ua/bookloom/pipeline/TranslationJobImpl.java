@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -23,7 +22,6 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
-import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
@@ -34,7 +32,6 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.ChunkCommit;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateFunction;
@@ -44,8 +41,10 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.OutcomeRecords;
 import ua.bookloom.pipeline.run.PauseDecider;
+import ua.bookloom.pipeline.run.PendingCommit;
 import ua.bookloom.pipeline.run.RunRecorder;
 import ua.bookloom.pipeline.run.RunReports;
 import ua.bookloom.pipeline.run.RunStart;
@@ -68,8 +67,8 @@ final class TranslationJobImpl implements TranslationJob {
     private final JobSubscribers subscribers = new JobSubscribers();
     private final String jobId = UUID.randomUUID().toString();
     private final RunRecorder recorder;
-    // Read and written only on the job thread: decide sets it, and the model decorator runs inside decide.
-    private @Nullable String decidingSegment;
+    // Used from the job thread only.
+    private final PendingCommit pending;
     // Written and read only on the job thread, from the claim on.
     private Instant startedAt;
 
@@ -89,6 +88,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.stores = Objects.requireNonNull(stores, "stores");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock);
+        this.pending = new PendingCommit(stores.checkpoint(), request.projectId());
         this.startedAt = clock.instant();
     }
 
@@ -136,7 +136,7 @@ final class TranslationJobImpl implements TranslationJob {
 
     @Override
     public JobState state() {
-        log.debug("Reading translation job state project={}", request.projectId());
+        // Silent: a screen polls it as often as it draws.
         return control.state();
     }
 
@@ -176,7 +176,7 @@ final class TranslationJobImpl implements TranslationJob {
     private Result<JobReport> translate(final RunStart.Started run, final WorkList work) {
         final SegmentTranslator translator = new SegmentTranslator(
                 GateFunction.of(documents, run.document().format()),
-                new CancellableChatModel(model, control, this::announceModelCall),
+                new JobModelCalls(onSent -> new CancellableChatModel(model, control, onSent), this::emit),
                 run.document().format(),
                 new DraftPromptBuilder(templates, callFrame(run.project().brief())),
                 new DraftReplyParser(mapper));
@@ -216,14 +216,14 @@ final class TranslationJobImpl implements TranslationJob {
 
     private @Nullable AppError commit(final WorkItem item, final Decision decision) {
         final SegmentRecord record = OutcomeRecords.decided(item.record(), decision);
-        final Result<Integer> committed = stores.checkpoint()
-                .commit(new ChunkCommit(record.projectId(), List.of(record), List.of(), List.of(), List.of()));
-        log.debug(
-                "Committed decision segmentId={} status={} ok={}",
-                record.segmentId(),
-                record.status(),
-                committed.isOk());
-        return committed.isErr() ? errorOf(committed) : null;
+        pending.decided(record);
+        log.debug("Committing decision segmentId={} status={}", record.segmentId(), record.status());
+        return flushPending();
+    }
+
+    private @Nullable AppError flushPending() {
+        final Result<Integer> flushed = pending.flush();
+        return flushed.isErr() ? errorOf(flushed) : null;
     }
 
     private @Nullable Result<JobReport> recoverOrFail(
@@ -279,6 +279,10 @@ final class TranslationJobImpl implements TranslationJob {
             @Nullable final AppError error,
             final JobProgress progress,
             final RunStart.Started run) {
+        final AppError unsaved = flushPending();
+        if (unsaved != null) {
+            return finish(JobState.FAILED, run, unsaved);
+        }
         recorder.paused();
         emit(new Paused(reason, error, progress));
         if (control.awaitPause() == PauseWait.CANCELLED) {
@@ -292,20 +296,18 @@ final class TranslationJobImpl implements TranslationJob {
     private Result<Decision> decide(
             final WorkItem item, final DraftContext context, final SegmentTranslator translator) {
         MDC.put("segment", item.segment().id());
-        decidingSegment = item.segment().id();
         try {
             return translator.translate(item.segment(), context);
         } finally {
-            decidingSegment = null;
             MDC.remove("segment");
         }
     }
 
-    private void announceModelCall() {
-        emit(new ModelCallStarted(Objects.requireNonNull(decidingSegment, "segment being decided")));
-    }
-
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {
+        final AppError unsaved = flushPending();
+        if (unsaved != null && end != JobState.FAILED) {
+            return finish(JobState.FAILED, run, unsaved);
+        }
         final JobReport report =
                 RunReports.of(stores, run.project().id(), run.document().format(), end, error);
         recorder.ended(report.end());

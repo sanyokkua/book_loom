@@ -172,7 +172,24 @@ class LoggingBootstrapTest {
             LoggerFactory.getLogger("ua.bookloom.test").info("job canary");
         }
 
-        assertThat(logLines(logDir.resolve("bookloom.log"))).anyMatch(line -> line.contains("[job=job-42]"));
+        assertThat(logLines(logDir.resolve("bookloom.log"))).anyMatch(line -> line.contains("[job=job-42 "));
+    }
+
+    // The segment id on a line is what lets one segment's decision be read out of a run's log.
+    @Test
+    void configure_pattern_includesSegmentMdcValue() throws IOException {
+        final Path logDir = Files.createDirectory(tempDir.resolve("logs"));
+        LoggingBootstrap.configure(logDir, false, resolved(Level.INFO));
+
+        try (var job = org.slf4j.MDC.putCloseable("job", "job-42");
+                var segment = org.slf4j.MDC.putCloseable("segment", "Book.md:0")) {
+            assertThat(job).isNotNull();
+            assertThat(segment).isNotNull();
+            LoggerFactory.getLogger("ua.bookloom.test").info("segment canary");
+        }
+
+        assertThat(logLines(logDir.resolve("bookloom.log")))
+                .anyMatch(line -> line.contains("[job=job-42 segment=Book.md:0]"));
     }
 
     @Test

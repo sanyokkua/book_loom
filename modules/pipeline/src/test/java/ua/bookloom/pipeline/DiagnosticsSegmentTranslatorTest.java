@@ -62,8 +62,7 @@ class DiagnosticsSegmentTranslatorTest {
                 .contains("Translating segment id=" + segment.id() + " format=MARKDOWN")
                 .contains("Building draft prompt sourceLanguage=English (en) targetLanguage=Ukrainian (uk) segmentId="
                         + segment.id())
-                .contains("Building chat request segmentId=" + segment.id() + " maskedLength=31")
-                .contains("Built chat request segmentId=" + segment.id() + " messageCount=2")
+                .contains("Built chat request segmentId=" + segment.id() + " maskedLength=31 messageCount=2")
                 .contains("Calling chat model segmentId=" + segment.id() + " messageCount=2")
                 .contains("Chat model completed segmentId=" + segment.id() + " result=success")
                 .contains("Model reply segment=" + segment.id() + " kind=STRUCTURED finish=STOP empty=false")
@@ -72,10 +71,11 @@ class DiagnosticsSegmentTranslatorTest {
                 .contains("Restored whitespace leadingLength=0 trailingLength=0 restoredLength=31")
                 .contains("Segment decision id=" + segment.id() + " decision=ACCEPTED errorCode=null")
                 .contains("Flagged segment id=" + segment.id() + " code=validation")
-                .contains("Collecting expected tokens segmentId=" + segment.id() + " placeholderCount=2")
+                .contains("Collected expected tokens segmentId=" + segment.id() + " placeholderCount=2")
                 .contains("Collected observed tokens textLength=27 tokenCount=1")
                 .contains("expectedTokens=⟦g0⟧ ⟦g1⟧ observedTokens=[⟦g0⟧]")
                 .contains("IllegalStateException: diagnostic model explosion");
+        assertOneLinePerStep(log);
         assertThat(count(log, "Unexpected model failure segment=" + segment.id() + " code=internal"))
                 .isEqualTo(1);
     }
@@ -102,6 +102,12 @@ class DiagnosticsSegmentTranslatorTest {
                 .contains("Segment reply restored=  SENSITIVE MANUSCRIPT SENTENCE.  ")
                 .contains("Segment unmask input=  SENSITIVE MANUSCRIPT SENTENCE.  ");
         assertSensitiveTextOnlyAtTrace(log, "Sensitive manuscript sentence.", "SENSITIVE MANUSCRIPT SENTENCE.");
+    }
+
+    // The step's outcome is one line; a "Building"/"Collecting" line before it would only double the log.
+    private static void assertOneLinePerStep(final String log) {
+        assertThat(log)
+                .doesNotContain("Building chat request", "Collecting expected tokens", "Collecting observed tokens");
     }
 
     /** Raises the {@code ua.bookloom} loggers to TRACE for one action, then restores the configured level. */
@@ -156,7 +162,7 @@ class DiagnosticsSegmentTranslatorTest {
             final String sourceLanguage) {
         return new SegmentTranslator(
                 GateFunction.of(documents, format),
-                model,
+                (kind, segmentId, request) -> model.chat(request),
                 format,
                 new DraftPromptBuilder(
                         new PromptTemplates(),

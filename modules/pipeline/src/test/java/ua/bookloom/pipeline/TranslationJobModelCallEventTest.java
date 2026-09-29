@@ -3,12 +3,17 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.targetReply;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 
@@ -41,5 +46,24 @@ class TranslationJobModelCallEventTest {
                 .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).segmentId())
                 .containsExactly("Book.md:0", "Book.md:1");
+    }
+
+    // The old announcement named DRAFT for a repair too, so a screen could not say what the model was doing.
+    @Test
+    void run_structuralRepair_announcesDraftThenStructuralRepairForTheSameSegment() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(Result.ok(new ChatResponse("{\"segments\":", FinishReason.STOP)))
+                .answer(Result.ok(new ChatResponse(targetReply("ONE."), FinishReason.STOP)));
+        final TranslationJobImpl translation = job(TestBooks.markdown(tempDir.resolve("Book.md"), "One."), model);
+        final List<JobEvent> events = new ArrayList<>();
+        translation.subscribe(events::add);
+
+        translation.run();
+
+        assertThat(events)
+                .filteredOn(ModelCallStarted.class::isInstance)
+                .containsExactly(
+                        new ModelCallStarted("Book.md:0", CallKind.DRAFT),
+                        new ModelCallStarted("Book.md:0", CallKind.STRUCTURAL_REPAIR));
     }
 }

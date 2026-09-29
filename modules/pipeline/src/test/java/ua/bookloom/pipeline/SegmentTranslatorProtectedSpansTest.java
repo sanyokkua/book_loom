@@ -126,7 +126,8 @@ class SegmentTranslatorProtectedSpansTest {
     private SegmentTranslator translator(
             final Segment segment, final ProtectedMask mask, final ScriptedChatModel model, final BookFormat format) {
         final GateFunction gate = ProtectedSpans.gate(Map.of(segment.id(), mask), GateFunction.of(documents, format));
-        return TranslationJobTestSupport.segmentTranslator(gate, model, format, "uk", "en");
+        return TranslationJobTestSupport.segmentTranslator(
+                gate, (kind, segmentId, request) -> model.chat(request), format, "uk", "en");
     }
 
     private Segment markdownSegment(final String source) {

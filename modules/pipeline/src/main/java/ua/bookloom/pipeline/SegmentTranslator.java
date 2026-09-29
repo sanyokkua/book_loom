@@ -11,7 +11,6 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
-import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -26,6 +25,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.run.PauseDecider;
 
@@ -34,19 +34,19 @@ import ua.bookloom.pipeline.run.PauseDecider;
 final class SegmentTranslator {
 
     private final GateFunction gate;
-    private final ChatModel model;
+    private final ModelCalls calls;
     private final BookFormat format;
     private final DraftPromptBuilder promptBuilder;
     private final DraftReplyParser replyParser;
 
     SegmentTranslator(
             final GateFunction gate,
-            final ChatModel model,
+            final ModelCalls calls,
             final BookFormat format,
             final DraftPromptBuilder promptBuilder,
             final DraftReplyParser replyParser) {
         this.gate = Objects.requireNonNull(gate, "gate");
-        this.model = Objects.requireNonNull(model, "model");
+        this.calls = Objects.requireNonNull(calls, "calls");
         this.format = Objects.requireNonNull(format, "format");
         this.promptBuilder = Objects.requireNonNull(promptBuilder, "promptBuilder");
         this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
@@ -71,7 +71,7 @@ final class SegmentTranslator {
         final DraftAttempt attempt = new DraftAttempt(segment, context, shownText);
         log.debug("Translating segment id={} format={} shownLength={}", segment.id(), format, shownText.length());
         final ChatRequest request = requestFor(attempt, DraftStep.DRAFT, "", "");
-        final Result<ChatResponse> reply = callModel(segment, request);
+        final Result<ChatResponse> reply = callModel(DraftStep.DRAFT, segment, request);
         if (reply.isErr()) {
             return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
@@ -143,18 +143,14 @@ final class SegmentTranslator {
 
     private ChatRequest requestFor(
             final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
-        final Segment segment = attempt.segment();
-        log.debug(
-                "Building chat request segmentId={} maskedLength={}",
-                segment.id(),
-                attempt.shownText().length());
         final OutputLimit limit = OutputLimit.forSource(
                 attempt.shownText(), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
         final ChatRequest request =
                 ChatRequests.build(step.promptName(), messagesFor(attempt, step, rejected, diagnostic), limit, false);
         log.debug(
-                "Built chat request segmentId={} messageCount={} expectedTokens={} capTokens={}",
-                segment.id(),
+                "Built chat request segmentId={} maskedLength={} messageCount={} expectedTokens={} capTokens={}",
+                attempt.segment().id(),
+                attempt.shownText().length(),
                 request.messages().size(),
                 request.expectedOutputTokens() == null ? "none" : request.expectedOutputTokens(),
                 request.maxOutputTokens() == null ? "none" : request.maxOutputTokens());
@@ -176,13 +172,14 @@ final class SegmentTranslator {
         };
     }
 
-    Result<ChatResponse> callModel(final Segment segment, final ChatRequest request) {
+    Result<ChatResponse> callModel(final DraftStep step, final Segment segment, final ChatRequest request) {
         log.debug(
                 "Calling chat model segmentId={} messageCount={}",
                 segment.id(),
                 request.messages().size());
         try {
-            final Result<ChatResponse> result = Objects.requireNonNull(model.chat(request), "model result");
+            final Result<ChatResponse> result =
+                    Objects.requireNonNull(calls.call(step.callKind(), segment.id(), request), "model result");
             log.debug("Chat model completed segmentId={} result={}", segment.id(), result.isOk() ? "success" : "error");
             return result;
         } catch (Throwable cause) {
@@ -244,7 +241,7 @@ final class SegmentTranslator {
         final Segment segment = attempt.segment();
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
         final ChatRequest request = requestFor(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
-        final Result<ChatResponse> reply = callModel(segment, request);
+        final Result<ChatResponse> reply = callModel(DraftStep.STRUCTURAL_REPAIR, segment, request);
         if (reply.isErr()) {
             return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
@@ -308,7 +305,7 @@ final class SegmentTranslator {
         final Segment segment = attempt.segment();
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
         final ChatRequest request = requestFor(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, gateNote);
-        final Result<ChatResponse> reply = callModel(segment, request);
+        final Result<ChatResponse> reply = callModel(DraftStep.PLACEHOLDER_REPAIR, segment, request);
         if (reply.isErr()) {
             return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
@@ -346,14 +343,11 @@ final class SegmentTranslator {
     private static String expectedTokens(final DraftAttempt attempt) {
         final String segmentId = attempt.segment().id();
         final int placeholderCount = Tokens.inOrder(attempt.shownText()).size();
-        log.debug("Collecting expected tokens segmentId={} placeholderCount={}", segmentId, placeholderCount);
-        final String tokens = DraftPromptBuilder.expectedTokenSequence(attempt.shownText());
-        log.debug("Collected expected tokens segmentId={} tokenCount={}", segmentId, placeholderCount);
-        return tokens;
+        log.debug("Collected expected tokens segmentId={} placeholderCount={}", segmentId, placeholderCount);
+        return DraftPromptBuilder.expectedTokenSequence(attempt.shownText());
     }
 
     private static String observedTokens(final String text) {
-        log.debug("Collecting observed tokens textLength={}", text.length());
         final List<String> tokens = Tokens.inOrder(text);
         log.debug("Collected observed tokens textLength={} tokenCount={}", text.length(), tokens.size());
         return tokens.toString();

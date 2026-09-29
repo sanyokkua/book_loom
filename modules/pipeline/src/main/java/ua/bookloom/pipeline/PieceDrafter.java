@@ -76,7 +76,7 @@ final class PieceDrafter {
         return answer(
                 piece,
                 context,
-                owner.callModel(piece, owner.requestFor(piece, context, DraftStep.DRAFT, "", "")),
+                owner.callModel(DraftStep.DRAFT, piece, owner.requestFor(piece, context, DraftStep.DRAFT, "", "")),
                 false,
                 false);
     }
@@ -142,7 +142,7 @@ final class PieceDrafter {
         return answer(
                 piece,
                 context,
-                owner.callModel(piece, owner.requestFor(piece, context, step, rejected, diagnostic)),
+                owner.callModel(step, piece, owner.requestFor(piece, context, step, rejected, diagnostic)),
                 !isPlaceholder,
                 isPlaceholder || placeholderUsed);
     }

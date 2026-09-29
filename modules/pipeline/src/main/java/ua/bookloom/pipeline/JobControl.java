@@ -207,16 +207,14 @@ final class JobControl {
         log.debug("Replaced pause points state={} points={}", observed, points);
     }
 
+    // Silent on purpose: a screen reads the state as often as it draws, and a line per read would bury the run's own.
     JobState state() {
-        final JobState observed;
         lock.lock();
         try {
-            observed = state;
+            return state;
         } finally {
             lock.unlock();
         }
-        log.debug("Read translation job state={}", observed);
-        return observed;
     }
 
     boolean isCancellationRequested() {
