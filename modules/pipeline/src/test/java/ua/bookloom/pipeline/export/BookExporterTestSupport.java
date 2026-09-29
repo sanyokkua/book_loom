@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -58,6 +59,11 @@ public final class BookExporterTestSupport {
         return document.withUnits(units);
     }
 
+    /** The decisions of {@code decided}, each target checked in its source placeholders' order. */
+    static EffectiveTargets sourceOrder(final Document decided) {
+        return new EffectiveTargets(decided, Map.of());
+    }
+
     static int segmentCount(final Document document) {
         return document.units().stream()
                 .mapToInt(unit -> unit.segments().size())
@@ -104,10 +110,14 @@ public final class BookExporterTestSupport {
         }
 
         @Override
-        public Result<Path> write(final Document document, final Path destination, final String targetLanguage) {
+        public Result<Path> write(
+                final Document document,
+                final Path destination,
+                @Nullable final String sourceLanguage,
+                final String targetLanguage) {
             written.add(document);
             writeDestinations.add(destination);
-            return super.write(document, destination, targetLanguage);
+            return super.write(document, destination, sourceLanguage, targetLanguage);
         }
 
         @Override
@@ -235,7 +245,11 @@ public final class BookExporterTestSupport {
         }
 
         @Override
-        public Result<Path> write(final Document document, final Path destination, final String targetLanguage) {
+        public Result<Path> write(
+                final Document document,
+                final Path destination,
+                @Nullable final String sourceLanguage,
+                final String targetLanguage) {
             return Result.err(failure);
         }
     }

@@ -454,14 +454,14 @@ auxiliary translations back into their own slots".
 - **WHEN** the EPUB paragraph `<p>Before <img src="fig1.png" alt="Figure 1"/> after</p>` is translated, its image's
   alt text `Figure 1` is translated as `Рисунок 1`, and the book is exported
 - **THEN** the check passes and the book is written
-- **AND** the written paragraph's image reads `<img src="fig1.png" alt="Рисунок 1"/>`
+- **AND** the written paragraph's image reads `<img src="fig1.png" alt="Рисунок 1" />`
 
 #### Scenario: A translated alt text inside a pending paragraph passes the check
 
 - **WHEN** the EPUB paragraph `<p>Before <img src="fig1.png" alt="Figure 1"/> after</p>` is still PENDING, its image's
   alt text `Figure 1` is translated as `Рисунок 1`, and the book is exported
 - **THEN** the check passes and the book is written
-- **AND** the written paragraph reads `<p>Before <img src="fig1.png" alt="Рисунок 1"/> after</p>`
+- **AND** the written paragraph reads `<p>Before <img src="fig1.png" alt="Рисунок 1" /> after</p>`
 
 #### Scenario: A translated Markdown alt text passes the check
 

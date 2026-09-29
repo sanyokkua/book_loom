@@ -5,6 +5,7 @@ import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.onlyDecision;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.opened;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.segmentCount;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.sourceOrder;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.zipEntry;
 
 import java.nio.file.Files;
@@ -50,8 +51,8 @@ class BookExporterFormatTest {
                 opened, SegmentStatus.ACCEPTED, Objects.requireNonNull(restored.data(), "restored target"));
         assertThat(documents.close(opened).data()).isTrue();
 
-        final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(firstMatch(zipEntry(destination, "OEBPS/ch0.xhtml"), "<p>.*?</p>"))
@@ -72,8 +73,8 @@ class BookExporterFormatTest {
         final Document decided = opened(documents, source);
         assertThat(documents.close(decided).data()).isTrue();
 
-        final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         final String exportedXml = Files.readString(destination);
         assertThat(result.data()).isEqualTo(destination);
@@ -93,8 +94,8 @@ class BookExporterFormatTest {
         final Document decided = onlyDecision(opened, SegmentStatus.FLAGGED, null);
         assertThat(documents.close(opened).data()).isTrue();
 
-        final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(destination)).isEqualTo("He opened the *old* door.");
@@ -112,7 +113,7 @@ class BookExporterFormatTest {
                 new BookExporterTestSupport.RecordingDocumentPort(documents);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(port.openedDocuments()).hasSize(2);
@@ -150,7 +151,7 @@ class BookExporterFormatTest {
                 new BookExporterTestSupport.RecordingDocumentPort(documents);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), reversed, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(reversed), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(port.writtenDocuments().getFirst().units().getFirst().segments())
@@ -168,6 +169,6 @@ class BookExporterFormatTest {
     }
 
     private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {
-        return new ExportPlan(source, destination, "uk", overwrite);
+        return new ExportPlan(source, destination, null, "uk", overwrite);
     }
 }

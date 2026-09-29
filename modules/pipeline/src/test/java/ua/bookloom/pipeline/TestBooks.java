@@ -98,6 +98,41 @@ public final class TestBooks {
     }
 
     /**
+     * An EPUB whose navigation document lists {@code navLabel} and whose NCX lists {@code ncxLabel}, both linking the
+     * first chapter — two auxiliary segments while the labels differ.
+     */
+    public static Path epubWithNcx(
+            final Path destination,
+            final List<List<String>> spineParagraphs,
+            final String navLabel,
+            final String ncxLabel) {
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
+            put(zip, "META-INF/container.xml", containerXml(), ZipEntry.DEFLATED);
+            final String items =
+                    "<item id=\"nav\" href=\"nav.xhtml\" media-type=\"application/xhtml+xml\" properties=\"nav\"/>"
+                            + "<item id=\"ncx\" href=\"toc.ncx\" media-type=\"application/x-dtbncx+xml\"/>";
+            put(zip, "OEBPS/content.opf", opf(spineParagraphs.size(), "en", items), ZipEntry.DEFLATED);
+            putChapters(zip, spineParagraphs, null, DEFAULT_PAGE_TITLE);
+            put(zip, "OEBPS/nav.xhtml", navigation(List.of(navLabel)), ZipEntry.DEFLATED);
+            put(zip, "OEBPS/toc.ncx", ncx(ncxLabel), ZipEntry.DEFLATED);
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
+    private static String ncx(final String label) {
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                + "<ncx xmlns=\"http://www.daisy.org/z3986/2005/ncx/\" version=\"2005-1\">"
+                + "<head/><docTitle><text>Test</text></docTitle><navMap>"
+                + "<navPoint id=\"np0\" playOrder=\"1\"><navLabel><text>" + label + "</text></navLabel>"
+                + "<content src=\"ch0.xhtml\"/></navPoint>"
+                + "</navMap></ncx>";
+    }
+
+    /**
      * An EPUB whose package document sits at the container root beside chapters of the given file names, so a
      * segment id reads {@code <name>:<n>} — {@code ch07.xhtml:41} — as the specification's examples name them.
      */

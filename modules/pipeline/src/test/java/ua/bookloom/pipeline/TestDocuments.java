@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
@@ -41,6 +42,16 @@ public final class TestDocuments {
         @Override
         public Result<Path> write(final Document document, final Path destination, final String targetLanguage) {
             return delegate.write(document, destination, targetLanguage);
+        }
+
+        // The export passes the brief's source language; forwarding only the three-argument write would drop it.
+        @Override
+        public Result<Path> write(
+                final Document document,
+                final Path destination,
+                @Nullable final String sourceLanguage,
+                final String targetLanguage) {
+            return delegate.write(document, destination, sourceLanguage, targetLanguage);
         }
 
         @Override

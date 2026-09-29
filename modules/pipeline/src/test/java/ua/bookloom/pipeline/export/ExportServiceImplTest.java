@@ -25,6 +25,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
@@ -43,6 +44,7 @@ import ua.bookloom.pipeline.export.BookExporterTestSupport.BlockingClosePort;
 import ua.bookloom.pipeline.export.BookExporterTestSupport.ScriptedMoveOperation;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
+import ua.bookloom.pipeline.revision.ConsistencyPass;
 
 /** The export service and job over the real document module and the in-memory repositories. */
 class ExportServiceImplTest {
@@ -210,7 +212,7 @@ class ExportServiceImplTest {
         final Path destination = tempDir.resolve("Book.uk.md");
         final ScriptedMoveOperation moves = new ScriptedMoveOperation()
                 .answer(Result.err(error(ErrorCode.internal, new IOException("scripted move failure"))));
-        final ExportJob job = dataOf(service.newExportWith(request(id, destination, false), moves));
+        final ExportJob job = dataOf(service.newExportWith(request(id, destination, false), null, moves));
 
         final Result<ExportReport> result = job.run();
 
@@ -225,7 +227,13 @@ class ExportServiceImplTest {
         final String id = importBook("One.", "uk");
         final Path destination = tempDir.resolve("Book.uk.md");
         final BlockingClosePort port = new BlockingClosePort(TestDocuments.documents(), 2);
-        final ExportServiceImpl blocking = new ExportServiceImpl(projects, segments, openProjects, port);
+        final ExportServiceImpl blocking = new ExportServiceImpl(
+                projects,
+                segments,
+                openProjects,
+                port,
+                injector.getInstance(ConsistencyPass.class),
+                injector.getInstance(GlossaryRepository.class));
         final ExportJob job = dataOf(blocking.newExport(request(id, destination, false), null));
         workers = Executors.newSingleThreadExecutor();
 

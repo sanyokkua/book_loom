@@ -2,16 +2,19 @@ package ua.bookloom.pipeline.export;
 
 import java.nio.file.Path;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * What {@link BookExporter} needs to write one book.
  *
  * @param source the source file, opened afresh so a changed source is noticed
  * @param destination the file to publish
+ * @param sourceLanguage the language the run translated from, or null to let the writer read the book's own
  * @param targetLanguage the language tag the written book declares
  * @param overwrite whether an existing destination may be replaced
  */
-public record ExportPlan(Path source, Path destination, String targetLanguage, boolean overwrite) {
+public record ExportPlan(
+        Path source, Path destination, @Nullable String sourceLanguage, String targetLanguage, boolean overwrite) {
 
     /** Rejects a plan without its paths or language. */
     public ExportPlan {

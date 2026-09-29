@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.errorOf;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.snapshot;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.sourceOrder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,7 +41,8 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
         final RecordingDocumentPort port = new RecordingDocumentPort(documents);
 
-        final Result<Path> result = new BookExporter(port).export(request(source, destination), decided, () -> false);
+        final Result<Path> result =
+                new BookExporter(port).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -60,7 +62,7 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
 
         final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination), decided, () -> false);
+                new BookExporter(documents).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -79,7 +81,8 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
         final RecordingDocumentPort port = new RecordingDocumentPort(documents);
 
-        final Result<Path> result = new BookExporter(port).export(request(source, destination), decided, () -> false);
+        final Result<Path> result =
+                new BookExporter(port).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -99,7 +102,8 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
         final RecordingDocumentPort port = new RecordingDocumentPort(documents);
 
-        final Result<Path> result = new BookExporter(port).export(request(source, destination), decided, () -> false);
+        final Result<Path> result =
+                new BookExporter(port).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -124,7 +128,8 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
         final RecordingDocumentPort port = new RecordingDocumentPort(documents);
 
-        final Result<Path> result = new BookExporter(port).export(request(source, destination), decided, () -> false);
+        final Result<Path> result =
+                new BookExporter(port).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -148,7 +153,7 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
 
         final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination), decided, () -> false);
+                new BookExporter(documents).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(source)).isEqualTo("NEW TRANSLATION");
@@ -169,7 +174,7 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
 
         final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination), decided, () -> false);
+                new BookExporter(documents).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(source)).isEqualTo("NEW TRANSLATION");
@@ -188,7 +193,7 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
 
         final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination), decided, () -> false);
+                new BookExporter(documents).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(destination)).isEqualTo("NEW TRANSLATION");
@@ -203,7 +208,8 @@ class BookExporterCollisionTest {
         final Document decided = snapshot(documents, source);
         final RecordingDocumentPort port = new RecordingDocumentPort(documents);
 
-        final Result<Path> result = new BookExporter(port).export(request(source, destination), decided, () -> false);
+        final Result<Path> result =
+                new BookExporter(port).export(request(source, destination), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(port.writeDestinations()).containsExactly(tempDir.resolve(".Book.uk.fb2.zip"));
@@ -211,6 +217,6 @@ class BookExporterCollisionTest {
     }
 
     private static ExportPlan request(final Path source, final Path destination) {
-        return new ExportPlan(source, destination, "uk", true);
+        return new ExportPlan(source, destination, null, "uk", true);
     }
 }

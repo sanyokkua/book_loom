@@ -7,6 +7,7 @@ import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.error;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.errorOf;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.snapshot;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.sourceOrder;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -58,8 +59,8 @@ class BookExporterFilesystemTest {
                 .answer(Result.err(error(ErrorCode.internal, unsupported)))
                 .answer(Result.ok(destination));
 
-        final Result<Path> result =
-                new BookExporter(documents, moves).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents, moves)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(destination)).isEqualTo("NEW TRANSLATION");
@@ -78,8 +79,8 @@ class BookExporterFilesystemTest {
         final ScriptedMoveOperation moves =
                 new ScriptedMoveOperation().answer(Result.err(error(ErrorCode.internal, moveFailure)));
 
-        final Result<Path> result =
-                new BookExporter(documents, moves).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents, moves)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
         assertThat(errorOf(result).cause()).isSameAs(moveFailure);
@@ -94,8 +95,8 @@ class BookExporterFilesystemTest {
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
         final Document decided = snapshot(documents, source);
 
-        final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination, false), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, false), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(errorOf(result).cause()).isInstanceOf(FileAlreadyExistsException.class);
@@ -110,8 +111,8 @@ class BookExporterFilesystemTest {
         final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "OLD DESTINATION");
         final Document decided = snapshot(documents, source);
 
-        final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(Files.readString(destination)).isEqualTo("NEW TRANSLATION");
@@ -127,7 +128,7 @@ class BookExporterFilesystemTest {
         final DestinationCreatingMoveOperation lateConflict = new DestinationCreatingMoveOperation("LATE DESTINATION");
 
         final Result<Path> result = new BookExporter(documents, lateConflict)
-                .export(request(source, destination, false), decided, () -> false);
+                .export(request(source, destination, false), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(destination)).isEqualTo("LATE DESTINATION");
@@ -146,7 +147,7 @@ class BookExporterFilesystemTest {
         final CloseFailurePort port = new CloseFailurePort(documents, first, second);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.error()).isSameAs(first);
         assertThat(port.closedDocuments()).hasSize(2);
@@ -165,7 +166,7 @@ class BookExporterFilesystemTest {
         final SingleCloseFailurePort port = new SingleCloseFailurePort(documents, failingIndex, closeFailure);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.error()).isSameAs(closeFailure);
         assertThat(port.closedDocuments()).hasSize(2);
@@ -185,7 +186,7 @@ class BookExporterFilesystemTest {
         final AbsentClosePort port = new AbsentClosePort(documents);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.data()).isEqualTo(destination);
         assertThat(port.closedDocuments()).hasSize(2);
@@ -201,7 +202,7 @@ class BookExporterFilesystemTest {
         final Document decided = snapshot(documents, source);
 
         final Result<Path> result = new BookExporter(documents, new ThrowingMoveOperation(failure))
-                .export(request(source, destination, true), decided, () -> false);
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
         assertThat(errorOf(result).cause()).isSameAs(failure);
@@ -224,7 +225,7 @@ class BookExporterFilesystemTest {
                 new CloseFailurePort(writePort, error(ErrorCode.internal, null), error(ErrorCode.internal, null));
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.error()).isSameAs(writeFailure);
         assertThat(port.closedDocuments()).hasSize(1);
@@ -242,7 +243,7 @@ class BookExporterFilesystemTest {
                 new BookExporterTestSupport.RecordingDocumentPort(documents);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -259,8 +260,8 @@ class BookExporterFilesystemTest {
         final Path temporary = Files.createSymbolicLink(tempDir.resolve(".Book.uk.md"), destination.getFileName());
         final Document decided = snapshot(documents, source);
 
-        final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -276,8 +277,8 @@ class BookExporterFilesystemTest {
         final Path temporary = Files.createSymbolicLink(tempDir.resolve(".Book.uk.md"), destination.getFileName());
         final Document decided = snapshot(documents, source);
 
-        final Result<Path> result =
-                new BookExporter(documents).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> result = new BookExporter(documents)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(source)).isEqualTo("SOURCE BYTES");
@@ -286,6 +287,6 @@ class BookExporterFilesystemTest {
     }
 
     private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {
-        return new ExportPlan(source, destination, "uk", overwrite);
+        return new ExportPlan(source, destination, null, "uk", overwrite);
     }
 }

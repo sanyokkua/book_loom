@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.export;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -14,57 +15,47 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentKind;
-import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.persistence.ProjectRepository;
-import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.project.OpenProjects;
+import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.revision.ConsistencyReport;
 
 /**
  * Writes what a project stores: each segment record's effective target laid over a fresh read of the source by
- * {@link BookExporter}, so the file holds the best text every segment has today.
+ * {@link BookExporter}, so the file holds the best text every segment has today, then the chosen side files beside it.
+ * An occupied path is refused before anything slow; the consistency pass, when asked, runs before the records are
+ * read. The export never reads or changes a run's control state: it is the only writer, allowed at any time.
  */
 @Slf4j
 final class ExportJobImpl implements ExportJob {
 
     private final ExportRequest request;
-    private final ProjectRepository projects;
-    private final SegmentRepository segments;
-    private final OpenProjects openProjects;
-    private final ExportMoveOperation moves;
-    private final DocumentPort documents;
+    private final ExportParts parts;
+    private final @Nullable ModelCalls calls;
     private final AtomicBoolean cancelled = new AtomicBoolean();
 
-    ExportJobImpl(
-            final ExportRequest request,
-            final ProjectRepository projects,
-            final SegmentRepository segments,
-            final OpenProjects openProjects,
-            final DocumentPort documents,
-            final ExportMoveOperation moves) {
+    ExportJobImpl(final ExportRequest request, final ExportParts parts, @Nullable final ModelCalls calls) {
         this.request = Objects.requireNonNull(request, "request");
-        this.projects = Objects.requireNonNull(projects, "projects");
-        this.segments = Objects.requireNonNull(segments, "segments");
-        this.openProjects = Objects.requireNonNull(openProjects, "openProjects");
-        this.documents = Objects.requireNonNull(documents, "documents");
-        this.moves = Objects.requireNonNull(moves, "moves");
+        this.parts = Objects.requireNonNull(parts, "parts");
+        this.calls = calls;
     }
 
     @Override
     public Result<ExportReport> run() {
         try {
             log.info(
-                    "export starting project={} destination={} overwrite={}",
+                    "export starting project={} destination={} overwrite={} sideFiles={} consistencyPass={}",
                     request.projectId(),
                     request.destination(),
-                    request.overwrite());
+                    request.overwrite(),
+                    chosenSideFiles(),
+                    request.consistencyPass());
             final Result<ExportReport> result = write();
             logOutcome(result);
             return result;
@@ -85,107 +76,128 @@ final class ExportJobImpl implements ExportJob {
             return Result.err(errorOf(found));
         }
         final Project project = Objects.requireNonNull(found.data(), "project");
-        final Document opened = openProjects.get(project.id());
-        final String targetLanguage = project.brief().targetLanguage();
-        final AppError refusal = refusal(opened, targetLanguage);
+        final Document opened = parts.openProjects().get(project.id());
+        final AppError refusal = refusal(opened, project.brief().targetLanguage());
         if (refusal != null) {
             return Result.err(refusal);
         }
-        return writeStored(project, Objects.requireNonNull(opened, "open book"), targetLanguage);
+        final Document book = Objects.requireNonNull(opened, "open book");
+        return consistencyPass(project.id()).flatMap(pass -> writeStored(project, book, pass.orElse(null)));
     }
 
     private @Nullable AppError refusal(@Nullable final Document opened, @Nullable final String targetLanguage) {
+        log.debug("export check=target-language value={}", targetLanguage);
         if (targetLanguage == null) {
             return refused("target-language", "No target language is chosen", "Choose the target language first.");
         }
+        log.debug("export check=book-open outcome={}", opened == null ? "closed" : "open");
         if (opened == null) {
             return refused(
                     "book-open", "This project is not open", "No open project has this id; open the book again.");
         }
-        final boolean occupied = Files.exists(request.destination(), LinkOption.NOFOLLOW_LINKS);
-        log.debug("export check=destination-free outcome={}", occupied ? "occupied" : "free");
-        if (occupied && !request.overwrite()) {
+        if (isRefusedOccupied(request.destination())) {
             return refused(
                     "destination-exists",
                     "This destination already exists",
                     "Allow replacing it, or choose another file.");
         }
+        return occupiedSideFile(opened);
+    }
+
+    private @Nullable AppError occupiedSideFile(final Document opened) {
+        for (final SideFile sideFile : chosenSideFiles()) {
+            final Path path = sideFile.pathBeside(request.destination(), opened.format());
+            if (isRefusedOccupied(path)) {
+                return refused(
+                        "side-file-exists",
+                        "A side file already exists",
+                        path.getFileName() + " already exists. Allow replacing it, or choose another file.");
+            }
+        }
         return null;
     }
 
+    private boolean isRefusedOccupied(final Path path) {
+        final boolean occupied = Files.exists(path, LinkOption.NOFOLLOW_LINKS);
+        log.debug(
+                "export check=path-free path={} outcome={} overwrite={}",
+                path,
+                occupied ? "occupied" : "free",
+                request.overwrite());
+        return occupied && !request.overwrite();
+    }
+
+    private Result<Optional<ConsistencyReport>> consistencyPass(final String projectId) {
+        log.debug(
+                "export step=consistency-pass project={} requested={} withModel={}",
+                projectId,
+                request.consistencyPass(),
+                calls != null);
+        if (!request.consistencyPass()) {
+            return Result.ok(Optional.empty());
+        }
+        return parts.consistencyPass().run(projectId, calls).map(Optional::of);
+    }
+
     private Result<ExportReport> writeStored(
-            final Project project, final Document opened, @Nullable final String targetLanguage) {
+            final Project project, final Document opened, @Nullable final ConsistencyReport pass) {
         final Set<SegmentKind> kept = project.brief().alsoTranslate().keptKinds();
-        final Result<List<SegmentRecord>> records = segments.all(project.id());
+        log.debug("export step=read-records project={} keptKinds={}", project.id(), kept);
+        final Result<List<SegmentRecord>> records = parts.segments().all(project.id());
         if (records.isErr()) {
             return Result.err(errorOf(records));
         }
-        final Result<SegmentCounts> counts = segments.countsByStatus(project.id(), kept);
-        if (counts.isErr()) {
-            return Result.err(errorOf(counts));
-        }
         final List<SegmentRecord> stored = Objects.requireNonNull(records.data(), "records");
+        final EffectiveTargets targets = EffectiveTargets.apply(opened, stored, kept);
+        final ExportCounts counts = ExportCounts.of(stored, kept, opened);
+        return glossaryEntries(project.id())
+                .map(glossary -> SideFiles.build(
+                        request.sideFiles(),
+                        new SideFiles.Sources(request.destination(), targets, stored, kept, counts, pass, glossary)))
+                .flatMap(sideFiles -> publish(project, targets, counts, sideFiles));
+    }
+
+    private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {
+        final boolean needed = request.sideFiles().contains(SideFile.GLOSSARY_CSV);
+        log.debug("export step=read-glossary project={} needed={}", projectId, needed);
+        return needed ? parts.glossary().all(projectId) : Result.ok(List.of());
+    }
+
+    private Result<ExportReport> publish(
+            final Project project,
+            final EffectiveTargets targets,
+            final ExportCounts counts,
+            final List<SideFiles.Content> sideFiles) {
         final ExportPlan plan = new ExportPlan(
                 project.source(),
                 request.destination(),
-                Objects.requireNonNull(targetLanguage, "target language"),
+                project.brief().sourceLanguage(),
+                Objects.requireNonNull(project.brief().targetLanguage(), "target language"),
                 request.overwrite());
-        final Result<Path> written = new BookExporter(documents, moves)
-                .export(plan, DecidedBook.apply(opened, stored, kept), cancelled::get);
+        final Result<Path> written =
+                new BookExporter(parts.documents(), parts.moves()).export(plan, targets, cancelled::get);
         if (written.isErr()) {
             return Result.err(errorOf(written));
         }
-        return Result.ok(report(
-                Objects.requireNonNull(written.data(), "written path"),
-                Objects.requireNonNull(counts.data(), "counts"),
-                stored,
-                kept));
-    }
-
-    /**
-     * {@code written} counts every segment that carries a target; a flagged record with none is a pending segment
-     * written as source, so it moves from {@code flagged} to {@code pending}.
-     */
-    private static ExportReport report(
-            final Path destination,
-            final SegmentCounts counts,
-            final List<SegmentRecord> stored,
-            final Set<SegmentKind> kept) {
-        final int flaggedWritten = (int) stored.stream()
-                .filter(record -> record.status() == SegmentStatus.FLAGGED)
-                .filter(record -> !record.isKeptAsSource(kept))
-                .filter(record -> record.machineTarget() != null)
-                .count();
-        final int flaggedWithoutTarget = counts.flagged() - flaggedWritten;
-        log.debug(
-                "export records applied pending={} accepted={} revised={} flaggedWritten={} flaggedWithoutTarget={}"
-                        + " sourceKept={}",
-                counts.pending(),
-                counts.accepted(),
-                counts.revised(),
-                flaggedWritten,
-                flaggedWithoutTarget,
-                counts.sourceKept());
-        return new ExportReport(
-                destination,
-                counts.accepted() + counts.revised() + flaggedWritten,
-                counts.pending() + flaggedWithoutTarget,
-                counts.sourceKept(),
-                flaggedWritten,
-                0,
-                0,
-                List.of(),
-                0);
+        final Path destination = Objects.requireNonNull(written.data(), "written path");
+        return SideFiles.write(sideFiles, request.overwrite(), parts.moves())
+                .map(paths -> counts.report(destination, paths));
     }
 
     private Result<Project> findProject() {
-        final Result<Optional<Project>> found = projects.find(request.projectId());
+        final Result<Optional<Project>> found = parts.projects().find(request.projectId());
         if (found.isErr()) {
             return Result.err(errorOf(found));
         }
         return Objects.requireNonNull(found.data(), "found")
                 .map(Result::ok)
                 .orElseGet(() -> Result.err(unknownProject(request.projectId())));
+    }
+
+    private List<SideFile> chosenSideFiles() {
+        return Arrays.stream(SideFile.values())
+                .filter(request.sideFiles()::contains)
+                .toList();
     }
 
     // A failure is logged once, where its AppError was built; this is the lifecycle line of the export's end.
@@ -199,13 +211,18 @@ final class ExportJobImpl implements ExportJob {
         }
         final ExportReport report = Objects.requireNonNull(result.data(), "report");
         log.info(
-                "export finished project={} destination={} written={} pending={} sourceKept={} flaggedWritten={}",
+                "export finished project={} destination={} written={} pending={} sourceKept={} flaggedWritten={}"
+                        + " autoAccepted={} reviewed={} verifiedSegments={} sideFiles={}",
                 request.projectId(),
                 report.destination(),
                 report.written(),
                 report.pending(),
                 report.sourceKept(),
-                report.flaggedWritten());
+                report.flaggedWritten(),
+                report.autoAccepted(),
+                report.reviewed(),
+                report.verifiedSegments(),
+                report.sideFiles());
     }
 
     private static AppError refused(final String check, final String title, final String message) {

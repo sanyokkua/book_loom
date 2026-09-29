@@ -7,6 +7,7 @@ import static ua.bookloom.pipeline.export.BookExporterTestSupport.errorOf;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.onlyDecision;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.opened;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.snapshot;
+import static ua.bookloom.pipeline.export.BookExporterTestSupport.sourceOrder;
 import static ua.bookloom.pipeline.export.BookExporterTestSupport.zipEntry;
 
 import java.nio.file.Files;
@@ -55,7 +56,7 @@ class BookExporterValidationTest {
         final CountMismatchPort port = new CountMismatchPort(documents, temporary::equals);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
@@ -78,7 +79,7 @@ class BookExporterValidationTest {
         final TemporaryOpenFailurePort port = new TemporaryOpenFailurePort(documents, temporary::equals, reopenFailure);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.error()).isSameAs(reopenFailure);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
@@ -103,7 +104,7 @@ class BookExporterValidationTest {
                 new CloseFailurePort(reopenPort, error(ErrorCode.internal, null), error(ErrorCode.internal, null));
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.error()).isSameAs(reopenFailure);
         assertThat(port.closedDocuments()).hasSize(1);
@@ -121,7 +122,7 @@ class BookExporterValidationTest {
         final AppError openFailure = error(ErrorCode.validation, null);
 
         final Result<Path> result = new BookExporter(new OpenFailurePort(documents, openFailure))
-                .export(request(source, destination, true), decided, () -> false);
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(result.error()).isSameAs(openFailure);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
@@ -138,7 +139,7 @@ class BookExporterValidationTest {
         final RecordingDocumentPort port = new RecordingDocumentPort(documents);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(Files.readString(destination)).isEqualTo("OLD DESTINATION");
@@ -164,7 +165,7 @@ class BookExporterValidationTest {
         final RecordingDocumentPort port = new RecordingDocumentPort(documents);
 
         final Result<Path> result =
-                new BookExporter(port).export(request(source, destination, true), decided, () -> false);
+                new BookExporter(port).export(request(source, destination, true), sourceOrder(decided), () -> false);
 
         assertThat(errorOf(result).code()).isEqualTo(ErrorCode.internal);
         assertThat(errorOf(result).cause()).isNotNull();
@@ -187,11 +188,11 @@ class BookExporterValidationTest {
         final RecordingDocumentPort retryPort = new RecordingDocumentPort(documents);
 
         final Result<Path> cancelled = new BookExporter(firstPort)
-                .export(request(source, destination, true), decided, cancelAfterClosure(firstPort));
+                .export(request(source, destination, true), sourceOrder(decided), cancelAfterClosure(firstPort));
         assertCancelledAttempt(cancelled, destination, decided, firstPort);
 
-        final Result<Path> retried =
-                new BookExporter(retryPort).export(request(source, destination, true), decided, () -> false);
+        final Result<Path> retried = new BookExporter(retryPort)
+                .export(request(source, destination, true), sourceOrder(decided), () -> false);
         assertSuccessfulRetry(retried, destination, decided, firstPort, retryPort);
     }
 
@@ -258,6 +259,6 @@ class BookExporterValidationTest {
     }
 
     private static ExportPlan request(final Path source, final Path destination, final boolean overwrite) {
-        return new ExportPlan(source, destination, "uk", overwrite);
+        return new ExportPlan(source, destination, null, "uk", overwrite);
     }
 }

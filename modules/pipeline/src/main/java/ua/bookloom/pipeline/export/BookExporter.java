@@ -1,11 +1,7 @@
 package ua.bookloom.pipeline.export;
 
-import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,33 +42,35 @@ public final class BookExporter {
     }
 
     /**
-     * Writes the decided document beside the destination, re-opens and checks it, then publishes it.
+     * Writes the decided book beside the destination, re-opens it and checks its body segments against what was
+     * written into them, then publishes it.
      *
-     * @param plan where to read the source, where to publish and in which language
-     * @param decidedDocument the document whose segments carry the decisions to write
+     * @param plan where to read the source, where to publish and in which languages
+     * @param decided the book whose segments carry the decisions to write, with each written target's masked form
      * @param cancellationRequested read once, after the check and before the publication move
      * @return the published path, or a typed failure that leaves the destination and any temporary file untouched
      */
-    public Result<Path> export(
-            final ExportPlan plan, final Document decidedDocument, final BooleanSupplier cancellationRequested) {
+    Result<Path> export(
+            final ExportPlan plan, final EffectiveTargets decided, final BooleanSupplier cancellationRequested) {
         Objects.requireNonNull(plan, "plan");
-        Objects.requireNonNull(decidedDocument, "decidedDocument");
+        Objects.requireNonNull(decided, "decided");
         Objects.requireNonNull(cancellationRequested, "cancellationRequested");
         log.debug(
-                "Export requested from {} to {} in {} with overwrite {}",
+                "Export requested from {} to {} in {} from {} with overwrite {}",
                 plan.source(),
                 plan.destination(),
                 plan.targetLanguage(),
+                plan.sourceLanguage(),
                 plan.overwrite());
         try {
-            return beginExport(plan, decidedDocument, cancellationRequested);
+            return beginExport(plan, decided, cancellationRequested);
         } catch (Throwable cause) {
             return Result.err(unexpectedError("start export", cause));
         }
     }
 
     private Result<Path> beginExport(
-            final ExportPlan plan, final Document decidedDocument, final BooleanSupplier cancellationRequested) {
+            final ExportPlan plan, final EffectiveTargets decided, final BooleanSupplier cancellationRequested) {
         final Path temporary = temporaryPath(plan.destination());
         log.debug("Export temporary path is {}", temporary);
         final Result<Boolean> collision = hasTemporaryCollision(plan, temporary);
@@ -83,7 +81,7 @@ public final class BookExporter {
             log.warn("Refused export because temporary path {} aliases source or destination", temporary);
             return Result.err(collisionError());
         }
-        return new Attempt(plan, decidedDocument, cancellationRequested, temporary).run();
+        return new Attempt(plan, decided, cancellationRequested, temporary).run();
     }
 
     private Result<Boolean> hasTemporaryCollision(final ExportPlan plan, final Path temporary) {
@@ -117,18 +115,18 @@ public final class BookExporter {
     private final class Attempt {
 
         private final ExportPlan plan;
-        private final Document decidedDocument;
+        private final EffectiveTargets decided;
         private final BooleanSupplier cancellationRequested;
         private final Path temporary;
         private final List<Document> opened = new ArrayList<>();
 
         Attempt(
                 final ExportPlan plan,
-                final Document decidedDocument,
+                final EffectiveTargets decided,
                 final BooleanSupplier cancellationRequested,
                 final Path temporary) {
             this.plan = plan;
-            this.decidedDocument = decidedDocument;
+            this.decided = decided;
             this.cancellationRequested = cancellationRequested;
             this.temporary = temporary;
         }
@@ -157,21 +155,28 @@ public final class BookExporter {
         }
 
         private Result<Path> validateSourceAndWrite(final Document fresh) {
-            final boolean matches = fresh.contentHash().equals(decidedDocument.contentHash());
+            final boolean matches =
+                    fresh.contentHash().equals(decided.document().contentHash());
             log.debug("Export source hash match for document {} is {}", fresh.id(), matches);
             if (!matches) {
                 log.warn("Export source {} changed after translation began", plan.source());
                 return fail(sourceChangedError());
             }
-            final Document applied = applyDecisions(fresh, decidedDocument);
+            final Document applied = applyDecisions(fresh, decided.document());
             logDecisionCounts(applied);
-            log.debug("Writing translated document {} to {}", fresh.id(), temporary);
-            final Result<Path> written = documents.write(applied, temporary, plan.targetLanguage());
+            log.debug(
+                    "Writing translated document {} to {} sourceLanguage={} targetLanguage={}",
+                    fresh.id(),
+                    temporary,
+                    plan.sourceLanguage(),
+                    plan.targetLanguage());
+            final Result<Path> written =
+                    documents.write(applied, temporary, plan.sourceLanguage(), plan.targetLanguage());
             log.debug("Temporary export write result is {}", outcomeOf(written));
-            return written.isErr() ? fail(errorOf(written)) : reopenTemporary();
+            return written.isErr() ? fail(errorOf(written)) : reopenTemporary(applied);
         }
 
-        private Result<Path> reopenTemporary() {
+        private Result<Path> reopenTemporary(final Document applied) {
             log.debug("Opening written temporary book {}", temporary);
             final Result<Document> reopened = documents.open(temporary);
             if (reopened.isErr()) {
@@ -182,16 +187,13 @@ public final class BookExporter {
             }
             final Document verified = Objects.requireNonNull(reopened.data(), "reopened temporary book");
             opened.add(verified);
-            return validateCountAndPublish(verified);
+            return verifyAndPublish(applied, verified);
         }
 
-        private Result<Path> validateCountAndPublish(final Document verified) {
-            final int expected = segmentCount(decidedDocument);
-            final int observed = segmentCount(verified);
-            log.debug("Temporary export segment counts are expected {} and observed {}", expected, observed);
-            if (expected != observed) {
-                log.warn("Refused temporary export with {} segments; source snapshot has {}", observed, expected);
-                return fail(countMismatchError());
+        private Result<Path> verifyAndPublish(final Document applied, final Document verified) {
+            final Result<Integer> checked = SegmentVerification.verify(applied, verified, decided.maskedTargets());
+            if (checked.isErr()) {
+                return fail(errorOf(checked));
             }
             final Result<Boolean> closed = closeAll();
             if (closed.isErr()) {
@@ -207,28 +209,12 @@ public final class BookExporter {
         private Result<Path> publish() {
             log.debug("Publishing {} to {} with overwrite {}", temporary, plan.destination(), plan.overwrite());
             try {
-                if (plan.overwrite()) {
-                    moveWithOverwrite();
-                } else {
-                    moves.move(temporary, plan.destination());
-                }
+                Publication.move(moves, temporary, plan.destination(), plan.overwrite());
                 log.debug("Published validated export at {}", plan.destination());
                 log.debug("Temporary export {} removed by publication move", temporary);
                 return Result.ok(plan.destination());
             } catch (UncheckedIOException failure) {
                 return failAfterClose(moveError(Objects.requireNonNull(failure.getCause(), "move failure cause")));
-            }
-        }
-
-        private void moveWithOverwrite() {
-            try {
-                moves.move(temporary, plan.destination(), ATOMIC_MOVE, REPLACE_EXISTING);
-            } catch (UncheckedIOException failure) {
-                if (!(failure.getCause() instanceof AtomicMoveNotSupportedException)) {
-                    throw failure;
-                }
-                log.warn("Atomic move is unsupported for {}; falling back to replacement", plan.destination());
-                moves.move(temporary, plan.destination(), REPLACE_EXISTING);
             }
         }
 
@@ -300,12 +286,6 @@ public final class BookExporter {
         return decision == null ? fresh : fresh.withDecision(decision.status(), decision.targetInner());
     }
 
-    private static int segmentCount(final Document document) {
-        return document.units().stream()
-                .mapToInt(unit -> unit.segments().size())
-                .sum();
-    }
-
     private static void logDecisionCounts(final Document document) {
         final long accepted = countStatus(document, SegmentStatus.ACCEPTED);
         final long flagged = countStatus(document, SegmentStatus.FLAGGED);
@@ -347,13 +327,6 @@ public final class BookExporter {
                 ErrorCode.validation,
                 "The source book changed",
                 "The source file changed after translation began, so this export was stopped.");
-    }
-
-    private static AppError countMismatchError() {
-        return AppError.of(
-                ErrorCode.validation,
-                "The exported book failed validation",
-                "The written book did not contain the same number of translatable segments as the source.");
     }
 
     private static AppError cancelledError() {
