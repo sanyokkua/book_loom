@@ -2,6 +2,8 @@ package ua.bookloom.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+import java.util.Locale;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
@@ -9,9 +11,15 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.Throughput;
 
 /**
- * The real shell at and below its minimum window size (task 9.9): the window limit, and the navigation column and
+ * The real shell at and below its minimum window size the window limit, and the navigation column and
  * content area that scroll instead of clipping. Split from {@link AppShellViewTest} to keep both under the file-length
  * limit.
  */
@@ -35,6 +43,30 @@ class AppShellViewSizeTest extends ShellTestBase {
         assertThat(sceneBounds("nav-projects").getMinY()).isGreaterThanOrEqualTo(titleBar.getMaxY());
         final Node brand = scene.getRoot().lookup(".nav-brand");
         assertThat(brand.localToScene(brand.getLayoutBounds()).getMinY()).isGreaterThanOrEqualTo(titleBar.getMaxY());
+    }
+
+    // IF the run status could not shrink, THEN a long book name would push the theme toggle and About out of the
+    // title bar; the file name gives way first.
+    @Test
+    void titleBar_longestRunStatusUnderUkrainian_keepsThemeToggleAndAboutInside() {
+        useLocale(Locale.forLanguageTag("uk"));
+        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("a-very-long-book-title-".repeat(3).substring(0, 60) + ".epub");
+        mirror.publishProgress(ProgressFixtures.progress(7, 11, 78, 0, 22));
+        mirror.live().publishThroughput(new Throughput(null, false, Duration.ofMinutes(80), Duration.ofMinutes(62)));
+        mirror.publishRunState(RunState.PAUSED);
+        mirror.review()
+                .publishProviderError(AppError.of(ErrorCode.unreachable, "Unreachable", "Nothing is listening."));
+        onFx(() -> {});
+        WaitForAsyncUtils.waitForFxEvents();
+
+        final Bounds titleBar = sceneBounds("shell-title-bar");
+        assertThat(sceneBounds("shell-run-status").getMaxX())
+                .isLessThanOrEqualTo(sceneBounds("shell-theme-toggle").getMinX());
+        assertThat(sceneBounds("shell-theme-toggle").getMinX()).isGreaterThanOrEqualTo(titleBar.getMinX());
+        assertThat(sceneBounds("shell-about").getMaxX()).isLessThanOrEqualTo(titleBar.getMaxX());
+        assertThat(titleBar.getWidth()).isEqualTo(CONTENT_AT_MINIMUM_WIDTH);
     }
 
     // IF the navigation column were taller than a short window with no way to scroll it, THEN its lower entries

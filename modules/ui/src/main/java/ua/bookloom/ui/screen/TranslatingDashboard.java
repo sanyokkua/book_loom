@@ -1,7 +1,6 @@
 package ua.bookloom.ui.screen;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import javafx.application.Platform;
 import javafx.scene.Node;
@@ -10,6 +9,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.HBox;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LogEntry;
@@ -33,7 +33,6 @@ final class TranslatingDashboard {
     private static final String WARN = "banner-warn";
     private static final String ERR = "banner-err";
     private static final List<String> ROLE_CLASSES = List.of(INFO, OK, WARN, ERR);
-    private static final int SECONDS_PER_MINUTE = 60;
 
     /** How the banner is told: its glyph, its role class, its words and whether it offers the provider settings. */
     private record Look(String glyph, String roleClass, String title, String text, boolean offersSettings) {}
@@ -111,12 +110,8 @@ final class TranslatingDashboard {
                 plain.glyph(),
                 plain.roleClass(),
                 plain.title(),
-                messages.get(MessageKey.TRANSLATING_WAITING_FOR_MODEL, clock(waitingSeconds)),
+                messages.get(MessageKey.TRANSLATING_WAITING_FOR_MODEL, DurationText.clock(waitingSeconds)),
                 false);
-    }
-
-    private static String clock(final int seconds) {
-        return String.format(Locale.ROOT, "%d:%02d", seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE);
     }
 
     private Look lookOf(final RunNotice notice) {

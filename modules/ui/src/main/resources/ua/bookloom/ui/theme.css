@@ -189,6 +189,22 @@
     -fx-font-weight: bold;
 }
 
+.run-status {
+    -fx-spacing: 10px;
+    -fx-alignment: center-left;
+    -fx-padding: 0 6px 0 6px;
+}
+
+.run-status-text {
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12px;
+}
+
+.run-status-detail {
+    -fx-text-fill: -color-nav-fg-muted;
+    -fx-font-size: 12px;
+}
+
 .shell-title-button,
 .shell-title-button:selected {
     -fx-background-color: transparent;

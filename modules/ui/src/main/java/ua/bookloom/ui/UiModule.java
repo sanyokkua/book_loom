@@ -13,6 +13,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.dialog.ReplaceRunDialog;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
@@ -43,7 +44,7 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  *
  * <p>The theme and display-locale seams, the {@link Navigator}, the {@link GuiceControllerFactory}, the
  * {@link ModalHost}, the notification surfaces ({@link Toasts} over the toast stack, {@link ErrorPresenter} over the
- * modal error dialog), the {@link AppShellView}, the {@link StateMirror} with the {@link TranslationRunner} that
+ * modal error dialog), the {@link AppShellView} with the {@link RunStatusBar} it places in the title bar, the {@link StateMirror} with the {@link TranslationRunner} that
  * feeds it, the {@link SettingsViewModel} and the {@link ModelListing} it owns, the {@link CurrentProject} holding the
  * open book, the {@link ImportViewModel} that fills it, the {@link BookBriefViewModel} that holds the choices made about it, the
  * {@link ImportGuard} that asks before an import replaces a run, the {@link RunStarter} that builds a run on it and the {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
@@ -70,6 +71,11 @@ public final class UiModule extends AbstractModule {
         bind(ReplaceRunPrompt.class).to(ReplaceRunDialog.class);
     }
 
+    private void bindShell() {
+        bind(RunStatusBar.class);
+        bind(AppShellView.class);
+    }
+
     @Override
     protected void configure() {
         bind(ColorSchemeProvider.class).to(PlatformColorSchemeProvider.class);
@@ -81,7 +87,7 @@ public final class UiModule extends AbstractModule {
         bind(ToastStack.class);
         bind(Toasts.class).to(ToastStack.class);
         bindDialogs();
-        bind(AppShellView.class);
+        bindShell();
         bind(StateMirror.class);
         bind(TranslationRunner.class);
         bind(ModelListing.class);

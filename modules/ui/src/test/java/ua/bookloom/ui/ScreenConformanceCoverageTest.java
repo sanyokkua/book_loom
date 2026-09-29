@@ -20,6 +20,7 @@ class ScreenConformanceCoverageTest {
                         .distinct())
                 .contains(
                         "SHELL",
+                        "SHELL_RUN_STATUS",
                         "SETTINGS",
                         "IMPORT",
                         "BOOK_BRIEF",

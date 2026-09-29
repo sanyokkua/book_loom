@@ -43,6 +43,7 @@ final class ConformancePreparations {
             case LANGUAGE_MISMATCH -> showMismatch();
             case RUN_COMPLETED -> completeARun();
             case RUN_PROVIDER_FAILED -> pauseARunOnAProviderError();
+            case RUN_STARTED -> startARun();
             case BOOK_REPORTED -> reportAFinishedBook();
         }
     }
@@ -83,6 +84,11 @@ final class ConformancePreparations {
         final JobReport report = new JobReport(BookFormat.EPUB, JobState.COMPLETED, 1240, 1237, 3, List.of(), null);
         injector.getInstance(StateMirror.class).publishExportedFile(written);
         injector.getInstance(StateMirror.class).publishOutcome(RunState.COMPLETED, report, null);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void startARun() {
+        injector.getInstance(StateMirror.class).publishRunStarted("Frankenstein.epub");
         WaitForAsyncUtils.waitForFxEvents();
     }
 

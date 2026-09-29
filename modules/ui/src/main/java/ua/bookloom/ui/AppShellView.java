@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ToastStack;
@@ -68,6 +69,7 @@ public final class AppShellView {
     private final String version;
     private final ModalHost modalHost;
     private final ToastStack toasts;
+    private final RunStatusBar runStatus;
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
     private final StackPane contentHost = new StackPane();
@@ -82,6 +84,7 @@ public final class AppShellView {
      * @param themeController what the theme control reads and drives, and what {@link #createScene} attaches
      * @param modalHost the overlay the About dialog is shown in; shared so other dialogs use the same one
      * @param toasts the transient-message surface whose host the shell places above everything else
+     * @param runStatus the run's status and control, placed between the product name and the theme control
      * @param version the build version the About dialog reports
      */
     @Inject
@@ -91,12 +94,14 @@ public final class AppShellView {
             final ThemeController themeController,
             final ModalHost modalHost,
             final ToastStack toasts,
+            final RunStatusBar runStatus,
             final @BuildVersion String version) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.themeController = Objects.requireNonNull(themeController, "themeController");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
+        this.runStatus = Objects.requireNonNull(runStatus, "runStatus");
         this.version = Objects.requireNonNull(version, "version");
         this.navColumn = new NavColumn(messages, this::activate);
     }
@@ -187,7 +192,7 @@ public final class AppShellView {
         about.setId("shell-about");
         about.getStyleClass().add("shell-title-button");
         about.setOnAction(event -> openAbout());
-        final HBox bar = new HBox(product, spacer, themeToggle, about);
+        final HBox bar = new HBox(product, spacer, runStatus.view(), themeToggle, about);
         bar.setId("shell-title-bar");
         bar.getStyleClass().add("shell-title-bar");
         bar.setAlignment(Pos.CENTER_LEFT);

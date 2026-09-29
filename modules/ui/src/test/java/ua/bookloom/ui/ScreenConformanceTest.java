@@ -8,6 +8,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Labeled;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.Border;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Paint;
 import org.junit.jupiter.api.Named;
@@ -77,18 +80,18 @@ class ScreenConformanceTest extends ShellTestBase {
     }
 
     private static Paint paintOf(final Node node, final Kind kind) {
-        final Region region = (Region) node;
         return switch (kind) {
             case BACKGROUND -> {
-                assertThat(region.getBackground())
-                        .as("%s must paint a background", node)
-                        .isNotNull();
-                yield region.getBackground().getFills().get(0).getFill();
+                final Background background = ((Region) node).getBackground();
+                assertThat(background).as("%s must paint a background", node).isNotNull();
+                yield background.getFills().get(0).getFill();
             }
             case BORDER -> {
-                assertThat(region.getBorder()).as("%s must draw a border", node).isNotNull();
-                yield region.getBorder().getStrokes().get(0).getBottomStroke();
+                final Border border = ((Region) node).getBorder();
+                assertThat(border).as("%s must draw a border", node).isNotNull();
+                yield border.getStrokes().get(0).getBottomStroke();
             }
+            case TEXT -> ((Labeled) node).getTextFill();
         };
     }
 

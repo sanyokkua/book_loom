@@ -47,6 +47,32 @@ public enum MessageKey {
     SHELL_TAGLINE("shell.tagline"),
     /** Tail of a workflow breadcrumb; argument 0 is the step number and argument 1 the number of workflow steps. */
     SHELL_BREADCRUMB_STEP("shell.breadcrumb.step"),
+    /** State text while running; argument 0 is the whole-number percentage. */
+    SHELL_RUN_PROGRESS("shell.run.progress"),
+    /** State text while paused; argument 0 is the whole-number percentage. */
+    SHELL_RUN_PAUSED("shell.run.paused"),
+    /** State text once stopped; argument 0 is the whole-number percentage. */
+    SHELL_RUN_STOPPED("shell.run.stopped"),
+    /** State text while paused on an error, whatever its code. */
+    SHELL_RUN_PROVIDER_ERROR("shell.run.providerError"),
+    /** State text once every segment is decided. */
+    SHELL_RUN_FINISHED("shell.run.finished"),
+    /** State text once the run ended in failure; argument 0 is the whole-number percentage. */
+    SHELL_RUN_FAILED("shell.run.failed"),
+    /** Title-bar elapsed time; argument 0 is the formatted duration. */
+    SHELL_RUN_ELAPSED("shell.run.elapsed"),
+    /** Title-bar time left; argument 0 is the formatted duration. */
+    SHELL_RUN_LEFT("shell.run.left"),
+    /** Title-bar run control that pauses the run. */
+    SHELL_RUN_PAUSE("shell.run.pause"),
+    /** Title-bar run control that resumes the run. */
+    SHELL_RUN_RESUME("shell.run.resume"),
+    /** A duration of an hour or more; argument 0 is the hours, argument 1 the two-digit minutes, both Strings. */
+    DURATION_HM("duration.hm"),
+    /** A duration of a minute or more, under an hour; argument 0 is the minutes, a String. */
+    DURATION_M("duration.m"),
+    /** A duration under a minute; argument 0 is the seconds, a String. */
+    DURATION_S("duration.s"),
     /** Label of a button that dismisses a dialog. */
     COMMON_CLOSE("common.close"),
     /** Activity-log entry for an accepted segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */

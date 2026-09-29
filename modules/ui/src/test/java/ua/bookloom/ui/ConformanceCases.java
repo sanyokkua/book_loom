@@ -20,7 +20,8 @@ final class ConformanceCases {
     /** What a role is painted onto: the fill behind a part, or the line drawn around it. */
     enum Kind {
         BACKGROUND,
-        BORDER
+        BORDER,
+        TEXT
     }
 
     /** A part of a screen: where to find it, what its role paints, and what the role must resolve to. */
@@ -47,6 +48,7 @@ final class ConformanceCases {
         LANGUAGE_MISMATCH,
         RUN_COMPLETED,
         RUN_PROVIDER_FAILED,
+        RUN_STARTED,
         BOOK_REPORTED
     }
 
@@ -82,6 +84,13 @@ final class ConformanceCases {
                             new Part("#shell-nav", Kind.BACKGROUND, "nav-bg", "#3a4a52", "#20292e"),
                             new Part(".shell-toolbar", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part(".shell-toolbar", Kind.BORDER, "divider", "#eae4d8", "#3c4a51"))),
+            // The title bar's run status: its text is painted with the title bar's foreground role.
+            new Screen(
+                    "SHELL_RUN_STATUS",
+                    null,
+                    Preparation.RUN_STARTED,
+                    Overlay.NONE,
+                    List.of(new Part(".run-status-text", Kind.TEXT, "title-fg", "#dfe4e6", "#dfe4e6"))),
             new Screen(
                     "ABOUT_DIALOG",
                     null,
