@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -14,7 +15,7 @@ import ua.bookloom.api.pipeline.PauseReason;
 /** The interrupt Pause and Stop send to a model call is sent only inside one, and never left behind. */
 class JobControlModelCallTest {
 
-    private final JobControl control = new JobControl();
+    private final JobControl control = new JobControl(Set.of());
 
     @AfterEach
     void cleanUp() {

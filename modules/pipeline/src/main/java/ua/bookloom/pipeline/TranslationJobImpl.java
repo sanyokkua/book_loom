@@ -66,7 +66,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
     private final Clock clock;
-    private final JobControl control = new JobControl();
+    private final JobControl control;
     private final JobSubscribers subscribers = new JobSubscribers();
     private final String jobId = UUID.randomUUID().toString();
     private final RunRecorder recorder;
@@ -94,6 +94,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
         this.splitter = Objects.requireNonNull(splitter, "splitter");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.control = new JobControl(request.mode().pausePoints());
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock);
         this.pending = new PendingCommit(stores.checkpoint(), request.projectId());
         this.startedAt = clock.instant();
@@ -219,8 +220,12 @@ final class TranslationJobImpl implements TranslationJob {
                 new RunSteps(translator, qualityLoop, gate, calls, splitter, summary),
                 new RunSettings(request.projectId(), request.mode(), dial, frame, brief.names()),
                 stores,
-                new RunSinks(pending, recorder, this::emit, new JobBoundaries(control, pending, recorder, this::emit)),
+                new RunSinks(pending, recorder, this::emit, boundaries()),
                 SegmentLocators.of(run.document()));
+    }
+
+    private JobBoundaries boundaries() {
+        return new JobBoundaries(control, pending, recorder, this::emit, stores.segments(), request.projectId());
     }
 
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {

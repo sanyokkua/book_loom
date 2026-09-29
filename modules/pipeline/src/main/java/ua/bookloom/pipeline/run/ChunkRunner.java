@@ -306,9 +306,16 @@ public final class ChunkRunner {
             sinks.emit().accept(memory.announced(record.segmentId()));
         }
         return followUp.decided(current.work(), item, record, current.context().glossary(), decider.deferrals())
-                .or(() -> sinks.boundaries()
-                        .afterDecision(
-                                current.work().endsSection(item), current.work().isComplete(), progress));
+                .or(() -> sinks.boundaries().afterDecision(boundaryOf(current.work(), item, record), progress));
+    }
+
+    private static RunBoundaries.Decision boundaryOf(
+            final WorkList work, final WorkItem item, final SegmentRecord record) {
+        return new RunBoundaries.Decision(
+                record.segmentId(),
+                record.status() == SegmentStatus.FLAGGED,
+                work.endsSection(item),
+                work.isComplete());
     }
 
     private Optional<RunEnd> commitChunk(final int index, final int decided) {

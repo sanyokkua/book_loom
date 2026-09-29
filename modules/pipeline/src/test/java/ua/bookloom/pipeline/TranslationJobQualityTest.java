@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -136,13 +137,16 @@ class TranslationJobQualityTest {
                 .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO);
     }
 
+    // Run as the command line runs, with no pause point: Assisted and Manual would otherwise wait on the flag.
     @ParameterizedTest
     @EnumSource(ReviewMode.class)
     void run_pseudoModel_flagsTheEchoInEveryMode(final ReviewMode mode) {
         final CountingModel model = new CountingModel(new PseudoChatModel(new ObjectMapper()));
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
+        final TranslationJobImpl translation = job(project, model, mode);
+        translation.pauseAt(Set.of());
 
-        report(job(project, model, mode).run());
+        report(translation.run());
 
         assertThat(model.formats()).containsExactly(DRAFT, JUDGE, FIX, FIX);
         assertThat(stored(project, "Book.txt:0"))

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -10,6 +11,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
+import ua.bookloom.pipeline.run.PauseDecider;
 
 /** Owns the lock-protected controls that a caller may change from any thread. */
 @Slf4j
@@ -18,7 +20,7 @@ final class JobControl {
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition changed = lock.newCondition();
     private JobState state = JobState.NEW;
-    private Set<PausePoint> pausePoints = Set.of();
+    private Set<PausePoint> pausePoints;
     private boolean claimed;
     private boolean pauseRequested;
     private boolean cancelRequested;
@@ -31,6 +33,15 @@ final class JobControl {
     // Set only when this control interrupted the model-call thread, so exitModelCall clears that interrupt and
     // never one somebody else sent, such as an executor shutdown, which must still end the run.
     private boolean interruptSent;
+
+    /**
+     * Creates the control of one job.
+     *
+     * @param pausePoints the non-null points the job pauses at until {@link #pauseAt(Set)} replaces them
+     */
+    JobControl(final Set<PausePoint> pausePoints) {
+        this.pausePoints = Set.copyOf(Objects.requireNonNull(pausePoints, "pausePoints"));
+    }
 
     boolean claimRun() {
         final boolean claimedNow;
@@ -235,24 +246,31 @@ final class JobControl {
         }
     }
 
-    BoundaryDecision boundary(final boolean afterSegment, final boolean afterSection, final boolean betweenStages) {
+    /**
+     * Answers the boundary after a segment was decided: a stop if one was asked for, else the pause the decider
+     * chooses over the points in force now, so points replaced during a run or a pause apply from the next boundary.
+     */
+    BoundaryDecision boundary(final boolean flagged, final boolean endsSection, final boolean endsStage) {
         final BoundaryDecision decision;
         lock.lock();
         try {
             if (cancelRequested) {
                 decision = BoundaryDecision.cancel();
             } else {
-                final PauseReason reason = boundaryReason(afterSegment, afterSection, betweenStages);
-                decision = reason == null ? BoundaryDecision.continueRunning() : pause(reason);
+                final Optional<PauseReason> reason =
+                        PauseDecider.boundary(pausePoints, pauseRequested, flagged, endsSection, endsStage);
+                // A requested pause always wins the boundary it reaches, so reaching one consumes the request.
+                pauseRequested = false;
+                decision = reason.map(this::pause).orElseGet(BoundaryDecision::continueRunning);
             }
         } finally {
             lock.unlock();
         }
         log.debug(
-                "Checked boundary segment={} section={} stages={} decision={}",
-                afterSegment,
-                afterSection,
-                betweenStages,
+                "Checked boundary flagged={} section={} stage={} decision={}",
+                flagged,
+                endsSection,
+                endsStage,
                 decision);
         return decision;
     }
@@ -309,20 +327,6 @@ final class JobControl {
             lock.unlock();
         }
         log.debug("Finished translation job terminal={}", terminal);
-    }
-
-    private @Nullable PauseReason boundaryReason(
-            final boolean afterSegment, final boolean afterSection, final boolean betweenStages) {
-        if (pauseRequested) {
-            return consumeRequestedPause();
-        }
-        if (betweenStages && pausePoints.contains(PausePoint.BETWEEN_STAGES)) {
-            return PauseReason.BETWEEN_STAGES;
-        }
-        if (afterSection && pausePoints.contains(PausePoint.AFTER_SECTION)) {
-            return PauseReason.AFTER_SECTION;
-        }
-        return afterSegment && pausePoints.contains(PausePoint.AFTER_SEGMENT) ? PauseReason.AFTER_SEGMENT : null;
     }
 
     private PauseReason consumeRequestedPause() {

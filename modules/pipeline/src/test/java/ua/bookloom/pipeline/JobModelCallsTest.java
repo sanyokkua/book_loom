@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ class JobModelCallsTest {
 
     private static final ChatRequest REQUEST = new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "Hello.")));
 
-    private final JobControl control = new JobControl();
+    private final JobControl control = new JobControl(Set.of());
     private final ScriptedChatModel model = TranslationJobTestSupport.replies("ONE.", "TWO.");
     private final List<ModelCallStarted> announced = new CopyOnWriteArrayList<>();
     private final JobModelCalls calls =

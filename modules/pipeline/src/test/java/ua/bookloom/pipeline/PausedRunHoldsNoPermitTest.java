@@ -32,8 +32,12 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ReviewMode;
 
-/** A run paused by an error holds no model-call permit, so another caller of the same gate is never queued behind it. */
+/**
+ * A run paused by an error or for review holds no model-call permit, so another caller of the same gate is never
+ * queued behind it.
+ */
 class PausedRunHoldsNoPermitTest {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
@@ -73,6 +77,36 @@ class PausedRunHoldsNoPermitTest {
         translation.cancel();
 
         assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
+        assertThat(other.data()).isNotNull().extracting(ChatResponse::content).isEqualTo("HELLO");
+        assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
+    }
+
+    // A review pause waits for the person, who may retry the segment or test the provider meanwhile.
+    @Test
+    void run_pausedOnFlagged_holdsNoPermit() {
+        final WireMockProvider provider = new WireMockProvider(ProviderKind.OPENAI_COMPATIBLE);
+        started = provider;
+        provider.stubSequence(List.of(
+                provider.target(ChunkRunFixtures.ECHO1, Duration.ZERO),
+                provider.target(ChunkRunFixtures.ECHO1, Duration.ZERO),
+                provider.reply("HELLO", Duration.ZERO)));
+        final WireMockProvider.TwoModels models = provider.twoModels(REQUEST_TIMEOUT);
+        final TranslationJobImpl translation = job(
+                project(TestBooks.markdown(tempDir.resolve("Book.md"), ChunkRunFixtures.S1), brief("en", "uk")),
+                models.first(),
+                ReviewMode.ASSISTED);
+        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
+        translation.subscribe(event -> capturePaused(pauses, event));
+
+        final Future<Result<JobReport>> run = executor().submit(translation::run);
+        final Paused pause = awaitPaused(pauses);
+        final Result<ChatResponse> other = await(executor()
+                .submit(() -> models.second().chat(new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello"))))));
+        translation.cancel();
+
+        assertThat(pause)
+                .extracting(Paused::reason, Paused::segmentId)
+                .containsExactly(PauseReason.ON_FLAGGED, "Book.md:0");
         assertThat(other.data()).isNotNull().extracting(ChatResponse::content).isEqualTo("HELLO");
         assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
     }

@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.run;
 
+import java.util.Objects;
 import java.util.Optional;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.JobProgress;
@@ -12,14 +13,29 @@ import ua.bookloom.api.pipeline.JobProgress;
 public interface RunBoundaries {
 
     /**
+     * Where a decided segment leaves the run, which is all a pause point needs to know.
+     *
+     * @param segmentId the non-null id of the segment just decided, named by a pause about it
+     * @param flagged whether it was decided FLAGGED
+     * @param endsSection whether it was the last of its section to decide
+     * @param endsRun whether it was the last segment of the run
+     */
+    record Decision(String segmentId, boolean flagged, boolean endsSection, boolean endsRun) {
+
+        /** Rejects a decision that names no segment. */
+        public Decision {
+            Objects.requireNonNull(segmentId, "segmentId");
+        }
+    }
+
+    /**
      * Answers the boundary after a segment was decided and its decision recorded.
      *
-     * @param endsSection whether the segment was the last of its unit to decide
-     * @param endsRun whether it was the last segment of the run
+     * @param decision the non-null place the decision leaves the run
      * @param progress the non-null progress after the decision
      * @return empty to go on, or how the run ends
      */
-    Optional<RunEnd> afterDecision(boolean endsSection, boolean endsRun, JobProgress progress);
+    Optional<RunEnd> afterDecision(Decision decision, JobProgress progress);
 
     /**
      * Answers the boundary after a model call was refused or interrupted — by a pause, a stop, or neither.
