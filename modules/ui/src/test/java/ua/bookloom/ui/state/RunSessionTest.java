@@ -6,9 +6,15 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.JobStage;
@@ -168,5 +174,78 @@ class RunSessionTest extends RunnerTestBase {
 
         assertThat(pause).isTrue();
         assertThat(states).containsExactly(RunState.PAUSING);
+    }
+
+    private AppError providerErrorOf(final ErrorCode code) {
+        return AppError.of(code, "A title", "A message about " + code.name());
+    }
+
+    private @Nullable AppError publishedProviderError() {
+        WaitForAsyncUtils.waitForFxEvents();
+        return onFx(() -> mirror.review().providerError().get());
+    }
+
+    private @Nullable String publishedReviewSegment() {
+        WaitForAsyncUtils.waitForFxEvents();
+        return onFx(() -> mirror.review().reviewPauseSegment().get());
+    }
+
+    // IF a pause on an error were not shown as the provider-error state, THEN a hiccup would read as a crash; IF the
+    // resume left the error, THEN a healthy run would still show it.
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"unreachable", "validation"})
+    void paused_onError_publishesTheErrorWhateverItsCodeAndTheNextResumeClearsIt(final ErrorCode code) {
+        final RunSession session = session();
+        final AppError error = providerErrorOf(code);
+
+        session.onEvent(new Paused(PauseReason.ON_ERROR, error, progress(1, 0, 1)));
+
+        assertThat(publishedProviderError()).isEqualTo(error);
+        assertThat(states).containsExactly(RunState.PAUSED);
+
+        session.onEvent(new Resumed(progress(1, 0, 1)));
+
+        assertThat(publishedProviderError()).isNull();
+        assertThat(states).containsExactly(RunState.PAUSED, RunState.RUNNING);
+    }
+
+    // IF a review pause did not name its segment, THEN the panel could not open the segment the run waits on.
+    @ParameterizedTest
+    @CsvSource({"ON_FLAGGED, ch05.xhtml:11", "AFTER_SEGMENT, ch01.xhtml:2"})
+    void paused_forReview_publishesItsSegmentAndTheNextResumeClearsIt(final PauseReason reason, final String segment) {
+        final RunSession session = session();
+
+        session.onEvent(new Paused(reason, null, progress(1, 0, 1), segment));
+
+        assertThat(publishedReviewSegment()).isEqualTo(segment);
+        assertThat(publishedProviderError()).isNull();
+
+        session.onEvent(new Resumed(progress(1, 0, 1)));
+
+        assertThat(publishedReviewSegment()).isNull();
+    }
+
+    // IF an ordinary pause published a provider error, THEN a requested pause would show a failure banner.
+    @Test
+    void paused_requestedByThePerson_publishesNeitherAnErrorNorASegment() {
+        final RunSession session = session();
+
+        session.onEvent(new Paused(PauseReason.REQUESTED, null, progress(1, 0, 1)));
+
+        assertThat(publishedProviderError()).isNull();
+        assertThat(publishedReviewSegment()).isNull();
+    }
+
+    // IF a pause on an error arriving after a stop were shown, THEN a stopping run would read as a provider error.
+    @Test
+    void paused_onErrorAfterAStopRequest_publishesNoProviderError() {
+        final RunSession session = session();
+        session.requestStop();
+
+        session.onEvent(new Paused(PauseReason.ON_ERROR, providerErrorOf(ErrorCode.timeout), progress(1, 0, 1)));
+
+        assertThat(publishedProviderError()).isNull();
     }
 }

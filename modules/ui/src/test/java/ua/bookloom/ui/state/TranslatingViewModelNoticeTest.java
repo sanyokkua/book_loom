@@ -7,6 +7,7 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 
 /**
@@ -155,12 +156,12 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
 
     // IF the last run's notice stayed while a new run began, THEN a healthy run would still read as failed.
     @Test
-    void start_afterAProviderFailure_clearsTheNoticeAtOnce() throws Exception {
+    void start_afterAProviderFailure_clearsTheNoticeAtOnce() {
         openBookAndChooseModel();
+        models = ScriptedChatModelFactory.failing(failureOf(ErrorCode.unreachable));
         buildViewModel();
-        startAndPrepare();
-        job.finish(Result.err(failureOf(ErrorCode.unreachable)));
-        awaitState(RunState.FAILED);
+        press(viewModel::start);
+        queued.runAll();
         WaitForAsyncUtils.waitForFxEvents();
         assertThat(noticeKind()).isEqualTo(PROVIDER);
 
@@ -171,15 +172,16 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
 
     // IF the notice came back once the new run reported running, THEN a run in progress would show the old failure.
     @Test
-    void run_startsAfterAProviderFailure_showsNoNoticeOnceRunning() throws Exception {
+    void run_startsAfterARefusedRun_showsNoNoticeOnceRunning() throws Exception {
         final RecordingJob again = new RecordingJob();
         engine = ScriptedTranslationEngine.returning(job, again);
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
-        job.finish(Result.err(failureOf(ErrorCode.unreachable)));
+        job.finish(Result.err(failureOf(ErrorCode.validation)));
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
+        assertThat(noticeKind()).isEqualTo("Refused");
 
         press(viewModel::start);
         queued.runAll();

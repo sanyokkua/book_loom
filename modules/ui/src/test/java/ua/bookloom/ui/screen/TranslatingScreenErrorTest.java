@@ -16,9 +16,9 @@ import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.RunState;
 
 /**
- * The translating dashboard when something goes wrong, read from the real scene: a provider failure as the run's own
+ * The translating dashboard when something goes wrong, read from the real scene: a pause on a provider error as the run's own
  * state with a route to the settings, a refusal in place, the refused start that names its missing input, and no
- * dialog opened for any of them. A failure reaches the screen the way it does in the application, through the mirror.
+ * dialog for the pause or the refusal. A failure reaches the screen the way it does in the application, through the mirror.
  */
 class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
 
@@ -29,6 +29,12 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
 
     private void failRun(final AppError error) {
         mirror().publishOutcome(RunState.FAILED, null, error);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void pauseOnError(final AppError error) {
+        mirror().publishRunState(RunState.PAUSED);
+        mirror().review().publishProviderError(error);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -54,11 +60,11 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
 
     // IF the banner did not name the code, THEN a person could not tell a dead server from a wrong key.
     @Test
-    void banner_runFailsWithUnreachable_namesTheCodeAndCarriesTheMessageInTheErrorRole() {
+    void banner_runPausesOnUnreachable_namesTheCodeAndCarriesTheMessageInTheErrorRole() {
         showTranslating();
         publish(RunState.RUNNING);
 
-        failRun(UNREACHABLE);
+        pauseOnError(UNREACHABLE);
 
         assertThat(labelText("translating-banner-title")).containsIgnoringCase("unreachable");
         assertThat(labelText("translating-banner-text")).contains("Nothing is listening at http://localhost:11434.");
@@ -87,7 +93,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         showTranslating();
         publish(RunState.RUNNING);
 
-        failRun(AppError.of(code, "Provider failure", "The provider reported " + code.name() + "."));
+        pauseOnError(AppError.of(code, "Provider failure", "The provider reported " + code.name() + "."));
 
         assertThat(required("translating-banner").getStyleClass()).contains("banner-err");
         assertThat(labelText("translating-banner-title")).containsIgnoringCase(code.name());
@@ -102,7 +108,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         showTranslating();
         publish(RunState.RUNNING);
 
-        failRun(UNREACHABLE);
+        pauseOnError(UNREACHABLE);
 
         assertThat(isShown("translating-open-settings")).isTrue();
         assertThat(button("translating-open-settings").getText()).isEqualTo("Open provider settings");
@@ -113,7 +119,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
     void openSettings_pressed_makesTheSettingsScreenTheCurrentView() {
         showTranslating();
         publish(RunState.RUNNING);
-        failRun(UNREACHABLE);
+        pauseOnError(UNREACHABLE);
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
 
         onFx(() -> button("translating-open-settings").fire());
@@ -128,7 +134,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         publish(RunState.RUNNING);
         publishProgress(412, 3, 825);
 
-        failRun(UNREACHABLE);
+        pauseOnError(UNREACHABLE);
 
         assertThat(labelText("translating-count-accepted")).isEqualTo("412");
         assertThat(labelText("translating-count-flagged")).isEqualTo("3");
@@ -141,7 +147,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         showTranslating();
         publish(RunState.RUNNING);
 
-        failRun(UNREACHABLE);
+        pauseOnError(UNREACHABLE);
 
         assertNoDialogOrErrorToast();
     }
@@ -151,7 +157,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
     void banner_newRunBeginsAfterAProviderError_returnsToThePlainRunningBanner() {
         showTranslating();
         publish(RunState.RUNNING);
-        failRun(UNREACHABLE);
+        pauseOnError(UNREACHABLE);
 
         publish(RunState.RUNNING);
 
@@ -159,6 +165,20 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         assertThat(required("translating-banner").getStyleClass())
                 .contains("banner-info")
                 .doesNotContain("banner-err");
+        assertThat(isShown("translating-open-settings")).isFalse();
+    }
+
+    // IF a run that ended failed with a provider code still drew the provider-error banner, THEN a run that cannot be
+    // resumed would offer a Retry that has nothing to retry.
+    @Test
+    void dialog_runFailedWithAProviderCode_opensTheDialogAndShowsNoProviderBanner() {
+        showTranslating();
+        publish(RunState.RUNNING);
+
+        failRun(UNREACHABLE);
+
+        assertThat(optional("error-card")).isNotNull();
+        assertThat(required("translating-banner").getStyleClass()).doesNotContain("banner-err");
         assertThat(isShown("translating-open-settings")).isFalse();
     }
 

@@ -43,8 +43,8 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
 
     static final String MODEL = "gemma3:12b";
     static final Path BOOK = Path.of("Frankenstein.epub");
-    static final List<String> BUTTON_IDS = List.of(
-            "translating-start", "translating-new-run", "translating-pause", "translating-resume", "translating-stop");
+    static final List<String> BUTTON_IDS =
+            List.of("translating-start", "translating-pause", "translating-resume", "translating-stop");
 
     final RecordingJob job = new RecordingJob();
     final ScriptedChatModelFactory models = ScriptedChatModelFactory.ok();
@@ -117,7 +117,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
         return (ProgressBar) required("translating-progress");
     }
 
-    /** The ids of the five run controls that a person can see and press. */
+    /** The ids of the four run controls that a person can see and press. */
     List<String> enabledControls() {
         return BUTTON_IDS.stream()
                 .filter(this::isShown)
@@ -125,7 +125,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
                 .toList();
     }
 
-    /** The ids of the five run controls that a person can see but not press. */
+    /** The ids of the four run controls that a person can see but not press. */
     List<String> disabledControls() {
         return BUTTON_IDS.stream()
                 .filter(this::isShown)

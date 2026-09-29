@@ -55,6 +55,7 @@ public final class StateMirror {
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
     private final LiveSection live = new LiveSection();
+    private final ReviewSection review = new ReviewSection();
 
     /** Creates an idle, empty mirror. */
     public StateMirror() {
@@ -217,6 +218,15 @@ public final class StateMirror {
     }
 
     /**
+     * Why a paused run is waiting: the model error it paused on or the segment a review pause names.
+     *
+     * @return the section, whose properties are read on the FX thread
+     */
+    public ReviewSection review() {
+        return review;
+    }
+
+    /**
      * Resets every figure, the log, the failure, the report and the written file for a fresh run, names the book it
      * runs on, and shows it running.
      *
@@ -349,6 +359,7 @@ public final class StateMirror {
         exportedFile.set(null);
         waitingSeconds.set(NOT_WAITING);
         live.reset();
+        review.reset();
         runState.set(state);
     }
 

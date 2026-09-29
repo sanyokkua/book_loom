@@ -14,6 +14,7 @@ import javafx.beans.value.ChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -35,8 +36,9 @@ import ua.bookloom.ui.notify.Toasts;
  * published. Resuming a stopped run asks for a new job over the same project, which begins at its first pending
  * segment; resuming a paused one continues the same job.
  *
- * <p>A failed preparation and a run that returns a failure go through the same {@code route} method, so one code can
- * never reach two different surfaces depending on when it happened. A start is refused by naming the first missing
+ * <p>A failed preparation is routed by its code through {@link FailureSurface}; a run that ends on a failure is routed
+ * by its state (stopped, refused in place, or the blocking dialog), and a pause on a model error, whatever its code,
+ * is the provider-error state that Resume continues from. A start is refused by naming the first missing
  * input, book before model. The target language is not among them: the brief defaults it and accepts only the
  * supported languages, so it can never be blank when a start is pressed.
  */
@@ -53,11 +55,13 @@ public final class TranslatingViewModel {
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final ReadOnlyBooleanWrapper preparing = new ReadOnlyBooleanWrapper(false);
+    private final ReadOnlyBooleanWrapper pendingRemain = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
     private final ChangeListener<String> onModelText = (observed, was, now) -> onModelTextChanged();
     private final ChangeListener<@Nullable OpenedBook> onOpenedBook = (observed, was, now) -> onBookChanged(now);
+    private final ChangeListener<@Nullable AppError> onProviderError = (observed, was, now) -> onPausedOnError(now);
 
     /**
      * Registers the completion listener on the mirror and derives the first set of controls.
@@ -91,10 +95,12 @@ public final class TranslatingViewModel {
         this.errors = Objects.requireNonNull(errors, "errors");
         refreshControls();
         preparing.addListener((observed, was, now) -> refreshControls());
+        pendingRemain.addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
         current.book().addListener(onOpenedBook);
+        mirror.review().providerError().addListener(onProviderError);
         log.debug("translating view model ready");
     }
 
@@ -127,13 +133,22 @@ public final class TranslatingViewModel {
     }
 
     /**
+     * Whether the project still holds segments no run has decided, which a completed run needs to offer a start. It
+     * stays false until the dashboard reads the project's pending count.
+     *
+     * @return a read-only property; FX thread only
+     */
+    public ReadOnlyBooleanProperty pendingRemain() {
+        return pendingRemain.getReadOnlyProperty();
+    }
+
+    /**
      * Starts a run from the brief and the chosen model, if the state allows it. Returns at once; the run is prepared in
      * the background and appears through the mirror. A start with no book or no model starts nothing and publishes a
      * notice naming the first of them that is missing. FX thread only.
      */
     public void start() {
-        final Controls offered = controls.get();
-        if (!offered.start().isEnabled() && !offered.newRun().isEnabled()) {
+        if (!controls.get().start().isEnabled()) {
             log.debug(
                     "start refused: not offered in state {}, preparing {}",
                     mirror.runState().get(),
@@ -242,27 +257,40 @@ public final class TranslatingViewModel {
     }
 
     /**
-     * The one place a failure chooses its surface, for a failed preparation and a run that ends on an error alike. Only
-     * the code is logged, never the cause or the details.
+     * The surface of a failed preparation, chosen from its code. A preparation has no segment to flag and no review
+     * retry to warn about, so those two surfaces fall back to the blocking dialog. Only the code is logged, never the
+     * cause or the details.
      */
     private void route(final AppError error) {
         final FailureSurface surface = FailureSurface.of(error.code());
-        log.debug("failure code {} -> surface {}", error.code(), surface);
+        log.debug("preparation failure code {} -> surface {}", error.code(), surface);
         switch (surface) {
-            case PROVIDER_ERROR -> {
-                log.warn("provider error: code {}", error.code());
-                notice.set(new RunNotice.ProviderError(error));
-            }
+            case PROVIDER_ERROR -> notice.set(new RunNotice.ProviderError(error));
             case IN_PLACE -> notice.set(new RunNotice.Refused(error));
-            case DIALOG -> errors.present(error);
+            case DIALOG, FLAGGED_SEGMENT, WARNING_TOAST -> errors.present(error);
             case STOPPED -> log.debug("a stop is shown by the stopped state; nothing more to show");
             case SETTINGS_ONLY ->
-                log.warn("code {} belongs to the model list, not to a run; the run's own banner stands", error.code());
+                log.debug("code {} belongs to the model list, not to a run; the run's own banner stands", error.code());
         }
     }
 
     private void refreshControls() {
-        controls.set(Controls.of(mirror.runState().get(), preparing.get()));
+        final RunState state = mirror.runState().get();
+        final Controls next = Controls.of(state, preparing.get(), pendingRemain.get());
+        log.debug(
+                "controls for state {} preparing {} pending remain {}: {}",
+                state,
+                preparing.get(),
+                pendingRemain.get(),
+                next);
+        controls.set(next);
+    }
+
+    private void onPausedOnError(final @Nullable AppError error) {
+        if (error != null) {
+            log.debug("paused on error {}: showing the provider-error state", error.code());
+            notice.set(new RunNotice.ProviderError(error));
+        }
     }
 
     private void onRunStateChanged(final RunState now) {
@@ -274,13 +302,21 @@ public final class TranslatingViewModel {
         }
     }
 
+    // A run's own outcome is routed by its state: a refused start (validation) is shown in place, any other failure
+    // opens the blocking dialog. A cancellation never gets here, because it ends the run stopped.
     private void routeRunFailure() {
         final AppError failure = mirror.failure().get();
         if (failure == null) {
             log.warn("the run failed but no failure was published to route");
             return;
         }
-        route(failure);
+        if (failure.code() == ErrorCode.validation) {
+            log.debug("the run was refused with {}: shown in place", failure.code());
+            notice.set(new RunNotice.Refused(failure));
+        } else {
+            log.debug("the run failed with {}: opening the error dialog", failure.code());
+            errors.present(failure);
+        }
     }
 
     private void announceCompletion() {

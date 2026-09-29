@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
+import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.ReviewDesk;
@@ -286,8 +287,25 @@ final class RunSession implements JobListener {
         record(paused.progress());
         locked(() -> {
             runClock.paused(clock.instant());
-            settleLocked(feed.paused(paused), RunState.PAUSED, true);
+            if (settleLocked(feed.paused(paused), RunState.PAUSED, true)) {
+                publishPauseDetailsLocked(paused);
+            }
         });
+    }
+
+    // Every pause on an error is the provider-error state whatever its code, so a model that was unloaded and is
+    // reported as a validation failure reaches it too.
+    private void publishPauseDetailsLocked(final Paused paused) {
+        final AppError error = paused.error();
+        final String segmentId = paused.segmentId();
+        log.debug("paused for {} at segment {}", paused.reason(), segmentId);
+        if (paused.reason() == PauseReason.ON_ERROR && error != null) {
+            log.debug("pause on error {}: publishing the provider error", error.code());
+            mirror.review().publishProviderError(error);
+        } else if (segmentId != null
+                && (paused.reason() == PauseReason.ON_FLAGGED || paused.reason() == PauseReason.AFTER_SEGMENT)) {
+            mirror.review().publishReviewPauseSegment(segmentId);
+        }
     }
 
     private void onResumed(final Resumed resumed) {
@@ -295,6 +313,7 @@ final class RunSession implements JobListener {
         locked(() -> {
             runClock.resumed(clock.instant());
             settleLocked(feed.resumed(), RunState.RUNNING, false);
+            mirror.review().publishResumed();
         });
     }
 
@@ -307,17 +326,18 @@ final class RunSession implements JobListener {
         }
     }
 
-    private void settleLocked(final LogEntry entry, final RunState reached, final boolean nowPaused) {
+    private boolean settleLocked(final LogEntry entry, final RunState reached, final boolean nowPaused) {
         pending.add(entry);
         pauseReached = nowPaused;
         pauseRequested = false;
         waitNotice.clear("the engine paused or resumed");
         if (terminal || stopRequested) {
             log.debug("engine reported {} but the run is stopping or over; the state is left alone", reached);
-        } else {
-            log.debug("engine reported {}, publishing it", reached);
-            mirror.publishRunState(reached);
+            return false;
         }
+        log.debug("engine reported {}, publishing it", reached);
+        mirror.publishRunState(reached);
+        return true;
     }
 
     private void record(final JobProgress progress) {

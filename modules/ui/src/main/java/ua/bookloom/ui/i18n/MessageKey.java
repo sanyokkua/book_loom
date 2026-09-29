@@ -341,8 +341,6 @@ public enum MessageKey {
     TRANSLATING_TITLE("translating.title"),
     /** Button that starts the first run from the dashboard. */
     TRANSLATING_START("translating.start"),
-    /** Button that starts another run once one has ended; a stopped run is never resumed. */
-    TRANSLATING_NEW_RUN("translating.newRun"),
     /** Button that asks the run to pause at its next boundary. */
     TRANSLATING_PAUSE("translating.pause"),
     /** Button that asks a paused run to continue. */

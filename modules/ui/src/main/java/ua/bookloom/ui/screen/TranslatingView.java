@@ -66,8 +66,6 @@ final class TranslatingView {
 
     private static final Control START =
             new Control("start", "btn-primary", MessageKey.TRANSLATING_START, Controls::start);
-    private static final Control NEW_RUN =
-            new Control("new-run", "btn-primary", MessageKey.TRANSLATING_NEW_RUN, Controls::newRun);
     private static final Control PAUSE =
             new Control("pause", "btn-secondary", MessageKey.TRANSLATING_PAUSE, Controls::pause);
     private static final Control RESUME =
@@ -206,7 +204,6 @@ final class TranslatingView {
         final HBox row = new HBox(
                 ACTION_SPACING,
                 control(START, viewModel::start, controls, messages),
-                control(NEW_RUN, viewModel::start, controls, messages),
                 control(PAUSE, viewModel::pause, controls, messages),
                 control(RESUME, viewModel::resume, controls, messages),
                 control(STOP, viewModel::stop, controls, messages));

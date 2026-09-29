@@ -38,8 +38,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
             PAUSED    | translating-resume translating-stop  | -
             STOPPING  | -                                    | translating-stop
             STOPPED   | translating-resume                   | -
-            COMPLETED | translating-new-run                  | -
-            FAILED    | translating-new-run                  | -
+            COMPLETED | -                                    | -
+            FAILED    | translating-start                    | -
             """)
     void controls_eachRunState_showTheStatedButtonsAvailableOrNot(
             final RunState state, final String enabled, final String disabled) {
@@ -129,7 +129,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
     // IF a stop were dressed as a failure, THEN a choice the person made would be reported as if it had gone wrong.
     @Test
-    void stopped_cancelledRunReturns_isANeutralOutcomeWithResumeAndNoNewRunOrErrorSurface() {
+    void stopped_cancelledRunReturns_isANeutralOutcomeWithResumeAndNoStartOrErrorSurface() {
         showTranslating();
         publish(RunState.RUNNING);
 
@@ -140,7 +140,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(required("translating-banner").getStyleClass()).doesNotContain("banner-err", "banner-warn");
         assertThat(textOf("translating-banner")).doesNotContainIgnoringCase("error", "fail");
         assertThat(isShown("translating-resume")).isTrue();
-        assertThat(isShown("translating-new-run")).isFalse();
+        assertThat(isShown("translating-start")).isFalse();
         assertThat(optional("error-card")).isNull();
         assertThat(scene.getRoot().lookupAll(".toast-err")).isEmpty();
     }

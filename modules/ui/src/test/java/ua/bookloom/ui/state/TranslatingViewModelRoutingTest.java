@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
@@ -25,25 +26,45 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
 
     private static final String REFUSED = "Refused";
 
-    // Written out code by code from the notifications spec: the notice a code produces, and how many times the error
-    // presenter is handed it.
-    static Stream<Arguments> assignedSurfaces() {
+    // Written out code by code from the notifications spec: the notice a failed preparation produces for a code, and
+    // how many times the error presenter is handed it.
+    static Stream<Arguments> preparationSurfaces() {
         return Stream.of(
                 Arguments.of(ErrorCode.unreachable, PROVIDER, 0),
                 Arguments.of(ErrorCode.timeout, PROVIDER, 0),
                 Arguments.of(ErrorCode.auth, PROVIDER, 0),
                 Arguments.of(ErrorCode.rateLimited, PROVIDER, 0),
                 Arguments.of(ErrorCode.upstream, PROVIDER, 0),
-                Arguments.of(ErrorCode.emptyCompletion, PROVIDER, 0),
+                Arguments.of(ErrorCode.emptyCompletion, NONE, 1),
                 Arguments.of(ErrorCode.modelNotFound, PROVIDER, 0),
                 Arguments.of(ErrorCode.modelUnavailable, PROVIDER, 0),
                 Arguments.of(ErrorCode.missingCredential, PROVIDER, 0),
-                Arguments.of(ErrorCode.contextWindow, PROVIDER, 0),
+                Arguments.of(ErrorCode.contextWindow, NONE, 1),
                 Arguments.of(ErrorCode.cancelled, NONE, 0),
                 Arguments.of(ErrorCode.validation, REFUSED, 0),
                 Arguments.of(ErrorCode.internal, NONE, 1),
                 Arguments.of(ErrorCode.busy, NONE, 1),
                 Arguments.of(ErrorCode.discoveryFailed, NONE, 0));
+    }
+
+    // A run that ends failed is routed by its state, not by its code: validation is a refused start shown in place and
+    // every other code opens the blocking dialog. A cancelled result ends the run stopped instead, so it is not here.
+    static Stream<Arguments> failedRunSurfaces() {
+        return Stream.of(
+                Arguments.of(ErrorCode.unreachable, NONE, 1),
+                Arguments.of(ErrorCode.timeout, NONE, 1),
+                Arguments.of(ErrorCode.auth, NONE, 1),
+                Arguments.of(ErrorCode.rateLimited, NONE, 1),
+                Arguments.of(ErrorCode.upstream, NONE, 1),
+                Arguments.of(ErrorCode.emptyCompletion, NONE, 1),
+                Arguments.of(ErrorCode.modelNotFound, NONE, 1),
+                Arguments.of(ErrorCode.modelUnavailable, NONE, 1),
+                Arguments.of(ErrorCode.missingCredential, NONE, 1),
+                Arguments.of(ErrorCode.contextWindow, NONE, 1),
+                Arguments.of(ErrorCode.validation, REFUSED, 0),
+                Arguments.of(ErrorCode.internal, NONE, 1),
+                Arguments.of(ErrorCode.busy, NONE, 1),
+                Arguments.of(ErrorCode.discoveryFailed, NONE, 1));
     }
 
     // A cancelled result ends the run stopped, every other code ends it failed.
@@ -59,8 +80,8 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
     // IF any of the fifteen codes reached a surface other than its assigned one, or reached two, THEN one failure
     // would be told twice or told wrongly.
     @ParameterizedTest(name = "{0} -> notice {1}, {2} dialog(s)")
-    @MethodSource("assignedSurfaces")
-    void run_returnsAFailure_reachesExactlyTheSurfaceAssignedToItsCode(
+    @MethodSource("failedRunSurfaces")
+    void run_returnsAFailure_reachesExactlyTheSurfaceOfItsRunState(
             final ErrorCode code, final String expectedNotice, final int expectedDialogs) throws Exception {
         openBookAndChooseModel();
         buildViewModel();
@@ -75,9 +96,10 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         assertThat(outcomeToasts()).isEmpty();
     }
 
-    // IF the provider-error state dropped the failure it names, THEN the banner could not say which code ended the run.
+    // IF a failed run with a provider code drew the provider-error state, THEN a run that cannot be resumed would offer
+    // a Retry with nothing to retry.
     @Test
-    void run_unreachable_publishesAProviderErrorCarryingThatFailureAndOpensNoDialog() throws Exception {
+    void run_unreachable_opensTheDialogOnceAndShowsNoProviderBanner() throws Exception {
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
@@ -86,14 +108,14 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(notice()).contains(new RunNotice.ProviderError(failureOf(ErrorCode.unreachable)));
-        assertThat(errors.presented()).isEmpty();
+        assertThat(errors.presented()).containsExactly(failureOf(ErrorCode.unreachable));
+        assertThat(notice()).isEmpty();
         assertThat(outcomeToasts()).isEmpty();
     }
 
     // IF a failure reset the figures, THEN the person could not see how much was done before it fell over.
     @Test
-    void run_unreachableAfter412Accepted_keepsTheCountsAndOpensNoDialog() throws Exception {
+    void run_unreachableAfter412Accepted_keepsTheCounts() throws Exception {
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
@@ -106,7 +128,22 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(412);
-        assertThat(noticeKind()).isEqualTo(PROVIDER);
+    }
+
+    // IF a pause on an error did not show the provider-error state, THEN a provider hiccup would read as a crash.
+    @Test
+    void pause_onErrorPublished_showsTheProviderErrorNoticeWithoutADialog() {
+        buildViewModel();
+        final AppError error = failureOf(ErrorCode.validation);
+
+        onFx(() -> {
+            mirror.publishRunState(RunState.PAUSED);
+            mirror.review().publishProviderError(error);
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(notice()).contains(new RunNotice.ProviderError(error));
         assertThat(errors.presented()).isEmpty();
     }
 
@@ -144,21 +181,6 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         assertThat(notice()).isEmpty();
     }
 
-    // IF a busy failure were shown only as a banner, THEN the blocking failure the spec names would not block.
-    @Test
-    void run_busyFailure_isPresentedToTheErrorPresenterOnceAndShowsNoNotice() throws Exception {
-        openBookAndChooseModel();
-        buildViewModel();
-        startAndPrepare();
-
-        job.finish(Result.err(failureOf(ErrorCode.busy)));
-        awaitState(RunState.FAILED);
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(errors.presented()).containsExactly(failureOf(ErrorCode.busy));
-        assertThat(notice()).isEmpty();
-    }
-
     // IF a cancellation were dressed as an error, THEN a choice the person made would be reported as if it had gone
     // wrong; the spec shows it as the run's stopped state.
     @Test
@@ -193,21 +215,24 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         assertThat(outcomeToasts()).isEmpty();
     }
 
-    // IF a discovery failure opened a dialog or drew a provider error, THEN a note that belongs to the model list would
-    // be shown as the run's own failure.
-    @Test
-    void run_discoveryFailed_opensNoDialogAndRaisesNoToastOrNotice() throws Exception {
+    // IF a failed run carrying busy or discoveryFailed drew a warning toast or nothing, THEN a run that ended on an
+    // error would end silently.
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"busy", "discoveryFailed"})
+    void run_busyOrDiscoveryFailed_opensTheBlockingDialogAndRaisesNoWarningToast(final ErrorCode code)
+            throws Exception {
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
 
-        job.finish(Result.err(failureOf(ErrorCode.discoveryFailed)));
+        job.finish(Result.err(failureOf(code)));
         awaitState(RunState.FAILED);
         WaitForAsyncUtils.waitForFxEvents();
 
-        assertThat(errors.presented()).isEmpty();
+        assertThat(errors.presented()).containsExactly(failureOf(code));
         assertThat(outcomeToasts()).isEmpty();
-        assertThat(notice()).isEmpty();
     }
 
     // --- a run that could not be prepared ---------------------------------------------------------------------
@@ -215,7 +240,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
     // IF a failed preparation were routed differently from the same failure ending a run, THEN the same code would
     // appear in two places depending on when it happened.
     @ParameterizedTest(name = "{0} -> notice {1}, {2} dialog(s)")
-    @MethodSource("assignedSurfaces")
+    @MethodSource("preparationSurfaces")
     void start_modelCannotBeCreated_reachesExactlyTheSurfaceAssignedToItsCode(
             final ErrorCode code, final String expectedNotice, final int expectedDialogs) {
         openBookAndChooseModel();
@@ -237,7 +262,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
     // IF a job that cannot be created were sent to the dialog whatever its code, THEN a refused destination would be
     // shown like a crash.
     @ParameterizedTest(name = "{0} -> notice {1}, {2} dialog(s)")
-    @MethodSource("assignedSurfaces")
+    @MethodSource("preparationSurfaces")
     void start_jobCannotBeCreated_reachesExactlyTheSurfaceAssignedToItsCode(
             final ErrorCode code, final String expectedNotice, final int expectedDialogs) {
         openBookAndChooseModel();

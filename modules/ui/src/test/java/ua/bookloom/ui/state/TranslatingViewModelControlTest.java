@@ -1,9 +1,11 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
@@ -16,20 +18,15 @@ import ua.bookloom.ui.ScriptedTranslationEngine;
 /** The controls the dashboard offers in each state of a run, and what pressing them asks of the job. */
 class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
 
-    private static final Controls START_ONLY = new Controls(
-            ControlState.ENABLED, ControlState.HIDDEN, ControlState.HIDDEN, ControlState.HIDDEN, ControlState.HIDDEN);
-    private static final Controls PAUSE_AND_STOP = new Controls(
-            ControlState.HIDDEN, ControlState.HIDDEN, ControlState.ENABLED, ControlState.HIDDEN, ControlState.ENABLED);
-    private static final Controls PAUSING = new Controls(
-            ControlState.HIDDEN, ControlState.HIDDEN, ControlState.DISABLED, ControlState.HIDDEN, ControlState.ENABLED);
-    private static final Controls RESUME_AND_STOP = new Controls(
-            ControlState.HIDDEN, ControlState.HIDDEN, ControlState.HIDDEN, ControlState.ENABLED, ControlState.ENABLED);
-    private static final Controls STOPPING = new Controls(
-            ControlState.HIDDEN, ControlState.HIDDEN, ControlState.HIDDEN, ControlState.HIDDEN, ControlState.DISABLED);
-    private static final Controls RESUME_ONLY = new Controls(
-            ControlState.HIDDEN, ControlState.HIDDEN, ControlState.HIDDEN, ControlState.ENABLED, ControlState.HIDDEN);
-    private static final Controls NEW_RUN_ONLY = new Controls(
-            ControlState.HIDDEN, ControlState.ENABLED, ControlState.HIDDEN, ControlState.HIDDEN, ControlState.HIDDEN);
+    private static final ControlState HIDDEN = ControlState.HIDDEN;
+    private static final ControlState ENABLED = ControlState.ENABLED;
+    private static final ControlState DISABLED = ControlState.DISABLED;
+    private static final Controls START_ONLY = new Controls(ENABLED, HIDDEN, HIDDEN, HIDDEN);
+    private static final Controls PAUSE_AND_STOP = new Controls(HIDDEN, ENABLED, HIDDEN, ENABLED);
+    private static final Controls PAUSING = new Controls(HIDDEN, DISABLED, HIDDEN, ENABLED);
+    private static final Controls RESUME_AND_STOP = new Controls(HIDDEN, HIDDEN, ENABLED, ENABLED);
+    private static final Controls STOPPING = new Controls(HIDDEN, HIDDEN, HIDDEN, DISABLED);
+    private static final Controls RESUME_ONLY = new Controls(HIDDEN, HIDDEN, ENABLED, HIDDEN);
 
     // IF the view model offered anything but start before a run, THEN a person could pause a run that does not exist.
     @Test
@@ -219,7 +216,7 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
 
     // IF a failed run offered no way on, THEN the dashboard would be a dead end until the application restarted.
     @Test
-    void controls_runFails_offerANewRun() throws Exception {
+    void controls_runFails_offerStart() throws Exception {
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
@@ -227,7 +224,28 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
         job.finish(Result.err(error()));
 
         awaitState(RunState.FAILED);
-        assertThat(controls()).isEqualTo(NEW_RUN_ONLY);
+        assertThat(controls()).isEqualTo(START_ONLY);
+    }
+
+    // IF start stayed pressable while the run is paused on a provider error, THEN a second run would begin beside the
+    // one that can be resumed.
+    @Test
+    void start_pausedOnAProviderError_asksTheEngineForNoJob() throws Exception {
+        openBookAndChooseModel();
+        buildViewModel();
+        startAndPrepare();
+        final int requests = engine.requests().size();
+        onFx(() -> {
+            mirror.publishRunState(RunState.PAUSED);
+            mirror.review().publishProviderError(failureOf(ErrorCode.unreachable));
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        press(viewModel::start);
+
+        assertThat(controls().start()).isEqualTo(ControlState.HIDDEN);
+        assertThat(engine.requests()).hasSize(requests);
     }
 
     // IF a control pressed with no run reached the runner's job, THEN an old job could be paused by mistake.
