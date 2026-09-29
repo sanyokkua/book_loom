@@ -155,6 +155,17 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
     }
 
     @Test
+    void candidates_measuresSourceLengthInCodePoints() {
+        final TmRepository repository = tmRepository();
+        repository.put(new TmEntry("faces", "p1", "h1", "c1", "\uD83D\uDE00".repeat(3), "xyz"));
+
+        assertThat(repository.candidates("p1", 3, 3).data())
+                .extracting(TmEntry::id)
+                .containsExactly("faces");
+        assertThat(repository.candidates("p1", 6, 6).data()).isEmpty();
+    }
+
+    @Test
     void exactAndContext_unknownProject_answerEmpty() {
         final TmRepository repository = tmRepository();
 

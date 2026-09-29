@@ -40,12 +40,13 @@ public interface TmRepository {
     Result<Optional<TmEntry>> context(String projectId, String sourceHash, String contextKey);
 
     /**
-     * Finds entries whose masked source length lies within a character band, for fuzzy-match scoring by the
-     * pipeline.
+     * Finds entries whose {@link TmEntry#sourceInner()} length lies within a band, for fuzzy-match scoring by the
+     * pipeline. The band counts Unicode code points, not UTF-16 units, so a source of emoji or other astral
+     * characters is neither missed nor over-counted.
      *
      * @param projectId the non-null project id
-     * @param minChars the inclusive lower bound on source length
-     * @param maxChars the inclusive upper bound on source length
+     * @param minChars the inclusive lower bound on source length, in code points
+     * @param maxChars the inclusive upper bound on source length, in code points
      * @return the candidate entries; never null, empty when none lie in the band
      */
     Result<List<TmEntry>> candidates(String projectId, int minChars, int maxChars);

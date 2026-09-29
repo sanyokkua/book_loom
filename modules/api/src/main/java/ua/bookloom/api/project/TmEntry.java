@@ -10,7 +10,8 @@ import java.util.Objects;
  * @param projectId the owning project's id
  * @param sourceHash the SHA-256 hash over the pre-mask source text
  * @param contextKey the key identifying the context this entry was translated under
- * @param sourceInner the masked source text
+ * @param sourceInner the display text of the source — placeholder tokens removed, whitespace normalized — which is
+ *     the form the fuzzy comparison and the code-point length band of {@code TmRepository.candidates} run on
  * @param targetInner the masked target text
  */
 public record TmEntry(

@@ -70,7 +70,8 @@ public final class InMemoryTmRepository implements TmRepository {
         try {
             return Result.ok(store.tm(projectId).values().stream()
                     .filter(entry -> {
-                        final int length = entry.sourceInner().length();
+                        final int length = entry.sourceInner()
+                                .codePointCount(0, entry.sourceInner().length());
                         return length >= minChars && length <= maxChars;
                     })
                     .toList());
