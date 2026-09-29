@@ -31,8 +31,8 @@ import ua.bookloom.pipeline.revision.ConsistencyReport;
  * {@link BookExporter}, so the file holds the best text every segment has today, then the chosen side files beside it.
  * An occupied path, or a side file that would land on the source or the book, is refused before anything slow; the
  * consistency pass, when asked, runs before the records are read. A cancel is honoured at each step — before the pass,
- * inside its model calls, before the book is written and before each side file — so a late cancel leaves nothing
- * behind. The export never reads or changes a run's control state: it is the only writer, allowed at any time.
+ * inside its model calls, before the book is written and before each side file — so a cancel never leaves a partial
+ * file, and its message says how far the export got. The export never reads or changes a run's control state: it is the only writer, allowed at any time.
  */
 @Slf4j
 final class ExportJobImpl implements ExportJob {
@@ -59,7 +59,7 @@ final class ExportJobImpl implements ExportJob {
                     chosenSideFiles(),
                     request.consistencyPass());
             final Result<ExportReport> result =
-                    isCancelledBefore("start") ? Result.err(BookExporter.cancelledError()) : write();
+                    isCancelledBefore("start") ? Result.err(BookExporter.cancelledBeforeWriting()) : write();
             logOutcome(result);
             return result;
         } catch (Throwable cause) {
@@ -86,7 +86,7 @@ final class ExportJobImpl implements ExportJob {
         }
         final Document book = Objects.requireNonNull(opened, "open book");
         if (isCancelledBefore("consistency-pass")) {
-            return Result.err(BookExporter.cancelledError());
+            return Result.err(BookExporter.cancelledBeforeWriting());
         }
         return consistencyPass(project.id()).flatMap(pass -> writeStored(project, book, pass.orElse(null)));
     }
@@ -175,7 +175,7 @@ final class ExportJobImpl implements ExportJob {
             return null;
         }
         return (kind, segmentId, chat) -> isCancelledBefore("model-call")
-                ? Result.err(BookExporter.cancelledError())
+                ? Result.err(BookExporter.cancelledBeforeWriting())
                 : model.call(kind, segmentId, chat);
     }
 
@@ -221,7 +221,7 @@ final class ExportJobImpl implements ExportJob {
                 Objects.requireNonNull(project.brief().targetLanguage(), "target language"),
                 request.overwrite());
         if (isCancelledBefore("write")) {
-            return Result.err(BookExporter.cancelledError());
+            return Result.err(BookExporter.cancelledBeforeWriting());
         }
         final Result<Path> written =
                 new BookExporter(parts.documents(), parts.moves()).export(plan, targets, cancelled::get);

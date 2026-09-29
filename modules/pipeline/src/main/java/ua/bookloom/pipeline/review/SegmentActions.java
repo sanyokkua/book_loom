@@ -32,7 +32,8 @@ import ua.bookloom.pipeline.project.OpenProjects;
 
 /**
  * The person's actions on one stored segment, each checked against the status machine before it writes: a refused
- * action changes nothing and answers {@code validation}. Every write goes through
+ * action changes nothing and answers {@code validation}. Saving an edit or reverting withdraws a backward-revision
+ * proposal waiting on the segment, since it was built on the wording those actions replace. Every write goes through
  * {@link SegmentRepository#update}, which replaces that one record and applies the change to the record as it is
  * then stored, so a run deciding other segments meanwhile is never overwritten. Retry is not here: it calls the model.
  */
@@ -173,12 +174,13 @@ public final class SegmentActions {
             case GateResult.Restored restored -> {
                 log.debug("saveEdit: gate outcome=Restored segment={}", record.segmentId());
                 yield write(
-                        SAVE_EDIT,
-                        record,
-                        current -> current.withStatus(SegmentStatus.REVISED)
-                                .withUserTarget(restored.restored(), restored.maskedForm())
-                                .withPath(SegmentPath.USER)
-                                .withReviewed(true));
+                                SAVE_EDIT,
+                                record,
+                                current -> current.withStatus(SegmentStatus.REVISED)
+                                        .withUserTarget(restored.restored(), restored.maskedForm())
+                                        .withPath(SegmentPath.USER)
+                                        .withReviewed(true))
+                        .flatMap(this::withoutProposal);
             }
             case GateResult.GateFailed failed -> {
                 log.debug("saveEdit: gate outcome=GateFailed segment={}", record.segmentId());
@@ -202,12 +204,19 @@ public final class SegmentActions {
         // The path the machine target came by is not kept once an edit replaces it; the repair rounds tell the two
         // apart.
         return write(
-                REVERT,
-                record,
-                current -> current.withStatus(SegmentStatus.ACCEPTED)
-                        .withUserTarget(null, null)
-                        .withPath(current.repairRounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT)
-                        .withReviewed(true));
+                        REVERT,
+                        record,
+                        current -> current.withStatus(SegmentStatus.ACCEPTED)
+                                .withUserTarget(null, null)
+                                .withPath(current.repairRounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT)
+                                .withReviewed(true))
+                .flatMap(this::withoutProposal);
+    }
+
+    // A proposal waiting on the segment was built on the wording just replaced, so the panel must not offer it.
+    private Result<SegmentRecord> withoutProposal(final SegmentRecord after) {
+        return Proposals.withdraw(deferrals, after.projectId(), after.segmentId())
+                .map(withdrawn -> after);
     }
 
     private Result<String> skipped(final SegmentRecord record) {

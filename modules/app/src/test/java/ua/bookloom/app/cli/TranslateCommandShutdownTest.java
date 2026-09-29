@@ -58,8 +58,7 @@ class TranslateCommandShutdownTest {
         exports.awaitShutdownReturned();
 
         assertThat(exit).isEqualTo(1);
-        assertThat(console.toString(StandardCharsets.UTF_8))
-                .contains("Export cancelled: The translated book was checked but not published");
+        assertThat(console.toString(StandardCharsets.UTF_8)).contains("Export cancelled: Nothing was written.");
         assertThat(tempDir.resolve("Book.uk.md")).doesNotExist();
         assertThat(names()).containsExactlyInAnyOrder("Book.md", "data", "test-logs");
     }

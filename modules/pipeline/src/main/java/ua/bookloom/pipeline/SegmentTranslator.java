@@ -2,7 +2,6 @@ package ua.bookloom.pipeline;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -13,14 +12,12 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.PieceRedraft;
-import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -132,15 +129,29 @@ public final class SegmentTranslator {
                 step == DraftStep.PLACEHOLDER_REPAIR);
     }
 
+    /** The run's draft of one segment, in pieces when it is alone above the budget: no note, the draft's temperature. */
+    public Result<DraftOutcome> translateSplit(
+            final Segment segment,
+            final DraftContext context,
+            final ProtectedMask mask,
+            final SentenceSplitter splitter,
+            final int budgetTokens) {
+        return translateSplit(segment, context, mask, splitter, budgetTokens, "", false);
+    }
+
     /**
      * Drafts a segment, in sentence-aligned pieces when the text it is shown is alone above the budget. The pieces are
-     * joined and gated once as that one segment, because the translation goes back into the node it came from.
+     * joined and gated once as that one segment, because the translation goes back into the node it came from. A
+     * review retry passes the person's note and its temperature choice, so every piece's draft carries them as the
+     * whole segment's draft would.
      *
      * @param segment the non-null segment to draft
      * @param context the non-null context each piece is shown
      * @param mask the non-null spans hidden in the segment; the pieces are cut from its text
      * @param splitter the non-null sentence splitter of the source language
      * @param budgetTokens the chunk budget a piece must fit
+     * @param extraInstruction the non-null note shown under {@code [Extra instruction]}; empty for none
+     * @param lowerTemperature whether each draft call asks for its lower temperature
      * @return the draft's outcome, or the error a call answered, which the run routes
      */
     public Result<DraftOutcome> translateSplit(
@@ -148,44 +159,59 @@ public final class SegmentTranslator {
             final DraftContext context,
             final ProtectedMask mask,
             final SentenceSplitter splitter,
-            final int budgetTokens) {
+            final int budgetTokens,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(mask, "mask");
         Objects.requireNonNull(splitter, "splitter");
+        Objects.requireNonNull(extraInstruction, "extraInstruction");
         final String shown = mask.maskedText();
         final int estimate = TokenEstimator.estimate(shown, promptBuilder.sourceLanguage());
         if (estimate <= budgetTokens) {
             log.debug(
                     "Segment id={} estimate={} within budget={}, drafted whole", segment.id(), estimate, budgetTokens);
-            return translate(segment, context, mask);
+            return translate(segment, context, mask, extraInstruction, lowerTemperature);
         }
+        final DraftAttempt whole = DraftAttempt.of(segment, context, mask, extraInstruction, lowerTemperature);
         return switch (OversizedSplit.plan(segment, shown, promptBuilder.sourceLanguage(), budgetTokens, splitter)) {
-            case OversizedSplit.Pieces plan -> translatePieces(segment, context, mask, plan.pieces());
-            case OversizedSplit.Unsplittable none -> {
-                log.warn(
-                        "Oversized segment {} cannot be split estimate={} budget={}; drafting it whole without"
-                                + " preceding targets or memory hits",
-                        segment.id(),
-                        estimate,
-                        budgetTokens);
-                yield translate(
-                        segment,
-                        new DraftContext(List.of(), context.summary(), context.glossaryLines(), List.of()),
-                        mask);
-            }
+            case OversizedSplit.Pieces plan -> translatePieces(whole, plan.pieces());
+            case OversizedSplit.Unsplittable none -> unsplittable(whole, mask, estimate, budgetTokens);
         };
     }
 
+    // A segment whose one sentence is alone above the budget cannot be cut, so it is drafted whole, without preceding
+    // targets or memory hits to leave it room, keeping the note and temperature the draft was asked with.
+    private Result<DraftOutcome> unsplittable(
+            final DraftAttempt attempt, final ProtectedMask mask, final int estimate, final int budgetTokens) {
+        final Segment segment = attempt.segment();
+        final DraftContext context = attempt.context();
+        log.warn(
+                "Oversized segment {} cannot be split estimate={} budget={}; drafting it whole without"
+                        + " preceding targets or memory hits",
+                segment.id(),
+                estimate,
+                budgetTokens);
+        return translate(
+                segment,
+                new DraftContext(List.of(), context.summary(), context.glossaryLines(), List.of()),
+                mask,
+                attempt.extraInstruction(),
+                attempt.lowerTemperature());
+    }
+
     /** Drafts each piece with the segment's own context, joins the replies in order and gates them once. */
-    private Result<DraftOutcome> translatePieces(
-            final Segment segment, final DraftContext context, final ProtectedMask mask, final List<String> pieces) {
+    private Result<DraftOutcome> translatePieces(final DraftAttempt attempt, final List<String> pieces) {
+        final Segment segment = attempt.segment();
+        final DraftContext context = attempt.context();
         log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
-        final PieceRedraft redraft =
-                (findings, redraftCalls) -> redraftPieces(segment, context, pieces, findings, redraftCalls);
-        final DraftAttempt whole = DraftAttempt.of(segment, context, mask).redraftedBy(redraft);
-        final Result<PieceDrafter.Piece> drafted =
-                new PieceDrafter(this, replyParser, calls, "").draftAll(segment, context, pieces);
+        final PieceRedraft redraft = (findings, redraftCalls) ->
+                PieceDrafter.redraft(this, replyParser, segment, context, pieces, findings, redraftCalls);
+        final DraftAttempt whole = attempt.redraftedBy(redraft);
+        final Result<PieceDrafter.Piece> drafted = new PieceDrafter(
+                        this, replyParser, calls, attempt.extraInstruction(), attempt.lowerTemperature())
+                .draftAll(segment, context, pieces);
         if (drafted.isErr()) {
             return decideModelError(whole, Objects.requireNonNull(drafted.error()));
         }
@@ -194,37 +220,6 @@ public final class SegmentTranslator {
                 DraftOutcomes.flaggedAtOnce(whole, unusable, FinishReason.STOP.name(), "[]");
             case PieceDrafter.Text(final String joined) -> restore(whole, joined, true);
         };
-    }
-
-    // The findings' notes, one line each, are what each piece is told to fix; the joined result is handed back as a
-    // rewrite of the whole segment, which the round gates and evaluates once like any other.
-    private Result<RepairReply> redraftPieces(
-            final Segment segment,
-            final DraftContext context,
-            final List<String> pieces,
-            final List<QaFinding> findings,
-            final ModelCalls redraftCalls) {
-        final String instruction = findings.stream().map(QaFinding::note).collect(Collectors.joining("\n"));
-        log.debug("Redrafting segment id={} pieces={} findings={}", segment.id(), pieces.size(), findings.size());
-        if (log.isTraceEnabled()) {
-            log.trace("Extra instruction segmentId={} instruction={}", segment.id(), instruction);
-        }
-        final Result<PieceDrafter.Piece> drafted =
-                new PieceDrafter(this, replyParser, redraftCalls, instruction).draftAll(segment, context, pieces);
-        if (drafted.isErr()) {
-            return repairReplyOf(Objects.requireNonNull(drafted.error()));
-        }
-        return Result.ok(
-                switch (Objects.requireNonNull(drafted.data())) {
-                    case PieceDrafter.Unusable(final AppError unusable) -> new RepairReply.FlagNow(unusable);
-                    case PieceDrafter.Text(final String joined) -> new RepairReply.Rewritten(joined);
-                });
-    }
-
-    private static Result<RepairReply> repairReplyOf(final AppError error) {
-        return PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE
-                ? Result.ok(new RepairReply.FlagNow(error))
-                : Result.err(error);
     }
 
     ChatRequest requestFor(

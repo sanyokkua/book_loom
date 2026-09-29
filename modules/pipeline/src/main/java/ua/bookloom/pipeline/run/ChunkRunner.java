@@ -20,7 +20,6 @@ import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.chunk.TokenBudget;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -28,7 +27,6 @@ import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
-import ua.bookloom.pipeline.prompt.CallFrame;
 
 /**
  * Takes each unit's pending segments through chunks, in document order (design D4a). With the judge on, a chunk's
@@ -47,9 +45,6 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 @Slf4j
 public final class ChunkRunner {
 
-    // The style sheet is English prose, as every prompt is.
-    private static final String PROMPT_LANGUAGE = "en";
-
     private final RunSteps steps;
     private final RunSettings settings;
     private final RunStores stores;
@@ -59,7 +54,6 @@ public final class ChunkRunner {
     private final RoutedCalls calls;
     private final DecisionFollowUp followUp;
     private final SegmentEvents events;
-    private final int fixedHeadroom;
 
     /**
      * Creates the runner of one run.
@@ -85,9 +79,6 @@ public final class ChunkRunner {
         this.calls = new RoutedCalls(sinks.boundaries());
         this.followUp = new DecisionFollowUp(settings.projectId(), steps.summary(), stores, sinks, calls);
         this.events = new SegmentEvents(sinks.emit(), locators);
-        final CallFrame frame = settings.frame();
-        this.fixedHeadroom = TokenEstimator.estimate(frame.styleSheet().text(), PROMPT_LANGUAGE)
-                + TokenBudget.fullChunkAllowance(frame.sourceLanguage(), frame.targetLanguage());
     }
 
     /**
@@ -124,7 +115,8 @@ public final class ChunkRunner {
         if (glossary.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), "error")));
         }
-        final int headroom = headroomOf(segments, Objects.requireNonNull(glossary.data(), "glossary"));
+        final int headroom = ChunkBudget.headroom(
+                settings.frame(), segments, Objects.requireNonNull(glossary.data(), "glossary"), followUp.summary());
         final int budget = TokenBudget.chunkTokens(headroom);
         final int cap = settings.dial().chunkCap(settings.mode());
         final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);
@@ -152,13 +144,6 @@ public final class ChunkRunner {
             offset += size;
         }
         return Optional.empty();
-    }
-
-    private int headroomOf(final List<Segment> segments, final List<GlossaryEntry> glossary) {
-        final String summary = followUp.summary();
-        return fixedHeadroom
-                + ChunkContext.termsEstimate(segments, glossary)
-                + (summary == null ? 0 : TokenEstimator.estimate(summary, null));
     }
 
     private Optional<RunEnd> runChunk(

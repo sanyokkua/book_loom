@@ -10,9 +10,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
@@ -34,11 +36,14 @@ import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
  * A cancel is honoured as soon as the export can see it: before it starts, no model call and no write happen; raised
- * while the consistency pass waits on the model, the book is never written. Nothing is left behind either way.
+ * while the consistency pass waits on the model, the book is never written. Nothing is left behind either way, and the
+ * message says how far the export got: nothing written, the book checked but not published, or the book published
+ * without its side files.
  */
 class ExportJobCancelTest {
 
     private static final String REPLY = "{\"target\":\"Сем пішла.\"}";
+    private static final String NOTHING_WRITTEN = "Nothing was written.";
 
     @TempDir
     private Path tempDir;
@@ -68,7 +73,9 @@ class ExportJobCancelTest {
 
         final Result<ExportReport> result = job.run();
 
-        assertThat(error(result).code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(error(result))
+                .extracting(AppError::code, AppError::title, AppError::message)
+                .containsExactly(ErrorCode.cancelled, "Export cancelled", NOTHING_WRITTEN);
         assertThat(model.requests()).isEmpty();
         assertThat(port.writtenDocuments()).isEmpty();
         assertThat(destination).doesNotExist();
@@ -89,11 +96,71 @@ class ExportJobCancelTest {
 
         final Result<ExportReport> result = job.run();
 
-        assertThat(error(result).code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(error(result))
+                .extracting(AppError::code, AppError::title, AppError::message)
+                .containsExactly(ErrorCode.cancelled, "Export cancelled", NOTHING_WRITTEN);
         assertThat(port.writtenDocuments()).isEmpty();
         assertThat(destination).doesNotExist();
         assertThat(tempDir.resolve("Book.uk.report.md")).doesNotExist();
         assertThat(hiddenFiles(tempDir)).isEmpty();
+    }
+
+    // A cancel raised once the book is written and checked, before it is moved into place, says exactly that.
+    @Test
+    void run_cancelRaisedAfterTheBookWasChecked_saysCheckedButNotPublished() {
+        final AtomicReference<ExportJob> running = new AtomicReference<>();
+        final RecordingDocumentPort cancelling = new RecordingDocumentPort(fixture.documents()) {
+            @Override
+            public Result<Path> write(
+                    final Document document,
+                    final Path target,
+                    @Nullable final String sourceLanguage,
+                    final String targetLanguage) {
+                Objects.requireNonNull(running.get(), "job").cancel();
+                return super.write(document, target, sourceLanguage, targetLanguage);
+            }
+        };
+        final ExportJob job = ok(fixture.serviceOver(cancelling).newExport(withoutPass(), null));
+        running.set(job);
+
+        final Result<ExportReport> result = job.run();
+
+        assertThat(error(result))
+                .extracting(AppError::code, AppError::message)
+                .containsExactly(
+                        ErrorCode.cancelled,
+                        "The translated book was checked but not published because the export was cancelled.");
+        assertThat(cancelling.writtenDocuments()).hasSize(1);
+        assertThat(destination).doesNotExist();
+        assertThat(hiddenFiles(tempDir)).isEmpty();
+    }
+
+    // A cancel raised as the book is moved into place leaves the book there and names the side files it stopped.
+    @Test
+    void run_cancelRaisedAsTheBookIsPublished_keepsTheBookAndSaysTheSideFilesWereNotWritten() {
+        final AtomicReference<ExportJob> running = new AtomicReference<>();
+        final ExportMoveOperation cancellingMove = (source, target, options) -> {
+            Objects.requireNonNull(running.get(), "job").cancel();
+            return ExportMoveOperation.nio().move(source, target, options);
+        };
+        final ExportJob job = ok(fixture.serviceOver(port).newExportWith(withoutPass(), null, cancellingMove));
+        running.set(job);
+
+        final Result<ExportReport> result = job.run();
+
+        assertThat(error(result))
+                .extracting(AppError::code, AppError::message)
+                .containsExactly(
+                        ErrorCode.cancelled,
+                        "The translated book was written, but the export was cancelled before all its side files were"
+                                + " written.");
+        assertThat(destination).exists();
+        assertThat(tempDir.resolve("Book.uk.report.md")).doesNotExist();
+        assertThat(hiddenFiles(tempDir)).isEmpty();
+    }
+
+    private ExportRequest withoutPass() {
+        return new ExportRequest(projectId, destination, false, Set.of(SideFile.QUALITY_REPORT), false);
     }
 
     private ExportRequest request() {

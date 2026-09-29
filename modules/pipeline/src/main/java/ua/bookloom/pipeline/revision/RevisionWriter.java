@@ -2,7 +2,7 @@ package ua.bookloom.pipeline.revision;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
@@ -10,14 +10,16 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
 
 /**
- * Stores one revised target: a machine-owned segment takes it as its machine target in both forms and becomes
- * REVISED; a segment the person edited keeps their text and gets it as a proposal in both forms instead, so an
- * accepted proposal can be edited again with its placeholders. The record is read again right before the write,
- * because the person may have edited it while a revision call waited on a pause.
+ * Stores one revised target: a machine-owned segment takes it as its machine target in both forms; a segment the
+ * person edited keeps their text and gets it as a proposal in both forms instead, so an accepted proposal can be edited
+ * again with its placeholders. The segment is checked and written in one step against the record the revision was
+ * built from: if the person reverted, retried or edited it meanwhile — a revision call may wait through a whole pause —
+ * the answer was written for text that is gone, so nothing is stored and the person's action stands.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -28,52 +30,131 @@ final class RevisionWriter {
 
     /** How a revised target was stored. */
     enum Stored {
-        /** The machine target was replaced and the segment is REVISED. */
+        /** The machine target was replaced; the segment is REVISED, or still FLAGGED when a finding remains unfixed. */
         MACHINE_TARGET,
 
         /** The person's edit was kept and the target waits as a proposal. */
-        PROPOSAL
+        PROPOSAL,
+
+        /** The segment changed after the revision was built, so the answer was discarded and nothing was stored. */
+        STALE
+    }
+
+    /**
+     * What a revision changes, and so which findings recorded against a FLAGGED segment it can be said to fix: a name
+     * swap must never hide a real problem, so a FLAGGED segment becomes REVISED only when every finding it carries is
+     * one of these.
+     */
+    enum Change {
+        /**
+         * A renamed locked term swept in. It fixes a {@code glossary} finding: a finding does not name its term, so
+         * every glossary finding on the segment is taken to be about the swapped name.
+         */
+        NAME_SWAP(true),
+
+        /** A re-render for a character's now-known gender. Agreement is never a recorded finding, so it fixes none. */
+        GENDER(false);
+
+        private static final String GLOSSARY_KIND = "glossary";
+
+        private final boolean fixesGlossaryFindings;
+
+        Change(final boolean fixesGlossaryFindings) {
+            this.fixesGlossaryFindings = fixesGlossaryFindings;
+        }
+
+        /** Whether this change fixes every one of {@code findings}; a segment flagged with none has nothing fixed. */
+        boolean canFixAll(final List<QaFinding> findings) {
+            return fixesGlossaryFindings
+                    && !findings.isEmpty()
+                    && findings.stream().allMatch(finding -> GLOSSARY_KIND.equals(finding.kind()));
+        }
     }
 
     /**
      * Stores {@code revised} for its segment and resolves the deferrals it answers.
      *
-     * @param projectId the project id
-     * @param segmentId the segment the target is for
+     * @param base the segment as it was read when the revision was built; the write happens only if it still reads so
      * @param revised the new target, restored through the document gate
      * @param answered the open deferrals the new target answers, the first of which carries a proposal; not empty
-     * @return how the target was stored, or the storage error
+     * @param change what the revision changed, which decides the status of a FLAGGED segment
+     * @return how the target was stored — {@link Stored#STALE} when the segment changed meanwhile, with every
+     *     deferral left open — or the storage error
      */
     Result<Stored> store(
-            final String projectId,
-            final String segmentId,
+            final SegmentRecord base,
             final GateResult.Restored revised,
-            final List<Deferral> answered) {
-        final Result<Optional<SegmentRecord>> found = segments.find(projectId, segmentId);
-        if (found.isErr()) {
-            return Result.err(Objects.requireNonNull(found.error(), "error"));
-        }
-        final boolean edited = Objects.requireNonNull(found.data(), "found")
-                .map(record -> record.userTarget() != null)
-                .orElse(false);
-        log.debug("Storing a revised target segmentId={} edited={} answers={}", segmentId, edited, answered.size());
-        return edited ? propose(revised, answered) : replace(projectId, segmentId, revised, answered);
-    }
-
-    private Result<Stored> replace(
-            final String projectId,
-            final String segmentId,
-            final GateResult.Restored revised,
-            final List<Deferral> answered) {
+            final List<Deferral> answered,
+            final Change change) {
+        final AtomicReference<Stored> how = new AtomicReference<>(Stored.STALE);
         final Result<SegmentRecord> updated = segments.update(
-                projectId,
-                segmentId,
-                current -> current.withMachineTarget(revised.restored(), revised.maskedForm())
-                        .withStatus(SegmentStatus.REVISED));
+                base.projectId(), base.segmentId(), current -> written(base, current, revised, change, how));
         if (updated.isErr()) {
             return Result.err(Objects.requireNonNull(updated.error(), "error"));
         }
-        return resolveAll(answered).map(done -> Stored.MACHINE_TARGET);
+        final SegmentRecord after = Objects.requireNonNull(updated.data(), "updated");
+        final Stored stored = Objects.requireNonNull(how.get(), "how");
+        log.debug(
+                "Storing a revised target segmentId={} change={} stored={} answers={}",
+                base.segmentId(),
+                change,
+                stored,
+                answered.size());
+        return switch (stored) {
+            case STALE -> discarded(base);
+            case PROPOSAL -> propose(revised, answered);
+            case MACHINE_TARGET -> {
+                logStatus(base, after, change);
+                yield resolveAll(answered).map(done -> Stored.MACHINE_TARGET);
+            }
+        };
+    }
+
+    // Runs inside the repository's one-record update, so the check and the write see the same record.
+    private static SegmentRecord written(
+            final SegmentRecord base,
+            final SegmentRecord current,
+            final GateResult.Restored revised,
+            final Change change,
+            final AtomicReference<Stored> how) {
+        if (!readsAs(base, current)) {
+            return current;
+        }
+        if (current.userTarget() != null) {
+            how.set(Stored.PROPOSAL);
+            return current;
+        }
+        how.set(Stored.MACHINE_TARGET);
+        final boolean keepsFlag = current.status() == SegmentStatus.FLAGGED && !change.canFixAll(current.findings());
+        return current.withMachineTarget(revised.restored(), revised.maskedForm())
+                .withStatus(keepsFlag ? SegmentStatus.FLAGGED : SegmentStatus.REVISED);
+    }
+
+    private static boolean readsAs(final SegmentRecord base, final SegmentRecord current) {
+        return base.status() == current.status()
+                && Objects.equals(base.machineTarget(), current.machineTarget())
+                && Objects.equals(base.maskedMachineTarget(), current.maskedMachineTarget())
+                && Objects.equals(base.userTarget(), current.userTarget())
+                && Objects.equals(base.maskedUserTarget(), current.maskedUserTarget());
+    }
+
+    private static Result<Stored> discarded(final SegmentRecord base) {
+        log.debug(
+                "Revised answer discarded segmentId={}: the segment changed after the revision was built from it",
+                base.segmentId());
+        return Result.ok(Stored.STALE);
+    }
+
+    private static void logStatus(final SegmentRecord base, final SegmentRecord after, final Change change) {
+        if (base.status() == SegmentStatus.FLAGGED) {
+            log.debug(
+                    "Flagged segment revised segmentId={} change={} findings={} fixed={} status={}",
+                    base.segmentId(),
+                    change,
+                    after.findings().stream().map(QaFinding::kind).toList(),
+                    change.canFixAll(after.findings()),
+                    after.status());
+        }
     }
 
     // The carrier is resolved and added again with the proposal, since an open deferral is never changed in place.

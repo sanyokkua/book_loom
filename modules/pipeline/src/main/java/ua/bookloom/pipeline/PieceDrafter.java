@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -10,18 +11,21 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
  * Drafts one piece of an oversized segment: one call, the draft step's one structural repair, and a check that the
  * reply holds exactly the piece's own tokens with one placeholder repair. Whole-segment unmasking and the decision
  * stay with {@link SegmentTranslator}, because the pieces only make sense joined. One drafter drafts every piece
- * under the same extra instruction, through the same seam.
+ * under the same extra instruction and temperature choice, through the same seam.
  */
 @Slf4j
 final class PieceDrafter {
@@ -42,16 +46,54 @@ final class PieceDrafter {
     private final DraftReplyParser replyParser;
     private final ModelCalls calls;
     private final String extraInstruction;
+    private final boolean lowerTemperature;
 
     PieceDrafter(
             final SegmentTranslator owner,
             final DraftReplyParser replyParser,
             final ModelCalls calls,
-            final String extraInstruction) {
+            final String extraInstruction,
+            final boolean lowerTemperature) {
         this.owner = Objects.requireNonNull(owner, "owner");
         this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.extraInstruction = Objects.requireNonNull(extraInstruction, "extraInstruction");
+        this.lowerTemperature = lowerTemperature;
+    }
+
+    /**
+     * Drafts every piece again, each told to fix the findings — their notes, one line each — and hands the joined
+     * result back as a rewrite of the whole segment, which the repair round gates and evaluates once like any other.
+     *
+     * @return the rewrite, a flag-now reply when a piece's answer is unusable or its error flags at once, or the error
+     *     a call answered that the run routes
+     */
+    static Result<RepairReply> redraft(
+            final SegmentTranslator owner,
+            final DraftReplyParser replyParser,
+            final Segment segment,
+            final DraftContext context,
+            final List<String> pieces,
+            final List<QaFinding> findings,
+            final ModelCalls calls) {
+        final String instruction = findings.stream().map(QaFinding::note).collect(Collectors.joining("\n"));
+        log.debug("Redrafting segment id={} pieces={} findings={}", segment.id(), pieces.size(), findings.size());
+        if (log.isTraceEnabled()) {
+            log.trace("Extra instruction segmentId={} instruction={}", segment.id(), instruction);
+        }
+        final Result<Piece> drafted =
+                new PieceDrafter(owner, replyParser, calls, instruction, false).draftAll(segment, context, pieces);
+        if (drafted.isErr()) {
+            final AppError error = Objects.requireNonNull(drafted.error());
+            return PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE
+                    ? Result.ok(new RepairReply.FlagNow(error))
+                    : Result.err(error);
+        }
+        return Result.ok(
+                switch (Objects.requireNonNull(drafted.data())) {
+                    case Unusable(final AppError unusable) -> new RepairReply.FlagNow(unusable);
+                    case Text(final String joined) -> new RepairReply.Rewritten(joined);
+                });
     }
 
     /**
@@ -62,10 +104,11 @@ final class PieceDrafter {
      */
     Result<Piece> draftAll(final Segment segment, final DraftContext context, final List<String> pieces) {
         log.debug(
-                "Drafting pieces segmentId={} pieces={} hasExtraInstruction={}",
+                "Drafting pieces segmentId={} pieces={} hasExtraInstruction={} lowerTemperature={}",
                 segment.id(),
                 pieces.size(),
-                !extraInstruction.isEmpty());
+                !extraInstruction.isEmpty(),
+                lowerTemperature);
         final List<String> replies = new ArrayList<>();
         for (final String piece : pieces) {
             final Result<Piece> drafted = draft(pieceOf(segment, piece), context);
@@ -188,8 +231,8 @@ final class PieceDrafter {
             final DraftStep step,
             final String rejected,
             final String diagnostic) {
-        final var request =
-                owner.requestFor(DraftAttempt.ofPiece(piece, context, extraInstruction), step, rejected, diagnostic);
+        final var request = owner.requestFor(
+                DraftAttempt.ofPiece(piece, context, extraInstruction, lowerTemperature), step, rejected, diagnostic);
         return owner.callModel(step, piece, request, calls);
     }
 

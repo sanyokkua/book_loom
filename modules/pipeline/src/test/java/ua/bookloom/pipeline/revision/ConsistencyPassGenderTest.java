@@ -27,8 +27,11 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.judge.JudgeDeferral;
+import ua.bookloom.pipeline.review.ReviewFixtures;
 
 /**
  * The consistency pass's revision calls over a real opened EPUB: a character whose gender became known is re-rendered
@@ -68,6 +71,25 @@ class ConsistencyPassGenderTest {
         assertThat(record.machineTarget()).isEqualTo(DOOR_REVISED_PLAIN);
         assertThat(record.status()).isEqualTo(SegmentStatus.REVISED);
         assertThat(report).isEqualTo(new ConsistencyReport(0, 1, 0, List.of("ch1 · p10: revised for gender")));
+        assertThat(book.openDeferrals()).isEmpty();
+    }
+
+    // A gender re-render fixes no recorded finding, so a FLAGGED segment takes the new target and stays FLAGGED.
+    @Test
+    void run_flaggedSegmentReRenderedForGender_takesTheTargetAndStaysFlagged() {
+        final QaFinding glossary = new QaFinding("glossary", Severity.MEDIUM, "note", "glossary");
+        samDoorWaitingOnGender();
+        ReviewFixtures.update(
+                book.desk(),
+                SAM_DOOR,
+                record -> record.withStatus(SegmentStatus.FLAGGED).withFindings(List.of(glossary)));
+        book.model().answerTo(REVISION, reply(DOOR_REVISED));
+
+        ok(book.run(true));
+
+        assertThat(book.stored(SAM_DOOR))
+                .extracting(SegmentRecord::maskedMachineTarget, SegmentRecord::status, SegmentRecord::findings)
+                .containsExactly(DOOR_REVISED, SegmentStatus.FLAGGED, List.of(glossary));
         assertThat(book.openDeferrals()).isEmpty();
     }
 

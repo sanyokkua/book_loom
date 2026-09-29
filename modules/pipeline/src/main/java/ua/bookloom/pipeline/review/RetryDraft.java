@@ -18,6 +18,8 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.document.SentenceSplitter;
+import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
@@ -32,6 +34,7 @@ import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.pipeline.SegmentTranslator;
+import ua.bookloom.pipeline.chunk.TokenBudget;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.ChunkDecider;
@@ -50,12 +53,14 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.run.ChunkBudget;
 import ua.bookloom.pipeline.run.OutcomeRecords;
 
 /**
  * Retry and Retry with note: one fair second attempt at a FLAGGED or ACCEPTED segment. It replays the context its first
  * draft saw, from the stored snapshot's texts alone, and is decided by the run's own draft step, checks, judge and
- * acceptance rule — the quality loop with no repair round. It never queues behind a running book: while the project's
+ * acceptance rule — the quality loop with no repair round. A segment the run drafted in pieces is drafted in the same
+ * pieces, each carrying the note. It never queues behind a running book: while the project's
  * latest run is RUNNING it answers {@code busy} before any call. A failure never downgrades an ACCEPTED segment.
  */
 @Slf4j
@@ -72,6 +77,7 @@ public final class RetryDraft {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final QualityLoop qualityLoop;
+    private final SentenceSplitter splitter;
     private final ReviewMode mode;
 
     /**
@@ -183,11 +189,9 @@ public final class RetryDraft {
             final RetryPlan plan, final String instruction, final boolean lowerTemperature, final ChatModel model) {
         final Segment segment = plan.segment();
         final ContextSnapshot snapshot = plan.snapshot();
+        final List<GlossaryEntry> terms = termsOf(snapshot, plan.record().projectId());
         final ProtectedMask mask = ProtectedSpans.mask(
-                segment,
-                plan.frame().sourceLanguage(),
-                plan.frame().foreignPassagePolicy(),
-                termsOf(snapshot, plan.record().projectId()));
+                segment, plan.frame().sourceLanguage(), plan.frame().foreignPassagePolicy(), terms);
         final DraftContext context = ContextPackageAssembler.replay(snapshot, mask);
         logReplayed(segment.id(), snapshot);
         final GateFunction gate = ProtectedSpans.gate(
@@ -201,9 +205,26 @@ public final class RetryDraft {
                 new DraftPromptBuilder(templates, plan.frame()),
                 new DraftReplyParser(mapper));
         return translator
-                .translate(segment, context, mask, instruction, lowerTemperature)
+                .translateSplit(segment, context, mask, splitter, budgetOf(plan, terms), instruction, lowerTemperature)
                 .flatMap(drafted -> decide(plan, drafted, gate, calls))
                 .flatMap(outcome -> store(plan, outcome));
+    }
+
+    // The run drafts a segment alone above its unit's chunk budget in sentence-aligned pieces; a retry computes that
+    // budget the same way, from the unit and the replayed glossary and summary, so the longest paragraphs still fit.
+    private static int budgetOf(final RetryPlan plan, final List<GlossaryEntry> terms) {
+        final Segment segment = plan.segment();
+        final List<Segment> unit = plan.document().units().stream()
+                .filter(candidate -> candidate.id().equals(segment.unit()))
+                .findFirst()
+                .map(Unit::segments)
+                .orElse(List.of(segment));
+        final int headroom =
+                ChunkBudget.headroom(plan.frame(), unit, terms, plan.snapshot().summary());
+        final int budget = TokenBudget.chunkTokens(headroom);
+        log.debug(
+                "retry: segment={} budget={} headroom={} unitSegments={}", segment.id(), budget, headroom, unit.size());
+        return budget;
     }
 
     // The run's own quality loop with no repair round: the same evaluation, the same one-pair judge (labelled s1) when

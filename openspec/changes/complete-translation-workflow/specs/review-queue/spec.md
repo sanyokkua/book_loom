@@ -150,8 +150,8 @@ The application SHALL start every segment as PENDING and move it only through th
   segment reviewed, or by a passing retry, which replaces the machine target; ACCEPTED → ACCEPTED unchanged, by a
   failing retry, which keeps the previous target and reports the new findings; ACCEPTED → REVISED, by a saved edit;
 - REVISED → ACCEPTED, by revert; REVISED → REVISED, by another saved edit or an accepted backward-revision proposal;
-- ACCEPTED → REVISED, by backward revision; FLAGGED → REVISED, by backward revision only when every finding the segment
-  carries is one the revision fixes (a `glossary` finding when the revision swaps the name it names); a FLAGGED segment
+- ACCEPTED → REVISED, by backward revision; FLAGGED → REVISED, by backward revision only when the segment carries at least one finding and
+  every finding is one the revision fixes (a `glossary` finding when the revision swaps the name it names); a FLAGGED segment
   with any other finding takes the revised target and stays FLAGGED, keeping its findings.
 
 No segment SHALL return to PENDING, a retry SHALL never lower a segment's status, and a FLAGGED segment SHALL stay

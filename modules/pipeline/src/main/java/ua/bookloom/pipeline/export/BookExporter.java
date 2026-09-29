@@ -27,6 +27,8 @@ import ua.bookloom.api.document.Unit;
 @Slf4j
 public final class BookExporter {
 
+    private static final String CANCELLED_TITLE = "Export cancelled";
+
     private final DocumentPort documents;
     private final ExportMoveOperation moves;
 
@@ -201,7 +203,7 @@ public final class BookExporter {
             }
             if (cancellationRequested.getAsBoolean()) {
                 log.debug("Export cancelled after validation and closure, before publication");
-                return failAfterClose(cancelledError());
+                return failAfterClose(cancelledBeforePublication());
             }
             return publish();
         }
@@ -329,12 +331,25 @@ public final class BookExporter {
                 "The source file changed after translation began, so this export was stopped.");
     }
 
-    // The export job answers a cancel it sees earlier with this same error, so every caller reads one cancel outcome.
-    static AppError cancelledError() {
+    // Every cancel answers the one cancelled code under one title; the message says how far the export got, since a
+    // person deciding whether to export again needs to know whether a file was already put in place.
+    static AppError cancelledBeforeWriting() {
+        return AppError.of(ErrorCode.cancelled, CANCELLED_TITLE, "Nothing was written.");
+    }
+
+    private static AppError cancelledBeforePublication() {
         return AppError.of(
                 ErrorCode.cancelled,
-                "Export cancelled",
-                "The translated book was checked but not published because the job was cancelled.");
+                CANCELLED_TITLE,
+                "The translated book was checked but not published because the export was cancelled.");
+    }
+
+    // The book is already in place and is not taken back; only the side files not yet written are skipped.
+    static AppError cancelledBeforeSideFiles() {
+        return AppError.of(
+                ErrorCode.cancelled,
+                CANCELLED_TITLE,
+                "The translated book was written, but the export was cancelled before all its side files were written.");
     }
 
     private static AppError unexpectedError(final String action, final Throwable cause) {

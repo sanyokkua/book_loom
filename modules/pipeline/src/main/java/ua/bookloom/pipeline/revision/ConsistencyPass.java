@@ -114,7 +114,7 @@ public final class ConsistencyPass {
             return Result.ok(false);
         }
         final RevisionCall call = new RevisionCall(templates, new DraftReplyParser(mapper));
-        return new GenderRevision(glossary, segments, writer, call).revise(inputs, open, calls, tally);
+        return new GenderRevision(glossary, segments, deferrals, writer, call).revise(inputs, open, calls, tally);
     }
 
     private static ConsistencyReport ended(final String projectId, final PassTally tally) {

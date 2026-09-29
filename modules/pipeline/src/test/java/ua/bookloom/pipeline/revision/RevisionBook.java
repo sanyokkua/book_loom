@@ -63,6 +63,12 @@ final class RevisionBook {
 
     /** Runs the pass over the book, with the scripted model or, when {@code withModel} is false, with none. */
     Result<ConsistencyReport> run(final boolean withModel) {
+        final ModelCalls calls = (kind, segmentId, request) -> model.chat(request);
+        return runWith(withModel ? calls : null);
+    }
+
+    /** Runs the pass with every revision call sent through {@code calls}, or with no model when it is null. */
+    Result<ConsistencyReport> runWith(@Nullable final ModelCalls calls) {
         final ConsistencyPass pass = new ConsistencyPass(
                 desk.documents(),
                 desk.openProjects(),
@@ -72,8 +78,7 @@ final class RevisionBook {
                 desk.glossary(),
                 new PromptTemplates(),
                 new ObjectMapper());
-        final ModelCalls calls = (kind, segmentId, request) -> model.chat(request);
-        return pass.run(desk.projectId(), withModel ? calls : null);
+        return pass.run(desk.projectId(), calls);
     }
 
     GlossaryEntry character(

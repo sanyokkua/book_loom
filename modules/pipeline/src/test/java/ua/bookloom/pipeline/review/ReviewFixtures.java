@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookInspector;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
@@ -73,7 +74,8 @@ public final class ReviewFixtures {
             OpenProjects openProjects,
             DocumentPort documents,
             RunRepository runs,
-            GlossaryRepository glossary) {
+            GlossaryRepository glossary,
+            SentenceSplitter splitter) {
 
         /** Queries over the same stores whose opened books are forgotten. */
         ReviewQueries queriesWithoutOpenBook() {
@@ -91,6 +93,7 @@ public final class ReviewFixtures {
                     new PromptTemplates(),
                     new ObjectMapper(),
                     Guice.createInjector().getInstance(QualityLoop.class),
+                    splitter,
                     mode);
         }
 
@@ -277,6 +280,7 @@ public final class ReviewFixtures {
                 openProjects,
                 documents,
                 injector.getInstance(RunRepository.class),
-                injector.getInstance(GlossaryRepository.class));
+                injector.getInstance(GlossaryRepository.class),
+                injector.getInstance(SentenceSplitter.class));
     }
 }

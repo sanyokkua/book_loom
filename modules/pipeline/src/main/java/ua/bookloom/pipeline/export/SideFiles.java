@@ -144,7 +144,7 @@ final class SideFiles {
         for (final Content content : contents) {
             if (cancellationRequested.getAsBoolean()) {
                 log.debug("Side files stopped by a cancel before {} written={}", content.path(), written);
-                return Result.err(BookExporter.cancelledError());
+                return Result.err(BookExporter.cancelledBeforeSideFiles());
             }
             final Result<Path> one = writeOne(content, overwrite, moves);
             if (one.isErr()) {

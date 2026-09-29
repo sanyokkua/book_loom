@@ -13,11 +13,17 @@ import ua.bookloom.pipeline.review.Proposals;
  * person-edited segment is always revised from the proposal already waiting on it: the new proposal then holds every
  * earlier fix and supersedes the old one, and exactly one proposal waits on the segment.
  *
+ * <p>Known limit, accepted as it is: a locked term renamed twice before the person applies the waiting proposal
+ * ({@code Хейл} → {@code Гейл} → {@code Гаїл}) leaves the proposal holding the first new rendering, because the second
+ * rename records no deferral on a segment whose own text never held {@code Гейл}; the person ignores the proposal or
+ * edits by hand.
+ *
  * @param masked the masked text the revision is applied to
  * @param proposal the open deferral carrying the waiting proposal the text came from, which the new one supersedes, or
  *     null when the text is the person's own or the machine target
+ * @param read the stored record the text was taken from; the revision is stored only while the segment still reads so
  */
-record RevisionBase(String masked, @Nullable Deferral proposal) {
+record RevisionBase(String masked, @Nullable Deferral proposal, SegmentRecord read) {
 
     /**
      * Picks the text a revision of {@code record} starts from.
@@ -30,11 +36,11 @@ record RevisionBase(String masked, @Nullable Deferral proposal) {
     static @Nullable RevisionBase of(final SegmentRecord record, final List<Deferral> open) {
         if (record.userTarget() == null) {
             final String machine = record.maskedMachineTarget();
-            return machine == null ? null : new RevisionBase(machine, null);
+            return machine == null ? null : new RevisionBase(machine, null, record);
         }
         final Optional<Deferral> proposal = Proposals.waitingOn(open, record.segmentId());
         final String masked = proposal.map(Deferral::maskedProposal).orElse(record.maskedUserTarget());
-        return masked == null ? null : new RevisionBase(masked, proposal.orElse(null));
+        return masked == null ? null : new RevisionBase(masked, proposal.orElse(null), record);
     }
 
     /**

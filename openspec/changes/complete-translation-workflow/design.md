@@ -635,8 +635,8 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   keeps `Гейл`: the second rename records no deferral, because the person's text never held `Гейл`. Owner's decision:
   accepted as it is; the person ignores the proposal or edits by hand.
 - **A flagged segment keeps its flag:** backward revision replaces the target of a FLAGGED segment but moves it to
-  REVISED only when every finding it carries is one the revision fixes (a `glossary` finding about the swapped name);
-  otherwise it stays FLAGGED with its findings, so a name swap never hides a real problem.
+  REVISED only when it carries at least one finding and every finding is one the revision fixes (a `glossary` finding, when
+  the revision swapped a name); a FLAGGED segment with no finding, or with any other finding, stays FLAGGED with them, so a name swap never hides a real problem.
 
 ### D11 — Book inspection and profile (ADR-0037, ADR-0039)
 

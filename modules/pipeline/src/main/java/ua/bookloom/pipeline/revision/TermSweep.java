@@ -197,7 +197,7 @@ final class TermSweep {
             final Sweep sweep,
             final PassTally tally) {
         final Result<RevisionWriter.Stored> stored =
-                writer.store(inputs.projectId(), segmentId, restored, base.answering(sweep.swept()));
+                writer.store(base.read(), restored, base.answering(sweep.swept()), RevisionWriter.Change.NAME_SWAP);
         if (stored.isErr()) {
             return Result.err(Objects.requireNonNull(stored.error(), "error"));
         }
@@ -212,8 +212,11 @@ final class TermSweep {
             case MACHINE_TARGET ->
                 tally.swept(segmentId, inputs.locator(segmentId), sweep.swept().size());
             case PROPOSAL -> tally.proposed(segmentId, inputs.locator(segmentId));
+            // The sweep makes no model call, so only a truly concurrent action gets here; the next pass sweeps again.
+            case STALE ->
+                log.debug("Term deferrals left open segmentId={}: the segment changed as it was swept", segmentId);
         }
-        return Result.ok(true);
+        return Result.ok(how != RevisionWriter.Stored.STALE);
     }
 
     /** A segment's masked target with its terms swept, and the deferrals that were. */

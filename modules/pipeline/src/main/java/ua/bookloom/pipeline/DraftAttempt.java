@@ -54,8 +54,12 @@ record DraftAttempt(
                 segment, context, mask.maskedText(), extraInstruction, null, mask.presentLocked(), lowerTemperature);
     }
 
-    static DraftAttempt ofPiece(final Segment piece, final DraftContext context, final String extraInstruction) {
-        return new DraftAttempt(piece, context, piece.masked(), extraInstruction, null, List.of(), false);
+    static DraftAttempt ofPiece(
+            final Segment piece,
+            final DraftContext context,
+            final String extraInstruction,
+            final boolean lowerTemperature) {
+        return new DraftAttempt(piece, context, piece.masked(), extraInstruction, null, List.of(), lowerTemperature);
     }
 
     DraftAttempt redraftedBy(final PieceRedraft redraft) {
