@@ -37,6 +37,7 @@ public final class ScriptedProjectService implements ProjectService {
     private final List<BookBrief> briefs = new CopyOnWriteArrayList<>();
     private final List<String> closed = new CopyOnWriteArrayList<>();
     private final List<Boolean> closedOnFxThread = new CopyOnWriteArrayList<>();
+    private final List<String> events = new CopyOnWriteArrayList<>();
     private final CountDownLatch entered = new CountDownLatch(1);
     private volatile Result<ImportedBook> fallback =
             Result.err(AppError.of(ErrorCode.internal, "Not scripted", "The test scripted no answer for this file."));
@@ -83,6 +84,7 @@ public final class ScriptedProjectService implements ProjectService {
     public Result<ImportedBook> importBook(final Path source) {
         final CountDownLatch held = gate;
         imports.add(Objects.requireNonNull(source, "source"));
+        events.add("import " + source);
         importsOnFxThread.add(Platform.isFxApplicationThread());
         entered.countDown();
         awaitGate(held);
@@ -117,8 +119,14 @@ public final class ScriptedProjectService implements ProjectService {
     @Override
     public Result<Boolean> close(final String projectId) {
         closed.add(Objects.requireNonNull(projectId, "projectId"));
+        events.add("close " + projectId);
         closedOnFxThread.add(Platform.isFxApplicationThread());
         return Result.ok(true);
+    }
+
+    /** Every import and close in call order, as {@code import <path>} and {@code close <projectId>}. */
+    public List<String> events() {
+        return List.copyOf(events);
     }
 
     /** The source of every import, in call order. */

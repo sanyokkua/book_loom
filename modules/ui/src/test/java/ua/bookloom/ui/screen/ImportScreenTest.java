@@ -19,7 +19,10 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.dialog.RecordingReplaceRunPrompt;
 import ua.bookloom.ui.state.ImportState;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
 
 /**
  * The import screen the application builds, read from the real scene: what each of its four states shows, what is
@@ -226,6 +229,27 @@ class ImportScreenTest extends ImportScreenTestBase {
 
         assertThat(projects.imports()).containsExactly(first);
         assertThat(state()).isInstanceOf(ImportState.Detected.class);
+    }
+
+    // IF a drop on the import screen skipped the guard, THEN a paused translation would be thrown away unasked.
+    @Test
+    void openDropped_runIsPaused_asksTheQuestionAndImportsNothingYet() throws TimeoutException {
+        final Path first = dir.resolve("Frankenstein.epub");
+        final Path second = dir.resolve("Dracula.epub");
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
+        openImport();
+        openBook(first);
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishRunState(RunState.PAUSED);
+        awaitFx(() -> mirror.runState().get() == RunState.PAUSED);
+
+        onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of(second)));
+
+        assertThat(prompt.asked())
+                .containsExactly(
+                        new RecordingReplaceRunPrompt.Asked("Frankenstein.epub", "Dracula.epub", RunState.PAUSED));
+        assertThat(projects.imports()).containsExactly(first);
     }
 
     // IF the open book were held by the screen instead of the view model, THEN leaving and returning would forget it

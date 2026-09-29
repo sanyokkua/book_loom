@@ -129,6 +129,25 @@ class StateMirrorTest extends ApplicationTest {
         assertThat(onFx(() -> mirror.activityLog().size())).isZero();
     }
 
+    // IF a cleared run kept its file name, figures or log, THEN the next book would open on the last book's run.
+    @Test
+    void publishRunCleared_afterARun_returnsEveryFigureToIdle() {
+        final StateMirror mirror = new StateMirror();
+        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishProgress(ProgressFixtures.progress(1, 1, 3, 1, 5));
+        mirror.publishLogEntries(List.of(new LogEntry(LogKind.ACCEPTED, List.of("s-1"))));
+        mirror.publishOutcome(RunState.STOPPED, null, null);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        mirror.publishRunCleared();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.IDLE);
+        assertThat(onFx(() -> mirror.runFileName().get())).isNull();
+        assertThat(onFx(() -> mirror.total().get())).isZero();
+        assertThat(onFx(() -> mirror.activityLog().size())).isZero();
+    }
+
     // IF the bound were not 500, THEN the log would grow without limit over a long book or be cut too early.
     @Test
     void maxLogEntries_isFiveHundred() {

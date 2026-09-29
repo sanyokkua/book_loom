@@ -13,6 +13,8 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.ui.dialog.ReplaceRunDialog;
+import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.OsLocaleProvider;
@@ -23,6 +25,7 @@ import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.PlatformFileRevealer;
@@ -43,7 +46,7 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  * modal error dialog), the {@link AppShellView}, the {@link StateMirror} with the {@link TranslationRunner} that
  * feeds it, the {@link SettingsViewModel} and the {@link ModelListing} it owns, the {@link CurrentProject} holding the
  * open book, the {@link ImportViewModel} that fills it, the {@link BookBriefViewModel} that holds the choices made about it, the
- * {@link RunStarter} that builds a run on it and the {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
+ * {@link ImportGuard} that asks before an import replaces a run, the {@link RunStarter} that builds a run on it and the {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
  * {@link FileRevealer} that shows a written book in the file manager.
  * The singletons are bound explicitly rather than left to JIT so the composition root's graph lists everything the
  * window depends on. The {@link BuildVersion} value, the {@link BackgroundExecutor} pool, the ports ({@link
@@ -61,6 +64,12 @@ public final class UiModule extends AbstractModule {
         // Guice modules are constructed, not injected.
     }
 
+    private void bindDialogs() {
+        bind(ModalErrorPresenter.class);
+        bind(ErrorPresenter.class).to(ModalErrorPresenter.class);
+        bind(ReplaceRunPrompt.class).to(ReplaceRunDialog.class);
+    }
+
     @Override
     protected void configure() {
         bind(ColorSchemeProvider.class).to(PlatformColorSchemeProvider.class);
@@ -71,8 +80,7 @@ public final class UiModule extends AbstractModule {
         bind(LanguageNames.class);
         bind(ToastStack.class);
         bind(Toasts.class).to(ToastStack.class);
-        bind(ModalErrorPresenter.class);
-        bind(ErrorPresenter.class).to(ModalErrorPresenter.class);
+        bindDialogs();
         bind(AppShellView.class);
         bind(StateMirror.class);
         bind(TranslationRunner.class);
@@ -80,6 +88,7 @@ public final class UiModule extends AbstractModule {
         bind(SettingsViewModel.class);
         bind(CurrentProject.class);
         bind(ImportViewModel.class);
+        bind(ImportGuard.class);
         bind(BookBriefViewModel.class);
         bind(RunStarter.class);
         bind(TranslatingViewModel.class);

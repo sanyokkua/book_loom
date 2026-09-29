@@ -18,6 +18,7 @@ import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.dialog.RecordingReplaceRunPrompt;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 
@@ -34,10 +35,11 @@ abstract class ImportScreenTestBase extends ShellTestBase {
             List.of("file", "format", "title", "author", "declaredLang", "units", "segments");
 
     final ScriptedProjectService projects = new ScriptedProjectService();
+    final RecordingReplaceRunPrompt prompt = new RecordingReplaceRunPrompt();
 
     @Override
     protected Injector createInjector(final Locale locale) {
-        return UiTestInjector.builder(locale).projects(projects).build();
+        return UiTestInjector.builder(locale).projects(projects).prompt(prompt).build();
     }
 
     void openImport() {

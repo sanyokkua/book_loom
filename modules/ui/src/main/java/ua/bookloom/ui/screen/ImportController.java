@@ -24,6 +24,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 
@@ -40,6 +41,7 @@ public final class ImportController {
     private static final String DROPZONE_ACTIVE = "dropzone-active";
 
     private final ImportViewModel viewModel;
+    private final ImportGuard guard;
     private final Messages messages;
     private final Navigator navigator;
     private final ChangeListener<ImportState> onState = (observed, was, now) -> show(now);
@@ -56,15 +58,22 @@ public final class ImportController {
     /**
      * Receives the collaborators the injector owns.
      *
-     * @param viewModel the state this screen shows and the open it starts
+     * @param viewModel the state this screen shows
+     * @param guard what a chosen file goes through before it is opened, so a translation that can continue is not
+     *     replaced unasked
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Continue leads
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
-    public ImportController(final ImportViewModel viewModel, final Messages messages, final Navigator navigator) {
+    public ImportController(
+            final ImportViewModel viewModel,
+            final ImportGuard guard,
+            final Messages messages,
+            final Navigator navigator) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.guard = Objects.requireNonNull(guard, "guard");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
     }
@@ -85,7 +94,7 @@ public final class ImportController {
         if (paths.size() > 1) {
             log.debug("drop carried {} files; opening the first and ignoring the rest", paths.size());
         }
-        viewModel.open(paths.get(0));
+        guard.requestImport(paths.get(0));
     }
 
     @FXML
@@ -147,7 +156,7 @@ public final class ImportController {
         final var picked = chooser.showOpenDialog(dropzone.getScene().getWindow());
         log.debug("file chooser answered with a file: {}", picked != null);
         if (picked != null) {
-            viewModel.open(picked.toPath());
+            guard.requestImport(picked.toPath());
         }
     }
 

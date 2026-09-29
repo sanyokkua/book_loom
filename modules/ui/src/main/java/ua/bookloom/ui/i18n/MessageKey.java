@@ -488,7 +488,19 @@ public enum MessageKey {
     /** Display name of the true crime genre offered on the Book Brief. */
     GENRE_TRUE_CRIME("genre.trueCrime"),
     /** Display name of the graphic novel genre offered on the Book Brief. */
-    GENRE_GRAPHIC_NOVEL("genre.graphicNovel");
+    GENRE_GRAPHIC_NOVEL("genre.graphicNovel"),
+    /** Title of the question asked before an import discards the current translation. */
+    DIALOG_REPLACE_RUN_TITLE("dialog.replaceRun.title"),
+    /** Body when the run is still going: {0} is the run's file, {1} the file about to be imported. */
+    DIALOG_REPLACE_RUN_ACTIVE("dialog.replaceRun.active"),
+    /** Body when the run was stopped and could be resumed: {0} is the run's file, {1} the file to import. */
+    DIALOG_REPLACE_RUN_STOPPED("dialog.replaceRun.stopped"),
+    /** Button that leaves the run and the open book untouched. */
+    DIALOG_REPLACE_RUN_KEEP("dialog.replaceRun.keep"),
+    /** Button that discards the run and imports the other book. */
+    DIALOG_REPLACE_RUN_CONFIRM("dialog.replaceRun.confirm"),
+    /** Line shown while the discarded run is being stopped. */
+    DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping");
 
     private final String key;
 

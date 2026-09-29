@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -21,6 +22,7 @@ import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.theme.ColorSchemeProvider;
@@ -79,6 +81,7 @@ public final class UiTestInjector {
         private ExportService exports = new ScriptedExportService();
         private ChatModelFactory models = ScriptedChatModelFactory.ok();
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
+        private @Nullable ReplaceRunPrompt prompt;
 
         private Builder(final Locale locale) {
             this.locale = locale;
@@ -126,12 +129,19 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** Replaces the real replace-run card with this question, so the test can read what was asked. */
+        public Builder prompt(final ReplaceRunPrompt value) {
+            prompt = Objects.requireNonNull(value, "prompt");
+            return this;
+        }
+
         /**
          * Makes the graph.
          *
          * @return a fresh injector; never shares singletons with another call
          */
         public Injector build() {
+            final ReplaceRunPrompt replacement = prompt;
             return Guice.createInjector(Modules.override(new UiModule())
                     .with(new ReviewPortsModule(), new AbstractModule() {
                         @Override
@@ -150,6 +160,9 @@ public final class UiTestInjector {
                             bind(ProjectService.class).toInstance(projects);
                             bind(ExportService.class).toInstance(exports);
                             bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
+                            if (replacement != null) {
+                                bind(ReplaceRunPrompt.class).toInstance(replacement);
+                            }
                         }
                     }));
         }

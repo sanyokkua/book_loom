@@ -219,6 +219,15 @@ public final class StateMirror {
     }
 
     /**
+     * Forgets the run altogether: the state returns to idle, no file is named, and every figure, the log, the failure
+     * and the report are reset, as at the start of the application.
+     */
+    public void publishRunCleared() {
+        log.debug("publishing run cleared");
+        Platform.runLater(this::resetToIdle);
+    }
+
+    /**
      * Shows the file a run's book was written to; sent before the outcome, so an observer that sees the run complete
      * already sees the file.
      *
@@ -314,6 +323,14 @@ public final class StateMirror {
     }
 
     private void resetForNewRun(final String fileName) {
+        resetTo(fileName, RunState.RUNNING);
+    }
+
+    private void resetToIdle() {
+        resetTo(null, RunState.IDLE);
+    }
+
+    private void resetTo(final @Nullable String fileName, final RunState state) {
         applyFigures(RunFigures.EMPTY);
         runFileName.set(fileName);
         logEntries.clear();
@@ -321,7 +338,7 @@ public final class StateMirror {
         report.set(null);
         exportedFile.set(null);
         waitingSeconds.set(NOT_WAITING);
-        runState.set(RunState.RUNNING);
+        runState.set(state);
     }
 
     private void applyFigures(final RunFigures figures) {
