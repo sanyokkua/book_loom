@@ -599,7 +599,7 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
   after every 20 ACCEPTED segments and at every unit end; the counter resets at each refresh, not per unit. On Max the
   unit-end refresh is one `summary` model call and the every-20 refresh stays deterministic. An unreadable summary
   reply — an empty `summary.target` included — keeps the previous version with one WARN; a model-call error routes by
-  D3. `RollingSummary` fields: `source` the deterministic text, `target` the model's summary (Max, unit end) or empty (the record's field is non-null),
+  D3. `RollingSummary` fields: `source` the deterministic text, `target` the model's summary (Max, unit end) — carried unchanged through the deterministic every-20 refreshes that follow, so a later refresh never erases it — or empty when none was written (the record's field is non-null),
   `version` the latest plus one (assigned by the keeper), `lastSummarizedKey` the last decided segment id,
   `tokensSince` the ACCEPTED segments since the last refresh. The keeper's counter and memory live in the job and are
   seeded from the decided records when a job starts, so a resume in the session continues them. The draft prompt

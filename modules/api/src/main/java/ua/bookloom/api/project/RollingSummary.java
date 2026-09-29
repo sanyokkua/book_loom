@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
  * @param target the summary text in the target language
  * @param version this summary's version, incremented on each update
  * @param lastSummarizedKey the last segment key folded into this summary, or null when none has been
- * @param tokensSince the number of tokens of new text seen since this summary was last updated
+ * @param tokensSince the number of accepted segments since the summary before this one was written
  */
 public record RollingSummary(
         String projectId,

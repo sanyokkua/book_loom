@@ -603,19 +603,21 @@ single chapter) the every-K-blocks trigger drives updates and end-of-document ac
 **SYSTEM**
 
 ```
-You maintain a short rolling bilingual summary of a book being translated ({{sourceLang}} / {{targetLang}}).
+You maintain a short rolling bilingual summary of a book being translated ({{sourceLanguage}} → {{targetLanguage}}).
 Update the running summary with what this chapter established: characters, relationships, places, and
 terminology decisions. Keep it compact and factual — it is context for translating later chapters, not a retelling.
-Provide the summary in both {{sourceLang}} and {{targetLang}}.
+Provide the summary in both {{sourceLanguage}} and {{targetLanguage}}.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 ```
 
 **USER**
 
 ```
+{{#previousSummary}}
 [Running summary so far]
 {{previousSummary}}
 
+{{/previousSummary}}
 [This chapter — source]
 {{chapterSource}}
 
@@ -623,15 +625,15 @@ Output ONLY the required JSON object. No commentary, no code fences, no reasonin
 {{chapterTarget}}
 
 Return JSON exactly as:
-{"summary":{"source":"<updated summary in {{sourceLang}}>","target":"<updated summary in {{targetLang}}>"},
+{"summary":{"source":"<updated summary in the source language>","target":"<updated summary in the target language>"},
  "facts":["<key fact>","<key fact>"]}
 ```
 
 | Variable                                 | Required? | Source / notes                                                                           |
 |--------------------------------------------|-----------|--------------------------------------------------------------------------------------------|
-| `{{sourceLang}}`, `{{targetLang}}`       | Required  | Project languages.                                                                       |
-| `{{chapterSource}}`, `{{chapterTarget}}` | Required  | The just-finished chapter's source and accepted target (may be condensed to fit budget). |
-| `{{previousSummary}}`                    | Optional  | `(none)` for the first chapter.                                                          |
+| `{{sourceLanguage}}`, `{{targetLanguage}}` | Required  | System message; the project's languages. The user message names them generically.         |
+| `{{chapterSource}}`, `{{chapterTarget}}` | Required  | The just-finished unit's accepted source and target display text, one segment per line.  |
+| `{{previousSummary}}`                    | Optional  | The latest summary (its target text, else its deterministic text); the whole block is dropped for the first unit. |
 
 **Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
 
@@ -640,5 +642,6 @@ Return JSON exactly as:
   "facts": [ "Hale is male", "Story set at 7 Baker Street" ] }
 ```
 
-Tolerant read: `facts` may be absent; unknown fields ignored; the bilingual `summary` is stored per
+Tolerant read: `facts` may be absent; unknown fields ignored; a reply that is not JSON, or whose `summary.target` is
+empty, is unreadable — the previous summary is kept and one WARN is logged; the bilingual `summary` is stored per
 `02_Architecture/06_DATA_MODEL_SQLITE.md#summaries`.

@@ -113,7 +113,18 @@ public enum PromptName {
             0.2,
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("candidates"), Set.of("existingTerms")));
+            new Slots(Set.of("candidates"), Set.of("existingTerms"))),
+
+    /** The chapter-end summary the Max dial asks the model for; the reply's target text is what later prompts carry. */
+    SUMMARY(
+            "summary",
+            CallKind.SUMMARY,
+            "summary",
+            SummarySchema.SCHEMA,
+            0.2,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("chapterSource", "chapterTarget"), Set.of("previousSummary")));
 
     private final String resourceBaseName;
     private final CallKind callKind;
