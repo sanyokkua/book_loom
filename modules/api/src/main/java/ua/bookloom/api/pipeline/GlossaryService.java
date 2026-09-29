@@ -67,9 +67,10 @@ public interface GlossaryService {
      *
      * @param projectId the non-null project id
      * @param source the non-null CSV file to read
-     * @return the number of rows imported
+     * @return what was imported and which lines were malformed or refused, or {@code validation} when the file cannot
+     *     be read
      */
-    Result<Integer> importCsv(String projectId, Path source);
+    Result<GlossaryImportReport> importCsv(String projectId, Path source);
 
     /**
      * Exports the project's glossary to an RFC-4180 CSV file.
