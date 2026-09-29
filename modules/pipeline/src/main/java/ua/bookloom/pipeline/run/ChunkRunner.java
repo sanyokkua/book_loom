@@ -78,22 +78,23 @@ public final class ChunkRunner {
     }
 
     /**
-     * Decides every segment still pending, unit by unit and chunk by chunk.
+     * Decides every segment still pending, unit by unit and chunk by chunk, reading the brief's switches again as each
+     * unit ends.
      *
      * @param work the non-null list of the segments to decide
      * @return completed once every segment is decided, or how a boundary or a failure ended the run
      */
     public RunEnd run(final WorkList work) {
         Objects.requireNonNull(work, "work");
-        final List<WorkItem> remaining = List.copyOf(work.remaining());
-        int from = 0;
-        while (from < remaining.size()) {
-            final int to = unitEnd(remaining, from);
-            final Optional<RunEnd> end = runUnit(work, remaining.subList(from, to));
+        while (work.hasPending()) {
+            final Optional<RunEnd> end = runUnit(work, work.nextSection());
             if (end.isPresent()) {
                 return end.get();
             }
-            from = to;
+            final Result<Integer> refreshed = work.refresh();
+            if (refreshed.isErr()) {
+                return failedBy(Objects.requireNonNull(refreshed.error(), "error"));
+            }
         }
         return new RunEnd(JobState.COMPLETED, null);
     }
@@ -338,14 +339,6 @@ public final class ChunkRunner {
 
     private static RunEnd failedBy(final AppError error) {
         return new RunEnd(JobState.FAILED, error);
-    }
-
-    private static int unitEnd(final List<WorkItem> items, final int from) {
-        int to = from + 1;
-        while (to < items.size() && items.get(to).section() == items.get(from).section()) {
-            to++;
-        }
-        return to;
     }
 
     /** A call's answer once the run went on, or how the run ended while it waited for one. */

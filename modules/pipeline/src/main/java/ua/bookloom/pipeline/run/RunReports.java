@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.run;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
@@ -46,8 +48,11 @@ public final class RunReports {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(format, "format");
         Objects.requireNonNull(end, "end");
-        final Result<SegmentCounts> counts = stores.segments().countsByStatus(projectId, WorkList.KEPT_AS_SOURCE);
-        final Result<List<SegmentRecord>> flagged = stores.segments().flagged(projectId, WorkList.KEPT_AS_SOURCE);
+        final Result<Set<SegmentKind>> kept = WorkList.keptKinds(stores, projectId);
+        final Result<SegmentCounts> counts =
+                kept.flatMap(kinds -> stores.segments().countsByStatus(projectId, kinds));
+        final Result<List<SegmentRecord>> flagged =
+                kept.flatMap(kinds -> stores.segments().flagged(projectId, kinds));
         if (counts.isErr() || flagged.isErr()) {
             final AppError unreadable = Objects.requireNonNull(counts.isErr() ? counts.error() : flagged.error());
             log.warn(

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,10 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.JobProgress;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.AlsoTranslate;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
@@ -64,16 +69,64 @@ class WorkListTest {
                 .containsExactly("one:0", "one:1", "one:2", "one:3");
     }
 
-    // The auxiliary unit is never the run's work until the brief's switches reach it.
+    // The auxiliary unit is the run's last work, and it is no section: the section count stays the body's.
     @Test
-    void read_lastUnitIsAuxiliary_leavesItOutOfPendingWorkAndSectionCount() {
+    void read_lastUnitIsAuxiliary_listsItAfterTheBodyWithoutCountingItAsASection() {
         final WorkList work = read(documentWithAuxiliary(), Map.of());
 
         assertThat(work.sectionCount()).isEqualTo(2);
         assertThat(work.segmentCount()).isEqualTo(5);
-        assertThat(pendingIds(work))
-                .containsExactly("one:0", "one:1", "one:2", "one:3", "two:0")
-                .doesNotContain("aux:title");
+        assertThat(pendingIds(work)).containsExactly("one:0", "one:1", "one:2", "one:3", "two:0", "aux:title");
+        assertThat(work.remaining().getLast().section()).isEqualTo(2);
+    }
+
+    // A kept record is neither work nor pending, whatever the switch was when the record was stored.
+    @Test
+    void read_metadataSwitchedOff_leavesTheTitleOutOfWorkAndPendingCount() {
+        saveProject(new AlsoTranslate(true, true, false, false));
+        final WorkList work = read(documentWithAuxiliary(), Map.of());
+
+        assertThat(pendingIds(work)).doesNotContain("aux:title");
+        assertThat(work.currentTranslationProgress().pending()).isEqualTo(5);
+    }
+
+    // A person may flip a switch while the run is paused; the next section must follow the brief as it then stands.
+    @Test
+    void remaining_switchChangedBetweenReads_followsTheBrief() {
+        final WorkList work = read(documentWithAuxiliary(), Map.of());
+        assertThat(pendingIds(work)).contains("aux:title");
+
+        saveProject(new AlsoTranslate(true, true, false, false));
+        work.refresh();
+        assertThat(pendingIds(work)).doesNotContain("aux:title");
+        assertThat(work.currentTranslationProgress().pending()).isEqualTo(5);
+
+        saveProject(AlsoTranslate.defaults());
+        work.refresh();
+        assertThat(pendingIds(work)).endsWith("aux:title");
+        assertThat(work.currentTranslationProgress().pending()).isEqualTo(6);
+    }
+
+    // The progress bar must reach 100 % with the auxiliary unit running as the last section, not one past it.
+    @Test
+    void apply_auxiliaryItem_reportsTheLastSection() {
+        final WorkList work = read(documentWithAuxiliary(), Map.of());
+        final WorkItem title = work.remaining().getLast();
+
+        final JobProgress progress = work.apply(title, SegmentStatus.ACCEPTED);
+
+        assertThat(progress)
+                .extracting(JobProgress::section, JobProgress::sections)
+                .containsExactly(2, 2);
+    }
+
+    // Pausing after a section names body sections only: nothing follows the last body segment's section end but the
+    // title.
+    @Test
+    void endsSection_auxiliaryItem_isNeverASectionEnd() {
+        final WorkList work = read(documentWithAuxiliary(), Map.of());
+
+        assertThat(work.endsSection(work.remaining().getLast())).isFalse();
     }
 
     // Starting at the first segment again would repeat what an earlier run decided; a flagged one is never work.
@@ -130,7 +183,30 @@ class WorkListTest {
                 .map(segment -> record(segment, stored.getOrDefault(segment.id(), SegmentStatus.PENDING)))
                 .toList();
         stores.segments().saveAll(PROJECT, records);
+        if (Objects.requireNonNull(stores.projects().find(PROJECT).data(), "found")
+                .isEmpty()) {
+            saveProject(AlsoTranslate.defaults());
+        }
         return Objects.requireNonNull(WorkList.read(stores, PROJECT, document).data(), "work list");
+    }
+
+    private void saveProject(final AlsoTranslate alsoTranslate) {
+        final BookBrief defaults = BookBrief.defaults("en");
+        final BookBrief brief = new BookBrief(
+                "en",
+                "uk",
+                defaults.genre(),
+                defaults.register(),
+                defaults.voiceEra(),
+                defaults.audience(),
+                defaults.names(),
+                defaults.foreignPassages(),
+                defaults.footnotes(),
+                defaults.units(),
+                defaults.balance(),
+                alsoTranslate,
+                QualityDial.FAST);
+        stores.projects().save(new Project(PROJECT, Path.of("Book.md"), BookFormat.MARKDOWN, "hash", brief));
     }
 
     private static SegmentRecord record(final Segment segment, final SegmentStatus status) {

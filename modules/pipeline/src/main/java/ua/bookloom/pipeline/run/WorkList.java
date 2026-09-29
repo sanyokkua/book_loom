@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
@@ -15,55 +17,49 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
-import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentRecord;
 
 /**
  * The segments a run still has to decide, in document order, and the counts that move as it decides them.
  *
- * <p>The list is the project's PENDING records, so a run that starts after an earlier one stopped begins at the
- * first segment nobody decided; a FLAGGED record is never one. The counts are read once and moved per decision, so
- * no query runs while the job works.
+ * <p>The list is the project's PENDING records of the body units, then of the auxiliary unit, so a run that starts
+ * after an earlier one stopped begins at the first segment nobody decided; a FLAGGED record is never one. A record of
+ * an auxiliary kind the brief keeps as source is no work and no pending count, and its stored status is never
+ * touched. The brief is read again at every {@link #refresh()}, so a switch changed during a pause takes effect at
+ * the next section; the counts move per decision in between, so no query runs while a section is worked.
+ *
+ * <p>Used from the job thread only.
  */
 @Slf4j
 public final class WorkList {
 
-    /**
-     * The auxiliary kinds the run leaves out until the Book Brief's switches reach it: with every switch off, the
-     * whole auxiliary unit is kept as source. It is never removed from the book, because the export compares full
-     * segment counts.
-     */
-    static final Set<SegmentKind> KEPT_AS_SOURCE = new AlsoTranslate(false, false, false, false).keptKinds();
-
-    private final List<Unit> body;
+    private final RunStores stores;
+    private final String projectId;
+    private final List<Unit> units;
+    private final int bodyUnits;
     private final int segments;
-    private final List<WorkItem> pending;
+    private List<WorkItem> pending = List.of();
     private int next;
     private int accepted;
     private int flagged;
     private int pendingCount;
     private int lastSection;
 
-    private WorkList(
-            final List<Unit> body, final int segments, final List<WorkItem> pending, final SegmentCounts counts) {
-        this.body = List.copyOf(body);
-        this.segments = segments;
-        this.pending = List.copyOf(pending);
-        accepted = counts.accepted() + counts.revised();
-        flagged = counts.flagged();
-        pendingCount = counts.pending();
-        log.debug(
-                "Built work list sections={} segments={} pending={} accepted={} flagged={}",
-                body.size(),
-                segments,
-                this.pending.size(),
-                accepted,
-                flagged);
+    private WorkList(final RunStores stores, final String projectId, final Document document) {
+        this.stores = stores;
+        this.projectId = projectId;
+        final List<Unit> body =
+                document.units().stream().filter(unit -> !unit.isAuxiliary()).toList();
+        final List<Unit> ordered = new ArrayList<>(body);
+        document.units().stream().filter(Unit::isAuxiliary).forEach(ordered::add);
+        this.units = List.copyOf(ordered);
+        this.bodyUnits = body.size();
+        this.segments = body.stream().mapToInt(unit -> unit.segments().size()).sum();
     }
 
     /**
-     * Reads a project's stored records and lays them over its opened book.
+     * Reads a project's stored records and the brief's switches and lays them over its opened book.
      *
      * @param stores the non-null stores to read from
      * @param projectId the non-null project id
@@ -74,34 +70,80 @@ public final class WorkList {
         Objects.requireNonNull(stores, "stores");
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(document, "document");
-        final Result<List<SegmentRecord>> records = stores.segments().all(projectId);
-        if (records.isErr()) {
-            return Result.err(Objects.requireNonNull(records.error(), "error"));
-        }
-        final Result<SegmentCounts> counts = stores.segments().countsByStatus(projectId, KEPT_AS_SOURCE);
-        if (counts.isErr()) {
-            return Result.err(Objects.requireNonNull(counts.error(), "error"));
-        }
-        final Map<String, SegmentRecord> byId = new HashMap<>();
-        Objects.requireNonNull(records.data(), "records").forEach(record -> byId.put(record.segmentId(), record));
-        return Result.ok(of(document, byId, Objects.requireNonNull(counts.data(), "counts")));
+        final WorkList work = new WorkList(stores, projectId, document);
+        return work.load("start").map(count -> work);
     }
 
-    private static WorkList of(
-            final Document document, final Map<String, SegmentRecord> byId, final SegmentCounts counts) {
-        final List<Unit> body =
-                document.units().stream().filter(unit -> !unit.isAuxiliary()).toList();
-        final List<WorkItem> pending = new ArrayList<>();
-        int total = 0;
-        for (int section = 0; section < body.size(); section++) {
-            total += body.get(section).segments().size();
-            addPending(pending, body.get(section), section, byId);
+    /**
+     * Reads the auxiliary kinds the project's brief keeps as source, as the brief stands now.
+     *
+     * @param stores the non-null stores to read from
+     * @param projectId the non-null project id
+     * @return the kinds, or {@code validation} when the project is gone, or the storage error that stopped the read
+     */
+    static Result<Set<SegmentKind>> keptKinds(final RunStores stores, final String projectId) {
+        return stores.projects()
+                .find(projectId)
+                .flatMap(found -> found.isEmpty()
+                        ? Result.<Set<SegmentKind>>err(AppError.of(
+                                ErrorCode.validation, "This project is not known", "Import the book again."))
+                        : Result.ok(found.get().brief().alsoTranslate().keptKinds()));
+    }
+
+    /**
+     * Reads the stored records, the brief's switches and the counts again and starts the list over from the first
+     * segment nobody has decided; everything decided so far must already be committed.
+     *
+     * @return the number of segments still to decide, or the storage error that stopped the read
+     */
+    public Result<Integer> refresh() {
+        return load("section end");
+    }
+
+    private Result<Integer> load(final String occasion) {
+        return keptKinds(stores, projectId)
+                .flatMap(kept -> stores.segments()
+                        .all(projectId)
+                        .flatMap(records -> stores.segments()
+                                .countsByStatus(projectId, kept)
+                                .map(counts -> install(occasion, kept, records, counts))));
+    }
+
+    private int install(
+            final String occasion,
+            final Set<SegmentKind> kept,
+            final List<SegmentRecord> records,
+            final SegmentCounts counts) {
+        final Map<String, SegmentRecord> byId = new HashMap<>();
+        records.forEach(record -> byId.put(record.segmentId(), record));
+        final List<WorkItem> queued = new ArrayList<>();
+        for (int section = 0; section < units.size(); section++) {
+            addPending(queued, units.get(section), section, byId, kept);
         }
-        return new WorkList(body, total, pending, counts);
+        pending = List.copyOf(queued);
+        next = 0;
+        accepted = counts.accepted() + counts.revised();
+        flagged = counts.flagged();
+        pendingCount = counts.pending();
+        log.debug(
+                "Read work list occasion={} keptKinds={} keptRecords={} sections={} segments={} pending={} accepted={} flagged={}",
+                occasion,
+                kept,
+                counts.sourceKept(),
+                bodyUnits,
+                segments,
+                pending.size(),
+                accepted,
+                flagged);
+        return pending.size();
     }
 
     private static void addPending(
-            final List<WorkItem> pending, final Unit unit, final int section, final Map<String, SegmentRecord> byId) {
+            final List<WorkItem> queued,
+            final Unit unit,
+            final int section,
+            final Map<String, SegmentRecord> byId,
+            final Set<SegmentKind> kept) {
         log.debug(
                 "Inspecting unit id={} section={} segments={}",
                 unit.id(),
@@ -109,11 +151,30 @@ public final class WorkList {
                 unit.segments().size());
         for (final Segment segment : unit.segments()) {
             final SegmentRecord record = byId.get(segment.id());
-            if (record != null && record.status() == SegmentStatus.PENDING) {
-                pending.add(new WorkItem(segment, section, record));
+            if (record != null && record.isKeptAsSource(kept)) {
+                log.debug("Kept as source segmentId={} kind={}", segment.id(), record.kind());
+            } else if (record != null && record.status() == SegmentStatus.PENDING) {
+                queued.add(new WorkItem(segment, section, record));
                 log.debug("Queued pending segment id={} section={}", segment.id(), section);
             }
         }
+    }
+
+    /**
+     * Returns the pending segments of the first section that has any, in document order.
+     *
+     * @return the leading run of {@link #remaining()} that shares one section; never null, empty when none is left
+     */
+    public List<WorkItem> nextSection() {
+        if (!hasPending()) {
+            return List.of();
+        }
+        int to = next + 1;
+        while (to < pending.size()
+                && pending.get(to).section() == pending.get(next).section()) {
+            to++;
+        }
+        return List.copyOf(pending.subList(next, to));
     }
 
     /**
@@ -144,7 +205,7 @@ public final class WorkList {
      * @return never null; holds the item's own segment
      */
     public List<Segment> unitSegments(final WorkItem item) {
-        return body.get(Objects.requireNonNull(item, "item").section()).segments();
+        return units.get(Objects.requireNonNull(item, "item").section()).segments();
     }
 
     /**
@@ -198,7 +259,8 @@ public final class WorkList {
      * @return {@code true} if nothing follows it in its section, {@code false} otherwise
      */
     public boolean endsSection(final WorkItem item) {
-        final boolean endsSection = !hasPending() || pending.get(next).section() != item.section();
+        final boolean endsSection = item.section() < bodyUnits
+                && (!hasPending() || pending.get(next).section() != item.section());
         log.debug(
                 "Checked section boundary segmentId={} section={} endsSection={}",
                 item.segment().id(),
@@ -224,7 +286,7 @@ public final class WorkList {
      * @return the section count
      */
     public int sectionCount() {
-        return body.size();
+        return bodyUnits;
     }
 
     /**
@@ -237,12 +299,12 @@ public final class WorkList {
     }
 
     private JobProgress progress(final JobStage stage, final int section) {
-        final JobProgress progress = new JobProgress(stage, section, body.size(), accepted, flagged, pendingCount);
+        final JobProgress progress = new JobProgress(stage, section, bodyUnits, accepted, flagged, pendingCount);
         log.debug(
                 "Built progress stage={} section={}/{} accepted={} flagged={} pending={}",
                 stage,
                 section,
-                body.size(),
+                bodyUnits,
                 accepted,
                 flagged,
                 pendingCount);

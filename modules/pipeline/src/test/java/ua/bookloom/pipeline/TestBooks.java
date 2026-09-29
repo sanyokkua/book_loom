@@ -15,6 +15,8 @@ import org.jspecify.annotations.Nullable;
 /** Small real book files used by pipeline tests. */
 public final class TestBooks {
 
+    private static final String DEFAULT_PAGE_TITLE = "Test";
+
     private TestBooks() {}
 
     public static Path markdown(final Path destination, final String content) {
@@ -58,7 +60,19 @@ public final class TestBooks {
             @Nullable final String contentLanguage) {
         try (OutputStream output = Files.newOutputStream(destination);
                 ZipOutputStream zip = new ZipOutputStream(output)) {
-            writeEpub(zip, spineParagraphs, language, contentLanguage);
+            writeEpub(zip, spineParagraphs, language, contentLanguage, DEFAULT_PAGE_TITLE);
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
+    /** An EPUB whose content documents each carry {@code pageTitle} as their {@code <title>}. */
+    public static Path epubTitled(
+            final Path destination, final List<List<String>> spineParagraphs, final String pageTitle) {
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            writeEpub(zip, spineParagraphs, "en", null, pageTitle);
             return destination;
         } catch (IOException cause) {
             throw new UncheckedIOException(cause);
@@ -69,7 +83,7 @@ public final class TestBooks {
     public static Path encryptedEpub(final Path destination, final List<List<String>> spineParagraphs) {
         try (OutputStream output = Files.newOutputStream(destination);
                 ZipOutputStream zip = new ZipOutputStream(output)) {
-            writeEpub(zip, spineParagraphs, "en", null);
+            writeEpub(zip, spineParagraphs, "en", null, DEFAULT_PAGE_TITLE);
             put(zip, "META-INF/encryption.xml", encryptionXml(), ZipEntry.DEFLATED);
             return destination;
         } catch (IOException cause) {
@@ -81,7 +95,8 @@ public final class TestBooks {
             final ZipOutputStream zip,
             final List<List<String>> spineParagraphs,
             @Nullable final String language,
-            @Nullable final String contentLanguage)
+            @Nullable final String contentLanguage,
+            final String pageTitle)
             throws IOException {
         put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
         put(zip, "META-INF/container.xml", containerXml(), ZipEntry.DEFLATED);
@@ -90,7 +105,7 @@ public final class TestBooks {
             put(
                     zip,
                     "OEBPS/ch" + index + ".xhtml",
-                    xhtml(spineParagraphs.get(index), contentLanguage),
+                    xhtml(spineParagraphs.get(index), contentLanguage, pageTitle),
                     ZipEntry.DEFLATED);
         }
     }
@@ -157,12 +172,14 @@ public final class TestBooks {
                 + "</spine></package>";
     }
 
-    private static String xhtml(final List<String> paragraphs, @Nullable final String contentLanguage) {
+    private static String xhtml(
+            final List<String> paragraphs, @Nullable final String contentLanguage, final String pageTitle) {
         final String lang = contentLanguage == null ? "" : " xml:lang=\"" + contentLanguage + "\"";
         final String body =
                 paragraphs.stream().map(text -> "<p>" + text + "</p>").reduce("", String::concat);
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                + "<html xmlns=\"http://www.w3.org/1999/xhtml\"" + lang + "><head><title>Test</title></head><body>"
+                + "<html xmlns=\"http://www.w3.org/1999/xhtml\"" + lang + "><head><title>" + pageTitle
+                + "</title></head><body>"
                 + body
                 + "</body></html>";
     }

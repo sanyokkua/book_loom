@@ -161,6 +161,25 @@ final class TranslationJobTestSupport {
                 fast.dial());
     }
 
+    /** The job-test brief with the given "Also translate" switches. */
+    static BookBrief briefWith(final AlsoTranslate alsoTranslate) {
+        final BookBrief fast = brief("en", "uk");
+        return new BookBrief(
+                fast.sourceLanguage(),
+                fast.targetLanguage(),
+                fast.genre(),
+                fast.register(),
+                fast.voiceEra(),
+                fast.audience(),
+                fast.names(),
+                fast.foreignPassages(),
+                fast.footnotes(),
+                fast.units(),
+                fast.balance(),
+                alsoTranslate,
+                fast.dial());
+    }
+
     static BookBrief withTarget(final BookBrief brief, final String targetLanguage) {
         return new BookBrief(
                 brief.sourceLanguage(),
