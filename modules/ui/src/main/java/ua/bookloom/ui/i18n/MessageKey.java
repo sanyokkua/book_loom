@@ -330,7 +330,7 @@ public enum MessageKey {
     /** Heading of the structure screen. */
     STRUCTURE_TITLE("structure.title"),
     /** Position of a unit in reading order; argument 0 is the zero-based position, passed as an Integer. */
-    STRUCTURE_POSITION("structure.position"),
+    STRUCTURE_UNTITLED("structure.untitled"),
     /** Total of translatable segments beneath the list; argument 0 is the count, passed as an Integer. */
     STRUCTURE_TOTAL("structure.total"),
     /** Button that moves on from the structure screen to the next available step. */

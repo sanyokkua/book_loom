@@ -46,8 +46,10 @@ import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.InterimRunRequest;
+import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -152,17 +154,14 @@ class TranslationWorkspaceEndToEndTest {
 
     private void openBook(final Path book) throws Exception {
         onFx(() -> injector.getInstance(ImportViewModel.class).open(book));
-        waitUntil(() -> injector.getInstance(ImportViewModel.class).openedBook().get() != null);
-        assertThat(onFx(() -> injector.getInstance(ImportViewModel.class)
-                        .openedBook()
-                        .get()
-                        .source()))
-                .isEqualTo(book);
-        assertThat(onFx(() -> segmentCount(injector.getInstance(ImportViewModel.class)
-                        .openedBook()
-                        .get()
-                        .document())))
-                .isEqualTo(SEGMENT_COUNT);
+        waitUntil(() -> injector.getInstance(CurrentProject.class).book().get() != null);
+        final OpenedBook opened =
+                onFx(() -> injector.getInstance(CurrentProject.class).book().get());
+        assertThat(opened).isNotNull();
+        assertThat(opened.projectId()).isNotBlank();
+        assertThat(opened.source()).isEqualTo(book);
+        assertThat(opened.profile()).isNotNull();
+        assertThat(Objects.requireNonNull(opened.profile()).stats().segments()).isEqualTo(SEGMENT_COUNT);
     }
 
     /** Picks a language, checks the proposed destination follows it, then replaces it with the person's own path. */

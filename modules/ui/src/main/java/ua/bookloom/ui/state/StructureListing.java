@@ -3,15 +3,15 @@ package ua.bookloom.ui.state;
 import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.api.document.Document;
-import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.BookProfile;
+import ua.bookloom.api.document.StructureNode;
 
 /**
- * What the structure screen shows for an opened book: one flat row per unit in reading order and, on request, the sum of
- * their segment counts. It is built here, away from the scene graph, so the numbers a person reads can be checked without a
- * window and cannot drift from the parse.
+ * What the structure screen shows for an opened book: one flat row per top-level node of its structure and, on request,
+ * the sum of their segment counts. It is built here, away from the scene graph, so the numbers a person reads can be
+ * checked without a window and cannot drift from the profile.
  *
- * @param rows the units in reading order, unmodifiable
+ * @param rows the top-level nodes in navigation order, unmodifiable
  */
 @Slf4j
 public record StructureListing(List<StructureRow> rows) {
@@ -23,17 +23,16 @@ public record StructureListing(List<StructureRow> rows) {
     }
 
     /**
-     * Lists the units of a parsed book.
+     * Lists the top-level nodes of a book's structure.
      *
-     * @param document the opened book; its units are taken in the order it holds them
-     * @return the rows and their total; no rows and a zero total when the book has no units
+     * @param profile the opened book's profile; its structure is taken in the order it holds it
+     * @return the rows and their total; no rows and a zero total when the book has no structure
      */
-    public static StructureListing of(final Document document) {
-        Objects.requireNonNull(document, "document");
-        final List<StructureRow> rows = document.units().stream()
-                .filter(unit -> !isLeftOut(unit))
-                .map(StructureListing::rowOf)
-                .toList();
+    public static StructureListing of(final BookProfile profile) {
+        Objects.requireNonNull(profile, "profile");
+        final List<StructureRow> rows =
+                profile.structure().stream().map(StructureListing::rowOf).toList();
+        log.debug("structure listing built with {} row(s)", rows.size());
         return new StructureListing(rows);
     }
 
@@ -46,17 +45,9 @@ public record StructureListing(List<StructureRow> rows) {
         return rows.stream().mapToInt(StructureRow::segmentCount).sum();
     }
 
-    /** The auxiliary unit is not a section of the book; it is left out until the brief's switches reach the run. */
-    private static boolean isLeftOut(final Unit unit) {
-        if (unit.isAuxiliary()) {
-            log.debug(
-                    "structure listing leaves the auxiliary unit out segments={}",
-                    unit.segments().size());
-        }
-        return unit.isAuxiliary();
-    }
-
-    private static StructureRow rowOf(final Unit unit) {
-        return new StructureRow(unit.href(), unit.order(), unit.segments().size());
+    // A node that only points into a unit another node counts carries no figure of its own.
+    private static StructureRow rowOf(final StructureNode node) {
+        final Integer count = node.segmentCount();
+        return new StructureRow(node.title(), count == null ? 0 : count);
     }
 }

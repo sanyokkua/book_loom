@@ -12,7 +12,7 @@ import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeView;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Document;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.StructureRow;
@@ -30,9 +30,9 @@ abstract class StructureScreenTestBase extends ImportScreenTestBase {
         onFx(() -> shell.activate(ViewNames.STRUCTURE));
     }
 
-    /** Opens {@code document} from {@code source} through the import screen's view model, then shows the screen. */
-    void openBookThenShowStructure(final Path source, final Document document) throws TimeoutException {
-        port.on(source, Result.ok(document));
+    /** Opens {@code imported} from {@code source} through the import screen's view model, then shows the screen. */
+    void openBookThenShowStructure(final Path source, final ImportedBook imported) throws TimeoutException {
+        projects.on(source, Result.ok(imported));
         openImport();
         openBook(source);
         showStructure();

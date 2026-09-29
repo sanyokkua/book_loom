@@ -10,7 +10,7 @@ import javafx.scene.control.ToggleButton;
 import org.controlsfx.control.SegmentedButton;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.Document;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -28,9 +28,9 @@ abstract class BookBriefScreenTestBase extends ImportScreenTestBase {
         onFx(() -> shell.activate(ViewNames.BOOK_BRIEF));
     }
 
-    /** Opens {@code document} from {@code source} through the import screen's view model, then shows the brief. */
-    void openBookThenShowBrief(final Path source, final Document document) throws TimeoutException {
-        port.on(source, Result.ok(document));
+    /** Opens {@code imported} from {@code source} through the import screen's view model, then shows the brief. */
+    void openBookThenShowBrief(final Path source, final ImportedBook imported) throws TimeoutException {
+        projects.on(source, Result.ok(imported));
         openImport();
         openBook(source);
         showBrief();

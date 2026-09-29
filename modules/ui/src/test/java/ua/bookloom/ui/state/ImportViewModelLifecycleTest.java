@@ -15,7 +15,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.Document;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.BookFixtures;
 
 /**
@@ -31,14 +31,14 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     @Test
     void open_realExecutor_callsThePortOffTheFxThread() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         useBackgroundThread();
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
         awaitAnswered(viewModel);
 
-        assertThat(port.openCallsOnFxThread()).containsExactly(false);
+        assertThat(projects.importCallsOnFxThread()).containsExactly(false);
         assertThat(stateOf(viewModel)).isInstanceOf(ImportState.Detected.class);
     }
 
@@ -47,20 +47,20 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     @Test
     void open_portNotYetAnswered_isOpeningWithTheFileNameThenAnswers() throws InterruptedException, TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
-        port.hold();
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
+        projects.hold();
         useBackgroundThread();
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
-        port.awaitEntered();
+        projects.awaitEntered();
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(isOpening(viewModel)).isTrue();
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Opening("Frankenstein.epub"));
-        assertThat(openedBookOf(viewModel)).isNull();
+        assertThat(openedBook()).isNull();
 
-        port.release();
+        projects.release();
         awaitAnswered(viewModel);
 
         assertThat(isOpening(viewModel)).isFalse();
@@ -73,25 +73,25 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     void open_whileOpening_secondRequestIsIgnored() throws InterruptedException, TimeoutException {
         final Path first = dir.resolve("first.epub");
         final Path second = dir.resolve("second.epub");
-        port.on(first, Result.ok(BookFixtures.frankenstein()));
-        port.on(second, Result.ok(BookFixtures.book("second", BookFormat.EPUB, "en", "Other", "Someone", 1)));
-        port.hold();
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
+        projects.on(second, Result.ok(BookFixtures.imported("p2", BookFormat.EPUB, "en", "Other", "Someone", 1)));
+        projects.hold();
         useBackgroundThread();
         final ImportViewModel viewModel = viewModel();
         open(viewModel, first);
-        port.awaitEntered();
+        projects.awaitEntered();
 
         onFx(() -> {
             viewModel.open(second);
             return null;
         });
 
-        assertThat(port.openCallCount()).isEqualTo(1);
+        assertThat(projects.imports().size()).isEqualTo(1);
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Opening("first.epub"));
-        port.release();
+        projects.release();
         awaitAnswered(viewModel);
 
-        assertThat(port.openedPaths()).containsExactly(first);
+        assertThat(projects.imports()).containsExactly(first);
         assertThat(stateOf(viewModel))
                 .isInstanceOfSatisfying(
                         ImportState.Detected.class,
@@ -103,7 +103,7 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     @Test
     void open_portThrows_answeredAsInternalErrorAndScreenStaysUsable() {
         final Path source = dir.resolve("any.epub");
-        port.throwing(new IllegalStateException("boom-secret-detail"));
+        projects.throwing(new IllegalStateException("boom-secret-detail"));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
@@ -113,7 +113,7 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         assertThat(presented.code()).isEqualTo(ErrorCode.internal);
         assertThat(String.valueOf(presented.details())).doesNotContain("boom-secret-detail");
         assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
-        assertThat(openedBookOf(viewModel)).isNull();
+        assertThat(openedBook()).isNull();
         assertThat(isOpening(viewModel)).isFalse();
         assertThat(toasts.raised()).isEmpty();
     }
@@ -122,12 +122,12 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     @Test
     void open_firstBook_releasesNothing() {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
-        assertThat(port.closedDocuments()).isEmpty();
+        assertThat(projects.closedProjects()).isEmpty();
     }
 
     // IF opening a second book left the first retained, THEN every book opened in a session would stay in memory; the
@@ -136,10 +136,10 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     void open_secondBook_replacesTheFirstAndReleasesIt() {
         final Path firstPath = dir.resolve("first.epub");
         final Path secondPath = dir.resolve("second.epub");
-        final Document first = BookFixtures.frankenstein();
-        final Document second = BookFixtures.book("second", BookFormat.EPUB, "fr", "Candide", "Voltaire", 1, 1);
-        port.on(firstPath, Result.ok(first));
-        port.on(secondPath, Result.ok(second));
+        final ImportedBook first = BookFixtures.frankensteinImport();
+        final ImportedBook second = BookFixtures.imported("p2", BookFormat.EPUB, "fr", "Candide", "Voltaire", 1, 1);
+        projects.on(firstPath, Result.ok(first));
+        projects.on(secondPath, Result.ok(second));
         final ImportViewModel viewModel = viewModel();
         open(viewModel, firstPath);
 
@@ -148,8 +148,11 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
                         new BookCard("second.epub", BookFormat.EPUB, "Candide", "Voltaire", "fr", 2, 2)));
-        assertThat(openedBookOf(viewModel)).isEqualTo(new OpenedBook(secondPath, second));
-        assertThat(port.closedDocuments()).containsExactly(first);
+        assertThat(openedBook()).isNotNull().satisfies(book -> {
+            assertThat(book.projectId()).isEqualTo("p2");
+            assertThat(book.source()).isEqualTo(secondPath);
+        });
+        assertThat(projects.closedProjects()).containsExactly("p1");
     }
 
     // IF a refusal left the previous book open, THEN the screen would refuse a file while the brief screen still read
@@ -158,9 +161,9 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     void open_refusalAfterABook_releasesThePreviousBookAndClearsTheOpenBook() {
         final Path goodPath = dir.resolve("Frankenstein.epub");
         final Path badPath = dir.resolve("secret.epub");
-        final Document good = BookFixtures.frankenstein();
-        port.on(goodPath, Result.ok(good));
-        port.on(
+        final ImportedBook good = BookFixtures.frankensteinImport();
+        projects.on(goodPath, Result.ok(good));
+        projects.on(
                 badPath,
                 Result.err(AppError.of(ErrorCode.validation, "This book is protected", "The book is encrypted.")));
         final ImportViewModel viewModel = viewModel();
@@ -168,8 +171,8 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
 
         open(viewModel, badPath);
 
-        assertThat(port.closedDocuments()).containsExactly(good);
-        assertThat(openedBookOf(viewModel)).isNull();
+        assertThat(projects.closedProjects()).containsExactly("p1");
+        assertThat(openedBook()).isNull();
         assertThat(stateOf(viewModel)).isInstanceOf(ImportState.Refused.class);
     }
 
@@ -183,18 +186,18 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         final Path goodPath = dir.resolve("Frankenstein.epub");
         final Path badPath = dir.resolve("flaky.epub");
         final AppError fault = AppError.of(code, "Could not open", "The book could not be opened.");
-        port.on(goodPath, Result.ok(BookFixtures.frankenstein()));
-        port.on(badPath, Result.err(fault));
+        projects.on(goodPath, Result.ok(BookFixtures.frankensteinImport()));
+        projects.on(badPath, Result.err(fault));
         final ImportViewModel viewModel = viewModel();
         open(viewModel, goodPath);
         final ImportState detected = stateOf(viewModel);
-        final OpenedBook openBook = openedBookOf(viewModel);
+        final OpenedBook openBook = openedBook();
 
         open(viewModel, badPath);
 
         assertThat(stateOf(viewModel)).isEqualTo(detected).isInstanceOf(ImportState.Detected.class);
-        assertThat(openedBookOf(viewModel)).isSameAs(openBook).isNotNull();
-        assertThat(port.closedDocuments()).isEmpty();
+        assertThat(openedBook()).isSameAs(openBook).isNotNull();
+        assertThat(projects.closedProjects()).isEmpty();
         assertThat(errors.presented()).containsExactly(fault);
         assertThat(isOpening(viewModel)).isFalse();
     }
@@ -204,18 +207,18 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     @Test
     void open_portThrowsAfterABook_keepsThePreviousBookAndRestoresItsState() {
         final Path goodPath = dir.resolve("Frankenstein.epub");
-        port.on(goodPath, Result.ok(BookFixtures.frankenstein()));
+        projects.on(goodPath, Result.ok(BookFixtures.frankensteinImport()));
         final ImportViewModel viewModel = viewModel();
         open(viewModel, goodPath);
         final ImportState detected = stateOf(viewModel);
-        final OpenedBook openBook = openedBookOf(viewModel);
-        port.throwing(new IllegalStateException("boom"));
+        final OpenedBook openBook = openedBook();
+        projects.throwing(new IllegalStateException("boom"));
 
         open(viewModel, dir.resolve("other.epub"));
 
         assertThat(stateOf(viewModel)).isEqualTo(detected);
-        assertThat(openedBookOf(viewModel)).isSameAs(openBook);
-        assertThat(port.closedDocuments()).isEmpty();
+        assertThat(openedBook()).isSameAs(openBook);
+        assertThat(projects.closedProjects()).isEmpty();
         assertThat(errors.presented()).hasSize(1);
     }
 
@@ -224,8 +227,8 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
     void open_secondBookOnRealExecutor_releasesTheFirstOffTheFxThread() throws TimeoutException {
         final Path firstPath = dir.resolve("first.epub");
         final Path secondPath = dir.resolve("second.epub");
-        port.on(firstPath, Result.ok(BookFixtures.frankenstein()));
-        port.on(secondPath, Result.ok(BookFixtures.book("second", BookFormat.EPUB, null, null, null, 1)));
+        projects.on(firstPath, Result.ok(BookFixtures.frankensteinImport()));
+        projects.on(secondPath, Result.ok(BookFixtures.imported("p2", BookFormat.EPUB, null, null, null, 1)));
         useBackgroundThread();
         final ImportViewModel viewModel = viewModel();
         open(viewModel, firstPath);
@@ -236,8 +239,89 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS,
                 TimeUnit.SECONDS,
-                () -> !port.closeCallsOnFxThread().isEmpty());
+                () -> !projects.closeCallsOnFxThread().isEmpty());
 
-        assertThat(port.closeCallsOnFxThread()).containsExactly(false);
+        assertThat(projects.closeCallsOnFxThread()).containsExactly(false);
+    }
+
+    // IF Cancel left the project open, THEN every abandoned import would stay stored and the next screens would still
+    // read it; Cancel releases exactly the open project, empties the holder and returns the screen to the drop zone.
+    @Test
+    void cancel_bookOpen_closesItsProjectEmptiesTheHolderAndReturnsToIdle() {
+        final Path source = dir.resolve("Frankenstein.epub");
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
+        final ImportViewModel viewModel = viewModel();
+        open(viewModel, source);
+
+        onFx(() -> {
+            viewModel.cancel();
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(projects.closedProjects()).containsExactly("p1");
+        assertThat(openedBook()).isNull();
+        assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
+    }
+
+    // IF Cancel with nothing open asked the service to close something, THEN it would release a project that is not
+    // there.
+    @Test
+    void cancel_nothingOpen_closesNothing() {
+        final ImportViewModel viewModel = viewModel();
+
+        onFx(() -> {
+            viewModel.cancel();
+            return null;
+        });
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(projects.closedProjects()).isEmpty();
+        assertThat(stateOf(viewModel)).isEqualTo(new ImportState.Idle());
+    }
+
+    // IF Cancel during an unanswered import discarded the current book, THEN the answer would then open a second book
+    // beside a project that was already released; it is ignored until the answer decides what is open.
+    @Test
+    void cancel_whileOpening_isIgnored() throws InterruptedException, TimeoutException {
+        final Path first = dir.resolve("first.epub");
+        final Path second = dir.resolve("second.epub");
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
+        projects.on(second, Result.ok(BookFixtures.imported("p2", BookFormat.EPUB, "en", "Other", "Someone", 1)));
+        useBackgroundThread();
+        final ImportViewModel viewModel = viewModel();
+        open(viewModel, first);
+        awaitAnswered(viewModel);
+        projects.hold();
+        open(viewModel, second);
+        projects.awaitEntered();
+
+        onFx(() -> {
+            viewModel.cancel();
+            return null;
+        });
+
+        assertThat(projects.closedProjects()).isEmpty();
+        assertThat(openedBook()).isNotNull();
+        projects.release();
+        awaitAnswered(viewModel);
+    }
+
+    // IF the replaced project were closed before the new one was current, THEN a screen reading the holder in between
+    // would find nothing open; the new project is current once the old one is released.
+    @Test
+    void open_secondBook_closesTheFirstProjectAndTheHolderReadsTheSecond() {
+        final Path firstPath = dir.resolve("Frankenstein.epub");
+        final Path secondPath = dir.resolve("Dracula.epub");
+        projects.on(firstPath, Result.ok(BookFixtures.frankensteinImport()));
+        projects.on(
+                secondPath, Result.ok(BookFixtures.imported("p2", BookFormat.EPUB, "en", "Dracula", "Bram Stoker", 1)));
+        final ImportViewModel viewModel = viewModel();
+        open(viewModel, firstPath);
+
+        open(viewModel, secondPath);
+
+        assertThat(projects.closedProjects()).containsExactly("p1");
+        assertThat(openedBook()).extracting(OpenedBook::projectId).isEqualTo("p2");
     }
 }

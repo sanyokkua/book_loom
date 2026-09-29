@@ -15,7 +15,6 @@ import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedChatModelFactory;
-import ua.bookloom.ui.ScriptedDocumentPort;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
@@ -39,7 +38,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     static final String PROVIDER = "ProviderError";
     static final String NONE = "none";
 
-    protected ScriptedDocumentPort port;
+    protected CurrentProject current;
     protected RecordingToasts toasts;
     protected RecordingErrorPresenter errors;
     protected ScriptedChatModelFactory models;
@@ -54,7 +53,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     @BeforeEach
     void setUpTranslatingFixtures() {
-        port = ScriptedDocumentPort.idle();
+        current = new CurrentProject();
         toasts = new RecordingToasts();
         errors = new RecordingErrorPresenter();
         models = ScriptedChatModelFactory.ok();
@@ -62,9 +61,9 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         projects = new ScriptedProjectService();
         queued = new QueuedExecutor();
         prepExecutor = queued;
-        imports = onFx(() ->
-                new ImportViewModel(port, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
-        brief = onFx(() -> new BookBriefViewModel(imports, new DirectExecutor()));
+        imports = onFx(() -> new ImportViewModel(
+                projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
+        brief = onFx(() -> new BookBriefViewModel(current, new DirectExecutor()));
         settings = onFx(() -> new SettingsViewModel(
                 new FakeProviderConfigs(),
                 ScriptedProviderVerifier.idle(),
@@ -81,13 +80,13 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
         viewModel = onFx(() -> new TranslatingViewModel(
-                mirror, runner, brief, settings, models, engine, projects, toasts, errors, prepExecutor));
+                mirror, runner, brief, current, settings, models, engine, projects, toasts, errors, prepExecutor));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     /** Opens the book and chooses a model, so that {@code start()} has everything it needs. */
     protected void openBookAndChooseModel() {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         onFx(() -> {
             imports.open(BOOK);
             return null;

@@ -13,7 +13,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import org.jspecify.annotations.Nullable;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.ScriptedDocumentPort;
+import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
@@ -22,7 +22,7 @@ import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 
 /**
- * What the import screen tests share: the scripted document port wired into the graph, the view model the screen
+ * What the import screen tests share: the scripted project service wired into the graph, the view model the screen
  * observes, and lookups that tell an absent node from one that is present but hidden.
  */
 abstract class ImportScreenTestBase extends ShellTestBase {
@@ -33,11 +33,11 @@ abstract class ImportScreenTestBase extends ShellTestBase {
     static final List<String> CARD_ROWS =
             List.of("file", "format", "title", "author", "declaredLang", "units", "segments");
 
-    final ScriptedDocumentPort port = ScriptedDocumentPort.idle();
+    final ScriptedProjectService projects = new ScriptedProjectService();
 
     @Override
     protected Injector createInjector(final Locale locale) {
-        return UiTestInjector.create(locale, port);
+        return UiTestInjector.builder(locale).projects(projects).build();
     }
 
     void openImport() {

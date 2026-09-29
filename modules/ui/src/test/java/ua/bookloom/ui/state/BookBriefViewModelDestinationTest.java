@@ -21,7 +21,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF the view model proposed nothing or used another target, THEN the person would start from a wrong path.
     @Test
     void destination_epubOpenedWithDefaultTarget_isProposedBesideTheSourceWithUk() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         assertThat(target()).isEqualTo("uk");
         assertThat(destination())
@@ -31,7 +31,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF the target were not part of the proposal, THEN every language would be written to the same file.
     @Test
     void destination_targetChangedToGerman_proposalMovesToTheGermanName() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         selectTarget("de");
 
@@ -43,7 +43,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF a target change overwrote a path typed by hand, THEN a person's choice would silently be undone.
     @Test
     void destination_editedByHandThenTargetChanged_staysWhereThePersonPutIt() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
         editDestination("/archive/out.epub");
 
         selectTarget("de");
@@ -54,7 +54,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF a path picked in the file chooser were not counted as edited, THEN the next target change would discard it.
     @Test
     void destination_chosenInTheFileChooserThenTargetChanged_staysWhereThePersonPutIt() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
         chooseDestination(Path.of("/archive/out.epub"));
 
         selectTarget("pl");
@@ -67,7 +67,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     void destination_fb2ZipOpened_keepsTheCompositeSuffixWhole() {
         openBook(
                 Path.of("/books/Kobzar.fb2.zip"),
-                BookFixtures.book("kobzar", BookFormat.FB2, "uk", "Kobzar", "Shevchenko", 1));
+                BookFixtures.imported("kobzar", BookFormat.FB2, "uk", "Kobzar", "Shevchenko", 1));
 
         assertThat(destination()).isEqualTo(Path.of("/books/Kobzar.uk.fb2.zip").toString());
     }
@@ -81,7 +81,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     })
     void destination_eachFormatOpened_followsThatFormatsOwnSuffix(
             final String source, final BookFormat format, final String expected) {
-        openBook(Path.of(source), BookFixtures.book("any", format, null, null, null, 1));
+        openBook(Path.of(source), BookFixtures.imported("any", format, null, null, null, 1));
 
         assertThat(destination()).isEqualTo(Path.of(expected).toString());
     }
@@ -89,10 +89,11 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF the hand-edited flag outlived the book, THEN a second book would be proposed no path at all.
     @Test
     void destination_aDifferentBookOpenedAfterAnEdit_isProposedAgain() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
         editDestination("/archive/out.epub");
 
-        openBook(Path.of("/other/Dracula.epub"), BookFixtures.book("dracula", BookFormat.EPUB, "en", null, null, 1));
+        openBook(
+                Path.of("/other/Dracula.epub"), BookFixtures.imported("dracula", BookFormat.EPUB, "en", null, null, 1));
 
         assertThat(destination()).isEqualTo(Path.of("/other/Dracula.uk.epub").toString());
     }
@@ -100,9 +101,10 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF the reset were not complete, THEN after a second book the target change would still be ignored.
     @Test
     void destination_aDifferentBookAfterAnEdit_followsTheTargetAgain() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
         editDestination("/archive/out.epub");
-        openBook(Path.of("/other/Dracula.epub"), BookFixtures.book("dracula", BookFormat.EPUB, "en", null, null, 1));
+        openBook(
+                Path.of("/other/Dracula.epub"), BookFixtures.imported("dracula", BookFormat.EPUB, "en", null, null, 1));
 
         selectTarget("de");
 
@@ -112,7 +114,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF the screen's first visit came after the open, THEN a view model created late would show no destination.
     @Test
     void destination_viewModelCreatedAfterTheBookWasOpened_proposesForThatBook() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         recreateBrief();
 
@@ -141,7 +143,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     // IF the book's own language were copied into the target, THEN a person would translate into the source language.
     @Test
     void targetLanguage_aBookDeclaringEnglishOpened_staysUkrainian() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         assertThat(target()).isEqualTo("uk");
     }

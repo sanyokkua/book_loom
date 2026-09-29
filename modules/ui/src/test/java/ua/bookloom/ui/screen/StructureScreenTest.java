@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import javafx.scene.control.ButtonBase;
@@ -16,7 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.BookProfile;
+import ua.bookloom.api.document.StructureNode;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ViewNames;
 
@@ -27,31 +30,18 @@ import ua.bookloom.ui.ViewNames;
  */
 class StructureScreenTest extends StructureScreenTestBase {
 
-    private static final List<String> ELEVEN_HREFS = List.of(
-            "OEBPS/chapter-01.xhtml",
-            "OEBPS/chapter-02.xhtml",
-            "OEBPS/chapter-03.xhtml",
-            "OEBPS/chapter-04.xhtml",
-            "OEBPS/chapter-05.xhtml",
-            "OEBPS/chapter-06.xhtml",
-            "OEBPS/chapter-07.xhtml",
-            "OEBPS/chapter-08.xhtml",
-            "OEBPS/chapter-09.xhtml",
-            "OEBPS/chapter-10.xhtml",
-            "OEBPS/chapter-11.xhtml");
-
     private static final List<List<String>> ELEVEN_ROWS = List.of(
-            List.of("OEBPS/chapter-01.xhtml", "Position 0", "120 segments"),
-            List.of("OEBPS/chapter-02.xhtml", "Position 1", "95 segments"),
-            List.of("OEBPS/chapter-03.xhtml", "Position 2", "130 segments"),
-            List.of("OEBPS/chapter-04.xhtml", "Position 3", "110 segments"),
-            List.of("OEBPS/chapter-05.xhtml", "Position 4", "100 segments"),
-            List.of("OEBPS/chapter-06.xhtml", "Position 5", "115 segments"),
-            List.of("OEBPS/chapter-07.xhtml", "Position 6", "105 segments"),
-            List.of("OEBPS/chapter-08.xhtml", "Position 7", "125 segments"),
-            List.of("OEBPS/chapter-09.xhtml", "Position 8", "135 segments"),
-            List.of("OEBPS/chapter-10.xhtml", "Position 9", "90 segments"),
-            List.of("OEBPS/chapter-11.xhtml", "Position 10", "115 segments"));
+            List.of("Chapter 1", "120 segments"),
+            List.of("Chapter 2", "95 segments"),
+            List.of("Chapter 3", "130 segments"),
+            List.of("Chapter 4", "110 segments"),
+            List.of("Chapter 5", "100 segments"),
+            List.of("Chapter 6", "115 segments"),
+            List.of("Chapter 7", "105 segments"),
+            List.of("Chapter 8", "125 segments"),
+            List.of("Chapter 9", "135 segments"),
+            List.of("Chapter 10", "90 segments"),
+            List.of("Chapter 11", "115 segments"));
 
     private static final int UNITS_IN_A_HUGE_BOOK = 5_000;
     private static final int FAR_FEWER_THAN_ALL = 200;
@@ -59,10 +49,10 @@ class StructureScreenTest extends StructureScreenTestBase {
     @TempDir
     private Path dir;
 
-    /** Eleven units whose segment counts add up to 1,240. */
-    private static Document elevenUnitBook() {
-        return BookFixtures.book(
-                "eleven", BookFormat.EPUB, ELEVEN_HREFS, 120, 95, 130, 110, 100, 115, 105, 125, 135, 90, 115);
+    /** Eleven top-level nodes whose segment counts add up to 1,240. */
+    private static ImportedBook elevenUnitBook() {
+        return BookFixtures.imported(
+                "eleven", BookFormat.EPUB, null, null, null, 120, 95, 130, 110, 100, 115, 105, 125, 135, 90, 115);
     }
 
     // IF a row were dropped, reordered or given a neighbour's count, THEN the person would misread how the book parsed.
@@ -85,15 +75,35 @@ class StructureScreenTest extends StructureScreenTestBase {
                 .allMatch(TreeItem::isLeaf);
     }
 
-    // IF a title were shown, THEN the row would invent a chapter name the parse never produced; the row carries the
-    // path, the position and the count and nothing else.
+    // IF a row showed anything but the node's own title and count, THEN the screen would invent structure.
     @Test
-    void row_unitAtPositionZero_showsItsPathItsPositionAndItsCountAndNoTitle() throws TimeoutException {
-        final Document book = BookFixtures.book("one", BookFormat.EPUB, List.of("OEBPS/chapter-01.xhtml"), 1);
+    void row_singleNode_showsItsTitleAndItsCountAndNothingElse() throws TimeoutException {
+        final ImportedBook book = BookFixtures.imported("one", BookFormat.EPUB, null, null, null, 1);
         openBookThenShowStructure(dir.resolve("book.epub"), book);
 
         assertThat(renderedRows()).hasSize(1);
-        assertThat(renderedRows().get(0)).containsExactly("OEBPS/chapter-01.xhtml", "Position 0", "1 segment");
+        assertThat(renderedRows().get(0)).containsExactly("Chapter 1", "1 segment");
+    }
+
+    // IF a node without a title showed an empty row, THEN the person could not tell the row from a gap.
+    @Test
+    void row_nodeWithNoTitle_showsUntitled() throws TimeoutException {
+        final ImportedBook titled = BookFixtures.imported("one", BookFormat.EPUB, null, null, null, 3);
+        final BookProfile profile = Objects.requireNonNull(titled.profile());
+        final ImportedBook book = new ImportedBook(
+                titled.projectId(),
+                titled.inspection(),
+                new BookProfile(
+                        null,
+                        null,
+                        null,
+                        List.of(new StructureNode("", null, 3, List.of())),
+                        profile.stats(),
+                        profile.resourceIds()),
+                titled.brief());
+        openBookThenShowStructure(dir.resolve("book.epub"), book);
+
+        assertThat(renderedRows().get(0)).containsExactly("Untitled", "3 segments");
     }
 
     // IF the total were not the sum of the rows, THEN the screen would contradict itself.
@@ -120,7 +130,7 @@ class StructureScreenTest extends StructureScreenTestBase {
     // IF a book with a single segment said "1 segments in total", THEN the plural rule would be wrong at its edge.
     @Test
     void total_singleSegmentBook_usesTheSingularForm() throws TimeoutException {
-        final Document book = BookFixtures.book("one", BookFormat.TXT, List.of("book.txt"), 1);
+        final ImportedBook book = BookFixtures.imported("one", BookFormat.TXT, null, null, null, 1);
         openBookThenShowStructure(dir.resolve("book.txt"), book);
 
         assertThat(((Label) required("structure-total")).getText()).isEqualTo("1 segment in total");
@@ -130,13 +140,11 @@ class StructureScreenTest extends StructureScreenTestBase {
     // rows the viewport can show may become nodes.
     @Test
     void tree_fiveThousandUnitBook_holdsAllItemsButRendersFarFewerCells() throws TimeoutException {
-        final List<String> hrefs = IntStream.range(0, UNITS_IN_A_HUGE_BOOK)
-                .mapToObj(i -> "OEBPS/part-" + i + ".xhtml")
-                .toList();
         final int[] oneSegmentEach =
                 IntStream.generate(() -> 1).limit(UNITS_IN_A_HUGE_BOOK).toArray();
         openBookThenShowStructure(
-                dir.resolve("huge.epub"), BookFixtures.book("huge", BookFormat.EPUB, hrefs, oneSegmentEach));
+                dir.resolve("huge.epub"),
+                BookFixtures.imported("huge", BookFormat.EPUB, null, null, null, oneSegmentEach));
 
         assertThat(tree().getRoot().getChildren()).hasSize(UNITS_IN_A_HUGE_BOOK);
         assertThat(renderedCells()).isNotEmpty().hasSizeLessThan(FAR_FEWER_THAN_ALL);
@@ -177,7 +185,7 @@ class StructureScreenTest extends StructureScreenTestBase {
     void screen_bookOpenedWhileItIsOnShow_swapsTheNoBookStateForTheTree() throws TimeoutException {
         showStructure();
         assertThat(isShown("nobook-card")).isTrue();
-        port.on(dir.resolve("book.epub"), Result.ok(elevenUnitBook()));
+        projects.on(dir.resolve("book.epub"), Result.ok(elevenUnitBook()));
 
         openBook(dir.resolve("book.epub"));
 

@@ -11,7 +11,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -47,201 +46,113 @@ public final class UiTestInjector {
     /**
      * Creates an injector over {@link UiModule} whose display locale is fixed, whose operating system always reports
      * the light scheme, whose build version is {@value #DEV_VERSION}, whose {@link BackgroundExecutor} is two daemon
-     * threads, and whose provider registry, verifier, model catalogue and document port are the default test fakes (the
-     * two built-in presets, a verifier nobody is expected to ask, a catalogue that lists no models, a port that
-     * answers every book with an error, a model factory that hands out a model and an engine that refuses every job).
+     * threads, and whose every port is the idle test fake.
      *
      * @param locale the language every message renders in
      * @return a fresh injector; never shares singletons with another call
      */
     public static Injector create(final Locale locale) {
-        return create(locale, new FakeProviderConfigs(), ScriptedProviderVerifier.idle(), ScriptedModelCatalog.idle());
+        return builder(locale).build();
     }
 
     /**
-     * As {@link #create(Locale)} with a scripted document port, for a test that opens books.
+     * Starts a graph whose collaborators a test replaces one by one; each defaults to an idle fake: the two built-in
+     * provider presets, a verifier nobody is expected to ask, a catalogue that lists no models, a project service that
+     * answers every import with an error, an export service nobody is expected to ask, a model factory that hands out
+     * a model and an engine that refuses every job.
      *
      * @param locale the language every message renders in
-     * @param documents what the graph's {@link DocumentPort} is
-     * @return a fresh injector; never shares singletons with another call
+     * @return the builder
      */
-    public static Injector create(final Locale locale, final DocumentPort documents) {
-        return create(
-                locale,
-                new FakeProviderConfigs(),
-                ScriptedProviderVerifier.idle(),
-                ScriptedModelCatalog.idle(),
-                documents);
+    public static Builder builder(final Locale locale) {
+        return new Builder(Objects.requireNonNull(locale, "locale"));
     }
 
-    /**
-     * As {@link #create(Locale)} with a scripted verifier, for a test that drives or observes provider checks.
-     *
-     * @param locale the language every message renders in
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(final Locale locale, final ProviderVerifier verifier) {
-        return create(locale, new FakeProviderConfigs(), verifier, ScriptedModelCatalog.idle());
-    }
+    /** Collects the collaborators of one test graph; {@link #build()} makes a fresh injector from them. */
+    public static final class Builder {
 
-    /**
-     * As {@link #create(Locale)} with a scripted verifier and a scripted model catalogue, for a test that drives or
-     * observes model listing.
-     *
-     * @param locale the language every message renders in
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @param catalog what the graph's {@link ModelCatalog} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(final Locale locale, final ProviderVerifier verifier, final ModelCatalog catalog) {
-        return create(locale, new FakeProviderConfigs(), verifier, catalog);
-    }
+        private final Locale locale;
+        private ProviderConfigs configs = new FakeProviderConfigs();
+        private ProviderVerifier verifier = ScriptedProviderVerifier.idle();
+        private ModelCatalog catalog = ScriptedModelCatalog.idle();
+        private ProjectService projects = new ScriptedProjectService();
+        private ExportService exports = new ScriptedExportService();
+        private ChatModelFactory models = ScriptedChatModelFactory.ok();
+        private TranslationEngine engine = ScriptedTranslationEngine.idle();
 
-    /**
-     * As {@link #create(Locale)} with a scripted provider registry and verifier.
-     *
-     * @param locale the language every message renders in
-     * @param configs what the graph's {@link ProviderConfigs} is
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(final Locale locale, final ProviderConfigs configs, final ProviderVerifier verifier) {
-        return create(locale, configs, verifier, ScriptedModelCatalog.idle());
-    }
+        private Builder(final Locale locale) {
+            this.locale = locale;
+        }
 
-    /**
-     * As {@link #create(Locale)} with a scripted provider registry, verifier and model catalogue.
-     *
-     * @param locale the language every message renders in
-     * @param configs what the graph's {@link ProviderConfigs} is
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @param catalog what the graph's {@link ModelCatalog} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(
-            final Locale locale,
-            final ProviderConfigs configs,
-            final ProviderVerifier verifier,
-            final ModelCatalog catalog) {
-        return create(locale, configs, verifier, catalog, ScriptedDocumentPort.idle());
-    }
+        /** What the graph's {@link ProviderConfigs} is. */
+        public Builder configs(final ProviderConfigs value) {
+            configs = Objects.requireNonNull(value, "configs");
+            return this;
+        }
 
-    /**
-     * As {@link #create(Locale)} with every collaborator scripted.
-     *
-     * @param locale the language every message renders in
-     * @param configs what the graph's {@link ProviderConfigs} is
-     * @param verifier what the graph's {@link ProviderVerifier} is
-     * @param catalog what the graph's {@link ModelCatalog} is
-     * @param documents what the graph's {@link DocumentPort} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(
-            final Locale locale,
-            final ProviderConfigs configs,
-            final ProviderVerifier verifier,
-            final ModelCatalog catalog,
-            final DocumentPort documents) {
-        return create(
-                locale,
-                configs,
-                verifier,
-                catalog,
-                documents,
-                ScriptedChatModelFactory.ok(),
-                ScriptedTranslationEngine.idle(),
-                new ScriptedProjectService(),
-                new ScriptedExportService());
-    }
+        /** What the graph's {@link ProviderVerifier} is. */
+        public Builder verifier(final ProviderVerifier value) {
+            verifier = Objects.requireNonNull(value, "verifier");
+            return this;
+        }
 
-    /**
-     * As {@link #create(Locale, DocumentPort)} with a scripted model factory and translation engine, for a test that
-     * starts runs.
-     *
-     * @param locale the language every message renders in
-     * @param documents what the graph's {@link DocumentPort} is
-     * @param models what the graph's {@link ChatModelFactory} is
-     * @param engine what the graph's {@link TranslationEngine} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(
-            final Locale locale,
-            final DocumentPort documents,
-            final ChatModelFactory models,
-            final TranslationEngine engine) {
-        return create(locale, documents, models, engine, new ScriptedProjectService(), new ScriptedExportService());
-    }
+        /** What the graph's {@link ModelCatalog} is. */
+        public Builder catalog(final ModelCatalog value) {
+            catalog = Objects.requireNonNull(value, "catalog");
+            return this;
+        }
 
-    /**
-     * As {@link #create(Locale, DocumentPort, ChatModelFactory, TranslationEngine)} with the project and export
-     * services the test holds, so it can read what a run asked of them.
-     *
-     * @param locale the language every message renders in
-     * @param documents what the graph's {@link DocumentPort} is
-     * @param models what the graph's {@link ChatModelFactory} is
-     * @param engine what the graph's {@link TranslationEngine} is
-     * @param projects what the graph's {@link ProjectService} is
-     * @param exports what the graph's {@link ExportService} is
-     * @return a fresh injector; never shares singletons with another call
-     */
-    public static Injector create(
-            final Locale locale,
-            final DocumentPort documents,
-            final ChatModelFactory models,
-            final TranslationEngine engine,
-            final ScriptedProjectService projects,
-            final ScriptedExportService exports) {
-        return create(
-                locale,
-                new FakeProviderConfigs(),
-                ScriptedProviderVerifier.idle(),
-                ScriptedModelCatalog.idle(),
-                documents,
-                models,
-                engine,
-                projects,
-                exports);
-    }
+        /** What the graph's {@link ProjectService} is, so the test can read what the window asked of it. */
+        public Builder projects(final ProjectService value) {
+            projects = Objects.requireNonNull(value, "projects");
+            return this;
+        }
 
-    private static Injector create(
-            final Locale locale,
-            final ProviderConfigs configs,
-            final ProviderVerifier verifier,
-            final ModelCatalog catalog,
-            final DocumentPort documents,
-            final ChatModelFactory models,
-            final TranslationEngine engine,
-            final ProjectService projects,
-            final ExportService exports) {
-        Objects.requireNonNull(locale, "locale");
-        Objects.requireNonNull(configs, "configs");
-        Objects.requireNonNull(verifier, "verifier");
-        Objects.requireNonNull(catalog, "catalog");
-        Objects.requireNonNull(documents, "documents");
-        Objects.requireNonNull(models, "models");
-        Objects.requireNonNull(engine, "engine");
-        return Guice.createInjector(Modules.override(new UiModule())
-                .with(new ReviewPortsModule(), new AbstractModule() {
-                    @Override
-                    protected void configure() {
-                        bind(LocaleProvider.class).toInstance(() -> locale);
-                        bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
-                        bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
-                        bind(ExecutorService.class)
-                                .annotatedWith(BackgroundExecutor.class)
-                                .toInstance(daemonExecutor());
-                        bind(ProviderConfigs.class).toInstance(configs);
-                        bind(ProviderVerifier.class).toInstance(verifier);
-                        bind(ModelCatalog.class).toInstance(catalog);
-                        bind(DocumentPort.class).toInstance(documents);
-                        bind(ChatModelFactory.class).toInstance(models);
-                        bind(TranslationEngine.class).toInstance(engine);
-                        bind(ProjectService.class).toInstance(projects);
-                        bind(ExportService.class).toInstance(exports);
-                        bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
-                    }
-                }));
+        /** What the graph's {@link ExportService} is. */
+        public Builder exports(final ExportService value) {
+            exports = Objects.requireNonNull(value, "exports");
+            return this;
+        }
+
+        /** What the graph's {@link ChatModelFactory} is. */
+        public Builder models(final ChatModelFactory value) {
+            models = Objects.requireNonNull(value, "models");
+            return this;
+        }
+
+        /** What the graph's {@link TranslationEngine} is. */
+        public Builder engine(final TranslationEngine value) {
+            engine = Objects.requireNonNull(value, "engine");
+            return this;
+        }
+
+        /**
+         * Makes the graph.
+         *
+         * @return a fresh injector; never shares singletons with another call
+         */
+        public Injector build() {
+            return Guice.createInjector(Modules.override(new UiModule())
+                    .with(new ReviewPortsModule(), new AbstractModule() {
+                        @Override
+                        protected void configure() {
+                            bind(LocaleProvider.class).toInstance(() -> locale);
+                            bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
+                            bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
+                            bind(ExecutorService.class)
+                                    .annotatedWith(BackgroundExecutor.class)
+                                    .toInstance(daemonExecutor());
+                            bind(ProviderConfigs.class).toInstance(configs);
+                            bind(ProviderVerifier.class).toInstance(verifier);
+                            bind(ModelCatalog.class).toInstance(catalog);
+                            bind(ChatModelFactory.class).toInstance(models);
+                            bind(TranslationEngine.class).toInstance(engine);
+                            bind(ProjectService.class).toInstance(projects);
+                            bind(ExportService.class).toInstance(exports);
+                            bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
+                        }
+                    }));
+        }
     }
 
     /** The review-side ports and the launch-time review mode, which no test of the window scripts yet. */

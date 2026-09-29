@@ -61,6 +61,7 @@ public final class TranslatingViewModel {
     private final StateMirror mirror;
     private final TranslationRunner runner;
     private final BookBriefViewModel brief;
+    private final CurrentProject current;
     private final SettingsViewModel settings;
     private final ChatModelFactory models;
     private final TranslationEngine engine;
@@ -81,6 +82,7 @@ public final class TranslatingViewModel {
      * @param mirror the state every run publishes into and this view model observes
      * @param runner the runner that owns the one active run
      * @param brief where the request is assembled from
+     * @param current the open book a run is started on
      * @param settings where the provider and model come from
      * @param models the port a model is created through
      * @param engine the port a job is created through
@@ -94,6 +96,7 @@ public final class TranslatingViewModel {
             final StateMirror mirror,
             final TranslationRunner runner,
             final BookBriefViewModel brief,
+            final CurrentProject current,
             final SettingsViewModel settings,
             final ChatModelFactory models,
             final TranslationEngine engine,
@@ -104,6 +107,7 @@ public final class TranslatingViewModel {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.brief = Objects.requireNonNull(brief, "brief");
+        this.current = Objects.requireNonNull(current, "current");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.models = Objects.requireNonNull(models, "models");
         this.engine = Objects.requireNonNull(engine, "engine");
@@ -116,7 +120,7 @@ public final class TranslatingViewModel {
         mirror.runState().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
-        brief.openedBook().addListener(onOpenedBook);
+        current.book().addListener(onOpenedBook);
         log.debug("translating view model ready");
     }
 
@@ -221,7 +225,7 @@ public final class TranslatingViewModel {
     }
 
     private Optional<RunNotice.Input> missingInput(final boolean modelChosen) {
-        if (brief.openedBook().get() == null) {
+        if (current.book().get() == null) {
             return Optional.of(RunNotice.Input.BOOK);
         }
         return modelChosen ? Optional.empty() : Optional.of(RunNotice.Input.MODEL);

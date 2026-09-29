@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
+import java.util.List;
 import java.util.Objects;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
@@ -11,11 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.StructureListing;
 
 /**
- * The structure screen's frame, which lists the book's units while a book is open and shows the no-book state while
+ * The structure screen's frame, which lists the book's structure while a book is open and shows the no-book state while
  * none is.
  *
  * <p>The open book is observed through a weak listener held by the field below, because the view model outlives this
@@ -26,10 +28,10 @@ import ua.bookloom.ui.state.OpenedBook;
 @Slf4j
 public final class StructureController {
 
-    private final ImportViewModel viewModel;
+    private final CurrentProject project;
     private final Messages messages;
     private final Navigator navigator;
-    private final ChangeListener<OpenedBook> onBook = (observed, was, now) -> show(now);
+    private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
     private Pane stateHost;
@@ -37,33 +39,38 @@ public final class StructureController {
     /**
      * Receives the collaborators the injector owns.
      *
-     * @param viewModel the holder of the open book whose units are listed
+     * @param project the holder of the open book whose structure is listed
      * @param messages the catalogue the built parts are worded from
      * @param navigator where the route from the no-book state leads
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
-    public StructureController(final ImportViewModel viewModel, final Messages messages, final Navigator navigator) {
-        this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+    public StructureController(final CurrentProject project, final Messages messages, final Navigator navigator) {
+        this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
     }
 
     @FXML
     void initialize() {
-        final OpenedBook book = viewModel.openedBook().get();
+        final OpenedBook book = project.book().get();
         log.debug("building the structure screen, a book is open: {}", book != null);
         stateHost.getProperties().put(StructureController.class, this);
-        viewModel.openedBook().addListener(new WeakChangeListener<>(onBook));
+        project.book().addListener(new WeakChangeListener<>(onBook));
         show(book);
     }
 
     private void show(final @Nullable OpenedBook book) {
         log.debug("showing the {}", book != null ? "structure" : "no-book state");
         final Node content = book != null
-                ? StructureView.build(book.document(), messages, navigator)
+                ? StructureView.build(listingOf(book), messages, navigator)
                 : NoBookView.build(messages, navigator);
         stateHost.getChildren().setAll(content);
+    }
+
+    private static StructureListing listingOf(final OpenedBook book) {
+        final var profile = book.profile();
+        return profile == null ? new StructureListing(List.of()) : StructureListing.of(profile);
     }
 }

@@ -29,7 +29,7 @@ class BookBriefScreenDestinationTest extends BookBriefScreenTestBase {
     private Path dir;
 
     private void openFrankenstein() throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -140,7 +140,7 @@ class BookBriefScreenDestinationTest extends BookBriefScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(isShown("brief-destination-exists")).isTrue();
-        assertThat(port.openedPaths()).containsExactly(dir.resolve("Frankenstein.epub"));
+        assertThat(projects.imports()).containsExactly(dir.resolve("Frankenstein.epub"));
     }
 
     // IF the report were shown for a proposal that already exists, THEN only a typed path would ever be warned about.
@@ -205,7 +205,7 @@ class BookBriefScreenDestinationTest extends BookBriefScreenTestBase {
         openFrankenstein();
         onFx(() -> toggle("brief-overwrite").setSelected(true));
         final Path second = dir.resolve("Dracula.epub");
-        port.on(second, Result.ok(BookFixtures.book("dracula", BookFormat.EPUB, "en", null, null, 1)));
+        projects.on(second, Result.ok(BookFixtures.imported("dracula", BookFormat.EPUB, "en", null, null, 1)));
         openImport();
         openBook(second);
 

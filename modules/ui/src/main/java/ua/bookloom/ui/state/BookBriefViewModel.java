@@ -13,12 +13,11 @@ import java.util.concurrent.RejectedExecutionException;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.document.Document;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.util.paths.DestinationPath;
 
@@ -27,7 +26,7 @@ import ua.bookloom.util.paths.DestinationPath;
  * translation is written and whether an existing file may be replaced. Nothing else on the brief screen is read here,
  * because nothing else on it is available yet.
  *
- * <p>A singleton, like {@link ImportViewModel}, because the screen's controller is rebuilt on every visit while the
+ * <p>A singleton, like {@link CurrentProject}, because the screen's controller is rebuilt on every visit while the
  * choices must survive it. It is first constructed when the brief is first shown, which can be long after the book
  * was opened, so it proposes a destination for a book that is already open. The proposed file name is never built
  * here: {@link DestinationPath} owns that rule, so the command line and this screen cannot drift apart.
@@ -47,7 +46,7 @@ public final class BookBriefViewModel {
 
     private static final String DEFAULT_TARGET = TARGET_LANGUAGES.get(0);
 
-    private final ImportViewModel imports;
+    private final CurrentProject project;
     private final ExecutorService executor;
     private final ReadOnlyStringWrapper targetLanguage = new ReadOnlyStringWrapper(DEFAULT_TARGET);
     private final ReadOnlyStringWrapper destination = new ReadOnlyStringWrapper("");
@@ -61,28 +60,18 @@ public final class BookBriefViewModel {
     /**
      * Follows the open book, and proposes a destination for one that is already open.
      *
-     * @param imports the holder of the open book, which outlives this view model
+     * @param project the holder of the open book, which outlives this view model
      * @param executor the daemon executor the existence check runs on, never the FX thread
      */
     @Inject
-    public BookBriefViewModel(final ImportViewModel imports, @BackgroundExecutor final ExecutorService executor) {
-        this.imports = Objects.requireNonNull(imports, "imports");
+    public BookBriefViewModel(final CurrentProject project, @BackgroundExecutor final ExecutorService executor) {
+        this.project = Objects.requireNonNull(project, "project");
         this.executor = Objects.requireNonNull(executor, "executor");
-        imports.openedBook().addListener((observed, was, now) -> onBookChanged(now));
+        project.book().addListener((observed, was, now) -> onBookChanged(now));
         log.debug(
-                "book brief created, a book is already open: {}",
-                imports.openedBook().get() != null);
-        propose(imports.openedBook().get());
+                "book brief created, a book is already open: {}", project.book().get() != null);
+        propose(project.book().get());
         refreshExists();
-    }
-
-    /**
-     * The book the brief is about.
-     *
-     * @return a read-only property holding {@code null} while no book is open
-     */
-    public ReadOnlyObjectProperty<OpenedBook> openedBook() {
-        return imports.openedBook();
     }
 
     /**
@@ -137,11 +126,11 @@ public final class BookBriefViewModel {
      * @return the declared language code, or empty when no book is open or it declares none
      */
     public Optional<String> sourceLanguage() {
-        final OpenedBook book = imports.openedBook().get();
+        final OpenedBook book = project.book().get();
         if (book == null) {
             return Optional.empty();
         }
-        final String declared = book.document().declaredLang();
+        final String declared = book.inspection().languageEvidence().declared();
         return declared == null || declared.isBlank() ? Optional.empty() : Optional.of(declared);
     }
 
@@ -159,7 +148,7 @@ public final class BookBriefViewModel {
         targetLanguage.set(code);
         log.debug("target language is now {}, destination hand-edited: {}", code, destinationEdited);
         if (!destinationEdited) {
-            propose(imports.openedBook().get());
+            propose(project.book().get());
         }
         refreshExists();
     }
@@ -225,7 +214,7 @@ public final class BookBriefViewModel {
      *     language is left null so that the one the import preselected is used
      */
     public Optional<InterimRunRequest> request() {
-        final OpenedBook book = imports.openedBook().get();
+        final OpenedBook book = project.book().get();
         if (book == null) {
             log.debug("no request: no book is open");
             return Optional.empty();
@@ -236,7 +225,8 @@ public final class BookBriefViewModel {
 
     private void onBookChanged(final @Nullable OpenedBook book) {
         log.debug(
-                "the open book changed to {}; the destination is proposed afresh", book == null ? null : book.source());
+                "the open book changed to {}; the destination is proposed afresh",
+                book == null ? null : book.projectId());
         destinationEdited = false;
         overwrite.set(false);
         propose(book);
@@ -249,9 +239,9 @@ public final class BookBriefViewModel {
             destination.set("");
             return;
         }
-        final Document document = book.document();
-        final Path proposed = DestinationPath.destinationFor(book.source(), document.format(), targetLanguage.get());
-        log.debug("proposing destination {} for {} ({})", proposed, book.source(), document.format());
+        final BookFormat format = Objects.requireNonNull(book.inspection().format(), "format");
+        final Path proposed = DestinationPath.destinationFor(book.source(), format, targetLanguage.get());
+        log.debug("proposing destination {} for project {} ({})", proposed, book.projectId(), format);
         destination.set(proposed.toString());
     }
 

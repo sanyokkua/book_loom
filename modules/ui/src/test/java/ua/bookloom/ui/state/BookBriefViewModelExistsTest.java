@@ -26,8 +26,8 @@ class BookBriefViewModelExistsTest extends BookBriefViewModelTestBase {
 
     @BeforeEach
     void useTheQueuedExecutor() {
-        brief = onFx(() -> new BookBriefViewModel(imports, queue));
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        brief = onFx(() -> new BookBriefViewModel(current, queue));
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         runQueue();
     }
 
@@ -106,7 +106,7 @@ class BookBriefViewModelExistsTest extends BookBriefViewModelTestBase {
     void destinationExists_bookChangedWhileAnAnswerIsInFlight_answerOfTheOldBookIsDiscarded() throws IOException {
         Files.writeString(dir.resolve("Frankenstein.uk.epub"), "already here");
         refresh();
-        openBook(dir.resolve("Dracula.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Dracula.epub"), BookFixtures.frankensteinImport());
 
         queue.runNewestFirst();
         WaitForAsyncUtils.waitForFxEvents();

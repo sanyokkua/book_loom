@@ -88,11 +88,11 @@ class ScreenConformanceTest extends ShellTestBase {
         }
     }
 
-    private final ScriptedDocumentPort documents = ScriptedDocumentPort.idle();
+    private final ScriptedProjectService projects = new ScriptedProjectService();
 
     @Override
     protected Injector createInjector(final Locale locale) {
-        return UiTestInjector.create(locale, documents);
+        return UiTestInjector.builder(locale).projects(projects).build();
     }
 
     private static final Part CARD_FILL =
@@ -306,13 +306,13 @@ class ScreenConformanceTest extends ShellTestBase {
 
     private void openABook() throws TimeoutException {
         final Path source = Path.of("Frankenstein.epub");
-        documents.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openAndAwait(source, ImportState.Detected.class);
     }
 
     private void refuseABook() throws TimeoutException {
         final Path source = Path.of("secret.epub");
-        documents.on(
+        projects.on(
                 source,
                 Result.err(AppError.of(ErrorCode.validation, "This book is protected", "The book is encrypted.")));
         openAndAwait(source, ImportState.Refused.class);

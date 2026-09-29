@@ -35,7 +35,7 @@ class BookBriefScreenDisabledCardsTest extends BookBriefScreenTestBase {
 
     @BeforeEach
     void openTheBrief() throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
     }
 
     static Stream<Arguments> disabledControls() {

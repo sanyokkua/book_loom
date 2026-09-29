@@ -42,7 +42,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
     }
 
     private void pressStartWithBookOpenAndNoModel() throws TimeoutException {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
         showTranslating();

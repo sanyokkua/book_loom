@@ -46,7 +46,7 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
             value = ViewNames.class,
             names = {"IMPORT", "BOOK_BRIEF", "STRUCTURE", "TRANSLATING", "EXPORT"})
     void screen_bookOpen_atMinimumWidth_needsNoSidewaysScrolling(final ViewNames view) throws TimeoutException {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
 

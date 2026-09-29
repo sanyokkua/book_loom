@@ -8,9 +8,11 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
 
 /**
@@ -25,9 +27,10 @@ import ua.bookloom.ui.state.OpenedBook;
 public final class BookBriefController {
 
     private final BookBriefViewModel viewModel;
+    private final CurrentProject project;
     private final Messages messages;
     private final Navigator navigator;
-    private final ChangeListener<OpenedBook> onBook = (observed, was, now) -> show(now != null);
+    private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now != null);
 
     @FXML
     private Pane stateHost;
@@ -35,25 +38,31 @@ public final class BookBriefController {
     /**
      * Receives the collaborators the injector owns.
      *
-     * @param viewModel the choices the brief assembles and the open book they are about
+     * @param viewModel the choices the brief assembles
+     * @param project the holder of the open book they are about
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Back, Continue and the route from the no-book state lead
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
-    public BookBriefController(final BookBriefViewModel viewModel, final Messages messages, final Navigator navigator) {
+    public BookBriefController(
+            final BookBriefViewModel viewModel,
+            final CurrentProject project,
+            final Messages messages,
+            final Navigator navigator) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
     }
 
     @FXML
     void initialize() {
-        final boolean bookOpen = viewModel.openedBook().get() != null;
+        final boolean bookOpen = project.book().get() != null;
         log.debug("building the book-brief screen, a book is open: {}", bookOpen);
         stateHost.getProperties().put(BookBriefController.class, this);
-        viewModel.openedBook().addListener(new WeakChangeListener<>(onBook));
+        project.book().addListener(new WeakChangeListener<>(onBook));
         show(bookOpen);
     }
 

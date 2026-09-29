@@ -64,7 +64,7 @@ final class BriefView {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
-        log.debug("building the brief for {}", viewModel.openedBook().get().source());
+        log.debug("building the brief");
         this.root = build();
         wire();
         // The warning about an occupied destination is only as fresh as the last look, and the view model outlives

@@ -26,7 +26,7 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
     }
 
     private void openBookWithoutChoosingAModel() {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         press(() -> imports.open(BOOK));
     }
 

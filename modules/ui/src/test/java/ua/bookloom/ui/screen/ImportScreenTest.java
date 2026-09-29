@@ -103,7 +103,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     @Test
     void card_enBookOpened_showsEverySevenRowsAndContinueAndNoRefusal() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
 
         openBook(source);
@@ -137,7 +137,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     })
     void card_enBookOpened_rowShowsItsValue(final String row, final String expected) throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
 
         openBook(source);
@@ -150,7 +150,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     @Test
     void card_enBookOpened_declaredLanguageRowShowsTheDeclaredCode() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
 
         openBook(source);
@@ -172,7 +172,7 @@ class ImportScreenTest extends ImportScreenTestBase {
             final List<String> absentRows)
             throws TimeoutException {
         final Path source = dir.resolve(fileName);
-        port.on(source, Result.ok(BookFixtures.book(fileName, format, lang, title, author, 4, 2)));
+        projects.on(source, Result.ok(BookFixtures.imported(fileName, format, lang, title, author, 4, 2)));
         openImport();
 
         openBook(source);
@@ -191,7 +191,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     @ValueSource(strings = {"chapter", "word", "image", "font", "cover", "detected"})
     void card_enBookOpened_neverMentionsWhatTheParseDoesNotCarry(final String invented) throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
 
         openBook(source);
@@ -208,7 +208,7 @@ class ImportScreenTest extends ImportScreenTestBase {
 
         onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of()));
 
-        assertThat(port.openedPaths()).isEmpty();
+        assertThat(projects.imports()).isEmpty();
         assertThat(state()).isEqualTo(new ImportState.Idle());
     }
 
@@ -218,13 +218,13 @@ class ImportScreenTest extends ImportScreenTestBase {
     void openDropped_severalFiles_opensOnlyTheFirst() throws TimeoutException {
         final Path first = dir.resolve("first.epub");
         final Path second = dir.resolve("second.epub");
-        port.on(first, Result.ok(BookFixtures.frankenstein()));
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
 
         onFx(() -> injector.getInstance(ImportController.class).openDropped(List.of(first, second)));
         awaitFx(() -> !viewModel().opening().get());
 
-        assertThat(port.openedPaths()).containsExactly(first);
+        assertThat(projects.imports()).containsExactly(first);
         assertThat(state()).isInstanceOf(ImportState.Detected.class);
     }
 
@@ -233,7 +233,7 @@ class ImportScreenTest extends ImportScreenTestBase {
     @Test
     void screen_leftAndReturnedTo_stillReportsTheOpenBook() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(source);
         onFx(() -> shell.activate(ViewNames.SETTINGS));
@@ -250,8 +250,10 @@ class ImportScreenTest extends ImportScreenTestBase {
     void card_secondBookOpened_reportsTheSecondAndTheFirstIsReleased() throws TimeoutException {
         final Path first = dir.resolve("Frankenstein.epub");
         final Path second = dir.resolve("Candide.epub");
-        port.on(first, Result.ok(BookFixtures.frankenstein()));
-        port.on(second, Result.ok(BookFixtures.book("candide", BookFormat.EPUB, "fr", "Candide", "Voltaire", 1, 1)));
+        projects.on(first, Result.ok(BookFixtures.frankensteinImport()));
+        projects.on(
+                second,
+                Result.ok(BookFixtures.imported("candide", BookFormat.EPUB, "fr", "Candide", "Voltaire", 1, 1)));
         openImport();
         openBook(first);
 
@@ -259,14 +261,14 @@ class ImportScreenTest extends ImportScreenTestBase {
 
         assertThat(textOf("import-row-file")).contains("Candide.epub").doesNotContain("Frankenstein.epub");
         assertThat(textOf("import-row-title")).contains("Candide");
-        assertThat(port.closedDocuments()).hasSize(1);
+        assertThat(projects.closedProjects()).hasSize(1);
     }
 
     // IF a label were still English in Ukrainian, THEN the screen would be half translated.
     @Test
     void screenInUkrainian_dropzoneAndCardLabelsDifferFromEnglish() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         final String englishBrowse = button("import-browse").getText();
         openBook(source);

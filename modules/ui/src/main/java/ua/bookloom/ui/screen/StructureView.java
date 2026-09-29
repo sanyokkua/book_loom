@@ -18,7 +18,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.document.Document;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -27,13 +26,13 @@ import ua.bookloom.ui.state.StructureListing;
 import ua.bookloom.ui.state.StructureRow;
 
 /**
- * The structure screen's content for an open book: the card listing the units the book was parsed into, in reading
- * order, with the segment total beneath, and the Back and Continue actions under it.
+ * The structure screen's content for an open book: the card listing the top-level nodes of its structure, in
+ * navigation order, with the segment total beneath, and the Back and Continue actions under it.
  *
  * <p>The card is a {@link TreeView} although the list is flat, because the tree virtualizes its rows: a book with
  * thousands of units materialises only the cells the viewport shows. Its cells log nothing, since they are refreshed
- * on every scroll, and each cell builds its nodes once and only changes their text as it is reused. A path too long
- * for the row is shortened with an ellipsis rather than cut off: the cell is given no width of its own, so the path
+ * on every scroll, and each cell builds its nodes once and only changes their text as it is reused. A title too long
+ * for the row is shortened with an ellipsis rather than cut off: the cell is given no width of its own, so the title
  * label, the only one allowed to shrink, gives way first.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
@@ -48,12 +47,11 @@ final class StructureView {
     private static final double SCREEN_SPACING = 14;
     private static final double ACTION_SPACING = 10;
 
-    static Node build(final Document document, final Messages messages, final Navigator navigator) {
-        Objects.requireNonNull(document, "document");
+    static Node build(final StructureListing listing, final Messages messages, final Navigator navigator) {
+        Objects.requireNonNull(listing, "listing");
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(navigator, "navigator");
-        final StructureListing listing = StructureListing.of(document);
-        log.debug("listing {} units, {} segments in total", listing.rows().size(), listing.totalSegments());
+        log.debug("listing {} rows, {} segments in total", listing.rows().size(), listing.totalSegments());
         final VBox screen = new VBox(SCREEN_SPACING, card(listing, messages), actions(messages, navigator));
         VBox.setVgrow(screen, Priority.ALWAYS);
         return screen;
@@ -104,24 +102,22 @@ final class StructureView {
         return tree;
     }
 
-    /** Draws one unit as its path, its muted position and its segment count, and does nothing else. */
+    /** Draws one node as its title and its segment count, and does nothing else. */
     private static final class RowCell extends TreeCell<StructureRow> {
 
         private final Messages messages;
-        private final Label href = label("structure-row-href");
-        private final Label position = label("muted");
+        private final Label title = label("structure-row-title");
         private final Label count = label("muted");
-        private final HBox box = new HBox(ROW_SPACING, href, position, count);
+        private final HBox box = new HBox(ROW_SPACING, title, count);
 
         RowCell(final Messages messages) {
             this.messages = messages;
             // A cell never narrows below its preferred width, so it is given none: it takes the tree's width, and
-            // the path label alone may then shrink and show its ellipsis.
+            // the title label alone may then shrink and show its ellipsis.
             setPrefWidth(0);
-            position.setMinWidth(Region.USE_PREF_SIZE);
             count.setMinWidth(Region.USE_PREF_SIZE);
-            href.setMinWidth(0);
-            HBox.setHgrow(href, Priority.ALWAYS);
+            title.setMinWidth(0);
+            HBox.setHgrow(title, Priority.ALWAYS);
             box.setAlignment(Pos.CENTER_LEFT);
             setText(null);
         }
@@ -133,8 +129,7 @@ final class StructureView {
                 setGraphic(null);
                 return;
             }
-            href.setText(row.href());
-            position.setText(messages.get(MessageKey.STRUCTURE_POSITION, row.order()));
+            title.setText(row.title().isBlank() ? messages.get(MessageKey.STRUCTURE_UNTITLED) : row.title());
             count.setText(messages.get(MessageKey.IMPORT_COUNT_SEGMENTS, row.segmentCount()));
             setGraphic(box);
         }

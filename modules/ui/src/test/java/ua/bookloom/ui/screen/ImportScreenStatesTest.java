@@ -41,7 +41,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
     @Test
     void refusal_protectedBook_showsTitleMessageAndCodeWithNoContinueOrCard() throws TimeoutException {
         final Path source = dir.resolve("secret.epub");
-        port.on(
+        projects.on(
                 source,
                 Result.err(AppError.of(
                         ErrorCode.validation, "This book is protected", "The book is encrypted and cannot be read.")));
@@ -65,7 +65,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
     @Test
     void refusal_droppedPdf_reportsValidationAndOffersNoContinue() throws TimeoutException {
         final Path source = dir.resolve("notes.pdf");
-        port.on(
+        projects.on(
                 source,
                 Result.err(AppError.of(
                         ErrorCode.validation,
@@ -86,8 +86,8 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
     void screen_goodBookAfterARefusal_replacesTheRefusalWithTheCard() throws TimeoutException {
         final Path bad = dir.resolve("secret.epub");
         final Path good = dir.resolve("Frankenstein.epub");
-        port.on(bad, Result.err(AppError.of(ErrorCode.validation, "This book is protected", "Encrypted.")));
-        port.on(good, Result.ok(BookFixtures.frankenstein()));
+        projects.on(bad, Result.err(AppError.of(ErrorCode.validation, "This book is protected", "Encrypted.")));
+        projects.on(good, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(bad);
 
@@ -104,12 +104,12 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
     void screen_bookStillOpening_showsProgressAndDisablesBrowseThenRestoresBoth()
             throws InterruptedException, TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
-        port.hold();
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
+        projects.hold();
         openImport();
 
         onFx(() -> viewModel().open(source));
-        port.awaitEntered();
+        projects.awaitEntered();
         awaitFx(() -> viewModel().opening().get());
 
         assertThat(isShown("import-progress")).isTrue();
@@ -117,7 +117,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         assertThat(isShown("import-card")).isFalse();
         assertThat(optional("import-continue")).isNull();
 
-        port.release();
+        projects.release();
         awaitFx(() -> !viewModel().opening().get());
 
         assertThat(isShown("import-progress")).isFalse();
@@ -153,7 +153,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
     @ValueSource(strings = {"en", "uk"})
     void mismatch_anyBookOpened_isNeverShown(final String declared) throws TimeoutException {
         final Path source = dir.resolve("any.epub");
-        port.on(source, Result.ok(BookFixtures.book("any", BookFormat.EPUB, declared, "T", "A", 1)));
+        projects.on(source, Result.ok(BookFixtures.imported("any", BookFormat.EPUB, declared, "T", "A", 1)));
         openImport();
 
         openBook(source);
@@ -166,7 +166,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
     @Test
     void continueControl_bookOpened_firingItMovesToTheBrief() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(source);
 

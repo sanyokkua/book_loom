@@ -28,7 +28,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // IF the declared language were not surfaced, THEN the source could not be shown as the book says it is.
     @Test
     void sourceLanguage_bookDeclaringEnglish_isPresent() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         assertThat(sourceLanguage()).hasValue("en");
     }
@@ -38,7 +38,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @NullSource
     @ValueSource(strings = {"", "   "})
     void sourceLanguage_bookDeclaringNothingOrBlank_isEmpty(final String declared) {
-        openBook(Path.of("/notes/Diary.txt"), BookFixtures.book("diary", BookFormat.TXT, declared, null, null, 1));
+        openBook(Path.of("/notes/Diary.txt"), BookFixtures.imported("diary", BookFormat.TXT, declared, null, null, 1));
 
         assertThat(sourceLanguage()).isEmpty();
     }
@@ -47,7 +47,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // a target other than the default proves the choice is taken and not just already in place.
     @Test
     void selectTarget_bookDeclaringNothing_stillAcceptsAChoice() {
-        openBook(Path.of("/notes/Diary.txt"), BookFixtures.book("diary", BookFormat.TXT, null, null, null, 1));
+        openBook(Path.of("/notes/Diary.txt"), BookFixtures.imported("diary", BookFormat.TXT, null, null, null, 1));
 
         selectTarget("de");
 
@@ -65,7 +65,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @Test
     void destinationExists_fileAtTheDestinationAndOverwriteOff_isTrue() throws IOException {
         final Path occupied = Files.writeString(dir.resolve("Frankenstein.uk.epub"), "already here");
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         assertThat(destination()).isEqualTo(occupied.toString());
         assertThat(destinationExists()).isTrue();
@@ -75,7 +75,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @Test
     void destinationExists_fileAtTheDestinationAndOverwriteOn_isFalse() throws IOException {
         Files.writeString(dir.resolve("Frankenstein.uk.epub"), "already here");
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         setOverwrite(true);
 
@@ -88,11 +88,11 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @Test
     void overwrite_differentBookOpenedAfterReplaceAllowed_isOffAndWarningShown() throws IOException {
         Files.writeString(dir.resolve("Frankenstein.uk.epub"), "already here");
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         setOverwrite(true);
         Files.writeString(dir.resolve("Dracula.uk.epub"), "already here too");
 
-        openBook(dir.resolve("Dracula.epub"), BookFixtures.book("dracula", BookFormat.EPUB, "en", null, null, 1));
+        openBook(dir.resolve("Dracula.epub"), BookFixtures.imported("dracula", BookFormat.EPUB, "en", null, null, 1));
 
         assertThat(overwrite()).isFalse();
         assertThat(destinationExists()).isTrue();
@@ -102,7 +102,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // unreported when the brief is shown again.
     @Test
     void refresh_fileAppearedAfterTheLastCheck_reportsIt() throws IOException {
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         assertThat(destinationExists()).isFalse();
         Files.writeString(dir.resolve("Frankenstein.uk.epub"), "appeared later");
 
@@ -115,7 +115,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @Test
     void refresh_fileRemovedAfterTheLastCheck_clearsTheReport() throws IOException {
         final Path occupied = Files.writeString(dir.resolve("Frankenstein.uk.epub"), "already here");
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         assertThat(destinationExists()).isTrue();
         Files.delete(occupied);
 
@@ -128,7 +128,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @Test
     void destinationExists_overwriteSwitchedOnThenOff_isTrueAgain() throws IOException {
         Files.writeString(dir.resolve("Frankenstein.uk.epub"), "already here");
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         setOverwrite(true);
 
         setOverwrite(false);
@@ -140,7 +140,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @Test
     void destinationExists_destinationEditedToAnExistingFile_isTrue() throws IOException {
         final Path occupied = Files.writeString(dir.resolve("taken.epub"), "already here");
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         assertThat(destinationExists()).isFalse();
 
         editDestination(occupied.toString());
@@ -152,7 +152,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @Test
     void destinationExists_destinationChosenAsAnExistingFile_isTrue() throws IOException {
         final Path occupied = Files.writeString(dir.resolve("taken.epub"), "already here");
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         chooseDestination(occupied);
 
@@ -162,7 +162,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // IF a free path were reported as occupied, THEN the warning would cry wolf on every book.
     @Test
     void destinationExists_noFileAtTheDestination_isFalse() {
-        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         assertThat(destinationExists()).isFalse();
     }
@@ -176,7 +176,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // IF the request omitted or invented a component, THEN the run would read something the person never chose.
     @Test
     void request_bookOpenedAndTargetChosen_carriesSourceDestinationTargetAndOverwriteOnly() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
         selectTarget("de");
         setOverwrite(true);
 
@@ -188,7 +188,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // IF the request carried the declared language, THEN a later detection could not be told from a person's choice.
     @Test
     void request_bookDeclaringEnglish_leavesTheSourceLanguageNull() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         assertThat(request())
                 .hasValueSatisfying(r -> assertThat(r.sourceLanguage()).isNull());
@@ -197,7 +197,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // IF a hand-edited destination did not reach the request, THEN the run would write somewhere else.
     @Test
     void request_destinationEditedByHand_usesTheEditedPath() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
         editDestination("/archive/out.epub");
 
         assertThat(request())
@@ -214,7 +214,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
     void request_blankDestination_isEmpty(final String blank) {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         editDestination(blank);
 
@@ -224,7 +224,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
     // IF an unparsable path threw, THEN typing one character would crash the screen instead of just disabling Continue.
     @Test
     void request_destinationWithANulCharacter_isEmptyAndDoesNotThrow() {
-        openBook(FRANKENSTEIN, BookFixtures.frankenstein());
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
         assertThatCode(() -> editDestination("/books/bad\0name.epub")).doesNotThrowAnyException();
 

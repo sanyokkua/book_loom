@@ -2,15 +2,18 @@ package ua.bookloom.ui;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import javafx.application.Platform;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.BookInspection;
-import ua.bookloom.api.document.InspectionVerdict;
-import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
@@ -19,28 +22,79 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
 
 /**
- * A hand-written {@link ProjectService} that answers every import with one scripted project id and records the
- * source of each import and every brief it was asked to save.
+ * A hand-written {@link ProjectService} that answers {@code importBook} with what the test scripted for that path (or
+ * an {@code internal} error, or a thrown exception), records every source it was asked to import, every brief it was asked to
+ * save and every project it was asked to close together with whether the call arrived on the FX Application Thread,
+ * and can hold each import until the test releases it.
  */
 public final class ScriptedProjectService implements ProjectService {
 
-    /** The project id every import answers with. */
-    public static final String PROJECT_ID = "scripted-project";
+    private static final long WAIT_SECONDS = 10;
 
+    private final Map<Path, Result<ImportedBook>> byPath = new ConcurrentHashMap<>();
     private final List<Path> imports = new CopyOnWriteArrayList<>();
+    private final List<Boolean> importsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<BookBrief> briefs = new CopyOnWriteArrayList<>();
+    private final List<String> closed = new CopyOnWriteArrayList<>();
+    private final List<Boolean> closedOnFxThread = new CopyOnWriteArrayList<>();
+    private final CountDownLatch entered = new CountDownLatch(1);
+    private volatile Result<ImportedBook> fallback =
+            Result.err(AppError.of(ErrorCode.internal, "Not scripted", "The test scripted no answer for this file."));
+    private volatile @Nullable RuntimeException failure;
+    private volatile @Nullable CountDownLatch gate;
+
+    /** From now on answers an import of {@code source} with {@code answer}; other paths keep the default. */
+    public void on(final Path source, final Result<ImportedBook> answer) {
+        byPath.put(source, answer);
+    }
+
+    /** From now on answers every unscripted path with {@code next}; a previously scripted exception no longer applies. */
+    public void respondWith(final Result<ImportedBook> next) {
+        failure = null;
+        fallback = next;
+    }
+
+    /** From now on throws {@code thrown} from every unscripted import, the way a defective adapter would. */
+    public void throwing(final RuntimeException thrown) {
+        failure = thrown;
+    }
+
+    /** From now on blocks each import until {@link #release()}. */
+    public void hold() {
+        gate = new CountDownLatch(1);
+    }
+
+    /** Lets the held imports answer. */
+    public void release() {
+        final CountDownLatch held = gate;
+        if (held != null) {
+            held.countDown();
+        }
+    }
+
+    /** Blocks until an import has been entered, so a test knows the call is truly in flight. */
+    public void awaitEntered() throws InterruptedException {
+        if (!entered.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("the service was never asked to import a book");
+        }
+    }
 
     @Override
     public Result<ImportedBook> importBook(final Path source) {
+        final CountDownLatch held = gate;
         imports.add(Objects.requireNonNull(source, "source"));
-        final BookInspection inspection = new BookInspection(
-                InspectionVerdict.READABLE,
-                BookFormat.TXT,
-                null,
-                "TXT",
-                null,
-                new LanguageEvidence(null, null, "en", LanguageEvidence.Verdict.ABSENT));
-        return Result.ok(new ImportedBook(PROJECT_ID, inspection, null, BookBrief.defaults("en")));
+        importsOnFxThread.add(Platform.isFxApplicationThread());
+        entered.countDown();
+        awaitGate(held);
+        final Result<ImportedBook> scripted = byPath.get(source);
+        if (scripted != null) {
+            return scripted;
+        }
+        final RuntimeException thrown = failure;
+        if (thrown != null) {
+            throw thrown;
+        }
+        return fallback;
     }
 
     @Override
@@ -62,17 +116,48 @@ public final class ScriptedProjectService implements ProjectService {
 
     @Override
     public Result<Boolean> close(final String projectId) {
-        return notScripted();
+        closed.add(Objects.requireNonNull(projectId, "projectId"));
+        closedOnFxThread.add(Platform.isFxApplicationThread());
+        return Result.ok(true);
     }
 
-    /** The source of every import, in order. */
+    /** The source of every import, in call order. */
     public List<Path> imports() {
         return List.copyOf(imports);
+    }
+
+    /** For each import, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> importCallsOnFxThread() {
+        return List.copyOf(importsOnFxThread);
     }
 
     /** Every brief saved through {@link #updateBrief}, in order. */
     public List<BookBrief> briefs() {
         return List.copyOf(briefs);
+    }
+
+    /** The id of every project {@link #close} was asked to release, in call order. */
+    public List<String> closedProjects() {
+        return List.copyOf(closed);
+    }
+
+    /** For each {@code close}, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> closeCallsOnFxThread() {
+        return List.copyOf(closedOnFxThread);
+    }
+
+    private static void awaitGate(final @Nullable CountDownLatch held) {
+        if (held == null) {
+            return;
+        }
+        try {
+            if (!held.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("the test never released the service");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("interrupted while held back", e);
+        }
     }
 
     private static <T> Result<T> notScripted() {

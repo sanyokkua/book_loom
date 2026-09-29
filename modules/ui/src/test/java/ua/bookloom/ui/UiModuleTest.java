@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
@@ -36,6 +37,7 @@ class UiModuleTest extends ShellTestBase {
                 StateMirror.class,
                 TranslationRunner.class,
                 SettingsViewModel.class,
+                CurrentProject.class,
                 ImportViewModel.class,
                 TranslatingViewModel.class
             })

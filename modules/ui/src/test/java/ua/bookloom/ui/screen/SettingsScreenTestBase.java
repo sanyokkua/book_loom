@@ -41,7 +41,10 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
 
     @Override
     protected final Injector createInjector(final Locale locale) {
-        return UiTestInjector.create(locale, verifier, catalog);
+        return UiTestInjector.builder(locale)
+                .verifier(verifier)
+                .catalog(catalog)
+                .build();
     }
 
     void openSettings() {

@@ -3,7 +3,6 @@ package ua.bookloom.ui;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import java.util.concurrent.ExecutorService;
-import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
@@ -22,6 +21,7 @@ import ua.bookloom.ui.notify.ModalErrorPresenter;
 import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.ModelListing;
@@ -40,13 +40,13 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  * <p>The theme and display-locale seams, the {@link Navigator}, the {@link GuiceControllerFactory}, the
  * {@link ModalHost}, the notification surfaces ({@link Toasts} over the toast stack, {@link ErrorPresenter} over the
  * modal error dialog), the {@link AppShellView}, the {@link StateMirror} with the {@link TranslationRunner} that
- * feeds it, the {@link SettingsViewModel} and the {@link ModelListing} it owns, the {@link ImportViewModel} that
- * holds the open book, the {@link BookBriefViewModel} that holds the choices made about it and the
+ * feeds it, the {@link SettingsViewModel} and the {@link ModelListing} it owns, the {@link CurrentProject} holding the
+ * open book, the {@link ImportViewModel} that fills it, the {@link BookBriefViewModel} that holds the choices made about it and the
  * {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
  * {@link FileRevealer} that shows a written book in the file manager.
  * The singletons are bound explicitly rather than left to JIT so the composition root's graph lists everything the
  * window depends on. The {@link BuildVersion} value, the {@link BackgroundExecutor} pool, the ports ({@link
- * DocumentPort}, {@link ProviderConfigs}, {@link ProviderVerifier}, {@link ModelCatalog}, {@link ChatModelFactory},
+ * ProviderConfigs}, {@link ProviderVerifier}, {@link ModelCatalog}, {@link ChatModelFactory},
  * {@link TranslationEngine}, {@link ProjectService}, {@link GlossaryService}, {@link ReviewDesk} and
  * {@link ExportService}) and the {@link ReviewMode} are deliberately absent: the composition root owns the value, the
  * pool and the mode, and {@code :document}, {@code :llm} and {@code :pipeline} implement the ports. This module
@@ -77,11 +77,11 @@ public final class UiModule extends AbstractModule {
         bind(TranslationRunner.class);
         bind(ModelListing.class);
         bind(SettingsViewModel.class);
+        bind(CurrentProject.class);
         bind(ImportViewModel.class);
         bind(BookBriefViewModel.class);
         bind(TranslatingViewModel.class);
         bind(FileRevealer.class).to(PlatformFileRevealer.class);
-        requireBinding(DocumentPort.class);
         requireBinding(ProviderConfigs.class);
         requireBinding(ProviderVerifier.class);
         requireBinding(ModelCatalog.class);

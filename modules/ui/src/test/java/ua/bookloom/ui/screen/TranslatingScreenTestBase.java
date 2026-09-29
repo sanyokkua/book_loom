@@ -53,7 +53,11 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
 
     @Override
     protected Injector createInjector(final Locale locale) {
-        return UiTestInjector.create(locale, port, models, engine);
+        return UiTestInjector.builder(locale)
+                .projects(projects)
+                .models(models)
+                .engine(engine)
+                .build();
     }
 
     /** Lets a job that is still waiting for instructions end, so its thread does not outlive the test. */
@@ -78,7 +82,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
 
     /** Opens the book and chooses a model, so that the start control has everything it needs. */
     void readyToStart() throws TimeoutException {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
         ThemeTestSupport.onFx(() -> {

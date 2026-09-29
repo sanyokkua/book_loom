@@ -14,7 +14,6 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
-import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 
 /** Starting a run from the dashboard: what is prepared, where, and what happens when it cannot be. */
@@ -45,12 +44,13 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
 
         assertThat(models.selections()).containsExactly(new ModelSelection("ollama", MODEL));
         assertThat(models.askedOnFxThread()).containsExactly(false);
-        assertThat(projects.imports()).containsExactly(BOOK);
+        // The window imported the book once; the interim start imports it again until runs start on the current
+        // project.
+        assertThat(projects.imports()).containsExactly(BOOK, BOOK);
         assertThat(projects.briefs())
                 .extracting(BookBrief::sourceLanguage, BookBrief::targetLanguage)
                 .containsExactly(tuple("en", "uk"));
-        assertThat(engine.requests())
-                .containsExactly(new RunRequest(ScriptedProjectService.PROJECT_ID, ReviewMode.UNATTENDED));
+        assertThat(engine.requests()).containsExactly(new RunRequest("p1", ReviewMode.UNATTENDED));
         assertThat(engine.askedOnFxThread()).containsExactly(false);
         assertThat(job.calls()).containsExactly("pauseAt", "subscribe", "run");
         awaitState(RunState.RUNNING);
@@ -116,7 +116,7 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
     // IF a missing model started something anyway, THEN the factory would be asked about a blank model name.
     @Test
     void start_noModelChosen_isRefusedWithNoRunNoToastAndNoError() {
-        port.on(BOOK, Result.ok(BookFixtures.frankenstein()));
+        projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         buildViewModel();
         press(() -> imports.open(BOOK));
 

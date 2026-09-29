@@ -26,7 +26,7 @@ class ImportScreenScrollTest extends ImportScreenTestBase {
 
     private void openFullCard() throws TimeoutException {
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(source);
     }

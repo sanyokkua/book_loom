@@ -56,7 +56,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         showBrief();
         assertThat(isShown("nobook-card")).isTrue();
 
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         assertThat(isShown("brief-languages-card")).isTrue();
         assertThat(isShown("nobook-card")).isFalse();
@@ -67,7 +67,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     // IF it were a plain label, THEN it would not be the picker the reference draws for a language.
     @Test
     void source_bookDeclaringEnglish_isADisabledFixedPickerShowingEn() throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         final ComboBox<?> source = (ComboBox<?>) required("brief-source");
 
@@ -81,7 +81,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     @Test
     void source_bookDeclaringNothing_isADisabledPickerSayingUndeclaredAndShowsNoLanguageCode() throws TimeoutException {
         openBookThenShowBrief(
-                dir.resolve("Diary.txt"), BookFixtures.book("diary", BookFormat.TXT, null, null, null, 1));
+                dir.resolve("Diary.txt"), BookFixtures.imported("diary", BookFormat.TXT, null, null, null, 1));
 
         final ComboBox<?> source = (ComboBox<?>) required("brief-source");
 
@@ -92,7 +92,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     // IF the target were free text or missing a code, THEN a person could type a language the run cannot use.
     @Test
     void target_bookOpened_isAFixedChoiceOfTheFourCodesDefaultingToUk() throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         final ComboBox<String> target = targetPicker();
 
@@ -106,7 +106,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     @Test
     void target_bookDeclaringNothing_acceptsAChoice() throws TimeoutException {
         openBookThenShowBrief(
-                dir.resolve("Diary.txt"), BookFixtures.book("diary", BookFormat.TXT, null, null, null, 1));
+                dir.resolve("Diary.txt"), BookFixtures.imported("diary", BookFormat.TXT, null, null, null, 1));
 
         onFx(() -> briefModel().selectTarget("de"));
 
@@ -121,7 +121,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         showBrief();
         assertThat(isShown("nobook-card")).isTrue();
         final Path source = dir.resolve("Frankenstein.epub");
-        port.on(source, Result.ok(BookFixtures.frankenstein()));
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
 
         openBook(source);
 
@@ -135,7 +135,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     @ParameterizedTest
     @ValueSource(strings = {"en", "pl", "de"})
     void target_chosenInThePicker_reachesTheViewModel(final String code) throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         onFx(() -> targetPicker().getSelectionModel().select(code));
 
@@ -146,7 +146,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     @ParameterizedTest
     @ValueSource(strings = {"en", "pl", "de"})
     void target_selectedInTheViewModel_isShownInThePicker(final String code) throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         onFx(() -> briefModel().selectTarget(code));
 
@@ -156,7 +156,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     // IF Back were not wired, THEN a person could not return to the book they opened.
     @Test
     void backControl_bookOpened_firingItMovesToTheImportScreen() throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         onFx(() -> button("brief-back").fire());
 
@@ -166,7 +166,7 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
     // IF Continue were not wired to the workflow, THEN a person who has briefed the run could not go on.
     @Test
     void continueControl_bookOpened_firingItMovesToTheStructureScreen() throws TimeoutException {
-        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankenstein());
+        openBookThenShowBrief(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
 
         onFx(() -> button("brief-continue").fire());
 
