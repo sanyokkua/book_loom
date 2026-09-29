@@ -15,9 +15,11 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.project.SegmentCounts;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 
 /**
@@ -41,10 +43,9 @@ public final class WorkList {
     private final int segments;
     private List<WorkItem> pending = List.of();
     private List<Segment> decided = List.of();
+    private final RunCounts counts = new RunCounts();
     private int next;
-    private int accepted;
-    private int flagged;
-    private int pendingCount;
+    // The 1-based section of the last decision, 0 before any.
     private int lastSection;
 
     private WorkList(final RunStores stores, final String projectId, final Document document) {
@@ -107,14 +108,14 @@ public final class WorkList {
                         .all(projectId)
                         .flatMap(records -> stores.segments()
                                 .countsByStatus(projectId, kept)
-                                .map(counts -> install(occasion, kept, records, counts))));
+                                .map(stored -> install(occasion, kept, records, stored))));
     }
 
     private int install(
             final String occasion,
             final Set<SegmentKind> kept,
             final List<SegmentRecord> records,
-            final SegmentCounts counts) {
+            final SegmentCounts stored) {
         final Map<String, SegmentRecord> byId = new HashMap<>();
         records.forEach(record -> byId.put(record.segmentId(), record));
         final List<WorkItem> queued = new ArrayList<>();
@@ -124,21 +125,19 @@ public final class WorkList {
         pending = List.copyOf(queued);
         decided = decidedOf(byId, kept);
         next = 0;
-        accepted = counts.accepted() + counts.revised();
-        flagged = counts.flagged();
-        pendingCount = counts.pending();
+        counts.reset(stored, records, kept);
         log.debug(
                 "Read work list occasion={} keptKinds={} keptRecords={} sections={} segments={} pending={} decided={}"
                         + " accepted={} flagged={}",
                 occasion,
                 kept,
-                counts.sourceKept(),
+                stored.sourceKept(),
                 bodyUnits,
                 segments,
                 pending.size(),
                 decided.size(),
-                accepted,
-                flagged);
+                counts.accepted(),
+                counts.flagged());
         return pending.size();
     }
 
@@ -228,7 +227,7 @@ public final class WorkList {
      * @return the counts with the section of the next undecided segment, or of the last decided one at the end
      */
     public JobProgress currentTranslationProgress() {
-        return progress(JobStage.TRANSLATE, hasPending() ? pending.get(next).section() : lastSection);
+        return progress(JobStage.TRANSLATE, currentSection());
     }
 
     /**
@@ -237,7 +236,27 @@ public final class WorkList {
      * @return the counts under the {@code PREP} stage, at the section of the first undecided segment
      */
     public JobProgress preparationProgress() {
-        return progress(JobStage.PREP, hasPending() ? pending.get(next).section() : lastSection);
+        return progress(JobStage.PREP, currentSection());
+    }
+
+    /**
+     * Records the chunk the run has entered, which every later snapshot and segment start carries.
+     *
+     * @param chunk the 1-based chunk within its unit
+     * @param chunks the unit's chunk count, the unit's pending segments packed
+     */
+    public void enterChunk(final int chunk, final int chunks) {
+        counts.enterChunk(chunk, chunks);
+    }
+
+    /**
+     * Returns where an item stands: its section among the body units and the chunk the run is in.
+     *
+     * @param item the non-null item about to be translated
+     * @return the section k of n, {@code n} for the auxiliary unit, and the chunk k of n within the unit
+     */
+    public ChunkPosition position(final WorkItem item) {
+        return counts.position(sectionOf(Objects.requireNonNull(item, "item")), bodyUnits);
     }
 
     /**
@@ -245,24 +264,22 @@ public final class WorkList {
      *
      * @param item the non-null item just decided, which must be the first of {@link #remaining()}
      * @param status the non-null status it was decided with, {@code ACCEPTED} or {@code FLAGGED}
+     * @param path the non-null path it took, which tells a repaired acceptance from an automatic one
      * @return the progress after the decision
      */
-    public JobProgress apply(final WorkItem item, final SegmentStatus status) {
+    public JobProgress apply(final WorkItem item, final SegmentStatus status, final SegmentPath path) {
         Objects.requireNonNull(item, "item");
         Objects.requireNonNull(status, "status");
+        Objects.requireNonNull(path, "path");
         log.debug(
-                "Applying decision segmentId={} status={} section={}",
+                "Applying decision segmentId={} status={} path={} section={}",
                 item.segment().id(),
                 status,
+                path,
                 item.section());
-        lastSection = item.section();
+        lastSection = sectionOf(item);
         next++;
-        pendingCount--;
-        if (status == SegmentStatus.ACCEPTED) {
-            accepted++;
-        } else {
-            flagged++;
-        }
+        counts.decided(status, path);
         return progress(JobStage.TRANSLATE, lastSection);
     }
 
@@ -327,7 +344,7 @@ public final class WorkList {
      */
     public boolean isComplete() {
         final boolean complete = !hasPending();
-        log.debug("Checked translation completion complete={} pending={}", complete, pendingCount);
+        log.debug("Checked translation completion complete={} pending={}", complete, counts.pending());
         return complete;
     }
 
@@ -350,15 +367,15 @@ public final class WorkList {
     }
 
     private JobProgress progress(final JobStage stage, final int section) {
-        final JobProgress progress = new JobProgress(stage, section, bodyUnits, accepted, flagged, pendingCount);
-        log.debug(
-                "Built progress stage={} section={}/{} accepted={} flagged={} pending={}",
-                stage,
-                section,
-                bodyUnits,
-                accepted,
-                flagged,
-                pendingCount);
-        return progress;
+        return counts.progress(stage, section, bodyUnits);
+    }
+
+    private int currentSection() {
+        return hasPending() ? sectionOf(pending.get(next)) : lastSection;
+    }
+
+    // An item's unit index counts the auxiliary unit last, one past the body; reported, it stays the last section.
+    private int sectionOf(final WorkItem item) {
+        return Math.min(item.section() + 1, bodyUnits);
     }
 }

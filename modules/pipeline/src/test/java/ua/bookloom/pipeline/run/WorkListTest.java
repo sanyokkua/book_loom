@@ -26,6 +26,7 @@ import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.persistence.TmRepository;
+import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
@@ -117,7 +118,7 @@ class WorkListTest {
         final WorkList work = read(documentWithAuxiliary(), Map.of());
         final WorkItem title = work.remaining().getLast();
 
-        final JobProgress progress = work.apply(title, SegmentStatus.ACCEPTED);
+        final JobProgress progress = work.apply(title, SegmentStatus.ACCEPTED, SegmentPath.DRAFT);
 
         assertThat(progress)
                 .extracting(JobProgress::section, JobProgress::sections)
@@ -173,7 +174,7 @@ class WorkListTest {
                         "two:0", SegmentStatus.ACCEPTED));
         final WorkItem title = work.remaining().getFirst();
 
-        work.apply(title, SegmentStatus.ACCEPTED);
+        work.apply(title, SegmentStatus.ACCEPTED, SegmentPath.DRAFT);
 
         assertThat(work.endsUnit(title)).isTrue();
         assertThat(work.isBody(title)).isFalse();
@@ -193,7 +194,7 @@ class WorkListTest {
 
         assertThat(progress)
                 .extracting(JobProgress::section, JobProgress::sections, JobProgress::accepted, JobProgress::flagged)
-                .containsExactly(0, 2, 2, 1);
+                .containsExactly(1, 2, 2, 1);
         assertThat(progress.pending()).isEqualTo(2);
     }
 
@@ -202,11 +203,48 @@ class WorkListTest {
     void apply_acceptedDecision_movesOneSegmentFromPendingToAccepted() {
         final WorkList work = read(document(), Map.of());
 
-        final JobProgress progress = work.apply(work.remaining().getFirst(), SegmentStatus.ACCEPTED);
+        final JobProgress progress = work.apply(work.remaining().getFirst(), SegmentStatus.ACCEPTED, SegmentPath.DRAFT);
 
         assertThat(progress)
                 .extracting(JobProgress::accepted, JobProgress::flagged, JobProgress::pending)
                 .containsExactly(1, 0, 4);
+    }
+
+    // A repaired acceptance of an earlier run is still a repaired one: the tiles count the whole project.
+    @Test
+    void refresh_storedRepairedAcceptance_countsItApartFromTheAutomaticOne() {
+        final WorkList work =
+                read(document(), Map.of("one:0", SegmentStatus.ACCEPTED, "one:1", SegmentStatus.ACCEPTED));
+        stores.segments().update(PROJECT, "one:0", record -> record.withPath(SegmentPath.REPAIRED));
+
+        work.refresh();
+
+        assertThat(work.currentTranslationProgress())
+                .extracting(JobProgress::accepted, JobProgress::autoAccepted, JobProgress::repairedAccepted)
+                .containsExactly(2, 1, 1);
+    }
+
+    // A flagged segment is never counted as repaired-and-accepted, whatever rounds it used.
+    @Test
+    void apply_repairedThenFlaggedRepaired_countsOnlyTheAcceptanceAsRepaired() {
+        final WorkList work = read(document(), Map.of());
+        work.apply(work.remaining().getFirst(), SegmentStatus.ACCEPTED, SegmentPath.REPAIRED);
+
+        final JobProgress progress =
+                work.apply(work.remaining().getFirst(), SegmentStatus.FLAGGED, SegmentPath.REPAIRED);
+
+        assertThat(progress)
+                .extracting(JobProgress::autoAccepted, JobProgress::repairedAccepted, JobProgress::flagged)
+                .containsExactly(0, 1, 1);
+    }
+
+    // The screen shows "chapter k of n" and "chunk k of n": both must be 1-based and name the item's own unit.
+    @Test
+    void position_itemOfTheSecondUnitInItsThirdChunk_isSectionTwoOfTwoAndChunkThreeOfFive() {
+        final WorkList work = read(document(), Map.of());
+        work.enterChunk(3, 5);
+
+        assertThat(work.position(work.remaining().getLast())).isEqualTo(new ChunkPosition(2, 2, 3, 5));
     }
 
     private static List<String> pendingIds(final WorkList work) {

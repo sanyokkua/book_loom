@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
@@ -18,6 +19,7 @@ import com.google.inject.util.Modules;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -90,6 +92,36 @@ final class WireMockProvider implements AutoCloseable {
     ResponseDefinitionBuilder reply(final String content, final Duration delay) {
         final ResponseDefinitionBuilder response = aResponse().withStatus(200).withBody(envelope(content));
         return delay.isZero() ? response : response.withFixedDelay((int) delay.toMillis());
+    }
+
+    /**
+     * A reply carrying {@code content} and the token usage in this dialect's own fields: Ollama's
+     * {@code prompt_eval_count}, {@code eval_count} and {@code eval_duration}, or the OpenAI-compatible
+     * {@code usage.prompt_tokens} and {@code usage.completion_tokens}, which report no generation time.
+     */
+    ResponseDefinitionBuilder replyWithUsage(
+            final String content, final int promptTokens, final int completionTokens, final long evalNanos) {
+        final Map<String, Object> body = new LinkedHashMap<>(parsed(envelope(content)));
+        if (kind == ProviderKind.OLLAMA) {
+            body.put("prompt_eval_count", promptTokens);
+            body.put("eval_count", completionTokens);
+            body.put("eval_duration", evalNanos);
+        } else {
+            body.put("usage", Map.of("prompt_tokens", promptTokens, "completion_tokens", completionTokens));
+        }
+        try {
+            return aResponse().withStatus(200).withBody(MAPPER.writeValueAsString(body));
+        } catch (JsonProcessingException cause) {
+            throw new AssertionError("could not encode provider reply", cause);
+        }
+    }
+
+    private static Map<String, Object> parsed(final String json) {
+        try {
+            return MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (JsonProcessingException cause) {
+            throw new AssertionError("could not decode provider reply", cause);
+        }
     }
 
     /** A reply carrying the strict one-field target object the engine asks for. */

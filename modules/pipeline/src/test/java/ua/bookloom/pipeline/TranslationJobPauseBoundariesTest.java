@@ -91,7 +91,7 @@ class TranslationJobPauseBoundariesTest {
                 .containsExactly(0, 0, 3);
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "StageStarted", "Paused");
+                .containsExactly("StageStarted", "StageStarted", "SegmentStarted", "Paused");
         assertThat(model.requests()).isEmpty();
         translation.resume();
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
@@ -189,10 +189,10 @@ class TranslationJobPauseBoundariesTest {
 
         assertThat(first.progress())
                 .extracting(p -> p.section(), p -> p.accepted(), p -> p.pending())
-                .containsExactly(0, 2, 1);
+                .containsExactly(1, 2, 1);
         assertThat(second.progress())
                 .extracting(p -> p.section(), p -> p.accepted(), p -> p.pending())
-                .containsExactly(1, 3, 0);
+                .containsExactly(2, 3, 0);
         assertThat(first.reason()).isEqualTo(PauseReason.AFTER_SECTION);
         assertThat(second.reason()).isEqualTo(PauseReason.AFTER_SECTION);
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
@@ -218,7 +218,7 @@ class TranslationJobPauseBoundariesTest {
 
         assertThat(pause.progress())
                 .extracting(p -> p.section(), p -> p.accepted(), p -> p.flagged(), p -> p.pending())
-                .containsExactly(1, 2, 0, 0);
+                .containsExactly(2, 2, 0, 0);
         assertThat(pause.reason()).isEqualTo(PauseReason.AFTER_SECTION);
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
         assertThat(pauses).isEmpty();

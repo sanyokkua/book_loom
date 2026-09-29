@@ -205,8 +205,8 @@ final class TranslationJobImpl implements TranslationJob {
                 styleSheet,
                 brief.foreignPassages());
         final GateFunction gate = GateFunction.of(documents, run.document().format());
-        final ModelCalls calls =
-                new JobModelCalls(onSent -> new CancellableChatModel(model, control, onSent), this::emit);
+        final ModelCalls calls = new JobModelCalls(
+                onSent -> new CancellableChatModel(model, control, onSent), this::emit, clock, frame.targetLanguage());
         final SegmentTranslator translator = new SegmentTranslator(
                 gate,
                 calls,

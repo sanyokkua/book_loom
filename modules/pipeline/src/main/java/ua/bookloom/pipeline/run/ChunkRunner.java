@@ -11,7 +11,6 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobState;
-import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
@@ -58,6 +57,7 @@ public final class ChunkRunner {
     private final MemoryReuse memory;
     private final RoutedCalls calls;
     private final DecisionFollowUp followUp;
+    private final SegmentEvents events;
     private final int fixedHeadroom;
 
     /**
@@ -83,6 +83,7 @@ public final class ChunkRunner {
         this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
         this.calls = new RoutedCalls(sinks.boundaries());
         this.followUp = new DecisionFollowUp(settings.projectId(), steps.summary(), stores, sinks, calls);
+        this.events = new SegmentEvents(sinks.emit(), locators);
         final CallFrame frame = settings.frame();
         this.fixedHeadroom = TokenEstimator.estimate(frame.styleSheet().text(), PROMPT_LANGUAGE)
                 + TokenBudget.fullChunkAllowance(frame.sourceLanguage(), frame.targetLanguage());
@@ -133,10 +134,16 @@ public final class ChunkRunner {
                 headroom,
                 cap,
                 chunks.stream().map(chunk -> chunk.segments().size()).toList());
+        return runChunks(work, items, chunks, budget);
+    }
+
+    private Optional<RunEnd> runChunks(
+            final WorkList work, final List<WorkItem> items, final List<Chunk> chunks, final int budget) {
         int offset = 0;
         for (int index = 0; index < chunks.size(); index++) {
             final int size = chunks.get(index).segments().size();
             final List<WorkItem> chunkItems = items.subList(offset, offset + size);
+            work.enterChunk(index + 1, chunks.size());
             final Optional<RunEnd> end = runChunk(work, chunks.get(index), chunkItems, index, budget);
             if (end.isPresent()) {
                 return end;
@@ -224,6 +231,7 @@ public final class ChunkRunner {
      */
     private Step<DraftOutcome> draft(final Current current, final WorkItem item) {
         final Segment segment = item.segment();
+        events.started(segment, current.work().position(item));
         final List<Segment> unitSegments = current.work().unitSegments(item);
         final Result<List<String>> earlierMaskedTargets = preceding.earlierMaskedTargets(
                 unitSegments, segment, settings.dial().precedingTargets(), current.drafts());
@@ -241,6 +249,11 @@ public final class ChunkRunner {
             current.drafts().drafted(reused, context.snapshot());
             return new Step.Done<>(reused);
         }
+        return drafted(current, segment, context, mask);
+    }
+
+    private Step<DraftOutcome> drafted(
+            final Current current, final Segment segment, final ContextPackage context, final ProtectedMask mask) {
         final Step<DraftOutcome> drafted = calls.untilAnswered(
                 current.work(),
                 segment.id(),
@@ -248,6 +261,7 @@ public final class ChunkRunner {
                         .translateSplit(segment, context.draftContext(), mask, steps.splitter(), current.budget()));
         if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
             current.drafts().drafted(outcome, context.snapshot());
+            events.drafted(outcome, current.loop());
         }
         return drafted;
     }
@@ -292,7 +306,7 @@ public final class ChunkRunner {
                         memory.entryFor(record, item.segment(), current.work().unitSegments(item)));
         current.drafts().decided(record.segmentId());
         sinks.recorder().decided(record.status());
-        final JobProgress progress = current.work().apply(item, record.status());
+        final JobProgress progress = current.work().apply(item, record.status(), record.path());
         final ErrorCode reason = record.status() == SegmentStatus.FLAGGED ? OutcomeRecords.reportCode(record) : null;
         log.debug(
                 "Decided segmentId={} status={} reason={} path={} rounds={}",
@@ -301,7 +315,7 @@ public final class ChunkRunner {
                 reason,
                 record.path(),
                 record.repairRounds());
-        sinks.emit().accept(new SegmentDecided(record.segmentId(), record.status(), reason, progress));
+        events.decided(record, reason, progress);
         if (record.path() == SegmentPath.TM_REUSE) {
             sinks.emit().accept(memory.announced(record.segmentId()));
         }

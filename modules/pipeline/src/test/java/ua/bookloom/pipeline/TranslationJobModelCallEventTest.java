@@ -38,9 +38,15 @@ class TranslationJobModelCallEventTest {
                 .containsExactly(
                         "StageStarted",
                         "StageStarted",
+                        "SegmentStarted",
                         "ModelCallStarted",
+                        "ModelCallFinished",
+                        "SegmentDrafted",
                         "SegmentDecided",
+                        "SegmentStarted",
                         "ModelCallStarted",
+                        "ModelCallFinished",
+                        "SegmentDrafted",
                         "SegmentDecided",
                         "MemoryUpdated",
                         "Finished");

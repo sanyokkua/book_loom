@@ -38,15 +38,23 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.MemoryUpdated;
+import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.SegmentDrafted;
+import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 
 /** Proves event order, count snapshots, reports, subscribers, and atomic run claiming. */
 class TranslationJobEventsTest {
+
+    /** What one segment accepted on its first call announces, in order. */
+    private static final List<String> ACCEPTED_ON_FIRST_CALL =
+            List.of("SegmentStarted", "ModelCallStarted", "ModelCallFinished", "SegmentDrafted", "SegmentDecided");
 
     @TempDir
     private Path tempDir;
@@ -56,30 +64,27 @@ class TranslationJobEventsTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // Changing order or pending bookkeeping would break these hard-coded lifecycle snapshots; the request events have
-    // their own test, so they are left out of the order here.
+    // Changing order or pending bookkeeping would break these hard-coded lifecycle snapshots, and a screen built from
+    // the events alone would show a segment it never announced.
     @Test
     void events_threeAcceptedSegments_areExactAndOrdered() {
-        final TranslationJobImpl translation = markdownJob(replies("ONE.", "TWO.", "THREE."), "One.\n\nTwo.\n\nThree.");
+        final TranslationJobImpl translation = job(
+                TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo.\n\nThree."),
+                replies("ONE.", "TWO.", "THREE."));
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
 
         final Result<JobReport> result = translation.run();
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
-        assertThat(namesWithoutRequests(events))
-                .containsExactly(
-                        "StageStarted",
-                        "StageStarted",
-                        "SegmentDecided",
-                        "SegmentDecided",
-                        "SegmentDecided",
-                        "MemoryUpdated",
-                        "Finished");
         assertThat(events)
-                .filteredOn(SegmentDecided.class::isInstance)
-                .extracting(event -> ((SegmentDecided) event).progress().pending())
-                .containsExactly(2, 1, 0);
+                .extracting(TranslationJobEventsTest::label)
+                .containsExactlyElementsOf(concat(List.of(
+                        List.of("StageStarted PREP", "StageStarted TRANSLATE"),
+                        acceptedOnFirstCall("Book.txt:0", 2),
+                        acceptedOnFirstCall("Book.txt:1", 1),
+                        acceptedOnFirstCall("Book.txt:2", 0),
+                        List.of("MemoryUpdated SUMMARY", "Finished COMPLETED"))));
         assertThat(events)
                 .filteredOn(StageStarted.class::isInstance)
                 .extracting(
@@ -89,7 +94,7 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.PREP, 0, 1, 0, 0, 3), tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 3));
+                .containsExactly(tuple(JobStage.PREP, 1, 1, 0, 0, 3), tuple(JobStage.TRANSLATE, 1, 1, 0, 0, 3));
     }
 
     // Building the Finished event from other counts than the returned report would let a screen show one outcome while
@@ -151,7 +156,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(6);
+        assertThat(healthy).hasSize(9);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -188,13 +193,10 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly(
-                        "StageStarted",
-                        "StageStarted",
-                        "ModelCallStarted",
-                        "SegmentDecided",
-                        "MemoryUpdated",
-                        "Finished");
+                .containsExactlyElementsOf(concat(List.of(
+                        List.of("StageStarted", "StageStarted"),
+                        ACCEPTED_ON_FIRST_CALL,
+                        List.of("MemoryUpdated", "Finished"))));
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -215,17 +217,12 @@ class TranslationJobEventsTest {
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly(
-                        "StageStarted",
-                        "StageStarted",
-                        "ModelCallStarted",
-                        "SegmentDecided",
-                        "Paused",
-                        "Resumed",
-                        "ModelCallStarted",
-                        "SegmentDecided",
-                        "MemoryUpdated",
-                        "Finished");
+                .containsExactlyElementsOf(concat(List.of(
+                        List.of("StageStarted", "StageStarted"),
+                        ACCEPTED_ON_FIRST_CALL,
+                        List.of("Paused", "Resumed"),
+                        ACCEPTED_ON_FIRST_CALL,
+                        List.of("MemoryUpdated", "Finished"))));
         shutdown(workers);
     }
 
@@ -293,11 +290,33 @@ class TranslationJobEventsTest {
         return job(TestBooks.markdown(tempDir.resolve("Book.md"), content), model);
     }
 
-    private static List<String> namesWithoutRequests(final List<JobEvent> events) {
-        return events.stream()
-                .filter(event -> !(event instanceof ModelCallStarted))
-                .map(event -> event.getClass().getSimpleName())
-                .toList();
+    private static List<String> acceptedOnFirstCall(final String segmentId, final int pendingAfter) {
+        return List.of(
+                "SegmentStarted " + segmentId,
+                "ModelCallStarted DRAFT " + segmentId,
+                "ModelCallFinished DRAFT " + segmentId,
+                "SegmentDrafted " + segmentId,
+                "SegmentDecided " + segmentId + " ACCEPTED pending=" + pendingAfter);
+    }
+
+    private static List<String> concat(final List<List<String>> parts) {
+        return parts.stream().flatMap(List::stream).toList();
+    }
+
+    private static String label(final JobEvent event) {
+        return switch (event) {
+            case StageStarted started -> "StageStarted " + started.stage();
+            case SegmentStarted started -> "SegmentStarted " + started.segmentId();
+            case ModelCallStarted started -> "ModelCallStarted " + started.kind() + " " + started.segmentId();
+            case ModelCallFinished finished -> "ModelCallFinished " + finished.kind() + " " + finished.segmentId();
+            case SegmentDrafted drafted -> "SegmentDrafted " + drafted.segmentId();
+            case SegmentDecided decided ->
+                "SegmentDecided " + decided.segmentId() + " " + decided.status() + " pending="
+                        + decided.progress().pending();
+            case MemoryUpdated updated -> "MemoryUpdated " + updated.kind();
+            case Finished finished -> "Finished " + finished.report().end();
+            default -> event.getClass().getSimpleName();
+        };
     }
 
     private static void observeFinishedState(

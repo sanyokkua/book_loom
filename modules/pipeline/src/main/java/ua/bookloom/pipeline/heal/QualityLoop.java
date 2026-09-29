@@ -11,13 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.judge.JudgeCall;
 import ua.bookloom.pipeline.judge.JudgeVerdict;
 import ua.bookloom.pipeline.judge.JudgedPair;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.qa.CheckName;
-import ua.bookloom.pipeline.qa.CheckResult;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
@@ -72,50 +69,10 @@ public final class QualityLoop {
         final Map<Integer, QaResult> results = new LinkedHashMap<>();
         for (int index = 0; index < outcomes.size(); index++) {
             if (outcomes.get(index) instanceof DraftOutcome.Drafted drafted) {
-                results.put(index, evaluateDraft(drafted, settings));
+                results.put(index, DraftEvaluation.evaluate(drafted, settings));
             }
         }
         return results;
-    }
-
-    private QaResult evaluateDraft(final DraftOutcome.Drafted outcome, final LoopSettings settings) {
-        final List<CheckResult> given = outcome.restoredTarget() == null
-                ? List.of(failedGateFrom(Objects.requireNonNull(outcome.gateFinding())))
-                : List.<CheckResult>of();
-        logTraceDraftTarget(outcome);
-        return QaEvaluation.evaluate(
-                given,
-                outcome.segment(),
-                outcome.maskedSource(),
-                outcome.maskedReply(),
-                Objects.requireNonNullElse(outcome.maskedForm(), outcome.maskedReply()),
-                settings,
-                outcome.lockedRenderings());
-    }
-
-    /** Rebuilds the draft's own hard-gate failure as a {@link CheckResult}, from the finding it already raised. */
-    private static CheckResult failedGateFrom(final QaFinding gateFinding) {
-        return CheckResult.hardGateFailed(checkNameFor(gateFinding.raisedBy()), gateFinding.note());
-    }
-
-    private static CheckName checkNameFor(final String raisedBy) {
-        return switch (raisedBy) {
-            case "placeholder" -> CheckName.PLACEHOLDER;
-            case "locked-term" -> CheckName.LOCKED_TERM;
-            case "kept-run" -> CheckName.KEPT_RUN;
-            default -> throw new IllegalArgumentException("no hard-gate CheckName for raisedBy=" + raisedBy);
-        };
-    }
-
-    private static void logTraceDraftTarget(final DraftOutcome.Drafted outcome) {
-        if (log.isTraceEnabled()) {
-            log.trace(
-                    "Draft target segment={} reply={} maskedForm={} restored={}",
-                    outcome.segment().id(),
-                    outcome.maskedReply(),
-                    outcome.maskedForm(),
-                    outcome.restoredTarget());
-        }
     }
 
     /** Makes the chunk's judge call when the dial enables it and at least one pair qualifies. */

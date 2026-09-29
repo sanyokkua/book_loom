@@ -97,6 +97,44 @@ public final class TestBooks {
         }
     }
 
+    /**
+     * An EPUB whose package document sits at the container root beside chapters of the given file names, so a
+     * segment id reads {@code <name>:<n>} — {@code ch07.xhtml:41} — as the specification's examples name them.
+     */
+    public static Path epubAtRoot(
+            final Path destination, final List<String> chapterNames, final List<List<String>> spineParagraphs) {
+        try (OutputStream output = Files.newOutputStream(destination);
+                ZipOutputStream zip = new ZipOutputStream(output)) {
+            put(zip, "mimetype", "application/epub+zip", ZipEntry.STORED);
+            put(zip, "META-INF/container.xml", containerXml().replace("OEBPS/", ""), ZipEntry.DEFLATED);
+            put(zip, "content.opf", rootOpf(chapterNames), ZipEntry.DEFLATED);
+            for (int index = 0; index < chapterNames.size(); index++) {
+                put(
+                        zip,
+                        chapterNames.get(index),
+                        xhtml(spineParagraphs.get(index), null, DEFAULT_PAGE_TITLE),
+                        ZipEntry.DEFLATED);
+            }
+            return destination;
+        } catch (IOException cause) {
+            throw new UncheckedIOException(cause);
+        }
+    }
+
+    private static String rootOpf(final List<String> chapterNames) {
+        final StringBuilder manifest = new StringBuilder();
+        final StringBuilder spine = new StringBuilder();
+        for (int index = 0; index < chapterNames.size(); index++) {
+            manifest.append("<item id=\"c")
+                    .append(index)
+                    .append("\" href=\"")
+                    .append(chapterNames.get(index))
+                    .append("\" media-type=\"application/xhtml+xml\"/>");
+            spine.append("<itemref idref=\"c").append(index).append("\"/>");
+        }
+        return opf(0, "en", manifest.toString()).replace("<spine></spine>", "<spine>" + spine + "</spine>");
+    }
+
     private static String navigation(final List<String> labels) {
         final String items = labels.stream()
                 .map(label -> "<li><a href=\"ch0.xhtml\">" + label + "</a></li>")
