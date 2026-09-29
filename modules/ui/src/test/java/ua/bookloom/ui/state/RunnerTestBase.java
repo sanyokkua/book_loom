@@ -24,9 +24,11 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedExportService;
 
 /**
@@ -42,6 +44,7 @@ abstract class RunnerTestBase extends ApplicationTest {
     static final Path SOURCE = Path.of("/books/in.txt");
     static final Path DESTINATION = Path.of("/books/out.uk.txt");
     static final String PROJECT_ID = "project-1";
+    static final String FILE_NAME = "Frankenstein.epub";
     static final InterimRunRequest REQUEST = new InterimRunRequest(SOURCE, DESTINATION, "uk", "en", false);
     static final ModelSelection SELECTION = new ModelSelection("pseudo", "pseudo-1");
 
@@ -91,8 +94,13 @@ abstract class RunnerTestBase extends ApplicationTest {
         executor.shutdownNow();
     }
 
+    /** The context every started run in these tests carries: {@code Frankenstein.epub} under the pseudo model. */
+    static RunContext runContext() {
+        return new RunContext(PROJECT_ID, FILE_NAME, ReviewMode.UNATTENDED, QualityDial.BALANCED, SELECTION, REQUEST);
+    }
+
     static JobProgress progress(final int accepted, final int flagged, final int pending) {
-        return new JobProgress(JobStage.TRANSLATE, 1, 1, accepted, flagged, pending);
+        return ProgressFixtures.progress(1, 1, accepted, flagged, pending);
     }
 
     static SegmentDecided decided(final String id, final SegmentStatus status, final JobProgress progress) {
@@ -126,7 +134,7 @@ abstract class RunnerTestBase extends ApplicationTest {
 
     /** Starts {@link #job}, and returns once the job thread is inside {@code run()}. */
     protected void startJob() throws InterruptedException {
-        assertThat(runner.start(job, PROJECT_ID, REQUEST, SELECTION)).isTrue();
+        assertThat(runner.start(job, runContext())).isTrue();
         job.awaitRunStarted();
     }
 

@@ -7,18 +7,33 @@ import ua.bookloom.api.pipeline.JobProgress;
  * The figures a run shows, derived from an engine snapshot.
  *
  * <p>The snapshot carries neither a total nor a field called remaining, so both are derived here, once. The section
- * columns are deliberately never read: moving to a later chapter must not move the bar.
+ * and chunk positions are carried for display only and feed no count: moving to a later chapter must not move the bar.
  *
- * @param accepted segments accepted so far
+ * @param autoAccepted segments accepted without repair
+ * @param repaired segments accepted after at least one repair round
  * @param flagged segments flagged so far
  * @param remaining segments not decided yet
- * @param total accepted plus flagged plus remaining
+ * @param total auto-accepted plus repaired plus flagged plus remaining
  * @param fraction decided segments over the total, zero when the total is zero
+ * @param section the 1-based body unit being translated, zero before the first
+ * @param sections how many body units the book has
+ * @param chunk the 1-based chunk within the section
+ * @param chunks how many chunks the section has
  */
-public record RunFigures(int accepted, int flagged, int remaining, int total, double fraction) {
+public record RunFigures(
+        int autoAccepted,
+        int repaired,
+        int flagged,
+        int remaining,
+        int total,
+        double fraction,
+        int section,
+        int sections,
+        int chunk,
+        int chunks) {
 
     /** The figures of a run that has not counted anything. */
-    public static final RunFigures EMPTY = new RunFigures(0, 0, 0, 0, 0.0);
+    public static final RunFigures EMPTY = new RunFigures(0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0);
 
     /**
      * Derives the figures from a snapshot.
@@ -28,8 +43,28 @@ public record RunFigures(int accepted, int flagged, int remaining, int total, do
      */
     public static RunFigures from(final JobProgress progress) {
         Objects.requireNonNull(progress, "progress");
-        final int total = progress.accepted() + progress.flagged() + progress.pending();
-        final double fraction = total == 0 ? 0.0 : (double) (progress.accepted() + progress.flagged()) / total;
-        return new RunFigures(progress.accepted(), progress.flagged(), progress.pending(), total, fraction);
+        final int decided = progress.autoAccepted() + progress.repairedAccepted() + progress.flagged();
+        final int total = decided + progress.pending();
+        final double fraction = total == 0 ? 0.0 : (double) decided / total;
+        return new RunFigures(
+                progress.autoAccepted(),
+                progress.repairedAccepted(),
+                progress.flagged(),
+                progress.pending(),
+                total,
+                fraction,
+                progress.section(),
+                progress.sections(),
+                progress.chunk(),
+                progress.chunks());
+    }
+
+    /**
+     * Segments accepted, with or without repair.
+     *
+     * @return auto-accepted plus repaired
+     */
+    public int accepted() {
+        return autoAccepted + repaired;
     }
 }

@@ -4,9 +4,6 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.function.BooleanSupplier;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -17,21 +14,8 @@ import javafx.beans.value.ChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.ProjectService;
-import ua.bookloom.api.pipeline.ReviewMode;
-import ua.bookloom.api.pipeline.RunRequest;
-import ua.bookloom.api.pipeline.TranslationEngine;
-import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
-import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Toasts;
@@ -46,8 +30,10 @@ import ua.bookloom.ui.notify.Toasts;
  * screen's own listeners are weak, as they must be for a controller the mirror outlives.
  *
  * <p>Everything here that touches a property runs on the FX Application Thread. Building the model and the job can
- * load a model, so it goes to the background executor, and the busy flag is cleared only by a task the FX queue runs,
- * on every way out, so that it can never be seen cleared before the run it guards has been published.
+ * load a model, so the {@link RunStarter} does it on the background executor, and the busy flag is cleared only by a
+ * task the FX queue runs, on every way out, so that it can never be seen cleared before the run it guards has been
+ * published. Resuming a stopped run asks for a new job over the same project, which begins at its first pending
+ * segment; resuming a paused one continues the same job.
  *
  * <p>A failed preparation and a run that returns a failure go through the same {@code route} method, so one code can
  * never reach two different surfaces depending on when it happened. A start is refused by naming the first missing
@@ -63,12 +49,9 @@ public final class TranslatingViewModel {
     private final BookBriefViewModel brief;
     private final CurrentProject current;
     private final SettingsViewModel settings;
-    private final ChatModelFactory models;
-    private final TranslationEngine engine;
-    private final ProjectService projects;
+    private final RunStarter starter;
     private final Toasts toasts;
     private final ErrorPresenter errors;
-    private final ExecutorService executor;
     private final ReadOnlyBooleanWrapper preparing = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
@@ -84,12 +67,9 @@ public final class TranslatingViewModel {
      * @param brief where the request is assembled from
      * @param current the open book a run is started on
      * @param settings where the provider and model come from
-     * @param models the port a model is created through
-     * @param engine the port a job is created through
-     * @param projects the port a book is imported into a stored project through
+     * @param starter what builds a run on the open book and starts it
      * @param toasts where a finished run is announced
      * @param errors where a failure whose code is assigned the blocking dialog is shown
-     * @param executor the daemon executor a run is prepared on, never the FX thread
      */
     @Inject
     public TranslatingViewModel(
@@ -98,23 +78,17 @@ public final class TranslatingViewModel {
             final BookBriefViewModel brief,
             final CurrentProject current,
             final SettingsViewModel settings,
-            final ChatModelFactory models,
-            final TranslationEngine engine,
-            final ProjectService projects,
+            final RunStarter starter,
             final Toasts toasts,
-            final ErrorPresenter errors,
-            @BackgroundExecutor final ExecutorService executor) {
+            final ErrorPresenter errors) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.brief = Objects.requireNonNull(brief, "brief");
         this.current = Objects.requireNonNull(current, "current");
         this.settings = Objects.requireNonNull(settings, "settings");
-        this.models = Objects.requireNonNull(models, "models");
-        this.engine = Objects.requireNonNull(engine, "engine");
-        this.projects = Objects.requireNonNull(projects, "projects");
+        this.starter = Objects.requireNonNull(starter, "starter");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
-        this.executor = Objects.requireNonNull(executor, "executor");
         refreshControls();
         preparing.addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener((observed, was, now) -> refreshControls());
@@ -166,23 +140,7 @@ public final class TranslatingViewModel {
                     preparing.get());
             return;
         }
-        final Optional<ModelSelection> selection = settings.selection();
-        final Optional<RunNotice.Input> missing = missingInput(selection.isPresent());
-        if (missing.isPresent()) {
-            log.debug("start refused: {} is missing", missing.get());
-            notice.set(new RunNotice.MissingInput(missing.get()));
-            return;
-        }
-        notice.set(null);
-        final Optional<InterimRunRequest> request = brief.request();
-        if (request.isEmpty()) {
-            log.debug("start refused: the brief could not be turned into a request");
-            return;
-        }
-        final ModelSelection chosen = selection.orElseThrow();
-        log.info("start requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
-        preparing.set(true);
-        submit(request.get(), chosen);
+        begin(true);
     }
 
     /** Asks the run to pause at its next boundary, if the pause control is offered. FX thread only. */
@@ -192,9 +150,19 @@ public final class TranslatingViewModel {
         }
     }
 
-    /** Asks a paused run to continue, if the resume control is offered. FX thread only. */
+    /**
+     * Continues a run, if the resume control is offered: a paused run resumes the same job, while a stopped one gets a
+     * new job over the same project that begins at its first pending segment. FX thread only.
+     */
     public void resume() {
-        if (offered("resume", controls.get().resume())) {
+        if (!offered("resume", controls.get().resume())) {
+            return;
+        }
+        if (mirror.runState().get() == RunState.STOPPED) {
+            log.debug("resume after a stop: a new job over the same project");
+            begin(false);
+        } else {
+            log.debug("resume from a pause: the same job continues");
             runner.resume();
         }
     }
@@ -241,85 +209,34 @@ public final class TranslatingViewModel {
         return enabled;
     }
 
-    private void submit(final InterimRunRequest request, final ModelSelection selection) {
-        try {
-            executor.execute(() -> prepareOffThread(request, selection));
-        } catch (RejectedExecutionException rejected) {
-            log.error("the run could not be submitted for preparation", rejected);
-            finishPreparing(internalError(rejected));
+    private void begin(final boolean announce) {
+        final Optional<ModelSelection> selection = settings.selection();
+        final Optional<RunNotice.Input> missing = missingInput(selection.isPresent());
+        if (missing.isPresent()) {
+            log.debug("run refused: {} is missing", missing.get());
+            notice.set(new RunNotice.MissingInput(missing.get()));
+            return;
         }
-    }
-
-    private void prepareOffThread(final InterimRunRequest request, final ModelSelection selection) {
-        log.debug("preparing a run on {}", Thread.currentThread().getName());
-        AppError failure = null;
-        try {
-            failure = prepare(request, selection);
-        } catch (RuntimeException thrown) {
-            log.error("preparing the run threw instead of returning a result", thrown);
-            failure = internalError(thrown);
-        } finally {
-            // Also on an Error: the busy flag must never outlive a preparation that will not publish anything.
-            finishPreparing(failure);
+        notice.set(null);
+        final Optional<InterimRunRequest> request = brief.request();
+        if (request.isEmpty()) {
+            log.debug("run refused: the brief could not be turned into a request");
+            return;
         }
-    }
-
-    private @Nullable AppError prepare(final InterimRunRequest request, final ModelSelection selection) {
-        final Result<ChatModel> model = models.create(selection);
-        if (model.isErr()) {
-            log.debug("no model was created: code {}", errorCode(model));
-            return model.error();
-        }
-        final Result<String> project = openProject(request);
-        if (project.isErr()) {
-            log.debug("no project was opened: code {}", errorCode(project));
-            return project.error();
-        }
-        final String projectId = Objects.requireNonNull(project.data(), "project id");
-        final Result<TranslationJob> created = engine.newJob(
-                new RunRequest(projectId, ReviewMode.UNATTENDED), Objects.requireNonNull(model.data(), "model"));
-        if (created.isErr()) {
-            log.debug("no job was created: code {}", errorCode(created));
-            return created.error();
-        }
-        final TranslationJob job = Objects.requireNonNull(created.data(), "job");
-        // Same as the command line: the job may pause only when this screen asks it to.
-        job.pauseAt(Set.of());
-        final boolean began = runner.start(job, projectId, request, selection);
-        log.debug("the runner accepted the run: {}", began);
-        return null;
-    }
-
-    /** Imports the book into a stored project and saves the chosen languages on its brief. */
-    private Result<String> openProject(final InterimRunRequest request) {
-        final Result<ImportedBook> imported = projects.importBook(request.source());
-        if (imported.isErr()) {
-            return Result.err(Objects.requireNonNull(imported.error(), "error"));
-        }
-        final ImportedBook book = Objects.requireNonNull(imported.data(), "imported book");
-        final String projectId = book.projectId();
-        final BookBrief opened = book.brief();
-        if (projectId == null || opened == null) {
-            log.warn(
-                    "the book was refused when it was imported for the run: {}",
-                    book.inspection().verdict());
-            return Result.err(AppError.of(
-                    ErrorCode.validation,
-                    "This book cannot be translated",
-                    "The book was refused when it was opened for the run."));
-        }
-        final String source = request.sourceLanguage() == null ? opened.sourceLanguage() : request.sourceLanguage();
-        final Result<Project> saved =
-                projects.updateBrief(projectId, opened.withLanguages(source, request.targetLanguage()));
-        return saved.isErr() ? Result.err(Objects.requireNonNull(saved.error(), "error")) : Result.ok(projectId);
+        final ModelSelection chosen = selection.orElseThrow();
+        log.info("run requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
+        preparing.set(true);
+        starter.start(request.get(), chosen, failure -> finishPreparing(failure, announce));
     }
 
     /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */
-    private void finishPreparing(final @Nullable AppError failure) {
+    private void finishPreparing(final @Nullable AppError failure, final boolean announce) {
         Platform.runLater(() -> {
             preparing.set(false);
             if (failure != null) {
                 route(failure);
+            } else if (announce) {
+                toasts.info(MessageKey.TOAST_RUN_STARTED);
             }
         });
     }
@@ -377,19 +294,5 @@ public final class TranslatingViewModel {
         } else {
             toasts.success(MessageKey.TOAST_RUN_FINISHED, accepted);
         }
-    }
-
-    private static @Nullable ErrorCode errorCode(final Result<?> result) {
-        final AppError error = result.error();
-        return error == null ? null : error.code();
-    }
-
-    private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The run could not be started because of an unexpected error.",
-                null,
-                cause);
     }
 }

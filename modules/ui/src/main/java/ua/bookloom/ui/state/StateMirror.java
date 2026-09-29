@@ -42,10 +42,15 @@ public final class StateMirror {
     private final ReadOnlyIntegerWrapper flagged = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper remaining = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper total = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper section = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper sections = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper chunk = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper chunks = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper waitingSeconds = new ReadOnlyIntegerWrapper(NOT_WAITING);
     private final ReadOnlyDoubleWrapper progressFraction = new ReadOnlyDoubleWrapper();
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable String> runFileName = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable Path> exportedFile = new ReadOnlyObjectWrapper<>();
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
@@ -101,6 +106,42 @@ public final class StateMirror {
     }
 
     /**
+     * The 1-based body unit the run is translating.
+     *
+     * @return the read-only position, zero before the first; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty section() {
+        return section.getReadOnlyProperty();
+    }
+
+    /**
+     * How many body units the book has.
+     *
+     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty sections() {
+        return sections.getReadOnlyProperty();
+    }
+
+    /**
+     * The 1-based chunk within the section being translated.
+     *
+     * @return the read-only position, zero before the first; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty chunk() {
+        return chunk.getReadOnlyProperty();
+    }
+
+    /**
+     * How many chunks the section has.
+     *
+     * @return the read-only count, zero before a snapshot arrives; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty chunks() {
+        return chunks.getReadOnlyProperty();
+    }
+
+    /**
      * Decided segments over the total.
      *
      * @return the read-only proportion between 0.0 and 1.0; read on the FX thread
@@ -138,6 +179,15 @@ public final class StateMirror {
     }
 
     /**
+     * The name of the book file the run started on.
+     *
+     * @return a read-only property holding {@code null} while no run exists; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable String> runFileName() {
+        return runFileName.getReadOnlyProperty();
+    }
+
+    /**
      * The file the finished run's book was written to.
      *
      * @return a read-only property holding {@code null} until a run's book is written; cleared when a run starts;
@@ -156,10 +206,16 @@ public final class StateMirror {
         return readOnlyLog;
     }
 
-    /** Resets every figure, the log, the failure, the report and the written file for a fresh run, and shows it running. */
-    public void publishRunStarted() {
-        log.debug("publishing run started");
-        Platform.runLater(this::resetForNewRun);
+    /**
+     * Resets every figure, the log, the failure, the report and the written file for a fresh run, names the book it
+     * runs on, and shows it running.
+     *
+     * @param fileName the non-null name of the book file the run translates
+     */
+    public void publishRunStarted(final String fileName) {
+        Objects.requireNonNull(fileName, "fileName");
+        log.debug("publishing run started on {}", fileName);
+        Platform.runLater(() -> resetForNewRun(fileName));
     }
 
     /**
@@ -257,8 +313,9 @@ public final class StateMirror {
         });
     }
 
-    private void resetForNewRun() {
+    private void resetForNewRun(final String fileName) {
         applyFigures(RunFigures.EMPTY);
+        runFileName.set(fileName);
         logEntries.clear();
         failure.set(null);
         report.set(null);
@@ -272,6 +329,10 @@ public final class StateMirror {
         flagged.set(figures.flagged());
         remaining.set(figures.remaining());
         total.set(figures.total());
+        section.set(figures.section());
+        sections.set(figures.sections());
+        chunk.set(figures.chunk());
+        chunks.set(figures.chunks());
         progressFraction.set(figures.fraction());
     }
 

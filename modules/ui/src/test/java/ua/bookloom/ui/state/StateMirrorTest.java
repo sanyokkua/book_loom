@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.ui.ProgressFixtures;
 
 /**
  * The one bridge from engine threads to the scene graph: every publisher may be called from any thread and lands on
@@ -87,11 +88,12 @@ class StateMirrorTest extends ApplicationTest {
 
     static Stream<Arguments> publishers() {
         return Stream.of(
-                Arguments.of(Named.<Consumer<StateMirror>>of("publishRunStarted", StateMirror::publishRunStarted)),
+                Arguments.of(Named.<Consumer<StateMirror>>of(
+                        "publishRunStarted", mirror -> mirror.publishRunStarted("Book.epub"))),
                 Arguments.of(
                         Named.<Consumer<StateMirror>>of("publishRunState", m -> m.publishRunState(RunState.PAUSED))),
                 Arguments.of(Named.<Consumer<StateMirror>>of(
-                        "publishProgress", m -> m.publishProgress(new JobProgress(JobStage.TRANSLATE, 1, 1, 3, 1, 4)))),
+                        "publishProgress", m -> m.publishProgress(ProgressFixtures.progress(1, 1, 3, 1, 4)))),
                 Arguments.of(Named.<Consumer<StateMirror>>of(
                         "publishLogEntries", m -> m.publishLogEntries(List.of(accepted(1))))),
                 Arguments.of(Named.<Consumer<StateMirror>>of(
@@ -190,7 +192,7 @@ class StateMirrorTest extends ApplicationTest {
     void publishProgress_snapshotOf768And3And469_publishesTheDerivedFigures() {
         final StateMirror mirror = new StateMirror();
 
-        mirror.publishProgress(new JobProgress(JobStage.TRANSLATE, 1, 1, 768, 3, 469));
+        mirror.publishProgress(ProgressFixtures.progress(1, 1, 768, 3, 469));
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(768);
@@ -200,12 +202,39 @@ class StateMirrorTest extends ApplicationTest {
         assertThat(onFx(() -> mirror.progressFraction().get())).isCloseTo(0.6217741935483871, within(1e-12));
     }
 
+    // IF the position columns were dropped, THEN the dashboard could not say which chapter and chunk it is in.
+    @Test
+    void publishProgress_snapshotInSection7Of11Chunk41Of66_publishesThePosition() {
+        final StateMirror mirror = new StateMirror();
+
+        mirror.publishProgress(new JobProgress(JobStage.TRANSLATE, 7, 11, 768, 3, 469, 41, 66, 700, 68));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(onFx(() -> mirror.section().get())).isEqualTo(7);
+        assertThat(onFx(() -> mirror.sections().get())).isEqualTo(11);
+        assertThat(onFx(() -> mirror.chunk().get())).isEqualTo(41);
+        assertThat(onFx(() -> mirror.chunks().get())).isEqualTo(66);
+        assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(768);
+    }
+
+    // IF the file name were set before any run, THEN the title bar would show a run that does not exist.
+    @Test
+    void runFileName_beforeAnyRun_isNullAndAfterAStartNamesTheBook() {
+        final StateMirror mirror = new StateMirror();
+        assertThat(onFx(() -> mirror.runFileName().get())).isNull();
+
+        mirror.publishRunStarted("Frankenstein.epub");
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(onFx(() -> mirror.runFileName().get())).isEqualTo("Frankenstein.epub");
+    }
+
     // IF the chapter index fed the proportion, THEN moving to a later chapter would move the bar.
     @Test
     void publishProgress_sameCountsInAnotherChapter_publishesTheSameFigures() {
         final StateMirror mirror = new StateMirror();
 
-        mirror.publishProgress(new JobProgress(JobStage.TRANSLATE, 7, 11, 768, 3, 469));
+        mirror.publishProgress(ProgressFixtures.progress(7, 11, 768, 3, 469));
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.total().get())).isEqualTo(1240);
@@ -217,7 +246,7 @@ class StateMirrorTest extends ApplicationTest {
     void publishProgress_allZeroSnapshot_publishesZeroProportion() {
         final StateMirror mirror = new StateMirror();
 
-        mirror.publishProgress(new JobProgress(JobStage.TRANSLATE, 0, 0, 0, 0, 0));
+        mirror.publishProgress(ProgressFixtures.progress(0, 0, 0, 0, 0));
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.progressFraction().get())).isEqualTo(0.0);
@@ -257,12 +286,12 @@ class StateMirrorTest extends ApplicationTest {
     @Test
     void publishRunStarted_afterAFinishedRun_resetsEverything() {
         final StateMirror mirror = new StateMirror();
-        mirror.publishProgress(new JobProgress(JobStage.TRANSLATE, 1, 1, 768, 3, 469));
+        mirror.publishProgress(ProgressFixtures.progress(1, 1, 768, 3, 469));
         mirror.publishLogEntries(entries(0, 5));
         mirror.publishOutcome(RunState.FAILED, cancelledReport(), error());
         WaitForAsyncUtils.waitForFxEvents();
 
-        mirror.publishRunStarted();
+        mirror.publishRunStarted("Book.epub");
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.RUNNING);
@@ -280,7 +309,7 @@ class StateMirrorTest extends ApplicationTest {
     @Test
     void publishRunState_afterProgress_changesOnlyTheState() {
         final StateMirror mirror = new StateMirror();
-        mirror.publishProgress(new JobProgress(JobStage.TRANSLATE, 1, 1, 412, 0, 88));
+        mirror.publishProgress(ProgressFixtures.progress(1, 1, 412, 0, 88));
 
         mirror.publishRunState(RunState.PAUSING);
         WaitForAsyncUtils.waitForFxEvents();

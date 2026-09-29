@@ -72,7 +72,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
 
         assertThat(noticeKind()).isEqualTo(expectedNotice);
         assertThat(errors.presented()).hasSize(expectedDialogs);
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
     }
 
     // IF the provider-error state dropped the failure it names, THEN the banner could not say which code ended the run.
@@ -88,7 +88,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
 
         assertThat(notice()).contains(new RunNotice.ProviderError(failureOf(ErrorCode.unreachable)));
         assertThat(errors.presented()).isEmpty();
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
     }
 
     // IF a failure reset the figures, THEN the person could not see how much was done before it fell over.
@@ -126,7 +126,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
 
         assertThat(notice()).contains(new RunNotice.Refused(refusal));
         assertThat(errors.presented()).isEmpty();
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
     }
 
     // IF an unexpected failure were shown only as a banner, THEN a bug would read like a routine provider hiccup.
@@ -172,7 +172,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(errors.presented()).isEmpty();
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
         assertThat(notice()).isEmpty();
     }
 
@@ -190,7 +190,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
 
         assertThat(notice()).isEmpty();
         assertThat(errors.presented()).isEmpty();
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
     }
 
     // IF a discovery failure opened a dialog or drew a provider error, THEN a note that belongs to the model list would
@@ -206,7 +206,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(errors.presented()).isEmpty();
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
         assertThat(notice()).isEmpty();
     }
 
@@ -228,7 +228,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
 
         assertThat(noticeKind()).isEqualTo(expectedNotice);
         assertThat(errors.presented()).hasSize(expectedDialogs);
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
         assertThat(engine.requests()).isEmpty();
         assertThat(state()).isEqualTo(RunState.IDLE);
         assertThat(preparing()).isFalse();
@@ -250,7 +250,7 @@ class TranslatingViewModelRoutingTest extends TranslatingViewModelTestBase {
 
         assertThat(noticeKind()).isEqualTo(expectedNotice);
         assertThat(errors.presented()).hasSize(expectedDialogs);
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
         assertThat(job.calls()).isEmpty();
         assertThat(state()).isEqualTo(RunState.IDLE);
         assertThat(preparing()).isFalse();

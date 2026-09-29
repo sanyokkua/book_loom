@@ -16,11 +16,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -101,7 +100,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
     }
 
     void publishProgress(final int accepted, final int flagged, final int pending) {
-        mirror().publishProgress(new JobProgress(JobStage.TRANSLATE, 7, 11, accepted, flagged, pending));
+        mirror().publishProgress(ProgressFixtures.progress(7, 11, accepted, flagged, pending));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

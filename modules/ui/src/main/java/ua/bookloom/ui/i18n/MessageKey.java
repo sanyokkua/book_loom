@@ -79,6 +79,8 @@ public enum MessageKey {
     TOAST_RUN_FINISHED("toast.runFinished"),
     /** Transient message raised when a run finished with flagged segments; argument 0 is accepted, argument 1 flagged. */
     TOAST_RUN_FINISHED_FLAGGED("toast.runFinishedFlagged"),
+    /** Transient message raised when a run has begun, reminding that progress is kept only until the application closes. */
+    TOAST_RUN_STARTED("toast.runStarted"),
     /** Transient message raised when a provider's model list could not be read. */
     TOAST_MODEL_LIST_UNREADABLE("toast.modelListUnreadable"),
     /** Heading of the settings screen. */

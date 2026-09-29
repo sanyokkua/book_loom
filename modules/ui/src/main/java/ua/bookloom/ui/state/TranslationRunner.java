@@ -12,7 +12,6 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
@@ -41,7 +40,7 @@ import ua.bookloom.ui.BackgroundExecutor;
 public final class TranslationRunner {
 
     /** The run the runner is busy with; the job is kept beside its session so a control reaches both. */
-    private record ActiveRun(TranslationJob job, RunSession session, String projectId, InterimRunRequest request) {}
+    private record ActiveRun(TranslationJob job, RunSession session, RunContext context) {}
 
     private final StateMirror mirror;
     private final ExecutorService executor;
@@ -91,33 +90,26 @@ public final class TranslationRunner {
      * submitted, so the first events of a fast job are never lost.
      *
      * @param job the job to run on the background executor; not started before this call
-     * @param projectId the stored project the job runs over, and the one exported once it completes
-     * @param request where the completed run's book is written, and what is logged about the run
-     * @param selection the provider and model, for the log only
+     * @param context the project the job runs over, and what is shown and logged about the run
      * @return {@code true} if the run began, {@code false} if another run is active or the run could not be started
      */
-    public boolean start(
-            final TranslationJob job,
-            final String projectId,
-            final InterimRunRequest request,
-            final ModelSelection selection) {
+    public boolean start(final TranslationJob job, final RunContext context) {
         Objects.requireNonNull(job, "job");
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(request, "request");
-        Objects.requireNonNull(selection, "selection");
-        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock), projectId, request);
+        Objects.requireNonNull(context, "context");
+        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock), context);
         if (!active.compareAndSet(null, run)) {
             log.warn("refusing to start a run: another run is active");
             return false;
         }
         log.info(
-                "run starting: book {}, target language {}, provider {}, model {}",
-                request.source().getFileName(),
-                request.targetLanguage(),
-                selection.providerId(),
-                selection.modelId());
+                "run starting: project {}, book {}, review mode {}, provider {}, model {}",
+                context.projectId(),
+                context.fileName(),
+                context.reviewMode(),
+                context.selection().providerId(),
+                context.selection().modelId());
         try {
-            mirror.publishRunStarted();
+            mirror.publishRunStarted(context.fileName());
             return launch(run);
         } catch (Throwable cause) {
             return abandon(run, cause);
@@ -231,11 +223,11 @@ public final class TranslationRunner {
 
     private Result<ExportReport> export(final ActiveRun run) {
         try {
-            final InterimRunRequest request = run.request();
-            log.info("the run completed; exporting project {} to {}", run.projectId(), request.destination());
+            final InterimRunRequest request = run.context().interimExport();
+            final String projectId = run.context().projectId();
+            log.info("the run completed; exporting project {} to {}", projectId, request.destination());
             final Result<ExportJob> created = exports.newExport(
-                    new ExportRequest(run.projectId(), request.destination(), request.overwrite(), Set.of(), false),
-                    null);
+                    new ExportRequest(projectId, request.destination(), request.overwrite(), Set.of(), false), null);
             if (created.isErr()) {
                 return Result.err(Objects.requireNonNull(created.error(), "error"));
             }

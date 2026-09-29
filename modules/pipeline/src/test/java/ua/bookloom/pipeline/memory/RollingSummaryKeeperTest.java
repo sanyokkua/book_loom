@@ -29,6 +29,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RollingSummary;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.ScriptedChatModel;
@@ -110,6 +111,41 @@ class RollingSummaryKeeperTest {
         assertThat(versions(next)).isEmpty();
         assertThat(summaries.latest(PROJECT).data())
                 .hasValueSatisfying(summary -> assertThat(summary.version()).isEqualTo(2));
+    }
+
+    // IF a resumed job counted its twenty from zero, THEN a stopped chapter would wait up to twice as long for its
+    // next refresh as the same chapter run in one go.
+    @Test
+    void seed_recordsAfterTheLastRefresh_continueTheCountOfTwenty() {
+        final List<Segment> segments = IntStream.range(0, 25)
+                .mapToObj(order -> segment("ch01.xhtml", order, SegmentKind.PARAGRAPH, "Sentence " + order + "."))
+                .toList();
+        decideAccepted(keeper, "ch01.xhtml", 0, 25);
+        final List<SegmentRecord> stored = segments.stream()
+                .map(segment -> record(segment, SegmentStatus.ACCEPTED, "Речення."))
+                .toList();
+        final Optional<RollingSummary> latest = summaries.latest(PROJECT).data();
+        final RollingSummaryKeeper resumed = keeperFor(QualityDial.BALANCED);
+
+        final int seeded = resumed.seed(stored, Objects.requireNonNull(latest, "latest"));
+        final List<Result<Optional<RollingSummary>>> next = decideAccepted(resumed, "ch01.xhtml", 25, 16);
+
+        assertThat(seeded).isEqualTo(5);
+        assertThat(versions(next)).containsExactly(2);
+        assertThat(versions(next.subList(0, 14))).isEmpty();
+    }
+
+    @Test
+    void seed_noSummaryYet_countsEveryAcceptedRecordAndNotTheFlaggedOnes() {
+        final List<SegmentRecord> stored = IntStream.range(0, 12)
+                .mapToObj(order -> segment("ch01.xhtml", order, SegmentKind.PARAGRAPH, "Sentence " + order + "."))
+                .map(segment -> record(
+                        segment, segment.order() < 3 ? SegmentStatus.FLAGGED : SegmentStatus.ACCEPTED, "Речення."))
+                .toList();
+
+        final int seeded = keeper.seed(stored, Optional.empty());
+
+        assertThat(seeded).isEqualTo(9);
     }
 
     @Test

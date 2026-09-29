@@ -46,6 +46,7 @@ public final class RecordingJob implements TranslationJob {
     private volatile boolean subscribedBeforeRun;
     private volatile @Nullable RuntimeException subscribeFailure;
     private volatile Runnable onControl = () -> {};
+    private volatile Set<PausePoint> pausePoints = Set.of();
 
     @Override
     public Result<JobReport> run() {
@@ -158,6 +159,12 @@ public final class RecordingJob implements TranslationJob {
     @Override
     public void pauseAt(final Set<PausePoint> points) {
         calls.add("pauseAt");
+        pausePoints = Set.copyOf(points);
+    }
+
+    /** The set of the last {@code pauseAt} call, or empty when none was made. */
+    public Set<PausePoint> pausePoints() {
+        return pausePoints;
     }
 
     @Override

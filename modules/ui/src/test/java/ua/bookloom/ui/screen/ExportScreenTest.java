@@ -168,7 +168,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         publishCompleted(epubReport());
         assertThat(isShown("export-reveal")).isTrue();
 
-        mirror().publishRunStarted();
+        mirror().publishRunStarted("Book.epub");
         WaitForAsyncUtils.waitForFxEvents();
         onFx(() -> {});
 
@@ -256,7 +256,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         showExport();
         publishCompleted(epubReport());
 
-        mirror().publishRunStarted();
+        mirror().publishRunStarted("Book.epub");
         WaitForAsyncUtils.waitForFxEvents();
         onFx(() -> {});
 

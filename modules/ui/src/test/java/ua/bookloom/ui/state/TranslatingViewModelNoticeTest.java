@@ -7,6 +7,7 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ScriptedTranslationEngine;
 
 /**
  * The notice a refused start or a failed run leaves on the dashboard: a refused start names its missing input, and
@@ -171,6 +172,8 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
     // IF the notice came back once the new run reported running, THEN a run in progress would show the old failure.
     @Test
     void run_startsAfterAProviderFailure_showsNoNoticeOnceRunning() throws Exception {
+        final RecordingJob again = new RecordingJob();
+        engine = ScriptedTranslationEngine.returning(job, again);
         openBookAndChooseModel();
         buildViewModel();
         startAndPrepare();
@@ -185,6 +188,6 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
 
         assertThat(notice()).isEmpty();
         assertThat(errors.presented()).isEmpty();
-        job.finish(Result.ok(cancelledReport()));
+        again.finish(Result.ok(cancelledReport()));
     }
 }

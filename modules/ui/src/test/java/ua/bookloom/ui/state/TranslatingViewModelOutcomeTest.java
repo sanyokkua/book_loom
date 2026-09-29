@@ -28,7 +28,7 @@ class TranslatingViewModelOutcomeTest extends TranslatingViewModelTestBase {
         job.finish(Result.ok(completedReport(10)));
 
         awaitState(RunState.COMPLETED);
-        assertThat(toasts.raised()).containsExactly(new Raised("success", MessageKey.TOAST_RUN_FINISHED, List.of(10)));
+        assertThat(outcomeToasts()).containsExactly(new Raised("success", MessageKey.TOAST_RUN_FINISHED, List.of(10)));
     }
 
     // IF a run with flagged segments got the plain success message, THEN the flagged ones would be missed.
@@ -41,7 +41,7 @@ class TranslatingViewModelOutcomeTest extends TranslatingViewModelTestBase {
         job.finish(Result.ok(completedWithFlagged()));
 
         awaitState(RunState.COMPLETED);
-        assertThat(toasts.raised())
+        assertThat(outcomeToasts())
                 .containsExactly(new Raised("warning", MessageKey.TOAST_RUN_FINISHED_FLAGGED, List.of(7, 3)));
     }
 
@@ -56,7 +56,7 @@ class TranslatingViewModelOutcomeTest extends TranslatingViewModelTestBase {
         job.finish(Result.ok(cancelledReport()));
 
         awaitState(RunState.STOPPED);
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
         assertThat(errors.presented()).isEmpty();
     }
 
@@ -70,6 +70,6 @@ class TranslatingViewModelOutcomeTest extends TranslatingViewModelTestBase {
         job.finish(Result.err(error()));
 
         awaitState(RunState.FAILED);
-        assertThat(toasts.raised()).isEmpty();
+        assertThat(outcomeToasts()).isEmpty();
     }
 }

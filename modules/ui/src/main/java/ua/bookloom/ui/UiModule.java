@@ -26,6 +26,7 @@ import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.PlatformFileRevealer;
+import ua.bookloom.ui.state.RunStarter;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -41,8 +42,8 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  * {@link ModalHost}, the notification surfaces ({@link Toasts} over the toast stack, {@link ErrorPresenter} over the
  * modal error dialog), the {@link AppShellView}, the {@link StateMirror} with the {@link TranslationRunner} that
  * feeds it, the {@link SettingsViewModel} and the {@link ModelListing} it owns, the {@link CurrentProject} holding the
- * open book, the {@link ImportViewModel} that fills it, the {@link BookBriefViewModel} that holds the choices made about it and the
- * {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
+ * open book, the {@link ImportViewModel} that fills it, the {@link BookBriefViewModel} that holds the choices made about it, the
+ * {@link RunStarter} that builds a run on it and the {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
  * {@link FileRevealer} that shows a written book in the file manager.
  * The singletons are bound explicitly rather than left to JIT so the composition root's graph lists everything the
  * window depends on. The {@link BuildVersion} value, the {@link BackgroundExecutor} pool, the ports ({@link
@@ -80,6 +81,7 @@ public final class UiModule extends AbstractModule {
         bind(CurrentProject.class);
         bind(ImportViewModel.class);
         bind(BookBriefViewModel.class);
+        bind(RunStarter.class);
         bind(TranslatingViewModel.class);
         bind(FileRevealer.class).to(PlatformFileRevealer.class);
         requireBinding(ProviderConfigs.class);

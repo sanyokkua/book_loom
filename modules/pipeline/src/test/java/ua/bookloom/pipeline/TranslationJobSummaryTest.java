@@ -157,6 +157,46 @@ class TranslationJobSummaryTest {
         assertThat(events.getLast()).isInstanceOf(Finished.class);
     }
 
+    // IF a job resumed on a project with ten accepted segments counted its twenty from zero, THEN the version the
+    // twentieth accepted segment earns would only come ten segments later, if the chapter lasted that long.
+    @Test
+    void run_secondJobOnTenAcceptedSegments_refreshesAfterTheTenthOfItsOwn() {
+        final TestProject project =
+                project(TestBooks.markdown(tempDir.resolve("Book.md"), numberedLines(26)), brief("en", "uk"));
+        final ScriptedChatModel firstModel = replies(numberedReplies(10))
+                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.")));
+        report(job(project, firstModel).run());
+        final TranslationJobImpl second = job(project, replies(numberedReplies(16)));
+        final List<JobEvent> events = recorded(second);
+
+        report(second.run());
+
+        assertThat(memoryEvents(events))
+                .containsExactly(
+                        new MemoryUpdated(MemoryKind.SUMMARY, "1"), new MemoryUpdated(MemoryKind.SUMMARY, "2"));
+        assertThat(decisionsAndMemory(events))
+                .containsExactlyElementsOf(Stream.of(
+                                Collections.nCopies(10, "decided"),
+                                List.of("memory"),
+                                Collections.nCopies(6, "decided"),
+                                List.of("memory"))
+                        .flatMap(List::stream)
+                        .toList());
+    }
+
+    private static String numberedLines(final int count) {
+        return IntStream.rangeClosed(1, count)
+                .mapToObj(line -> "Line " + line + ".")
+                .reduce((text, line) -> text + "\n\n" + line)
+                .orElseThrow();
+    }
+
+    private static String[] numberedReplies(final int count) {
+        return IntStream.rangeClosed(1, count)
+                .mapToObj(line -> "Рядок " + line + ".")
+                .toArray(String[]::new);
+    }
+
     /** A heading and twenty short lines: the heading is the only thing the deterministic summary can name. */
     private Path lighthouseChapter() {
         final String lines = IntStream.rangeClosed(1, 20)

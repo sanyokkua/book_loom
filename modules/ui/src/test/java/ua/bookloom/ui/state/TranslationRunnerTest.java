@@ -44,13 +44,26 @@ class TranslationRunnerTest extends RunnerTestBase {
         awaitState(RunState.STOPPED);
     }
 
+    // IF the runner did not name the book, THEN the title bar and the export screen would not know which book the run
+    // translates.
+    @Test
+    void start_job_makesTheMirrorNameTheBookFile() throws Exception {
+        assertThat(onFx(() -> mirror.runFileName().get())).isNull();
+
+        startJob();
+
+        assertThat(onFx(() -> mirror.runFileName().get())).isEqualTo("Frankenstein.epub");
+        job.finish(Result.ok(cancelledReport()));
+        awaitState(RunState.STOPPED);
+    }
+
     // IF a second run could start while one is active, THEN two jobs would drive one mirror and one model.
     @Test
     void start_whileARunIsActive_returnsFalseAndNeverTouchesTheSecondJob() throws Exception {
         final RecordingJob second = new RecordingJob();
         startJob();
 
-        final boolean accepted = runner.start(second, PROJECT_ID, REQUEST, SELECTION);
+        final boolean accepted = runner.start(second, runContext());
 
         assertThat(accepted).isFalse();
         assertThat(second.calls()).isEmpty();
@@ -69,7 +82,7 @@ class TranslationRunnerTest extends RunnerTestBase {
         awaitState(RunState.COMPLETED);
         final RecordingJob next = new RecordingJob();
 
-        final boolean accepted = runner.start(next, PROJECT_ID, REQUEST, SELECTION);
+        final boolean accepted = runner.start(next, runContext());
         next.awaitRunStarted();
 
         assertThat(accepted).isTrue();

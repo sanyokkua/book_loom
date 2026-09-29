@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,15 +11,18 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
+import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * What the translating view model tests share, on top of the runner fixtures: a real {@link TranslationRunner}
@@ -45,6 +49,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     protected ScriptedTranslationEngine engine;
     protected ScriptedProjectService projects;
     protected ExecutorService prepExecutor;
+    protected ReviewMode reviewMode = ReviewMode.UNATTENDED;
     protected QueuedExecutor queued;
     protected ImportViewModel imports;
     protected BookBriefViewModel brief;
@@ -79,8 +84,9 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
-        viewModel = onFx(() -> new TranslatingViewModel(
-                mirror, runner, brief, current, settings, models, engine, projects, toasts, errors, prepExecutor));
+        final RunStarter starter = new RunStarter(current, models, engine, projects, reviewMode, runner, prepExecutor);
+        viewModel =
+                onFx(() -> new TranslatingViewModel(mirror, runner, brief, current, settings, starter, toasts, errors));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -125,6 +131,13 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     /** The notice the dashboard is showing instead of the plain state banner, if any. */
     protected Optional<RunNotice> notice() {
         return onFx(() -> Optional.ofNullable(viewModel.notice().get()));
+    }
+
+    /** The messages raised other than the one that announces a run has begun. */
+    protected List<Raised> outcomeToasts() {
+        return toasts.raised().stream()
+                .filter(raised -> raised.key() != MessageKey.TOAST_RUN_STARTED)
+                .toList();
     }
 
     protected boolean preparing() {

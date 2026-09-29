@@ -92,6 +92,37 @@ public final class RollingSummaryKeeper {
     }
 
     /**
+     * Continues the count of twenty from the segments an earlier job already decided, so a resumed job refreshes at
+     * the same point the uninterrupted run would have. Only the accepted records that follow the segment the latest
+     * summary was made at count, in document order; with no summary yet they all do.
+     *
+     * @param records every stored record of the project in document order; never null
+     * @param latest the latest stored summary, or empty when none was written; never null
+     * @return the number of accepted segments the count starts from
+     */
+    public int seed(final List<SegmentRecord> records, final Optional<RollingSummary> latest) {
+        Objects.requireNonNull(records, "records");
+        Objects.requireNonNull(latest, "latest");
+        final String summarizedKey =
+                latest.map(RollingSummary::lastSummarizedKey).orElse(null);
+        int from = 0;
+        for (int index = 0; index < records.size() && summarizedKey != null; index++) {
+            if (records.get(index).segmentId().equals(summarizedKey)) {
+                from = index + 1;
+            }
+        }
+        acceptedSinceRefresh = (int) records.subList(from, records.size()).stream()
+                .filter(record -> record.status() == SegmentStatus.ACCEPTED)
+                .count();
+        log.debug(
+                "Summary keeper seeded acceptedSinceRefresh={} after key={} of {} records",
+                acceptedSinceRefresh,
+                summarizedKey,
+                records.size());
+        return acceptedSinceRefresh;
+    }
+
+    /**
      * Takes note of a segment the run has decided and refreshes the summary when enough have been accepted.
      *
      * @param segment the decided segment; never null

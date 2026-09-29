@@ -13,15 +13,16 @@ import java.util.Objects;
  *   <li>{@code PAUSING}: pause unavailable, stop available, no resume.
  *   <li>{@code PAUSED}: resume and stop.
  *   <li>{@code STOPPING}: stop unavailable and nothing else.
- *   <li>{@code STOPPED}, {@code COMPLETED}, {@code FAILED}: a new run only; a stopped run is terminal in this build, so
- *       none of them offers a resume.
+ *   <li>{@code STOPPED}: resume only, which starts a new job at the first pending segment.
+ *   <li>{@code COMPLETED}, {@code FAILED}: a new run only.
  * </ul>
  *
  * <p>Known gap, not a bug: the engine honours no pause during export, so a pause pressed then is ignored by
  * {@link RunSession}, and the pause control stays offered.
  *
- * <p>Start and new run are the same action on two labels: start before any run, new run after one has ended. Only they
- * are affected by {@code preparing}: a run that is already under way needs its pause and stop at once.
+ * <p>Start and new run are the same action on two labels: start before any run, new run after one has ended. Only they,
+ * and the resume of a stopped run, which also builds a job, are affected by {@code preparing}: a run that is already
+ * under way needs its pause and stop at once.
  *
  * @param start begins the first run
  * @param newRun begins another run after one has ended
@@ -45,7 +46,8 @@ public record Controls(
      * The controls for a run state.
      *
      * @param state where the run is
-     * @param preparing whether a start is still building its model and job, which makes start and new run unavailable
+     * @param preparing whether a start is still building its model and job, which makes start, new run and a stopped
+     *     run's resume unavailable
      * @return the controls; never null
      */
     public static Controls of(final RunState state, final boolean preparing) {
@@ -57,7 +59,8 @@ public record Controls(
             case PAUSING -> new Controls(hidden(), hidden(), ControlState.DISABLED, hidden(), ControlState.ENABLED);
             case PAUSED -> new Controls(hidden(), hidden(), hidden(), ControlState.ENABLED, ControlState.ENABLED);
             case STOPPING -> new Controls(hidden(), hidden(), hidden(), hidden(), ControlState.DISABLED);
-            case STOPPED, COMPLETED, FAILED -> new Controls(hidden(), begin, hidden(), hidden(), hidden());
+            case STOPPED -> new Controls(hidden(), hidden(), hidden(), begin, hidden());
+            case COMPLETED, FAILED -> new Controls(hidden(), begin, hidden(), hidden(), hidden());
         };
     }
 

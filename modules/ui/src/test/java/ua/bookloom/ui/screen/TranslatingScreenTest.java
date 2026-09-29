@@ -37,7 +37,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
             PAUSING   | translating-stop                     | translating-pause
             PAUSED    | translating-resume translating-stop  | -
             STOPPING  | -                                    | translating-stop
-            STOPPED   | translating-new-run                  | -
+            STOPPED   | translating-resume                   | -
             COMPLETED | translating-new-run                  | -
             FAILED    | translating-new-run                  | -
             """)
@@ -129,7 +129,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
     // IF a stop were dressed as a failure, THEN a choice the person made would be reported as if it had gone wrong.
     @Test
-    void stopped_cancelledRunReturns_isANeutralOutcomeWithNewRunAndNoResumeOrErrorSurface() {
+    void stopped_cancelledRunReturns_isANeutralOutcomeWithResumeAndNoNewRunOrErrorSurface() {
         showTranslating();
         publish(RunState.RUNNING);
 
@@ -139,13 +139,14 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-banner-title")).isEqualTo("Run stopped");
         assertThat(required("translating-banner").getStyleClass()).doesNotContain("banner-err", "banner-warn");
         assertThat(textOf("translating-banner")).doesNotContainIgnoringCase("error", "fail");
-        assertThat(isShown("translating-new-run")).isTrue();
-        assertThat(isShown("translating-resume")).isFalse();
+        assertThat(isShown("translating-resume")).isTrue();
+        assertThat(isShown("translating-new-run")).isFalse();
         assertThat(optional("error-card")).isNull();
         assertThat(scene.getRoot().lookupAll(".toast-err")).isEmpty();
     }
 
-    // IF the dashboard hid itself with no book open, THEN task 9.2's message would have nowhere to appear.
+    // IF the dashboard hid itself with no book open, THEN the message naming a missing book or model would have nowhere
+    // to appear.
     @Test
     void screen_noBookOpen_showsTheDashboardWithItsStartControlAndNoNoBookState() {
         showTranslating();

@@ -5,10 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.pipeline.JobProgress;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.ui.ProgressFixtures;
 
 /**
  * The dashboard's buttons wired to the run: each one fired on the screen reaches the recording job the scripted engine
@@ -56,7 +55,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
     void resumeControl_paused_firingItAsksTheJobToResume() throws Exception {
         startRun();
         onFx(() -> button("translating-pause").fire());
-        job.emit(new Paused(PauseReason.REQUESTED, null, new JobProgress(JobStage.TRANSLATE, 1, 2, 5, 0, 5)));
+        job.emit(new Paused(PauseReason.REQUESTED, null, ProgressFixtures.progress(1, 2, 5, 0, 5)));
         awaitBanner("Paused");
 
         onFx(() -> button("translating-resume").fire());
@@ -75,6 +74,6 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
         awaitBanner("Stopping");
         job.finish(Result.ok(cancelledReport()));
         awaitBanner("Run stopped");
-        assertThat(enabledControls()).containsExactly("translating-new-run");
+        assertThat(enabledControls()).containsExactly("translating-resume");
     }
 }

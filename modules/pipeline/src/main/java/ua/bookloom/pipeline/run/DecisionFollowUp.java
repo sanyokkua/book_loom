@@ -11,6 +11,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -35,6 +36,7 @@ final class DecisionFollowUp {
     private final String projectId;
     private final RollingSummaryKeeper keeper;
     private final SummaryRepository summaries;
+    private final SegmentRepository segments;
     private final GlossaryRepository glossary;
     private final RunSinks sinks;
     private final RoutedCalls calls;
@@ -50,6 +52,7 @@ final class DecisionFollowUp {
         this.projectId = Objects.requireNonNull(projectId, "projectId");
         this.keeper = Objects.requireNonNull(keeper, "keeper");
         this.summaries = Objects.requireNonNull(stores, "stores").summaries();
+        this.segments = stores.segments();
         this.glossary = stores.glossary();
         this.sinks = Objects.requireNonNull(sinks, "sinks");
         this.calls = Objects.requireNonNull(calls, "calls");
@@ -57,16 +60,22 @@ final class DecisionFollowUp {
 
     /**
      * Reads the latest stored summary, so a run started after an earlier one shows its first drafts what that run
-     * summarized.
+     * summarized, and starts the summary keeper's count from the segments that run already accepted.
      *
-     * @return empty, or the failed end when the summary could not be read
+     * @return empty, or the failed end when the summary or the stored records could not be read
      */
     Optional<RunEnd> readSummary() {
         final Result<Optional<RollingSummary>> latest = summaries.latest(projectId);
         if (latest.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(latest.error(), "error")));
         }
-        Objects.requireNonNull(latest.data(), "latest").ifPresent(this::hold);
+        final Optional<RollingSummary> stored = Objects.requireNonNull(latest.data(), "latest");
+        stored.ifPresent(this::hold);
+        final Result<List<SegmentRecord>> records = segments.all(projectId);
+        if (records.isErr()) {
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(records.error(), "error")));
+        }
+        keeper.seed(Objects.requireNonNull(records.data(), "records"), stored);
         log.debug("Read the latest summary projectId={} present={}", projectId, summary != null);
         return Optional.empty();
     }

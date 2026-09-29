@@ -62,7 +62,7 @@ class TranslationRunnerExportTest extends RunnerTestBase {
         job.finish(Result.ok(completedReport(3)));
         awaitState(RunState.COMPLETED);
 
-        mirror.publishRunStarted();
+        mirror.publishRunStarted("Book.epub");
         awaitState(RunState.RUNNING);
 
         assertThat(exportedFile()).isNull();
