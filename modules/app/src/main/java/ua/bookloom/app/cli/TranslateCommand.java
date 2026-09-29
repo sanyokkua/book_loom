@@ -2,6 +2,8 @@ package ua.bookloom.app.cli;
 
 import java.io.PrintStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -58,6 +60,7 @@ public final class TranslateCommand {
     private final ProviderVerifier verifier;
     private final ProjectService projects;
     private final ExportService exports;
+    private final ShutdownCancellation shutdown;
 
     /** Runs one parsed command and reports only its user-facing result to the supplied stream. */
     public int run(List<String> args, PrintStream out) {
@@ -70,6 +73,8 @@ public final class TranslateCommand {
             exit = parsed.isErr() ? usageFailure(errorOf(parsed), out) : execute(dataOf(parsed), out);
         } catch (Throwable cause) {
             exit = unexpectedFailure(out, cause);
+        } finally {
+            shutdown.finished();
         }
         log.info("translate command exitCode={}", exit);
         return exit;
@@ -78,6 +83,23 @@ public final class TranslateCommand {
     private int execute(TranslateArguments arguments, PrintStream out) {
         final Path destination =
                 DestinationPath.destinationFor(arguments.source(), arguments.format(), arguments.targetLanguage());
+        logParsed(arguments, destination);
+        if (destinationOccupied(destination, arguments.overwrite())) {
+            return printError(destinationExists(), out);
+        }
+        final Result<ModelSelection> selection = selectModel(arguments);
+        if (selection.isErr()) {
+            return selectionFailure(errorOf(selection), out);
+        }
+        final ModelSelection selected = dataOf(selection);
+        logSelection(arguments, selected);
+        if (!PSEUDO_PROVIDER.equals(selected.providerId()) && !preflight(selected, out)) {
+            return 1;
+        }
+        return translate(arguments, destination, selected, out);
+    }
+
+    private static void logParsed(TranslateArguments arguments, Path destination) {
         log.debug(
                 "translate command parsed source={} destination={} targetLanguage={} sourceLanguage={} overwrite={}",
                 arguments.source(),
@@ -85,11 +107,9 @@ public final class TranslateCommand {
                 arguments.targetLanguage(),
                 arguments.sourceLanguage(),
                 arguments.overwrite());
-        final Result<ModelSelection> selection = selectModel(arguments);
-        if (selection.isErr()) {
-            return selectionFailure(errorOf(selection), out);
-        }
-        final ModelSelection selected = dataOf(selection);
+    }
+
+    private static void logSelection(TranslateArguments arguments, ModelSelection selected) {
         log.info(
                 "translate command provider={} model={} targetLanguage={} sourceLanguage={} overwrite={} baseUrl={} requestTimeout={}",
                 selected.providerId(),
@@ -99,10 +119,19 @@ public final class TranslateCommand {
                 arguments.overwrite(),
                 arguments.baseUrl(),
                 arguments.requestTimeout());
-        if (!PSEUDO_PROVIDER.equals(selected.providerId()) && !preflight(selected, out)) {
-            return 1;
-        }
-        return translate(arguments, destination, selected, out);
+    }
+
+    private static boolean destinationOccupied(Path destination, boolean overwrite) {
+        final boolean occupied = Files.exists(destination, LinkOption.NOFOLLOW_LINKS);
+        log.debug("translate command check=destination-free occupied={} overwrite={}", occupied, overwrite);
+        return occupied && !overwrite;
+    }
+
+    private static AppError destinationExists() {
+        return AppError.of(
+                ErrorCode.validation,
+                "This destination already exists",
+                "Choose a new destination or allow the existing file to be replaced.");
     }
 
     private Result<ModelSelection> selectModel(TranslateArguments arguments) {
@@ -153,6 +182,7 @@ public final class TranslateCommand {
     }
 
     private boolean preflight(ModelSelection selection, PrintStream out) {
+        log.debug("translate command preflight provider={} model={}", selection.providerId(), selection.modelId());
         final Result<VerificationReport> result = verifier.verify(selection, VerificationPolicy.PREFLIGHT);
         if (result.isErr()) {
             printError(errorOf(result), out);
@@ -163,6 +193,7 @@ public final class TranslateCommand {
                 return false;
             }
         }
+        log.debug("translate command preflight passed");
         return true;
     }
 
@@ -217,6 +248,7 @@ public final class TranslateCommand {
         }
         final TranslationJob translationJob = dataOf(job);
         translationJob.pauseAt(Set.of());
+        shutdown.hold(translationJob::cancel);
         return report(translationJob.run(), projectId, destination, arguments.overwrite(), out);
     }
 
@@ -229,6 +261,10 @@ public final class TranslateCommand {
         final ImportedBook book = dataOf(imported);
         final String projectId = book.projectId();
         final BookBrief opened = book.brief();
+        log.debug(
+                "translate command import projectId={} verdict={}",
+                projectId,
+                book.inspection().verdict());
         if (projectId == null || opened == null) {
             log.warn(
                     "translate command book refused verdict={}",
@@ -238,6 +274,11 @@ public final class TranslateCommand {
         final String source = arguments.sourceLanguage() == null ? opened.sourceLanguage() : arguments.sourceLanguage();
         final Result<?> saved =
                 projects.updateBrief(projectId, opened.withLanguages(source, arguments.targetLanguage()));
+        log.debug(
+                "translate command brief saved={} source={} target={}",
+                saved.isOk(),
+                source,
+                arguments.targetLanguage());
         return saved.isErr() ? Result.err(errorOf(saved)) : Result.ok(projectId);
     }
 
@@ -273,6 +314,7 @@ public final class TranslateCommand {
             return printError(report.error() != null ? report.error() : stoppedError(report.end()), out);
         }
         final Result<ExportReport> exported = export(projectId, destination, overwrite);
+        log.debug("translate command export ok={}", exported.isOk());
         if (exported.isErr()) {
             return errorFailure(exported, out);
         }
@@ -284,7 +326,12 @@ public final class TranslateCommand {
     private Result<ExportReport> export(String projectId, Path destination, boolean overwrite) {
         final Result<ExportJob> job =
                 exports.newExport(new ExportRequest(projectId, destination, overwrite, Set.of(), false), null);
-        return job.isErr() ? Result.err(errorOf(job)) : dataOf(job).run();
+        if (job.isErr()) {
+            return Result.err(errorOf(job));
+        }
+        final ExportJob exportJob = dataOf(job);
+        shutdown.hold(exportJob::cancel);
+        return exportJob.run();
     }
 
     private int selectionFailure(AppError error, PrintStream out) {

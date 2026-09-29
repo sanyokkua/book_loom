@@ -72,6 +72,7 @@ jpackage ^
     --icon "%ICON%" ^
     --type app-image ^
     --java-options "-Dbookloom.env=prod" ^
+    --java-options "-Dguice_bytecode_gen_option=DISABLED" ^
     --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6"
 
 if errorlevel 1 exit /b 1

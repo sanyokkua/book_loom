@@ -31,13 +31,24 @@ final class TranslateCommandTestFakes {
     /** The command over the real engine, project and export services of {@code core} and the given provider seams. */
     static TranslateCommand commandOver(
             Injector core, ChatModelFactory models, ProviderConfigs configs, ProviderVerifier verifier) {
+        return commandOver(core, models, configs, verifier, core.getInstance(ExportService.class));
+    }
+
+    /** As above, over the given export service, which may wrap the real one. */
+    static TranslateCommand commandOver(
+            Injector core,
+            ChatModelFactory models,
+            ProviderConfigs configs,
+            ProviderVerifier verifier,
+            ExportService exports) {
         return new TranslateCommand(
                 core.getInstance(TranslationEngine.class),
                 models,
                 configs,
                 verifier,
                 core.getInstance(ProjectService.class),
-                core.getInstance(ExportService.class));
+                exports,
+                core.getInstance(ShutdownCancellation.class));
     }
 
     static final class RecordingProviderConfigs implements ProviderConfigs {

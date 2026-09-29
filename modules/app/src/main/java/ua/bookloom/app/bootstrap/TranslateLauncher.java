@@ -17,6 +17,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.app.AppLifecycle;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.app.cli.ShutdownCancellation;
 import ua.bookloom.app.cli.TranslateCommand;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
@@ -105,7 +106,7 @@ public final class TranslateLauncher {
             final AppLifecycle lifecycle = new AppLifecycle();
             lifecycle.phaseOne(injector);
             lifecycle.phaseTwo(injector);
-            final int exit = injector.getInstance(TranslateCommand.class).run(args, out);
+            final int exit = runWithShutdownHook(injector, args, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
         } catch (Throwable cause) {
@@ -114,6 +115,25 @@ public final class TranslateLauncher {
             final int exit = printError(error, out);
             log.info("translate launcher exitCode={}", exit);
             return exit;
+        }
+    }
+
+    /** Lets Ctrl+C cancel the running job or export and wait for it, then removes the hook so a caller can run again. */
+    private static int runWithShutdownHook(Injector injector, List<String> args, PrintStream out) {
+        final Thread hook = new Thread(injector.getInstance(ShutdownCancellation.class), "translate-shutdown");
+        Runtime.getRuntime().addShutdownHook(hook);
+        try {
+            return injector.getInstance(TranslateCommand.class).run(args, out);
+        } finally {
+            removeHook(hook);
+        }
+    }
+
+    private static void removeHook(Thread hook) {
+        try {
+            Runtime.getRuntime().removeShutdownHook(hook);
+        } catch (IllegalStateException shuttingDown) {
+            // The JVM is already stopping and is running the hook itself; nothing is left to remove.
         }
     }
 

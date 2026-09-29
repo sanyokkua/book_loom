@@ -123,6 +123,7 @@ JPACKAGE_ARGS=(
     --main-class "${MAIN_CLASS}"
     --dest "${OUTPUT_DIR}"
     --java-options "-Dbookloom.env=prod"
+    --java-options "-Dguice_bytecode_gen_option=DISABLED"
     --jlink-options "--strip-debug --no-header-files --no-man-pages --compress zip-6"
 )
 
