@@ -52,9 +52,21 @@ public final class DraftPromptBuilder {
      * @param shownText the text the model translates and whose tokens it must copy; never null
      */
     public List<ChatMessage> messagesFor(final Segment segment, final DraftContext context, final String shownText) {
+        return messagesFor(segment, context, shownText, "");
+    }
+
+    /**
+     * As {@link #messagesFor(Segment, DraftContext, String)}, with an instruction the model reads before the text.
+     *
+     * @param extraInstruction what a repair asks of this draft, one line per finding; empty for a plain draft, which
+     *     leaves the message exactly as it is without one
+     */
+    public List<ChatMessage> messagesFor(
+            final Segment segment, final DraftContext context, final String shownText, final String extraInstruction) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(shownText, "shownText");
+        Objects.requireNonNull(extraInstruction, "extraInstruction");
         final String source = PromptLanguages.describe(frame.sourceLanguage());
         final String target = PromptLanguages.describe(frame.targetLanguage());
         log.debug(
@@ -64,7 +76,7 @@ public final class DraftPromptBuilder {
                 segment.id(),
                 shownText.length());
         final String system = systemMessage();
-        final String user = userMessage(source, target, shownText, context);
+        final String user = userMessage(source, target, shownText, context, extraInstruction);
         if (log.isTraceEnabled()) {
             log.trace("Draft prompt system={} user={}", system, user);
         }
@@ -85,11 +97,22 @@ public final class DraftPromptBuilder {
             final String shownText,
             final String rejectedReply,
             final String diagnostic) {
+        return messagesForStructuredRepair(segment, context, shownText, "", rejectedReply, diagnostic);
+    }
+
+    /** As the {@code shownText} overload, over a draft that carried {@code extraInstruction}. */
+    public List<ChatMessage> messagesForStructuredRepair(
+            final Segment segment,
+            final DraftContext context,
+            final String shownText,
+            final String extraInstruction,
+            final String rejectedReply,
+            final String diagnostic) {
         Objects.requireNonNull(rejectedReply, "rejectedReply");
         Objects.requireNonNull(diagnostic, "diagnostic");
         final String correction = templates.renderUser(
                 PromptName.STRUCTURAL_REPAIR, Map.of("rejectedReply", rejectedReply, "diagnostic", diagnostic));
-        return withCorrection(segment, context, shownText, correction);
+        return withCorrection(segment, context, shownText, extraInstruction, correction);
     }
 
     /**
@@ -114,6 +137,17 @@ public final class DraftPromptBuilder {
             final String shownText,
             final String rejectedTarget,
             @Nullable final String gateNote) {
+        return messagesForPlaceholderRepair(segment, context, shownText, "", rejectedTarget, gateNote);
+    }
+
+    /** As the {@code shownText} overload, over a draft that carried {@code extraInstruction}. */
+    public List<ChatMessage> messagesForPlaceholderRepair(
+            final Segment segment,
+            final DraftContext context,
+            final String shownText,
+            final String extraInstruction,
+            final String rejectedTarget,
+            @Nullable final String gateNote) {
         Objects.requireNonNull(rejectedTarget, "rejectedTarget");
         final Map<String, String> values = new HashMap<>();
         values.put("rejectedTarget", rejectedTarget);
@@ -121,12 +155,21 @@ public final class DraftPromptBuilder {
         if (gateNote != null) {
             values.put("gateNote", gateNote);
         }
-        return withCorrection(segment, context, shownText, templates.renderUser(PromptName.PLACEHOLDER_REPAIR, values));
+        return withCorrection(
+                segment,
+                context,
+                shownText,
+                extraInstruction,
+                templates.renderUser(PromptName.PLACEHOLDER_REPAIR, values));
     }
 
     private List<ChatMessage> withCorrection(
-            final Segment segment, final DraftContext context, final String shownText, final String correction) {
-        final List<ChatMessage> original = messagesFor(segment, context, shownText);
+            final Segment segment,
+            final DraftContext context,
+            final String shownText,
+            final String extraInstruction,
+            final String correction) {
+        final List<ChatMessage> original = messagesFor(segment, context, shownText, extraInstruction);
         return List.of(
                 original.getFirst(),
                 new ChatMessage(ChatRole.USER, original.get(1).content() + "\n" + correction));
@@ -146,7 +189,11 @@ public final class DraftPromptBuilder {
     }
 
     private String userMessage(
-            final String source, final String target, final String shownText, final DraftContext context) {
+            final String source,
+            final String target,
+            final String shownText,
+            final DraftContext context,
+            final String extraInstruction) {
         final String summary = context.summary();
         return templates
                 .renderUser(
@@ -167,7 +214,9 @@ public final class DraftPromptBuilder {
                                 "memoryHint",
                                 String.join("\n", context.memoryLines()),
                                 "precedingTargets",
-                                String.join("\n\n", context.precedingTargets())))
+                                String.join("\n\n", context.precedingTargets()),
+                                "extraInstruction",
+                                extraInstruction))
                 .strip();
     }
 

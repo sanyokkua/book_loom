@@ -250,6 +250,56 @@ class DraftPromptBuilderTest {
         assertThat(system).contains("keep it verbatim");
     }
 
+    // An empty instruction adds no block and no blank line: the message is the shipped one, byte for byte.
+    @Test
+    void messagesFor_emptyExtraInstruction_matchesTheGolden() throws IOException {
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
+
+        final String user = builder.messagesFor(
+                        segment("He opened the ⟦g0⟧old⟦g1⟧ door.", Map.of("g0", "*", "g1", "*")),
+                        DraftContext.empty(),
+                        "He opened the ⟦g0⟧old⟦g1⟧ door.",
+                        "")
+                .get(1)
+                .content();
+
+        assertThat(user).isEqualTo(golden("draft-en-uk.user.txt"));
+    }
+
+    // The instruction sits directly above the text, after the token rule, so the source is still the last thing read.
+    @Test
+    void messagesFor_extraInstruction_rendersItsBlockBetweenTheTokenRuleAndTheText() {
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
+
+        final String user = builder.messagesFor(
+                        segment("Hello."), DraftContext.empty(), "Hello.", "echo similarity 1.0")
+                .get(1)
+                .content();
+
+        assertThat(user).contains("""
+                Do not add, reorder, split, translate, or omit these tokens.
+
+                [Extra instruction]
+                echo similarity 1.0
+
+                <Text>
+                Hello.
+                </Text>""");
+    }
+
+    // A repair of a draft that carried an instruction still shows that instruction, so the model keeps being told it.
+    @Test
+    void messagesForPlaceholderRepair_extraInstruction_keepsItInTheOriginalDraftPrompt() {
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
+
+        final String user = builder.messagesForPlaceholderRepair(
+                        segment("Hello."), DraftContext.empty(), "Hello.", "keep it short", "Привіт.", null)
+                .get(1)
+                .content();
+
+        assertThat(user).contains("[Extra instruction]\nkeep it short\n\n<Text>");
+    }
+
     // A repair the gate gave no rule for is byte-identical to the shipped prompt: no empty block, no stray blank line.
     @Test
     void messagesForPlaceholderRepair_noNote_matchesTheGolden() throws IOException {

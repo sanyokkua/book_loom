@@ -1,8 +1,8 @@
 package ua.bookloom.pipeline;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -13,11 +13,14 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
+import ua.bookloom.pipeline.heal.PieceRedraft;
+import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -145,35 +148,54 @@ public final class SegmentTranslator {
     /** Drafts each piece with the segment's own context, joins the replies in order and gates them once. */
     Result<DraftOutcome> translatePieces(final Segment segment, final DraftContext context, final List<String> pieces) {
         log.debug("Translating segment id={} in {} pieces", segment.id(), pieces.size());
-        final PieceDrafter drafter = new PieceDrafter(this, replyParser);
-        final DraftAttempt whole = DraftAttempt.showingItsOwnMaskedText(segment, context);
-        final List<String> replies = new ArrayList<>();
-        for (final String piece : pieces) {
-            final Result<PieceDrafter.Piece> drafted = drafter.draft(PieceDrafter.pieceOf(segment, piece), context);
-            if (drafted.isErr()) {
-                return decideModelError(whole, Objects.requireNonNull(drafted.error()));
-            }
-            final PieceDrafter.Piece drafts = Objects.requireNonNull(drafted.data());
-            if (drafts instanceof PieceDrafter.Unusable(final AppError unusable)) {
-                return DraftOutcomes.flaggedAtOnce(whole, unusable, FinishReason.STOP.name(), "[]");
-            }
-            if (drafts instanceof PieceDrafter.Text(final String text)) {
-                replies.add(WhitespaceRestoration.restore(piece, text));
-            }
+        final PieceRedraft redraft =
+                (findings, redraftCalls) -> redraftPieces(segment, context, pieces, findings, redraftCalls);
+        final DraftAttempt whole =
+                DraftAttempt.showingItsOwnMaskedText(segment, context).redraftedBy(redraft);
+        final Result<PieceDrafter.Piece> drafted =
+                new PieceDrafter(this, replyParser, calls, "").draftAll(segment, context, pieces);
+        if (drafted.isErr()) {
+            return decideModelError(whole, Objects.requireNonNull(drafted.error()));
         }
-        return restore(whole, String.join("", replies).strip(), true);
+        return switch (Objects.requireNonNull(drafted.data())) {
+            case PieceDrafter.Unusable(final AppError unusable) ->
+                DraftOutcomes.flaggedAtOnce(whole, unusable, FinishReason.STOP.name(), "[]");
+            case PieceDrafter.Text(final String joined) -> restore(whole, joined, true);
+        };
+    }
+
+    // The findings' notes, one line each, are what each piece is told to fix; the joined result is handed back as a
+    // rewrite of the whole segment, which the round gates and evaluates once like any other.
+    private Result<RepairReply> redraftPieces(
+            final Segment segment,
+            final DraftContext context,
+            final List<String> pieces,
+            final List<QaFinding> findings,
+            final ModelCalls redraftCalls) {
+        final String instruction = findings.stream().map(QaFinding::note).collect(Collectors.joining("\n"));
+        log.debug("Redrafting segment id={} pieces={} findings={}", segment.id(), pieces.size(), findings.size());
+        if (log.isTraceEnabled()) {
+            log.trace("Extra instruction segmentId={} instruction={}", segment.id(), instruction);
+        }
+        final Result<PieceDrafter.Piece> drafted =
+                new PieceDrafter(this, replyParser, redraftCalls, instruction).draftAll(segment, context, pieces);
+        if (drafted.isErr()) {
+            return repairReplyOf(Objects.requireNonNull(drafted.error()));
+        }
+        return Result.ok(
+                switch (Objects.requireNonNull(drafted.data())) {
+                    case PieceDrafter.Unusable(final AppError unusable) -> new RepairReply.FlagNow(unusable);
+                    case PieceDrafter.Text(final String joined) -> new RepairReply.Rewritten(joined);
+                });
+    }
+
+    private static Result<RepairReply> repairReplyOf(final AppError error) {
+        return PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE
+                ? Result.ok(new RepairReply.FlagNow(error))
+                : Result.err(error);
     }
 
     ChatRequest requestFor(
-            final Segment segment,
-            final DraftContext context,
-            final DraftStep step,
-            final String rejected,
-            final String diagnostic) {
-        return requestFor(DraftAttempt.showingItsOwnMaskedText(segment, context), step, rejected, diagnostic);
-    }
-
-    private ChatRequest requestFor(
             final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
         final OutputLimit limit = OutputLimit.forSource(
                 attempt.shownText(), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
@@ -194,24 +216,30 @@ public final class SegmentTranslator {
         final Segment segment = attempt.segment();
         final DraftContext context = attempt.context();
         final String shown = attempt.shownText();
+        final String extra = attempt.extraInstruction();
         return switch (step) {
-            case DRAFT -> promptBuilder.messagesFor(segment, context, shown);
+            case DRAFT -> promptBuilder.messagesFor(segment, context, shown, extra);
             case STRUCTURAL_REPAIR ->
-                promptBuilder.messagesForStructuredRepair(segment, context, shown, rejected, diagnostic);
+                promptBuilder.messagesForStructuredRepair(segment, context, shown, extra, rejected, diagnostic);
             case PLACEHOLDER_REPAIR ->
                 promptBuilder.messagesForPlaceholderRepair(
-                        segment, context, shown, rejected, diagnostic.isEmpty() ? null : diagnostic);
+                        segment, context, shown, extra, rejected, diagnostic.isEmpty() ? null : diagnostic);
         };
     }
 
     Result<ChatResponse> callModel(final DraftStep step, final Segment segment, final ChatRequest request) {
+        return callModel(step, segment, request, calls);
+    }
+
+    Result<ChatResponse> callModel(
+            final DraftStep step, final Segment segment, final ChatRequest request, final ModelCalls through) {
         log.debug(
                 "Calling chat model segmentId={} messageCount={}",
                 segment.id(),
                 request.messages().size());
         try {
             final Result<ChatResponse> result =
-                    Objects.requireNonNull(calls.call(step.callKind(), segment.id(), request), "model result");
+                    Objects.requireNonNull(through.call(step.callKind(), segment.id(), request), "model result");
             log.debug("Chat model completed segmentId={} result={}", segment.id(), result.isOk() ? "success" : "error");
             return result;
         } catch (Throwable cause) {

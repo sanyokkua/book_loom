@@ -40,6 +40,7 @@ public sealed interface DraftOutcome {
      *     failed that gate after its own placeholder repair
      * @param gateFinding the high {@code markup} finding raised by {@code placeholder} when {@code restoredTarget}
      *     is {@code null}; {@code null} when the gate passed
+     * @param pieceRedraft how to draft the segment's pieces again, or {@code null} when it was drafted whole
      */
     record Drafted(
             Segment segment,
@@ -48,8 +49,21 @@ public sealed interface DraftOutcome {
             String maskedReply,
             @Nullable String maskedForm,
             @Nullable String restoredTarget,
-            @Nullable QaFinding gateFinding)
+            @Nullable QaFinding gateFinding,
+            @Nullable PieceRedraft pieceRedraft)
             implements DraftOutcome {
+
+        /** A segment drafted whole. */
+        public Drafted(
+                final Segment segment,
+                final String maskedSource,
+                final List<LockedRendering> lockedRenderings,
+                final String maskedReply,
+                @Nullable final String maskedForm,
+                @Nullable final String restoredTarget,
+                @Nullable final QaFinding gateFinding) {
+            this(segment, maskedSource, lockedRenderings, maskedReply, maskedForm, restoredTarget, gateFinding, null);
+        }
 
         /**
          * Validates the invariants a caller is entitled to assume, defensively copies the list component, and
@@ -73,6 +87,11 @@ public sealed interface DraftOutcome {
                 throw new IllegalArgumentException("maskedForm and restoredTarget must be both null or both present");
             }
             lockedRenderings = List.copyOf(lockedRenderings);
+        }
+
+        /** Whether the segment was drafted in pieces, so a repair round drafts them again. */
+        public boolean inPieces() {
+            return pieceRedraft != null;
         }
     }
 

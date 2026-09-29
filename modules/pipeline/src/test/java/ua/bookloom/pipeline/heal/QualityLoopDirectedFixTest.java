@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -214,6 +217,93 @@ class QualityLoopDirectedFixTest {
                 .filteredOn(finding -> finding.severity() == Severity.MEDIUM)
                 .extracting(QaFinding::kind)
                 .contains(findingKind);
+    }
+
+    // A segment drafted in pieces is too large for any one repair call, so a failing round drafts its pieces again
+    // naming the finding and sends no directed fix; a Malformed answer wastes that round like any malformed repair.
+    @Test
+    void nextDecision_pieceRedraftAnsweringMalformed_wastesTheRoundAndTriesTheNext() {
+        final ScriptedRedraft redraft = new ScriptedRedraft(
+                new RepairReply.Malformed("not the target object"),
+                new RepairReply.Rewritten("Він відчинив старі двері."));
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        final ChunkDecider decider = start(
+                List.of(inPieces("HE OPENED THE OLD DOOR.", redraft)),
+                twoRoundsJudgeOff(),
+                QualityLoopFixtures.PASSTHROUGH_GATE,
+                model);
+        final SegmentOutcome decision =
+                Objects.requireNonNull(decider.nextDecision().data());
+
+        assertThat(model.requests()).isEmpty();
+        assertThat(redraft.findingKinds()).hasSize(2);
+        assertThat(redraft.findingKinds().getFirst()).contains("language");
+        assertThat(decision.status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(decision.repairRounds()).isEqualTo(2);
+    }
+
+    // With no concrete finding a reflect round would have run; on a segment drafted in pieces it is a plain redraft.
+    @Test
+    void nextDecision_lowJudgeScoreOnASegmentDraftedInPieces_redraftsWithNoFindings() {
+        final String target = "Він відчинив старі двері.";
+        final ScriptedRedraft redraft = new ScriptedRedraft(new RepairReply.Rewritten(target));
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable("{\"score\":0.5,\"verdict\":\"revise\"}"))
+                .answer(readable("{\"score\":0.9,\"verdict\":\"accept\"}"));
+        final LoopSettings settings = new LoopSettings(
+                ReviewMode.ASSISTED,
+                new DialParameters(2, 1, true, false, false, 4),
+                QualityLoopFixtures.FRAME,
+                NamePolicy.TRANSLITERATE,
+                List.of());
+
+        final ChunkDecider decider =
+                start(List.of(inPieces(target, redraft)), settings, QualityLoopFixtures.PASSTHROUGH_GATE, model);
+        final SegmentOutcome decision =
+                Objects.requireNonNull(decider.nextDecision().data());
+
+        assertThat(model.requests())
+                .extracting(request ->
+                        Objects.requireNonNull(request.responseFormat()).name())
+                .containsExactly("judge", "judge");
+        assertThat(redraft.findingKinds()).containsExactly(List.of());
+        assertThat(decision.status()).isEqualTo(SegmentStatus.ACCEPTED);
+    }
+
+    private static DraftOutcome.Drafted inPieces(final String reply, final PieceRedraft redraft) {
+        final String source = "He opened the old door.";
+        return new DraftOutcome.Drafted(segmentFor(source), source, List.of(), reply, reply, reply, null, redraft);
+    }
+
+    private static LoopSettings twoRoundsJudgeOff() {
+        return new LoopSettings(
+                ReviewMode.ASSISTED,
+                new DialParameters(1, 2, false, false, false, 4),
+                QualityLoopFixtures.FRAME,
+                NamePolicy.TRANSLITERATE,
+                List.of());
+    }
+
+    /** Answers each redraft with the next scripted reply and remembers the kinds of the findings it was given. */
+    private static final class ScriptedRedraft implements PieceRedraft {
+
+        private final Deque<RepairReply> replies = new ArrayDeque<>();
+        private final List<List<String>> findingKinds = new ArrayList<>();
+
+        ScriptedRedraft(final RepairReply... scripted) {
+            replies.addAll(List.of(scripted));
+        }
+
+        @Override
+        public Result<RepairReply> redraft(final List<QaFinding> findings, final ModelCalls calls) {
+            findingKinds.add(findings.stream().map(QaFinding::kind).toList());
+            return Result.ok(replies.removeFirst());
+        }
+
+        List<List<String>> findingKinds() {
+            return findingKinds;
+        }
     }
 
     private static Segment segmentFor(final String source) {

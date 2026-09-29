@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
@@ -55,6 +56,26 @@ class DraftOutcomeTest {
                 new DraftOutcome.Drafted(segment(), SOURCE, List.of(), "reply", "form", SOURCE, null);
 
         assertThat(drafted.maskedForm()).isEqualTo("form");
+    }
+
+    @Test
+    void inPieces_draftedWhole_isFalse() {
+        final DraftOutcome.Drafted drafted =
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), "reply", "form", SOURCE, null);
+
+        assertThat(drafted.inPieces()).isFalse();
+        assertThat(drafted.pieceRedraft()).isNull();
+    }
+
+    @Test
+    void inPieces_withARedraft_isTrue() {
+        final PieceRedraft redraft = (findings, calls) -> Result.ok(new RepairReply.Rewritten("again"));
+
+        final DraftOutcome.Drafted drafted =
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), "reply", "form", SOURCE, null, redraft);
+
+        assertThat(drafted.inPieces()).isTrue();
+        assertThat(drafted.pieceRedraft()).isSameAs(redraft);
     }
 
     private static QaFinding placeholderFinding() {

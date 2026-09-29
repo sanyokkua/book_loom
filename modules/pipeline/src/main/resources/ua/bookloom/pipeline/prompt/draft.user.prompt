@@ -26,6 +26,11 @@ Translate from {{source}} to {{target}}.
 Copy this exact ordered sequence unchanged: {{tokens}}
 Do not add, reorder, split, translate, or omit these tokens.
 
+{{#extraInstruction}}
+[Extra instruction]
+{{extraInstruction}}
+{{/extraInstruction}}
+
 <Text>
 {{text}}
 </Text>

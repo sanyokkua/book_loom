@@ -113,9 +113,7 @@ final class SegmentHealer {
                 SegmentFindings.concrete(state.qa(), state.routingVerdict(), segmentId), state.lastGateFinding());
         SegmentHealerLogging.logRoundChoice(
                 segmentId, round, concreteFindings, state.qa(), state.routingVerdict(), tau);
-        final RoundOutcome result = concreteFindings.isEmpty()
-                ? runReflectImproveRound(outcome, state.rewriteBase(), tau)
-                : runDirectedFixRound(outcome, state.rewriteBase(), concreteFindings);
+        final RoundOutcome result = runRound(outcome, state.rewriteBase(), concreteFindings, tau, round);
         return switch (result) {
             case RoundOutcome.StepError stepError -> RoundStep.terminal(Result.err(stepError.error()));
             case RoundOutcome.FlagNow flagNow ->
@@ -211,6 +209,34 @@ final class SegmentHealer {
                 && qa.hardGatesPass()
                 && !qa.failedOutright()
                 && qa.confidence() >= tau - AcceptanceRule.ACCEPTANCE_TOLERANCE;
+    }
+
+    // A segment drafted in pieces is too large for any one repair call, so every round drafts its pieces again — with
+    // the findings when there are any, plain when a reflect round would have run.
+    private RoundOutcome runRound(
+            final DraftOutcome.Drafted outcome,
+            final String rewriteBase,
+            final List<QaFinding> findings,
+            final double tau,
+            final int round) {
+        if (outcome.inPieces()) {
+            return runPieceRedraftRound(outcome, findings, round);
+        }
+        return findings.isEmpty()
+                ? runReflectImproveRound(outcome, rewriteBase, tau)
+                : runDirectedFixRound(outcome, rewriteBase, findings);
+    }
+
+    private RoundOutcome runPieceRedraftRound(
+            final DraftOutcome.Drafted outcome, final List<QaFinding> findings, final int round) {
+        log.debug(
+                "Redrafting the pieces of segment={} round={} findings={}",
+                outcome.segment().id(),
+                round,
+                findings.size());
+        final Result<RepairReply> reply =
+                Objects.requireNonNull(outcome.pieceRedraft()).redraft(findings, calls);
+        return evaluator.classify(outcome, reply);
     }
 
     private RoundOutcome runDirectedFixRound(

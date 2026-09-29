@@ -39,7 +39,8 @@ final class DraftOutcomes {
                 maskedReply,
                 restored.maskedForm(),
                 restored.restored(),
-                null));
+                null,
+                attempt.pieceRedraft()));
     }
 
     // Design D3 rule 5: a reply whose markup still does not restore after its repair is not flagged here; its markup
@@ -54,7 +55,14 @@ final class DraftOutcomes {
                 observedTokens(maskedReply));
         log.debug("Draft outcome id={} outcome=DRAFTED restored=false", segment.id());
         return Result.ok(new DraftOutcome.Drafted(
-                segment, attempt.shownText(), List.of(), maskedReply, null, null, failed.finding()));
+                segment,
+                attempt.shownText(),
+                List.of(),
+                maskedReply,
+                null,
+                null,
+                failed.finding(),
+                attempt.pieceRedraft()));
     }
 
     // Design D3 rules 2-4: a reply with nothing self-heal could work on flags its segment at once.

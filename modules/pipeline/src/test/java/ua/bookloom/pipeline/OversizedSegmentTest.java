@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +31,11 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -63,6 +69,34 @@ class OversizedSegmentTest {
     @AfterEach
     void tearDown() {
         pipelineLogger.detachAppender(logEvents);
+        TranslationJobTestSupport.shutdownAll();
+    }
+
+    // Two sentence-aligned pieces, both echoed: the round repairs by drafting each piece again, naming the echo
+    // finding in the piece's own request, and never sends the whole oversized segment to a directed fix.
+    @Test
+    void run_oversizedBalancedSegmentFailingEcho_redraftsBothPiecesWithFindings() {
+        final String text = IntStream.range(100, 300)
+                .mapToObj(number -> "The night number " + number + " was calm.")
+                .collect(Collectors.joining(" "));
+        final TestProject project = TranslationJobTestSupport.project(
+                TestBooks.markdown(tempDir.resolve("Book.md"), text),
+                TranslationJobTestSupport.brief("en", "uk", QualityDial.BALANCED));
+        final RedraftingModel model = new RedraftingModel();
+
+        TranslationJobTestSupport.report(
+                TranslationJobTestSupport.job(project, model).run());
+
+        assertThat(model.formats()).containsExactly("draft", "draft", "judge", "draft", "draft", "judge");
+        assertThat(model.userMessages().subList(0, 2))
+                .allSatisfy(user -> assertThat(user).doesNotContain("[Extra instruction]"));
+        assertThat(model.userMessages().subList(3, 5))
+                .allSatisfy(user -> assertThat(user)
+                        .contains("[Extra instruction]\n")
+                        .contains("echo similarity 1.0 at or above 0.9\n\n<Text>\n"));
+        assertThat(TranslationJobTestSupport.stored(project, "Book.md:0"))
+                .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::repairRounds)
+                .containsExactly(ua.bookloom.api.document.SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, 1);
     }
 
     @Test
@@ -89,6 +123,26 @@ class OversizedSegmentTest {
         assertThat(DraftStepFixtures.drafted(result))
                 .extracting(DraftOutcome.Drafted::restoredTarget, DraftOutcome.Drafted::gateFinding)
                 .containsExactly(text.toUpperCase(Locale.ROOT), null);
+    }
+
+    @Test
+    void translateSplit_400Sentences_isDraftedInPieces() {
+        final Segment segment = segments(SENTENCE.repeat(400).stripTrailing()).getFirst();
+
+        final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(
+                translator(new UppercasingModel()).translateSplit(segment, DraftContext.empty(), splitter, BUDGET));
+
+        assertThat(drafted.inPieces()).isTrue();
+    }
+
+    @Test
+    void translateSplit_withinTheBudget_isNotDraftedInPieces() {
+        final Segment segment = segments("The sea was calm tonight.").getFirst();
+
+        final DraftOutcome.Drafted drafted = DraftStepFixtures.drafted(
+                translator(new UppercasingModel()).translateSplit(segment, DraftContext.empty(), splitter, BUDGET));
+
+        assertThat(drafted.inPieces()).isFalse();
     }
 
     @Test
@@ -139,6 +193,52 @@ class OversizedSegmentTest {
 
     private SegmentTranslator translator(final ChatModel model) {
         return DraftStepFixtures.segmentTranslator(documents, model, BookFormat.MARKDOWN, "uk", "en");
+    }
+
+    /**
+     * Echoes each piece of the first draft, translates it once the request carries an extra instruction, and accepts
+     * whatever the judge is shown.
+     */
+    private static final class RedraftingModel implements ChatModel {
+
+        private static final Pattern TEXT = Pattern.compile("<Text>\n(.*)\n</Text>", Pattern.DOTALL);
+        private static final Pattern NIGHT = Pattern.compile("The night number (\\d+) was calm\\.");
+        private final List<ChatRequest> requests = new ArrayList<>();
+
+        @Override
+        public Result<ChatResponse> chat(final ChatRequest request) {
+            requests.add(request);
+            final String format = format(request);
+            final String content =
+                    "judge".equals(format) ? "{\"score\":0.9,\"verdict\":\"accept\"}" : draftReply(request);
+            return Result.ok(new ChatResponse(content, FinishReason.STOP));
+        }
+
+        List<String> formats() {
+            return requests.stream().map(RedraftingModel::format).toList();
+        }
+
+        List<String> userMessages() {
+            return requests.stream().map(RedraftingModel::user).toList();
+        }
+
+        private static String draftReply(final ChatRequest request) {
+            final String user = user(request);
+            final var matcher = TEXT.matcher(user);
+            final String body = matcher.find() ? matcher.group(1) : "";
+            final String target = user.contains("[Extra instruction]")
+                    ? NIGHT.matcher(body).replaceAll("Ніч номер $1 була дуже тихою.")
+                    : body;
+            return TranslationJobTestSupport.targetReply(target);
+        }
+
+        private static String format(final ChatRequest request) {
+            return Objects.requireNonNull(request.responseFormat()).name();
+        }
+
+        private static String user(final ChatRequest request) {
+            return request.messages().get(1).content();
+        }
     }
 
     /** Answers every draft with its own text body upper-cased, leaving the tokens untouched. */

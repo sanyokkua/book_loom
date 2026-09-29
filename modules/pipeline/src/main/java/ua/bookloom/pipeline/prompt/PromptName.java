@@ -25,7 +25,7 @@ public enum PromptName {
             new Slots(Set.of("source", "target", "styleSheet", "foreignPassageRule"), Set.of()),
             new Slots(
                     Set.of("source", "target", "tokens", "text"),
-                    Set.of("summary", "glossaryTerms", "memoryHint", "precedingTargets"))),
+                    Set.of("summary", "glossaryTerms", "memoryHint", "precedingTargets", "extraInstruction"))),
 
     /** The correction call after a reply is not the required JSON object. */
     STRUCTURAL_REPAIR(

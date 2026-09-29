@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -13,11 +15,13 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * Drafts one piece of an oversized segment: one call, the draft step's one structural repair, and a check that the
  * reply holds exactly the piece's own tokens with one placeholder repair. Whole-segment unmasking and the decision
- * stay with {@link SegmentTranslator}, because the pieces only make sense joined.
+ * stay with {@link SegmentTranslator}, because the pieces only make sense joined. One drafter drafts every piece
+ * under the same extra instruction, through the same seam.
  */
 @Slf4j
 final class PieceDrafter {
@@ -36,10 +40,46 @@ final class PieceDrafter {
 
     private final SegmentTranslator owner;
     private final DraftReplyParser replyParser;
+    private final ModelCalls calls;
+    private final String extraInstruction;
 
-    PieceDrafter(final SegmentTranslator owner, final DraftReplyParser replyParser) {
+    PieceDrafter(
+            final SegmentTranslator owner,
+            final DraftReplyParser replyParser,
+            final ModelCalls calls,
+            final String extraInstruction) {
         this.owner = Objects.requireNonNull(owner, "owner");
         this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
+        this.calls = Objects.requireNonNull(calls, "calls");
+        this.extraInstruction = Objects.requireNonNull(extraInstruction, "extraInstruction");
+    }
+
+    /**
+     * Drafts every piece in order and joins the replies.
+     *
+     * @return the joined, stripped translation, the first piece's reply the step cannot use, or the error a call
+     *     answered
+     */
+    Result<Piece> draftAll(final Segment segment, final DraftContext context, final List<String> pieces) {
+        log.debug(
+                "Drafting pieces segmentId={} pieces={} hasExtraInstruction={}",
+                segment.id(),
+                pieces.size(),
+                !extraInstruction.isEmpty());
+        final List<String> replies = new ArrayList<>();
+        for (final String piece : pieces) {
+            final Result<Piece> drafted = draft(pieceOf(segment, piece), context);
+            if (drafted.isErr()) {
+                return drafted;
+            }
+            switch (Objects.requireNonNull(drafted.data())) {
+                case Unusable unusable -> {
+                    return drafted;
+                }
+                case Text(final String text) -> replies.add(WhitespaceRestoration.restore(piece, text));
+            }
+        }
+        return Result.ok(new Text(String.join("", replies).strip()));
     }
 
     /** A copy of the segment whose masked text is one piece, so the prompt states that piece's own tokens. */
@@ -65,7 +105,7 @@ final class PieceDrafter {
     }
 
     /** The piece's draft, or the error the model call answered. */
-    Result<Piece> draft(final Segment piece, final DraftContext context) {
+    private Result<Piece> draft(final Segment piece, final DraftContext context) {
         log.debug(
                 "Drafting piece segmentId={} pieceLength={}",
                 piece.id(),
@@ -73,12 +113,7 @@ final class PieceDrafter {
         if (log.isTraceEnabled()) {
             log.trace("Piece text segmentId={} text={}", piece.id(), piece.masked());
         }
-        return answer(
-                piece,
-                context,
-                owner.callModel(DraftStep.DRAFT, piece, owner.requestFor(piece, context, DraftStep.DRAFT, "", "")),
-                false,
-                false);
+        return answer(piece, context, callFor(piece, context, DraftStep.DRAFT, "", ""), false, false);
     }
 
     private Result<Piece> answer(
@@ -142,9 +177,20 @@ final class PieceDrafter {
         return answer(
                 piece,
                 context,
-                owner.callModel(step, piece, owner.requestFor(piece, context, step, rejected, diagnostic)),
+                callFor(piece, context, step, rejected, diagnostic),
                 !isPlaceholder,
                 isPlaceholder || placeholderUsed);
+    }
+
+    private Result<ChatResponse> callFor(
+            final Segment piece,
+            final DraftContext context,
+            final DraftStep step,
+            final String rejected,
+            final String diagnostic) {
+        final var request =
+                owner.requestFor(DraftAttempt.ofPiece(piece, context, extraInstruction), step, rejected, diagnostic);
+        return owner.callModel(step, piece, request, calls);
     }
 
     private static Result<Piece> failed(final Segment piece, final ErrorCode code, final String message) {
