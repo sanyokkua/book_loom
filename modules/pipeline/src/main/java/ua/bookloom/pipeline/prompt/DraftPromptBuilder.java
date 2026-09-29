@@ -1,23 +1,19 @@
 package ua.bookloom.pipeline.prompt;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.pipeline.Tokens;
 
 /** Renders the catalog's one-segment draft-translation prompt with the currently available context. */
 @Slf4j
 public final class DraftPromptBuilder {
-
-    private static final Pattern PLACEHOLDER = Pattern.compile("⟦g\\d+⟧");
 
     private final PromptTemplates templates;
     private final @Nullable String sourceLanguage;
@@ -148,11 +144,7 @@ public final class DraftPromptBuilder {
      */
     public static String expectedTokenSequence(final String masked) {
         Objects.requireNonNull(masked, "masked");
-        final Matcher matcher = PLACEHOLDER.matcher(masked);
-        final List<String> tokens = new ArrayList<>();
-        while (matcher.find()) {
-            tokens.add(matcher.group());
-        }
+        final List<String> tokens = Tokens.inOrder(masked);
         return tokens.isEmpty() ? "(none; do not invent placeholders)" : String.join(" ", tokens);
     }
 }

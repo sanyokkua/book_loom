@@ -4,6 +4,7 @@ import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.WholeWord;
 
 /**
  * The {@code Keep original} name removal {@link ScriptCheck} and {@link EchoCheck} both apply before comparing
@@ -14,8 +15,6 @@ import ua.bookloom.api.project.NamePolicy;
 final class NameRemoval {
 
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
-    private static final String NOT_AFTER_WORD_CHARACTER = "(?<![\\p{L}\\p{N}])";
-    private static final String NOT_BEFORE_WORD_CHARACTER = "(?![\\p{L}\\p{N}])";
 
     /**
      * The source display text with every whole-word glossary-term occurrence removed under
@@ -51,14 +50,8 @@ final class NameRemoval {
         return collapseWhitespace(result);
     }
 
-    /**
-     * Removes {@code term} wherever no letter or digit touches it on either side. Not {@code \b}: since JDK 19 that
-     * boundary is ASCII-only, so it never matches around a Cyrillic, Greek or Han name.
-     */
     private static String removeWholeWord(final String text, final String term) {
-        return Pattern.compile(NOT_AFTER_WORD_CHARACTER + Pattern.quote(term) + NOT_BEFORE_WORD_CHARACTER)
-                .matcher(text)
-                .replaceAll("");
+        return WholeWord.pattern(term).matcher(text).replaceAll("");
     }
 
     private static String collapseWhitespace(final String text) {

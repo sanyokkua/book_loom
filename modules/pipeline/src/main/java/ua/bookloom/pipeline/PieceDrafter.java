@@ -1,10 +1,6 @@
 package ua.bookloom.pipeline;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -16,7 +12,7 @@ import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
-import ua.bookloom.pipeline.prompt.PromptName;
+import ua.bookloom.pipeline.prompt.DraftStep;
 
 /**
  * Drafts one piece of an oversized segment: one call, the draft step's one structural repair, and a check that the
@@ -25,8 +21,6 @@ import ua.bookloom.pipeline.prompt.PromptName;
  */
 @Slf4j
 final class PieceDrafter {
-
-    private static final Pattern PLACEHOLDER = Pattern.compile("⟦g\\d+⟧");
 
     private final SegmentTranslator owner;
     private final DraftReplyParser replyParser;
@@ -70,7 +64,7 @@ final class PieceDrafter {
         return answer(
                 piece,
                 context,
-                owner.callModel(piece, owner.requestFor(piece, context, PromptName.DRAFT, "", "")),
+                owner.callModel(piece, owner.requestFor(piece, context, DraftStep.DRAFT, "", "")),
                 false,
                 false);
     }
@@ -92,7 +86,7 @@ final class PieceDrafter {
                     : repair(
                             piece,
                             context,
-                            PromptName.STRUCTURAL_REPAIR,
+                            DraftStep.STRUCTURAL_REPAIR,
                             response.content(),
                             parsed.diagnostic(),
                             placeholderUsed);
@@ -115,28 +109,28 @@ final class PieceDrafter {
         if (response.finishReason() != FinishReason.STOP) {
             return failed(piece, ErrorCode.validation, "The model response did not finish normally.");
         }
-        if (tokensOf(trimmed).equals(tokensOf(piece.masked()))) {
+        if (Tokens.inOrder(trimmed).equals(Tokens.inOrder(piece.masked()))) {
             return Result.ok(trimmed);
         }
         return placeholderUsed
                 ? failed(piece, ErrorCode.validation, "The piece's placeholder tokens do not match its source.")
-                : repair(piece, context, PromptName.PLACEHOLDER_REPAIR, trimmed, "", false);
+                : repair(piece, context, DraftStep.PLACEHOLDER_REPAIR, trimmed, "", false);
     }
 
     private Result<String> repair(
             final Segment piece,
             final DraftContext context,
-            final PromptName kind,
+            final DraftStep step,
             final String rejected,
             final String diagnostic,
             final boolean placeholderUsed) {
-        log.debug("Repairing piece segmentId={} kind={}", piece.id(), kind);
-        log.warn("Repairing a piece of an oversized segment segmentId={} kind={}", piece.id(), kind);
-        final boolean isPlaceholder = kind == PromptName.PLACEHOLDER_REPAIR;
+        log.debug("Repairing piece segmentId={} step={}", piece.id(), step);
+        log.warn("Repairing a piece of an oversized segment segmentId={} step={}", piece.id(), step);
+        final boolean isPlaceholder = step == DraftStep.PLACEHOLDER_REPAIR;
         return answer(
                 piece,
                 context,
-                owner.callModel(piece, owner.requestFor(piece, context, kind, rejected, diagnostic)),
+                owner.callModel(piece, owner.requestFor(piece, context, step, rejected, diagnostic)),
                 !isPlaceholder,
                 isPlaceholder || placeholderUsed);
     }
@@ -144,14 +138,5 @@ final class PieceDrafter {
     private static Result<String> failed(final Segment piece, final ErrorCode code, final String message) {
         log.debug("Piece failed segmentId={} code={}", piece.id(), code);
         return Result.err(AppError.of(code, "Piece translation failed", message));
-    }
-
-    private static List<String> tokensOf(final String text) {
-        final Matcher matcher = PLACEHOLDER.matcher(text);
-        final List<String> tokens = new ArrayList<>();
-        while (matcher.find()) {
-            tokens.add(matcher.group());
-        }
-        return tokens;
     }
 }

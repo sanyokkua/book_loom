@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.judge;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -14,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.prompt.JsonReplies;
 
 /**
  * Reads a judge reply the way the catalogue promises: absent {@code findings}/{@code deferrals} read as empty,
@@ -31,20 +31,16 @@ public final class JudgeReplyParser {
         Objects.requireNonNull(replyText, "replyText");
         Objects.requireNonNull(pairs, "pairs");
         final Map<String, String> labelToSegmentId = labelToSegmentId(pairs);
-        try {
-            final JsonNode root = mapper.readTree(replyText);
-            if (root == null || !hasValidScore(root)) {
-                return JudgeVerdict.unreadable();
-            }
-            return new JudgeVerdict(
-                    root.path("score").asDouble(),
-                    textOrNull(root.path("verdict")),
-                    findings(root.path("findings"), labelToSegmentId),
-                    deferrals(root.path("deferrals"), labelToSegmentId),
-                    true);
-        } catch (JsonProcessingException ignored) {
+        final JsonNode root = JsonReplies.tolerant(mapper, replyText).orElse(null);
+        if (root == null || !hasValidScore(root)) {
             return JudgeVerdict.unreadable();
         }
+        return new JudgeVerdict(
+                root.path("score").asDouble(),
+                textOrNull(root.path("verdict")),
+                findings(root.path("findings"), labelToSegmentId),
+                deferrals(root.path("deferrals"), labelToSegmentId),
+                true);
     }
 
     private static boolean hasValidScore(final JsonNode root) {

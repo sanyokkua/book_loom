@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DisplayText {
 
-    private static final Pattern PLACEHOLDER = Pattern.compile("⟦g\\d+⟧");
     private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     /**
@@ -21,9 +20,6 @@ public final class DisplayText {
      */
     public static String of(final String masked) {
         Objects.requireNonNull(masked, "masked");
-        return WHITESPACE
-                .matcher(PLACEHOLDER.matcher(masked).replaceAll(""))
-                .replaceAll(" ")
-                .strip();
+        return WHITESPACE.matcher(Tokens.replace(masked, "")).replaceAll(" ").strip();
     }
 }

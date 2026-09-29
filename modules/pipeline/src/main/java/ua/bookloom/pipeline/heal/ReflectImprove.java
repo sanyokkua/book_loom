@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.heal;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -22,6 +21,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
+import ua.bookloom.pipeline.prompt.JsonReplies;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -184,18 +184,15 @@ public final class ReflectImprove {
     }
 
     private List<String> parseIssues(final String replyText) {
-        try {
-            final JsonNode root = mapper.readTree(replyText);
-            final JsonNode issues = root == null ? null : root.path("issues");
-            if (issues == null || !issues.isArray()) {
-                return List.of();
-            }
-            final List<String> result = new ArrayList<>();
-            issues.forEach(node -> addIssue(result, node));
-            return result;
-        } catch (JsonProcessingException ignored) {
+        final JsonNode issues = JsonReplies.tolerant(mapper, replyText)
+                .map(root -> root.path("issues"))
+                .orElse(null);
+        if (issues == null || !issues.isArray()) {
             return List.of();
         }
+        final List<String> result = new ArrayList<>();
+        issues.forEach(node -> addIssue(result, node));
+        return result;
     }
 
     private static void addIssue(final List<String> issues, final JsonNode node) {

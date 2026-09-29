@@ -3,8 +3,6 @@ package ua.bookloom.pipeline;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -26,13 +24,12 @@ import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
-import ua.bookloom.pipeline.prompt.PromptName;
+import ua.bookloom.pipeline.prompt.DraftStep;
 
 /** Makes one model call and decides one segment. */
 @Slf4j
 final class SegmentTranslator {
 
-    private static final Pattern PLACEHOLDER = Pattern.compile("⟦g\\d+⟧");
     private final DocumentPort documents;
     private final ChatModel model;
     private final BookFormat format;
@@ -61,7 +58,7 @@ final class SegmentTranslator {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(context, "context");
         log.debug("Translating segment id={} format={}", segment.id(), format);
-        final ChatRequest request = requestFor(segment, context, PromptName.DRAFT, "", "");
+        final ChatRequest request = requestFor(segment, context, DraftStep.DRAFT, "", "");
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
             return decideModelError(segment, Objects.requireNonNull(reply.error()));
@@ -119,7 +116,7 @@ final class SegmentTranslator {
     ChatRequest requestFor(
             final Segment segment,
             final DraftContext context,
-            final PromptName kind,
+            final DraftStep step,
             final String rejected,
             final String diagnostic) {
         log.debug(
@@ -129,8 +126,8 @@ final class SegmentTranslator {
         final int allowance = TokenEstimator.outputAllowance(
                 DisplayText.of(segment.masked()), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
         final ChatRequest request = ChatRequests.build(
-                kind,
-                messagesFor(segment, context, kind, rejected, diagnostic),
+                step.promptName(),
+                messagesFor(segment, context, step, rejected, diagnostic),
                 allowance > 0 ? allowance : null,
                 false);
         log.debug(
@@ -143,15 +140,13 @@ final class SegmentTranslator {
     private List<ua.bookloom.api.llm.ChatMessage> messagesFor(
             final Segment segment,
             final DraftContext context,
-            final PromptName kind,
+            final DraftStep step,
             final String rejected,
             final String diagnostic) {
-        return switch (kind) {
+        return switch (step) {
             case DRAFT -> promptBuilder.messagesFor(segment, context);
             case STRUCTURAL_REPAIR -> promptBuilder.messagesForStructuredRepair(segment, context, rejected, diagnostic);
             case PLACEHOLDER_REPAIR -> promptBuilder.messagesForPlaceholderRepair(segment, context, rejected);
-            case JUDGE, DIRECTED_FIX, REFLECT, IMPROVE, POLISH ->
-                throw new IllegalArgumentException(kind + " is not rendered by the draft step");
         };
     }
 
@@ -221,7 +216,7 @@ final class SegmentTranslator {
             final Segment segment, final DraftContext context, final String rejectedReply, final String diagnostic) {
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
         final ChatRequest request =
-                requestFor(segment, context, PromptName.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
+                requestFor(segment, context, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
             return decideModelError(segment, Objects.requireNonNull(reply.error()));
@@ -271,7 +266,7 @@ final class SegmentTranslator {
     private Result<Decision> repairPlaceholder(
             final Segment segment, final DraftContext context, final String rejectedTarget) {
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final ChatRequest request = requestFor(segment, context, PromptName.PLACEHOLDER_REPAIR, rejectedTarget, "");
+        final ChatRequest request = requestFor(segment, context, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, "");
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
             return decideModelError(segment, Objects.requireNonNull(reply.error()));
@@ -321,11 +316,7 @@ final class SegmentTranslator {
 
     private static String observedTokens(final String text) {
         log.debug("Collecting observed tokens textLength={}", text.length());
-        final Matcher matcher = PLACEHOLDER.matcher(text);
-        final List<String> tokens = new ArrayList<>();
-        while (matcher.find()) {
-            tokens.add(matcher.group());
-        }
+        final List<String> tokens = Tokens.inOrder(text);
         log.debug("Collected observed tokens textLength={} tokenCount={}", text.length(), tokens.size());
         return tokens.toString();
     }
