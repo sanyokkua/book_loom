@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
@@ -166,7 +165,7 @@ class TranslationJobProviderAbortTest {
 
     private TranslationJobImpl markdownJob(final ChatModel model, final String content) {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), content);
-        return job(documents(), source, tempDir.resolve("Book.uk.md"), model);
+        return job(source, model);
     }
 
     private static void sleepOneSecond() {

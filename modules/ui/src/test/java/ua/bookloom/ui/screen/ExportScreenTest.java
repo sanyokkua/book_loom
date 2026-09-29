@@ -36,12 +36,11 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     private static final Path WRITTEN = Path.of("/books/Frankenstein.uk.epub");
 
     private static JobReport epubReport() {
-        return new JobReport(BookFormat.EPUB, JobState.COMPLETED, 1240, 1237, 3, List.of(), WRITTEN, null);
+        return new JobReport(BookFormat.EPUB, JobState.COMPLETED, 1240, 1237, 3, List.of(), null);
     }
 
     static Stream<Arguments> runsThatWroteNothing() {
-        final JobReport cancelled =
-                new JobReport(BookFormat.EPUB, JobState.CANCELLED, 1240, 600, 2, List.of(), null, null);
+        final JobReport cancelled = new JobReport(BookFormat.EPUB, JobState.CANCELLED, 1240, 600, 2, List.of(), null);
         final JobReport failed = new JobReport(
                 BookFormat.EPUB,
                 JobState.FAILED,
@@ -49,7 +48,6 @@ class ExportScreenTest extends TranslatingScreenTestBase {
                 10,
                 0,
                 List.of(),
-                null,
                 AppError.of(ErrorCode.unreachable, "Unreachable", "Nothing is listening at http://localhost:11434."));
         return Stream.of(
                 Arguments.of(Named.of("a stopped run", cancelled), RunState.STOPPED),
@@ -68,6 +66,12 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     private void showExport() {
         onFx(() -> shell.activate(ViewNames.IMPORT));
         onFx(() -> shell.activate(ViewNames.EXPORT));
+    }
+
+    /** The run wrote its book before it completed, so the file is published first, as the runner does. */
+    private void publishCompleted(final JobReport report) {
+        mirror().publishExportedFile(WRITTEN);
+        publishOutcome(RunState.COMPLETED, report);
     }
 
     private void publishOutcome(final RunState state, final JobReport report) {
@@ -103,7 +107,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     void screen_completedRun_rendersPathFormatAndBothCounts() {
         showExport();
 
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         assertThat(textOf("export-path")).contains("/books/Frankenstein.uk.epub");
         assertThat(textsUnder(required("export-format"))).contains("EPUB");
@@ -117,7 +121,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     void screen_completedRun_offersToRevealTheFile() {
         showExport();
 
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         assertThat(isShown("export-reveal")).isTrue();
         assertThat(button("export-reveal").isDisabled()).isFalse();
@@ -127,7 +131,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     // show an empty screen over a finished book.
     @Test
     void screen_reportPublishedBeforeOpening_rendersItOnArrival() {
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         showExport();
 
@@ -161,7 +165,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     @Test
     void screen_newRunStarted_returnsToEmptyState() {
         showExport();
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
         assertThat(isShown("export-reveal")).isTrue();
 
         mirror().publishRunStarted();
@@ -187,7 +191,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     @MethodSource("auxiliaryControls")
     void screen_completedRun_auxControlsPresentAndDisabled(final String id, final Class<? extends Node> type) {
         showExport();
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         assertThat(required(id)).isInstanceOf(type);
         assertThat(required(id).isDisabled()).isTrue();
@@ -198,7 +202,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     @Test
     void screen_completedRun_hasNoSavePathField() {
         showExport();
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         assertThat(required("export-screen").lookupAll(".text-input")).isEmpty();
         assertThat(idsUnder(required("export-screen"))).noneMatch(id -> id.contains("save") || id.contains("browse"));
@@ -208,7 +212,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     @Test
     void screen_completedRun_theOnlyButtonIsReveal() {
         showExport();
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         assertThat(required("export-screen").lookupAll(".button").stream().map(Node::getId))
                 .containsExactly("export-reveal");
@@ -218,7 +222,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     @Test
     void revealButton_pressed_callsRevealerWithTheWrittenPath() {
         showExport();
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         onFx(() -> button("export-reveal").fire());
 
@@ -240,7 +244,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     void screen_completedRun_headingAnnouncesTheBookAndSubtitleExplainsIt() {
         showExport();
 
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         assertThat(labelText("export-title")).isEqualTo("Translated book ready");
         assertThat(textOf("export-subtitle")).startsWith("The run wrote your translated book");
@@ -250,7 +254,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     @Test
     void screen_newRunStarted_headingReturnsToNeutral() {
         showExport();
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         mirror().publishRunStarted();
         WaitForAsyncUtils.waitForFxEvents();
@@ -271,7 +275,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         useLocale(Locale.forLanguageTag(language));
         showExport();
 
-        publishOutcome(RunState.COMPLETED, epubReport());
+        publishCompleted(epubReport());
 
         assertThat(labelText("export-title")).isEqualTo(title);
         assertThat(textsUnder(required("export-path"))).contains(written);

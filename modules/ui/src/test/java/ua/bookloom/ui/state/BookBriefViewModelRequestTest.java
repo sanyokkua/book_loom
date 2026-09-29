@@ -12,7 +12,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.ui.BookFixtures;
 
 /**
@@ -183,7 +182,7 @@ class BookBriefViewModelRequestTest extends BookBriefViewModelTestBase {
 
         assertThat(request())
                 .hasValue(
-                        new TranslationRequest(FRANKENSTEIN, Path.of("/books/Frankenstein.de.epub"), "de", null, true));
+                        new InterimRunRequest(FRANKENSTEIN, Path.of("/books/Frankenstein.de.epub"), "de", null, true));
     }
 
     // IF the request carried the declared language, THEN a later detection could not be told from a person's choice.

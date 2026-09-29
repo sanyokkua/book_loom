@@ -16,6 +16,8 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.state.FileRevealer;
@@ -145,7 +147,9 @@ public final class UiTestInjector {
                 catalog,
                 documents,
                 ScriptedChatModelFactory.ok(),
-                ScriptedTranslationEngine.idle());
+                ScriptedTranslationEngine.idle(),
+                new ScriptedProjectService(),
+                new ScriptedExportService());
     }
 
     /**
@@ -163,6 +167,28 @@ public final class UiTestInjector {
             final DocumentPort documents,
             final ChatModelFactory models,
             final TranslationEngine engine) {
+        return create(locale, documents, models, engine, new ScriptedProjectService(), new ScriptedExportService());
+    }
+
+    /**
+     * As {@link #create(Locale, DocumentPort, ChatModelFactory, TranslationEngine)} with the project and export
+     * services the test holds, so it can read what a run asked of them.
+     *
+     * @param locale the language every message renders in
+     * @param documents what the graph's {@link DocumentPort} is
+     * @param models what the graph's {@link ChatModelFactory} is
+     * @param engine what the graph's {@link TranslationEngine} is
+     * @param projects what the graph's {@link ProjectService} is
+     * @param exports what the graph's {@link ExportService} is
+     * @return a fresh injector; never shares singletons with another call
+     */
+    public static Injector create(
+            final Locale locale,
+            final DocumentPort documents,
+            final ChatModelFactory models,
+            final TranslationEngine engine,
+            final ScriptedProjectService projects,
+            final ScriptedExportService exports) {
         return create(
                 locale,
                 new FakeProviderConfigs(),
@@ -170,7 +196,9 @@ public final class UiTestInjector {
                 ScriptedModelCatalog.idle(),
                 documents,
                 models,
-                engine);
+                engine,
+                projects,
+                exports);
     }
 
     private static Injector create(
@@ -180,7 +208,9 @@ public final class UiTestInjector {
             final ModelCatalog catalog,
             final DocumentPort documents,
             final ChatModelFactory models,
-            final TranslationEngine engine) {
+            final TranslationEngine engine,
+            final ProjectService projects,
+            final ExportService exports) {
         Objects.requireNonNull(locale, "locale");
         Objects.requireNonNull(configs, "configs");
         Objects.requireNonNull(verifier, "verifier");
@@ -188,14 +218,11 @@ public final class UiTestInjector {
         Objects.requireNonNull(documents, "documents");
         Objects.requireNonNull(models, "models");
         Objects.requireNonNull(engine, "engine");
-        final LocaleProvider fixed = () -> locale;
-        final ColorSchemeProvider light = () -> Optional.of(ThemeBlock.LIGHT);
-        final FileRevealer revealer = new RecordingFileRevealer();
         return Guice.createInjector(Modules.override(new UiModule()).with(new AbstractModule() {
             @Override
             protected void configure() {
-                bind(LocaleProvider.class).toInstance(fixed);
-                bind(ColorSchemeProvider.class).toInstance(light);
+                bind(LocaleProvider.class).toInstance(() -> locale);
+                bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
                 bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
                 bind(ExecutorService.class)
                         .annotatedWith(BackgroundExecutor.class)
@@ -206,7 +233,9 @@ public final class UiTestInjector {
                 bind(DocumentPort.class).toInstance(documents);
                 bind(ChatModelFactory.class).toInstance(models);
                 bind(TranslationEngine.class).toInstance(engine);
-                bind(FileRevealer.class).toInstance(revealer);
+                bind(ProjectService.class).toInstance(projects);
+                bind(ExportService.class).toInstance(exports);
+                bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
             }
         }));
     }

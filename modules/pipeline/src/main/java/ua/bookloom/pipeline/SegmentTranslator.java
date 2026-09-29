@@ -290,7 +290,8 @@ final class SegmentTranslator {
                 segment.id(),
                 restored.restored().length());
         logTraceUnmask(restored.maskedForm(), restored.restored());
-        final Decision decision = new Decision(segment.withDecision(SegmentStatus.ACCEPTED, restored.restored()), null);
+        final Decision decision = new Decision(
+                segment.withDecision(SegmentStatus.ACCEPTED, restored.restored()), null, restored.maskedForm());
         log.debug("Segment decision id={} decision={} errorCode={}", segment.id(), SegmentStatus.ACCEPTED, null);
         return Result.ok(decision);
     }
@@ -323,7 +324,7 @@ final class SegmentTranslator {
                 finish,
                 SegmentStatus.FLAGGED,
                 error.code());
-        return Result.ok(new Decision(segment.withDecision(SegmentStatus.FLAGGED, null), error));
+        return Result.ok(new Decision(segment.withDecision(SegmentStatus.FLAGGED, null), error, null));
     }
 
     private static Result<Decision> terminal(final Segment segment, final AppError error, final String replyKind) {

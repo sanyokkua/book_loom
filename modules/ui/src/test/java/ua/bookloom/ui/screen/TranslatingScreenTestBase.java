@@ -63,11 +63,11 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
     }
 
     static JobReport cancelledReport() {
-        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null, null);
+        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null);
     }
 
     static JobReport completedReport() {
-        return new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), Path.of("out.txt"), null);
+        return new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), null);
     }
 
     /** Shows the translating screen afresh, the way a person arrives from another screen. */

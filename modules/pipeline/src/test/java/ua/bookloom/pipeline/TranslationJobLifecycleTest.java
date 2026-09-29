@@ -1,16 +1,17 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.TestDocuments.documents;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.counts;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.stored;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,29 +19,28 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.llm.ChatModel;
-import ua.bookloom.api.llm.ChatRequest;
-import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.StageStarted;
-import ua.bookloom.pipeline.export.BookExporterTestSupport;
+import ua.bookloom.api.project.SegmentCounts;
+import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
-/** Covers startup refusals, source release, terminal controls, and one-run claiming. */
+/** Covers what a finished run leaves stored, startup refusals, terminal controls, and one-run claiming. */
 class TranslationJobLifecycleTest {
 
     @TempDir
     private Path tempDir;
 
-    // Removing the successful terminal branch would make this report or exported book differ.
+    // Removing the successful terminal branch would make this report differ, and the run must write no book itself.
     @Test
-    void run_threeAcceptedSegments_completesAndWritesReport() {
+    void run_threeAcceptedSegments_completesWithProjectCountsAndWritesNoFile() {
         final Path source = markdown("One.\n\nTwo.\n\nThree.");
-        final Path destination = tempDir.resolve("Book.uk.md");
-        final TranslationJobImpl translation = job(documents(), source, destination, replies("ONE.", "TWO.", "THREE."));
+        final TranslationJobImpl translation = job(source, replies("ONE.", "TWO.", "THREE."));
 
         final Result<JobReport> result = translation.run();
 
@@ -52,39 +52,44 @@ class TranslationJobLifecycleTest {
                         JobReport::segments,
                         JobReport::accepted,
                         JobReport::flagged,
-                        JobReport::written,
                         JobReport::error)
-                .containsExactly(JobState.COMPLETED, BookFormat.MARKDOWN, 3, 3, 0, destination, null);
+                .containsExactly(JobState.COMPLETED, BookFormat.MARKDOWN, 3, 3, 0, null);
         assertThat(report(result).flaggedSegments()).isEmpty();
         assertThat(translation.state()).isEqualTo(JobState.COMPLETED);
-        assertThat(Files.exists(destination)).isTrue();
+        assertThat(tempDir.resolve("Book.uk.md")).doesNotExist();
     }
 
-    // Dropping accumulated decisions before export would publish the accepted source text instead.
+    // Storing the decision only in the job would leave the record pending and the masked target unset.
     @Test
-    void run_acceptedAndFlaggedMarkdown_writesTranslatedAndVerbatimParagraphs() throws Exception {
+    void run_acceptedAndFlaggedMarkdown_storesEachDecisionInItsRecord() {
         final Path source = markdown("He opened the *old* door.\n\nKeep *this* paragraph.");
-        final Path destination = tempDir.resolve("Book.uk.md");
         final AppError invalid = AppError.of(ErrorCode.validation, "Invalid", "The reply is invalid.");
         final ScriptedChatModel model =
                 replies("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.").answer(Result.err(invalid));
+        final TestProject project = project(source, brief("en", "uk"));
 
-        final JobReport completed =
-                report(job(documents(), source, destination, model).run());
+        final JobReport completed = report(job(project, model).run());
 
         assertThat(completed)
                 .extracting(JobReport::end, JobReport::accepted, JobReport::flagged)
                 .containsExactly(JobState.COMPLETED, 1, 1);
-        assertThat(Files.readString(destination)).isEqualTo("HE OPENED THE *OLD* DOOR.\n\nKeep *this* paragraph.");
+        assertThat(stored(project, "Book.md:0"))
+                .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::maskedMachineTarget)
+                .containsExactly(
+                        SegmentStatus.ACCEPTED, "HE OPENED THE *OLD* DOOR.", "HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
+        assertThat(stored(project, "Book.md:1"))
+                .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.FLAGGED, null);
+        assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 1, 0, 1, 0));
     }
 
-    // Skipping the startup destination refusal would overwrite this sentinel and call the model.
+    // Reading the source again in the job would hide a book that was closed after the import.
     @Test
-    void run_existingDestinationWithoutOverwrite_returnsStartupError() throws Exception {
-        final Path source = markdown("One.");
-        final Path destination = Files.writeString(tempDir.resolve("Book.uk.md"), "KEEP");
+    void run_bookNoLongerOpen_returnsStartupError() {
         final ScriptedChatModel model = replies("ONE.");
-        final TranslationJobImpl translation = job(documents(), source, destination, model);
+        final TestProject project = project(markdown("One."), brief("en", "uk"));
+        project.stores().openProjects().remove(project.id());
+        final TranslationJobImpl translation = job(project, model);
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
 
@@ -92,73 +97,16 @@ class TranslationJobLifecycleTest {
 
         assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
         assertThat(model.requests()).isEmpty();
-        assertThat(Files.readString(destination)).isEqualTo("KEEP");
         assertThat(events).isEmpty();
-    }
-
-    // Replacing the source-open error would hide the port's startup refusal behind a report.
-    @Test
-    void run_sourceOpenFailure_returnsStartupError() {
-        final Path source = tempDir.resolve("Book.md");
-        final AppError failure = AppError.of(ErrorCode.validation, "Unreadable", "The source cannot open.");
-        final ScriptedChatModel model = replies("ONE.");
-        final Path destination = tempDir.resolve("Book.uk.md");
-        final TranslationJobImpl translation =
-                job(new BookExporterTestSupport.OpenFailurePort(documents(), failure), source, destination, model);
-        final List<JobEvent> events = new ArrayList<>();
-        translation.subscribe(events::add);
-
-        final Result<JobReport> result = translation.run();
-
-        assertThat(result.error()).isSameAs(failure);
-        assertThat(model.requests()).isEmpty();
-        assertThat(events).isEmpty();
-        assertThat(Files.exists(destination)).isFalse();
-    }
-
-    // Moving source close after inference would make this model observe an open source snapshot.
-    @Test
-    void run_sourceSnapshot_closesBeforeFirstModelCall() {
-        final Path source = markdown("One.");
-        final BookExporterTestSupport.RecordingDocumentPort recording =
-                new BookExporterTestSupport.RecordingDocumentPort(documents());
-        final AtomicBoolean closedBeforeChat = new AtomicBoolean();
-        final ChatModel model = observingModel(closedBeforeChat, recording, replies("ONE."));
-
-        final Result<JobReport> result =
-                job(recording, source, tempDir.resolve("Book.uk.md"), model).run();
-
-        assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
-        assertThat(closedBeforeChat).isTrue();
-    }
-
-    // Releasing a parsed source failure must remain a terminal report because counts are known.
-    @Test
-    void run_sourceReleaseFailure_returnsFailedReportWithKnownCounts() {
-        final Path source = markdown("One.\n\nTwo.");
-        final AppError failure = AppError.of(ErrorCode.internal, "Close failed", "The source could not be released.");
-        final ScriptedChatModel model = replies("ONE.", "TWO.");
-        final TranslationJobImpl translation = job(
-                new BookExporterTestSupport.SingleCloseFailurePort(documents(), 0, failure),
-                source,
-                tempDir.resolve("Book.uk.md"),
-                model);
-
-        final Result<JobReport> result = translation.run();
-
-        assertThat(report(result))
-                .extracting(
-                        JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged, JobReport::error)
-                .containsExactly(JobState.FAILED, 2, 0, 0, failure);
-        assertThat(model.requests()).isEmpty();
+        assertThat(translation.state()).isEqualTo(JobState.FAILED);
     }
 
     // Dropping the claimed flag would run a completed job a second time and repeat its model call.
     @Test
-    void run_afterCompletion_returnsValidationWithoutNewWork() {
+    void run_twice_secondIsValidation() {
         final Path source = markdown("One.");
         final ScriptedChatModel model = replies("ONE.");
-        final TranslationJobImpl translation = job(documents(), source, tempDir.resolve("Book.uk.md"), model);
+        final TranslationJobImpl translation = job(source, model);
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
 
@@ -179,7 +127,7 @@ class TranslationJobLifecycleTest {
     void run_calledRecursivelyFromStageCallback_returnsValidation() {
         final Path source = markdown("One.");
         final ScriptedChatModel model = replies("ONE.");
-        final TranslationJobImpl translation = job(documents(), source, tempDir.resolve("Book.uk.md"), model);
+        final TranslationJobImpl translation = job(source, model);
         final AtomicReference<Result<JobReport>> nested = new AtomicReference<>();
         translation.subscribe(event -> recordRecursiveRun(translation, nested, event));
 
@@ -193,14 +141,12 @@ class TranslationJobLifecycleTest {
         assertThat(model.requests()).hasSize(1);
     }
 
-    // Reading the source before checking cancellation would violate this zero-work cancellation report.
+    // Deciding a segment before checking cancellation would leave this segment decided instead of pending.
     @Test
-    void cancel_beforeRun_finishesCancelledWithoutOpening() {
+    void cancel_beforeRun_finishesCancelledWithoutDeciding() {
         final Path source = markdown("One.");
-        final BookExporterTestSupport.RecordingDocumentPort recording =
-                new BookExporterTestSupport.RecordingDocumentPort(documents());
         final ScriptedChatModel model = replies("ONE.");
-        final TranslationJobImpl translation = job(recording, source, tempDir.resolve("Book.uk.md"), model);
+        final TranslationJobImpl translation = job(source, model);
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
         translation.cancel();
@@ -212,14 +158,8 @@ class TranslationJobLifecycleTest {
         assertThat(translation.state()).isEqualTo(JobState.CANCELLED);
         assertThat(report(result))
                 .extracting(
-                        JobReport::end,
-                        JobReport::segments,
-                        JobReport::accepted,
-                        JobReport::flagged,
-                        JobReport::written,
-                        JobReport::error)
-                .containsExactly(JobState.CANCELLED, 0, 0, 0, null, null);
-        assertThat(recording.openedDocuments()).isEmpty();
+                        JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged, JobReport::error)
+                .containsExactly(JobState.CANCELLED, 1, 0, 0, null);
         assertThat(model.requests()).isEmpty();
         assertThat(events).hasSize(1).allMatch(Finished.class::isInstance);
         assertThat(((Finished) events.getFirst()).report()).isEqualTo(report(result));
@@ -228,8 +168,7 @@ class TranslationJobLifecycleTest {
     // Replaying stored events or mutating a terminal state would make this late listener observe work.
     @Test
     void controls_terminalJob_areNoOpsAndSubscriptionsDoNotReplay() {
-        final TranslationJobImpl translation =
-                job(documents(), markdown("One."), tempDir.resolve("Book.uk.md"), replies("ONE."));
+        final TranslationJobImpl translation = job(markdown("One."), replies("ONE."));
         translation.run();
         final List<JobEvent> lateEvents = new ArrayList<>();
         translation.subscribe(lateEvents::add);
@@ -245,22 +184,6 @@ class TranslationJobLifecycleTest {
 
     private Path markdown(final String content) {
         return TestBooks.markdown(tempDir.resolve("Book.md"), content);
-    }
-
-    private static ChatModel observingModel(
-            final AtomicBoolean closedBeforeChat,
-            final BookExporterTestSupport.RecordingDocumentPort recording,
-            final ScriptedChatModel delegate) {
-        return request -> observeAndReply(closedBeforeChat, recording, delegate, request);
-    }
-
-    private static Result<ChatResponse> observeAndReply(
-            final AtomicBoolean closedBeforeChat,
-            final BookExporterTestSupport.RecordingDocumentPort recording,
-            final ScriptedChatModel delegate,
-            final ChatRequest request) {
-        closedBeforeChat.set(recording.closedDocuments().size() == 1);
-        return delegate.chat(request);
     }
 
     private static void recordRecursiveRun(

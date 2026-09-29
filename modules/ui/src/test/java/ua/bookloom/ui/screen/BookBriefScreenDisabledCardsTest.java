@@ -19,9 +19,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.InterimRunRequest;
 
 /**
  * The rest of the brief — tone, policies, balance, quality and the auxiliary-text switches — drawn with the control
@@ -109,11 +109,11 @@ class BookBriefScreenDisabledCardsTest extends BookBriefScreenTestBase {
     // IF the brief read a disabled control, THEN the request would carry something the person never chose.
     @Test
     void request_qualityDialDrawnAtItsMiddle_carriesOnlySourceDestinationTargetAndOverwrite() {
-        final Optional<TranslationRequest> request =
+        final Optional<InterimRunRequest> request =
                 ThemeTestSupport.onFx(() -> briefModel().request());
 
         assertThat(request)
-                .hasValue(new TranslationRequest(
+                .hasValue(new InterimRunRequest(
                         dir.resolve("Frankenstein.epub"), dir.resolve("Frankenstein.uk.epub"), "uk", null, false));
     }
 }

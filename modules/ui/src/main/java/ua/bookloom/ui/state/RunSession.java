@@ -18,7 +18,6 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobListener;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
@@ -59,7 +58,6 @@ final class RunSession implements JobListener {
     private boolean stopRequested;
     private boolean pauseRequested;
     private boolean pauseReached;
-    private boolean exporting;
     private boolean terminal;
     // The two fields below are guarded by publishLock too: when the request now outstanding was sent, and the second
     // count the banner currently shows for it.
@@ -99,23 +97,20 @@ final class RunSession implements JobListener {
     /**
      * Publishes that a pause is pending.
      *
-     * <p>Ignored once the run is over, a stop is in flight, a pause is pending or reached, or the export stage began:
-     * the engine honours no pause in export, so showing one would promise a state that never arrives.
+     * <p>Ignored once the run is over, a stop is in flight, or a pause is pending or reached.
      *
      * @return {@code true} if the job should now be asked to pause, {@code false} if the request changes nothing
      */
     boolean requestPause() {
         publishLock.lock();
         try {
-            if (terminal || stopRequested || pauseRequested || pauseReached || exporting) {
+            if (terminal || stopRequested || pauseRequested || pauseReached) {
                 log.debug(
-                        "pause request ignored: terminal {}, stop requested {}, pause pending {}, pause reached {},"
-                                + " exporting {}",
+                        "pause request ignored: terminal {}, stop requested {}, pause pending {}, pause reached {}",
                         terminal,
                         stopRequested,
                         pauseRequested,
-                        pauseReached,
-                        exporting);
+                        pauseReached);
                 return false;
             }
             log.debug("pause requested, publishing PAUSING");
@@ -285,26 +280,6 @@ final class RunSession implements JobListener {
         record(started.progress());
         pending.add(milestone(STAGE_STARTED));
         log.debug("stage {} started", started.stage());
-        if (started.stage() == JobStage.EXPORT) {
-            publishLock.lock();
-            try {
-                exporting = true;
-                clearWaitLocked("the export stage began");
-                dropPendingPauseLocked();
-            } finally {
-                publishLock.unlock();
-            }
-        }
-    }
-
-    // The engine honours no pause once export began, so a pause still pending here will never be reached: no Paused
-    // event follows and the mirror would otherwise stay at PAUSING until the book was written.
-    private void dropPendingPauseLocked() {
-        if (pauseRequested && !pauseReached && !stopRequested && !terminal) {
-            log.debug("export began while a pause was pending; the request is dropped, publishing RUNNING");
-            pauseRequested = false;
-            mirror.publishRunState(RunState.RUNNING);
-        }
     }
 
     private void onPausedOrResumed(

@@ -27,7 +27,7 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.SegmentDecided;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.ui.ScriptedExportService;
 
 /**
  * Shared fixtures for the {@link TranslationRunner} tests: a real mirror, a recording job, a cadence the test fires by
@@ -41,13 +41,15 @@ abstract class RunnerTestBase extends ApplicationTest {
     static final int TICKS = 10;
     static final Path SOURCE = Path.of("/books/in.txt");
     static final Path DESTINATION = Path.of("/books/out.uk.txt");
-    static final TranslationRequest REQUEST = new TranslationRequest(SOURCE, DESTINATION, "uk", "en", false);
+    static final String PROJECT_ID = "project-1";
+    static final InterimRunRequest REQUEST = new InterimRunRequest(SOURCE, DESTINATION, "uk", "en", false);
     static final ModelSelection SELECTION = new ModelSelection("pseudo", "pseudo-1");
 
     protected StateMirror mirror;
     protected ManualTicks ticks;
     protected ExecutorService executor;
     protected TranslationRunner runner;
+    protected ScriptedExportService exports;
     protected List<RunState> states;
     protected AtomicInteger acceptedChanges;
     protected AtomicInteger flaggedChanges;
@@ -68,7 +70,8 @@ abstract class RunnerTestBase extends ApplicationTest {
             thread.setDaemon(true);
             return thread;
         });
-        runner = new TranslationRunner(mirror, executor, ticks);
+        exports = new ScriptedExportService();
+        runner = new TranslationRunner(mirror, executor, ticks, exports);
         states = new CopyOnWriteArrayList<>();
         acceptedChanges = new AtomicInteger();
         flaggedChanges = new AtomicInteger();
@@ -101,15 +104,15 @@ abstract class RunnerTestBase extends ApplicationTest {
     }
 
     static JobReport completedReport(final int segments) {
-        return new JobReport(BookFormat.TXT, JobState.COMPLETED, segments, segments, 0, List.of(), DESTINATION, null);
+        return new JobReport(BookFormat.TXT, JobState.COMPLETED, segments, segments, 0, List.of(), null);
     }
 
     static JobReport cancelledReport() {
-        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null, null);
+        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null);
     }
 
     static JobReport failedReport(final AppError error) {
-        return new JobReport(BookFormat.TXT, JobState.FAILED, 10, 3, 0, List.of(), null, error);
+        return new JobReport(BookFormat.TXT, JobState.FAILED, 10, 3, 0, List.of(), error);
     }
 
     static LogEntry log(final LogKind kind, final String... args) {
@@ -123,7 +126,7 @@ abstract class RunnerTestBase extends ApplicationTest {
 
     /** Starts {@link #job}, and returns once the job thread is inside {@code run()}. */
     protected void startJob() throws InterruptedException {
-        assertThat(runner.start(job, REQUEST, SELECTION)).isTrue();
+        assertThat(runner.start(job, PROJECT_ID, REQUEST, SELECTION)).isTrue();
         job.awaitRunStarted();
     }
 

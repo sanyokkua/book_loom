@@ -153,19 +153,6 @@ class RunSessionTest extends RunnerTestBase {
         assertThat(states).containsExactly(RunState.COMPLETED);
     }
 
-    // IF a pause were honoured in export, THEN the screen would promise a pause the engine never reaches.
-    @Test
-    void requestPause_afterTheExportStageStarted_isRefused() {
-        final RunSession session = new RunSession(mirror, clock);
-        session.onEvent(new StageStarted(JobStage.EXPORT, progress(3, 0, 0)));
-
-        final boolean pause = session.requestPause();
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(pause).isFalse();
-        assertThat(states).isEmpty();
-    }
-
     // IF a translate-stage start blocked pauses, THEN the person could not pause a normal run.
     @Test
     void requestPause_afterTheTranslateStageStarted_isAccepted() {
@@ -177,32 +164,5 @@ class RunSessionTest extends RunnerTestBase {
 
         assertThat(pause).isTrue();
         assertThat(states).containsExactly(RunState.PAUSING);
-    }
-    // IF the engine ignored a pause that arrived once export began, THEN the screen would sit on "pausing" until the
-    // book was written, promising a pause that never comes.
-    @Test
-    void requestPause_atExportStart_neverStaysPausing() {
-        final RunSession session = new RunSession(mirror, clock);
-        session.onEvent(new StageStarted(JobStage.TRANSLATE, progress(0, 0, 1)));
-        session.requestPause();
-
-        session.onEvent(new StageStarted(JobStage.EXPORT, progress(1, 0, 0)));
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(states).containsExactly(RunState.PAUSING, RunState.RUNNING);
-    }
-
-    // IF a stop pending at export start were downgraded to running, THEN the person who pressed Stop would see the
-    // button come back.
-    @Test
-    void requestStop_atExportStart_staysStopping() {
-        final RunSession session = new RunSession(mirror, clock);
-        session.onEvent(new StageStarted(JobStage.TRANSLATE, progress(0, 0, 1)));
-        session.requestStop();
-
-        session.onEvent(new StageStarted(JobStage.EXPORT, progress(1, 0, 0)));
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(states).containsExactly(RunState.STOPPING);
     }
 }

@@ -22,7 +22,7 @@ import ua.bookloom.ui.state.StateMirror;
  * The export screen's frame, which reports the file a finished run wrote and says so plainly while there is none.
  *
  * <p>The mirror keeps the report of a stopped or failed run as well as a completed one, so the screen keys on the
- * report's own end state and a written path rather than on the report merely existing. The report is observed through
+ * report's own end state and a written file rather than on the report merely existing. The report is observed through
  * a weak listener held by the field below, because the mirror outlives this controller; the host keeps a reference to
  * the controller in its properties, which is what lets the listener live exactly as long as the screen does. The
  * report changes once per run, so the listener may log.
@@ -65,7 +65,9 @@ public final class ExportController {
     }
 
     private void render(final @Nullable JobReport report) {
-        final @Nullable Path written = report != null && report.end() == JobState.COMPLETED ? report.written() : null;
+        final @Nullable Path written = report != null && report.end() == JobState.COMPLETED
+                ? mirror.exportedFile().get()
+                : null;
         final Node content;
         if (report == null || written == null) {
             log.debug("showing the empty state, the report is {}", report == null ? null : report.end());

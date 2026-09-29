@@ -1,5 +1,6 @@
 package ua.bookloom.app.cli;
 
+import com.google.inject.Injector;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,11 +19,26 @@ import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.TranslationEngine;
 
 /** Recording seams for translate-command provider tests. */
 final class TranslateCommandTestFakes {
 
     private TranslateCommandTestFakes() {}
+
+    /** The command over the real engine, project and export services of {@code core} and the given provider seams. */
+    static TranslateCommand commandOver(
+            Injector core, ChatModelFactory models, ProviderConfigs configs, ProviderVerifier verifier) {
+        return new TranslateCommand(
+                core.getInstance(TranslationEngine.class),
+                models,
+                configs,
+                verifier,
+                core.getInstance(ProjectService.class),
+                core.getInstance(ExportService.class));
+    }
 
     static final class RecordingProviderConfigs implements ProviderConfigs {
 

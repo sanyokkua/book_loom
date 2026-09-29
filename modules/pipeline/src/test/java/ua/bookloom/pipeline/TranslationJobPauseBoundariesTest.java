@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
@@ -11,7 +10,6 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -177,7 +175,7 @@ class TranslationJobPauseBoundariesTest {
         final Path source =
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
         final ScriptedChatModel model = replies("ONE.", "TWO.", "THREE.");
-        final TranslationJobImpl translation = job(documents(), source, tempDir.resolve("Book.uk.epub"), model);
+        final TranslationJobImpl translation = job(source, model);
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.AFTER_SECTION));
@@ -207,8 +205,7 @@ class TranslationJobPauseBoundariesTest {
     void pauseAt_afterSection_emptyThenTwo_skipsEmptySection() {
         final Path source =
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of(), List.of("One.", "Two.")), "en");
-        final TranslationJobImpl translation =
-                job(documents(), source, tempDir.resolve("Book.uk.epub"), replies("ONE.", "TWO."));
+        final TranslationJobImpl translation = job(source, replies("ONE.", "TWO."));
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.AFTER_SECTION));
@@ -227,11 +224,10 @@ class TranslationJobPauseBoundariesTest {
         shutdown(workers);
     }
 
-    // Starting export before this pause would create the destination and temporary book too soon.
+    // Finishing before this pause would report Completed while the last segment's boundary still asks to wait.
     @Test
-    void pauseAt_betweenStages_waitsBeforeCreatingDestination() {
-        final Path destination = tempDir.resolve("Book.uk.md");
-        final TranslationJobImpl translation = job(documents(), markdown("One."), destination, replies("ONE."));
+    void pauseAt_betweenStages_waitsBeforeTheRunEnds() {
+        final TranslationJobImpl translation = job(markdown("One."), replies("ONE."));
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.BETWEEN_STAGES));
@@ -244,11 +240,9 @@ class TranslationJobPauseBoundariesTest {
         assertThat(pause.progress())
                 .extracting(p -> p.stage(), p -> p.accepted(), p -> p.flagged(), p -> p.pending())
                 .containsExactly(ua.bookloom.api.pipeline.JobStage.TRANSLATE, 1, 0, 0);
-        assertThat(Files.exists(destination)).isFalse();
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
+        assertThat(translation.state()).isEqualTo(JobState.PAUSED);
         translation.resume();
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
-        assertThat(Files.exists(destination)).isTrue();
         shutdown(workers);
     }
 
@@ -274,8 +268,7 @@ class TranslationJobPauseBoundariesTest {
     @Test
     void pauseAt_coincidentPoints_usesWidestReasonOnce() {
         final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "One.");
-        final TranslationJobImpl translation =
-                job(documents(), source, tempDir.resolve("Book.uk.txt"), replies("ONE."));
+        final TranslationJobImpl translation = job(source, replies("ONE."));
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.AFTER_SEGMENT, PausePoint.AFTER_SECTION, PausePoint.BETWEEN_STAGES));
@@ -295,7 +288,7 @@ class TranslationJobPauseBoundariesTest {
     }
 
     private TranslationJobImpl markdownJob(final ua.bookloom.api.llm.ChatModel model, final String content) {
-        return job(documents(), markdown(content), tempDir.resolve("Book.uk.md"), model);
+        return job(markdown(content), model);
     }
 
     private Path markdown(final String content) {

@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
@@ -11,12 +10,7 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -30,16 +24,13 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.StageStarted;
 
-/** Proves recoverable errors retry only the failed model or export step. */
+/** Proves recoverable errors retry only the failed model step. */
 class TranslationJobRecoveryTest {
 
     private static final Pattern SOURCE_TEXT = Pattern.compile("<Text>\\n(.*?)\\n</Text>", Pattern.DOTALL);
@@ -57,10 +48,9 @@ class TranslationJobRecoveryTest {
     void run_unreachableWithoutOnError_returnsSuccessfulFailedReport() {
         final AppError unreachable = unreachable();
         final ScriptedChatModel model = replies("ONE.").answer(Result.err(unreachable));
-        final Path destination = tempDir.resolve("Book.uk.md");
 
         final Result<JobReport> result =
-                markdownJob(model, destination, "One.\n\nTwo.\n\nThree.").run();
+                markdownJob(model, "One.\n\nTwo.\n\nThree.").run();
 
         assertThat(result.isOk()).isTrue();
         assertThat(report(result))
@@ -70,7 +60,7 @@ class TranslationJobRecoveryTest {
         assertThat(model.requests())
                 .extracting(request -> sourceText(request.messages().get(1).content()))
                 .containsExactly("One.", "Two.");
-        assertThat(Files.exists(destination)).isFalse();
+        assertThat(tempDir.resolve("Book.uk.md")).doesNotExist();
     }
 
     // Advancing the cursor after failure would omit the repeated Two request in this exact sequence.
@@ -81,8 +71,7 @@ class TranslationJobRecoveryTest {
                 .answer(Result.err(unreachable))
                 .answer(Result.ok(response("TWO.")))
                 .answer(Result.ok(response("THREE.")));
-        final TranslationJobImpl translation =
-                markdownJob(model, tempDir.resolve("Book.uk.md"), "One.\n\nTwo.\n\nThree.");
+        final TranslationJobImpl translation = markdownJob(model, "One.\n\nTwo.\n\nThree.");
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.ON_ERROR));
@@ -115,8 +104,7 @@ class TranslationJobRecoveryTest {
                 .answer(Result.ok(response("THREE.")));
         final TranslationJobTestSupport.SecondBlockingChatModel model =
                 new TranslationJobTestSupport.SecondBlockingChatModel(scripted);
-        final TranslationJobImpl translation =
-                markdownJob(model, tempDir.resolve("Book.uk.md"), "One.\n\nTwo.\n\nThree.");
+        final TranslationJobImpl translation = markdownJob(model, "One.\n\nTwo.\n\nThree.");
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.ON_ERROR));
@@ -137,94 +125,13 @@ class TranslationJobRecoveryTest {
         shutdown(workers);
     }
 
-    // Re-emitting EXPORT StageStarted on retry would make this list contain two export starts.
-    @Test
-    void pauseAt_exportError_retriesExportWithoutRepeatingTranslation() throws Exception {
-        final Path source = markdown("One.\n\nTwo.");
-        final Path output = Files.createDirectory(tempDir.resolve("output"));
-        final Path destination = output.resolve("Book.uk.md");
-        final ScriptedChatModel model = replies("ONE.", "TWO.");
-        final TranslationJobImpl translation = job(documents(), source, destination, model);
-        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
-        final List<JobEvent> events = new ArrayList<>();
-        translation.subscribe(event -> deleteOutputOnExportStart(output, pauses, events, event));
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-        final ExecutorService workers = executor();
-
-        final Future<Result<JobReport>> run = workers.submit(translation::run);
-        final Paused pause = awaitPaused(pauses);
-        Files.createDirectory(output);
-        translation.resume();
-        final JobReport completed = report(await(run));
-
-        assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
-        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
-        assertThat(pause.progress())
-                .extracting(p -> p.stage(), p -> p.pending())
-                .containsExactly(JobStage.EXPORT, 0);
-        assertThat(events)
-                .filteredOn(StageStarted.class::isInstance)
-                .extracting(event -> ((StageStarted) event).stage())
-                .containsExactly(JobStage.TRANSLATE, JobStage.EXPORT);
-        assertThat(model.requests()).hasSize(2);
-        assertThat(completed.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(Files.readString(destination)).isEqualTo("ONE.\n\nTWO.");
-        shutdown(workers);
-    }
-
-    // Publishing a partial book before the failed export is retried would leave a destination while the job waits.
-    @Test
-    void pauseAt_exportError_leavesNoDestinationWhilePaused() throws Exception {
-        final Path source = markdown("One.");
-        final Path output = Files.createDirectory(tempDir.resolve("output"));
-        final Path destination = output.resolve("Book.uk.md");
-        final TranslationJobImpl translation = job(documents(), source, destination, replies("ONE."));
-        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
-        final List<JobEvent> events = new ArrayList<>();
-        translation.subscribe(event -> deleteOutputOnExportStart(output, pauses, events, event));
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-        final ExecutorService workers = executor();
-
-        final Future<Result<JobReport>> run = workers.submit(translation::run);
-        awaitPaused(pauses);
-        final boolean destinationWhilePaused = Files.exists(destination);
-        translation.cancel();
-
-        assertThat(destinationWhilePaused).isFalse();
-        assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
-        assertThat(destination).doesNotExist();
-        shutdown(workers);
-    }
-
-    // Retaining a pause request received during export would relabel this failure REQUESTED.
-    @Test
-    void pause_duringExportDoesNotChangeExportErrorReason() throws Exception {
-        final Path source = markdown("One.");
-        final Path output = Files.createDirectory(tempDir.resolve("output"));
-        final TranslationJobImpl translation = job(documents(), source, output.resolve("Book.uk.md"), replies("ONE."));
-        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
-        translation.subscribe(event -> pauseAndDeleteAtExportStart(translation, output, pauses, event));
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-        final ExecutorService workers = executor();
-
-        final Future<Result<JobReport>> run = workers.submit(translation::run);
-        final Paused pause = awaitPaused(pauses);
-        Files.createDirectory(output);
-        translation.resume();
-
-        assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
-        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
-        assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
-        shutdown(workers);
-    }
-
     // Keeping ON_ERROR from the consumed pause would create a second pause instead of this failed report.
     @Test
     void pauseAt_removedDuringErrorPause_failedRetryEndsFailed() {
         final AppError unreachable = unreachable();
         final ScriptedChatModel model =
                 replies().answer(Result.err(unreachable)).answer(Result.err(unreachable));
-        final TranslationJobImpl translation = markdownJob(model, tempDir.resolve("Book.uk.md"), "One.");
+        final TranslationJobImpl translation = markdownJob(model, "One.");
         final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
         translation.subscribe(event -> capturePaused(pauses, event));
         translation.pauseAt(Set.of(PausePoint.ON_ERROR));
@@ -245,9 +152,8 @@ class TranslationJobRecoveryTest {
         shutdown(workers);
     }
 
-    private TranslationJobImpl markdownJob(
-            final ua.bookloom.api.llm.ChatModel model, final Path destination, final String content) {
-        return job(documents(), markdown(content), destination, model);
+    private TranslationJobImpl markdownJob(final ua.bookloom.api.llm.ChatModel model, final String content) {
+        return job(markdown(content), model);
     }
 
     private Path markdown(final String content) {
@@ -269,37 +175,5 @@ class TranslationJobRecoveryTest {
 
     private static AppError unreachable() {
         return AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.");
-    }
-
-    private static void deleteOutputOnExportStart(
-            final Path output,
-            final LinkedBlockingQueue<Paused> pauses,
-            final List<JobEvent> events,
-            final JobEvent event) {
-        events.add(event);
-        capturePaused(pauses, event);
-        if (event instanceof StageStarted started && started.stage() == JobStage.EXPORT) {
-            delete(output);
-        }
-    }
-
-    private static void pauseAndDeleteAtExportStart(
-            final TranslationJobImpl translation,
-            final Path output,
-            final LinkedBlockingQueue<Paused> pauses,
-            final JobEvent event) {
-        capturePaused(pauses, event);
-        if (event instanceof StageStarted started && started.stage() == JobStage.EXPORT) {
-            translation.pause();
-            delete(output);
-        }
-    }
-
-    private static void delete(final Path output) {
-        try {
-            Files.delete(output);
-        } catch (IOException cause) {
-            throw new UncheckedIOException(cause);
-        }
     }
 }

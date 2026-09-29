@@ -1,17 +1,20 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
-import java.nio.file.Path;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.RunRequest;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
+import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 
 /** Starting a run from the dashboard: what is prepared, where, and what happens when it cannot be. */
@@ -42,8 +45,12 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
 
         assertThat(models.selections()).containsExactly(new ModelSelection("ollama", MODEL));
         assertThat(models.askedOnFxThread()).containsExactly(false);
+        assertThat(projects.imports()).containsExactly(BOOK);
+        assertThat(projects.briefs())
+                .extracting(BookBrief::sourceLanguage, BookBrief::targetLanguage)
+                .containsExactly(tuple("en", "uk"));
         assertThat(engine.requests())
-                .containsExactly(new TranslationRequest(BOOK, Path.of("Frankenstein.uk.epub"), "uk", null, false));
+                .containsExactly(new RunRequest(ScriptedProjectService.PROJECT_ID, ReviewMode.UNATTENDED));
         assertThat(engine.askedOnFxThread()).containsExactly(false);
         assertThat(job.calls()).containsExactly("pauseAt", "subscribe", "run");
         awaitState(RunState.RUNNING);

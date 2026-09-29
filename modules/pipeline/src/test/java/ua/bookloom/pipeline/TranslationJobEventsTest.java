@@ -2,7 +2,6 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
-import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
@@ -69,13 +68,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(namesWithoutRequests(events))
-                .containsExactly(
-                        "StageStarted",
-                        "SegmentDecided",
-                        "SegmentDecided",
-                        "SegmentDecided",
-                        "StageStarted",
-                        "Finished");
+                .containsExactly("StageStarted", "SegmentDecided", "SegmentDecided", "SegmentDecided", "Finished");
         assertThat(events)
                 .filteredOn(SegmentDecided.class::isInstance)
                 .extracting(event -> ((SegmentDecided) event).progress().pending())
@@ -89,7 +82,7 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 3), tuple(JobStage.EXPORT, 0, 1, 3, 0, 0));
+                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 3));
     }
 
     // Building the Finished event from other counts than the returned report would let a screen show one outcome while
@@ -152,7 +145,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(5);
+        assertThat(healthy).hasSize(4);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -189,7 +182,7 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("StageStarted", "ModelCallStarted", "SegmentDecided", "StageStarted", "Finished");
+                .containsExactly("StageStarted", "ModelCallStarted", "SegmentDecided", "Finished");
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -218,54 +211,16 @@ class TranslationJobEventsTest {
                         "Resumed",
                         "ModelCallStarted",
                         "SegmentDecided",
-                        "StageStarted",
                         "Finished");
         shutdown(workers);
     }
 
-    // Resetting export progress to zero would make the final EPUB section index wrong.
-    @Test
-    void progress_exportRetainsLastSectionIndex() {
-        final Path source =
-                TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
-        final TranslationJobImpl translation =
-                job(documents(), source, tempDir.resolve("Book.uk.epub"), replies("ONE.", "TWO.", "THREE."));
-        final List<JobEvent> events = new ArrayList<>();
-        translation.subscribe(events::add);
-
-        translation.run();
-
-        assertThat(events)
-                .filteredOn(StageStarted.class::isInstance)
-                .extracting(event -> ((StageStarted) event).progress().section())
-                .containsExactly(0, 1);
-    }
-
-    // The auxiliary unit every EPUB now ends with is not the job's work until the brief's switches reach the run:
-    // no draft request is sent for the package title or a page title, and the export still succeeds.
-    @Test
-    void run_epubWithAuxiliaryUnit_sendsOneDraftRequestPerBodySegmentAndExports() {
-        final Path source =
-                TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("One.", "Two."), List.of("Three.")), "en");
-        final Path destination = tempDir.resolve("Book.uk.epub");
-        final ScriptedChatModel model = replies("ONE.", "TWO.", "THREE.");
-        final TranslationJobImpl translation = job(documents(), source, destination, model);
-
-        final JobReport result = report(translation.run());
-
-        assertThat(model.requests()).hasSize(3);
-        assertThat(result)
-                .extracting(JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged)
-                .containsExactly(JobState.COMPLETED, 3, 3, 0);
-        assertThat(destination).exists();
-    }
-
-    // Treating an empty book as having no section would reject this zero-count export progress.
+    // Treating an empty book as having no section would reject this zero-count progress.
     @Test
     void progress_emptyBook_usesSectionZero() {
         final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "");
         final ScriptedChatModel model = replies();
-        final TranslationJobImpl translation = job(documents(), source, tempDir.resolve("Book.uk.txt"), model);
+        final TranslationJobImpl translation = job(source, model);
         final List<JobEvent> events = new ArrayList<>();
         translation.subscribe(events::add);
 
@@ -283,7 +238,7 @@ class TranslationJobEventsTest {
                         event -> ((StageStarted) event).progress().accepted(),
                         event -> ((StageStarted) event).progress().flagged(),
                         event -> ((StageStarted) event).progress().pending())
-                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 0), tuple(JobStage.EXPORT, 0, 1, 0, 0, 0));
+                .containsExactly(tuple(JobStage.TRANSLATE, 0, 1, 0, 0, 0));
         assertThat(events).noneMatch(SegmentDecided.class::isInstance);
         assertThat(model.requests()).isEmpty();
     }
@@ -322,11 +277,7 @@ class TranslationJobEventsTest {
     }
 
     private TranslationJobImpl markdownJob(final ua.bookloom.api.llm.ChatModel model, final String content) {
-        return job(
-                documents(),
-                TestBooks.markdown(tempDir.resolve("Book.md"), content),
-                tempDir.resolve("Book.uk.md"),
-                model);
+        return job(TestBooks.markdown(tempDir.resolve("Book.md"), content), model);
     }
 
     private static List<String> namesWithoutRequests(final List<JobEvent> events) {

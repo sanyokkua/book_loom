@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.pipeline.TranslationJobTestSupport.withTarget;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
@@ -26,11 +28,18 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.persistence.PersistenceModule;
@@ -51,11 +60,11 @@ class TranslationEngineEndToEndTest {
                 TestBooks.epub(tempDir.resolve("Book.epub"), List.of(List.of("Tom &amp; <i>Jerry</i> ran.")), "en");
         final Path destination = tempDir.resolve("Book.uk.epub");
 
-        final JobReport report = translate(source, destination);
+        final ExportedBook exported = translate(source, destination);
         final String chapter = zipEntry(destination, "OEBPS/ch0.xhtml");
         final String packageDocument = zipEntry(destination, "OEBPS/content.opf");
 
-        assertCompleted(report, destination, BookFormat.EPUB);
+        assertCompleted(exported, destination, BookFormat.EPUB);
         assertThat(chapter).contains("TOM &amp; <i>JERRY</i> RAN.");
         assertThat(packageDocument).contains("<dc:language>uk</dc:language>");
         assertCheckedExport(source, destination);
@@ -67,10 +76,10 @@ class TranslationEngineEndToEndTest {
         final Path source = TestBooks.fb2(tempDir.resolve("Book.fb2"), List.of("Tom <emphasis>ran</emphasis>."), "en");
         final Path destination = tempDir.resolve("Book.uk.fb2");
 
-        final JobReport report = translate(source, destination);
+        final ExportedBook exported = translate(source, destination);
         final String output = read(destination);
 
-        assertCompleted(report, destination, BookFormat.FB2);
+        assertCompleted(exported, destination, BookFormat.FB2);
         assertThat(output).contains("TOM <emphasis>RAN</emphasis>.");
         assertThat(output).contains("<lang>uk</lang>");
         assertCheckedExport(source, destination);
@@ -83,10 +92,10 @@ class TranslationEngineEndToEndTest {
                 TestBooks.zippedFb2(tempDir.resolve("Book.fb2.zip"), List.of("Tom <emphasis>ran</emphasis>."), "en");
         final Path destination = tempDir.resolve("Book.uk.fb2.zip");
 
-        final JobReport report = translate(source, destination);
+        final ExportedBook exported = translate(source, destination);
         final String output = zipEntry(destination, "book.fb2");
 
-        assertCompleted(report, destination, BookFormat.FB2);
+        assertCompleted(exported, destination, BookFormat.FB2);
         assertThat(output).contains("TOM <emphasis>RAN</emphasis>.");
         assertThat(output).contains("<lang>uk</lang>");
         assertCheckedExport(source, destination);
@@ -98,9 +107,9 @@ class TranslationEngineEndToEndTest {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.", "en");
         final Path destination = tempDir.resolve("Book.uk.md");
 
-        final JobReport report = translate(source, destination);
+        final ExportedBook exported = translate(source, destination);
 
-        assertCompleted(report, destination, BookFormat.MARKDOWN);
+        assertCompleted(exported, destination, BookFormat.MARKDOWN);
         assertThat(read(destination)).contains("HE OPENED THE *OLD* DOOR.");
         assertCheckedExport(source, destination);
     }
@@ -111,22 +120,30 @@ class TranslationEngineEndToEndTest {
         final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "Hello world.\n\nSecond paragraph.");
         final Path destination = tempDir.resolve("Book.uk.txt");
 
-        final JobReport report = translate(source, destination);
+        final ExportedBook exported = translate(source, destination);
 
-        assertCompleted(report, destination, BookFormat.TXT);
+        assertCompleted(exported, destination, BookFormat.TXT);
         assertThat(read(destination)).isEqualTo("HELLO WORLD.\n\nSECOND PARAGRAPH.");
         assertCheckedExport(source, destination);
     }
 
-    private JobReport translate(final Path source, final Path destination) {
+    private ExportedBook translate(final Path source, final Path destination) {
         final Injector injector = Guice.createInjector(
                 new DocumentModule(), new LlmModule(), new PersistenceModule(), new PipelineModule());
-        final TranslationEngine engine = injector.getInstance(TranslationEngine.class);
-        final ChatModel model = jsonUppercaseModel();
-        final TranslationJob job =
-                dataOf(engine.newJob(new TranslationRequest(source, destination, "uk", null, false), model));
-        return dataOf(job.run());
+        final ProjectService projects = injector.getInstance(ProjectService.class);
+        final ImportedBook imported = dataOf(projects.importBook(source));
+        final String projectId = Objects.requireNonNull(imported.projectId(), "project id");
+        dataOf(projects.updateBrief(projectId, withTarget(Objects.requireNonNull(imported.brief()), "uk")));
+        final TranslationJob job = dataOf(injector.getInstance(TranslationEngine.class)
+                .newJob(new RunRequest(projectId, ReviewMode.UNATTENDED), jsonUppercaseModel()));
+        final JobReport report = dataOf(job.run());
+        assertThat(destination).doesNotExist();
+        final ExportJob export = dataOf(injector.getInstance(ExportService.class)
+                .newExport(new ExportRequest(projectId, destination, false, Set.of(), false), null));
+        return new ExportedBook(report, dataOf(export.run()));
     }
+
+    private record ExportedBook(JobReport report, ExportReport written) {}
 
     private static ChatModel jsonUppercaseModel() {
         return request -> {
@@ -183,11 +200,11 @@ class TranslationEngineEndToEndTest {
     }
 
     private static void assertCompleted(
-            final JobReport report, final Path destination, final BookFormat expectedFormat) {
-        assertThat(report.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(report.format()).isEqualTo(expectedFormat);
-        assertThat(report.written()).isEqualTo(destination);
-        assertThat(report.error()).isNull();
+            final ExportedBook exported, final Path destination, final BookFormat expectedFormat) {
+        assertThat(exported.report().end()).isEqualTo(JobState.COMPLETED);
+        assertThat(exported.report().format()).isEqualTo(expectedFormat);
+        assertThat(exported.report().error()).isNull();
+        assertThat(exported.written().destination()).isEqualTo(destination);
         assertThat(Files.exists(destination)).isTrue();
     }
 

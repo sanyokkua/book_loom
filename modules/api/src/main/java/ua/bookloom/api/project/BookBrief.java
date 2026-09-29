@@ -82,4 +82,28 @@ public record BookBrief(
                 AlsoTranslate.defaults(),
                 QualityDial.BALANCED);
     }
+
+    /**
+     * Returns this brief with its two languages replaced, everything else kept.
+     *
+     * @param sourceLanguage the replacement source language tag, or null when none is chosen
+     * @param targetLanguage the replacement target language tag, or null when none is chosen
+     * @return a new brief with the supplied languages
+     */
+    public BookBrief withLanguages(@Nullable final String sourceLanguage, @Nullable final String targetLanguage) {
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial);
+    }
 }

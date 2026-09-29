@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
@@ -24,11 +25,19 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.util.paths.DestinationPath;
 
 /** Parses and executes the one-book translation command behind the public launcher. */
@@ -47,6 +56,8 @@ public final class TranslateCommand {
     private final ChatModelFactory models;
     private final ProviderConfigs providerConfigs;
     private final ProviderVerifier verifier;
+    private final ProjectService projects;
+    private final ExportService exports;
 
     /** Runs one parsed command and reports only its user-facing result to the supplied stream. */
     public int run(List<String> args, PrintStream out) {
@@ -194,39 +205,86 @@ public final class TranslateCommand {
         if (model.isErr()) {
             return errorFailure(model, out);
         }
-        final TranslationRequest request = new TranslationRequest(
-                arguments.source(),
-                destination,
-                arguments.targetLanguage(),
-                arguments.sourceLanguage(),
-                arguments.overwrite());
-        final Result<TranslationJob> job = engine.newJob(request, dataOf(model));
+        final Result<String> project = openProject(arguments);
+        if (project.isErr()) {
+            return errorFailure(project, out);
+        }
+        final String projectId = dataOf(project);
+        final Result<TranslationJob> job =
+                engine.newJob(new RunRequest(projectId, ReviewMode.UNATTENDED), dataOf(model));
         if (job.isErr()) {
             return errorFailure(job, out);
         }
         final TranslationJob translationJob = dataOf(job);
         translationJob.pauseAt(Set.of());
-        return report(translationJob.run(), out);
+        return report(translationJob.run(), projectId, destination, arguments.overwrite(), out);
     }
 
-    private int report(Result<JobReport> result, PrintStream out) {
+    /** Imports the book into a stored project and saves the languages the command names on its brief. */
+    private Result<String> openProject(TranslateArguments arguments) {
+        final Result<ImportedBook> imported = projects.importBook(arguments.source());
+        if (imported.isErr()) {
+            return Result.err(errorOf(imported));
+        }
+        final ImportedBook book = dataOf(imported);
+        final String projectId = book.projectId();
+        final BookBrief opened = book.brief();
+        if (projectId == null || opened == null) {
+            log.warn(
+                    "translate command book refused verdict={}",
+                    book.inspection().verdict());
+            return Result.err(refusal(book.inspection().verdict()));
+        }
+        final String source = arguments.sourceLanguage() == null ? opened.sourceLanguage() : arguments.sourceLanguage();
+        final Result<?> saved =
+                projects.updateBrief(projectId, opened.withLanguages(source, arguments.targetLanguage()));
+        return saved.isErr() ? Result.err(errorOf(saved)) : Result.ok(projectId);
+    }
+
+    private static AppError refusal(InspectionVerdict verdict) {
+        return switch (verdict) {
+            case DRM_PROTECTED ->
+                AppError.of(
+                        ErrorCode.validation,
+                        "This book is protected",
+                        "This book is protected and cannot be translated. Its content is encrypted, so there is"
+                                + " nothing to translate.");
+            case UNSUPPORTED, READABLE ->
+                AppError.of(
+                        ErrorCode.validation,
+                        "This file could not be opened",
+                        "This file could not be read as a book — its structure is missing, malformed, or not a format"
+                                + " this application supports.");
+        };
+    }
+
+    private int report(
+            Result<JobReport> result, String projectId, Path destination, boolean overwrite, PrintStream out) {
         if (result.isErr()) {
             return errorFailure(result, out);
         }
         final JobReport report = dataOf(result);
         log.debug(
-                "translate command report state={} accepted={} flagged={} written={}",
+                "translate command report state={} accepted={} flagged={}",
                 report.end(),
                 report.accepted(),
-                report.flagged(),
-                report.written());
+                report.flagged());
         if (report.end() != JobState.COMPLETED) {
             return printError(report.error() != null ? report.error() : stoppedError(report.end()), out);
         }
-        final Path written = Objects.requireNonNull(report.written(), "completed report must have a written path");
-        out.println(
-                "Completed: " + written + " (accepted=" + report.accepted() + ", flagged=" + report.flagged() + ")");
+        final Result<ExportReport> exported = export(projectId, destination, overwrite);
+        if (exported.isErr()) {
+            return errorFailure(exported, out);
+        }
+        out.println("Completed: " + dataOf(exported).destination() + " (accepted=" + report.accepted() + ", flagged="
+                + report.flagged() + ")");
         return 0;
+    }
+
+    private Result<ExportReport> export(String projectId, Path destination, boolean overwrite) {
+        final Result<ExportJob> job =
+                exports.newExport(new ExportRequest(projectId, destination, overwrite, Set.of(), false), null);
+        return job.isErr() ? Result.err(errorOf(job)) : dataOf(job).run();
     }
 
     private int selectionFailure(AppError error, PrintStream out) {

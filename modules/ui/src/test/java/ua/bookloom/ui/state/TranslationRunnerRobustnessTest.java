@@ -21,12 +21,12 @@ class TranslationRunnerRobustnessTest extends RunnerTestBase {
     @BeforeEach
     void setUpFlakyExecutor() {
         flaky = new FailingOnceExecutor(executor);
-        flakyRunner = new TranslationRunner(mirror, flaky, ticks);
+        flakyRunner = new TranslationRunner(mirror, flaky, ticks, exports);
     }
 
     private void assertARunCanStartAgain(final TranslationRunner target) throws Exception {
         final RecordingJob next = new RecordingJob();
-        assertThat(target.start(next, REQUEST, SELECTION)).isTrue();
+        assertThat(target.start(next, PROJECT_ID, REQUEST, SELECTION)).isTrue();
         next.awaitRunStarted();
         next.finish(Result.ok(cancelledReport()));
         awaitState(RunState.STOPPED);
@@ -41,7 +41,7 @@ class TranslationRunnerRobustnessTest extends RunnerTestBase {
     void start_subscribeThrows_endsFailedWithAnInternalErrorAndTheRunnerIsFree() throws Exception {
         job.failOnSubscribe(new IllegalStateException("no listeners"));
 
-        final boolean started = runner.start(job, REQUEST, SELECTION);
+        final boolean started = runner.start(job, PROJECT_ID, REQUEST, SELECTION);
         awaitState(RunState.FAILED);
 
         assertThat(started).isFalse();
@@ -60,7 +60,7 @@ class TranslationRunnerRobustnessTest extends RunnerTestBase {
             throw new RejectedExecutionException("the pool is shut down");
         });
 
-        final boolean started = flakyRunner.start(job, REQUEST, SELECTION);
+        final boolean started = flakyRunner.start(job, PROJECT_ID, REQUEST, SELECTION);
         awaitState(RunState.FAILED);
 
         assertThat(started).isFalse();
@@ -78,7 +78,8 @@ class TranslationRunnerRobustnessTest extends RunnerTestBase {
             throw new InternalError("the pool broke");
         });
 
-        assertThatThrownBy(() -> flakyRunner.start(job, REQUEST, SELECTION)).isInstanceOf(InternalError.class);
+        assertThatThrownBy(() -> flakyRunner.start(job, PROJECT_ID, REQUEST, SELECTION))
+                .isInstanceOf(InternalError.class);
         awaitState(RunState.FAILED);
 
         assertThat(ticks.stops()).isEqualTo(1);

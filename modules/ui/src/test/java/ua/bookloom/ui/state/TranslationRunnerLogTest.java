@@ -36,7 +36,7 @@ class TranslationRunnerLogTest extends RunnerTestBase {
                         Named.<JobEvent>of("flagged", decided("s-8", SegmentStatus.FLAGGED, at)),
                         log(LogKind.SEGMENT_ERROR, "s-8")),
                 Arguments.of(
-                        Named.<JobEvent>of("stage", new StageStarted(JobStage.EXPORT, at)),
+                        Named.<JobEvent>of("stage", new StageStarted(JobStage.TRANSLATE, at)),
                         log(LogKind.MILESTONE, "stageStarted")),
                 Arguments.of(
                         Named.<JobEvent>of("paused", new Paused(PauseReason.AFTER_SECTION, null, at)),

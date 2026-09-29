@@ -327,16 +327,15 @@ class ScreenConformanceTest extends ShellTestBase {
     }
 
     private void completeARun() {
-        final JobReport report =
-                new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), Path.of("out.txt"), null);
+        final JobReport report = new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), null);
         injector.getInstance(StateMirror.class).publishOutcome(RunState.COMPLETED, report, null);
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void reportAFinishedBook() {
         final Path written = Path.of("/books/Frankenstein.uk.epub");
-        final JobReport report =
-                new JobReport(BookFormat.EPUB, JobState.COMPLETED, 1240, 1237, 3, List.of(), written, null);
+        final JobReport report = new JobReport(BookFormat.EPUB, JobState.COMPLETED, 1240, 1237, 3, List.of(), null);
+        injector.getInstance(StateMirror.class).publishExportedFile(written);
         injector.getInstance(StateMirror.class).publishOutcome(RunState.COMPLETED, report, null);
         WaitForAsyncUtils.waitForFxEvents();
     }

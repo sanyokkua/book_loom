@@ -17,6 +17,7 @@ import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedDocumentPort;
 import ua.bookloom.ui.ScriptedModelCatalog;
+import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 
@@ -43,6 +44,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     protected RecordingErrorPresenter errors;
     protected ScriptedChatModelFactory models;
     protected ScriptedTranslationEngine engine;
+    protected ScriptedProjectService projects;
     protected ExecutorService prepExecutor;
     protected QueuedExecutor queued;
     protected ImportViewModel imports;
@@ -57,6 +59,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         errors = new RecordingErrorPresenter();
         models = ScriptedChatModelFactory.ok();
         engine = ScriptedTranslationEngine.returning(job);
+        projects = new ScriptedProjectService();
         queued = new QueuedExecutor();
         prepExecutor = queued;
         imports = onFx(() ->
@@ -78,7 +81,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
         viewModel = onFx(() -> new TranslatingViewModel(
-                mirror, runner, brief, settings, models, engine, toasts, errors, prepExecutor));
+                mirror, runner, brief, settings, models, engine, projects, toasts, errors, prepExecutor));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

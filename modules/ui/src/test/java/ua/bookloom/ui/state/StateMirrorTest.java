@@ -46,7 +46,7 @@ class StateMirrorTest extends ApplicationTest {
     }
 
     private static JobReport cancelledReport() {
-        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null, null);
+        return new JobReport(BookFormat.TXT, JobState.CANCELLED, 10, 3, 0, List.of(), null);
     }
 
     private static LogEntry accepted(final int index) {

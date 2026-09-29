@@ -40,13 +40,13 @@ import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
-import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.InterimRunRequest;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -169,7 +169,7 @@ class TranslationWorkspaceEndToEndTest {
         onFx(() -> injector.getInstance(BookBriefViewModel.class).editDestination(chosen.toString()));
         assertThat(onFx(() -> injector.getInstance(BookBriefViewModel.class).request()))
                 .hasValueSatisfying(request -> assertThat(request)
-                        .extracting(TranslationRequest::destination, TranslationRequest::targetLanguage)
+                        .extracting(InterimRunRequest::destination, InterimRunRequest::targetLanguage)
                         .containsExactly(chosen, language));
     }
 

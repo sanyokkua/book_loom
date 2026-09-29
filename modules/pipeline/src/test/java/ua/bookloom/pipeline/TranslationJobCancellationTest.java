@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.TestDocuments.documents;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
@@ -11,9 +10,6 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.shutdown;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.nio.file.CopyOption;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,12 +32,8 @@ import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.SegmentDecided;
-import ua.bookloom.api.pipeline.TranslationRequest;
-import ua.bookloom.pipeline.export.BookExporterTestSupport;
-import ua.bookloom.pipeline.export.ExportMoveOperation;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 
-/** Proves cooperative cancellation preserves decisions and reaches the exporter final check. */
+/** Proves cooperative cancellation preserves the decisions already stored. */
 class TranslationJobCancellationTest {
 
     @TempDir
@@ -68,15 +60,9 @@ class TranslationJobCancellationTest {
 
         assertThat(report(await(run)))
                 .extracting(
-                        JobReport::end,
-                        JobReport::segments,
-                        JobReport::accepted,
-                        JobReport::flagged,
-                        JobReport::written,
-                        JobReport::error)
-                .containsExactly(JobState.CANCELLED, 3, 1, 0, null, null);
+                        JobReport::end, JobReport::segments, JobReport::accepted, JobReport::flagged, JobReport::error)
+                .containsExactly(JobState.CANCELLED, 3, 1, 0, null);
         assertThat(events).noneMatch(Resumed.class::isInstance);
-        assertThat(Files.exists(tempDir.resolve("Book.uk.md"))).isFalse();
         shutdown(workers);
     }
 
@@ -98,7 +84,6 @@ class TranslationJobCancellationTest {
         final InterruptObservation observed = await(run);
         assertThat(report(observed.result()).end()).isEqualTo(JobState.CANCELLED);
         assertThat(observed.interrupted()).isTrue();
-        assertThat(Files.exists(tempDir.resolve("Book.uk.md"))).isFalse();
         shutdown(workers);
     }
 
@@ -123,7 +108,6 @@ class TranslationJobCancellationTest {
                 .containsExactly(JobState.CANCELLED, 1);
         assertThat(events).filteredOn(SegmentDecided.class::isInstance).hasSize(1);
         assertThat(scripted.requests()).hasSize(1);
-        assertThat(Files.exists(tempDir.resolve("Book.uk.md"))).isFalse();
         shutdown(workers);
     }
 
@@ -153,58 +137,8 @@ class TranslationJobCancellationTest {
         shutdown(workers);
     }
 
-    // Omitting the exporter's final cancellation supplier would publish this destination after cancellation.
-    @Test
-    void cancel_beforePublication_isObservedByExporterFinalCheck() {
-        final Path source = markdown("One.");
-        final Path destination = tempDir.resolve("Book.uk.md");
-        final BookExporterTestSupport.BlockingClosePort port =
-                new BookExporterTestSupport.BlockingClosePort(documents(), 3);
-        final TranslationJobImpl translation = job(port, source, destination, replies("ONE."));
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-        final ExecutorService workers = executor();
-
-        final Future<Result<JobReport>> run = workers.submit(translation::run);
-        port.awaitBlockingClose();
-        translation.cancel();
-        port.releaseClose();
-
-        assertThat(report(await(run)))
-                .extracting(JobReport::end, JobReport::written)
-                .containsExactly(JobState.CANCELLED, null);
-        assertThat(Files.exists(destination)).isFalse();
-        assertThat(Files.exists(tempDir.resolve(".Book.uk.md"))).isFalse();
-        shutdown(workers);
-    }
-
-    // Cancellation after the real publication move must not replace the successful terminal report.
-    @Test
-    void cancel_afterPublication_keepsCompletedReportAndWrittenBook() {
-        final Path source = markdown("One.");
-        final Path destination = tempDir.resolve("Book.uk.md");
-        final AtomicReference<TranslationJobImpl> reference = new AtomicReference<>();
-        final ExportMoveOperation moves =
-                (temporary, published, options) -> publishThenCancel(reference, temporary, published, options);
-        final TranslationJobImpl translation = new TranslationJobImpl(
-                documents(),
-                new TranslationRequest(source, destination, "uk", "en", false),
-                replies("ONE."),
-                new ObjectMapper(),
-                new PromptTemplates(),
-                moves);
-        reference.set(translation);
-
-        final JobReport result = report(translation.run());
-
-        assertThat(result)
-                .extracting(JobReport::end, JobReport::written)
-                .containsExactly(JobState.COMPLETED, destination);
-        assertThat(translation.state()).isEqualTo(JobState.COMPLETED);
-        assertThat(Files.exists(destination)).isTrue();
-    }
-
     private TranslationJobImpl markdownJob(final ua.bookloom.api.llm.ChatModel model, final String content) {
-        return job(documents(), markdown(content), tempDir.resolve("Book.uk.md"), model);
+        return job(markdown(content), model);
     }
 
     private Path markdown(final String content) {
@@ -215,16 +149,6 @@ class TranslationJobCancellationTest {
             final LinkedBlockingQueue<Paused> pauses, final List<JobEvent> events, final JobEvent event) {
         events.add(event);
         capturePaused(pauses, event);
-    }
-
-    private static Path publishThenCancel(
-            final AtomicReference<TranslationJobImpl> reference,
-            final Path temporary,
-            final Path destination,
-            final CopyOption... options) {
-        final Path published = ExportMoveOperation.nio().move(temporary, destination, options);
-        Objects.requireNonNull(reference.get(), "translation job").cancel();
-        return published;
     }
 
     private static InterruptObservation runAndObserveInterrupt(

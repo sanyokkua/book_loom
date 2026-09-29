@@ -22,7 +22,6 @@ final class JobControl {
     private boolean claimed;
     private boolean pauseRequested;
     private boolean cancelRequested;
-    private boolean exportStarted;
     // The thread inside a model call, or null between calls. It is the only thread pause() and cancel() may
     // interrupt, and both read and write it under the lock, so an interrupt can never land outside a call.
     private @Nullable Thread modelCallThread;
@@ -58,7 +57,7 @@ final class JobControl {
         final boolean interrupted;
         lock.lock();
         try {
-            ignored = isTerminal() || exportStarted;
+            ignored = isTerminal();
             if (!ignored) {
                 pauseRequested = true;
             }
@@ -294,18 +293,6 @@ final class JobControl {
         }
         log.debug("Completed pause wait result={} interrupted={}", result, interrupted);
         return result;
-    }
-
-    void markExportStarted() {
-        final JobState observed;
-        lock.lock();
-        try {
-            exportStarted = true;
-            observed = state;
-        } finally {
-            lock.unlock();
-        }
-        log.debug("Marked export stage started state={}", observed);
     }
 
     void finish(final JobState terminal) {

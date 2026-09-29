@@ -1,19 +1,22 @@
 package ua.bookloom.pipeline;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import java.time.Clock;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
+import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
- * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine} and {@code ExportService} ports bound to
- * their implementations and the prompt templates, loaded and slot-checked once at injector creation so a broken
- * template fails the start, not a run.
+ * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine}, {@code ExportService} and
+ * {@code ProjectService} ports bound to their implementations, the clock a run times itself with, and the prompt
+ * templates, loaded and slot-checked once at injector creation so a broken template fails the start, not a run.
  *
- * <p>The judge, the self-heal calls ({@code judge}, {@code heal}) and the stored-project service carry
- * {@code @Inject} constructors but no binding yet: the run that uses them, and the {@code ProjectService} binding,
- * arrive with the job's move onto a stored project. The deterministic checks in {@code qa} are static functions.
+ * <p>The judge and the self-heal calls ({@code judge}, {@code heal}) carry {@code @Inject} constructors but no
+ * binding yet: nothing a run does calls them. The deterministic checks in {@code qa} are static functions.
  */
 public final class PipelineModule extends AbstractModule {
 
@@ -27,5 +30,11 @@ public final class PipelineModule extends AbstractModule {
         bind(PromptTemplates.class).asEagerSingleton();
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
         bind(ExportService.class).to(ExportServiceImpl.class);
+        bind(ProjectService.class).to(ProjectServiceImpl.class);
+    }
+
+    @Provides
+    Clock clock() {
+        return Clock.systemUTC();
     }
 }

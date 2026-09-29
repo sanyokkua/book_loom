@@ -10,7 +10,6 @@ import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedDocumentPort;
@@ -118,7 +117,7 @@ abstract class BookBriefViewModelTestBase extends ApplicationTest {
         return onFx(brief::sourceLanguage);
     }
 
-    Optional<TranslationRequest> request() {
+    Optional<InterimRunRequest> request() {
         return onFx(brief::request);
     }
 }

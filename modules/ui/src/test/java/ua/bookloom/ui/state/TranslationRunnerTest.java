@@ -50,7 +50,7 @@ class TranslationRunnerTest extends RunnerTestBase {
         final RecordingJob second = new RecordingJob();
         startJob();
 
-        final boolean accepted = runner.start(second, REQUEST, SELECTION);
+        final boolean accepted = runner.start(second, PROJECT_ID, REQUEST, SELECTION);
 
         assertThat(accepted).isFalse();
         assertThat(second.calls()).isEmpty();
@@ -69,7 +69,7 @@ class TranslationRunnerTest extends RunnerTestBase {
         awaitState(RunState.COMPLETED);
         final RecordingJob next = new RecordingJob();
 
-        final boolean accepted = runner.start(next, REQUEST, SELECTION);
+        final boolean accepted = runner.start(next, PROJECT_ID, REQUEST, SELECTION);
         next.awaitRunStarted();
 
         assertThat(accepted).isTrue();

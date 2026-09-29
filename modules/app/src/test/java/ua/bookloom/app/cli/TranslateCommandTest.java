@@ -6,6 +6,7 @@ import static ua.bookloom.app.cli.TranslateCommandTestFakes.RecordingProviderCon
 import static ua.bookloom.app.cli.TranslateCommandTestFakes.ScriptedProviderVerifier;
 
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -37,7 +38,6 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
-import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.util.paths.AppEnvironment;
@@ -292,18 +292,18 @@ class TranslateCommandTest {
     }
 
     private TranslateCommand command() throws IOException {
-        final Path logDir = Files.createDirectories(tempDir.resolve("test-logs"));
-        final StartupContext startup = new StartupContext(AppPaths.of(tempDir, logDir), AppEnvironment.DEV);
-        return Guice.createInjector(new CoreModules(startup)).getInstance(TranslateCommand.class);
+        return core().getInstance(TranslateCommand.class);
     }
 
     private TranslateCommand command(ProviderConfigs configs, ProviderVerifier verifier, ChatModelFactory models)
             throws IOException {
+        return TranslateCommandTestFakes.commandOver(core(), models, configs, verifier);
+    }
+
+    private Injector core() throws IOException {
         final Path logDir = Files.createDirectories(tempDir.resolve("test-logs"));
         final StartupContext startup = new StartupContext(AppPaths.of(tempDir, logDir), AppEnvironment.DEV);
-        final TranslationEngine engine =
-                Guice.createInjector(new CoreModules(startup)).getInstance(TranslationEngine.class);
-        return new TranslateCommand(engine, models, configs, verifier);
+        return Guice.createInjector(new CoreModules(startup));
     }
 
     private List<String> argumentsFor(String invalidCase) throws IOException {

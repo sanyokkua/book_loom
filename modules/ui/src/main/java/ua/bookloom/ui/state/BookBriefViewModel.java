@@ -19,12 +19,11 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
-import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.util.paths.DestinationPath;
 
 /**
- * The parts of a {@link TranslationRequest} a person chooses before a run: the target language, where the
+ * The parts of an {@link InterimRunRequest} a person chooses before a run: the target language, where the
  * translation is written and whether an existing file may be replaced. Nothing else on the brief screen is read here,
  * because nothing else on it is available yet.
  *
@@ -223,16 +222,16 @@ public final class BookBriefViewModel {
      * Assembles what a run needs from the choices made here.
      *
      * @return the request, or empty while no book is open or the destination names no usable path; the source
-     *     language is left null so that the book's own declaration is used
+     *     language is left null so that the one the import preselected is used
      */
-    public Optional<TranslationRequest> request() {
+    public Optional<InterimRunRequest> request() {
         final OpenedBook book = imports.openedBook().get();
         if (book == null) {
             log.debug("no request: no book is open");
             return Optional.empty();
         }
         return destinationPath()
-                .map(path -> new TranslationRequest(book.source(), path, targetLanguage.get(), null, overwrite.get()));
+                .map(path -> new InterimRunRequest(book.source(), path, targetLanguage.get(), null, overwrite.get()));
     }
 
     private void onBookChanged(final @Nullable OpenedBook book) {

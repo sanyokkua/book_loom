@@ -15,7 +15,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 class TranslatingViewModelOutcomeTest extends TranslatingViewModelTestBase {
 
     private static JobReport completedWithFlagged() {
-        return new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 7, 3, List.of(), DESTINATION, null);
+        return new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 7, 3, List.of(), null);
     }
 
     // IF a finished run raised nothing, THEN a person looking at another screen would not know it was done.

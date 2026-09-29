@@ -22,10 +22,15 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -59,6 +64,7 @@ public final class TranslatingViewModel {
     private final SettingsViewModel settings;
     private final ChatModelFactory models;
     private final TranslationEngine engine;
+    private final ProjectService projects;
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final ExecutorService executor;
@@ -78,6 +84,7 @@ public final class TranslatingViewModel {
      * @param settings where the provider and model come from
      * @param models the port a model is created through
      * @param engine the port a job is created through
+     * @param projects the port a book is imported into a stored project through
      * @param toasts where a finished run is announced
      * @param errors where a failure whose code is assigned the blocking dialog is shown
      * @param executor the daemon executor a run is prepared on, never the FX thread
@@ -90,6 +97,7 @@ public final class TranslatingViewModel {
             final SettingsViewModel settings,
             final ChatModelFactory models,
             final TranslationEngine engine,
+            final ProjectService projects,
             final Toasts toasts,
             final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor) {
@@ -99,6 +107,7 @@ public final class TranslatingViewModel {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.models = Objects.requireNonNull(models, "models");
         this.engine = Objects.requireNonNull(engine, "engine");
+        this.projects = Objects.requireNonNull(projects, "projects");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -161,7 +170,7 @@ public final class TranslatingViewModel {
             return;
         }
         notice.set(null);
-        final Optional<TranslationRequest> request = brief.request();
+        final Optional<InterimRunRequest> request = brief.request();
         if (request.isEmpty()) {
             log.debug("start refused: the brief could not be turned into a request");
             return;
@@ -228,7 +237,7 @@ public final class TranslatingViewModel {
         return enabled;
     }
 
-    private void submit(final TranslationRequest request, final ModelSelection selection) {
+    private void submit(final InterimRunRequest request, final ModelSelection selection) {
         try {
             executor.execute(() -> prepareOffThread(request, selection));
         } catch (RejectedExecutionException rejected) {
@@ -237,7 +246,7 @@ public final class TranslatingViewModel {
         }
     }
 
-    private void prepareOffThread(final TranslationRequest request, final ModelSelection selection) {
+    private void prepareOffThread(final InterimRunRequest request, final ModelSelection selection) {
         log.debug("preparing a run on {}", Thread.currentThread().getName());
         AppError failure = null;
         try {
@@ -251,13 +260,20 @@ public final class TranslatingViewModel {
         }
     }
 
-    private @Nullable AppError prepare(final TranslationRequest request, final ModelSelection selection) {
+    private @Nullable AppError prepare(final InterimRunRequest request, final ModelSelection selection) {
         final Result<ChatModel> model = models.create(selection);
         if (model.isErr()) {
             log.debug("no model was created: code {}", errorCode(model));
             return model.error();
         }
-        final Result<TranslationJob> created = engine.newJob(request, Objects.requireNonNull(model.data(), "model"));
+        final Result<String> project = openProject(request);
+        if (project.isErr()) {
+            log.debug("no project was opened: code {}", errorCode(project));
+            return project.error();
+        }
+        final String projectId = Objects.requireNonNull(project.data(), "project id");
+        final Result<TranslationJob> created = engine.newJob(
+                new RunRequest(projectId, ReviewMode.UNATTENDED), Objects.requireNonNull(model.data(), "model"));
         if (created.isErr()) {
             log.debug("no job was created: code {}", errorCode(created));
             return created.error();
@@ -265,9 +281,33 @@ public final class TranslatingViewModel {
         final TranslationJob job = Objects.requireNonNull(created.data(), "job");
         // Same as the command line: the job may pause only when this screen asks it to.
         job.pauseAt(Set.of());
-        final boolean began = runner.start(job, request, selection);
+        final boolean began = runner.start(job, projectId, request, selection);
         log.debug("the runner accepted the run: {}", began);
         return null;
+    }
+
+    /** Imports the book into a stored project and saves the chosen languages on its brief. */
+    private Result<String> openProject(final InterimRunRequest request) {
+        final Result<ImportedBook> imported = projects.importBook(request.source());
+        if (imported.isErr()) {
+            return Result.err(Objects.requireNonNull(imported.error(), "error"));
+        }
+        final ImportedBook book = Objects.requireNonNull(imported.data(), "imported book");
+        final String projectId = book.projectId();
+        final BookBrief opened = book.brief();
+        if (projectId == null || opened == null) {
+            log.warn(
+                    "the book was refused when it was imported for the run: {}",
+                    book.inspection().verdict());
+            return Result.err(AppError.of(
+                    ErrorCode.validation,
+                    "This book cannot be translated",
+                    "The book was refused when it was opened for the run."));
+        }
+        final String source = request.sourceLanguage() == null ? opened.sourceLanguage() : request.sourceLanguage();
+        final Result<Project> saved =
+                projects.updateBrief(projectId, opened.withLanguages(source, request.targetLanguage()));
+        return saved.isErr() ? Result.err(Objects.requireNonNull(saved.error(), "error")) : Result.ok(projectId);
     }
 
     /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */

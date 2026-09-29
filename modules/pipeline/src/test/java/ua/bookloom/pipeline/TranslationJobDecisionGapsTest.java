@@ -2,8 +2,8 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatModel;
@@ -25,8 +24,6 @@ import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
-import ua.bookloom.api.pipeline.TranslationRequest;
-import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Proves, through a whole job, the decisions the scenario audit found covered only at the translator. */
 class TranslationJobDecisionGapsTest {
@@ -34,21 +31,21 @@ class TranslationJobDecisionGapsTest {
     @TempDir
     private Path tempDir;
 
-    // Swapping the request's and the book's language in the job would send the declared en instead of the chosen de.
+    // Reading the book's declaration instead of the brief would send the declared en instead of the chosen de.
     @Test
-    void run_requestedSourceLanguage_beatsTheDeclaredLanguage() {
+    void run_briefSourceLanguage_beatsTheDeclaredLanguage() {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.", "en");
         final ScriptedChatModel model = TranslationJobTestSupport.replies("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
 
-        final JobReport report = report(job(TestDocuments.documents(), source, "de", model));
+        final JobReport report = report(job(UnaryOperator.identity(), source, "de", model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(model.requests().getFirst().messages().getFirst().content())
                 .contains("from German (de) into Ukrainian (uk)");
     }
 
-    // Without a requested language the job must use the book's declaration, and name none when the book has none.
-    @ParameterizedTest(name = "declared={0}")
+    // The brief's source language is named as it stands, and none is named when the brief has none.
+    @ParameterizedTest(name = "brief={0}")
     @CsvSource(
             delimiter = '|',
             nullValues = "NULL",
@@ -56,18 +53,18 @@ class TranslationJobDecisionGapsTest {
                 "en|from English (en) into Ukrainian (uk)",
                 "NULL|from the language of this segment (infer it from its text) into Ukrainian (uk)"
             })
-    void run_noRequestedSourceLanguage_usesTheBookDeclaration(
-            @Nullable final String declared, final String expectedInstruction) {
-        final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.", declared);
+    void run_briefSourceLanguage_isNamedInThePrompt(
+            @Nullable final String briefSource, final String expectedInstruction) {
+        final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.", "en");
         final ScriptedChatModel model = TranslationJobTestSupport.replies("ONE.");
 
-        final JobReport report = report(job(TestDocuments.documents(), source, null, model));
+        final JobReport report = report(job(UnaryOperator.identity(), source, briefSource, model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(model.requests().getFirst().messages().getFirst().content()).contains(expectedInstruction);
     }
 
-    // A flag that stopped the loop would leave the second paragraph unsent and the book unwritten.
+    // A flag that stopped the loop would leave the second paragraph unsent.
     @ParameterizedTest(name = "{0}")
     @MethodSource("flaggingReplies")
     void run_flaggedFirstSegment_stillSendsAndAcceptsTheSecond(
@@ -80,7 +77,7 @@ class TranslationJobDecisionGapsTest {
         model.answer(
                 Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("SHE LEFT."), FinishReason.STOP)));
 
-        final JobReport report = report(job(TestDocuments.documents(), source, "en", model));
+        final JobReport report = report(job(UnaryOperator.identity(), source, "en", model));
 
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(report.accepted()).isEqualTo(1);
@@ -106,7 +103,7 @@ class TranslationJobDecisionGapsTest {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n\nTwo.\n");
         final ScriptedChatModel model = new ScriptedChatModel().throwFailure(new IllegalStateException("model broke"));
 
-        final JobReport report = report(job(TestDocuments.documents(), source, "en", model));
+        final JobReport report = report(job(UnaryOperator.identity(), source, "en", model));
 
         assertThat(report.end()).isEqualTo(JobState.FAILED);
         assertThat(report.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
@@ -120,7 +117,7 @@ class TranslationJobDecisionGapsTest {
     void run_unmaskInternalErrorOnFirstSegment_endsFailedWithBothSegmentsPending() {
         final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n\nTwo.\n");
         final AppError restoreFault = AppError.of(ErrorCode.internal, "Restore failed", "The restore broke.");
-        final DocumentPort port = new TestDocuments.ForwardingPort(TestDocuments.documents()) {
+        final UnaryOperator<DocumentPort> port = documents -> new TestDocuments.ForwardingPort(documents) {
             @Override
             public Result<String> unmask(final BookFormat format, final Segment segment, final String translated) {
                 return Result.err(restoreFault);
@@ -138,35 +135,15 @@ class TranslationJobDecisionGapsTest {
         assertThat(model.requests()).hasSize(1);
     }
 
-    // Retrying or pausing on a failed write without pause on error would leave the caller waiting on nothing.
-    @Test
-    void run_exportWriteFailsWithoutPauseOnError_endsFailedWithTheWriteError() {
-        final Path source = TestBooks.markdown(tempDir.resolve("Book.md"), "One.\n");
-        final AppError writeFault = AppError.of(ErrorCode.internal, "Write failed", "The disk refused the book.");
-        final DocumentPort port = new TestDocuments.ForwardingPort(TestDocuments.documents()) {
-            @Override
-            public Result<Path> write(final Document document, final Path destination, final String targetLanguage) {
-                return Result.err(writeFault);
-            }
-        };
-
-        final JobReport report = report(job(port, source, "en", TranslationJobTestSupport.replies("ONE.")));
-
-        assertThat(report.end()).isEqualTo(JobState.FAILED);
-        assertThat(report.error()).isEqualTo(writeFault);
-        assertThat(report.accepted()).isEqualTo(1);
-        assertThat(tempDir.resolve("Book.uk.md")).doesNotExist();
-        assertThat(tempDir.resolve(".Book.uk.md")).doesNotExist();
-    }
-
     private TranslationJobImpl job(
-            final DocumentPort documents,
+            final UnaryOperator<DocumentPort> decorate,
             final Path source,
             @Nullable final String sourceLanguage,
             final ChatModel model) {
-        final TranslationRequest request =
-                new TranslationRequest(source, tempDir.resolve("Book.uk.md"), "uk", sourceLanguage, false);
-        return new TranslationJobImpl(documents, request, model, new ObjectMapper(), new PromptTemplates());
+        return TranslationJobTestSupport.job(
+                TranslationJobTestSupport.project(
+                        decorate, source, TranslationJobTestSupport.brief(sourceLanguage, "uk")),
+                model);
     }
 
     private static JobReport report(final TranslationJobImpl job) {

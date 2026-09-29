@@ -9,9 +9,9 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
 
 /**
  * A hand-written {@link TranslationEngine} that hands out the one job a test scripted, or a scripted error, and
@@ -21,7 +21,7 @@ public final class ScriptedTranslationEngine implements TranslationEngine {
 
     private final @Nullable TranslationJob job;
     private final @Nullable AppError failure;
-    private final List<TranslationRequest> requests = new CopyOnWriteArrayList<>();
+    private final List<RunRequest> requests = new CopyOnWriteArrayList<>();
     private final List<Boolean> askedOnFxThread = new CopyOnWriteArrayList<>();
 
     private ScriptedTranslationEngine(final @Nullable TranslationJob job, final @Nullable AppError failure) {
@@ -46,7 +46,7 @@ public final class ScriptedTranslationEngine implements TranslationEngine {
     }
 
     @Override
-    public Result<TranslationJob> newJob(final TranslationRequest request, final ChatModel model) {
+    public Result<TranslationJob> newJob(final RunRequest request, final ChatModel model) {
         requests.add(request);
         askedOnFxThread.add(Platform.isFxApplicationThread());
         if (job != null) {
@@ -55,7 +55,7 @@ public final class ScriptedTranslationEngine implements TranslationEngine {
         return Result.err(Objects.requireNonNull(failure, "a failing engine carries its error"));
     }
 
-    public List<TranslationRequest> requests() {
+    public List<RunRequest> requests() {
         return List.copyOf(requests);
     }
 

@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Clock;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -12,10 +13,14 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
@@ -26,17 +31,22 @@ import ua.bookloom.ui.BackgroundExecutor;
  * the returned {@link Result}. That returned result, never a {@code Finished} event, decides the terminal state,
  * because a run refused before it starts emits no event at all. Every method here is non-blocking and safe to call
  * from the FX thread.
+ *
+ * <p>Until the window works on a stored project, a run that completes is followed, on the same thread, by the export
+ * to the destination the person chose, so a finished run still leaves a book; a failed export ends the run as
+ * failed.
  */
 @Slf4j
 @Singleton
 public final class TranslationRunner {
 
     /** The run the runner is busy with; the job is kept beside its session so a control reaches both. */
-    private record ActiveRun(TranslationJob job, RunSession session) {}
+    private record ActiveRun(TranslationJob job, RunSession session, String projectId, InterimRunRequest request) {}
 
     private final StateMirror mirror;
     private final ExecutorService executor;
     private final TickSource ticks;
+    private final ExportService exports;
     private final Clock clock;
     private final AtomicReference<@Nullable ActiveRun> active = new AtomicReference<>();
 
@@ -45,21 +55,32 @@ public final class TranslationRunner {
      *
      * @param mirror the mirror every run publishes into
      * @param executor the daemon executor a job runs on, never the FX thread
+     * @param exports the port a completed run's book is written through
      */
     @Inject
-    public TranslationRunner(final StateMirror mirror, @BackgroundExecutor final ExecutorService executor) {
-        this(mirror, executor, new FixedRateTicks());
-    }
-
-    TranslationRunner(final StateMirror mirror, final ExecutorService executor, final TickSource ticks) {
-        this(mirror, executor, ticks, Clock.systemUTC());
+    public TranslationRunner(
+            final StateMirror mirror, @BackgroundExecutor final ExecutorService executor, final ExportService exports) {
+        this(mirror, executor, new FixedRateTicks(), exports);
     }
 
     TranslationRunner(
-            final StateMirror mirror, final ExecutorService executor, final TickSource ticks, final Clock clock) {
+            final StateMirror mirror,
+            final ExecutorService executor,
+            final TickSource ticks,
+            final ExportService exports) {
+        this(mirror, executor, ticks, exports, Clock.systemUTC());
+    }
+
+    TranslationRunner(
+            final StateMirror mirror,
+            final ExecutorService executor,
+            final TickSource ticks,
+            final ExportService exports,
+            final Clock clock) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.ticks = Objects.requireNonNull(ticks, "ticks");
+        this.exports = Objects.requireNonNull(exports, "exports");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -70,15 +91,21 @@ public final class TranslationRunner {
      * submitted, so the first events of a fast job are never lost.
      *
      * @param job the job to run on the background executor; not started before this call
-     * @param request what is being translated, for the log only
+     * @param projectId the stored project the job runs over, and the one exported once it completes
+     * @param request where the completed run's book is written, and what is logged about the run
      * @param selection the provider and model, for the log only
      * @return {@code true} if the run began, {@code false} if another run is active or the run could not be started
      */
-    public boolean start(final TranslationJob job, final TranslationRequest request, final ModelSelection selection) {
+    public boolean start(
+            final TranslationJob job,
+            final String projectId,
+            final InterimRunRequest request,
+            final ModelSelection selection) {
         Objects.requireNonNull(job, "job");
+        Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(request, "request");
         Objects.requireNonNull(selection, "selection");
-        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock));
+        final ActiveRun run = new ActiveRun(job, new RunSession(mirror, clock), projectId, request);
         if (!active.compareAndSet(null, run)) {
             log.warn("refusing to start a run: another run is active");
             return false;
@@ -150,7 +177,7 @@ public final class TranslationRunner {
 
     private void execute(final ActiveRun run, final Runnable stopTicks, final Subscription subscription) {
         log.debug("run executing on {}", Thread.currentThread().getName());
-        final Result<JobReport> result = runGuarded(run.job());
+        final Result<JobReport> result = exportIfCompleted(run, runGuarded(run.job()));
         try {
             stopTicks.run();
         } catch (RuntimeException failure) {
@@ -176,6 +203,51 @@ public final class TranslationRunner {
             run.session().finish(result, () -> release(run));
         } finally {
             release(run);
+        }
+    }
+
+    private Result<JobReport> exportIfCompleted(final ActiveRun run, final Result<JobReport> result) {
+        final JobReport report = result.data();
+        if (report == null || report.end() != JobState.COMPLETED) {
+            return result;
+        }
+        final Result<ExportReport> exported = export(run);
+        if (exported.isOk()) {
+            mirror.publishExportedFile(
+                    Objects.requireNonNull(exported.data(), "export report").destination());
+            return result;
+        }
+        final AppError error = Objects.requireNonNull(exported.error(), "export error");
+        log.warn("the completed run could not be exported: code {}", error.code());
+        return Result.ok(new JobReport(
+                report.format(),
+                JobState.FAILED,
+                report.segments(),
+                report.accepted(),
+                report.flagged(),
+                report.flaggedSegments(),
+                error));
+    }
+
+    private Result<ExportReport> export(final ActiveRun run) {
+        try {
+            final InterimRunRequest request = run.request();
+            log.info("the run completed; exporting project {} to {}", run.projectId(), request.destination());
+            final Result<ExportJob> created = exports.newExport(
+                    new ExportRequest(run.projectId(), request.destination(), request.overwrite(), Set.of(), false),
+                    null);
+            if (created.isErr()) {
+                return Result.err(Objects.requireNonNull(created.error(), "error"));
+            }
+            return Objects.requireNonNull(created.data(), "export job").run();
+        } catch (Throwable thrown) {
+            log.error("the export threw instead of returning a result", thrown);
+            return Result.err(AppError.of(
+                    ErrorCode.internal,
+                    "Unexpected error",
+                    "The book could not be written because of an unexpected error.",
+                    null,
+                    thrown));
         }
     }
 
