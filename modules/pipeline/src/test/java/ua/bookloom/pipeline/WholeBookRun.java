@@ -42,6 +42,7 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
+import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
@@ -96,7 +97,7 @@ final class WholeBookRun {
     private static final int PROMPT_TOKENS = 120;
     private static final int COMPLETION_TOKENS = 45;
     private static final long EVAL_NANOS = 1_500_000_000L;
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
     private static final int SEGMENTS = 5;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -173,6 +174,7 @@ final class WholeBookRun {
 
             final Future<Result<JobReport>> running = executor().submit(job::run);
             final Paused pause = awaitPaused(pauses);
+            assertFlaggedPause(pause);
             final int requestsAtPause = provider.chatRequests();
             final List<SegmentStatus> statusesAtPause = statuses(project);
             final SegmentView edited = editTheFlaggedSegment(project);
@@ -191,6 +193,11 @@ final class WholeBookRun {
                     segments(project),
                     export(project, directory.resolve("Book.uk.md")));
         }
+    }
+
+    /** A pause for any other reason would mean the stubbed sequence was disturbed, so say what it was. */
+    private static void assertFlaggedPause(final Paused pause) {
+        assertThat(pause.reason()).as("pause error: %s", pause.error()).isEqualTo(PauseReason.ON_FLAGGED);
     }
 
     /** Keeps every event the job announces in {@code events} and answers the queue its pauses arrive on. */

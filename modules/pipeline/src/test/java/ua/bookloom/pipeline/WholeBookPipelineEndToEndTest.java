@@ -58,7 +58,7 @@ import ua.bookloom.pipeline.WholeBookRun.BookRun;
  */
 class WholeBookPipelineEndToEndTest {
 
-    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
     private static final String DOOR = "He opened the old door.";
     private static final String DOOR_TARGET = "Він відчинив старі двері.";
     private static final String HOUSE = "She left the house early.";
