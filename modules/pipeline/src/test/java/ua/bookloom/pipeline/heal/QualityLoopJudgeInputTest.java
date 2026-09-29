@@ -27,8 +27,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  */
 class QualityLoopJudgeInputTest {
 
-    private static final GateFunction PASSTHROUGH_GATE = (segment, maskedTarget) -> Result.ok(maskedTarget);
-
     @TempDir
     private Path tempDir;
 
@@ -54,7 +52,7 @@ class QualityLoopJudgeInputTest {
         final Result<ChunkDecider> started = loop.start(
                 outcomes,
                 QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
-                PASSTHROUGH_GATE,
+                QualityLoopFixtures.PASSTHROUGH_GATE,
                 calls(model));
 
         assertThat(started.isOk()).isTrue();
@@ -79,7 +77,7 @@ class QualityLoopJudgeInputTest {
         final Result<ChunkDecider> started = loop.start(
                 outcomes,
                 QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
-                PASSTHROUGH_GATE,
+                QualityLoopFixtures.PASSTHROUGH_GATE,
                 calls(model));
 
         assertThat(started.isOk()).isTrue();
@@ -94,7 +92,7 @@ class QualityLoopJudgeInputTest {
         final Result<ChunkDecider> started = loop.start(
                 outcomes,
                 QualityLoopFixtures.settings(ReviewMode.UNATTENDED, QualityDial.FAST),
-                PASSTHROUGH_GATE,
+                QualityLoopFixtures.PASSTHROUGH_GATE,
                 calls(model));
 
         assertThat(started.isOk()).isTrue();
@@ -123,7 +121,7 @@ class QualityLoopJudgeInputTest {
         final Result<ChunkDecider> started = loop.start(
                 outcomes,
                 QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
-                PASSTHROUGH_GATE,
+                QualityLoopFixtures.PASSTHROUGH_GATE,
                 calls(model));
 
         assertThat(started.isErr()).isTrue();

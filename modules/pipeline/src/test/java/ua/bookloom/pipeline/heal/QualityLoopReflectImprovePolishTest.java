@@ -128,13 +128,14 @@ class QualityLoopReflectImprovePolishTest {
         assertThat(source).hasSize(26);
         final Segment segment = segmentNamed("Book.md:3", source);
         final String echo = source.toUpperCase(Locale.ROOT);
-        final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(segment, source, List.of(), echo, echo, null);
+        final DraftOutcome.Drafted outcome =
+                new DraftOutcome.Drafted(segment, source, List.of(), echo, echo, echo, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"score\":0.5,\"verdict\":\"revise\"}"))
                 .answer(readable(targetReply(source)))
                 .answer(readable(targetReply(source)));
         final LoopSettings settings = QualityLoopFixtures.settings(ReviewMode.UNATTENDED, QualityDial.BALANCED);
-        final GateFunction gate = (unusedSegment, maskedTarget) -> Result.ok(maskedTarget);
+        final GateFunction gate = QualityLoopFixtures.PASSTHROUGH_GATE;
 
         final Result<SegmentOutcome> decision = Objects.requireNonNull(
                         loop.start(List.of(outcome), settings, gate, calls(model))
@@ -153,13 +154,11 @@ class QualityLoopReflectImprovePolishTest {
     // accepts the segment as repaired after exactly one round.
     @Test
     void nextDecision_directedFixForAMediumOmissionFinding_isJudgedAgainAloneAndAccepted() {
-        final Segment firstSegment = segmentNamed("Book.md:0", "It was quiet.");
         final DraftOutcome.Drafted first =
-                new DraftOutcome.Drafted(firstSegment, "It was quiet.", List.of(), "Було тихо.", "Було тихо.", null);
-        final Segment secondSegment = segmentNamed("Book.md:1", "She walked with Hale into the dark hall.");
-        final String secondDraft = "Вона пройшла в темну залу.";
-        final DraftOutcome.Drafted second = new DraftOutcome.Drafted(
-                secondSegment, "She walked with Hale into the dark hall.", List.of(), secondDraft, secondDraft, null);
+                gatedDraft(segmentNamed("Book.md:0", "It was quiet."), "It was quiet.", "Було тихо.");
+        final String secondSource = "She walked with Hale into the dark hall.";
+        final DraftOutcome.Drafted second =
+                gatedDraft(segmentNamed("Book.md:1", secondSource), secondSource, "Вона пройшла в темну залу.");
         final String fixed = "Вона пройшла з Гейлом до темної зали.";
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(
@@ -169,9 +168,9 @@ class QualityLoopReflectImprovePolishTest {
                 .answer(readable(targetReply(fixed)))
                 .answer(readable("{\"score\":0.9,\"verdict\":\"accept\"}"));
         final LoopSettings settings = QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED);
-        final GateFunction gate = (unusedSegment, maskedTarget) -> Result.ok(maskedTarget);
         final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(first, second), settings, gate, calls(model)).data());
+                loop.start(List.of(first, second), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
+                        .data());
 
         final SegmentOutcome firstDecision =
                 Objects.requireNonNull(decider.nextDecision().data());
@@ -179,6 +178,11 @@ class QualityLoopReflectImprovePolishTest {
                 Objects.requireNonNull(decider.nextDecision().data());
 
         assertMediumOmissionScenarioDecisions(model, firstDecision, secondDecision);
+    }
+
+    /** A draft whose reply passed the gate unchanged: the masked form and the restored target are the reply. */
+    private static DraftOutcome.Drafted gatedDraft(final Segment segment, final String source, final String reply) {
+        return new DraftOutcome.Drafted(segment, source, List.of(), reply, reply, reply, null);
     }
 
     private static void assertMediumOmissionScenarioDecisions(
@@ -203,14 +207,14 @@ class QualityLoopReflectImprovePolishTest {
     void nextDecision_maxDialAcceptedInItsSecondRound_isRepairedWithTwoRoundsUsed() {
         final String echo = DRAFT_SOURCE.toUpperCase(Locale.ROOT);
         final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), DRAFT_SOURCE, List.of(), echo, echo, null);
+                new DraftOutcome.Drafted(segment(), DRAFT_SOURCE, List.of(), echo, echo, echo, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"score\":0.5,\"verdict\":\"revise\"}"))
                 .answer(readable(targetReply(echo)))
                 .answer(readable(targetReply(GOOD_DRAFT_TARGET)))
                 .answer(readable("{\"score\":0.95,\"verdict\":\"accept\"}"));
         final LoopSettings settings = QualityLoopFixtures.settings(ReviewMode.UNATTENDED, QualityDial.MAX);
-        final GateFunction gate = (unusedSegment, maskedTarget) -> Result.ok(maskedTarget);
+        final GateFunction gate = QualityLoopFixtures.PASSTHROUGH_GATE;
 
         final Result<SegmentOutcome> decision = Objects.requireNonNull(
                         loop.start(List.of(outcome), settings, gate, calls(model))
@@ -321,9 +325,9 @@ class QualityLoopReflectImprovePolishTest {
     private Result<SegmentOutcome> decide(
             final LoopSettings settings, final String draftReply, final ScriptedChatModel model) {
         final Segment segment = segment();
-        final List<DraftOutcome> outcomes =
-                List.of(new DraftOutcome.Drafted(segment, DRAFT_SOURCE, List.of(), draftReply, draftReply, null));
-        final GateFunction gate = (unusedSegment, maskedTarget) -> Result.ok(maskedTarget);
+        final List<DraftOutcome> outcomes = List.of(
+                new DraftOutcome.Drafted(segment, DRAFT_SOURCE, List.of(), draftReply, draftReply, draftReply, null));
+        final GateFunction gate = QualityLoopFixtures.PASSTHROUGH_GATE;
         final ChunkDecider decider = Objects.requireNonNull(
                 loop.start(outcomes, settings, gate, calls(model)).data());
         return decider.nextDecision();

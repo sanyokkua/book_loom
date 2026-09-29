@@ -5,12 +5,10 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.judge.JudgeCall;
 import ua.bookloom.pipeline.judge.JudgeVerdict;
 import ua.bookloom.pipeline.judge.JudgedPair;
@@ -32,7 +30,7 @@ final class SegmentHealer {
     private final ReflectImprove reflectImprove;
     private final Polish polish;
     private final LoopSettings settings;
-    private final GateFunction gate;
+    private final RoundEvaluator evaluator;
     private final ModelCalls calls;
 
     SegmentHealer(
@@ -48,7 +46,7 @@ final class SegmentHealer {
         this.reflectImprove = Objects.requireNonNull(reflectImprove, "reflectImprove");
         this.polish = Objects.requireNonNull(polish, "polish");
         this.settings = Objects.requireNonNull(settings, "settings");
-        this.gate = Objects.requireNonNull(gate, "gate");
+        this.evaluator = new RoundEvaluator(gate, settings);
         this.calls = Objects.requireNonNull(calls, "calls");
     }
 
@@ -80,7 +78,7 @@ final class SegmentHealer {
 
     private static MachineTarget machineTargetFrom(final DraftOutcome.Drafted outcome, final QaResult qa) {
         return outcome.restoredTarget() != null && qa.hardGatesPass()
-                ? new MachineTarget(outcome.restoredTarget(), outcome.maskedReply())
+                ? new MachineTarget(outcome.restoredTarget(), outcome.maskedForm())
                 : MachineTarget.none();
     }
 
@@ -91,7 +89,7 @@ final class SegmentHealer {
             final QaResult qa0,
             @Nullable final JudgeVerdict verdict0,
             final MachineTarget initialMachine) {
-        RoundState state = new RoundState(qa0, verdict0, verdict0, initialMachine, outcome.maskedReply());
+        RoundState state = new RoundState(qa0, verdict0, verdict0, initialMachine, outcome.maskedReply(), null);
         final int budget = settings.dial().repairRounds();
         for (int round = 1; round <= budget; round++) {
             final RoundStep step = attemptRound(outcome, segmentId, tau, round, state);
@@ -111,8 +109,8 @@ final class SegmentHealer {
             final double tau,
             final int round,
             final RoundState state) {
-        final List<QaFinding> concreteFindings =
-                SegmentFindings.concrete(state.qa(), state.routingVerdict(), segmentId);
+        final List<QaFinding> concreteFindings = SegmentFindings.withCarried(
+                SegmentFindings.concrete(state.qa(), state.routingVerdict(), segmentId), state.lastGateFinding());
         SegmentHealerLogging.logRoundChoice(
                 segmentId, round, concreteFindings, state.qa(), state.routingVerdict(), tau);
         final RoundOutcome result = concreteFindings.isEmpty()
@@ -126,9 +124,13 @@ final class SegmentHealer {
             case RoundOutcome.FlagNowAfterEvaluation flagNowAfter ->
                 RoundStep.terminal(
                         Result.ok(flaggedAfterEvaluation(segmentId, state.recordedVerdict(), round, flagNowAfter)));
-            case RoundOutcome.Failed ignored -> RoundStep.continueWith(state);
+            case RoundOutcome.Failed failed -> RoundStep.continueWith(carryingFinding(state, failed));
             case RoundOutcome.Evaluated evaluated -> decideEvaluated(outcome, segmentId, tau, round, state, evaluated);
         };
+    }
+
+    private static RoundState carryingFinding(final RoundState state, final RoundOutcome.Failed failed) {
+        return failed.gateFinding() == null ? state : state.withLastGateFinding(failed.gateFinding());
     }
 
     private SegmentOutcome flaggedAfterEvaluation(
@@ -137,7 +139,7 @@ final class SegmentHealer {
             final int round,
             final RoundOutcome.FlagNowAfterEvaluation flagNowAfter) {
         final RoundOutcome.Evaluated evaluated = flagNowAfter.evaluated();
-        final MachineTarget machine = new MachineTarget(evaluated.restoredTarget(), evaluated.maskedCandidate());
+        final MachineTarget machine = new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm());
         return buildFlagged(segmentId, machine, evaluated.qa(), recordedVerdict, round, flagNowAfter.error());
     }
 
@@ -151,7 +153,7 @@ final class SegmentHealer {
         final QaResult qa = evaluated.qa();
         SegmentHealerLogging.logEvaluation(segmentId, round, qa);
         final MachineTarget machine = qa.hardGatesPass()
-                ? new MachineTarget(evaluated.restoredTarget(), evaluated.maskedCandidate())
+                ? new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm())
                 : previous.machine();
         return eligibleForRejudge(qa, tau)
                 ? decideWithRejudge(outcome, segmentId, tau, round, machine, evaluated)
@@ -174,7 +176,7 @@ final class SegmentHealer {
         }
         // Not re-judged: routing resets (this text has no verdict of its own), the recorded verdict persists.
         return RoundStep.continueWith(
-                new RoundState(qa, null, previous.recordedVerdict(), machine, evaluated.maskedCandidate()));
+                new RoundState(qa, null, previous.recordedVerdict(), machine, evaluated.maskedCandidate(), null));
     }
 
     private RoundStep decideWithRejudge(
@@ -201,7 +203,7 @@ final class SegmentHealer {
                     Result.ok(buildAccepted(segmentId, machine, qa, verdict, round, SegmentPath.REPAIRED)));
         }
         // Re-judged: both the routing and the recorded verdict become this fresh one.
-        return RoundStep.continueWith(new RoundState(qa, verdict, verdict, machine, evaluated.maskedCandidate()));
+        return RoundStep.continueWith(new RoundState(qa, verdict, verdict, machine, evaluated.maskedCandidate(), null));
     }
 
     private boolean eligibleForRejudge(final QaResult qa, final double tau) {
@@ -215,7 +217,7 @@ final class SegmentHealer {
             final DraftOutcome.Drafted outcome, final String rewriteBase, final List<QaFinding> findings) {
         final Result<RepairReply> reply = directedFix.fix(
                 outcome.segment(), settings.frame(), outcome.maskedSource(), rewriteBase, findings, calls);
-        return classify(outcome, reply);
+        return evaluator.classify(outcome, reply);
     }
 
     private RoundOutcome runReflectImproveRound(
@@ -232,7 +234,7 @@ final class SegmentHealer {
                 rewriteBase,
                 Objects.requireNonNull(issues.data()),
                 calls);
-        final RoundOutcome improved = classify(outcome, improveReply);
+        final RoundOutcome improved = evaluator.classify(outcome, improveReply);
         return switch (improved) {
             case RoundOutcome.Evaluated evaluated -> polishIfBorderline(outcome, tau, evaluated);
             case RoundOutcome.Failed failed -> failed;
@@ -272,7 +274,7 @@ final class SegmentHealer {
 
     private RoundOutcome resolvePolishedTarget(
             final DraftOutcome.Drafted outcome, final String maskedCandidate, final RoundOutcome.Evaluated improved) {
-        final RoundOutcome polished = evaluateRewrite(outcome, maskedCandidate);
+        final RoundOutcome polished = evaluator.evaluateRewrite(outcome, maskedCandidate);
         return switch (polished) {
             case RoundOutcome.Evaluated evaluated when evaluated.qa().hardGatesPass() -> polished;
             case RoundOutcome.StepError stepError -> stepError;
@@ -287,56 +289,6 @@ final class SegmentHealer {
                 outcome.segment().id(),
                 reason);
         return improved;
-    }
-
-    private RoundOutcome classify(final DraftOutcome.Drafted outcome, final Result<RepairReply> reply) {
-        if (reply.isErr()) {
-            return new RoundOutcome.StepError(Objects.requireNonNull(reply.error()));
-        }
-        return switch (Objects.requireNonNull(reply.data())) {
-            case RepairReply.FlagNow flagNow -> new RoundOutcome.FlagNow(flagNow.error());
-            case RepairReply.Malformed malformed -> handleMalformed(outcome, malformed);
-            case RepairReply.Rewritten rewritten -> evaluateRewrite(outcome, rewritten.maskedTarget());
-        };
-    }
-
-    private RoundOutcome handleMalformed(final DraftOutcome.Drafted outcome, final RepairReply.Malformed malformed) {
-        log.debug(
-                "Self-heal round wasted segment={} diagnostic={}",
-                outcome.segment().id(),
-                malformed.diagnostic());
-        return new RoundOutcome.Failed();
-    }
-
-    /**
-     * Restores {@code rawCandidate}'s whitespace once and evaluates the result — the same value is what is sent to
-     * the gate, what {@code QaEvaluator} reads and what a round records as its masked candidate (one shape, per
-     * design D3's "the segment's own whitespace wins").
-     */
-    private RoundOutcome evaluateRewrite(final DraftOutcome.Drafted outcome, final String rawCandidate) {
-        final String maskedCandidate =
-                WhitespaceRestoration.restore(outcome.segment().masked(), rawCandidate);
-        final Result<String> restored = gate.restore(outcome.segment(), maskedCandidate);
-        if (restored.isErr()) {
-            final AppError error = Objects.requireNonNull(restored.error());
-            if (error.code() == ErrorCode.validation) {
-                log.debug(
-                        "Self-heal round failed the placeholder gate segment={}",
-                        outcome.segment().id());
-                return new RoundOutcome.Failed();
-            }
-            return new RoundOutcome.StepError(error);
-        }
-        final QaResult qa = QaEvaluation.evaluate(
-                List.of(),
-                outcome.segment(),
-                outcome.maskedSource(),
-                maskedCandidate,
-                settings,
-                outcome.lockedRenderings());
-        SegmentHealerLogging.logTraceTarget(
-                outcome.segment().id(), maskedCandidate, Objects.requireNonNull(restored.data()));
-        return new RoundOutcome.Evaluated(maskedCandidate, Objects.requireNonNull(restored.data()), qa);
     }
 
     private SegmentOutcome buildAccepted(

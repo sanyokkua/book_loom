@@ -9,7 +9,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
@@ -42,6 +41,19 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class QualityLoopFixtures {
 
+    /** Restores every candidate unchanged: the masked form is the candidate and so is the restored text. */
+    static final GateFunction PASSTHROUGH_GATE =
+            (segment, maskedReply) -> new GateResult.Restored(maskedReply, maskedReply);
+
+    /** Refuses every candidate as a broken placeholder rule. */
+    static final GateFunction ALWAYS_FAILS_PLACEHOLDER = (segment, maskedReply) -> new GateResult.GateFailed(
+            new QaFinding("markup", Severity.HIGH, "bad", "placeholder"),
+            AppError.of(ErrorCode.validation, "Placeholder mismatch", "bad"));
+
+    /** Fails every candidate with an error that ends the step rather than wasting the round. */
+    static final GateFunction ALWAYS_INTERNAL_ERROR = (segment, maskedReply) ->
+            new GateResult.StepError(AppError.of(ErrorCode.internal, "Gate exploded", "boom"));
+
     static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
@@ -73,23 +85,29 @@ final class QualityLoopFixtures {
     }
 
     /**
-     * Builds a {@link DraftOutcome.Drafted} the way the draft step will: restores {@code replyContent}'s trimmed
+     * Builds a {@link DraftOutcome.Drafted} the way the draft step does: restores {@code replyContent}'s trimmed
      * text into the segment's own whitespace, then runs it through the real placeholder gate.
      */
     static DraftOutcome.Drafted drafted(
             final Segment segment, final DocumentPort documents, final String replyContent) {
         final String maskedReply = WhitespaceRestoration.restore(segment.masked(), replyContent.strip());
-        final Result<String> gated = documents.unmask(BookFormat.MARKDOWN, segment, maskedReply);
-        if (gated.isOk()) {
-            return new DraftOutcome.Drafted(
-                    segment, segment.masked(), List.of(), maskedReply, Objects.requireNonNull(gated.data()), null);
-        }
-        final AppError error = Objects.requireNonNull(gated.error());
-        if (error.code() != ErrorCode.validation) {
-            throw new IllegalStateException("fixture segment failed the gate unexpectedly: " + error.code());
-        }
-        final QaFinding gateFinding = new QaFinding("markup", Severity.HIGH, error.message(), "placeholder");
-        return new DraftOutcome.Drafted(segment, segment.masked(), List.of(), maskedReply, null, gateFinding);
+        return switch (GateFunction.of(documents, BookFormat.MARKDOWN).restore(segment, maskedReply)) {
+            case GateResult.Restored restored ->
+                new DraftOutcome.Drafted(
+                        segment,
+                        segment.masked(),
+                        List.of(),
+                        maskedReply,
+                        restored.maskedForm(),
+                        restored.restored(),
+                        null);
+            case GateResult.GateFailed failed ->
+                new DraftOutcome.Drafted(
+                        segment, segment.masked(), List.of(), maskedReply, null, null, failed.finding());
+            case GateResult.StepError stepError ->
+                throw new IllegalStateException("fixture segment failed the gate unexpectedly: "
+                        + stepError.error().code());
+        };
     }
 
     static DraftOutcome.FlaggedAtOnce flaggedAtOnce(final Segment segment, final AppError error) {

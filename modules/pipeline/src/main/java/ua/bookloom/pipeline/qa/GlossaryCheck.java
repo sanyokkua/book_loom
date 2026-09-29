@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * The glossary-compliance check: whether every locked term present in the segment came back as its entered
- * rendering. Passes whenever the protected-span hard gate did (task 9.3), since a locked term travels as a
+ * rendering. Passes whenever the protected-span hard gate did, since a locked term travels as a
  * placeholder; it stays in the confidence blend because the reference weights include it.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

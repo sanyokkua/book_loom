@@ -23,11 +23,12 @@ final class QaEvaluation {
     /**
      * Evaluates one candidate target against every hard gate and soft check.
      *
-     * @param givenHardGates the placeholder/protected-span gate results already known for this candidate; empty
-     *     when the placeholder gate passed
+     * @param givenHardGates the hard-gate failures the gate call already found for this candidate; empty when
+     *     the gate passed
      * @param segment the segment being evaluated, read here only for its declared language
      * @param maskedSource the segment's masked source
-     * @param maskedCandidate the candidate masked target being evaluated
+     * @param maskedCandidate the candidate's masked form — protected spans restored, the document's own tokens still
+     *     in place
      * @param settings the chunk's languages, policies and glossary terms
      * @param lockedRenderings the locked terms and kept foreign runs masked in this segment
      * @return the candidate's hard-gate and soft outcome

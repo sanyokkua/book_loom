@@ -29,9 +29,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  */
 class QualityLoopModelErrorTest {
 
-    private static final GateFunction PASSTHROUGH_GATE = (segment, maskedTarget) -> Result.ok(maskedTarget);
-    private static final GateFunction ALWAYS_INTERNAL_ERROR =
-            (segment, maskedTarget) -> Result.err(AppError.of(ErrorCode.internal, "Gate exploded", "boom"));
     private static final String SOURCE = "He opened the old door.";
     private static final String GOOD_TARGET = "Він відчинив старі двері.";
 
@@ -43,7 +40,8 @@ class QualityLoopModelErrorTest {
     @Test
     void nextDecision_directedFixAnswersUnreachable_retryRedoesTheSameSegment() {
         final String echo = SOURCE.toUpperCase(Locale.ROOT);
-        final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, null);
+        final DraftOutcome.Drafted outcome =
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, echo, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")))
                 .answer(readable(targetReply(GOOD_TARGET)));
@@ -53,8 +51,8 @@ class QualityLoopModelErrorTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider =
-                Objects.requireNonNull(loop.start(List.of(outcome), settings, PASSTHROUGH_GATE, calls(model))
+        final ChunkDecider decider = Objects.requireNonNull(
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
                         .data());
 
         final Result<SegmentOutcome> first = decider.nextDecision();
@@ -73,7 +71,7 @@ class QualityLoopModelErrorTest {
     @Test
     void nextDecision_rejudgeAnswersUnreachable_endsTheStepWithThatError() {
         final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, null);
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, GOOD_TARGET, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"score\":0.60,\"verdict\":\"revise\",\"findings\":[],\"deferrals\":[]}"))
                 .answer(readable("{\"issues\":[]}"))
@@ -85,8 +83,8 @@ class QualityLoopModelErrorTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider =
-                Objects.requireNonNull(loop.start(List.of(outcome), settings, PASSTHROUGH_GATE, calls(model))
+        final ChunkDecider decider = Objects.requireNonNull(
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
                         .data());
 
         final Result<SegmentOutcome> decision = decider.nextDecision();
@@ -99,7 +97,8 @@ class QualityLoopModelErrorTest {
     @Test
     void nextDecision_gateAnswersANonValidationError_endsTheStepWithThatError() {
         final String echo = SOURCE.toUpperCase(Locale.ROOT);
-        final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, null);
+        final DraftOutcome.Drafted outcome =
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), echo, echo, echo, null);
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD_TARGET)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED,
@@ -107,8 +106,8 @@ class QualityLoopModelErrorTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider =
-                Objects.requireNonNull(loop.start(List.of(outcome), settings, ALWAYS_INTERNAL_ERROR, calls(model))
+        final ChunkDecider decider = Objects.requireNonNull(
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.ALWAYS_INTERNAL_ERROR, calls(model))
                         .data());
 
         final Result<SegmentOutcome> decision = decider.nextDecision();
@@ -121,7 +120,7 @@ class QualityLoopModelErrorTest {
     @Test
     void nextDecision_reflectAnswersUnreachable_endsTheStepWithThatError() {
         final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, null);
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, GOOD_TARGET, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"score\":0.60,\"verdict\":\"revise\",\"findings\":[],\"deferrals\":[]}"))
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")));
@@ -131,8 +130,8 @@ class QualityLoopModelErrorTest {
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
-        final ChunkDecider decider =
-                Objects.requireNonNull(loop.start(List.of(outcome), settings, PASSTHROUGH_GATE, calls(model))
+        final ChunkDecider decider = Objects.requireNonNull(
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
                         .data());
 
         final Result<SegmentOutcome> decision = decider.nextDecision();

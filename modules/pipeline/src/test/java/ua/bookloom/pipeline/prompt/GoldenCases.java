@@ -42,7 +42,7 @@ final class GoldenCases {
             case "placeholder-repair" ->
                 builders.apply("en", "uk")
                         .messagesForPlaceholderRepair(
-                                segment(SOURCE), DraftContext.empty(), "Він відчинив ⟦g0⟧старі двері.");
+                                segment(SOURCE), DraftContext.empty(), "Він відчинив ⟦g0⟧старі двері.", null);
             default -> throw new IllegalArgumentException(name);
         };
     }

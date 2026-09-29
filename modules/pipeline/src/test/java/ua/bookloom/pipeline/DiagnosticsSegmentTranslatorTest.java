@@ -25,6 +25,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -154,7 +155,7 @@ class DiagnosticsSegmentTranslatorTest {
             final String targetLanguage,
             final String sourceLanguage) {
         return new SegmentTranslator(
-                documents,
+                GateFunction.of(documents, format),
                 model,
                 format,
                 new DraftPromptBuilder(

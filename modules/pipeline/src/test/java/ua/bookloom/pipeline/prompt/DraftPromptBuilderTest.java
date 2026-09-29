@@ -2,6 +2,8 @@ package ua.bookloom.pipeline.prompt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -186,6 +188,48 @@ class DraftPromptBuilderTest {
                 .content();
 
         assertThat(system).contains("keep it verbatim");
+    }
+
+    // A repair the gate gave no rule for is byte-identical to the shipped prompt: no empty block, no stray blank line.
+    @Test
+    void messagesForPlaceholderRepair_noNote_matchesTheGolden() throws IOException {
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
+
+        final String user = builder.messagesForPlaceholderRepair(
+                        segment("He opened the ⟦g0⟧old⟦g1⟧ door.", Map.of("g0", "*", "g1", "*")),
+                        DraftContext.empty(),
+                        "Він відчинив ⟦g0⟧старі двері.",
+                        null)
+                .get(1)
+                .content();
+
+        assertThat(user).isEqualTo(golden("placeholder-repair.user.txt"));
+    }
+
+    // The rule the gate refused is named in its own block, after the required sequence and before the correction.
+    @Test
+    void messagesForPlaceholderRepair_withNote_namesTheRuleBeforeTheCorrectionLine() {
+        final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
+
+        final String user = builder.messagesForPlaceholderRepair(
+                        segment("He opened the ⟦g0⟧old⟦g1⟧ door.", Map.of("g0", "*", "g1", "*")),
+                        DraftContext.empty(),
+                        "Він відчинив ⟦g0⟧⟦g1⟧ двері.",
+                        "a pair of placeholders no longer wraps the same text")
+                .get(1)
+                .content();
+
+        assertThat(user).contains("""
+                Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧
+                [Rule the rejected target broke]
+                a pair of placeholders no longer wraps the same text
+                Correct the target from <Text>""");
+    }
+
+    private static String golden(final String file) throws IOException {
+        try (var stream = DraftPromptBuilderTest.class.getResourceAsStream("golden/" + file)) {
+            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        }
     }
 
     private static DraftPromptBuilder builder(

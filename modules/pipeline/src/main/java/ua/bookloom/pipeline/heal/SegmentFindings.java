@@ -45,6 +45,29 @@ final class SegmentFindings {
     }
 
     /**
+     * The findings a round repairs when the previous round's reply was refused by a gate: {@code carried} replaces
+     * the finding the same check raised before, or joins the list when none did.
+     *
+     * @param findings the concrete findings of the state the round starts from
+     * @param carried the finding the previous round's gate raised, or {@code null} when it raised none
+     * @return the merged findings, in the original order
+     */
+    static List<QaFinding> withCarried(final List<QaFinding> findings, @Nullable final QaFinding carried) {
+        if (carried == null) {
+            return findings;
+        }
+        final List<QaFinding> merged = new ArrayList<>(findings);
+        for (int index = 0; index < merged.size(); index++) {
+            if (merged.get(index).raisedBy().equals(carried.raisedBy())) {
+                merged.set(index, carried);
+                return List.copyOf(merged);
+            }
+        }
+        merged.add(carried);
+        return List.copyOf(merged);
+    }
+
+    /**
      * A decided segment's recorded findings: its last evaluation's findings plus every finding — any severity — of
      * the verdict that last decided it, on this segment, de-duplicated ({@code specs/quality-gates/spec.md}
      * "Record each segment's findings for review and repair").

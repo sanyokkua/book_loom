@@ -8,7 +8,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
@@ -18,6 +17,8 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.pipeline.chunk.OversizedSplit;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -30,19 +31,19 @@ import ua.bookloom.pipeline.prompt.DraftStep;
 @Slf4j
 final class SegmentTranslator {
 
-    private final DocumentPort documents;
+    private final GateFunction gate;
     private final ChatModel model;
     private final BookFormat format;
     private final DraftPromptBuilder promptBuilder;
     private final DraftReplyParser replyParser;
 
     SegmentTranslator(
-            final DocumentPort documents,
+            final GateFunction gate,
             final ChatModel model,
             final BookFormat format,
             final DraftPromptBuilder promptBuilder,
             final DraftReplyParser replyParser) {
-        this.documents = Objects.requireNonNull(documents, "documents");
+        this.gate = Objects.requireNonNull(gate, "gate");
         this.model = Objects.requireNonNull(model, "model");
         this.format = Objects.requireNonNull(format, "format");
         this.promptBuilder = Objects.requireNonNull(promptBuilder, "promptBuilder");
@@ -146,7 +147,9 @@ final class SegmentTranslator {
         return switch (step) {
             case DRAFT -> promptBuilder.messagesFor(segment, context);
             case STRUCTURAL_REPAIR -> promptBuilder.messagesForStructuredRepair(segment, context, rejected, diagnostic);
-            case PLACEHOLDER_REPAIR -> promptBuilder.messagesForPlaceholderRepair(segment, context, rejected);
+            case PLACEHOLDER_REPAIR ->
+                promptBuilder.messagesForPlaceholderRepair(
+                        segment, context, rejected, diagnostic.isEmpty() ? null : diagnostic);
         };
     }
 
@@ -244,29 +247,47 @@ final class SegmentTranslator {
         log.debug("Restoring segment id={} format={} trimmedLength={}", segment.id(), format, trimmed.length());
         final String restoredWhitespace = WhitespaceRestoration.restore(segment.masked(), trimmed);
         logTraceRestoration(restoredWhitespace);
-        final Result<String> unmasked = documents.unmask(format, segment, restoredWhitespace);
-        if (unmasked.isErr()) {
-            final AppError error = Objects.requireNonNull(unmasked.error());
-            log.debug("Unmask completed segmentId={} result=error code={}", segment.id(), error.code());
-            if (error.code() != ErrorCode.validation) {
-                return terminal(segment, error, "unmask");
+        return switch (gate.restore(segment, restoredWhitespace)) {
+            case GateResult.Restored restored -> accepted(segment, restored);
+            case GateResult.GateFailed failed -> {
+                log.debug(
+                        "Gate completed segmentId={} result=GateFailed code={}",
+                        segment.id(),
+                        failed.error().code());
+                yield placeholderRepairUsed
+                        ? flag(segment, failed.error(), FinishReason.STOP.name(), observedTokens(restoredWhitespace))
+                        : repairPlaceholder(
+                                segment,
+                                context,
+                                restoredWhitespace,
+                                failed.finding().note());
             }
-            return placeholderRepairUsed
-                    ? flag(segment, error, FinishReason.STOP.name(), observedTokens(restoredWhitespace))
-                    : repairPlaceholder(segment, context, restoredWhitespace);
-        }
-        final String target = Objects.requireNonNull(unmasked.data());
-        log.debug("Unmask completed segmentId={} result=success targetLength={}", segment.id(), target.length());
-        logTraceUnmask(restoredWhitespace, target);
-        final Decision decision = new Decision(segment.withDecision(SegmentStatus.ACCEPTED, target), null);
+            case GateResult.StepError stepError -> {
+                log.debug(
+                        "Gate completed segmentId={} result=StepError code={}",
+                        segment.id(),
+                        stepError.error().code());
+                yield terminal(segment, stepError.error(), "unmask");
+            }
+        };
+    }
+
+    private static Result<Decision> accepted(final Segment segment, final GateResult.Restored restored) {
+        log.debug(
+                "Gate completed segmentId={} result=Restored targetLength={}",
+                segment.id(),
+                restored.restored().length());
+        logTraceUnmask(restored.maskedForm(), restored.restored());
+        final Decision decision = new Decision(segment.withDecision(SegmentStatus.ACCEPTED, restored.restored()), null);
         log.debug("Segment decision id={} decision={} errorCode={}", segment.id(), SegmentStatus.ACCEPTED, null);
         return Result.ok(decision);
     }
 
     private Result<Decision> repairPlaceholder(
-            final Segment segment, final DraftContext context, final String rejectedTarget) {
+            final Segment segment, final DraftContext context, final String rejectedTarget, final String gateNote) {
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        final ChatRequest request = requestFor(segment, context, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, "");
+        final ChatRequest request =
+                requestFor(segment, context, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, gateNote);
         final Result<ChatResponse> reply = callModel(segment, request);
         if (reply.isErr()) {
             return decideModelError(segment, Objects.requireNonNull(reply.error()));

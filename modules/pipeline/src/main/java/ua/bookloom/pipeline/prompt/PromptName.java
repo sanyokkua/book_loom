@@ -47,7 +47,7 @@ public enum PromptName {
             0.2,
             null,
             null,
-            new Slots(Set.of("rejectedTarget", "tokens"), Set.of())),
+            new Slots(Set.of("rejectedTarget", "tokens"), Set.of("gateNote"))),
 
     /** Scores a chunk's drafted pairs once per chunk, so it states no expected output of its own. */
     JUDGE(

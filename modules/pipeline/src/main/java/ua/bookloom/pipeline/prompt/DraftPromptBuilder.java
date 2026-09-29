@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.prompt;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -80,14 +81,25 @@ public final class DraftPromptBuilder {
         return withCorrection(segment, context, correction);
     }
 
-    /** Builds a correction request after a structurally valid target fails the document placeholder hard gate. */
+    /**
+     * Builds a correction request after a structurally valid target fails the document placeholder hard gate.
+     *
+     * @param gateNote the rule the gate refused, so the model is told which rule broke as well as which tokens are
+     *     required; {@code null} to name none
+     */
     public List<ChatMessage> messagesForPlaceholderRepair(
-            final Segment segment, final DraftContext context, final String rejectedTarget) {
+            final Segment segment,
+            final DraftContext context,
+            final String rejectedTarget,
+            @Nullable final String gateNote) {
         Objects.requireNonNull(rejectedTarget, "rejectedTarget");
-        final String correction = templates.renderUser(
-                PromptName.PLACEHOLDER_REPAIR,
-                Map.of("rejectedTarget", rejectedTarget, "tokens", expectedTokenSequence(segment)));
-        return withCorrection(segment, context, correction);
+        final Map<String, String> values = new HashMap<>();
+        values.put("rejectedTarget", rejectedTarget);
+        values.put("tokens", expectedTokenSequence(segment));
+        if (gateNote != null) {
+            values.put("gateNote", gateNote);
+        }
+        return withCorrection(segment, context, templates.renderUser(PromptName.PLACEHOLDER_REPAIR, values));
     }
 
     private List<ChatMessage> withCorrection(

@@ -9,9 +9,9 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.qa.LockedRendering;
 
 /**
- * One chunk segment's outcome from the draft step (task 10.2): either a reply the quality loop can evaluate, or
- * content design D3's rules 2-4 (or a model {@code emptyCompletion}/{@code contextWindow} reply) already flagged
- * without a self-heal round ({@code specs/translation-pipeline/spec.md} "Flag a segment whose reply cannot be used,
+ * One chunk segment's outcome from the draft step: either a reply the quality loop can evaluate, or content design
+ * D3's rules 2-4 (or a model {@code emptyCompletion}/{@code contextWindow} reply) already flagged without a
+ * self-heal round ({@code specs/translation-pipeline/spec.md} "Flag a segment whose reply cannot be used,
  * and continue").
  */
 public sealed interface DraftOutcome {
@@ -22,7 +22,7 @@ public sealed interface DraftOutcome {
     /** The segment's masked source, shown to every self-heal call under {@code [Source]}. */
     String maskedSource();
 
-    /** The locked glossary terms and kept foreign runs masked in this segment; empty until task 9.3/10.3. */
+    /** The locked glossary terms and kept foreign runs masked in this segment; empty when none is protected. */
     List<LockedRendering> lockedRenderings();
 
     /**
@@ -31,7 +31,11 @@ public sealed interface DraftOutcome {
      * @param segment the segment this outcome is about
      * @param maskedSource the segment's masked source
      * @param lockedRenderings the locked terms and kept foreign runs masked in this segment
-     * @param maskedReply the draft's masked reply, already trimmed and restored into its segment's own whitespace
+     * @param maskedReply the draft's masked reply, already trimmed and restored into its segment's own whitespace —
+     *     the text the model returns to when a round rewrites it
+     * @param maskedForm the reply with every protected span restored and the document's own tokens still in place,
+     *     as the gate answered it — what is evaluated and recorded as the masked target; {@code null} exactly when
+     *     {@code restoredTarget} is
      * @param restoredTarget the reply restored through the placeholder gate, or {@code null} when the draft still
      *     failed that gate after its own placeholder repair
      * @param gateFinding the high {@code markup} finding raised by {@code placeholder} when {@code restoredTarget}
@@ -42,6 +46,7 @@ public sealed interface DraftOutcome {
             String maskedSource,
             List<LockedRendering> lockedRenderings,
             String maskedReply,
+            @Nullable String maskedForm,
             @Nullable String restoredTarget,
             @Nullable QaFinding gateFinding)
             implements DraftOutcome {
@@ -50,7 +55,8 @@ public sealed interface DraftOutcome {
          * Validates the invariants a caller is entitled to assume, defensively copies the list component, and
          * rejects a {@code restoredTarget}/{@code gateFinding} pair that is not exactly one null and one non-null —
          * the gate either passed (a target, no finding) or it didn't (no target, a finding), never both or
-         * neither.
+         * neither — and a {@code maskedForm} that is not null exactly when {@code restoredTarget} is, since both
+         * come from the one successful gate call.
          */
         public Drafted {
             Objects.requireNonNull(segment, "segment");
@@ -62,6 +68,9 @@ public sealed interface DraftOutcome {
                         "restoredTarget and gateFinding must be exactly one null and one non-null, but were "
                                 + "restoredTarget=" + (restoredTarget == null ? "null" : "present") + " gateFinding="
                                 + (gateFinding == null ? "null" : "present"));
+            }
+            if ((maskedForm == null) != (restoredTarget == null)) {
+                throw new IllegalArgumentException("maskedForm and restoredTarget must be both null or both present");
             }
             lockedRenderings = List.copyOf(lockedRenderings);
         }

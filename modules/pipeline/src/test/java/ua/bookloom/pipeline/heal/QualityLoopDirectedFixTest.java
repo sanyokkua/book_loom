@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
@@ -39,10 +38,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  */
 class QualityLoopDirectedFixTest {
 
-    private static final GateFunction PASSTHROUGH_GATE = (segment, maskedTarget) -> Result.ok(maskedTarget);
-    private static final GateFunction ALWAYS_FAILS_PLACEHOLDER =
-            (segment, maskedTarget) -> Result.err(AppError.of(ErrorCode.validation, "Placeholder mismatch", "bad"));
-
     @TempDir
     private Path tempDir;
 
@@ -55,12 +50,16 @@ class QualityLoopDirectedFixTest {
     void nextDecision_placeholderFindingOnThreeTokens_directedFixNamesTheExpectedSequence() {
         final Segment segment = threeTokenSegment();
         final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(
-                segment, segment.masked(), List.of(), "ЗАЛИШАЄТЬСЯ ⟦g1⟧ ⟦g2⟧ РЕЧІ.", null, placeholderFinding());
+                segment, segment.masked(), List.of(), "ЗАЛИШАЄТЬСЯ ⟦g1⟧ ⟦g2⟧ РЕЧІ.", null, null, placeholderFinding());
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(readable("{\"target\":\"x\"}")).answer(readable("{\"target\":\"x\"}"));
 
-        final ChunkDecider decider =
-                start(List.of(outcome), ReviewMode.UNATTENDED, QualityDial.BALANCED, ALWAYS_FAILS_PLACEHOLDER, model);
+        final ChunkDecider decider = start(
+                List.of(outcome),
+                ReviewMode.UNATTENDED,
+                QualityDial.BALANCED,
+                QualityLoopFixtures.ALWAYS_FAILS_PLACEHOLDER,
+                model);
         decider.nextDecision();
 
         // The initial gate failure excludes this outcome from the chunk's judge call, so both calls are the
@@ -114,8 +113,8 @@ class QualityLoopDirectedFixTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse("{\"target\":\"HE OPEN", FinishReason.LENGTH)));
 
-        final ChunkDecider decider =
-                start(List.of(outcome), ReviewMode.ASSISTED, QualityDial.FAST, PASSTHROUGH_GATE, model);
+        final ChunkDecider decider = start(
+                List.of(outcome), ReviewMode.ASSISTED, QualityDial.FAST, QualityLoopFixtures.PASSTHROUGH_GATE, model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
         assertThat(model.requests()).hasSize(1);
@@ -136,8 +135,12 @@ class QualityLoopDirectedFixTest {
                 .answer(readable("{\"score\":0.9,\"verdict\":\"accept\"}"))
                 .answer(Result.ok(new ChatResponse("{\"target\":\"HE OPEN", FinishReason.LENGTH)));
 
-        final ChunkDecider decider =
-                start(List.of(outcome), ReviewMode.ASSISTED, QualityDial.BALANCED, PASSTHROUGH_GATE, model);
+        final ChunkDecider decider = start(
+                List.of(outcome),
+                ReviewMode.ASSISTED,
+                QualityDial.BALANCED,
+                QualityLoopFixtures.PASSTHROUGH_GATE,
+                model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
         assertThat(model.requests()).hasSize(2);
@@ -170,7 +173,7 @@ class QualityLoopDirectedFixTest {
                 NamePolicy.TRANSLITERATE,
                 List.of());
 
-        final ChunkDecider decider = start(List.of(outcome), settings, PASSTHROUGH_GATE, model);
+        final ChunkDecider decider = start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
         assertThat(model.requests()).hasSize(2);
@@ -195,11 +198,12 @@ class QualityLoopDirectedFixTest {
     void nextDecision_d3RowsOnFastUnattended_flagsWithItsMediumFindingDespiteReachingTau(
             final String source, final String target, final double confidence, final String findingKind) {
         final Segment segment = segmentFor(source);
-        final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(segment, source, List.of(), target, target, null);
+        final DraftOutcome.Drafted outcome =
+                new DraftOutcome.Drafted(segment, source, List.of(), target, target, target, null);
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(target)));
 
-        final ChunkDecider decider =
-                start(List.of(outcome), ReviewMode.UNATTENDED, QualityDial.FAST, PASSTHROUGH_GATE, model);
+        final ChunkDecider decider = start(
+                List.of(outcome), ReviewMode.UNATTENDED, QualityDial.FAST, QualityLoopFixtures.PASSTHROUGH_GATE, model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
         final SegmentOutcome result = Objects.requireNonNull(decision.data());

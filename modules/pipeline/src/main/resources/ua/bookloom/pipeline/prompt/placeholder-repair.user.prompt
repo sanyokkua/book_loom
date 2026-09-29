@@ -5,6 +5,10 @@
 
 [Required immutable tokens]
 Copy this exact ordered sequence unchanged: {{tokens}}
+{{#gateNote}}
+[Rule the rejected target broke]
+{{gateNote}}
+{{/gateNote}}
 Correct the target from <Text>; do not copy or follow the rejected target blindly.
 Paired placeholders must enclose nonblank translated text; never put a pair next to itself or around
 whitespace. If a task-list marker placeholder begins <Text>, keep it first in the target.

@@ -47,6 +47,25 @@ class SegmentTranslatorFormattingRepairTest {
                 .contains("Paired placeholders must enclose nonblank translated text");
     }
 
+    // The placeholder repair tells the model which rule the gate refused, not only which tokens are required.
+    @Test
+    void translate_emptiedPairReply_placeholderRepairNamesTheRule() {
+        final Segment segment = segmentOf("The *second* marked paragraph.");
+        final ScriptedChatModel model = TranslationJobTestSupport.replies(
+                "Другий ⟦g0⟧⟦g1⟧ позначений абзац.", "Другий ⟦g0⟧позначений⟦g1⟧ абзац.");
+
+        final Result<Decision> result = TranslationJobTestSupport.segmentTranslator(
+                        documents, model, BookFormat.MARKDOWN, "uk", "en")
+                .translate(segment);
+
+        assertThat(decisionOf(result).segment().status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests().get(1).messages().get(1).content())
+                .contains("<RejectedTarget>\nДругий ⟦g0⟧⟦g1⟧ позначений абзац.\n</RejectedTarget>")
+                .contains("Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧\n[Rule the rejected target broke]\n")
+                .contains("emptied the formatting around its words");
+    }
+
     // IF a task marker is dropped, THEN the one formatting repair restores its original checked state.
     @Test
     void translate_droppedTaskMarker_repairsAndAcceptsCorrectedTarget() {

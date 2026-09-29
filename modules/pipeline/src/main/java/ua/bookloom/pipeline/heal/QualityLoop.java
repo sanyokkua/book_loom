@@ -86,7 +86,7 @@ public final class QualityLoop {
                 given,
                 outcome.segment(),
                 outcome.maskedSource(),
-                outcome.maskedReply(),
+                Objects.requireNonNullElse(outcome.maskedForm(), outcome.maskedReply()),
                 settings,
                 outcome.lockedRenderings());
     }
@@ -108,9 +108,10 @@ public final class QualityLoop {
     private static void logTraceDraftTarget(final DraftOutcome.Drafted outcome) {
         if (log.isTraceEnabled()) {
             log.trace(
-                    "Draft target segment={} masked={} restored={}",
+                    "Draft target segment={} reply={} maskedForm={} restored={}",
                     outcome.segment().id(),
                     outcome.maskedReply(),
+                    outcome.maskedForm(),
                     outcome.restoredTarget());
         }
     }

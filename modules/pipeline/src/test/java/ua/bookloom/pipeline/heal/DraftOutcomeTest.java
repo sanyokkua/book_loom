@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.heal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
@@ -15,7 +16,8 @@ import ua.bookloom.api.project.Severity;
 /**
  * {@link DraftOutcome.Drafted}: {@code restoredTarget} and {@code gateFinding} must be exactly one null and one
  * non-null — the gate either passed (a target, no finding) or it didn't (no target, a finding), never both or
- * neither, so {@link QualityLoop#start} never has to guess which one is missing.
+ * neither, so {@link QualityLoop#start} never has to guess which one is missing. {@code maskedForm} is null exactly
+ * when {@code restoredTarget} is: the two are the two outputs of one successful gate call.
  */
 class DraftOutcomeTest {
 
@@ -23,15 +25,36 @@ class DraftOutcomeTest {
 
     @Test
     void constructor_bothRestoredTargetAndGateFindingPresent_throws() {
-        assertThatThrownBy(() ->
-                        new DraftOutcome.Drafted(segment(), SOURCE, List.of(), SOURCE, SOURCE, placeholderFinding()))
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(
+                        segment(), SOURCE, List.of(), SOURCE, SOURCE, SOURCE, placeholderFinding()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructor_neitherRestoredTargetNorGateFindingPresent_throws() {
-        assertThatThrownBy(() -> new DraftOutcome.Drafted(segment(), SOURCE, List.of(), SOURCE, null, null))
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(segment(), SOURCE, List.of(), SOURCE, null, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructor_restoredTargetWithoutMaskedForm_throws() {
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(segment(), SOURCE, List.of(), SOURCE, null, SOURCE, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructor_maskedFormWithoutRestoredTarget_throws() {
+        assertThatThrownBy(() -> new DraftOutcome.Drafted(
+                        segment(), SOURCE, List.of(), SOURCE, SOURCE, null, placeholderFinding()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructor_maskedFormAndRestoredTargetTogether_isAccepted() {
+        final DraftOutcome.Drafted drafted =
+                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), "reply", "form", SOURCE, null);
+
+        assertThat(drafted.maskedForm()).isEqualTo("form");
     }
 
     private static QaFinding placeholderFinding() {

@@ -1,7 +1,9 @@
 package ua.bookloom.pipeline.heal;
 
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
@@ -14,22 +16,32 @@ sealed interface RoundOutcome {
     /**
      * A {@code Rewritten} reply that passed the placeholder gate and was evaluated.
      *
-     * @param maskedCandidate the candidate masked target that was evaluated
-     * @param restoredTarget the candidate restored through the placeholder gate
+     * @param maskedCandidate the model's reply, restored into the segment's own whitespace — the text a next round
+     *     rewrites
+     * @param maskedForm the candidate as the gate answered it, protected spans restored and the document's own
+     *     tokens in place — what was evaluated and what is recorded as the masked target
+     * @param restoredTarget the candidate restored through the gate
      * @param qa the candidate's hard-gate and soft outcome
      */
-    record Evaluated(String maskedCandidate, String restoredTarget, QaResult qa) implements RoundOutcome {
+    record Evaluated(String maskedCandidate, String maskedForm, String restoredTarget, QaResult qa)
+            implements RoundOutcome {
 
         /** Rejects a missing component. */
         public Evaluated {
             Objects.requireNonNull(maskedCandidate, "maskedCandidate");
+            Objects.requireNonNull(maskedForm, "maskedForm");
             Objects.requireNonNull(restoredTarget, "restoredTarget");
             Objects.requireNonNull(qa, "qa");
         }
     }
 
-    /** A {@code Malformed} reply, or a {@code Rewritten} reply whose gate call failed with {@code validation}. */
-    record Failed() implements RoundOutcome {}
+    /**
+     * A {@code Malformed} reply, or a {@code Rewritten} reply a gate refused.
+     *
+     * @param gateFinding the finding the refusing gate raised, which the next round repairs; {@code null} for a
+     *     malformed reply, which no gate saw
+     */
+    record Failed(@Nullable QaFinding gateFinding) implements RoundOutcome {}
 
     /**
      * Content that flags the segment at once, with no evaluated target behind it — the draft's or an earlier

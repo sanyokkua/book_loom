@@ -27,6 +27,7 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.document.DocumentModule;
+import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -61,7 +62,7 @@ final class TranslationJobTestSupport {
             final String targetLanguage,
             @Nullable final String sourceLanguage) {
         return new SegmentTranslator(
-                documents,
+                GateFunction.of(documents, format),
                 model,
                 format,
                 new DraftPromptBuilder(

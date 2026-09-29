@@ -33,7 +33,6 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  */
 class QualityLoopFlaggingAndOrderTest {
 
-    private static final GateFunction PASSTHROUGH_GATE = (segment, maskedTarget) -> Result.ok(maskedTarget);
     private static final String SOURCE = "He left the house at dawn and never once looked back at the old road.";
 
     private final QualityLoop loop = QualityLoopFixtures.loop();
@@ -72,7 +71,7 @@ class QualityLoopFlaggingAndOrderTest {
         final String shortTarget = "Він покинув дім на світанку і жодного раз";
         assertThat(shortTarget).hasSize(41);
         final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment, source, List.of(), shortTarget, shortTarget, null);
+                new DraftOutcome.Drafted(segment, source, List.of(), shortTarget, shortTarget, shortTarget, null);
         final ScriptedChatModel model = stillFailingLengthTwiceModel(shortTarget);
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
@@ -81,7 +80,8 @@ class QualityLoopFlaggingAndOrderTest {
                 NamePolicy.TRANSLITERATE,
                 List.of());
 
-        final Result<ChunkDecider> started = loop.start(List.of(outcome), settings, PASSTHROUGH_GATE, calls(model));
+        final Result<ChunkDecider> started =
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
         final Result<SegmentOutcome> decision =
                 Objects.requireNonNull(started.data()).nextDecision();
 
@@ -120,7 +120,8 @@ class QualityLoopFlaggingAndOrderTest {
     void nextDecision_acceptedSegment_keepsItsLowJudgeFinding() {
         final Segment segment = segment("Book.md:0");
         final String good = "Він покинув дім на світанку і жодного разу не озирнувся на стару дорогу.";
-        final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(segment, SOURCE, List.of(), good, good, null);
+        final DraftOutcome.Drafted outcome =
+                new DraftOutcome.Drafted(segment, SOURCE, List.of(), good, good, good, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(
                         readable(
@@ -133,7 +134,8 @@ class QualityLoopFlaggingAndOrderTest {
                 NamePolicy.TRANSLITERATE,
                 List.of());
 
-        final Result<ChunkDecider> started = loop.start(List.of(outcome), settings, PASSTHROUGH_GATE, calls(model));
+        final Result<ChunkDecider> started =
+                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
         final Result<SegmentOutcome> decision =
                 Objects.requireNonNull(started.data()).nextDecision();
 
@@ -170,14 +172,17 @@ class QualityLoopFlaggingAndOrderTest {
     void nextDecision_calledTwiceWithDraftedOutcomes_decidesInDocumentOrderOnePerCall() {
         final String good = "Він покинув дім на світанку і жодного разу не озирнувся на стару дорогу.";
         final DraftOutcome.Drafted first =
-                new DraftOutcome.Drafted(segment("Book.md:0"), SOURCE, List.of(), good, good, null);
+                new DraftOutcome.Drafted(segment("Book.md:0"), SOURCE, List.of(), good, good, good, null);
         final DraftOutcome.Drafted second =
-                new DraftOutcome.Drafted(segment("Book.md:1"), SOURCE, List.of(), good, good, null);
+                new DraftOutcome.Drafted(segment("Book.md:1"), SOURCE, List.of(), good, good, good, null);
         final LoopSettings settings =
                 QualityLoopFixtures.settings(ReviewMode.UNATTENDED, ua.bookloom.api.pipeline.QualityDial.FAST);
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(first, second), settings, PASSTHROUGH_GATE, calls(new ScriptedChatModel()))
-                        .data());
+        final ChunkDecider decider = Objects.requireNonNull(loop.start(
+                        List.of(first, second),
+                        settings,
+                        QualityLoopFixtures.PASSTHROUGH_GATE,
+                        calls(new ScriptedChatModel()))
+                .data());
 
         assertThat(decider.hasNext()).isTrue();
         final SegmentOutcome firstDecision =
@@ -196,8 +201,8 @@ class QualityLoopFlaggingAndOrderTest {
     private ChunkDecider start(final List<DraftOutcome> outcomes, final ScriptedChatModel model) {
         final LoopSettings settings =
                 QualityLoopFixtures.settings(ReviewMode.ASSISTED, ua.bookloom.api.pipeline.QualityDial.BALANCED);
-        return Objects.requireNonNull(
-                loop.start(outcomes, settings, PASSTHROUGH_GATE, calls(model)).data());
+        return Objects.requireNonNull(loop.start(outcomes, settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
+                .data());
     }
 
     private static Segment segment(final String id) {

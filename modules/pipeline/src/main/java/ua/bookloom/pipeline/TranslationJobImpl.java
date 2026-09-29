@@ -34,6 +34,7 @@ import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.pipeline.TranslationRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -156,7 +157,7 @@ final class TranslationJobImpl implements TranslationJob {
 
     private Result<JobReport> translate(final JobProgressTracker tracker) {
         final SegmentTranslator translator = new SegmentTranslator(
-                documents,
+                GateFunction.of(documents, tracker.format()),
                 new CancellableChatModel(model, control, this::announceModelCall),
                 tracker.format(),
                 new DraftPromptBuilder(
