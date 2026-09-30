@@ -646,35 +646,29 @@ public enum MessageKey {
     TRANSLATING_WAITING_FOR_MODEL("translating.waitingForModel"),
     /** Button on the provider-error banner that opens the provider settings. */
     TRANSLATING_OPEN_SETTINGS("translating.openSettings"),
-    /** Heading of the export screen. */
+    /** Heading of the export screen once a book was written. */
     EXPORT_TITLE("export.title"),
-    /** Line under the export heading saying the run already wrote the file. */
+    /** Line under the export heading: the book is written when Export book is pressed, at any time. */
     EXPORT_SUBTITLE("export.subtitle"),
-    /** Heading of the export screen's empty state. */
-    EXPORT_EMPTY_TITLE("export.empty.title"),
-    /** Text of the export screen's empty state, naming what produces the book. */
-    EXPORT_EMPTY_TEXT("export.empty.text"),
-    /** Heading of the card reporting the written file. */
+    /** Heading of the card that writes the book. */
     EXPORT_CARD_TITLE("export.card.title"),
-    /** Label of the row naming the written file's format. */
+    /** Label of the row naming the book's format. */
     EXPORT_FORMAT_LABEL("export.format.label"),
     /** Hint under the format row: the book is written in the format it was opened in. */
     EXPORT_FORMAT_HINT("export.format.hint"),
-    /** Label of the row giving the path the book was written to. */
-    EXPORT_PATH_LABEL("export.path.label"),
     /** Button that shows the written file in the system file manager. */
     EXPORT_REVEAL("export.reveal"),
-    /** Heading of the card of additional outputs nothing produces yet. */
+    /** Heading of the card of side files written beside the book. */
     EXPORT_ALSO_TITLE("export.also.title"),
-    /** Label of the unavailable glossary output. */
+    /** Label of the glossary side file. */
     EXPORT_AUX_GLOSSARY("export.aux.glossary"),
-    /** Label of the unavailable bilingual-copy output. */
+    /** Label of the bilingual-copy side file. */
     EXPORT_AUX_BILINGUAL("export.aux.bilingual"),
-    /** Label of the unavailable quality-report output. */
+    /** Label of the quality-report side file. */
     EXPORT_AUX_REPORT("export.aux.report"),
-    /** Heading of the card holding the unavailable final consistency pass. */
+    /** Heading of the card holding the final consistency pass. */
     EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
-    /** Note under the consistency-pass switch saying what it would do. */
+    /** Note under the consistency-pass switch saying what it does. */
     EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
     /** Refusal beside Save to when the destination is the source file itself. */
     EXPORT_REFUSAL_SOURCE("export.refusal.source"),
@@ -710,6 +704,30 @@ public enum MessageKey {
     EXPORT_COMPLETE_SIZE("export.complete.size"),
     /** Button that opens the written book in the program the system associates with it. */
     EXPORT_OPEN_BOOK("export.openBook"),
+    /** Label of the destination field beside Browse. */
+    EXPORT_SAVE_TO("export.saveTo"),
+    /** Button that opens the system save dialog for the destination. */
+    EXPORT_BROWSE("export.browse"),
+    /** Label of the switch that allows replacing an existing file at the destination. */
+    EXPORT_REPLACE("export.replace"),
+    /** The read-only format row; argument 0 is the format's display name. */
+    EXPORT_FORMAT_SAME("export.format.same"),
+    /** The button that writes the book. */
+    EXPORT_ACTION("export.action"),
+    /** Caption of the tile counting the segments written translated. */
+    EXPORT_TILE_WRITTEN("export.tile.written"),
+    /** Caption of the tile giving the share of written segments accepted without repair. */
+    EXPORT_TILE_AUTO("export.tile.auto"),
+    /** Caption of the tile counting the segments a person acted on. */
+    EXPORT_TILE_REVIEWED("export.tile.reviewed"),
+    /** Caption of the tile that shows a passed mark once the written file was re-opened. */
+    EXPORT_TILE_VALID("export.tile.valid"),
+    /** Check line after an export: the file was re-opened and verified. */
+    EXPORT_CHECK_REOPENED("export.check.reopened"),
+    /** Check line after an export: the language metadata changed; arguments are the source and the target tags. */
+    EXPORT_CHECK_LANGUAGE("export.check.language"),
+    /** The forward action of the last step, always unavailable. */
+    EXPORT_NEXT("export.next"),
     /** Display name of the literary fiction genre offered on the Book Brief. */
     GENRE_LITERARY_FICTION("genre.literaryFiction"),
     /** Display name of the classic literature genre offered on the Book Brief. */

@@ -25,7 +25,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextInputControl;
 import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
@@ -162,11 +164,8 @@ abstract class WorkspaceTestBase {
         assertThat(Objects.requireNonNull(opened.profile()).stats().segments()).isEqualTo(segments);
     }
 
-    /**
-     * Chooses the source the TXT does not declare and a target, checks the proposed destination follows the target,
-     * then replaces it with the person's own path.
-     */
-    protected void chooseBrief(final String language, final Path proposed, final Path chosen) throws Exception {
+    /** Chooses the source the TXT does not declare and a target, and checks the proposed destination follows the target. */
+    protected void chooseBrief(final String language, final Path proposed) throws Exception {
         final BookBriefViewModel brief = injector.getInstance(BookBriefViewModel.class);
         final ExportViewModel exports = injector.getInstance(ExportViewModel.class);
         assertThat(onFx(() -> brief.sourceUndeclared().get())).isTrue();
@@ -177,9 +176,6 @@ abstract class WorkspaceTestBase {
         // The run reads the stored brief, so the saves the two choices started must have reached the project.
         waitUntil(() -> !brief.saving().get());
         assertThat(onFx(() -> exports.destination().get())).isEqualTo(proposed.toString());
-        onFx(() -> exports.editDestination(chosen.toString()));
-        assertThat(onFx(() -> exports.interimExport()))
-                .hasValueSatisfying(request -> assertThat(request.destination()).isEqualTo(chosen));
     }
 
     protected void chooseModel() {
@@ -207,15 +203,34 @@ abstract class WorkspaceTestBase {
                 .isEqualTo(RunState.COMPLETED);
     }
 
-    protected void assertExportReport(final Path written, final int accepted, final int flagged) {
+    /**
+     * Opens the Export screen and presses Export book, as a person does after the run, then waits for the file. The
+     * export-complete dialog is the one announcement: it names the file and no transient message is raised.
+     */
+    protected void exportBook(final Path written) throws Exception {
         onFx(() -> shell.activate(ViewNames.EXPORT));
-        assertThat(exportText("#export-path .kv-value")).isEqualTo(written.toString());
-        assertThat(exportText("#export-count-accepted")).isEqualTo(String.valueOf(accepted));
-        assertThat(exportText("#export-count-flagged")).isEqualTo(String.valueOf(flagged));
-        assertThat(onFx(() -> exportNode("#export-reveal")))
-                .as("the reveal action is offered for the written file (never pressed here: it opens a file browser)")
-                .isNotNull();
-        assertThat(onFx(() -> exportNode("#export-empty"))).isNull();
+        assertThat(exportText("#export-save-to")).isEqualTo(written.toString());
+        waitUntil(() ->
+                injector.getInstance(ExportViewModel.class).exportAvailable().get());
+        final int toastsBefore = onFx(() -> toastCount());
+        onFx(() -> ((Button) exportNode("#export-run")).fire());
+        waitUntil(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);
+        WaitForAsyncUtils.waitForFxEvents();
+        assertThat(exportText("#export-complete-card .dialog-text"))
+                .contains(written.getFileName().toString());
+        assertThat(onFx(() -> exportNode("#export-reveal"))).isNotNull();
+        assertThat(onFx(() -> toastCount()))
+                .as("no transient message announces the export")
+                .isEqualTo(toastsBefore);
+    }
+
+    private int toastCount() {
+        return FxToolkit.toolkitContext()
+                .getRegisteredStage()
+                .getScene()
+                .getRoot()
+                .lookupAll(".toast")
+                .size();
     }
 
     protected void assertReopensWithSegments(final Path written, final int expectedSegments) {
@@ -250,7 +265,10 @@ abstract class WorkspaceTestBase {
     }
 
     protected String exportText(final String selector) {
-        return onFx(() -> ((Label) exportNode(selector)).getText());
+        return onFx(() -> {
+            final Node node = exportNode(selector);
+            return node instanceof TextInputControl input ? input.getText() : ((Label) node).getText();
+        });
     }
 
     protected Node exportNode(final String selector) {

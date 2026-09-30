@@ -29,7 +29,6 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.ui.ProgressFixtures;
-import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ScriptedReviewDesk;
 
 /**
@@ -43,17 +42,14 @@ abstract class RunnerTestBase extends ApplicationTest {
     static final int BATCH = 450;
     static final int TICKS = 10;
     static final Path SOURCE = Path.of("/books/in.txt");
-    static final Path DESTINATION = Path.of("/books/out.uk.txt");
     static final String PROJECT_ID = "project-1";
     static final String FILE_NAME = "Frankenstein.epub";
-    static final InterimRunRequest REQUEST = new InterimRunRequest(DESTINATION, false);
     static final ModelSelection SELECTION = new ModelSelection("pseudo", "pseudo-1");
 
     protected StateMirror mirror;
     protected ManualTicks ticks;
     protected ExecutorService executor;
     protected TranslationRunner runner;
-    protected ScriptedExportService exports;
     protected ScriptedReviewDesk desk;
     protected List<RunState> states;
     protected AtomicInteger acceptedChanges;
@@ -75,9 +71,8 @@ abstract class RunnerTestBase extends ApplicationTest {
             thread.setDaemon(true);
             return thread;
         });
-        exports = new ScriptedExportService();
         desk = new ScriptedReviewDesk();
-        runner = new TranslationRunner(mirror, executor, ticks, exports, desk);
+        runner = new TranslationRunner(mirror, executor, ticks, desk);
         states = new CopyOnWriteArrayList<>();
         acceptedChanges = new AtomicInteger();
         flaggedChanges = new AtomicInteger();
@@ -99,7 +94,7 @@ abstract class RunnerTestBase extends ApplicationTest {
 
     /** The context every started run in these tests carries: {@code Frankenstein.epub} under the pseudo model. */
     static RunContext runContext() {
-        return new RunContext(PROJECT_ID, FILE_NAME, ReviewMode.UNATTENDED, QualityDial.BALANCED, SELECTION, REQUEST);
+        return new RunContext(PROJECT_ID, FILE_NAME, ReviewMode.UNATTENDED, QualityDial.BALANCED, SELECTION);
     }
 
     static JobProgress progress(final int accepted, final int flagged, final int pending) {

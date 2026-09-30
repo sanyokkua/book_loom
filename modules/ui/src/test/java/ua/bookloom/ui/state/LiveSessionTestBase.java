@@ -32,8 +32,7 @@ abstract class LiveSessionTestBase extends RunnerTestBase {
     }
 
     protected RunSession session(final QualityDial dial) {
-        final RunContext context =
-                new RunContext(PROJECT_ID, FILE_NAME, ReviewMode.UNATTENDED, dial, SELECTION, REQUEST);
+        final RunContext context = new RunContext(PROJECT_ID, FILE_NAME, ReviewMode.UNATTENDED, dial, SELECTION);
         return new RunSession(mirror, clock, context, desk, new DirectExecutor());
     }
 

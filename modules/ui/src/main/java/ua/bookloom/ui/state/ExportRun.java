@@ -99,6 +99,13 @@ final class ExportRun {
         }
     }
 
+    /** Forgets the last outcome and failure, which described another book. FX thread only. */
+    void clear() {
+        log.debug("the last export outcome is forgotten");
+        outcome.set(null);
+        failure.set("");
+    }
+
     private void work(final ExportRequest request, final @Nullable ModelSelection selection) {
         ExportOutcome result = null;
         AppError error = null;

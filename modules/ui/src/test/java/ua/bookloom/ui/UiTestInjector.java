@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
@@ -181,6 +182,7 @@ public final class UiTestInjector {
                             bind(ProjectService.class).toInstance(projects);
                             bind(ExportService.class).toInstance(exports);
                             bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
+                            bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
                             if (replacement != null) {
                                 bind(ReplaceRunPrompt.class).toInstance(replacement);
                             }

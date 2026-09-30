@@ -53,7 +53,6 @@ public final class TranslatingViewModel {
 
     private final StateMirror mirror;
     private final TranslationRunner runner;
-    private final ExportViewModel exports;
     private final CurrentProject current;
     private final SettingsViewModel settings;
     private final RunStarter starter;
@@ -74,7 +73,6 @@ public final class TranslatingViewModel {
      *
      * @param mirror the state every run publishes into and this view model observes
      * @param runner the runner that owns the one active run
-     * @param exports where the completed run's book is written until the export screen does it
      * @param current the open book a run is started on
      * @param settings where the provider and model come from
      * @param starter what builds a run on the open book and starts it
@@ -87,7 +85,6 @@ public final class TranslatingViewModel {
     public TranslatingViewModel(
             final StateMirror mirror,
             final TranslationRunner runner,
-            final ExportViewModel exports,
             final CurrentProject current,
             final SettingsViewModel settings,
             final RunStarter starter,
@@ -97,7 +94,6 @@ public final class TranslatingViewModel {
             @BackgroundExecutor final ExecutorService executor) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
-        this.exports = Objects.requireNonNull(exports, "exports");
         this.current = Objects.requireNonNull(current, "current");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.starter = Objects.requireNonNull(starter, "starter");
@@ -294,15 +290,10 @@ public final class TranslatingViewModel {
             return;
         }
         notice.set(null);
-        final Optional<InterimRunRequest> request = exports.interimExport();
-        if (request.isEmpty()) {
-            log.debug("run refused: the destination names no usable path");
-            return;
-        }
         final ModelSelection chosen = selection.orElseThrow();
         log.info("run requested: provider {}, model {}", chosen.providerId(), chosen.modelId());
         preparing.set(true);
-        starter.start(request.get(), chosen, failure -> finishPreparing(failure, announce));
+        starter.start(chosen, failure -> finishPreparing(failure, announce));
     }
 
     /** Clears the busy flag on the FX thread, then routes the failure, if any, to the surface its code is assigned. */

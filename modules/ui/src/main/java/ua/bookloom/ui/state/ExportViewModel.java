@@ -287,20 +287,12 @@ public final class ExportViewModel {
         }
     }
 
-    /**
-     * What the interim export after a completed run needs.
-     *
-     * @return the destination with the overwrite choice, or empty while the destination names no usable path
-     */
-    public Optional<InterimRunRequest> interimExport() {
-        return destinationPath().map(path -> new InterimRunRequest(path, overwrite.get()));
-    }
-
     private void onBookChanged(final @Nullable OpenedBook book) {
         log.debug(
                 "the open book changed to {}; the destination is proposed afresh",
                 book == null ? null : book.projectId());
         destinationEdited = false;
+        run.clear();
         overwrite.set(false);
         propose();
         refreshExists();

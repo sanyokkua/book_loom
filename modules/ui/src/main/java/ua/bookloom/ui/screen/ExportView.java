@@ -1,149 +1,174 @@
 package ua.bookloom.ui.screen;
 
-import java.nio.file.Path;
-import java.text.NumberFormat;
 import java.util.Objects;
-import javafx.geometry.Insets;
+import javafx.collections.ListChangeListener;
+import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.controlsfx.control.ToggleSwitch;
-import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.ui.control.StatTile;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.ExportOutcome;
+import ua.bookloom.ui.state.ExportViewModel;
+import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.OpenedBook;
 
 /**
- * The export screen's content: the report of the file a finished run wrote, or the statement that none exists yet,
- * beside the extra outputs that are shown and unavailable.
+ * The export screen for an open book, laid out like the mockup: the result tiles across the top, the card that writes
+ * the book beside the side-file cards, and the step footer.
  *
- * <p>The screen reports and never writes: the run wrote the book as its last stage, so the only control that acts is
- * the one that shows the file in the system file manager. The extra outputs are drawn switched off, as the brief's unused cards are,
- * because the screen is specified to show them and nothing produces them.
+ * <p>Everything a person can set or read is the view model's; this class only arranges it and fills the result parts
+ * when an export finishes. The view model outlives it, so it is observed through weak listeners held by the fields
+ * below and the controller keeps the view alive with its nodes.
  */
-// Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
-// cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
-@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @Slf4j
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ExportView {
 
     private static final double SCREEN_SPACING = 14;
-    private static final double CARD_SPACING = 8;
-    private static final double TILE_SPACING = 12;
-    private static final double COLUMN_SPACING = 14;
-    private static final double AUX_WIDTH = 320;
+    private static final double CARD_SPACING = 12;
+    private static final double LINE_SPACING = 4;
 
-    /** The screen for a finished run: its file's format, path and counts, and the reveal action. */
-    static Node populated(final JobReport report, final Path written, final Messages messages, final Runnable reveal) {
-        Objects.requireNonNull(report, "report");
-        Objects.requireNonNull(written, "written");
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(reveal, "reveal");
-        log.debug("building the export report for {} accepted and {} flagged", report.accepted(), report.flagged());
-        final Label hint = BriefCards.hint(messages, MessageKey.EXPORT_FORMAT_HINT);
-        final Node card = BriefCards.card(
+    private final ExportViewModel viewModel;
+    private final CurrentProject project;
+    private final Messages messages;
+    private final Navigator navigator;
+    private final ExportDestinationCard destination;
+    private final ExportSideFilesColumn sideFiles;
+    private final ExportResult result;
+    private final VBox statement = new VBox(LINE_SPACING);
+    private final ListChangeListener<String> onStatement = change -> showStatement();
+
+    ExportView(
+            final ExportViewModel viewModel,
+            final CurrentProject project,
+            final Messages messages,
+            final Navigator navigator,
+            final DestinationChooser chooser,
+            final FileRevealer revealer) {
+        this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.project = Objects.requireNonNull(project, "project");
+        this.messages = Objects.requireNonNull(messages, "messages");
+        this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.destination = new ExportDestinationCard(viewModel, messages, chooser);
+        this.sideFiles = new ExportSideFilesColumn(viewModel, messages);
+        this.result = new ExportResult(messages, revealer);
+    }
+
+    /** The screen's content for {@code book}, filled for the export the view model last finished, if any. */
+    Node build(final OpenedBook book) {
+        Objects.requireNonNull(book, "book");
+        log.debug("building the export screen for project {}", book.projectId());
+        final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
+        subtitle.setId("export-subtitle");
+        final VBox left = new VBox(SCREEN_SPACING, writeCard(book));
+        HBox.setHgrow(left, Priority.ALWAYS);
+        final HBox columns = new HBox(SCREEN_SPACING, left, sideFiles.build());
+        showOutcome(viewModel.outcome().get());
+        viewModel.refreshStatement();
+        return new VBox(SCREEN_SPACING, subtitle, result.tiles(), columns, footer(messages, navigator));
+    }
+
+    /** Fills or clears the result parts; called on the FX thread when the view model's outcome changes. */
+    void showOutcome(final @Nullable ExportOutcome outcome) {
+        final OpenedBook book = project.book().get();
+        final BookBrief brief = project.brief().get();
+        if (book == null || brief == null) {
+            return;
+        }
+        result.show(outcome, book.inspection(), tag(brief.sourceLanguage()), tag(brief.targetLanguage()));
+    }
+
+    /** The step footer whose forward action is drawn unavailable, because no step follows the export. */
+    static Node footer(final Messages messages, final Navigator navigator) {
+        return StepFooter.withUnavailableForward(
+                new StepFooter.Action(
+                        "export-back",
+                        messages.get(MessageKey.BRIEF_BACK),
+                        "btn-ghost",
+                        () -> navigator.navigate(ViewNames.TRANSLATING)),
+                new StepFooter.Action("export-next", messages.get(MessageKey.EXPORT_NEXT), "btn-primary", () -> {}));
+    }
+
+    private Node writeCard(final OpenedBook book) {
+        final BookFormat format = Objects.requireNonNull(book.inspection().format(), "format");
+        final Node formatRow = ImportViews.keyValue(
+                "export-format",
+                messages.get(MessageKey.EXPORT_FORMAT_LABEL),
+                messages.get(MessageKey.EXPORT_FORMAT_SAME, messages.get(ImportViews.formatName(format))));
+        return BriefCards.card(
                 "export-card",
                 messages,
                 MessageKey.EXPORT_CARD_TITLE,
-                false,
-                ImportViews.keyValue(
-                        "export-format",
-                        messages.get(MessageKey.EXPORT_FORMAT_LABEL),
-                        messages.get(ImportViews.formatName(report.format()))),
-                hint,
-                ImportViews.keyValue("export-path", messages.get(MessageKey.EXPORT_PATH_LABEL), written.toString()),
-                tiles(report, messages),
-                revealButton(messages, reveal));
-        final Label subtitle = ImportViews.wrapped(messages.get(MessageKey.EXPORT_SUBTITLE), "muted");
-        subtitle.setId("export-subtitle");
-        return screen(card, messages, subtitle);
+                formatRow,
+                BriefCards.hint(messages, MessageKey.EXPORT_FORMAT_HINT),
+                result.checks(),
+                destination.build(),
+                statementBox(),
+                runRow(),
+                failure(),
+                result.actions());
     }
 
-    /** The screen for no finished book: the statement that none exists, and nothing to reveal. */
-    static Node empty(final Messages messages) {
-        Objects.requireNonNull(messages, "messages");
-        log.debug("building the export screen's empty state");
-        final Label title = new Label(messages.get(MessageKey.EXPORT_EMPTY_TITLE));
-        title.getStyleClass().add("kv-value");
-        final Label text = ImportViews.wrapped(messages.get(MessageKey.EXPORT_EMPTY_TEXT), "muted");
-        final VBox message = new VBox(CARD_SPACING, title, text);
-        message.setId("export-empty");
-        return screen(BriefCards.card("export-card", messages, MessageKey.EXPORT_CARD_TITLE, false, message), messages);
+    private Node statementBox() {
+        statement.setId("export-statement");
+        viewModel.statement().addListener(new WeakListChangeListener<>(onStatement));
+        showStatement();
+        return statement;
     }
 
-    private static Node screen(final Node report, final Messages messages, final Node... lead) {
-        final VBox left = new VBox(COLUMN_SPACING, report);
-        HBox.setHgrow(left, Priority.ALWAYS);
-        final HBox columns = new HBox(COLUMN_SPACING, left, auxiliary(messages));
-        final VBox screen = new VBox(SCREEN_SPACING, lead);
-        screen.getChildren().add(columns);
-        return screen;
+    private void showStatement() {
+        statement.getChildren().clear();
+        for (final String line : viewModel.statement()) {
+            final Label label = new Label(line);
+            label.setWrapText(true);
+            label.getStyleClass().add("hint");
+            statement.getChildren().add(label);
+        }
     }
 
-    private static Node tiles(final JobReport report, final Messages messages) {
-        final NumberFormat grouping = NumberFormat.getIntegerInstance(messages.locale());
-        final HBox row = new HBox(
-                TILE_SPACING,
-                tile("accepted", grouping.format(report.accepted()), MessageKey.TRANSLATING_COUNT_ACCEPTED, messages),
-                tile("flagged", grouping.format(report.flagged()), MessageKey.TRANSLATING_COUNT_FLAGGED, messages));
-        row.setPadding(new Insets(CARD_SPACING, 0, 0, 0));
-        return row;
+    private Node runRow() {
+        final Button run = new Button(messages.get(MessageKey.EXPORT_ACTION));
+        run.setId("export-run");
+        run.getStyleClass().add("btn-primary");
+        run.disableProperty().bind(viewModel.exportAvailable().not());
+        run.setOnAction(event -> {
+            log.debug(
+                    "export book pressed, available {}",
+                    viewModel.exportAvailable().get());
+            viewModel.export();
+        });
+        final Label note = new Label();
+        note.setId("export-note");
+        note.getStyleClass().add("hint");
+        note.textProperty().bind(viewModel.runNote());
+        return new HBox(
+                CARD_SPACING,
+                run,
+                BriefCards.shownWhile(note, viewModel.runNote().isNotEmpty()));
     }
 
-    private static Node tile(final String name, final String count, final MessageKey caption, final Messages messages) {
-        final Label number = new Label(count);
-        number.setId("export-count-" + name);
-        number.getStyleClass().add("stat-number");
-        return new StatTile("export-" + name, number, messages.get(caption));
+    private Node failure() {
+        final Label failure = new Label();
+        failure.setId("export-failure");
+        failure.setWrapText(true);
+        failure.getStyleClass().add("status-err");
+        failure.textProperty().bind(viewModel.failure());
+        return BriefCards.shownWhile(failure, viewModel.failure().isNotEmpty());
     }
 
-    private static Button revealButton(final Messages messages, final Runnable reveal) {
-        final Button button = new Button(messages.get(MessageKey.EXPORT_REVEAL));
-        button.setId("export-reveal");
-        button.getStyleClass().add("btn-secondary");
-        button.setOnAction(event -> reveal.run());
-        return button;
-    }
-
-    private static Node auxiliary(final Messages messages) {
-        final VBox also = BriefCards.card(
-                "export-also-card",
-                messages,
-                MessageKey.EXPORT_ALSO_TITLE,
-                true,
-                check("export-aux-glossary", messages, MessageKey.EXPORT_AUX_GLOSSARY),
-                check("export-aux-bilingual", messages, MessageKey.EXPORT_AUX_BILINGUAL),
-                check("export-aux-report", messages, MessageKey.EXPORT_AUX_REPORT));
-        final ToggleSwitch consistency = new ToggleSwitch();
-        consistency.setId("export-aux-consistency");
-        consistency.setAccessibleText(messages.get(MessageKey.EXPORT_CONSISTENCY_TITLE));
-        consistency.setDisable(true);
-        final VBox pass = BriefCards.card(
-                "export-consistency-card",
-                messages,
-                MessageKey.EXPORT_CONSISTENCY_TITLE,
-                true,
-                consistency,
-                BriefCards.hint(messages, MessageKey.EXPORT_CONSISTENCY_NOTE));
-        final VBox column = new VBox(COLUMN_SPACING, also, pass);
-        column.setPrefWidth(AUX_WIDTH);
-        column.setMinWidth(AUX_WIDTH);
-        column.setMaxWidth(AUX_WIDTH);
-        return column;
-    }
-
-    private static CheckBox check(final String id, final Messages messages, final MessageKey label) {
-        final CheckBox box = new CheckBox(messages.get(label));
-        box.setId(id);
-        box.setDisable(true);
-        return box;
+    private static String tag(final @Nullable String language) {
+        return language == null ? "" : language;
     }
 }

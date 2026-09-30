@@ -13,9 +13,9 @@ import ua.bookloom.ui.ViewNames;
 /**
  * Which workflow steps the person has completed, so the navigation can mark them.
  *
- * <p>Most marks are derived from state that already exists: a book is open, a run has started, the run completed, the
- * book was written. Two steps (the brief and the structure) have no state of their own, so their Continue actions say
- * so through {@link #markDone}; those marks belong to the open project and are dropped when it changes or clears. The
+ * <p>Most marks are derived from state that already exists: a book is open, a run has started, the run completed. Three
+ * steps (the brief, the structure and the export) have no state of their own, so their actions say so through
+ * {@link #markDone}; those marks belong to the open project and are dropped when it changes or clears. The
  * set is touched on the FX Application Thread only.
  */
 @Slf4j
@@ -32,7 +32,7 @@ public final class WorkflowProgress {
      * Starts following the project and the run.
      *
      * @param project the open book, whose presence marks the import and whose change drops the explicit marks
-     * @param mirror the run's state, file name and exported file
+     * @param mirror the run's state and file name
      */
     @Inject
     WorkflowProgress(final CurrentProject project, final StateMirror mirror) {
@@ -45,7 +45,6 @@ public final class WorkflowProgress {
         });
         mirror.runFileName().addListener((observed, old, current) -> refresh());
         mirror.runState().addListener((observed, old, current) -> refresh());
-        mirror.exportedFile().addListener((observed, old, current) -> refresh());
         refresh();
     }
 
@@ -85,9 +84,6 @@ public final class WorkflowProgress {
         }
         if (mirror.runState().get() == RunState.COMPLETED) {
             wanted.add(ViewNames.TRANSLATING);
-        }
-        if (mirror.exportedFile().get() != null) {
-            wanted.add(ViewNames.EXPORT);
         }
         apply(wanted);
     }

@@ -84,22 +84,17 @@ public final class RunStarter {
      * Prepares a run on the open book in the background and starts it. FX thread only, because it reads the open
      * book there.
      *
-     * @param request where the completed run's book is written
      * @param selection the provider and model to translate with
      * @param whenPrepared told, on the background thread and exactly once, {@code null} when the runner took the run
      *     or the error that stopped the preparation
      */
-    public void start(
-            final InterimRunRequest request,
-            final ModelSelection selection,
-            final Consumer<@Nullable AppError> whenPrepared) {
-        Objects.requireNonNull(request, "request");
+    public void start(final ModelSelection selection, final Consumer<@Nullable AppError> whenPrepared) {
         Objects.requireNonNull(selection, "selection");
         Objects.requireNonNull(whenPrepared, "whenPrepared");
         final OpenedBook book = Objects.requireNonNull(current.book().get(), "an open book, checked by the caller");
         log.debug("run requested: project {}, review mode {}", book.projectId(), reviewMode);
         try {
-            executor.execute(() -> prepareOffThread(book, request, selection, whenPrepared));
+            executor.execute(() -> prepareOffThread(book, selection, whenPrepared));
         } catch (RejectedExecutionException rejected) {
             log.error("the run could not be submitted for preparation", rejected);
             whenPrepared.accept(internalError(rejected));
@@ -107,14 +102,11 @@ public final class RunStarter {
     }
 
     private void prepareOffThread(
-            final OpenedBook book,
-            final InterimRunRequest request,
-            final ModelSelection selection,
-            final Consumer<@Nullable AppError> whenPrepared) {
+            final OpenedBook book, final ModelSelection selection, final Consumer<@Nullable AppError> whenPrepared) {
         log.debug("preparing a run on {}", Thread.currentThread().getName());
         AppError failure = null;
         try {
-            failure = prepare(book, request, selection);
+            failure = prepare(book, selection);
         } catch (RuntimeException thrown) {
             log.error("preparing the run threw instead of returning a result", thrown);
             failure = internalError(thrown);
@@ -124,8 +116,7 @@ public final class RunStarter {
         }
     }
 
-    private @Nullable AppError prepare(
-            final OpenedBook book, final InterimRunRequest request, final ModelSelection selection) {
+    private @Nullable AppError prepare(final OpenedBook book, final ModelSelection selection) {
         final Result<ChatModel> model = models.create(selection);
         if (model.isErr()) {
             log.debug("no model was created: code {}", errorCode(model));
@@ -139,8 +130,7 @@ public final class RunStarter {
         }
         final TranslationJob job = Objects.requireNonNull(created.data(), "job");
         job.pauseAt(pausePoints());
-        final RunContext context =
-                new RunContext(book.projectId(), fileNameOf(book), reviewMode, dialOf(), selection, request);
+        final RunContext context = new RunContext(book.projectId(), fileNameOf(book), reviewMode, dialOf(), selection);
         final boolean began = runner.start(job, context);
         log.debug("the runner accepted the run: {}", began);
         return null;

@@ -75,9 +75,9 @@ final class ConformanceCases {
             new Part("#export-screen .card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a");
     private static final Part CARD_EDGE = new Part("#export-screen .card", Kind.BORDER, "border", "#ddd5c8", "#48585f");
     private static final Part BOX_FILL =
-            new Part("#export-aux-glossary .box", Kind.BACKGROUND, "surface", "#ffffff", "#33424a");
+            new Part("#export-aux-bilingual .box", Kind.BACKGROUND, "surface", "#ffffff", "#33424a");
     private static final Part BOX_EDGE =
-            new Part("#export-aux-glossary .box", Kind.BORDER, "border-cool", "#cdd2d3", "#48585f");
+            new Part("#export-aux-bilingual .box", Kind.BORDER, "border-cool", "#cdd2d3", "#48585f");
     private static final Part SWITCH_TRACK =
             new Part("#export-aux-consistency .thumb-area", Kind.BACKGROUND, "border-cool", "#cdd2d3", "#48585f");
 
@@ -317,13 +317,13 @@ final class ConformanceCases {
                             new Part("#translating-banner", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
                             new Part("#translating-banner", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"),
                             new Part("#translating-progress > .bar", Kind.BACKGROUND, "err", "#b0574c", "#cc7a6f"))),
-            // The report screen: cards and count tiles on the surface role, the unavailable controls' boxes and track
-            // on
-            // the cool border role. Both states keep the right-hand "also export" cards, so both have a card.
+            // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes and the
+            // consistency track on the cool border role. It needs an open book to show them; the finished state
+            // follows a real export.
             new Screen(
                     "EXPORT",
                     ViewNames.EXPORT,
-                    Preparation.NONE,
+                    Preparation.BOOK_OPENED,
                     Overlay.NONE,
                     List.of(CARD_FILL, CARD_EDGE, BOX_FILL, BOX_EDGE, SWITCH_TRACK)),
             new Screen(
@@ -334,10 +334,10 @@ final class ConformanceCases {
                     List.of(
                             CARD_FILL,
                             CARD_EDGE,
-                            new Part("#export-accepted", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#export-accepted", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#export-flagged", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#export-flagged", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#export-written", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#export-written", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#export-auto", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#export-auto", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             BOX_FILL,
                             BOX_EDGE,
                             SWITCH_TRACK)));

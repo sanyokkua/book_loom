@@ -21,7 +21,7 @@ class TranslationRunnerRobustnessTest extends RunnerTestBase {
     @BeforeEach
     void setUpFlakyExecutor() {
         flaky = new FailingOnceExecutor(executor);
-        flakyRunner = new TranslationRunner(mirror, flaky, ticks, exports, desk);
+        flakyRunner = new TranslationRunner(mirror, flaky, ticks, desk);
     }
 
     private void assertARunCanStartAgain(final TranslationRunner target) throws Exception {

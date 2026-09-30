@@ -146,23 +146,6 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
         assertThat(notice()).contains(new RunNotice.MissingInput(RunNotice.Input.BOOK));
     }
 
-    // IF an unusable destination returned before the notice was cleared, THEN a stale "choose a model" banner would
-    // stay although the model is chosen.
-    @Test
-    void start_afterMissingModelThenUnusableDestination_leavesNoStaleNotice() {
-        buildViewModel();
-        openBookWithoutChoosingAModel();
-        press(viewModel::start);
-        chooseModel(MODEL);
-        press(() -> destinations.editDestination(""));
-
-        press(viewModel::start);
-
-        assertThat(notice()).isEmpty();
-        assertThat(queued.pending()).isZero();
-        assertThat(preparing()).isFalse();
-    }
-
     // --- the notice belongs to the run that raised it ---------------------------------------------------------
 
     // IF the last run's notice stayed while a new run began, THEN a healthy run would still read as failed.

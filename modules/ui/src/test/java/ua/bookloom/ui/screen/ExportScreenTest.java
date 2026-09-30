@@ -5,280 +5,296 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Stream;
-import javafx.scene.Node;
-import javafx.scene.Parent;
+import java.util.concurrent.TimeoutException;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.TextField;
 import org.controlsfx.control.ToggleSwitch;
-import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.pipeline.JobReport;
-import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.RecordingDestinationChooser;
 import ua.bookloom.ui.RecordingFileRevealer;
+import ua.bookloom.ui.ScriptedExportService;
+import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.RunState;
 
 /**
- * The export screen as the completion report: what a finished run wrote, how it ended up, and the one thing a person
- * can do about it. The run writes the book as its last act, so nothing here may trigger a write.
+ * The export screen as the place the book is written: where it goes, what is written beside it, the action, and the
+ * result it reports afterwards. Nothing here may write except the one Export book action.
  */
 class ExportScreenTest extends TranslatingScreenTestBase {
 
-    private static final Path WRITTEN = Path.of("/books/Frankenstein.uk.epub");
+    private static final Path EPUB = Path.of("Frankenstein.epub");
 
-    private static JobReport epubReport() {
-        return new JobReport(BookFormat.EPUB, JobState.COMPLETED, 1240, 1237, 3, List.of(), null);
-    }
-
-    static Stream<Arguments> runsThatWroteNothing() {
-        final JobReport cancelled = new JobReport(BookFormat.EPUB, JobState.CANCELLED, 1240, 600, 2, List.of(), null);
-        final JobReport failed = new JobReport(
-                BookFormat.EPUB,
-                JobState.FAILED,
-                1240,
-                10,
-                0,
-                List.of(),
-                AppError.of(ErrorCode.unreachable, "Unreachable", "Nothing is listening at http://localhost:11434."));
-        return Stream.of(
-                Arguments.of(Named.of("a stopped run", cancelled), RunState.STOPPED),
-                Arguments.of(Named.of("a failed run", failed), RunState.FAILED));
-    }
-
-    static Stream<Arguments> auxiliaryControls() {
-        return Stream.of(
-                Arguments.of("export-aux-glossary", CheckBox.class),
-                Arguments.of("export-aux-bilingual", CheckBox.class),
-                Arguments.of("export-aux-report", CheckBox.class),
-                Arguments.of("export-aux-consistency", ToggleSwitch.class));
-    }
-
-    /** Shows the export screen afresh, the way a person arrives from another screen. */
     private void showExport() {
         onFx(() -> shell.activate(ViewNames.IMPORT));
         onFx(() -> shell.activate(ViewNames.EXPORT));
     }
 
-    /** The run wrote its book before it completed, so the file is published first, as the runner does. */
-    private void publishCompleted(final JobReport report) {
-        mirror().publishExportedFile(WRITTEN);
-        publishOutcome(RunState.COMPLETED, report);
+    private void openBookAndShowExport(final Path source, final ua.bookloom.api.pipeline.ImportedBook book)
+            throws TimeoutException {
+        projects.on(source, Result.ok(book));
+        openImport();
+        openBook(source);
+        chooseTarget();
+        showExport();
+        awaitFx(() ->
+                injector.getInstance(ExportViewModel.class).exportAvailable().get());
     }
 
-    private void publishOutcome(final RunState state, final JobReport report) {
-        mirror().publishOutcome(state, report, null);
-        WaitForAsyncUtils.waitForFxEvents();
-        onFx(() -> {});
+    private void openEpubAndShowExport() throws TimeoutException {
+        openBookAndShowExport(EPUB, BookFixtures.frankensteinImport());
+    }
+
+    private ScriptedExportService exportService() {
+        return (ScriptedExportService) injector.getInstance(ExportService.class);
+    }
+
+    private RecordingDestinationChooser chooser() {
+        return (RecordingDestinationChooser) injector.getInstance(DestinationChooser.class);
     }
 
     private RecordingFileRevealer revealer() {
         return (RecordingFileRevealer) injector.getInstance(FileRevealer.class);
     }
 
-    private void assertEmptyState() {
-        assertThat(isShown("export-empty")).isTrue();
-        assertThat(optional("export-reveal")).isNull();
-        assertThat(optional("export-accepted")).isNull();
-        assertThat(optional("export-flagged")).isNull();
-        assertThat(optional("export-path")).isNull();
-    }
-
-    private List<String> idsUnder(final Node root) {
-        return Stream.concat(
-                        Stream.ofNullable(root.getId()),
-                        root instanceof Parent parent
-                                ? parent.getChildrenUnmodifiable().stream().flatMap(child -> idsUnder(child).stream())
-                                : Stream.empty())
-                .toList();
-    }
-
-    // IF a completed run's file were not reported, THEN a person could not tell where the book went or how much of it
-    // was accepted.
-    @Test
-    void screen_completedRun_rendersPathFormatAndBothCounts() {
-        showExport();
-
-        publishCompleted(epubReport());
-
-        assertThat(textOf("export-path")).contains("/books/Frankenstein.uk.epub");
-        assertThat(textsUnder(required("export-format"))).contains("EPUB");
-        assertThat(textsUnder(required("export-accepted"))).contains("1,237");
-        assertThat(textsUnder(required("export-flagged"))).contains("3");
-        assertThat(isShown("export-empty")).isFalse();
-    }
-
-    // IF a completed run offered no way to reveal its file, THEN the person would have to hunt for it by hand.
-    @Test
-    void screen_completedRun_offersToRevealTheFile() {
-        showExport();
-
-        publishCompleted(epubReport());
-
-        assertThat(isShown("export-reveal")).isTrue();
-        assertThat(button("export-reveal").isDisabled()).isFalse();
-    }
-
-    // IF the screen rendered only what was published while it was open, THEN arriving after the run finished would
-    // show an empty screen over a finished book.
-    @Test
-    void screen_reportPublishedBeforeOpening_rendersItOnArrival() {
-        publishCompleted(epubReport());
-
-        showExport();
-
-        assertThat(textOf("export-path")).contains("/books/Frankenstein.uk.epub");
-        assertThat(textsUnder(required("export-accepted"))).contains("1,237");
-        assertThat(isShown("export-reveal")).isTrue();
-    }
-
-    // IF the empty state offered a reveal control, THEN pressing it would point at a file that was never written.
-    @Test
-    void screen_noRunYet_showsEmptyStateAndOffersNothingToReveal() {
-        showExport();
-
-        assertEmptyState();
-    }
-
-    // IF a run that wrote nothing were reported as a finished book, THEN the screen would show a path to a file that
-    // does not exist.
-    @ParameterizedTest
-    @MethodSource("runsThatWroteNothing")
-    void screen_runThatWroteNothing_showsEmptyState(final JobReport report, final RunState state) {
-        showExport();
-
-        publishOutcome(state, report);
-
-        assertEmptyState();
-    }
-
-    // IF a new run left the previous run's file on the screen, THEN the screen would report a book the new run has
-    // not yet written.
-    @Test
-    void screen_newRunStarted_returnsToEmptyState() {
-        showExport();
-        publishCompleted(epubReport());
-        assertThat(isShown("export-reveal")).isTrue();
-
-        mirror().publishRunStarted("Book.epub");
+    private void exportBook(final ExportReport report) throws TimeoutException {
+        exportService().reportWith(report);
+        onFx(() -> button("export-run").fire());
+        awaitFx(() -> injector.getInstance(ExportViewModel.class).outcome().get() != null);
         WaitForAsyncUtils.waitForFxEvents();
-        onFx(() -> {});
-
-        assertEmptyState();
     }
 
-    // IF the auxiliary offerings were missing or usable, THEN the screen would promise work this change does not do.
-    @ParameterizedTest
-    @MethodSource("auxiliaryControls")
-    void screen_noRunYet_auxControlsPresentAndDisabled(final String id, final Class<? extends Node> type) {
-        showExport();
-
-        assertThat(required(id)).isInstanceOf(type);
-        assertThat(required(id).isDisabled()).isTrue();
+    private static ExportReport report(final int written, final int auto, final int reviewed) {
+        return new ExportReport(Path.of("Frankenstein.uk.epub"), written, 0, 0, 0, auto, reviewed, List.of(), written);
     }
 
-    // IF a finished run changed the auxiliary offerings, THEN they would look available exactly when a person is
-    // looking for what to do next.
-    @ParameterizedTest
-    @MethodSource("auxiliaryControls")
-    void screen_completedRun_auxControlsPresentAndDisabled(final String id, final Class<? extends Node> type) {
-        showExport();
-        publishCompleted(epubReport());
-
-        assertThat(required(id)).isInstanceOf(type);
-        assertThat(required(id).isDisabled()).isTrue();
-    }
-
-    // IF the screen carried a save-path field, THEN there would be a second, unproven way to choose where the book
-    // goes, after the run had already written it.
+    // IF the tiles were not filled from the report, THEN a person would not see what the written book contains.
     @Test
-    void screen_completedRun_hasNoSavePathField() {
-        showExport();
-        publishCompleted(epubReport());
+    void screen_afterExport_showsTheTilesAndAPassedMark() throws TimeoutException {
+        openEpubAndShowExport();
 
-        assertThat(required("export-screen").lookupAll(".text-input")).isEmpty();
-        assertThat(idsUnder(required("export-screen"))).noneMatch(id -> id.contains("save") || id.contains("browse"));
+        exportBook(report(1240, 1224, 16));
+
+        assertThat(labelText("export-written-value")).isEqualTo("1,240");
+        assertThat(labelText("export-auto-value")).isEqualTo("98.7%");
+        assertThat(labelText("export-reviewed-value")).isEqualTo("16");
+        assertThat(labelText("export-valid-value")).isEqualTo("✓");
+        assertThat(textOf("export-check-reopened")).contains("Re-opened and verified");
+        assertThat(isShown("export-actions")).isTrue();
     }
 
-    // IF the screen carried a control that writes a book, THEN it would be a second write path beside the run's.
+    // IF nothing written still showed a percentage, THEN the tile would divide by zero.
     @Test
-    void screen_completedRun_theOnlyButtonIsReveal() {
-        showExport();
-        publishCompleted(epubReport());
+    void screen_exportWroteNothing_showsDashesForThePercentage() throws TimeoutException {
+        openEpubAndShowExport();
 
-        assertThat(required("export-screen").lookupAll(".button").stream().map(Node::getId))
-                .containsExactly("export-reveal");
+        exportBook(report(0, 0, 0));
+
+        assertThat(labelText("export-auto-value")).isEqualTo("—");
     }
 
-    // IF the reveal control were not wired, THEN pressing it would do nothing and the folder would never open.
+    // IF a Markdown book with no declared language claimed a metadata update, THEN the line would be false.
     @Test
-    void revealButton_pressed_callsRevealerWithTheWrittenPath() {
+    void screen_markdownWithNoLangKey_listsTheReopenCheckAndNoLanguageLine() throws TimeoutException {
+        openBookAndShowExport(
+                Path.of("Book.md"), BookFixtures.imported("p-md", BookFormat.MARKDOWN, null, "T", "A", 3));
+
+        exportBook(report(3, 3, 0));
+
+        assertThat(optional("export-check-reopened")).isNotNull();
+        assertThat(optional("export-check-language")).isNull();
+    }
+
+    // IF a Markdown book that declares a language did not say its metadata was updated, THEN the change is hidden.
+    @Test
+    void screen_markdownWithLangKey_listsTheLanguageLine() throws TimeoutException {
+        openBookAndShowExport(
+                Path.of("Notes.md"), BookFixtures.imported("p-md", BookFormat.MARKDOWN, "en", "T", "A", 3));
+
+        exportBook(report(3, 3, 0));
+
+        assertThat(textOf("export-check-language")).contains("Language metadata updated (en → uk)");
+    }
+
+    // IF a TXT book listed a language line, THEN it would claim metadata the format does not have.
+    @Test
+    void screen_txtExport_hasNoLanguageLine() throws TimeoutException {
+        openBookAndShowExport(Path.of("Letter.txt"), BookFixtures.imported("p-txt", BookFormat.TXT, "en", "T", "A", 3));
+
+        exportBook(report(3, 3, 0));
+
+        assertThat(optional("export-check-language")).isNull();
+    }
+
+    // IF checks and result actions showed before an export, THEN they would vouch for a file that does not exist.
+    @Test
+    void screen_beforeAnyExport_hasNoChecksAndDashesAndNoResultActions() throws TimeoutException {
+        openEpubAndShowExport();
+
+        assertThat(optional("export-check-reopened")).isNull();
+        assertThat(optional("export-check-language")).isNull();
+        assertThat(labelText("export-written-value")).isEqualTo("—");
+        assertThat(labelText("export-valid-value")).isEqualTo("—");
+        assertThat(isShown("export-actions")).isFalse();
+        assertThat(((TextField) required("export-save-to")).getText()).isEqualTo("Frankenstein.uk.epub");
+        assertThat(textOf("export-format")).contains("EPUB — same as the original");
+        assertThat(labelText("export-title")).isEqualTo("Export");
+    }
+
+    // IF the no-book state offered a destination or an export, THEN there would be nothing to write.
+    @Test
+    void screen_noBookOpen_showsTheNoBookStateAndNextIsUnavailable() {
         showExport();
-        publishCompleted(epubReport());
+
+        assertThat(isShown("nobook-card")).isTrue();
+        assertThat(optional("export-save-to")).isNull();
+        assertThat(optional("export-run")).isNull();
+        assertThat(button("export-next").isDisabled()).isTrue();
+    }
+
+    // IF the side files stayed usable while a run translates, THEN a person could choose outputs that cannot be
+    // written.
+    @Test
+    void screen_runRunning_showsSideFilesAndTheSwitchUnavailableAndExportBlockedWithTheNote() throws TimeoutException {
+        openEpubAndShowExport();
+
+        publish(RunState.RUNNING);
+
+        assertThat(((CheckBox) required("export-aux-glossary")).isDisabled()).isTrue();
+        assertThat(((CheckBox) required("export-aux-bilingual")).isDisabled()).isTrue();
+        assertThat(((CheckBox) required("export-aux-report")).isDisabled()).isTrue();
+        assertThat(((ToggleSwitch) required("export-aux-consistency")).isDisabled())
+                .isTrue();
+        assertThat(isShown("export-aux-consistency")).isTrue();
+        assertThat(button("export-run").isDisabled()).isTrue();
+        assertThat(labelText("export-note")).isEqualTo("Pause the run to export");
+    }
+
+    // IF a pause did not free the choices again, THEN a paused run could never export.
+    @Test
+    void screen_runPaused_sideFilesAndExportAreUsable() throws TimeoutException {
+        openEpubAndShowExport();
+        publish(RunState.RUNNING);
+
+        publish(RunState.PAUSED);
+
+        assertThat(required("export-aux-glossary").isDisabled()).isFalse();
+        assertThat(button("export-run").isDisabled()).isFalse();
+        assertThat(isShown("export-note")).isFalse();
+    }
+
+    // IF a side-file box did not reach the viewmodel, THEN the chosen file would never be written.
+    @Test
+    void sideFileBox_checked_choosesTheSideFile() throws TimeoutException {
+        openEpubAndShowExport();
+
+        onFx(() -> ((CheckBox) required("export-aux-bilingual")).setSelected(true));
+
+        assertThat(ThemeTestSupport.onFx(
+                        () -> injector.getInstance(ExportViewModel.class).sideFiles()))
+                .contains(SideFile.GLOSSARY_CSV, SideFile.BILINGUAL_HTML);
+    }
+
+    // IF Browse did not hand the choice to the viewmodel, THEN the picked file would not be the destination.
+    @Test
+    void browse_pressed_callsChooseDestinationWithThePickedFile() throws TimeoutException {
+        openEpubAndShowExport();
+        chooser().answer(Path.of("/archive/out.epub"));
+
+        onFx(() -> button("export-browse").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(chooser().initials()).containsExactly(Path.of("Frankenstein.uk.epub"));
+        assertThat(((TextField) required("export-save-to")).getText()).isEqualTo("/archive/out.epub");
+        assertThat(ThemeTestSupport.onFx(() -> injector.getInstance(ExportViewModel.class)
+                        .destination()
+                        .get()))
+                .isEqualTo("/archive/out.epub");
+    }
+
+    // IF a success raised a toast beside the dialog, THEN the same news would be told twice.
+    @Test
+    void export_success_opensTheDialogAndRaisesNoToast() throws TimeoutException {
+        openEpubAndShowExport();
+        final int toastsBefore = scene.getRoot().lookupAll(".toast").size();
+
+        exportBook(report(10, 10, 0));
+
+        assertThat(optional("export-complete-card")).isNotNull();
+        assertThat(textOf("export-complete-card")).contains("Frankenstein.uk.epub");
+        assertThat(scene.getRoot().lookupAll(".toast")).hasSize(toastsBefore);
+    }
+
+    // IF a refused export showed a dialog, THEN a failure would read like a success.
+    @Test
+    void export_refused_showsTheMessageInPlaceAndNoDialogAndNoResultActions() throws TimeoutException {
+        openEpubAndShowExport();
+        exportService().failWith(AppError.of(ErrorCode.validation, "Refused", "Frankenstein.uk.epub is taken."));
+
+        onFx(() -> button("export-run").fire());
+        awaitFx(() ->
+                !injector.getInstance(ExportViewModel.class).failure().get().isEmpty());
+
+        assertThat(labelText("export-failure")).isEqualTo("Frankenstein.uk.epub is taken.");
+        assertThat(optional("export-complete-card")).isNull();
+        assertThat(isShown("export-actions")).isFalse();
+    }
+
+    // IF Open folder or Open book were not wired, THEN pressing them would do nothing.
+    @Test
+    void resultActions_pressed_revealAndOpenTheWrittenBook() throws TimeoutException {
+        openEpubAndShowExport();
+        exportBook(report(10, 10, 0));
 
         onFx(() -> button("export-reveal").fire());
+        onFx(() -> button("export-open-book").fire());
 
-        assertThat(revealer().revealed()).containsExactly(Path.of("/books/Frankenstein.uk.epub"));
+        assertThat(revealer().revealed()).containsExactly(Path.of("Frankenstein.uk.epub"));
+        assertThat(revealer().opened()).containsExactly(Path.of("Frankenstein.uk.epub"));
     }
 
-    // IF the empty screen claimed a book was ready, THEN a person who has not finished a run would be told a file
-    // exists that was never written.
+    // IF the screen still said the run writes the book, THEN it would describe behaviour that no longer exists.
     @Test
-    void screen_noRunYet_headingIsNeutralAndNoBookIsClaimed() {
-        showExport();
+    void screen_subtitle_doesNotClaimTheRunWroteTheBook() throws TimeoutException {
+        openEpubAndShowExport();
 
-        assertThat(labelText("export-title")).isEqualTo("Export");
-        assertThat(optional("export-subtitle")).isNull();
+        assertThat(textOf("export-subtitle")).doesNotContain("The run wrote");
     }
 
-    // IF a completed run kept the neutral heading, THEN the screen would not announce that the book is ready.
+    // IF the replace switch did not reach the viewmodel, THEN an occupied path could never be overwritten.
     @Test
-    void screen_completedRun_headingAnnouncesTheBookAndSubtitleExplainsIt() {
-        showExport();
+    void replaceSwitch_on_allowsReplacing() throws TimeoutException {
+        openEpubAndShowExport();
 
-        publishCompleted(epubReport());
+        onFx(() -> ((ToggleSwitch) required("export-replace")).setSelected(true));
 
-        assertThat(labelText("export-title")).isEqualTo("Translated book ready");
-        assertThat(textOf("export-subtitle")).startsWith("The run wrote your translated book");
+        assertThat(ThemeTestSupport.onFx(() ->
+                        injector.getInstance(ExportViewModel.class).overwrite().get()))
+                .isTrue();
     }
 
-    // IF a new run left the ready heading up, THEN the screen would claim a book the new run has not written.
-    @Test
-    void screen_newRunStarted_headingReturnsToNeutral() {
-        showExport();
-        publishCompleted(epubReport());
-
-        mirror().publishRunStarted("Book.epub");
-        WaitForAsyncUtils.waitForFxEvents();
-        onFx(() -> {});
-
-        assertThat(labelText("export-title")).isEqualTo("Export");
-        assertThat(optional("export-subtitle")).isNull();
-    }
-
-    // IF the screen's labels were not from the active catalogue, THEN a Ukrainian session would read English.
+    // IF the labels were not from the active catalogue, THEN a Ukrainian session would read English.
     @ParameterizedTest
-    @CsvSource({
-        "en, Translated book ready, Written to, Open folder",
-        "uk, Перекладена книга готова, Збережено в, Відкрити теку",
-    })
-    void screen_completedRun_rendersThatLanguagesLabels(
-            final String language, final String title, final String written, final String reveal) {
+    @ValueSource(strings = {"uk"})
+    void screen_ukrainian_rendersUkrainianLabels(final String language) throws TimeoutException {
         useLocale(Locale.forLanguageTag(language));
-        showExport();
+        openEpubAndShowExport();
 
-        publishCompleted(epubReport());
-
-        assertThat(labelText("export-title")).isEqualTo(title);
-        assertThat(textsUnder(required("export-path"))).contains(written);
-        assertThat(button("export-reveal").getText()).isEqualTo(reveal);
+        assertThat(button("export-run").getText()).isEqualTo("Експортувати книгу");
+        assertThat(button("export-browse").getText()).isEqualTo("Огляд…");
     }
 }

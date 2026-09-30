@@ -1,7 +1,6 @@
 package ua.bookloom.ui.state;
 
 import com.google.inject.Singleton;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
@@ -52,7 +51,6 @@ public final class StateMirror {
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> runFileName = new ReadOnlyObjectWrapper<>();
-    private final ReadOnlyObjectWrapper<@Nullable Path> exportedFile = new ReadOnlyObjectWrapper<>();
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
     private final LiveSection live = new LiveSection();
@@ -200,16 +198,6 @@ public final class StateMirror {
     }
 
     /**
-     * The file the finished run's book was written to.
-     *
-     * @return a read-only property holding {@code null} until a run's book is written; cleared when a run starts;
-     *     read on the FX thread
-     */
-    public ReadOnlyObjectProperty<@Nullable Path> exportedFile() {
-        return exportedFile.getReadOnlyProperty();
-    }
-
-    /**
      * The newest activity-log entries, oldest first.
      *
      * @return an unmodifiable list of at most {@link #MAX_LOG_ENTRIES} entries; read on the FX thread
@@ -255,18 +243,6 @@ public final class StateMirror {
     public void publishRunCleared() {
         log.debug("publishing run cleared");
         Platform.runLater(this::resetToIdle);
-    }
-
-    /**
-     * Shows the file a run's book was written to; sent before the outcome, so an observer that sees the run complete
-     * already sees the file.
-     *
-     * @param file the non-null written file
-     */
-    public void publishExportedFile(final Path file) {
-        Objects.requireNonNull(file, "file");
-        log.debug("publishing exported file {}", file);
-        Platform.runLater(() -> exportedFile.set(file));
     }
 
     /**
@@ -366,7 +342,6 @@ public final class StateMirror {
         logEntries.clear();
         failure.set(null);
         report.set(null);
-        exportedFile.set(null);
         waitingSeconds.set(NOT_WAITING);
         live.reset();
         review.reset();

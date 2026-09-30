@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Named;
@@ -14,6 +15,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
@@ -47,6 +49,20 @@ class TranslationRunnerOutcomeTest extends RunnerTestBase {
                         log(LogKind.ACCEPTED, "s-1"),
                         log(LogKind.ACCEPTED, "s-2"),
                         log(LogKind.MILESTONE, "finished"));
+    }
+
+    // IF a completed run still wrote the book, THEN the export screen would not be the only place a book is written.
+    @Test
+    void run_completed_writesNoFile() throws Exception {
+        startJob();
+
+        job.finish(Result.ok(completedReport(3)));
+        awaitState(RunState.COMPLETED);
+
+        assertThat(onFx(() -> mirror.failure().get())).isNull();
+        assertThat(TranslationRunner.class.getDeclaredConstructors())
+                .flatExtracting(constructor -> List.of(constructor.getParameterTypes()))
+                .doesNotContain(ExportService.class);
     }
 
     // IF a cancelled run looked failed, THEN a person who pressed Stop would be shown an error.

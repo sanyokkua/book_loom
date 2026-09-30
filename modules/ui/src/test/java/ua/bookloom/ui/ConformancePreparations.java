@@ -21,6 +21,8 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FlaggedRow;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
@@ -149,11 +151,26 @@ final class ConformancePreparations {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    private void reportAFinishedBook() {
-        final Path written = Path.of("/books/Frankenstein.uk.epub");
-        final JobReport report = new JobReport(BookFormat.EPUB, JobState.COMPLETED, 1240, 1237, 3, List.of(), null);
-        injector.getInstance(StateMirror.class).publishExportedFile(written);
-        injector.getInstance(StateMirror.class).publishOutcome(RunState.COMPLETED, report, null);
+    // The export screen's finished state comes from a real export through the view model, as a person's press does.
+    private void reportAFinishedBook() throws TimeoutException {
+        openABook();
+        onFx(() -> {
+            injector.getInstance(BookBriefViewModel.class).setTargetLanguage("uk");
+            return null;
+        });
+        final ExportViewModel exports = injector.getInstance(ExportViewModel.class);
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> exports.exportAvailable().get()));
+        onFx(() -> {
+            exports.export();
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> exports.outcome().get() != null));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

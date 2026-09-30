@@ -54,13 +54,13 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
     @EnumSource(ReviewMode.class)
     void run_threeFlaggedParagraphs_pausesAsTheReviewModeSays(final ReviewMode mode) throws Exception {
         final Path book = Files.writeString(booksDir.resolve("Letter.txt"), SOURCE_TEXT, StandardCharsets.UTF_8);
-        // Neither the proposed name (Letter.uk.txt) nor the source the book declares (none), so a brief that is ignored
-        // cannot pass.
-        final Path chosen = booksDir.resolve("Brief-translated.txt");
+        // The name the Export screen proposes beside the book for the chosen target, so a brief that is ignored cannot
+        // pass.
+        final Path proposed = booksDir.resolve("Letter.uk.txt");
         startWorkspace(mode);
 
         openBook(book, SEGMENT_COUNT);
-        chooseBrief("uk", booksDir.resolve("Letter.uk.txt"), chosen);
+        chooseBrief("uk", proposed);
         chooseModel();
         onFx(() -> shell.activate(ViewNames.TRANSLATING));
         startRun();
@@ -70,9 +70,12 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
         assertThat(paused).hasSize(mode == ReviewMode.UNATTENDED ? 0 : SEGMENT_COUNT);
         assertPauseLog(mode);
         assertRecords(mode);
-        assertThat(booksDir.resolve("Letter.uk.txt")).doesNotExist();
-        assertThat(Files.readString(chosen, StandardCharsets.UTF_8)).isEqualTo(TRANSLATED_TEXT);
-        assertReopensWithSegments(chosen, SEGMENT_COUNT);
+        assertThat(proposed)
+                .as("a finished run writes no book; only Export book does")
+                .doesNotExist();
+        exportBook(proposed);
+        assertThat(Files.readString(proposed, StandardCharsets.UTF_8)).isEqualTo(TRANSLATED_TEXT);
+        assertReopensWithSegments(proposed, SEGMENT_COUNT);
     }
 
     /** Accepts each pause as the person would, checking the panel opened on the segment the pause names. */
@@ -133,17 +136,14 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
         assertThat(counts.data())
                 .isEqualTo(new ReviewCounts(
                         SEGMENT_COUNT, 0, 0, reviewed ? 0 : SEGMENT_COUNT, reviewed ? SEGMENT_COUNT : 0, 0, 0, 0));
-        assertMirrorAndExport(reviewed);
+        assertMirror();
     }
 
-    private void assertMirrorAndExport(final boolean reviewed) {
+    private void assertMirror() {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         assertThat(onFx(() -> mirror.total().get())).isEqualTo(SEGMENT_COUNT);
         assertThat(onFx(() -> mirror.remaining().get())).isEqualTo(0);
         assertThat(onFx(() -> mirror.accepted().get())).isEqualTo(0);
         assertThat(onFx(() -> mirror.flagged().get())).isEqualTo(SEGMENT_COUNT);
-        if (!reviewed) {
-            assertExportReport(booksDir.resolve("Brief-translated.txt"), 0, SEGMENT_COUNT);
-        }
     }
 }

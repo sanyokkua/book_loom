@@ -14,15 +14,9 @@ import ua.bookloom.api.pipeline.ReviewMode;
  * @param reviewMode how much of the outcome the person confirms
  * @param dial the brief's speed and quality choice
  * @param selection the provider and model, for the log and the run's display
- * @param interimExport where the completed run's book is written until the export screen starts its own export
  */
 public record RunContext(
-        String projectId,
-        String fileName,
-        ReviewMode reviewMode,
-        QualityDial dial,
-        ModelSelection selection,
-        InterimRunRequest interimExport) {
+        String projectId, String fileName, ReviewMode reviewMode, QualityDial dial, ModelSelection selection) {
 
     /** Rejects a missing component. */
     public RunContext {
@@ -31,6 +25,5 @@ public record RunContext(
         Objects.requireNonNull(reviewMode, "reviewMode");
         Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(selection, "selection");
-        Objects.requireNonNull(interimExport, "interimExport");
     }
 }

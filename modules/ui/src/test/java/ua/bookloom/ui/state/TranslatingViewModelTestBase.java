@@ -4,7 +4,6 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,14 +18,11 @@ import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.ScriptedChatModelFactory;
-import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
-import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.MessageKey;
-import ua.bookloom.ui.i18n.Messages;
 
 /**
  * What the translating view model tests share, on top of the runner fixtures: a real {@link TranslationRunner}
@@ -57,7 +53,6 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     protected QueuedExecutor queued;
     protected ImportViewModel imports;
     protected BookBriefViewModel brief;
-    protected ExportViewModel destinations;
     protected SettingsViewModel settings;
     protected TranslatingViewModel viewModel;
 
@@ -75,7 +70,6 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
         settings = onFx(TranslatingViewModelTestBase::newSettings);
-        destinations = onFx(this::newDestinations);
     }
 
     private static SettingsViewModel newSettings() {
@@ -92,24 +86,11 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new DirectExecutor());
     }
 
-    private ExportViewModel newDestinations() {
-        return new ExportViewModel(
-                current,
-                mirror,
-                desk,
-                new Messages((LocaleProvider) () -> Locale.ENGLISH),
-                new ScriptedExportService(),
-                models,
-                settings,
-                new WorkflowProgress(current, mirror),
-                new DirectExecutor());
-    }
-
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
         final RunStarter starter = new RunStarter(current, models, engine, reviewMode, runner, prepExecutor);
         viewModel = onFx(() -> new TranslatingViewModel(
-                mirror, runner, destinations, current, settings, starter, toasts, errors, desk, new DirectExecutor()));
+                mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
