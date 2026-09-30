@@ -20,6 +20,8 @@ import ua.bookloom.api.project.GlossaryEntry;
 public final class ScriptedGlossaryService implements GlossaryService {
 
     private final List<String> calls = new CopyOnWriteArrayList<>();
+    private final List<GlossaryEntry> added = new CopyOnWriteArrayList<>();
+    private final List<GlossaryEntry> updated = new CopyOnWriteArrayList<>();
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
@@ -30,6 +32,16 @@ public final class ScriptedGlossaryService implements GlossaryService {
     /** Every call as {@code method(arguments)}, in order. */
     public List<String> calls() {
         return List.copyOf(calls);
+    }
+
+    /** Every entry {@code add} was asked to store, in order. */
+    public List<GlossaryEntry> added() {
+        return List.copyOf(added);
+    }
+
+    /** Every entry {@code update} was asked to store, in order. */
+    public List<GlossaryEntry> updated() {
+        return List.copyOf(updated);
     }
 
     @Override
@@ -49,11 +61,13 @@ public final class ScriptedGlossaryService implements GlossaryService {
 
     @Override
     public Result<GlossaryEntry> add(final GlossaryEntry entry) {
+        added.add(entry);
         return answer("add(" + entry.term() + ")");
     }
 
     @Override
     public Result<GlossaryEntry> update(final GlossaryEntry entry) {
+        updated.add(entry);
         return answer("update(" + entry.term() + ")");
     }
 

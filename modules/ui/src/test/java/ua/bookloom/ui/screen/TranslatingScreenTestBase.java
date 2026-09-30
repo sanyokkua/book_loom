@@ -21,6 +21,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
+import ua.bookloom.ui.ScriptedGlossaryService;
 import ua.bookloom.ui.ScriptedTranslationEngine;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
@@ -48,6 +49,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
 
     final RecordingJob job = new RecordingJob();
     final ScriptedChatModelFactory models = ScriptedChatModelFactory.ok();
+    final ScriptedGlossaryService glossary = new ScriptedGlossaryService();
     final ScriptedTranslationEngine engine = ScriptedTranslationEngine.returning(job);
 
     @Override
@@ -56,6 +58,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
                 .projects(projects)
                 .models(models)
                 .engine(engine)
+                .glossary(glossary)
                 .build();
     }
 

@@ -1463,3 +1463,51 @@
     -fx-text-fill: -color-text-strong;
     -fx-font-weight: bold;
 }
+
+/* --- Names & style: the glossary table and the Add term card's fields ------------------------------------------ */
+.glossary-table {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-table-cell-border-color: -color-divider;
+}
+
+.glossary-table .column-header-background,
+.glossary-table .column-header,
+.glossary-table .filler {
+    -fx-background-color: -color-surface-2;
+    -fx-border-color: -color-divider;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.glossary-table .column-header .label {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.glossary-table .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-table-cell-border-color: -color-divider;
+}
+
+.glossary-table .table-row-cell:selected {
+    -fx-background-color: -color-primary-soft;
+}
+
+.glossary-table .table-cell {
+    -fx-text-fill: -color-text;
+    -fx-alignment: CENTER_LEFT;
+    -fx-border-color: transparent;
+    -fx-padding: 4px 8px 4px 8px;
+}
+
+.glossary-table .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+.field-label {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}

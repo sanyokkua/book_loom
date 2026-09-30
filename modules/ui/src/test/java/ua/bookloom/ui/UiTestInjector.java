@@ -81,6 +81,7 @@ public final class UiTestInjector {
         private ExportService exports = new ScriptedExportService();
         private ChatModelFactory models = ScriptedChatModelFactory.ok();
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
+        private ScriptedGlossaryService glossary = new ScriptedGlossaryService();
         private @Nullable ReplaceRunPrompt prompt;
 
         private Builder(final Locale locale) {
@@ -129,6 +130,12 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** What the graph's {@link GlossaryService} is, so the test can script what the names screen is answered. */
+        public Builder glossary(final ScriptedGlossaryService value) {
+            glossary = Objects.requireNonNull(value, "glossary");
+            return this;
+        }
+
         /** Replaces the real replace-run card with this question, so the test can read what was asked. */
         public Builder prompt(final ReplaceRunPrompt value) {
             prompt = Objects.requireNonNull(value, "prompt");
@@ -143,7 +150,7 @@ public final class UiTestInjector {
         public Injector build() {
             final ReplaceRunPrompt replacement = prompt;
             return Guice.createInjector(Modules.override(new UiModule())
-                    .with(new ReviewPortsModule(), new AbstractModule() {
+                    .with(new ReviewPortsModule(glossary), new AbstractModule() {
                         @Override
                         protected void configure() {
                             bind(LocaleProvider.class).toInstance(() -> locale);
@@ -171,9 +178,15 @@ public final class UiTestInjector {
     /** The review-side ports and the launch-time review mode, which no test of the window scripts yet. */
     private static final class ReviewPortsModule extends AbstractModule {
 
+        private final GlossaryService glossary;
+
+        ReviewPortsModule(final GlossaryService glossary) {
+            this.glossary = glossary;
+        }
+
         @Override
         protected void configure() {
-            bind(GlossaryService.class).toInstance(new ScriptedGlossaryService());
+            bind(GlossaryService.class).toInstance(glossary);
             bind(ReviewDesk.class).toInstance(new ScriptedReviewDesk());
             bind(ReviewMode.class).toInstance(ReviewMode.UNATTENDED);
         }

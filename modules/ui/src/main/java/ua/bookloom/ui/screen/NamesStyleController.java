@@ -2,31 +2,40 @@ package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
 import java.util.Objects;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
-import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.control.Banner;
-import ua.bookloom.ui.control.StepFooter;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.NamesStyleViewModel;
+import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * The names and style screen's frame: the heading and subtitle from the view, the note that the step can be skipped,
- * and the footer that goes back to the structure or starts the run.
+ * The names and style screen's frame, which shows the glossary while a book is open and the no-book state while none
+ * is.
  *
- * <p>Start translation asks {@link TranslatingViewModel#start()} and then shows the translating screen whatever came of
- * it: the view model begins a run only when the controls offer a start, so with a run already under way the screen just
- * shows that run, and a missing input is named on the translating screen's banner.
+ * <p>The open book is observed through a weak listener held by the field below, because the state outlives this
+ * controller. Nothing in the frame's own nodes captures the controller, so the host keeps a reference to it in its
+ * properties: that is what lets the swap still happen when a book is opened under a screen that is on show, and lets
+ * the controller go when the screen does.
  */
 @Slf4j
 public final class NamesStyleController {
 
+    private final CurrentProject project;
     private final Messages messages;
     private final Navigator navigator;
     private final TranslatingViewModel translating;
+    private final NamesStyleViewModel glossary;
+    private final ModalHost modalHost;
+    private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
     private Pane body;
@@ -34,41 +43,45 @@ public final class NamesStyleController {
     /**
      * Receives the collaborators the injector owns.
      *
+     * @param project the holder of the open book whose glossary is shown
      * @param messages the catalogue the built parts are worded from
-     * @param navigator where Back and Start translation lead
+     * @param navigator where Back, Start translation and the route from the no-book state lead
      * @param translating what Start translation asks to begin the run
+     * @param glossary the state of the glossary table
+     * @param modalHost where the Add term card is shown
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
     @Inject
     public NamesStyleController(
-            final Messages messages, final Navigator navigator, final TranslatingViewModel translating) {
+            final CurrentProject project,
+            final Messages messages,
+            final Navigator navigator,
+            final TranslatingViewModel translating,
+            final NamesStyleViewModel glossary,
+            final ModalHost modalHost) {
+        this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
+        this.glossary = Objects.requireNonNull(glossary, "glossary");
+        this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
     }
 
     @FXML
     void initialize() {
-        log.debug("building the names and style screen");
-        final Banner skip =
-                new Banner("names-style-banner", Banner.Role.INFO, "ℹ", "", messages.get(MessageKey.NAMES_STYLE_SKIP));
-        final StepFooter footer = StepFooter.of(
-                new StepFooter.Action(
-                        "names-style-back",
-                        messages.get(MessageKey.NAMES_STYLE_BACK),
-                        "btn-ghost",
-                        () -> navigator.navigate(ViewNames.STRUCTURE)),
-                new StepFooter.Action(
-                        "names-style-start", messages.get(MessageKey.NAMES_STYLE_START), "btn-primary", this::onStart));
-        body.getChildren().setAll(skip, footer);
+        final OpenedBook book = project.book().get();
+        log.debug("building the names and style screen, a book is open: {}", book != null);
+        body.getProperties().put(NamesStyleController.class, this);
+        project.book().addListener(new WeakChangeListener<>(onBook));
+        show(book);
     }
 
-    private void onStart() {
-        log.debug(
-                "start translation pressed, a start is offered: {}",
-                translating.controls().get().start().isEnabled());
-        translating.start();
-        navigator.navigate(ViewNames.TRANSLATING);
+    private void show(final @Nullable OpenedBook book) {
+        log.debug("showing the {}", book != null ? "glossary" : "no-book state");
+        final Node content = book != null
+                ? new NamesStyleView(messages, navigator, translating, glossary, modalHost).build(book.projectId())
+                : NoBookView.build(messages, navigator);
+        body.getChildren().setAll(content);
     }
 }

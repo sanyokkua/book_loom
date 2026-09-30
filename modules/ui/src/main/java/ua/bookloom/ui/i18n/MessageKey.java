@@ -467,6 +467,80 @@ public enum MessageKey {
     NAMES_STYLE_BACK("namesStyle.back"),
     /** Button that starts the run from names and style. */
     NAMES_STYLE_START("namesStyle.start"),
+    /** Heading of the glossary card. */
+    NAMES_STYLE_GLOSSARY_TITLE("namesStyle.glossary.title"),
+    /** Button that opens the Add term card. */
+    NAMES_STYLE_ADD("namesStyle.add"),
+    /** Button that runs the model name scan. */
+    NAMES_STYLE_MODEL_SCAN("namesStyle.modelScan"),
+    /** Button that imports a glossary CSV file. */
+    NAMES_STYLE_IMPORT("namesStyle.import"),
+    /** Button that exports the glossary to a CSV file. */
+    NAMES_STYLE_EXPORT("namesStyle.export"),
+    /** Glossary column of the source term. */
+    NAMES_STYLE_COLUMN_SOURCE("namesStyle.column.source"),
+    /** Glossary column of the term's type. */
+    NAMES_STYLE_COLUMN_TYPE("namesStyle.column.type"),
+    /** Glossary column of the chosen rendering. */
+    NAMES_STYLE_COLUMN_TARGET("namesStyle.column.target"),
+    /** Glossary column of the grammatical gender. */
+    NAMES_STYLE_COLUMN_GENDER("namesStyle.column.gender"),
+    /** Glossary column of the lock switch. */
+    NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
+    /** Accessible name of the row's remove action. */
+    NAMES_STYLE_REMOVE("namesStyle.remove"),
+    /** Refusal of a lock on a term that has no target. */
+    NAMES_STYLE_LOCK_NEEDS_TARGET("namesStyle.lockNeedsTarget"),
+    /** Refusal of a duplicate term; argument 0 is the typed term. */
+    NAMES_STYLE_DUPLICATE("namesStyle.duplicate"),
+    /** Why the model scan did not start. */
+    NAMES_STYLE_NO_MODEL("namesStyle.noModel"),
+    /** Result of an import; argument 0 is the row count, passed as an Integer. */
+    NAMES_STYLE_IMPORT_DONE("namesStyle.import.done"),
+    /** Lines an import could not read; argument 0 is the joined line numbers, argument 1 their count. */
+    NAMES_STYLE_IMPORT_MALFORMED("namesStyle.import.malformed"),
+    /** Lines an import refused as locked without a target; argument 0 is the joined line numbers, argument 1 their count. */
+    NAMES_STYLE_IMPORT_REFUSED("namesStyle.import.refused"),
+    /** Result of an export; argument 0 is the written file name. */
+    NAMES_STYLE_EXPORT_DONE("namesStyle.export.done"),
+    /** Term type: a character. */
+    NAMES_STYLE_TYPE_CHARACTER("namesStyle.type.character"),
+    /** Term type: a place. */
+    NAMES_STYLE_TYPE_PLACE("namesStyle.type.place"),
+    /** Term type: a recurring term. */
+    NAMES_STYLE_TYPE_TERM("namesStyle.type.term"),
+    /** Term type: a title or honorific. */
+    NAMES_STYLE_TYPE_TITLE("namesStyle.type.title"),
+    /** Term type: anything else. */
+    NAMES_STYLE_TYPE_OTHER("namesStyle.type.other"),
+    /** Grammatical gender: female. */
+    NAMES_STYLE_GENDER_FEMALE("namesStyle.gender.female"),
+    /** Grammatical gender: male. */
+    NAMES_STYLE_GENDER_MALE("namesStyle.gender.male"),
+    /** Grammatical gender: neuter. */
+    NAMES_STYLE_GENDER_NEUTER("namesStyle.gender.neuter"),
+    /** Grammatical gender: not known. */
+    NAMES_STYLE_GENDER_UNKNOWN("namesStyle.gender.unknown"),
+    /** Heading of the Add term card. */
+    DIALOG_ADD_TERM_TITLE("dialog.addTerm.title"),
+    /** Line under the Add term heading. */
+    DIALOG_ADD_TERM_SUBTITLE("dialog.addTerm.subtitle"),
+    /** Label of the source field. */
+    DIALOG_ADD_TERM_SOURCE("dialog.addTerm.source"),
+    /** Label of the target field. */
+    DIALOG_ADD_TERM_TARGET("dialog.addTerm.target"),
+    /** Label of the type choice. */
+    DIALOG_ADD_TERM_TYPE("dialog.addTerm.type"),
+    /** Label of the gender choice. */
+    DIALOG_ADD_TERM_GENDER("dialog.addTerm.gender"),
+    /** Label of the lock switch. */
+    DIALOG_ADD_TERM_LOCK("dialog.addTerm.lock"),
+    /** Button that closes the Add term card without adding. */
+    DIALOG_ADD_TERM_CANCEL("dialog.addTerm.cancel"),
+    /** Button that adds the term. */
+    DIALOG_ADD_TERM_CONFIRM("dialog.addTerm.confirm"),
+    /** Refusal of an Add term with no source text. */
+    DIALOG_ADD_TERM_REQUIRED("dialog.addTerm.required"),
     /** Heading of the translating dashboard. */
     TRANSLATING_TITLE("translating.title"),
     /** Button that starts the first run from the dashboard. */

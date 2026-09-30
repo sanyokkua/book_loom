@@ -37,7 +37,8 @@ final class ConformanceCases {
         NONE,
         ABOUT,
         ERROR_DIALOG,
-        REPLACE_RUN
+        REPLACE_RUN,
+        ADD_TERM
     }
 
     /** What must have happened before the view is read: nothing, or a state reached through the import view model. */
@@ -219,7 +220,18 @@ final class ConformanceCases {
                     Overlay.NONE,
                     List.of(
                             new Part("#names-style-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
-                            new Part("#names-style-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
+                            new Part("#names-style-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"),
+                            new Part("#names-style-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#names-style-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            // The Add term card, opened from the glossary card's header over the names screen.
+            new Screen(
+                    "ADD_TERM_DIALOG",
+                    ViewNames.NAMES_STYLE,
+                    Preparation.BOOK_OPENED,
+                    Overlay.ADD_TERM,
+                    List.of(
+                            new Part("#add-term-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#add-term-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             // Ready to translate: the banner is the info role, the bar's track surface-2 and its fill the primary.
             new Screen(
                     "TRANSLATING",

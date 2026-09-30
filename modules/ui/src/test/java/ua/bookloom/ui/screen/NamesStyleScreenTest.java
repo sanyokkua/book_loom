@@ -2,11 +2,15 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.concurrent.TimeoutException;
+import javafx.scene.control.TableView;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
@@ -15,6 +19,8 @@ import ua.bookloom.ui.ViewNames;
 class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
     private void showNamesStyle() {
+        glossary.willAnswer(Result.ok(List.of()));
+        glossary.willAnswer(Result.ok(List.of()));
         onFx(() -> shell.activate(ViewNames.IMPORT));
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
     }
@@ -36,7 +42,8 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
     // IF the screen had no heading, subtitle, note or footer, THEN the step would be an empty wall.
     @Test
-    void screen_shown_holdsHeadingSubtitleNoteAndFooter() {
+    void screen_shown_holdsHeadingSubtitleNoteAndFooter() throws Exception {
+        openBookOnly();
         showNamesStyle();
 
         assertThat(labelText("names-style-title")).isEqualTo("Names & style");
@@ -49,7 +56,8 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
     // IF Back did not lead to Structure, THEN the step could not be left backwards.
     @Test
-    void backControl_shown_movesToTheStructureScreen() {
+    void backControl_shown_movesToTheStructureScreen() throws Exception {
+        openBookOnly();
         showNamesStyle();
 
         onFx(() -> button("names-style-back").fire());
@@ -130,5 +138,72 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
     private void showNamesStyleAgain() {
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+    }
+
+    private TableView<?> table() {
+        return (TableView<?>) required("names-style-table");
+    }
+
+    // IF a column were missing, THEN part of what the person settles could not be seen or edited.
+    @Test
+    void table_bookOpenEmptyGlossary_hasTheFiveColumnsAndAnEnabledStart() throws Exception {
+        openBookOnly();
+        showNamesStyle();
+
+        assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
+                        .map(column -> column.getText())
+                        .toList()))
+                .containsExactly("Source term", "Type", "Target", "Gender", "Locked");
+        assertThat(ThemeTestSupport.onFx(() -> table().getItems())).isEmpty();
+        assertThat(button("names-style-start").isDisabled()).isFalse();
+        assertThat(button("names-style-model-scan").getText()).isEqualTo("Model scan");
+    }
+
+    // IF a failed glossary read were silent, THEN an empty table would look like a book with no names.
+    @Test
+    void screen_glossaryReadFails_showsTheServicesMessageInPlace() throws Exception {
+        openBookOnly();
+        glossary.willAnswer(Result.err(ua.bookloom.api.AppError.of(
+                ua.bookloom.api.ErrorCode.internal, "Glossary unavailable", "The glossary could not be read.")));
+        onFx(() -> shell.activate(ViewNames.IMPORT));
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+
+        assertThat(labelText("names-style-notice-text")).isEqualTo("The glossary could not be read.");
+    }
+
+    // IF the table showed with no book, THEN a scan or a start could be pressed on nothing.
+    @Test
+    void screen_noBookOpen_reportsSoWithARouteToImportAndNoTableScanOrStart() {
+        onFx(() -> shell.activate(ViewNames.IMPORT));
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+
+        assertThat(labelText("nobook-report")).isNotBlank();
+        assertThat(button("nobook-open")).isNotNull();
+        assertThat(optional("names-style-table")).isNull();
+        assertThat(optional("names-style-model-scan")).isNull();
+        assertThat(optional("names-style-start")).isNull();
+    }
+
+    // IF a start with no source language reached the engine, THEN the model would be told a language nobody chose.
+    @Test
+    void startTranslation_noSourceLanguage_isRefusedNamingTheSourceAndAsksForNoJob() throws Exception {
+        final java.nio.file.Path notes = java.nio.file.Path.of("notes.txt");
+        projects.on(notes, Result.ok(BookFixtures.declaringNoLanguage("notes", BookFormat.TXT, 1)));
+        openImport();
+        openBook(notes);
+        chooseTarget();
+        ThemeTestSupport.onFx(() -> {
+            injector.getInstance(ua.bookloom.ui.state.SettingsViewModel.class)
+                    .model()
+                    .set(MODEL);
+            return null;
+        });
+        showNamesStyle();
+
+        onFx(() -> button("names-style-start").fire());
+
+        assertThat(labelText("translating-banner-text"))
+                .isEqualTo("Choose the source language on the book brief, then start the translation.");
+        assertThat(engine.requests()).isEmpty();
     }
 }

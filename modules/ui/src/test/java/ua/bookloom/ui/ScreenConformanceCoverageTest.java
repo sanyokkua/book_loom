@@ -30,7 +30,8 @@ class ScreenConformanceCoverageTest {
                         "EXPORT",
                         "ABOUT_DIALOG",
                         "ERROR_DIALOG",
-                        "REPLACE_RUN_DIALOG");
+                        "REPLACE_RUN_DIALOG",
+                        "ADD_TERM_DIALOG");
     }
 
     // IF a reachable view had no case here, THEN a screen added later would not be measured against the mockup.
