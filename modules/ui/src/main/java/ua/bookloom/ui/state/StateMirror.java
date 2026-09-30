@@ -47,6 +47,7 @@ public final class StateMirror {
     private final ReadOnlyIntegerWrapper chunk = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper chunks = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper waitingSeconds = new ReadOnlyIntegerWrapper(NOT_WAITING);
+    private final ReadOnlyObjectWrapper<RunFigures> figures = new ReadOnlyObjectWrapper<>(RunFigures.EMPTY);
     private final ReadOnlyDoubleWrapper progressFraction = new ReadOnlyDoubleWrapper();
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
@@ -60,6 +61,15 @@ public final class StateMirror {
     /** Creates an idle, empty mirror. */
     public StateMirror() {
         // Every property starts at its default; a run's first publish fills them.
+    }
+
+    /**
+     * The whole set of figures, which tells auto-accepted from repaired segments.
+     *
+     * @return the read-only figures; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<RunFigures> figures() {
+        return figures.getReadOnlyProperty();
     }
 
     /**
@@ -364,6 +374,7 @@ public final class StateMirror {
     }
 
     private void applyFigures(final RunFigures figures) {
+        this.figures.set(figures);
         accepted.set(figures.accepted());
         flagged.set(figures.flagged());
         remaining.set(figures.remaining());

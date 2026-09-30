@@ -232,11 +232,22 @@ final class ConformanceCases {
                     List.of(
                             new Part("#add-term-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#add-term-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
-            // Ready to translate: the banner is the info role, the bar's track surface-2 and its fill the primary.
+            // Ready to translate: the ready card and the banner in the info role.
             new Screen(
                     "TRANSLATING",
                     ViewNames.TRANSLATING,
                     Preparation.NONE,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#translating-ready-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#translating-ready-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
+                            new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
+            // Running: the bar's track surface-2 and its fill the primary, the tiles, the live panel and the log.
+            new Screen(
+                    "TRANSLATING_RUNNING",
+                    ViewNames.TRANSLATING,
+                    Preparation.RUN_STARTED,
                     Overlay.NONE,
                     List.of(
                             new Part("#translating-progress-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
@@ -258,6 +269,14 @@ final class ConformanceCases {
                     Preparation.RUN_COMPLETED,
                     Overlay.NONE,
                     List.of(
+                            new Part("#translating-outcome-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#translating-outcome-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part(
+                                    "#translating-outcome-tile-accepted",
+                                    Kind.BACKGROUND,
+                                    "surface",
+                                    "#ffffff",
+                                    "#33424a"),
                             new Part("#translating-banner", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
                             new Part("#translating-banner", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
             // A pause on a provider error is the run's own state: the banner takes the err role, light and dark.

@@ -87,8 +87,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
         final RunStarter starter = new RunStarter(current, models, engine, reviewMode, runner, prepExecutor);
-        viewModel = onFx(() ->
-                new TranslatingViewModel(mirror, runner, destinations, current, settings, starter, toasts, errors));
+        viewModel = onFx(() -> new TranslatingViewModel(
+                mirror, runner, destinations, current, settings, starter, toasts, errors, desk, new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

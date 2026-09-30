@@ -1340,6 +1340,10 @@
     -fx-font-weight: bold;
 }
 
+.stat-number-warn {
+    -fx-text-fill: -color-warn;
+}
+
 .stat-caption {
     -fx-text-fill: -color-muted;
     -fx-font-size: 11.5px;

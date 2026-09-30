@@ -43,6 +43,7 @@ public final class TranslatingController {
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
+    private final ChangeListener<Number> onChunk = (observed, was, now) -> renderChunk();
     private final ListChangeListener<LogEntry> onLog = change -> scrollLog();
 
     @FXML
@@ -82,12 +83,16 @@ public final class TranslatingController {
     void initialize() {
         log.debug(
                 "building the translating screen in state {}", mirror.runState().get());
-        dashboard = TranslatingView.build(viewModel, mirror, current, names, messages, this::openSettings);
+        dashboard = TranslatingView.build(
+                viewModel, mirror, current, names, messages, new TranslatingView.Exits(navigator, this::openSettings));
+        viewModel.refreshPending();
         host.getChildren().setAll(dashboard.root());
         host.getProperties().put(TranslatingController.class, this);
         mirror.runState().addListener(new WeakChangeListener<>(onState));
         viewModel.notice().addListener(new WeakChangeListener<>(onNotice));
         mirror.waitingSeconds().addListener(new WeakChangeListener<>(onWaiting));
+        mirror.chunk().addListener(new WeakChangeListener<>(onChunk));
+        mirror.chunks().addListener(new WeakChangeListener<>(onChunk));
         mirror.activityLog().addListener(new WeakListChangeListener<>(onLog));
         dashboard.render(
                 mirror.runState().get(),
@@ -111,6 +116,14 @@ public final class TranslatingController {
     // is first shown and when it is cleared.
     private void renderWaiting(final int seconds) {
         dashboard.render(mirror.runState().get(), viewModel.notice().get(), seconds);
+    }
+
+    // Not logged: the chunk changes with every chunk of the run; it matters only to the paused banner's wording.
+    private void renderChunk() {
+        dashboard.render(
+                mirror.runState().get(),
+                viewModel.notice().get(),
+                mirror.waitingSeconds().get());
     }
 
     private void render(final RunState state, final @Nullable RunNotice notice) {

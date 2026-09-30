@@ -9,6 +9,7 @@ import ua.bookloom.ui.notify.ErrorPresenter;
 public final class RecordingErrorPresenter implements ErrorPresenter {
 
     private final List<AppError> presented = new CopyOnWriteArrayList<>();
+    private final List<AppError> runFailures = new CopyOnWriteArrayList<>();
 
     @Override
     public void present(final AppError error) {
@@ -18,6 +19,17 @@ public final class RecordingErrorPresenter implements ErrorPresenter {
     @Override
     public void present(final AppError error, final Runnable onRetry) {
         presented.add(error);
+    }
+
+    @Override
+    public void presentRunFailure(final AppError error) {
+        presented.add(error);
+        runFailures.add(error);
+    }
+
+    /** The errors handed to {@code presentRunFailure}, which are also in {@link #presented()}. */
+    public List<AppError> runFailures() {
+        return List.copyOf(runFailures);
     }
 
     public List<AppError> presented() {

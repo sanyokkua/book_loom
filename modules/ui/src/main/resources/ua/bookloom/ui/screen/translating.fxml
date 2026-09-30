@@ -6,5 +6,6 @@
 <VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
       fx:controller="ua.bookloom.ui.screen.TranslatingController" id="translating-screen" spacing="14">
     <Label id="translating-title" styleClass="screen-title" text="%translating.title"/>
+    <Label id="translating-subtitle" styleClass="muted" wrapText="true" text="%translating.subtitle"/>
     <VBox fx:id="host" id="translating-state" spacing="14" VBox.vgrow="ALWAYS"/>
 </VBox>

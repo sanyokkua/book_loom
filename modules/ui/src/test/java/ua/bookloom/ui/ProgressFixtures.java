@@ -26,4 +26,39 @@ public final class ProgressFixtures {
             final int section, final int sections, final int accepted, final int flagged, final int pending) {
         return new JobProgress(JobStage.TRANSLATE, section, sections, accepted, flagged, pending, 1, 1, accepted, 0);
     }
+
+    /**
+     * A translate-stage snapshot that tells auto-accepted from repaired segments and names its chunk.
+     *
+     * @param section the 1-based section
+     * @param sections the number of sections
+     * @param autoAccepted segments accepted without repair
+     * @param repaired segments accepted after repair
+     * @param flagged flagged segments
+     * @param pending undecided segments
+     * @param chunk the 1-based chunk
+     * @param chunks the number of chunks in the section
+     * @return the snapshot
+     */
+    public static JobProgress detailed(
+            final int section,
+            final int sections,
+            final int autoAccepted,
+            final int repaired,
+            final int flagged,
+            final int pending,
+            final int chunk,
+            final int chunks) {
+        return new JobProgress(
+                JobStage.TRANSLATE,
+                section,
+                sections,
+                autoAccepted + repaired,
+                flagged,
+                pending,
+                chunk,
+                chunks,
+                autoAccepted,
+                repaired);
+    }
 }

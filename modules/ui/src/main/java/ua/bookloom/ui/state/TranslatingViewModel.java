@@ -4,12 +4,15 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BooleanSupplier;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.value.ChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -17,7 +20,10 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Toasts;
@@ -38,9 +44,8 @@ import ua.bookloom.ui.notify.Toasts;
  * segment; resuming a paused one continues the same job.
  *
  * <p>A failed preparation is routed by its code through {@link FailureSurface}; a run that ends on a failure is routed
- * by its state (stopped, refused in place, or the blocking dialog), and a pause on a model error, whatever its code,
- * is the provider-error state that Resume continues from. A start is refused by naming the first missing
- * input, in the order book, source language, target language, model.
+ * by its state, and a pause on a model error is the provider-error state that Resume continues from. A start is
+ * refused by naming the first missing input, in the order book, source language, target language, model.
  */
 @Slf4j
 @Singleton
@@ -55,7 +60,7 @@ public final class TranslatingViewModel {
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final ReadOnlyBooleanWrapper preparing = new ReadOnlyBooleanWrapper(false);
-    private final ReadOnlyBooleanWrapper pendingRemain = new ReadOnlyBooleanWrapper(false);
+    private final PendingCount pending;
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
@@ -75,6 +80,8 @@ public final class TranslatingViewModel {
      * @param starter what builds a run on the open book and starts it
      * @param toasts where a finished run is announced
      * @param errors where a failure whose code is assigned the blocking dialog is shown
+     * @param desk where the count of undecided segments is read
+     * @param executor the daemon executor that read runs on, never the FX thread
      */
     @Inject
     public TranslatingViewModel(
@@ -85,7 +92,9 @@ public final class TranslatingViewModel {
             final SettingsViewModel settings,
             final RunStarter starter,
             final Toasts toasts,
-            final ErrorPresenter errors) {
+            final ErrorPresenter errors,
+            final ReviewDesk desk,
+            @BackgroundExecutor final ExecutorService executor) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.exports = Objects.requireNonNull(exports, "exports");
@@ -94,9 +103,10 @@ public final class TranslatingViewModel {
         this.starter = Objects.requireNonNull(starter, "starter");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
+        this.pending = new PendingCount(desk, executor);
         refreshControls();
         preparing.addListener((observed, was, now) -> refreshControls());
-        pendingRemain.addListener((observed, was, now) -> refreshControls());
+        pending.remains().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
@@ -135,13 +145,49 @@ public final class TranslatingViewModel {
     }
 
     /**
-     * Whether the project still holds segments no run has decided, which a completed run needs to offer a start. It
-     * stays false until the dashboard reads the project's pending count.
+     * Whether segments remain undecided, which a completed run needs to offer a start; false until read.
      *
      * @return a read-only property; FX thread only
      */
     public ReadOnlyBooleanProperty pendingRemain() {
-        return pendingRemain.getReadOnlyProperty();
+        return pending.remains();
+    }
+
+    /**
+     * How many segments the open project has not decided.
+     *
+     * @return a read-only property, zero until read; FX thread only
+     */
+    public ReadOnlyIntegerProperty pendingCount() {
+        return pending.count();
+    }
+
+    /** Reads the pending count in the background, on each showing and when a run ends; FX thread only. */
+    public void refreshPending() {
+        final OpenedBook book = current.book().get();
+        if (book == null) {
+            pending.clear();
+        } else {
+            pending.refresh(book.projectId());
+        }
+    }
+
+    /**
+     * The review mode of this launch, for the ready card.
+     *
+     * @return the mode; never null
+     */
+    public ReviewMode reviewMode() {
+        return starter.reviewMode();
+    }
+
+    /**
+     * The model text, for the ready card.
+     *
+     * @return a read-only property, empty while none is chosen; FX thread only
+     */
+    public ReadOnlyStringProperty modelText() {
+        return settings.model();
     }
 
     /**
@@ -290,12 +336,13 @@ public final class TranslatingViewModel {
 
     private void refreshControls() {
         final RunState state = mirror.runState().get();
-        final Controls next = Controls.of(state, preparing.get(), pendingRemain.get());
+        final Controls next =
+                Controls.of(state, preparing.get(), pending.remains().get());
         log.debug(
                 "controls for state {} preparing {} pending remain {}: {}",
                 state,
                 preparing.get(),
-                pendingRemain.get(),
+                pending.remains().get(),
                 next);
         controls.set(next);
     }
@@ -308,6 +355,9 @@ public final class TranslatingViewModel {
     }
 
     private void onRunStateChanged(final RunState now) {
+        if (now == RunState.FAILED || now == RunState.COMPLETED || now == RunState.STOPPED) {
+            refreshPending();
+        }
         switch (now) {
             case RUNNING -> notice.set(null);
             case FAILED -> routeRunFailure();
@@ -329,7 +379,7 @@ public final class TranslatingViewModel {
             notice.set(new RunNotice.Refused(failure));
         } else {
             log.debug("the run failed with {}: opening the error dialog", failure.code());
-            errors.present(failure);
+            errors.presentRunFailure(failure);
         }
     }
 

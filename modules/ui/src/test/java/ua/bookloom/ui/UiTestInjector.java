@@ -82,6 +82,8 @@ public final class UiTestInjector {
         private ChatModelFactory models = ScriptedChatModelFactory.ok();
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
         private ScriptedGlossaryService glossary = new ScriptedGlossaryService();
+        private ScriptedReviewDesk desk = new ScriptedReviewDesk();
+        private ReviewMode reviewMode = ReviewMode.UNATTENDED;
         private @Nullable ReplaceRunPrompt prompt;
 
         private Builder(final Locale locale) {
@@ -136,6 +138,18 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** What the graph's {@link ReviewDesk} is, so the test can script the counts and the queue it is answered. */
+        public Builder reviewDesk(final ScriptedReviewDesk value) {
+            desk = Objects.requireNonNull(value, "desk");
+            return this;
+        }
+
+        /** The review mode the graph was launched with. */
+        public Builder reviewMode(final ReviewMode value) {
+            reviewMode = Objects.requireNonNull(value, "reviewMode");
+            return this;
+        }
+
         /** Replaces the real replace-run card with this question, so the test can read what was asked. */
         public Builder prompt(final ReplaceRunPrompt value) {
             prompt = Objects.requireNonNull(value, "prompt");
@@ -150,7 +164,7 @@ public final class UiTestInjector {
         public Injector build() {
             final ReplaceRunPrompt replacement = prompt;
             return Guice.createInjector(Modules.override(new UiModule())
-                    .with(new ReviewPortsModule(glossary), new AbstractModule() {
+                    .with(new ReviewPortsModule(glossary, desk, reviewMode), new AbstractModule() {
                         @Override
                         protected void configure() {
                             bind(LocaleProvider.class).toInstance(() -> locale);
@@ -179,16 +193,20 @@ public final class UiTestInjector {
     private static final class ReviewPortsModule extends AbstractModule {
 
         private final GlossaryService glossary;
+        private final ReviewDesk desk;
+        private final ReviewMode reviewMode;
 
-        ReviewPortsModule(final GlossaryService glossary) {
+        ReviewPortsModule(final GlossaryService glossary, final ReviewDesk desk, final ReviewMode reviewMode) {
             this.glossary = glossary;
+            this.desk = desk;
+            this.reviewMode = reviewMode;
         }
 
         @Override
         protected void configure() {
             bind(GlossaryService.class).toInstance(glossary);
-            bind(ReviewDesk.class).toInstance(new ScriptedReviewDesk());
-            bind(ReviewMode.class).toInstance(ReviewMode.UNATTENDED);
+            bind(ReviewDesk.class).toInstance(desk);
+            bind(ReviewMode.class).toInstance(reviewMode);
         }
     }
 

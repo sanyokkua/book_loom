@@ -72,6 +72,15 @@ public final class RunStarter {
     }
 
     /**
+     * The review mode every run of this launch uses.
+     *
+     * @return the mode; never null
+     */
+    public ReviewMode reviewMode() {
+        return reviewMode;
+    }
+
+    /**
      * Prepares a run on the open book in the background and starts it. FX thread only, because it reads the open
      * book there.
      *

@@ -16,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.LogEntry;
@@ -75,7 +76,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
     // IF the derived figures were shown wrongly, THEN the dashboard would contradict what the engine reports.
     @Test
-    void figures_engineReports768Accepted3Flagged469Pending_showTheFourCountsAndTheProportion() {
+    void figures_engineReports768Accepted3Flagged469Pending_showTheCountsAndTheProportion() {
         showTranslating();
 
         publishProgress(768, 3, 469);
@@ -83,9 +84,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-count-accepted")).isEqualTo("768");
         assertThat(labelText("translating-count-flagged")).isEqualTo("3");
         assertThat(labelText("translating-count-remaining")).isEqualTo("469");
-        assertThat(labelText("translating-count-total")).isEqualTo("1,240");
-        assertThat(labelText("translating-progress-text")).isEqualTo("771 of 1,240 segments processed");
-        assertThat(labelText("translating-remaining-text")).isEqualTo("469 segments remaining");
+        assertThat(labelText("translating-progress-text")).isEqualTo("62% · Chapter 7 of 11 · chunk 1/1");
         assertThat(progressBar().getProgress()).isCloseTo(0.6218, within(0.0001));
     }
 
@@ -96,7 +95,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishProgress(0, 0, 0);
 
-        assertThat(labelText("translating-progress-text")).isEqualTo("0 of 0 segments processed");
+        assertThat(labelText("translating-progress-text")).isEqualTo("0% · Chapter 7 of 11 · chunk 1/1");
         assertThat(progressBar().getProgress()).isZero();
     }
 
@@ -155,17 +154,14 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(optional("nobook-card")).isNull();
     }
 
-    // IF a rate or a finishing time were shown, THEN the dashboard would report something the engine never emits.
+    // IF a rate or a finishing time were shown before the engine measured one, THEN the line would invent a pace.
     @Test
-    void screen_runInProgress_showsNoRateNoEstimateAndNoNodeForOne() {
+    void pace_runInProgressNoFiguresYet_showsNothingInsteadOfARateOrEstimate() {
         showTranslating();
         publish(RunState.RUNNING);
         publishProgress(768, 3, 469);
 
-        assertThat(textsUnder(required("translating-screen")))
-                .noneMatch(text -> text.matches("(?i).*(tok/s|\\bETA\\b|\\bleft\\b|per second|estimate|throughput).*"));
-        assertThat(idsStartingWith("translating-"))
-                .noneMatch(id -> id.matches(".*(rate|eta|speed|throughput|estimate).*"));
+        assertThat(labelText("translating-pace-text")).isEmpty();
     }
 
     // IF a run could be started from an earlier step, THEN the specification's single start control would be two.
@@ -234,6 +230,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     void progressBar_sceneShorterThanDashboard_keepsPositiveHeight() {
         showTranslating();
         resizeScene(960, 300);
+        publish(RunState.RUNNING);
 
         publishProgress(42, 0, 58);
 
@@ -248,15 +245,17 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     // window; at the window minimum each tile keeps the mockup's 120 pixels and every caption is shown whole.
     @ParameterizedTest
     @CsvSource(delimiter = '|', textBlock = """
-            accepted  | accepted   | 768
-            flagged   | flagged    | 3
-            remaining | remaining  | 469
-            total     | in total   | 1,240
+            accepted  | auto-accepted        | 768
+            repaired  | repaired & accepted  | 41
+            flagged   | flagged              | 3
+            remaining | remaining            | 428
             """)
     void tiles_atMinimum_showNoTruncatedCaptions(final String name, final String caption, final String number) {
         showTranslating();
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-        publishProgress(768, 3, 469);
+        publish(RunState.RUNNING);
+        mirror().publishProgress(ProgressFixtures.detailed(7, 11, 768, 41, 3, 428, 41, 66));
+        WaitForAsyncUtils.waitForFxEvents();
 
         final Region tile = (Region) required("translating-tile-" + name);
         assertThat(tile.minWidth(-1)).isGreaterThanOrEqualTo(120);
@@ -277,6 +276,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
     void tiles_atMinimum_fitTheContentAreaWithoutSidewaysScrolling() {
         showTranslating();
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+        publish(RunState.RUNNING);
 
         final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
         final double contentWidth = pane.getContent().getLayoutBounds().getWidth();
@@ -285,16 +285,17 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(contentWidth).isLessThanOrEqualTo(pane.getViewportBounds().getWidth());
     }
 
-    // IF the Pause and Stop row sat below the fold of the minimum window with no way to reach it, THEN a person
-    // could not stop a run; in the content area the minimum leaves it is inside the viewport.
+    // IF the Pause and Stop row could not be reached in the content area the minimum leaves, THEN a person could not
+    // stop a run; scrolling to the bottom brings it into the viewport.
     @Test
-    void controls_atMinimum_pauseAndStopAreInsideTheViewport() {
+    void controls_atMinimum_stopIsReachableByScrolling() {
         showTranslating();
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-
         publish(RunState.RUNNING);
-
         final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
+
+        onFx(() -> pane.setVvalue(pane.getVmax()));
+
         final Bounds viewport = pane.localToScene(pane.getLayoutBounds());
         final Bounds stop = required("translating-stop")
                 .localToScene(required("translating-stop").getLayoutBounds());

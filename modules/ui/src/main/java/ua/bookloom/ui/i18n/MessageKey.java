@@ -99,6 +99,8 @@ public enum MessageKey {
     ERROR_DETAILS_SHOW("error.details.show"),
     /** Label of the error dialog's control that folds the failure's details away while they are shown. */
     ERROR_DETAILS_HIDE("error.details.hide"),
+    /** Line under a run failure's message: decided segments survive, but only until the application closes. */
+    ERROR_RUN_FAILURE_NOTE("error.runFailureNote"),
     /** Transient message raised when a book was opened; argument 0 is the file name, passed as a String. */
     TOAST_BOOK_OPENED("toast.bookOpened"),
     /** Transient message raised when a provider passed its check. */
@@ -551,16 +553,12 @@ public enum MessageKey {
     TRANSLATING_RESUME("translating.resume"),
     /** Button that asks the run to end. */
     TRANSLATING_STOP("translating.stop"),
-    /** Segments decided over the total, under the progress bar; argument 0 is the accepted plus flagged count and argument 1 the total, both passed as Integers. */
-    TRANSLATING_PROGRESS("translating.progress"),
     /** Caption of the accepted-segments tile. */
     TRANSLATING_COUNT_ACCEPTED("translating.count.accepted"),
     /** Caption of the flagged-segments tile. */
     TRANSLATING_COUNT_FLAGGED("translating.count.flagged"),
     /** Caption of the remaining-segments tile. */
     TRANSLATING_COUNT_REMAINING("translating.count.remaining"),
-    /** Caption of the total-segments tile. */
-    TRANSLATING_COUNT_TOTAL("translating.count.total"),
     /** Heading of the activity log card. */
     TRANSLATING_LOG_TITLE("translating.log.title"),
     /** Text shown in the activity log before the run has decided anything. */
@@ -587,6 +585,48 @@ public enum MessageKey {
     LIVE_SOURCE_FALLBACK("live.source.fallback"),
     /** Heading of the target pane when no target language is set. */
     LIVE_TARGET_FALLBACK("live.target.fallback"),
+    /** Line under the Translating heading: progress of a stopped run lasts only until the application closes. */
+    TRANSLATING_SUBTITLE("translating.subtitle"),
+    /** Caption of the tile counting segments accepted without repair. */
+    TRANSLATING_COUNT_AUTO("translating.count.auto"),
+    /** Caption of the tile counting segments accepted after repair. */
+    TRANSLATING_COUNT_REPAIRED("translating.count.repaired"),
+    /** Caption of the outcome tile counting auxiliary segments kept as source by choice. */
+    TRANSLATING_COUNT_KEPT("translating.count.kept"),
+    /** Title of the ready card shown before a run exists. */
+    TRANSLATING_READY_TITLE("translating.ready.title"),
+    /** Label of the ready card's book row. */
+    TRANSLATING_READY_BOOK("translating.ready.book"),
+    /** Label of the ready card's model row. */
+    TRANSLATING_READY_MODEL("translating.ready.model"),
+    /** Label of the ready card's review-mode row. */
+    TRANSLATING_READY_REVIEW("translating.ready.review"),
+    /** Label of the ready card's quality-dial row. */
+    TRANSLATING_READY_DIAL("translating.ready.dial"),
+    /** Label of the ready card's pending-segments row. */
+    TRANSLATING_READY_PENDING("translating.ready.pending"),
+    /** Name of a review mode; argument 0 is its lower-case token (unattended, assisted or manual). */
+    TRANSLATING_READY_REVIEW_MODE("translating.ready.reviewMode"),
+    /** Title of the card that reports what a finished or failed run decided. */
+    TRANSLATING_OUTCOME_TITLE("translating.outcome.title"),
+    /** The percentage of the progress line; argument 0 is the whole percent. */
+    TRANSLATING_LINE_PERCENT("translating.line.percent"),
+    /** The chapter part of the progress line; arguments are the section and the number of sections. */
+    TRANSLATING_LINE_SECTION("translating.line.section"),
+    /** The chunk part of the progress line; arguments are the chunk and the number of chunks. */
+    TRANSLATING_LINE_CHUNK("translating.line.chunk"),
+    /** The time-left part of the pace text; argument 0 is the duration, passed as a String. */
+    TRANSLATING_PACE_LEFT("translating.pace.left"),
+    /** The rate part of the pace text; argument 0 is the rate, passed as a String, with a leading ~ when estimated. */
+    TRANSLATING_PACE_RATE("translating.pace.rate"),
+    /** Paused banner text naming the chunk the run continues at; arguments are the chunk and the number of chunks. */
+    TRANSLATING_PAUSED_TEXT("translating.pausedText"),
+    /** Button that opens the flagged segments for review; argument 0 is the number of flagged segments. */
+    TRANSLATING_REVIEW_FLAGGED("translating.reviewFlagged"),
+    /** Button that leaves a completed run for the Export step. */
+    TRANSLATING_CONTINUE("translating.continue"),
+    /** Button that goes back to the Names and style step. */
+    TRANSLATING_BACK("translating.back"),
     /** Banner title of a run state; argument 0 is the state's token (idle to failed); stopped and failed are neutral. */
     TRANSLATING_STATE_TITLE("translating.stateTitle"),
     /** Banner text of a run state; argument 0 is the same token as for {@link #TRANSLATING_STATE_TITLE}. */

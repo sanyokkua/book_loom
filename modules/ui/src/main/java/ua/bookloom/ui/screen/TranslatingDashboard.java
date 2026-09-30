@@ -41,14 +41,20 @@ final class TranslatingDashboard {
     private final LiveBanner banner;
     private final ListView<LogEntry> log;
     private final Messages messages;
+    private final StateMirror mirror;
     private boolean scrollQueued;
 
     TranslatingDashboard(
-            final Node root, final LiveBanner banner, final ListView<LogEntry> log, final Messages messages) {
+            final Node root,
+            final LiveBanner banner,
+            final ListView<LogEntry> log,
+            final Messages messages,
+            final StateMirror mirror) {
         this.root = Objects.requireNonNull(root, "root");
         this.banner = Objects.requireNonNull(banner, "banner");
         this.log = Objects.requireNonNull(log, "log");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.mirror = Objects.requireNonNull(mirror, "mirror");
     }
 
     Node root() {
@@ -145,12 +151,28 @@ final class TranslatingDashboard {
             case IDLE -> stateLook("ℹ", INFO, "idle");
             case RUNNING -> stateLook("▶", INFO, "running");
             case PAUSING -> stateLook("⏸", INFO, "pausing");
-            case PAUSED -> stateLook("⏸", INFO, "paused");
+            case PAUSED -> pausedLook();
             case STOPPING -> stateLook("⏹", INFO, "stopping");
             case STOPPED -> stateLook("⏹", INFO, "stopped");
             case COMPLETED -> stateLook("✓", OK, "completed");
             case FAILED -> stateLook("⚠", WARN, "failed");
         };
+    }
+
+    // The chunk the run continues at is named once it is known; before that the plain paused text stands.
+    private Look pausedLook() {
+        if (mirror.chunks().get() == 0) {
+            return stateLook("⏸", INFO, "paused");
+        }
+        return new Look(
+                "⏸",
+                INFO,
+                messages.get(MessageKey.TRANSLATING_STATE_TITLE, "paused"),
+                messages.get(
+                        MessageKey.TRANSLATING_PAUSED_TEXT,
+                        mirror.chunk().get(),
+                        mirror.chunks().get()),
+                false);
     }
 
     private Look stateLook(final String glyph, final Banner.Role role, final String token) {

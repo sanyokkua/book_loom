@@ -36,6 +36,7 @@ final class ErrorDialog {
     static final String TITLE_ID = "error-title";
     static final String MESSAGE_ID = "error-message";
     static final String TOGGLE_ID = "error-details-toggle";
+    static final String NOTE_ID = "error-note";
     static final String DETAILS_ID = "error-details";
     static final String RETRY_ID = "error-retry";
     static final String DISMISS_ID = "error-dismiss";
@@ -46,6 +47,7 @@ final class ErrorDialog {
     private final AppError error;
     private final @Nullable Runnable onRetry;
     private final Runnable onDismiss;
+    private final @Nullable MessageKey note;
 
     /**
      * Prepares the card's content.
@@ -55,13 +57,19 @@ final class ErrorDialog {
      * @param onRetry what Retry does, or {@code null} when the caller offered no way to repeat the action, in which
      *     case no Retry button is built even for a retryable failure
      * @param onDismiss what Dismiss does
+     * @param note a line shown beneath the message, or {@code null} for none
      */
     ErrorDialog(
-            final Messages messages, final AppError error, final @Nullable Runnable onRetry, final Runnable onDismiss) {
+            final Messages messages,
+            final AppError error,
+            final @Nullable Runnable onRetry,
+            final Runnable onDismiss,
+            final @Nullable MessageKey note) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.error = Objects.requireNonNull(error, "error");
         this.onRetry = onRetry;
         this.onDismiss = Objects.requireNonNull(onDismiss, "onDismiss");
+        this.note = note;
     }
 
     /**
@@ -112,6 +120,13 @@ final class ErrorDialog {
         message.getStyleClass().add("dialog-text");
         final VBox body = new VBox(message);
         body.getStyleClass().add("error-body");
+        if (note != null) {
+            final Label line = new Label(messages.get(note));
+            line.setId(NOTE_ID);
+            line.setWrapText(true);
+            line.getStyleClass().add("dialog-text");
+            body.getChildren().add(line);
+        }
         if (hasDetails(error)) {
             body.getChildren().add(detailsToggle(body));
         }
