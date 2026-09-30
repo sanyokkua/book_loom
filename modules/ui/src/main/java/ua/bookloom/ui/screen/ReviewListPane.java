@@ -152,7 +152,9 @@ final class ReviewListPane extends VBox {
                 setGraphic(null);
                 return;
             }
-            final HBox line = new HBox(CHIP_GAP, new Label(row.locator()));
+            final Label locator = new Label(row.locator());
+            locator.getStyleClass().add("review-locator");
+            final HBox line = new HBox(CHIP_GAP, locator);
             if (row.badge() != null) {
                 line.getChildren().add(chip(messages.get(row.badge().label()), "chip-warn"));
             }

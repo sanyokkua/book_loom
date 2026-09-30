@@ -67,6 +67,21 @@
     -fx-focus-color: -color-focus;
     -fx-faint-focus-color: transparent;
 
+    /* Switch: the off track and the thumb are the mockup's slate and white in both themes. */
+    -color-toggle-off: #b2babd;
+    -color-toggle-thumb: #ffffff;
+
+    /* Modena re-based on the roles: every control it derives from these (labels, cells, text fields, scroll panes,
+       selection) follows the active value block instead of staying near-white with near-black text. */
+    -fx-base: -color-surface-2;
+    -fx-background: -color-bg;
+    -fx-control-inner-background: -color-surface;
+    -fx-text-background-color: -color-text;
+    -fx-text-base-color: -color-text;
+    -fx-text-inner-color: -color-text;
+    -fx-accent: -color-primary;
+    -fx-box-border: -color-border;
+
     /* Status (desaturated): success, warning, danger, info */
     -color-ok: #5f8a6b;
     -color-ok-bg: #e7efe8;
@@ -122,6 +137,10 @@
     -color-title-bg: #1c2429;
     -color-title-fg: #dfe4e6;
 
+    /* Switch: the same slate and white as the light block */
+    -color-toggle-off: #b2babd;
+    -color-toggle-thumb: #ffffff;
+
     /* Keyboard focus */
     -color-focus: #c4917e;
 
@@ -164,6 +183,78 @@
 
 .root.theme-dark .elevation-lg {
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.5), 40, 0, 0, 16);
+}
+
+/* --- Baselines: what a control shows when no rule below names it ------------------------------------------- */
+/* They sit before every component rule on purpose: a one-class baseline is out-ranked by a later one-class rule,
+   so `.muted`, `.card-title` and the other role classes keep winning over `.label`. */
+.label {
+    -fx-text-fill: -color-text;
+}
+
+.scroll-pane,
+.scroll-pane > .viewport,
+.scroll-pane > .corner {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.scroll-bar > .track,
+.scroll-bar > .track-background {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button,
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-shape: " ";
+}
+
+.list-view,
+.table-view {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.list-cell,
+.table-row-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text;
+}
+
+.list-cell:filled:selected,
+.table-row-cell:filled:selected {
+    -fx-background-color: -color-selected;
+    -fx-text-fill: -color-text;
+}
+
+.table-cell {
+    -fx-text-fill: -color-text;
+}
+
+.table-view .column-header-background,
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: -color-surface-2;
 }
 
 /* --- Placeholder screens: the one label style the FXML stand-ins share ---------------------------------- */
@@ -1044,6 +1135,18 @@
     -fx-font-size: 13px;
 }
 
+/* The text area wraps its own scroll pane: its frame, corner square and bar buttons would otherwise show as Modena greys. */
+.text-area.brief-input {
+    -fx-control-inner-background: -color-surface;
+}
+
+.text-area.brief-input .scroll-pane,
+.text-area.brief-input .scroll-pane > .viewport,
+.text-area.brief-input .scroll-pane > .corner {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
 .text-area.brief-input .content {
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
@@ -1068,25 +1171,46 @@
 }
 
 .toggle-switch .thumb-area {
-    -fx-background-color: -color-border-cool;
+    -fx-background-color: -color-toggle-off;
     -fx-background-insets: 0;
-    -fx-background-radius: 1em;
+    -fx-background-radius: 11px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 11px;
+    -fx-padding: 0;
+    -fx-min-width: 38px;
+    -fx-pref-width: 38px;
+    -fx-max-width: 38px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
 }
 
 .toggle-switch:selected .thumb-area {
     -fx-background-color: -color-primary;
 }
 
+/* The thumb box is the whole height of the track and the painted circle is inset 2px inside it, so the skin's own
+   travel (track width minus thumb box) leaves the same 2px gap at both ends. */
 .toggle-switch .thumb {
-    -fx-background-color: -color-surface;
-    -fx-background-insets: 0;
-    -fx-background-radius: 1em;
-    -fx-border-color: transparent;
+    -fx-background-color: -color-toggle-thumb;
+    -fx-background-insets: 2px;
+    -fx-background-radius: 11px;
+    -fx-padding: 0;
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
 }
 
-.toggle-switch:focused .thumb {
+/* The thumb's shadow is a colour literal, so it lives under `.root` with the elevation effects. */
+.root .toggle-switch .thumb {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
+}
+
+.toggle-switch:focused .thumb-area {
     -fx-border-color: -color-focus;
-    -fx-border-radius: 1em;
     -fx-border-width: 1px;
 }
 
@@ -1376,6 +1500,7 @@
 }
 
 .live-body {
+    -fx-padding: 12px;
     -fx-font-size: 14px;
     -fx-line-spacing: 3px;
     -fx-text-fill: -color-text-strong;
@@ -1385,6 +1510,30 @@
     -fx-border-color: transparent transparent -color-divider transparent;
     -fx-border-width: 0 0 1px 0;
     -fx-padding: 10px 4px 12px 4px;
+}
+
+/* The two live boxes are framed surfaces; the viewport only scrolls, so it stays clear. */
+.live-row .scroll-pane.edge-to-edge {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+}
+
+.live-row .scroll-pane.edge-to-edge > .viewport {
+    -fx-background-color: transparent;
+}
+
+.live-row .scroll-pane.live-target {
+    -fx-background-color: -color-surface-alt;
+}
+
+.review-list .list-cell:empty,
+.activity-log .list-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
 .activity-log .list-cell:filled:selected,
@@ -1515,8 +1664,17 @@
     -fx-table-cell-border-color: -color-divider;
 }
 
+.glossary-table .table-row-cell:hover {
+    -fx-background-color: -color-surface-alt;
+}
+
 .glossary-table .table-row-cell:selected {
-    -fx-background-color: -color-primary-soft;
+    -fx-background-color: -color-selected;
+}
+
+.glossary-term {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
 }
 
 .glossary-table .table-cell {
@@ -1553,6 +1711,19 @@
 .review-chip:selected {
     -fx-background-color: -color-primary-soft;
     -fx-border-color: -color-primary;
+    -fx-text-fill: -color-text-strong;
+}
+
+.finding-kind {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
+}
+
+.finding-note {
+    -fx-text-fill: -color-text;
+}
+
+.review-locator {
     -fx-text-fill: -color-text-strong;
 }
 

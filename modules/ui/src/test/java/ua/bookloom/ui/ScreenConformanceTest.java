@@ -2,14 +2,9 @@ package ua.bookloom.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.inject.Injector;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Labeled;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Border;
@@ -19,18 +14,9 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ConformanceCases.Kind;
 import ua.bookloom.ui.ConformanceCases.Part;
 import ua.bookloom.ui.ConformanceCases.Screen;
-import ua.bookloom.ui.dialog.ExportCompleteDialog;
-import ua.bookloom.ui.dialog.ReplaceRunPrompt;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
-import ua.bookloom.ui.notify.ErrorPresenter;
-import ua.bookloom.ui.state.ExportOutcome;
-import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.theme.ThemeMode;
 
 /**
@@ -43,14 +29,7 @@ import ua.bookloom.ui.theme.ThemeMode;
  * published catalogue, never read back from the code under test. Every (screen, part, block) is its own test case, so
  * a failure names exactly one of them. Pixel placement is deliberately not asserted.
  */
-class ScreenConformanceTest extends ShellTestBase {
-
-    private final ScriptedProjectService projects = new ScriptedProjectService();
-
-    @Override
-    protected Injector createInjector(final Locale locale) {
-        return UiTestInjector.builder(locale).projects(projects).build();
-    }
+class ScreenConformanceTest extends ConformanceTestBase {
 
     static Stream<Arguments> partsInEachBlock() {
         return ConformanceCases.SCREENS.stream()
@@ -62,37 +41,6 @@ class ScreenConformanceTest extends ShellTestBase {
                                                 part.kind() + " " + part.selector() + " (-color-" + part.role() + ")",
                                                 part),
                                         block))));
-    }
-
-    private void show(final Screen screen) throws TimeoutException {
-        final ViewNames view = screen.view();
-        if (view != null) {
-            onFx(() -> shell.activate(view));
-        }
-        new ConformancePreparations(injector, projects).prepare(screen.preparation());
-        switch (screen.overlay()) {
-            case NONE -> {
-                // nothing is open over the shell
-            }
-            case ABOUT -> onFx(() -> ((Button) required("shell-about")).fire());
-            case ERROR_DIALOG ->
-                onFx(() -> injector.getInstance(ErrorPresenter.class)
-                        .present(AppError.of(
-                                ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
-            case REVIEW_PANEL -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
-            case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
-            case RETRY ->
-                onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
-            case EXPORT_COMPLETE ->
-                onFx(() -> injector.getInstance(ExportCompleteDialog.class)
-                        .show(new ExportOutcome(
-                                new ExportReport(
-                                        Path.of("/books/Frankenstein.uk.epub"), 10, 0, 0, 0, 8, 2, List.of(), 10),
-                                958_464)));
-            case REPLACE_RUN ->
-                onFx(() -> injector.getInstance(ReplaceRunPrompt.class)
-                        .ask("Frankenstein.epub", "Dracula.epub", RunState.RUNNING, () -> {}));
-        }
     }
 
     private static Paint paintOf(final Node node, final Kind kind) {

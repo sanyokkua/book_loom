@@ -21,6 +21,9 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FlaggedRow;
@@ -39,10 +42,13 @@ final class ConformancePreparations {
 
     private final Injector injector;
     private final ScriptedProjectService projects;
+    private final ScriptedGlossaryService glossary;
 
-    ConformancePreparations(final Injector injector, final ScriptedProjectService projects) {
+    ConformancePreparations(
+            final Injector injector, final ScriptedProjectService projects, final ScriptedGlossaryService glossary) {
         this.injector = injector;
         this.projects = projects;
+        this.glossary = glossary;
     }
 
     void prepare(final ConformanceCases.Preparation preparation) throws TimeoutException {
@@ -61,6 +67,7 @@ final class ConformancePreparations {
             case RUN_STARTED -> startARun();
             case REVIEW_SELECTED -> selectAFlaggedSegment();
             case BOOK_REPORTED -> reportAFinishedBook();
+            case GLOSSARY_LISTED -> listAGlossary();
         }
     }
 
@@ -81,6 +88,13 @@ final class ConformancePreparations {
                 TimeUnit.SECONDS,
                 () -> onFx(() -> checks.state().get() instanceof StructureChecks.Finished));
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // The names screen loads the stored glossary as the book opens; one row is enough to show a term cell.
+    private void listAGlossary() throws TimeoutException {
+        glossary.willAnswer(Result.ok(List.of(
+                new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false))));
+        openABook();
     }
 
     private void refuseABook() throws TimeoutException {
@@ -131,8 +145,8 @@ final class ConformancePreparations {
     // A paused run with one flagged segment selected in the review view model; the overlay opens the panel.
     private void selectAFlaggedSegment() throws TimeoutException {
         final ScriptedReviewDesk desk = (ScriptedReviewDesk) injector.getInstance(ReviewDesk.class);
-        desk.willAnswerQueue(List.of(ReviewFixtures.lowScore()));
-        desk.willAnswerSegment(ReviewFixtures.lowScore());
+        desk.willAnswerQueue(List.of(ReviewFixtures.lowScoreWithFinding()));
+        desk.willAnswerSegment(ReviewFixtures.lowScoreWithFinding());
         desk.willAnswerCounts(new ReviewCounts(100, 99, 0, 1, 0, 0, 0, 0));
         openABook();
         final StateMirror mirror = injector.getInstance(StateMirror.class);

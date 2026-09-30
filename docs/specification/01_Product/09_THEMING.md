@@ -79,6 +79,8 @@ a defect (checked by the palette-token conformance assertion,
 | `shadow`        | Default elevation shadow                  | `0 3px 10px rgba(58,74,82,.12)`  | `0 4px 14px rgba(0,0,0,.35)` |
 | `shadow-lg`     | Large elevation shadow                    | `0 12px 34px rgba(35,45,50,.22)` | `0 16px 40px rgba(0,0,0,.5)` |
 | `focus`         | Keyboard focus ring                       | `#a58075`                        | `#c4917e`                    |
+| `toggle-off`    | Switch track when off (the mockup paints it from a literal) | `#b2babd`      | `#b2babd`                    |
+| `toggle-thumb`  | Switch thumb (white, with a small shadow) | `#ffffff`                        | `#ffffff`                    |
 
 ## status-colours {#status-colours}
 

@@ -57,7 +57,8 @@ final class ConformanceCases {
         RUN_PROVIDER_FAILED,
         RUN_STARTED,
         REVIEW_SELECTED,
-        BOOK_REPORTED
+        BOOK_REPORTED,
+        GLOSSARY_LISTED
     }
 
     /**
@@ -79,7 +80,9 @@ final class ConformanceCases {
     private static final Part BOX_EDGE =
             new Part("#export-aux-bilingual .box", Kind.BORDER, "border-cool", "#cdd2d3", "#48585f");
     private static final Part SWITCH_TRACK =
-            new Part("#export-aux-consistency .thumb-area", Kind.BACKGROUND, "border-cool", "#cdd2d3", "#48585f");
+            new Part("#export-aux-consistency .thumb-area", Kind.BACKGROUND, "toggle-off", "#b2babd", "#b2babd");
+    private static final Part SWITCH_THUMB =
+            new Part("#export-aux-consistency .thumb", Kind.BACKGROUND, "toggle-thumb", "#ffffff", "#ffffff");
 
     /** One entry per screen; a later screen task adds exactly one line here. */
     static final List<Screen> SCREENS = List.of(
@@ -236,13 +239,15 @@ final class ConformanceCases {
             new Screen(
                     "NAMES_STYLE",
                     ViewNames.NAMES_STYLE,
-                    Preparation.BOOK_OPENED,
+                    Preparation.GLOSSARY_LISTED,
                     Overlay.NONE,
                     List.of(
                             new Part("#names-style-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
                             new Part("#names-style-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"),
                             new Part("#names-style-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#names-style-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+                            new Part("#names-style-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            // The scanned term is readable, strong text in the glossary table.
+                            new Part(".glossary-term", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"))),
             // The Add term card, opened from the glossary card's header over the names screen.
             new Screen(
                     "ADD_TERM_DIALOG",
@@ -281,6 +286,14 @@ final class ConformanceCases {
                             new Part("#translating-log-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#translating-live-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#translating-live-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            // The live boxes are framed surfaces; the target box is tinted one step.
+                            new Part("#live-current-source-scroll", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part(
+                                    "#live-current-target-scroll",
+                                    Kind.BACKGROUND,
+                                    "surface-alt",
+                                    "#fbf9f4",
+                                    "#38474f"),
                             new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
                             new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
             new Screen(
@@ -308,7 +321,12 @@ final class ConformanceCases {
                     List.of(
                             new Part("#review-panel", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#review-panel", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#review-judge", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"))),
+                            new Part("#review-judge", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),
+                            new Part("#review-target", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            // A finding's kind is strong text and its note body text, readable on the card in both
+                            // blocks.
+                            new Part(".finding-kind", Kind.TEXT, "text-strong", "#22303a", "#f4f7f8"),
+                            new Part(".finding-note", Kind.TEXT, "text", "#2c3941", "#e6ebed"))),
             // A pause on a provider error is the run's own state: the banner takes the err role, light and dark.
             new Screen(
                     "TRANSLATING_PROVIDER_ERROR",
@@ -327,7 +345,7 @@ final class ConformanceCases {
                     ViewNames.EXPORT,
                     Preparation.BOOK_OPENED,
                     Overlay.NONE,
-                    List.of(CARD_FILL, CARD_EDGE, BOX_FILL, BOX_EDGE, SWITCH_TRACK)),
+                    List.of(CARD_FILL, CARD_EDGE, BOX_FILL, BOX_EDGE, SWITCH_TRACK, SWITCH_THUMB)),
             new Screen(
                     "EXPORT_COMPLETED",
                     ViewNames.EXPORT,
@@ -342,5 +360,6 @@ final class ConformanceCases {
                             new Part("#export-auto", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             BOX_FILL,
                             BOX_EDGE,
-                            SWITCH_TRACK)));
+                            SWITCH_TRACK,
+                            SWITCH_THUMB)));
 }

@@ -86,6 +86,9 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
     /** The three elevation roles: published as roles, expressed as style classes rather than colours (D10). */
     private static final Set<String> ELEVATION_ROLES = Set.of("shadow-sm", "shadow", "shadow-lg");
 
+    /** Two roles the published catalogue lacks: the switch's off track and thumb, which the mockup paints from literals. */
+    private static final Set<String> SWITCH_ROLES = Set.of("toggle-off", "toggle-thumb");
+
     private static final Set<String> BRAND_ANCHORS =
             Set.of("brand-charcoal", "brand-slate", "brand-sand", "brand-cognac");
 
@@ -102,16 +105,17 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
 
     // ===== the role names ================================================================================
 
-    // IF the stylesheet is read for its role names, THEN there are exactly 44: 41 colours plus 3 elevations.
+    // IF the stylesheet is read for its role names, THEN there are 44 published (41 colours, 3 elevations) plus 2
+    // switch.
     @Test
-    void catalogue_declaredRoles_areExactlyFortyFour() {
-        assertThat(catalogueNames()).hasSize(44);
+    void catalogue_declaredRoles_areFortyFourPublishedPlusTwoSwitchRoles() {
+        assertThat(catalogueNames()).hasSize(46);
     }
 
-    // IF the 41 colour roles are counted on .root without the brand anchors, THEN there are exactly 41.
+    // IF the colour roles are counted on .root without the brand anchors, THEN there are 41 published plus 2 switch.
     @Test
-    void catalogue_colourRolesOnRoot_areExactlyFortyOne() {
-        assertThat(colourNames(rootBlock())).hasSize(41);
+    void catalogue_colourRolesOnRoot_areFortyOnePublishedPlusTwoSwitchRoles() {
+        assertThat(colourNames(rootBlock())).hasSize(43);
     }
 
     // IF the catalogue's roles are classified, THEN exactly 12 are status roles (4 statuses x 3 shades).
@@ -122,11 +126,12 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
                 .hasSize(12);
     }
 
-    // IF the catalogue is compared with the published role list, THEN they are the same 44 names.
+    // IF the catalogue is compared with the published role list, THEN they are the same names plus the switch roles.
     @Test
-    void catalogue_names_equalThePublishedList() {
+    void catalogue_names_equalThePublishedListPlusSwitchRoles() {
         final Set<String> published = new TreeSet<>(COLOUR_ROLES);
         published.addAll(ELEVATION_ROLES);
+        published.addAll(SWITCH_ROLES);
 
         assertThat(catalogueNames()).containsExactlyInAnyOrderElementsOf(published);
     }
@@ -137,7 +142,9 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
         final Set<String> mockup = mockupLightNames();
 
         assertThat(mockup).as("the mockup's light block declares 44 roles").hasSize(44);
-        assertThat(catalogueNames()).containsExactlyInAnyOrderElementsOf(mockup);
+        final Set<String> withoutSwitchRoles = new TreeSet<>(catalogueNames());
+        withoutSwitchRoles.removeAll(SWITCH_ROLES);
+        assertThat(withoutSwitchRoles).containsExactlyInAnyOrderElementsOf(mockup);
     }
 
     // IF the dark block is read, THEN it defines the same 41 colour names as the light block, no more, no fewer.

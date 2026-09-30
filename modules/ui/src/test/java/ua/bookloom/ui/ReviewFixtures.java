@@ -61,6 +61,17 @@ public final class ReviewFixtures {
         return view("ch05.xhtml:11", "ch5 · p12", SegmentStatus.FLAGGED, List.of(), 0.58, fullContext());
     }
 
+    /** The low-scoring segment with the judge's finding on it, as the findings list shows it. */
+    public static SegmentView lowScoreWithFinding() {
+        return view(
+                "ch05.xhtml:11",
+                "ch5 · p12",
+                SegmentStatus.FLAGGED,
+                List.of(new QaFinding("judge", Severity.MEDIUM, "Reads stiffly", "judge")),
+                0.58,
+                fullContext());
+    }
+
     public static SegmentView nameIssue() {
         return view(
                 "ch07.xhtml:39",

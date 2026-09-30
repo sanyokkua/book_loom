@@ -57,6 +57,7 @@ final class LiveRowView extends VBox {
         VBox.setVgrow(panes, Priority.ALWAYS);
         sourceScroll.setId(idPrefix + "-source-scroll");
         targetScroll.setId(idPrefix + "-target-scroll");
+        targetScroll.getStyleClass().add("live-target");
         setPrefHeight(ROW_HEIGHT);
         setMinHeight(ROW_HEIGHT);
         setMaxHeight(ROW_HEIGHT);

@@ -84,6 +84,7 @@ final class GlossaryCells {
 
         SourceCell(final Messages messages, final NamesStyleViewModel model) {
             super(new HBox(ROW_SPACING));
+            term.getStyleClass().add("glossary-term");
             final Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
             final Button remove = new Button("✕");

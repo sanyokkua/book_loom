@@ -28,7 +28,8 @@ class ThemeNoStrayColourTest {
             ".root .elevation-lg",
             ".root.theme-dark .elevation-sm",
             ".root.theme-dark .elevation",
-            ".root.theme-dark .elevation-lg");
+            ".root.theme-dark .elevation-lg",
+            ".root .toggle-switch .thumb");
 
     private static final Pattern SEMICOLON = Pattern.compile(";");
     private static final Pattern HEX = Pattern.compile("#[0-9a-fA-F]{3,8}\\b");

@@ -117,6 +117,7 @@ final class ReviewComparePane extends VBox {
     private static Label note(final String id, final ObservableValue<String> text) {
         final Label label = new Label();
         label.setId(id);
+        label.getStyleClass().add("finding-note");
         label.setWrapText(true);
         label.setMinHeight(Region.USE_PREF_SIZE);
         label.textProperty().bind(text);
@@ -137,6 +138,7 @@ final class ReviewComparePane extends VBox {
         final Label caption = new Label(messages.get(MessageKey.REVIEW_PROPOSAL));
         caption.getStyleClass().add("stat-caption");
         proposal.setId("review-proposal-text");
+        proposal.getStyleClass().add("finding-note");
         proposal.setWrapText(true);
         proposal.setMinHeight(Region.USE_PREF_SIZE);
         final Button accept = action(
@@ -255,7 +257,9 @@ final class ReviewComparePane extends VBox {
                 MessageKey.REVIEW_FINDING_KIND,
                 finding.kind(),
                 finding.severity().name().toLowerCase(Locale.ROOT)));
+        kind.getStyleClass().add("finding-kind");
         final Label note = new Label(finding.note());
+        note.getStyleClass().add("finding-note");
         note.setWrapText(true);
         note.setMinHeight(Region.USE_PREF_SIZE);
         final Label source = new Label(messages.get(MessageKey.REVIEW_RAISED_BY, finding.raisedBy()));
