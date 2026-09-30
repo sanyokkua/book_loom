@@ -116,6 +116,7 @@ final class StructureChecksCard extends VBox {
         mark.getStyleClass().add(role.styleClass());
         final Label words = new Label(messages.get(text, args));
         words.setId(id);
+        words.getStyleClass().add("stats-value");
         words.setWrapText(true);
         final HBox row = new HBox(GLYPH_SPACING, mark, words);
         row.setAlignment(Pos.TOP_LEFT);
