@@ -2,7 +2,6 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.EnumSet;
@@ -11,10 +10,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
-import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -23,6 +21,9 @@ import javafx.collections.ObservableSet;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SideFile;
@@ -54,15 +55,14 @@ public final class ExportViewModel {
     private final CurrentProject project;
     private final StateMirror mirror;
     private final Messages messages;
-    private final ExecutorService executor;
     private final ObservableSet<SideFile> sideFiles = FXCollections.observableSet(EnumSet.of(SideFile.GLOSSARY_CSV));
     private final ReadOnlyBooleanWrapper consistencyPass = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper refusal = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper runNote = new ReadOnlyStringWrapper("");
     private final ReadOnlyBooleanWrapper exportAvailable = new ReadOnlyBooleanWrapper(false);
     private final ExportStatement statement;
-    // The first existing file among the book and the chosen side files, as answered last. FX thread only.
-    private @Nullable Path occupied;
+    private final ExportOccupancy occupancy;
+    private final ExportRun run;
     // The dial the consistency switch last followed, so an unrelated brief change leaves the person's choice alone.
     private @Nullable QualityDial followedDial;
     private final ReadOnlyStringWrapper destination = new ReadOnlyStringWrapper("");
@@ -73,8 +73,6 @@ public final class ExportViewModel {
     // The target the last proposal was made for, so a brief change that leaves it alone proposes nothing. FX thread
     // only.
     private @Nullable String proposedFor;
-    // Counts the questions asked about the destination; an answer for any other count is stale. FX thread only.
-    private long epoch;
 
     /**
      * Follows the open book and its brief, and proposes a destination for a book that is already open.
@@ -83,7 +81,11 @@ public final class ExportViewModel {
      * @param mirror the run's state, which decides whether a book can be written now
      * @param desk the review desk whose counts the partial-export statement states
      * @param messages the catalogue the refusals and the statement are worded from
-     * @param executor the daemon executor the existence check runs on, never the FX thread
+     * @param exports the port an export is asked of
+     * @param models the port the consistency pass's model is created through
+     * @param settings the provider settings, whose selection names that model
+     * @param progress the workflow marks, where a written book marks the export step
+     * @param executor the daemon executor the existence check and the export run on, never the FX thread
      */
     @Inject
     public ExportViewModel(
@@ -91,12 +93,18 @@ public final class ExportViewModel {
             final StateMirror mirror,
             final ReviewDesk desk,
             final Messages messages,
+            final ExportService exports,
+            final ChatModelFactory models,
+            final SettingsViewModel settings,
+            final WorkflowProgress progress,
             @BackgroundExecutor final ExecutorService executor) {
         this.project = Objects.requireNonNull(project, "project");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.statement = new ExportStatement(desk, messages, executor);
-        this.executor = Objects.requireNonNull(executor, "executor");
+        this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
+        this.run = new ExportRun(exports, models, settings, progress, executor);
+        run.running().addListener((observed, was, now) -> recompute());
         project.book().addListener((observed, was, now) -> onBookChanged(now));
         project.brief().addListener((observed, was, now) -> onBriefChanged(now));
         mirror.runState().addListener((observed, was, now) -> onRunStateChanged(now));
@@ -177,6 +185,31 @@ public final class ExportViewModel {
     /** Whether Export book can be used: no translating run, no refusal, and a usable destination path. */
     public ReadOnlyBooleanProperty exportAvailable() {
         return exportAvailable.getReadOnlyProperty();
+    }
+
+    /** The outcome of the last export, or null before one succeeds and again once the next one starts. */
+    public ReadOnlyObjectProperty<@Nullable ExportOutcome> outcome() {
+        return run.outcome();
+    }
+
+    /** Why the last export wrote nothing, worded for the person; empty otherwise. */
+    public ReadOnlyStringProperty failure() {
+        return run.failure();
+    }
+
+    /**
+     * Writes the book to the destination with the chosen side files, in the background. Does nothing while Export book
+     * is unavailable. The result arrives as {@link #outcome()} or {@link #failure()}.
+     */
+    public void export() {
+        final OpenedBook book = project.book().get();
+        final Optional<Path> path = destinationPath();
+        if (book == null || path.isEmpty() || !exportAvailable.get()) {
+            log.debug("export ignored: a book is open {}, a path {}", book != null, path.isPresent());
+            return;
+        }
+        run.start(new ExportRequest(
+                book.projectId(), path.get(), overwrite.get(), Set.copyOf(sideFiles), consistencyPass.get()));
     }
 
     /** The lines stating what a book written now would contain, as last refreshed by {@link #refreshStatement()}. */
@@ -304,54 +337,27 @@ public final class ExportViewModel {
     }
 
     private void refreshExists() {
-        epoch++;
-        final long asked = epoch;
         final Optional<Path> path = destinationPath();
         recompute();
         if (overwrite.get() || path.isEmpty()) {
             log.debug("existence not asked: overwrite allowed {}, usable path {}", overwrite.get(), path.isPresent());
+            occupancy.clear();
             destinationExists.set(false);
-            occupied = null;
             recompute();
             return;
         }
         final OpenedBook book = project.book().get();
-        final List<Path> written = book == null
-                ? List.of(path.get())
-                : ExportPathRules.writtenPaths(
-                        path.get(),
-                        Objects.requireNonNull(book.inspection().format(), "format"),
-                        Set.copyOf(sideFiles));
-        submit(written, asked);
+        occupancy.ask(
+                book == null
+                        ? List.of(path.get())
+                        : ExportPathRules.writtenPaths(
+                                path.get(),
+                                Objects.requireNonNull(book.inspection().format(), "format"),
+                                Set.copyOf(sideFiles)));
     }
 
-    private void submit(final List<Path> paths, final long asked) {
-        log.debug("existence of {} asked as question {}", paths, asked);
-        try {
-            executor.execute(() -> answer(paths, asked));
-        } catch (RejectedExecutionException rejected) {
-            log.warn("existence of {} could not be asked; the warning keeps its last value", paths, rejected);
-        }
-    }
-
-    private void answer(final List<Path> paths, final long asked) {
-        final List<Path> taken = paths.stream().filter(Files::exists).toList();
-        log.debug(
-                "question {} answered on {}: occupied {}",
-                asked,
-                Thread.currentThread().getName(),
-                taken);
-        Platform.runLater(() -> publish(asked, paths.get(0), taken));
-    }
-
-    private void publish(final long asked, final Path book, final List<Path> taken) {
-        if (asked != epoch) {
-            log.debug("answer to question {} discarded: the current one is {}", asked, epoch);
-            return;
-        }
-        log.debug("answer to question {} published: occupied {}", asked, taken);
-        destinationExists.set(taken.contains(book));
-        occupied = taken.isEmpty() ? null : taken.get(0);
+    private void onOccupancyAnswered() {
+        destinationExists.set(occupancy.isBookTaken());
         recompute();
     }
 
@@ -373,13 +379,16 @@ public final class ExportViewModel {
     }
 
     private void recompute() {
-        final String text = ExportRefusals.text(messages, project.book().get(), destinationPath(), occupied);
+        final String text =
+                ExportRefusals.text(messages, project.book().get(), destinationPath(), occupancy.occupied());
         if (!text.equals(refusal.get())) {
             log.debug("refusal beside Save to is now '{}'", text.isEmpty() ? "none" : text);
         }
         refusal.set(text);
-        final boolean available =
-                destinationPath().isPresent() && text.isEmpty() && runNote.get().isEmpty();
+        final boolean available = destinationPath().isPresent()
+                && text.isEmpty()
+                && runNote.get().isEmpty()
+                && !run.running().get();
         if (available != exportAvailable.get()) {
             log.debug(
                     "export available is now {} with the run {}",

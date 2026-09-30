@@ -19,6 +19,7 @@ import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.ScriptedChatModelFactory;
+import ua.bookloom.ui.ScriptedExportService;
 import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
@@ -73,9 +74,12 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
-        destinations = onFx(() -> new ExportViewModel(
-                current, mirror, desk, new Messages((LocaleProvider) () -> Locale.ENGLISH), new DirectExecutor()));
-        settings = onFx(() -> new SettingsViewModel(
+        settings = onFx(TranslatingViewModelTestBase::newSettings);
+        destinations = onFx(this::newDestinations);
+    }
+
+    private static SettingsViewModel newSettings() {
+        return new SettingsViewModel(
                 new FakeProviderConfigs(),
                 ScriptedProviderVerifier.idle(),
                 new ModelListing(
@@ -85,7 +89,20 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                         new DirectExecutor()),
                 new RecordingToasts(),
                 new RecordingErrorPresenter(),
-                new DirectExecutor()));
+                new DirectExecutor());
+    }
+
+    private ExportViewModel newDestinations() {
+        return new ExportViewModel(
+                current,
+                mirror,
+                desk,
+                new Messages((LocaleProvider) () -> Locale.ENGLISH),
+                new ScriptedExportService(),
+                models,
+                settings,
+                new WorkflowProgress(current, mirror),
+                new DirectExecutor());
     }
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */

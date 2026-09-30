@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
@@ -59,5 +60,44 @@ class OsCommandTest {
         final Path written = Path.of("Мої книги", "Франкенштейн 1.uk.epub");
 
         assertThat(OsCommand.forReveal("Mac OS X", written)).hasSize(3).last().isEqualTo(written.toString());
+    }
+
+    // IF Open book were built like Reveal, THEN it would select the file in Finder instead of opening it.
+    @Test
+    void forOpen_macOs_isOpenOfTheFile() {
+        final Path written = Path.of("/books/Frankenstein.uk.epub");
+
+        assertThat(OsCommand.forOpen("Mac OS X", written)).containsExactly("open", written.toString());
+    }
+
+    @Test
+    void forOpen_windows_isExplorerOfTheOneArgument() {
+        final Path written = Path.of("C:\\books\\Frankenstein.uk.epub");
+
+        assertThat(OsCommand.forOpen("Windows 11", written))
+                .containsExactly("explorer.exe", "C:\\books\\Frankenstein.uk.epub");
+    }
+
+    @Test
+    void forOpen_linux_isXdgOpenOfTheFileItself() {
+        final Path written = Path.of("/books/Frankenstein.uk.epub");
+
+        assertThat(OsCommand.forOpen("Linux", written)).containsExactly("xdg-open", written.toString());
+    }
+
+    // IF Explorer's exit code 1 counted as a failure, THEN every successful Show on Windows would log a warning.
+    @ParameterizedTest
+    @CsvSource({
+        "Windows 11, explorer.exe, 1, true",
+        "Windows 11, explorer.exe, 2, false",
+        "Windows 11, explorer.exe, 0, true",
+        "Mac OS X, open, 1, false",
+        "Mac OS X, open, 0, true",
+        "Linux, xdg-open, 0, true",
+        "Linux, xdg-open, 3, false"
+    })
+    void succeeded_exitCode_decidesPerProgram(
+            final String osName, final String program, final int exitCode, final boolean expected) {
+        assertThat(OsCommand.succeeded(osName, program, exitCode)).isEqualTo(expected);
     }
 }

@@ -32,6 +32,7 @@ class ScreenConformanceCoverageTest {
                         "ERROR_DIALOG",
                         "REPLACE_RUN_DIALOG",
                         "RETRY_DIALOG",
+                        "EXPORT_COMPLETE_DIALOG",
                         "ADD_TERM_DIALOG");
     }
 

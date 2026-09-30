@@ -48,24 +48,42 @@ public final class PlatformFileRevealer implements FileRevealer {
     @Override
     public void reveal(final Path file) {
         Objects.requireNonNull(file, "file");
-        final List<String> command = OsCommand.forReveal(osName.get(), file);
-        log.debug("showing {} with {}", file, command);
+        submit(OsCommand.forReveal(osName.get(), file), "showing", file);
+    }
+
+    @Override
+    public void open(final Path file) {
+        Objects.requireNonNull(file, "file");
+        submit(OsCommand.forOpen(osName.get(), file), "opening", file);
+    }
+
+    private void submit(final List<String> command, final String purpose, final Path file) {
+        log.debug("{} {} with {}", purpose, file, command.getFirst());
+        final String os = osName.get();
         try {
-            executor.execute(() -> launch(command));
+            executor.execute(() -> launch(command, os));
         } catch (RejectedExecutionException stopped) {
-            log.warn(
-                    "cannot show the written file with {}: the background pool has stopped",
-                    command.getFirst(),
-                    stopped);
+            log.warn("cannot start {}: the background pool has stopped", command.getFirst(), stopped);
         }
     }
 
-    private void launch(final List<String> command) {
+    // The exit-code callback only logs and cannot fail, so there is no exception on the future to lose.
+    @SuppressWarnings("FutureReturnValueIgnored")
+    private void launch(final List<String> command, final String os) {
+        final String program = command.getFirst();
         try {
-            launcher.launch(command);
-            log.info("started {} to show the written file", command.getFirst());
+            launcher.launch(command).thenAccept(code -> report(os, program, code));
+            log.debug("started {}", program);
         } catch (RuntimeException failure) {
-            log.warn("could not start {} to show the written file", command.getFirst(), failure);
+            log.warn("could not start {}", program, failure);
+        }
+    }
+
+    private void report(final String os, final String program, final int exitCode) {
+        if (OsCommand.succeeded(os, program, exitCode)) {
+            log.debug("{} exited with {}", program, exitCode);
+        } else {
+            log.warn("{} exited with the failing code {}", program, exitCode);
         }
     }
 }

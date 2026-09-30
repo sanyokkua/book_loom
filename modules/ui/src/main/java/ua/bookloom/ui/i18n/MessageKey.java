@@ -690,6 +690,26 @@ public enum MessageKey {
     EXPORT_PARTIAL_FLAGGED("export.partial.flagged"),
     /** Counted line: segments kept as source by choice. */
     EXPORT_PARTIAL_KEPT("export.partial.kept"),
+    /** Size of a written book under a kilobyte; argument 0 is the byte count. */
+    EXPORT_SIZE_BYTES("export.size.bytes"),
+    /** Size of a written book in kilobytes; argument 0 is the count. */
+    EXPORT_SIZE_KB("export.size.kb"),
+    /** Size of a written book in megabytes, one decimal at most; argument 0 is the count. */
+    EXPORT_SIZE_MB("export.size.mb"),
+    /** Title of the export-complete dialog. */
+    EXPORT_COMPLETE_TITLE("export.complete.title"),
+    /** Sentence of the export-complete dialog naming the written file; argument 0 is the file name. */
+    EXPORT_COMPLETE_WRITTEN("export.complete.written"),
+    /** Label of the folder row of the export-complete dialog. */
+    EXPORT_COMPLETE_LOCATION("export.complete.location"),
+    /** Label of the verification row of the export-complete dialog. */
+    EXPORT_COMPLETE_VALIDATION("export.complete.validation"),
+    /** Verification result of the export-complete dialog. */
+    EXPORT_COMPLETE_VERIFIED("export.complete.verified"),
+    /** Label of the size row of the export-complete dialog. */
+    EXPORT_COMPLETE_SIZE("export.complete.size"),
+    /** Button that opens the written book in the program the system associates with it. */
+    EXPORT_OPEN_BOOK("export.openBook"),
     /** Display name of the literary fiction genre offered on the Book Brief. */
     GENRE_LITERARY_FICTION("genre.literaryFiction"),
     /** Display name of the classic literature genre offered on the Book Brief. */

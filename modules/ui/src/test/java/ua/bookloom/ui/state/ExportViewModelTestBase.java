@@ -11,9 +11,14 @@ import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.ui.FakeProviderConfigs;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
+import ua.bookloom.ui.ScriptedChatModelFactory;
+import ua.bookloom.ui.ScriptedExportService;
+import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
+import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.Messages;
@@ -35,6 +40,10 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
     StateMirror mirror;
     ScriptedReviewDesk desk;
     Messages messages;
+    ScriptedExportService exportService;
+    ScriptedChatModelFactory models;
+    SettingsViewModel settings;
+    WorkflowProgress progress;
 
     @Override
     public final void start(final Stage stage) {
@@ -51,13 +60,28 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
         mirror = onFx(StateMirror::new);
         desk = new ScriptedReviewDesk();
         messages = new Messages((LocaleProvider) () -> Locale.ENGLISH);
+        exportService = new ScriptedExportService();
+        models = ScriptedChatModelFactory.ok();
+        settings = onFx(() -> new SettingsViewModel(
+                new FakeProviderConfigs(),
+                ScriptedProviderVerifier.idle(),
+                new ModelListing(
+                        ScriptedModelCatalog.idle(),
+                        new RecordingToasts(),
+                        new RecordingErrorPresenter(),
+                        new DirectExecutor()),
+                new RecordingToasts(),
+                new RecordingErrorPresenter(),
+                new DirectExecutor()));
+        progress = onFx(() -> new WorkflowProgress(current, mirror));
         exports = onFx(() -> newExports(new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */
     ExportViewModel newExports(final ExecutorService executor) {
-        return new ExportViewModel(current, mirror, desk, messages, executor);
+        return new ExportViewModel(
+                current, mirror, desk, messages, exportService, models, settings, progress, executor);
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */

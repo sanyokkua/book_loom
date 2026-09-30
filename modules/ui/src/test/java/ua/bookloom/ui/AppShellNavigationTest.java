@@ -126,4 +126,16 @@ class AppShellNavigationTest extends ShellTestBase {
         // IF an empty model were joined to the provider, THEN the footer would read "Ollama · ".
         assertThat(footerText()).isEqualTo("No model chosen");
     }
+
+    @Test
+    void navigation_exportMarkedDone_marksTheExportStep() throws TimeoutException {
+        // IF the export could not be marked done, THEN a written book would leave its step unmarked once the interim
+        // derivation goes.
+        openBook();
+        final WorkflowProgress progress = injector.getInstance(WorkflowProgress.class);
+
+        onFx(() -> progress.markDone(ViewNames.EXPORT));
+
+        assertThat(doneEntryIds()).contains("nav-export");
+    }
 }

@@ -3,6 +3,8 @@ package ua.bookloom.ui;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.inject.Injector;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
@@ -19,12 +21,15 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ConformanceCases.Kind;
 import ua.bookloom.ui.ConformanceCases.Part;
 import ua.bookloom.ui.ConformanceCases.Screen;
+import ua.bookloom.ui.dialog.ExportCompleteDialog;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.notify.ErrorPresenter;
+import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.theme.ThemeMode;
 
@@ -78,6 +83,12 @@ class ScreenConformanceTest extends ShellTestBase {
             case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
             case RETRY ->
                 onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
+            case EXPORT_COMPLETE ->
+                onFx(() -> injector.getInstance(ExportCompleteDialog.class)
+                        .show(new ExportOutcome(
+                                new ExportReport(
+                                        Path.of("/books/Frankenstein.uk.epub"), 10, 0, 0, 0, 8, 2, List.of(), 10),
+                                958_464)));
             case REPLACE_RUN ->
                 onFx(() -> injector.getInstance(ReplaceRunPrompt.class)
                         .ask("Frankenstein.epub", "Dracula.epub", RunState.RUNNING, () -> {}));

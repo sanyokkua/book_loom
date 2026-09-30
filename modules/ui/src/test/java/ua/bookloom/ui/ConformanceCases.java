@@ -39,6 +39,7 @@ final class ConformanceCases {
         ERROR_DIALOG,
         REPLACE_RUN,
         RETRY,
+        EXPORT_COMPLETE,
         ADD_TERM,
         REVIEW_PANEL
     }
@@ -126,6 +127,13 @@ final class ConformanceCases {
                     List.of(
                             new Part("#retry-note-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#retry-note-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+            new Screen(
+                    "EXPORT_COMPLETE_DIALOG",
+                    null,
+                    Overlay.EXPORT_COMPLETE,
+                    List.of(
+                            new Part("#export-complete-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#export-complete-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
             new Screen(
                     "SETTINGS",
                     ViewNames.SETTINGS,
