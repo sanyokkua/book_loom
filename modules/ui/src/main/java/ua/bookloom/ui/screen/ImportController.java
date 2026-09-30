@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import com.google.inject.Inject;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -21,11 +22,13 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.LanguageWarning;
 
 /**
  * The import screen: a drop zone and a file picker that both hand a file to the view model, and the area below them
@@ -43,6 +46,7 @@ public final class ImportController {
     private final ImportGuard guard;
     private final Messages messages;
     private final Navigator navigator;
+    private final LanguageNames names;
     private final ChangeListener<ImportState> onState = (observed, was, now) -> show(now);
 
     @FXML
@@ -62,6 +66,7 @@ public final class ImportController {
      *     replaced unasked
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Continue leads
+     * @param names how a language tag is named on the card and in the warnings
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -70,11 +75,13 @@ public final class ImportController {
             final ImportViewModel viewModel,
             final ImportGuard guard,
             final Messages messages,
-            final Navigator navigator) {
+            final Navigator navigator,
+            final LanguageNames names) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.guard = Objects.requireNonNull(guard, "guard");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.names = Objects.requireNonNull(names, "names");
     }
 
     /**
@@ -175,31 +182,49 @@ public final class ImportController {
         return switch (state) {
             case ImportState.Idle idle -> List.of();
             case ImportState.Opening opening -> List.of(ImportViews.progress(messages, opening.fileName()));
-            case ImportState.Detected detected ->
-                List.of(ImportViews.card(messages, detected.card()), continueFooter(MessageKey.IMPORT_CONTINUE));
+            case ImportState.Detected detected -> detectedNodes(detected);
+            case ImportState.DrmBlocked blocked -> withChooseAnother(ImportViews.drmBlocked(messages, blocked));
+            case ImportState.Unsupported unsupported ->
+                withChooseAnother(ImportViews.unsupported(messages, unsupported));
             case ImportState.Refused refused ->
-                List.of(ImportViews.refusal(messages, refused.fileName(), refused.error()), chooseAnotherFooter());
-            case ImportState.LanguageMismatch mismatch ->
-                List.of(
-                        ImportViews.mismatch(messages, mismatch.declaredLang(), mismatch.detectedLang()),
-                        ImportViews.card(messages, mismatch.card()),
-                        continueFooter(MessageKey.IMPORT_CONTINUE_ANYWAY));
+                withChooseAnother(List.of(ImportViews.refusal(messages, refused.fileName(), refused.error())));
         };
     }
 
-    private Node continueFooter(final MessageKey label) {
-        return StepFooter.of(
-                null, new StepFooter.Action("import-continue", messages.get(label), "btn-primary", this::onContinue));
+    private List<Node> detectedNodes(final ImportState.Detected detected) {
+        final List<Node> nodes = new ArrayList<>();
+        final LanguageWarning warning = detected.warning();
+        if (warning != null) {
+            nodes.add(ImportViews.warning(messages, names, warning));
+        }
+        nodes.add(ImportCardView.card(messages, names, detected.card()));
+        nodes.add(detectedFooter());
+        return nodes;
     }
 
-    private Node chooseAnotherFooter() {
-        return StepFooter.of(
+    private List<Node> withChooseAnother(final List<Node> parts) {
+        final List<Node> nodes = new ArrayList<>(parts);
+        nodes.add(StepFooter.of(
                 null,
                 new StepFooter.Action(
                         "import-choose-another",
                         messages.get(MessageKey.IMPORT_CHOOSE_ANOTHER),
                         "btn-secondary",
-                        this::chooseFile));
+                        this::chooseFile)));
+        return nodes;
+    }
+
+    private Node detectedFooter() {
+        return StepFooter.of(
+                new StepFooter.Action(
+                        "import-cancel", messages.get(MessageKey.IMPORT_CANCEL), "btn-ghost", this::onCancel),
+                new StepFooter.Action(
+                        "import-continue", messages.get(MessageKey.IMPORT_CONTINUE), "btn-primary", this::onContinue));
+    }
+
+    private void onCancel() {
+        log.debug("cancel pressed, the opened book is released");
+        viewModel.cancel();
     }
 
     private void onContinue() {

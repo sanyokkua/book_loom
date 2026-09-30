@@ -3,27 +3,36 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.document.CoverImage;
 
 /**
- * What the parse of a book actually learned, and nothing it did not: the card offers no chapter, word, image or cover
- * figure because {@code Document} carries none.
+ * What the inspection and the profile found about an opened book, and nothing they did not: a field the book did not
+ * declare is {@code null} so the view omits its row instead of showing a blank.
  *
  * @param fileName the name of the file that was opened, without its directory
  * @param format the format it was parsed as
- * @param title the title the book declares, or {@code null} so the view omits the row instead of showing a blank
+ * @param formatVersion the format's version, such as an EPUB's package version, or {@code null}
+ * @param title the title the book declares, or {@code null}
  * @param author the author the book declares, or {@code null}
- * @param declaredLang the language the book declares, or {@code null}
- * @param unitCount how many units the book was divided into
- * @param segmentCount how many translatable segments were found across them
+ * @param declaredLanguage the normalized tag of the language the book declares, or {@code null}
+ * @param chapters how many top-level entries the book's structure has
+ * @param words the approximate word count
+ * @param images how many images the book carries
+ * @param fonts how many embedded fonts the book carries
+ * @param cover the cover image, or {@code null} when the book has none
  */
 public record BookCard(
         String fileName,
         BookFormat format,
+        @Nullable String formatVersion,
         @Nullable String title,
         @Nullable String author,
-        @Nullable String declaredLang,
-        int unitCount,
-        int segmentCount) {
+        @Nullable String declaredLanguage,
+        int chapters,
+        int words,
+        int images,
+        int fonts,
+        @Nullable CoverImage cover) {
 
     /** Rejects a missing file name or format. */
     public BookCard {

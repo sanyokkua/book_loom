@@ -45,6 +45,8 @@ final class ConformanceCases {
         NONE,
         BOOK_OPENED,
         BOOK_REFUSED,
+        BOOK_DRM_BLOCKED,
+        BOOK_UNSUPPORTED,
         LANGUAGE_MISMATCH,
         RUN_COMPLETED,
         RUN_PROVIDER_FAILED,
@@ -144,6 +146,22 @@ final class ConformanceCases {
                     List.of(
                             new Part("#import-refusal", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
                             new Part("#import-refusal", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+            new Screen(
+                    "IMPORT_DRM_BLOCKED",
+                    ViewNames.IMPORT,
+                    Preparation.BOOK_DRM_BLOCKED,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#import-drm", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-drm", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+            new Screen(
+                    "IMPORT_UNSUPPORTED",
+                    ViewNames.IMPORT,
+                    Preparation.BOOK_UNSUPPORTED,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#import-unsupported", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
+                            new Part("#import-unsupported", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
             new Screen(
                     "IMPORT_LANGUAGE_MISMATCH",
                     ViewNames.IMPORT,

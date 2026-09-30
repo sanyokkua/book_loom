@@ -1,7 +1,6 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -14,12 +13,11 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.InspectionVerdict;
+import ua.bookloom.api.document.LanguageEvidence.Verdict;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BookFixtures;
@@ -60,15 +58,27 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_enBook_detectedCardCarriesEveryFieldAndCounts() {
         final Path source = dir.resolve("Frankenstein.epub");
-        final ImportedBook imported = BookFixtures.frankensteinImport();
+        final ImportedBook imported = BookFixtures.frankensteinInspected();
         projects.on(source, Result.ok(imported));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(stateOf(viewModel))
-                .isEqualTo(new ImportState.Detected(new BookCard(
-                        "Frankenstein.epub", BookFormat.EPUB, "Frankenstein", "Mary Shelley", "en", 3, 9)));
+                .isEqualTo(new ImportState.Detected(
+                        new BookCard(
+                                "Frankenstein.epub",
+                                BookFormat.EPUB,
+                                "2.0",
+                                "Frankenstein",
+                                "Mary Shelley",
+                                "en",
+                                11,
+                                78_214,
+                                7,
+                                0,
+                                BookFixtures.pngCover()),
+                        null));
         assertThat(openedBook()).isNotNull().satisfies(book -> {
             assertThat(book.projectId()).isEqualTo("p1");
             assertThat(book.source()).isEqualTo(source);
@@ -84,13 +94,27 @@ class ImportViewModelTest extends ImportViewModelTestBase {
     @Test
     void open_txtBook_reportsNameFormatAndCountsWithThreeFieldsAbsentAndNoError() {
         final Path source = dir.resolve("notes.txt");
-        projects.on(source, Result.ok(BookFixtures.imported("notes", BookFormat.TXT, null, null, null, 5, 1)));
+        projects.on(
+                source,
+                Result.ok(BookFixtures.inspected(
+                        "notes",
+                        BookFormat.TXT,
+                        null,
+                        null,
+                        null,
+                        BookFixtures.evidence(null, null, null, Verdict.ABSENT),
+                        1,
+                        640,
+                        0,
+                        0,
+                        null)));
         final ImportViewModel viewModel = viewModel();
 
         open(viewModel, source);
 
         assertThat(stateOf(viewModel))
-                .isEqualTo(new ImportState.Detected(new BookCard("notes.txt", BookFormat.TXT, null, null, null, 2, 6)));
+                .isEqualTo(new ImportState.Detected(
+                        new BookCard("notes.txt", BookFormat.TXT, null, null, null, null, 1, 640, 0, 0, null), null));
         assertThat(errors.presented()).isEmpty();
     }
 
@@ -105,7 +129,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
 
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard("notes.md", BookFormat.MARKDOWN, null, null, null, 1, 4)));
+                        new BookCard("notes.md", BookFormat.MARKDOWN, null, null, null, null, 1, 0, 0, 0, null), null));
     }
 
     // IF one missing metadata key hid or blanked the other, THEN a book declaring only its title would lose it.
@@ -125,7 +149,19 @@ class ImportViewModelTest extends ImportViewModelTestBase {
 
         assertThat(stateOf(viewModel))
                 .isEqualTo(new ImportState.Detected(
-                        new BookCard("book.epub", BookFormat.EPUB, expectedTitle, expectedAuthor, null, 1, 1)));
+                        new BookCard(
+                                "book.epub",
+                                BookFormat.EPUB,
+                                null,
+                                expectedTitle,
+                                expectedAuthor,
+                                null,
+                                1,
+                                0,
+                                0,
+                                0,
+                                null),
+                        null));
     }
 
     // IF a book with a declared language of any value ended in the mismatch state, THEN a warning would appear that no
@@ -170,44 +206,6 @@ class ImportViewModelTest extends ImportViewModelTestBase {
         assertThat(toasts.raised()).isEmpty();
         assertThat(errors.presented()).isEmpty();
         assertThat(isOpening(viewModel)).isFalse();
-    }
-
-    // IF a DRM-protected answer with no project were shown as a card, THEN the person could continue with a book that
-    // was never stored; the refusal must name the verdict and the detected type and leave no book open.
-    @Test
-    void open_answerWithoutAProjectId_isRefusedWithValidationNamingTheVerdictAndType() {
-        final Path source = dir.resolve("Purchased_Novel.epub");
-        projects.on(source, Result.ok(BookFixtures.refused(InspectionVerdict.DRM_PROTECTED, "EPUB")));
-        final ImportViewModel viewModel = viewModel();
-
-        open(viewModel, source);
-
-        assertThat(stateOf(viewModel)).isInstanceOfSatisfying(ImportState.Refused.class, refused -> {
-            assertThat(refused.fileName()).isEqualTo("Purchased_Novel.epub");
-            assertThat(refused.error().code()).isEqualTo(ErrorCode.validation);
-            assertThat(refused.error().title()).isEqualTo("This book is DRM-protected");
-            assertThat(refused.error().message()).contains("EPUB");
-        });
-        assertThat(openedBook()).isNull();
-        assertThat(toasts.raised()).isEmpty();
-        assertThat(errors.presented()).isEmpty();
-    }
-
-    // IF an unsupported type were reported like a protected book, THEN the person would be told the wrong reason.
-    @Test
-    void open_unsupportedAnswerWithoutAProjectId_isRefusedNamingTheDetectedType() {
-        final Path source = dir.resolve("notes.pdf");
-        projects.on(source, Result.ok(BookFixtures.refused(InspectionVerdict.UNSUPPORTED, "PDF")));
-        final ImportViewModel viewModel = viewModel();
-
-        open(viewModel, source);
-
-        assertThat(stateOf(viewModel)).isInstanceOfSatisfying(ImportState.Refused.class, refused -> {
-            assertThat(refused.error().code()).isEqualTo(ErrorCode.validation);
-            assertThat(refused.error().title()).isEqualTo("This file could not be read");
-            assertThat(refused.error().message()).contains("PDF");
-        });
-        assertThat(openedBook()).isNull();
     }
 
     // IF a project answered without its brief were opened, THEN the brief screen would read a brief that is not there;
@@ -319,23 +317,6 @@ class ImportViewModelTest extends ImportViewModelTestBase {
 
         assertThat(stateOf(viewModel)).isInstanceOf(ImportState.Detected.class);
         assertThat(openedBook()).isNotNull();
-    }
-
-    // IF the mismatch state could not be put on the screen directly, THEN its rendering would be covered by nothing;
-    // the view model must publish exactly the card and detected language it was given.
-    @Test
-    void showLanguageMismatch_cardAndDetectedLanguage_publishesThatState() {
-        final BookCard card =
-                new BookCard("Frankenstein.epub", BookFormat.EPUB, "Frankenstein", "Mary Shelley", "en", 3, 9);
-        final ImportViewModel viewModel = viewModel();
-
-        onFx(() -> {
-            viewModel.showLanguageMismatch(card, "uk");
-            return null;
-        });
-        WaitForAsyncUtils.waitForFxEvents();
-
-        assertThat(stateOf(viewModel)).isEqualTo(new ImportState.LanguageMismatch(card, "uk"));
     }
 
     private static AppError protectedError() {

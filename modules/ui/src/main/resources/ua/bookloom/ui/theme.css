@@ -1193,6 +1193,14 @@
     -fx-font-size: 26px;
 }
 
+.cover-placeholder {
+    -fx-background-color: -color-surface-2;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+}
+
 .kv {
     -fx-padding: 6px 0 6px 0;
     -fx-border-color: transparent transparent -color-divider transparent;

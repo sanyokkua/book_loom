@@ -209,18 +209,8 @@ public enum MessageKey {
     IMPORT_CARD_FILE("import.card.file"),
     /** Label of the format row of the book card. */
     IMPORT_CARD_FORMAT("import.card.format"),
-    /** Label of the title row of the book card. */
-    IMPORT_CARD_TITLE_ROW("import.card.titleRow"),
-    /** Label of the author row of the book card. */
-    IMPORT_CARD_AUTHOR("import.card.author"),
     /** Label of the row holding the language the book declares. */
     IMPORT_CARD_LANGUAGE("import.card.language"),
-    /** Label of the row counting the units the book was divided into. */
-    IMPORT_CARD_UNITS("import.card.units"),
-    /** Label of the row counting the translatable segments. */
-    IMPORT_CARD_SEGMENTS("import.card.segments"),
-    /** Count of units; argument 0 is the count, passed as an Integer. */
-    IMPORT_COUNT_UNITS("import.count.units"),
     /** Count of translatable segments; argument 0 is the count, passed as an Integer. */
     IMPORT_COUNT_SEGMENTS("import.count.segments"),
     /** Name of the EPUB format. */
@@ -241,10 +231,56 @@ public enum MessageKey {
     IMPORT_MISMATCH_TITLE("import.mismatch.title"),
     /** Body of the language-mismatch warning; argument 0 is the declared language and argument 1 the language of the text, both Strings. */
     IMPORT_MISMATCH_TEXT("import.mismatch.text"),
+    /** Label of the row joining the title and the author. */
+    IMPORT_CARD_TITLE_AUTHOR("import.card.titleAuthor"),
+    /** Label of the row counting chapters and approximate words. */
+    IMPORT_CARD_CHAPTERS("import.card.chapters"),
+    /** Chapters and approximate words; argument 0 is the chapter count and argument 1 the already formatted word figure. */
+    IMPORT_CARD_CHAPTERS_WORDS("import.card.chaptersWords"),
+    /** Label of the row counting images and fonts. */
+    IMPORT_CARD_MEDIA("import.card.media"),
+    /** Images and fonts; argument 0 is the image count and argument 1 the font count. */
+    IMPORT_CARD_MEDIA_COUNTS("import.card.mediaCounts"),
+    /** Label of the row saying whether the book is DRM-protected. */
+    IMPORT_CARD_DRM("import.card.drm"),
+    /** Value of the DRM row of a book that is not encrypted. */
+    IMPORT_DRM_NONE("import.drm.none"),
+    /** Accessible name of the cover picture. */
+    IMPORT_CARD_COVER("import.card.cover"),
+    /** Button that discards the opened book and returns to the drop zone. */
+    IMPORT_CANCEL("import.cancel"),
+    /** Heading of the warning about a declared language the application cannot name. */
+    IMPORT_UNRECOGNIZED_TITLE("import.unrecognized.title"),
+    /** Body of that warning; argument 0 is the code as the book wrote it. */
+    IMPORT_UNRECOGNIZED_TEXT("import.unrecognized.text"),
+    /** Heading of the DRM-blocked banner. */
+    IMPORT_DRM_TITLE("import.drm.title"),
+    /** Body of the DRM-blocked banner. */
+    IMPORT_DRM_TEXT("import.drm.text"),
+    /** Label of the file row of the DRM-blocked state. */
+    IMPORT_DRM_FILE("import.drm.file"),
+    /** Label of the encryption row of the DRM-blocked state. */
+    IMPORT_DRM_SCHEME("import.drm.scheme"),
+    /** Label of the status row of the DRM-blocked state. */
+    IMPORT_DRM_STATUS("import.drm.status"),
+    /** Value of that status row. */
+    IMPORT_DRM_STATUS_VALUE("import.drm.statusValue"),
+    /** Note that only DRM-free books are supported. */
+    IMPORT_DRM_NOTE("import.drm.note"),
+    /** Heading of the unsupported-file banner. */
+    IMPORT_UNSUPPORTED_TITLE("import.unsupported.title"),
+    /** Body of the unsupported-file banner. */
+    IMPORT_UNSUPPORTED_TEXT("import.unsupported.text"),
+    /** Label of the file row of the unsupported state. */
+    IMPORT_UNSUPPORTED_FILE("import.unsupported.file"),
+    /** Label of the detected-type row. */
+    IMPORT_UNSUPPORTED_TYPE("import.unsupported.type"),
+    /** Badge beside the detected type. */
+    IMPORT_UNSUPPORTED_BADGE("import.unsupported.badge"),
+    /** Hint listing the supported formats. */
+    IMPORT_UNSUPPORTED_HINT("import.unsupported.hint"),
     /** Button that moves on from an opened book to the brief. */
     IMPORT_CONTINUE("import.continue"),
-    /** Button that moves on despite the language-mismatch warning. */
-    IMPORT_CONTINUE_ANYWAY("import.continue.anyway"),
     /** Heading of the book-brief screen. */
     BRIEF_TITLE("brief.title"),
     /** Line under the heading saying what the brief is for and that most of it is not used yet. */

@@ -15,11 +15,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.BookFormat;
-import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
-import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
@@ -36,6 +33,8 @@ import ua.bookloom.ui.notify.Toasts;
 @Slf4j
 @Singleton
 public final class ImportViewModel {
+
+    private record Answer(Path source, ImportedBook imported) {}
 
     private final ProjectService projects;
     private final CurrentProject current;
@@ -126,25 +125,6 @@ public final class ImportViewModel {
         release(previous);
     }
 
-    /**
-     * Puts the screen in the language-mismatch state. Nothing detects a source language yet, so no input reaches this
-     * through {@link #open}; it exists so the state the screen is specified to have can be shown and tested. FX
-     * thread only.
-     *
-     * @param card what the parse found
-     * @param detectedLang the language the text is in
-     */
-    public void showLanguageMismatch(final BookCard card, final String detectedLang) {
-        Objects.requireNonNull(card, "card");
-        Objects.requireNonNull(detectedLang, "detectedLang");
-        log.debug(
-                "language mismatch shown for {}: declared {}, detected {}",
-                card.fileName(),
-                card.declaredLang(),
-                detectedLang);
-        state.set(new ImportState.LanguageMismatch(card, detectedLang));
-    }
-
     private void submit(final Path source, final String fileName) {
         try {
             executor.execute(() -> importOffThread(source, fileName));
@@ -156,13 +136,13 @@ public final class ImportViewModel {
 
     private void importOffThread(final Path source, final String fileName) {
         log.debug("importing {} on {}", fileName, Thread.currentThread().getName());
-        final Result<OpenedBook> answer = importGuarded(source);
+        final Result<Answer> answer = importGuarded(source);
         Platform.runLater(() -> publish(fileName, answer));
     }
 
-    private Result<OpenedBook> importGuarded(final Path source) {
+    private Result<Answer> importGuarded(final Path source) {
         try {
-            return openedOf(source, projects.importBook(source));
+            return answerOf(source, projects.importBook(source));
         } catch (Throwable thrown) {
             log.error("the project service threw instead of returning a result while importing", thrown);
             return Result.err(internalError(thrown));
@@ -170,40 +150,19 @@ public final class ImportViewModel {
     }
 
     // A refusal and a malformed answer both become errors here, so the FX thread only routes by code.
-    private static Result<OpenedBook> openedOf(final Path source, final Result<ImportedBook> answer) {
+    private static Result<Answer> answerOf(final Path source, final Result<ImportedBook> answer) {
         final AppError failure = answer.error();
         if (failure != null) {
             return Result.err(failure);
         }
         final ImportedBook imported = Objects.requireNonNull(answer.data(), "imported book");
         final String projectId = imported.projectId();
-        if (projectId == null) {
-            return Result.err(refusalOf(imported));
-        }
-        final BookBrief brief = imported.brief();
-        if (brief == null || imported.inspection().format() == null) {
+        if (projectId != null
+                && (imported.brief() == null || imported.inspection().format() == null)) {
             log.error("project {} was answered without its brief or format", projectId);
             return Result.err(internalError(null));
         }
-        return Result.ok(new OpenedBook(projectId, source, imported.inspection(), imported.profile(), brief));
-    }
-
-    private static AppError refusalOf(final ImportedBook imported) {
-        final String detected = imported.inspection().detectedType();
-        return switch (imported.inspection().verdict()) {
-            case DRM_PROTECTED ->
-                AppError.of(
-                        ErrorCode.validation,
-                        "This book is DRM-protected",
-                        "The book is encrypted (" + detected + ") and cannot be translated.");
-            case UNSUPPORTED ->
-                AppError.of(
-                        ErrorCode.validation,
-                        "This file could not be read",
-                        "BookLoom cannot read a file of this type (" + detected + ").");
-            case READABLE ->
-                AppError.of(ErrorCode.validation, "This book could not be opened", "No project was created for it.");
-        };
+        return Result.ok(new Answer(source, imported));
     }
 
     private static AppError internalError(final @Nullable Throwable cause) {
@@ -215,22 +174,25 @@ public final class ImportViewModel {
                 cause);
     }
 
-    private void publish(final String fileName, final Result<OpenedBook> result) {
+    private void publish(final String fileName, final Result<Answer> result) {
         final AppError failure = result.error();
+        final Answer answer = result.data();
+        final boolean stored = answer != null && answer.imported().projectId() != null;
         final boolean replacesPrevious = failure == null || failure.code() == ErrorCode.validation;
         log.debug(
-                "publishing the answer for {}: failure {}, replaces the open book {}",
+                "publishing the answer for {}: failure {}, book stored {}, replaces the open book {}",
                 fileName,
                 failure == null ? null : failure.code(),
+                stored,
                 replacesPrevious);
         final OpenedBook previous = current.book().get();
         try {
-            if (failure == null) {
-                accept(fileName, Objects.requireNonNull(result.data()));
-            } else if (replacesPrevious) {
-                refuse(fileName, failure);
+            if (failure != null) {
+                fail(fileName, failure, replacesPrevious);
+            } else if (stored) {
+                accept(fileName, Objects.requireNonNull(answer));
             } else {
-                keepPrevious(fileName, failure);
+                refuseByVerdict(fileName, Objects.requireNonNull(answer).imported());
             }
         } finally {
             opening.set(false);
@@ -240,17 +202,50 @@ public final class ImportViewModel {
         }
     }
 
-    private void accept(final String fileName, final OpenedBook opened) {
-        final BookCard card = cardOf(fileName, opened);
+    private void fail(final String fileName, final AppError failure, final boolean replacesPrevious) {
+        if (replacesPrevious) {
+            refuse(fileName, failure);
+        } else {
+            keepPrevious(fileName, failure);
+        }
+    }
+
+    private void accept(final String fileName, final Answer answer) {
+        final ImportedBook imported = answer.imported();
+        final OpenedBook opened = new OpenedBook(
+                Objects.requireNonNull(imported.projectId()),
+                answer.source(),
+                imported.inspection(),
+                imported.profile(),
+                Objects.requireNonNull(imported.brief()));
+        final ImportState detected = ImportStates.of(fileName, imported);
         current.open(opened);
-        state.set(new ImportState.Detected(card));
-        log.info(
-                "imported project {}: format {}, {} segment(s)",
-                opened.projectId(),
-                card.format(),
-                card.segmentCount());
-        log.trace("imported {} by {} from {}", card.title(), card.author(), opened.source());
+        state.set(detected);
+        if (detected instanceof ImportState.Detected shown) {
+            log.info(
+                    "imported project {}: format {}, {} segment(s)",
+                    opened.projectId(),
+                    shown.card().format(),
+                    imported.profile() == null ? 0 : imported.profile().stats().segments());
+            log.trace(
+                    "imported {} by {} from {}",
+                    shown.card().title(),
+                    shown.card().author(),
+                    opened.source());
+        }
         toasts.success(MessageKey.TOAST_BOOK_OPENED, fileName);
+    }
+
+    // The inspection refused the file before any project was made, so the verdict, not an error, names the state.
+    private void refuseByVerdict(final String fileName, final ImportedBook imported) {
+        current.clear();
+        final ImportState refusal = ImportStates.of(fileName, imported);
+        log.warn(
+                "{} was refused: verdict {}, scheme {}",
+                fileName,
+                imported.inspection().verdict(),
+                imported.inspection().encryptionScheme());
+        state.set(refusal);
     }
 
     private void refuse(final String fileName, final AppError refusal) {
@@ -266,25 +261,6 @@ public final class ImportViewModel {
         log.debug("{} goes to the error presenter; the open book and the state before the open are kept", fileName);
         state.set(stateBeforeOpen);
         errors.present(failure);
-    }
-
-    private static BookCard cardOf(final String fileName, final OpenedBook opened) {
-        final BookFormat format = Objects.requireNonNull(opened.inspection().format(), "format");
-        final BookProfile profile = opened.profile();
-        log.debug("building the card of {} ({})", fileName, format);
-        return new BookCard(
-                fileName,
-                format,
-                profile == null ? null : declaredOrNull(profile.title()),
-                profile == null ? null : declaredOrNull(profile.author()),
-                declaredOrNull(opened.inspection().languageEvidence().declared()),
-                profile == null ? 0 : profile.structure().size(),
-                profile == null ? 0 : profile.stats().segments());
-    }
-
-    /** A blank value is no declaration: the row is omitted rather than shown empty. */
-    private static @Nullable String declaredOrNull(final @Nullable String value) {
-        return value == null || value.isBlank() ? null : value;
     }
 
     private static String fileNameOf(final Path source) {

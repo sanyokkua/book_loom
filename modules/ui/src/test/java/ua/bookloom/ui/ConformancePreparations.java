@@ -12,9 +12,10 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.document.InspectionVerdict;
+import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
-import ua.bookloom.ui.state.BookCard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.RunState;
@@ -40,7 +41,9 @@ final class ConformancePreparations {
             }
             case BOOK_OPENED -> openABook();
             case BOOK_REFUSED -> refuseABook();
-            case LANGUAGE_MISMATCH -> showMismatch();
+            case BOOK_DRM_BLOCKED -> blockABook();
+            case BOOK_UNSUPPORTED -> refuseAnUnsupportedFile();
+            case LANGUAGE_MISMATCH -> openAMismatchedBook();
             case RUN_COMPLETED -> completeARun();
             case RUN_PROVIDER_FAILED -> pauseARunOnAProviderError();
             case RUN_STARTED -> startARun();
@@ -62,15 +65,35 @@ final class ConformancePreparations {
         openAndAwait(source, ImportState.Refused.class);
     }
 
-    private void showMismatch() {
-        final BookCard card =
-                new BookCard("Frankenstein.epub", BookFormat.EPUB, "Frankenstein", "Mary Shelley", "en", 3, 9);
-        final ImportViewModel viewModel = injector.getInstance(ImportViewModel.class);
-        onFx(() -> {
-            viewModel.showLanguageMismatch(card, "uk");
-            return null;
-        });
-        WaitForAsyncUtils.waitForFxEvents();
+    private void blockABook() throws TimeoutException {
+        final Path source = Path.of("Purchased_Novel.epub");
+        projects.on(source, Result.ok(BookFixtures.drmProtected("EPUB", "Adobe ADEPT")));
+        openAndAwait(source, ImportState.DrmBlocked.class);
+    }
+
+    private void refuseAnUnsupportedFile() throws TimeoutException {
+        final Path source = Path.of("book.pdf");
+        projects.on(source, Result.ok(BookFixtures.refused(InspectionVerdict.UNSUPPORTED, "PDF")));
+        openAndAwait(source, ImportState.Unsupported.class);
+    }
+
+    private void openAMismatchedBook() throws TimeoutException {
+        final Path source = Path.of("Witcher.epub");
+        projects.on(
+                source,
+                Result.ok(BookFixtures.inspected(
+                        "w",
+                        BookFormat.EPUB,
+                        "3.0",
+                        "The Witcher",
+                        "Sapkowski",
+                        BookFixtures.evidence("en", "en", "uk", LanguageEvidence.Verdict.MISMATCH),
+                        24,
+                        100_000,
+                        0,
+                        0,
+                        null)));
+        openAndAwait(source, ImportState.Detected.class);
     }
 
     private void completeARun() {
