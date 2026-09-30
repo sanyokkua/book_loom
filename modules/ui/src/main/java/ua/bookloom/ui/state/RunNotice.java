@@ -45,13 +45,14 @@ public sealed interface RunNotice {
         }
     }
 
-    /**
-     * An input a start needs. There is no target-language constant: the brief defaults the language and accepts only
-     * the supported ones, so a start can never be missing it.
-     */
+    /** An input a start needs, in the order a person supplies them. */
     enum Input {
         /** No book is open. */
         BOOK("book"),
+        /** The brief has no source language: the book declares none the application recognises and none was chosen. */
+        SOURCE_LANGUAGE("source"),
+        /** The brief has no target language. */
+        TARGET_LANGUAGE("target"),
         /** No model is chosen. */
         MODEL("model");
 

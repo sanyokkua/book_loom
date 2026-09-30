@@ -35,6 +35,7 @@ public final class ScriptedProjectService implements ProjectService {
     private final List<Path> imports = new CopyOnWriteArrayList<>();
     private final List<Boolean> importsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<BookBrief> briefs = new CopyOnWriteArrayList<>();
+    private final List<Boolean> briefsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> closed = new CopyOnWriteArrayList<>();
     private final List<Boolean> closedOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> events = new CopyOnWriteArrayList<>();
@@ -103,6 +104,7 @@ public final class ScriptedProjectService implements ProjectService {
     public Result<Project> updateBrief(final String projectId, final BookBrief brief) {
         Objects.requireNonNull(projectId, "projectId");
         briefs.add(Objects.requireNonNull(brief, "brief"));
+        briefsOnFxThread.add(Platform.isFxApplicationThread());
         return Result.ok(new Project(projectId, imports.getLast(), BookFormat.TXT, "hash", brief));
     }
 
@@ -142,6 +144,11 @@ public final class ScriptedProjectService implements ProjectService {
     /** Every brief saved through {@link #updateBrief}, in order. */
     public List<BookBrief> briefs() {
         return List.copyOf(briefs);
+    }
+
+    /** For each {@link #updateBrief}, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> briefCallsOnFxThread() {
+        return List.copyOf(briefsOnFxThread);
     }
 
     /** The id of every project {@link #close} was asked to release, in call order. */

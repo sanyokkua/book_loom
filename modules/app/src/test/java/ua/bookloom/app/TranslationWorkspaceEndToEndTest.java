@@ -47,8 +47,8 @@ import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.ImportViewModel;
-import ua.bookloom.ui.state.InterimRunRequest;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
@@ -127,7 +127,8 @@ class TranslationWorkspaceEndToEndTest {
     @Test
     void run_generatedTxtBookThroughTheWorkspace_writesTheBookAndReportsItOnTheExportScreen() throws Exception {
         final Path book = Files.writeString(booksDir.resolve("Letter.txt"), SOURCE_TEXT, StandardCharsets.UTF_8);
-        // Neither the proposed name (Letter.de.txt) nor the default language, so a brief that is ignored cannot pass.
+        // Neither the proposed name (Letter.de.txt) nor the source the book declares (none), so a brief that is ignored
+        // cannot pass.
         final Path chosen = booksDir.resolve("Brief-translated.txt");
 
         openBook(book);
@@ -164,18 +165,24 @@ class TranslationWorkspaceEndToEndTest {
         assertThat(Objects.requireNonNull(opened.profile()).stats().segments()).isEqualTo(SEGMENT_COUNT);
     }
 
-    /** Picks a language, checks the proposed destination follows it, then replaces it with the person's own path. */
-    private void chooseBrief(final String language, final Path proposed, final Path chosen) {
-        onFx(() -> injector.getInstance(BookBriefViewModel.class).selectTarget(language));
-        assertThat(onFx(() -> injector.getInstance(BookBriefViewModel.class)
-                        .destination()
-                        .get()))
-                .isEqualTo(proposed.toString());
-        onFx(() -> injector.getInstance(BookBriefViewModel.class).editDestination(chosen.toString()));
-        assertThat(onFx(() -> injector.getInstance(BookBriefViewModel.class).request()))
-                .hasValueSatisfying(request -> assertThat(request)
-                        .extracting(InterimRunRequest::destination, InterimRunRequest::targetLanguage)
-                        .containsExactly(chosen, language));
+    /**
+     * Chooses the source the TXT does not declare and a target, checks the proposed destination follows the target,
+     * then replaces it with the person's own path.
+     */
+    private void chooseBrief(final String language, final Path proposed, final Path chosen) throws Exception {
+        final BookBriefViewModel brief = injector.getInstance(BookBriefViewModel.class);
+        final ExportViewModel exports = injector.getInstance(ExportViewModel.class);
+        assertThat(onFx(() -> brief.sourceUndeclared().get())).isTrue();
+        assertThat(onFx(() -> brief.canContinue().get())).isFalse();
+        onFx(() -> brief.setSourceLanguage("en"));
+        onFx(() -> brief.setTargetLanguage(language));
+        assertThat(onFx(() -> brief.canContinue().get())).isTrue();
+        // The run reads the stored brief, so the saves the two choices started must have reached the project.
+        waitUntil(() -> !brief.saving().get());
+        assertThat(onFx(() -> exports.destination().get())).isEqualTo(proposed.toString());
+        onFx(() -> exports.editDestination(chosen.toString()));
+        assertThat(onFx(() -> exports.interimExport()))
+                .hasValueSatisfying(request -> assertThat(request.destination()).isEqualTo(chosen));
     }
 
     private void chooseModel() {

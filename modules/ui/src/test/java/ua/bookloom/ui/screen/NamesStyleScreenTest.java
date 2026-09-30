@@ -31,6 +31,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         projects.on(BOOK, Result.ok(ua.bookloom.ui.BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
+        chooseTarget();
     }
 
     // IF the screen had no heading, subtitle, note or footer, THEN the step would be an empty wall.

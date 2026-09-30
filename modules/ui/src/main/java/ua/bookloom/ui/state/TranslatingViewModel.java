@@ -17,6 +17,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.JobReport;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Toasts;
@@ -39,8 +40,7 @@ import ua.bookloom.ui.notify.Toasts;
  * <p>A failed preparation is routed by its code through {@link FailureSurface}; a run that ends on a failure is routed
  * by its state (stopped, refused in place, or the blocking dialog), and a pause on a model error, whatever its code,
  * is the provider-error state that Resume continues from. A start is refused by naming the first missing
- * input, book before model. The target language is not among them: the brief defaults it and accepts only the
- * supported languages, so it can never be blank when a start is pressed.
+ * input, in the order book, source language, target language, model.
  */
 @Slf4j
 @Singleton
@@ -48,7 +48,7 @@ public final class TranslatingViewModel {
 
     private final StateMirror mirror;
     private final TranslationRunner runner;
-    private final BookBriefViewModel brief;
+    private final ExportViewModel exports;
     private final CurrentProject current;
     private final SettingsViewModel settings;
     private final RunStarter starter;
@@ -61,6 +61,7 @@ public final class TranslatingViewModel {
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
     private final ChangeListener<String> onModelText = (observed, was, now) -> onModelTextChanged();
     private final ChangeListener<@Nullable OpenedBook> onOpenedBook = (observed, was, now) -> onBookChanged(now);
+    private final ChangeListener<@Nullable BookBrief> onBrief = (observed, was, now) -> onBriefChanged(now);
     private final ChangeListener<@Nullable AppError> onProviderError = (observed, was, now) -> onPausedOnError(now);
 
     /**
@@ -68,7 +69,7 @@ public final class TranslatingViewModel {
      *
      * @param mirror the state every run publishes into and this view model observes
      * @param runner the runner that owns the one active run
-     * @param brief where the request is assembled from
+     * @param exports where the completed run's book is written until the export screen does it
      * @param current the open book a run is started on
      * @param settings where the provider and model come from
      * @param starter what builds a run on the open book and starts it
@@ -79,7 +80,7 @@ public final class TranslatingViewModel {
     public TranslatingViewModel(
             final StateMirror mirror,
             final TranslationRunner runner,
-            final BookBriefViewModel brief,
+            final ExportViewModel exports,
             final CurrentProject current,
             final SettingsViewModel settings,
             final RunStarter starter,
@@ -87,7 +88,7 @@ public final class TranslatingViewModel {
             final ErrorPresenter errors) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
-        this.brief = Objects.requireNonNull(brief, "brief");
+        this.exports = Objects.requireNonNull(exports, "exports");
         this.current = Objects.requireNonNull(current, "current");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.starter = Objects.requireNonNull(starter, "starter");
@@ -100,6 +101,7 @@ public final class TranslatingViewModel {
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
         current.book().addListener(onOpenedBook);
+        current.brief().addListener(onBrief);
         mirror.review().providerError().addListener(onProviderError);
         log.debug("translating view model ready");
     }
@@ -197,6 +199,11 @@ public final class TranslatingViewModel {
         clearIfSupplied(RunNotice.Input.BOOK, () -> book != null);
     }
 
+    private void onBriefChanged(final @Nullable BookBrief brief) {
+        clearIfSupplied(RunNotice.Input.SOURCE_LANGUAGE, () -> brief != null && brief.sourceLanguage() != null);
+        clearIfSupplied(RunNotice.Input.TARGET_LANGUAGE, () -> brief != null && brief.targetLanguage() != null);
+    }
+
     /** Withdraws a refusal that named {@code input} once that input exists, so a ready start never reads as refused. */
     private void clearIfSupplied(final RunNotice.Input input, final BooleanSupplier supplied) {
         if (notice.get() instanceof RunNotice.MissingInput missing
@@ -208,8 +215,15 @@ public final class TranslatingViewModel {
     }
 
     private Optional<RunNotice.Input> missingInput(final boolean modelChosen) {
-        if (current.book().get() == null) {
+        final BookBrief brief = current.brief().get();
+        if (brief == null) {
             return Optional.of(RunNotice.Input.BOOK);
+        }
+        if (brief.sourceLanguage() == null) {
+            return Optional.of(RunNotice.Input.SOURCE_LANGUAGE);
+        }
+        if (brief.targetLanguage() == null) {
+            return Optional.of(RunNotice.Input.TARGET_LANGUAGE);
         }
         return modelChosen ? Optional.empty() : Optional.of(RunNotice.Input.MODEL);
     }
@@ -233,9 +247,9 @@ public final class TranslatingViewModel {
             return;
         }
         notice.set(null);
-        final Optional<InterimRunRequest> request = brief.request();
+        final Optional<InterimRunRequest> request = exports.interimExport();
         if (request.isEmpty()) {
-            log.debug("run refused: the brief could not be turned into a request");
+            log.debug("run refused: the destination names no usable path");
             return;
         }
         final ModelSelection chosen = selection.orElseThrow();

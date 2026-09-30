@@ -19,6 +19,7 @@ import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.dialog.RecordingReplaceRunPrompt;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 
@@ -58,6 +59,11 @@ abstract class ImportScreenTestBase extends ShellTestBase {
     void openBook(final Path source) throws TimeoutException {
         onFx(() -> viewModel().open(source));
         awaitFx(() -> !viewModel().opening().get());
+    }
+
+    /** Chooses Ukrainian as the target of the open book's brief, the one input a start needs that an import leaves empty. */
+    void chooseTarget() {
+        onFx(() -> injector.getInstance(BookBriefViewModel.class).setTargetLanguage("uk"));
     }
 
     /** Waits, polling on the FX thread, until {@code condition} holds. */

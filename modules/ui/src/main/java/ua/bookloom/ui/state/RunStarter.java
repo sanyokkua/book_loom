@@ -18,13 +18,11 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.PausePoint;
-import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
-import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Project;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
@@ -43,7 +41,6 @@ public final class RunStarter {
     private final CurrentProject current;
     private final ChatModelFactory models;
     private final TranslationEngine engine;
-    private final ProjectService projects;
     private final ReviewMode reviewMode;
     private final TranslationRunner runner;
     private final ExecutorService executor;
@@ -54,7 +51,6 @@ public final class RunStarter {
      * @param current the open book a run is started on
      * @param models the port a model is created through
      * @param engine the port a job is created through
-     * @param projects the port the brief's languages are saved through
      * @param reviewMode how the run's pauses for review are chosen, resolved once at launch
      * @param runner the runner that owns the one active run
      * @param executor the daemon executor a run is prepared on, never the FX thread
@@ -64,14 +60,12 @@ public final class RunStarter {
             final CurrentProject current,
             final ChatModelFactory models,
             final TranslationEngine engine,
-            final ProjectService projects,
             final ReviewMode reviewMode,
             final TranslationRunner runner,
             @BackgroundExecutor final ExecutorService executor) {
         this.current = Objects.requireNonNull(current, "current");
         this.models = Objects.requireNonNull(models, "models");
         this.engine = Objects.requireNonNull(engine, "engine");
-        this.projects = Objects.requireNonNull(projects, "projects");
         this.reviewMode = Objects.requireNonNull(reviewMode, "reviewMode");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.executor = Objects.requireNonNull(executor, "executor");
@@ -81,7 +75,7 @@ public final class RunStarter {
      * Prepares a run on the open book in the background and starts it. FX thread only, because it reads the open
      * book there.
      *
-     * @param request where the completed run's book is written and which languages the brief takes
+     * @param request where the completed run's book is written
      * @param selection the provider and model to translate with
      * @param whenPrepared told, on the background thread and exactly once, {@code null} when the runner took the run
      *     or the error that stopped the preparation
@@ -128,11 +122,6 @@ public final class RunStarter {
             log.debug("no model was created: code {}", errorCode(model));
             return model.error();
         }
-        final Result<Project> saved = saveLanguages(book, request);
-        if (saved.isErr()) {
-            log.debug("the brief's languages were not saved: code {}", errorCode(saved));
-            return saved.error();
-        }
         final Result<TranslationJob> created = engine.newJob(
                 new RunRequest(book.projectId(), reviewMode), Objects.requireNonNull(model.data(), "model"));
         if (created.isErr()) {
@@ -141,8 +130,8 @@ public final class RunStarter {
         }
         final TranslationJob job = Objects.requireNonNull(created.data(), "job");
         job.pauseAt(pausePoints());
-        final RunContext context = new RunContext(
-                book.projectId(), fileNameOf(book), reviewMode, book.brief().dial(), selection, request);
+        final RunContext context =
+                new RunContext(book.projectId(), fileNameOf(book), reviewMode, dialOf(), selection, request);
         final boolean began = runner.start(job, context);
         log.debug("the runner accepted the run: {}", began);
         return null;
@@ -155,10 +144,10 @@ public final class RunStarter {
         return Set.copyOf(points);
     }
 
-    private Result<Project> saveLanguages(final OpenedBook book, final InterimRunRequest request) {
-        final BookBrief opened = book.brief();
-        final String source = request.sourceLanguage() == null ? opened.sourceLanguage() : request.sourceLanguage();
-        return projects.updateBrief(book.projectId(), opened.withLanguages(source, request.targetLanguage()));
+    // The brief as the person has left it, not the one the project was created with; it exists whenever a book does.
+    private QualityDial dialOf() {
+        return Objects.requireNonNull(current.brief().get(), "the open book's brief")
+                .dial();
     }
 
     private static String fileNameOf(final OpenedBook book) {

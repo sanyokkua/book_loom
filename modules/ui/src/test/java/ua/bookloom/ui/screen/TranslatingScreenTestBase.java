@@ -84,6 +84,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
+        chooseTarget();
         ThemeTestSupport.onFx(() -> {
             injector.getInstance(SettingsViewModel.class).model().set(MODEL);
             return null;

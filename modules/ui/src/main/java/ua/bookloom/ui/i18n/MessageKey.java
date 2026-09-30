@@ -283,12 +283,10 @@ public enum MessageKey {
     IMPORT_CONTINUE("import.continue"),
     /** Heading of the book-brief screen. */
     BRIEF_TITLE("brief.title"),
-    /** Line under the heading saying what the brief is for and that most of it is not used yet. */
+    /** Line under the heading saying what the brief is for. */
     BRIEF_SUBTITLE("brief.subtitle"),
     /** Heading of the card holding the source and target languages. */
     BRIEF_CARD_LANGUAGES("brief.card.languages"),
-    /** Heading of the card holding the destination path and the overwrite choice. */
-    BRIEF_CARD_DESTINATION("brief.card.destination"),
     /** Heading of the tone-and-style card. */
     BRIEF_CARD_TONE("brief.card.tone"),
     /** Heading of the translation-policies card. */
@@ -299,24 +297,12 @@ public enum MessageKey {
     BRIEF_CARD_QUALITY("brief.card.quality"),
     /** Tag on a card whose choices nothing reads yet. */
     BRIEF_SOON("brief.soon"),
-    /** Label of the source language, which the book declares and a person cannot change. */
+    /** Label of the source language box. */
     BRIEF_SOURCE_LABEL("brief.source.label"),
     /** Shown in place of the source language when the book declares none. */
     BRIEF_SOURCE_UNDECLARED("brief.source.undeclared"),
     /** Label of the target-language picker. */
     BRIEF_TARGET_LABEL("brief.target.label"),
-    /** Label of the destination path field. */
-    BRIEF_DESTINATION_LABEL("brief.destination.label"),
-    /** Button that opens the file chooser for the destination. */
-    BRIEF_DESTINATION_BROWSE("brief.destination.browse"),
-    /** Title of the file chooser for the destination. */
-    BRIEF_DESTINATION_CHOOSER("brief.destination.chooser"),
-    /** Heading of the warning that a file already exists at the destination. */
-    BRIEF_DESTINATION_EXISTS_TITLE("brief.destination.exists.title"),
-    /** Body of the occupied-destination warning. */
-    BRIEF_DESTINATION_EXISTS_TEXT("brief.destination.exists.text"),
-    /** Label of the switch that allows replacing an existing destination file. */
-    BRIEF_OVERWRITE_LABEL("brief.overwrite.label"),
     /** Label of the genre field. */
     BRIEF_TONE_GENRE("brief.tone.genre"),
     /** Prompt text of the genre field. */
@@ -381,8 +367,22 @@ public enum MessageKey {
     BRIEF_QUALITY_BALANCED("brief.quality.balanced"),
     /** Quality option: best quality. */
     BRIEF_QUALITY_MAX("brief.quality.max"),
-    /** Hint describing what the balanced quality setting does. */
-    BRIEF_QUALITY_HINT("brief.quality.hint"),
+    /** Hint describing what the fast quality setting turns on. */
+    BRIEF_QUALITY_HINT_FAST("brief.quality.hint.fast"),
+    /** Hint describing what the balanced quality setting turns on. */
+    BRIEF_QUALITY_HINT_BALANCED("brief.quality.hint.balanced"),
+    /** Hint describing what the max quality setting turns on. */
+    BRIEF_QUALITY_HINT_MAX("brief.quality.hint.max"),
+    /** Label of the row naming the model a run will use. */
+    BRIEF_MODEL_LABEL("brief.model.label"),
+    /** The model row's value; argument 0 is the model, argument 1 the provider's name. */
+    BRIEF_MODEL_VALUE("brief.model.value"),
+    /** The model row's value while no model is chosen. */
+    BRIEF_MODEL_NONE("brief.model.none"),
+    /** Link on the model row that opens the settings. */
+    BRIEF_MODEL_CHANGE("brief.model.change"),
+    /** Message beside the language boxes when source and target are the same language. */
+    BRIEF_LANGUAGES_SAME("brief.languages.same"),
     /** Button that returns from the brief to the import screen. */
     BRIEF_BACK("brief.back"),
     /** Button that moves on from the brief to the next step. */

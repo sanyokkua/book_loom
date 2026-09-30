@@ -14,16 +14,15 @@ import ua.bookloom.ui.BookFixtures;
  * default follows the source and the target, an edited path is left alone, and opening a different book starts over.
  * The suffix itself is the shared helper's answer, so these tests pin only what the view model does with it.
  */
-class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
+class ExportViewModelDestinationTest extends ExportViewModelTestBase {
 
     private static final Path FRANKENSTEIN = Path.of("/books/Frankenstein.epub");
 
     // IF the view model proposed nothing or used another target, THEN the person would start from a wrong path.
     @Test
-    void destination_epubOpenedWithDefaultTarget_isProposedBesideTheSourceWithUk() {
+    void destination_epubOpenedWithTargetUk_isProposedBesideTheSourceWithUk() {
         openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
-        assertThat(target()).isEqualTo("uk");
         assertThat(destination())
                 .isEqualTo(Path.of("/books/Frankenstein.uk.epub").toString());
     }
@@ -116,7 +115,7 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
     void destination_viewModelCreatedAfterTheBookWasOpened_proposesForThatBook() {
         openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
-        recreateBrief();
+        recreateExports();
 
         assertThat(destination())
                 .isEqualTo(Path.of("/books/Frankenstein.uk.epub").toString());
@@ -128,23 +127,27 @@ class BookBriefViewModelDestinationTest extends BookBriefViewModelTestBase {
         assertThat(destination()).isEmpty();
     }
 
-    // IF the target were not one of the four offered codes, THEN the picker and the request would disagree.
+    // IF a destination were proposed before any target is chosen, THEN the file name would carry a language nobody
+    // chose.
     @Test
-    void targetLanguages_theOfferedCodes_areUkEnPlDeInThatOrder() {
-        assertThat(BookBriefViewModel.TARGET_LANGUAGES).containsExactly("uk", "en", "pl", "de");
-    }
+    void destination_bookOpenedWithNoTargetChosen_isEmptyUntilOneIs() {
+        openBookOnly(FRANKENSTEIN, BookFixtures.frankensteinImport());
+        assertThat(destination()).isEmpty();
 
-    // IF the default target were empty or another code, THEN a run could start toward no language.
-    @Test
-    void targetLanguage_beforeAnyChoice_isUkrainian() {
-        assertThat(target()).isEqualTo("uk");
+        selectTarget("pl");
+
+        assertThat(destination())
+                .isEqualTo(Path.of("/books/Frankenstein.pl.epub").toString());
     }
 
     // IF the book's own language were copied into the target, THEN a person would translate into the source language.
     @Test
-    void targetLanguage_aBookDeclaringEnglishOpened_staysUkrainian() {
-        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
+    void target_aBookDeclaringEnglishOpened_isNotChosenForThePerson() {
+        openBookOnly(FRANKENSTEIN, BookFixtures.frankensteinImport());
 
-        assertThat(target()).isEqualTo("uk");
+        assertThat(current.brief().get())
+                .isNotNull()
+                .extracting(b -> b.targetLanguage())
+                .isNull();
     }
 }

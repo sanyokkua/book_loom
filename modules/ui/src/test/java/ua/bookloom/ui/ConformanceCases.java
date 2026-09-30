@@ -177,7 +177,9 @@ final class ConformanceCases {
                     Overlay.NONE,
                     List.of(
                             new Part("#brief-languages-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#brief-languages-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+                            new Part("#brief-languages-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#brief-quality-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#brief-aux-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"))),
             new Screen(
                     "BOOK_BRIEF_NO_BOOK",
                     ViewNames.BOOK_BRIEF,

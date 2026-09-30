@@ -25,6 +25,7 @@ import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
@@ -46,7 +47,7 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  * {@link ModalHost}, the notification surfaces ({@link Toasts} over the toast stack, {@link ErrorPresenter} over the
  * modal error dialog), the {@link AppShellView} with the {@link RunStatusBar} it places in the title bar, the {@link StateMirror} with the {@link TranslationRunner} that
  * feeds it, the {@link SettingsViewModel} and the {@link ModelListing} it owns, the {@link CurrentProject} holding the
- * open book, the {@link ImportViewModel} that fills it, the {@link BookBriefViewModel} that holds the choices made about it, the
+ * open book, the {@link ImportViewModel} that fills it, the {@link BookBriefViewModel} that holds the choices made about it, the {@link ExportViewModel} that holds where the translation is written, the
  * {@link ImportGuard} that asks before an import replaces a run, the {@link RunStarter} that builds a run on it and the {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
  * {@link FileRevealer} that shows a written book in the file manager.
  * The singletons are bound explicitly rather than left to JIT so the composition root's graph lists everything the
@@ -71,6 +72,20 @@ public final class UiModule extends AbstractModule {
         bind(ReplaceRunPrompt.class).to(ReplaceRunDialog.class);
     }
 
+    private void bindState() {
+        bind(StateMirror.class);
+        bind(TranslationRunner.class);
+        bind(ModelListing.class);
+        bind(SettingsViewModel.class);
+        bind(CurrentProject.class);
+        bind(ImportViewModel.class);
+        bind(ImportGuard.class);
+        bind(BookBriefViewModel.class);
+        bind(ExportViewModel.class);
+        bind(RunStarter.class);
+        bind(TranslatingViewModel.class);
+    }
+
     private void bindShell() {
         bind(RunStatusBar.class);
         bind(AppShellView.class);
@@ -88,16 +103,7 @@ public final class UiModule extends AbstractModule {
         bind(Toasts.class).to(ToastStack.class);
         bindDialogs();
         bindShell();
-        bind(StateMirror.class);
-        bind(TranslationRunner.class);
-        bind(ModelListing.class);
-        bind(SettingsViewModel.class);
-        bind(CurrentProject.class);
-        bind(ImportViewModel.class);
-        bind(ImportGuard.class);
-        bind(BookBriefViewModel.class);
-        bind(RunStarter.class);
-        bind(TranslatingViewModel.class);
+        bindState();
         bind(FileRevealer.class).to(PlatformFileRevealer.class);
         requireBinding(ProviderConfigs.class);
         requireBinding(ProviderVerifier.class);

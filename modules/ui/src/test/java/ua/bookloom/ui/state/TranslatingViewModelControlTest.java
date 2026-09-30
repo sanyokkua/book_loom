@@ -207,6 +207,7 @@ class TranslatingViewModelControlTest extends TranslatingViewModelTestBase {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         buildViewModel();
         press(() -> imports.open(BOOK));
+        press(() -> brief.setTargetLanguage("uk"));
 
         press(viewModel::start);
 

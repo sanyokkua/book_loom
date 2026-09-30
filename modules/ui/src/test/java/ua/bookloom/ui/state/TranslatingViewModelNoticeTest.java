@@ -2,10 +2,12 @@ package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedTranslationEngine;
@@ -30,7 +32,16 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
     private void openBookWithoutChoosingAModel() {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         press(() -> imports.open(BOOK));
+        press(() -> brief.setTargetLanguage("uk"));
     }
+
+    private void openBookDeclaringNoLanguageAndChooseModel() {
+        projects.on(NOTES, Result.ok(BookFixtures.declaringNoLanguage("notes", BookFormat.TXT, 1)));
+        press(() -> imports.open(NOTES));
+        chooseModel(MODEL);
+    }
+
+    private static final Path NOTES = Path.of("notes.txt");
 
     // --- a start with an input missing ------------------------------------------------------------------------
 
@@ -143,7 +154,7 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
         openBookWithoutChoosingAModel();
         press(viewModel::start);
         chooseModel(MODEL);
-        press(() -> brief.editDestination(""));
+        press(() -> destinations.editDestination(""));
 
         press(viewModel::start);
 
@@ -191,5 +202,48 @@ class TranslatingViewModelNoticeTest extends TranslatingViewModelTestBase {
         assertThat(notice()).isEmpty();
         assertThat(errors.presented()).isEmpty();
         again.finish(Result.ok(cancelledReport()));
+    }
+
+    // --- a start with a language missing ----------------------------------------------------------------------
+
+    // IF a book declaring no language could start, THEN the model would be told a source language nobody chose.
+    @Test
+    void start_noSourceLanguage_isRefusedNamingTheSourceAndAsksForNoJob() {
+        buildViewModel();
+        openBookDeclaringNoLanguageAndChooseModel();
+        press(() -> brief.setTargetLanguage("uk"));
+
+        press(viewModel::start);
+
+        assertThat(notice()).contains(new RunNotice.MissingInput(RunNotice.Input.SOURCE_LANGUAGE));
+        assertThat(engine.requests()).isEmpty();
+    }
+
+    // IF a start with no target language asked for a job, THEN the run would translate into no language.
+    @Test
+    void start_sourceButNoTargetLanguage_isRefusedNamingTheTargetAndAsksForNoJob() {
+        buildViewModel();
+        openBookDeclaringNoLanguageAndChooseModel();
+        press(() -> brief.setSourceLanguage("en"));
+
+        press(viewModel::start);
+
+        assertThat(notice()).contains(new RunNotice.MissingInput(RunNotice.Input.TARGET_LANGUAGE));
+        assertThat(engine.requests()).isEmpty();
+    }
+
+    // IF choosing the source left "choose the source language" on screen, THEN the person would be told to do what
+    // they just did.
+    @Test
+    void notice_missingSourceThenSourceChosen_isWithdrawn() {
+        buildViewModel();
+        openBookDeclaringNoLanguageAndChooseModel();
+        press(() -> brief.setTargetLanguage("uk"));
+        press(viewModel::start);
+        assertThat(notice()).contains(new RunNotice.MissingInput(RunNotice.Input.SOURCE_LANGUAGE));
+
+        press(() -> brief.setSourceLanguage("en"));
+
+        assertThat(notice()).isEmpty();
     }
 }

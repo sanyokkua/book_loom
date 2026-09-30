@@ -51,6 +51,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         openImport();
         openBook(BOOK);
+        chooseTarget();
         showTranslating();
         onFx(() -> button("translating-start").fire());
         WaitForAsyncUtils.waitForFxEvents();

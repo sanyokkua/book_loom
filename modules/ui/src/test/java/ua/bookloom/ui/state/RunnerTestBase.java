@@ -46,7 +46,7 @@ abstract class RunnerTestBase extends ApplicationTest {
     static final Path DESTINATION = Path.of("/books/out.uk.txt");
     static final String PROJECT_ID = "project-1";
     static final String FILE_NAME = "Frankenstein.epub";
-    static final InterimRunRequest REQUEST = new InterimRunRequest(SOURCE, DESTINATION, "uk", "en", false);
+    static final InterimRunRequest REQUEST = new InterimRunRequest(DESTINATION, false);
     static final ModelSelection SELECTION = new ModelSelection("pseudo", "pseudo-1");
 
     protected StateMirror mirror;

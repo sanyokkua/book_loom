@@ -53,6 +53,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
     protected QueuedExecutor queued;
     protected ImportViewModel imports;
     protected BookBriefViewModel brief;
+    protected ExportViewModel destinations;
     protected SettingsViewModel settings;
     protected TranslatingViewModel viewModel;
 
@@ -68,7 +69,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         prepExecutor = queued;
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
-        brief = onFx(() -> new BookBriefViewModel(current, new DirectExecutor()));
+        brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
+        destinations = onFx(() -> new ExportViewModel(current, new DirectExecutor()));
         settings = onFx(() -> new SettingsViewModel(
                 new FakeProviderConfigs(),
                 ScriptedProviderVerifier.idle(),
@@ -84,21 +86,29 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
-        final RunStarter starter = new RunStarter(current, models, engine, projects, reviewMode, runner, prepExecutor);
-        viewModel =
-                onFx(() -> new TranslatingViewModel(mirror, runner, brief, current, settings, starter, toasts, errors));
+        final RunStarter starter = new RunStarter(current, models, engine, reviewMode, runner, prepExecutor);
+        viewModel = onFx(() ->
+                new TranslatingViewModel(mirror, runner, destinations, current, settings, starter, toasts, errors));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    /** Opens the book and chooses a model, so that {@code start()} has everything it needs. */
+    /** Opens the book (declaring English) and chooses a target and a model, so that {@code start()} has all it needs. */
     protected void openBookAndChooseModel() {
+        openBook();
+        onFx(() -> {
+            brief.setTargetLanguage("uk");
+            return null;
+        });
+        chooseModel(MODEL);
+    }
+
+    protected void openBook() {
         projects.on(BOOK, Result.ok(BookFixtures.frankensteinImport()));
         onFx(() -> {
             imports.open(BOOK);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
-        chooseModel(MODEL);
     }
 
     protected void chooseModel(final String model) {

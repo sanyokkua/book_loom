@@ -48,12 +48,14 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
     void start_ready_buildsTheModelAndJobOffTheFxThreadAndBeginsTheRun() throws Exception {
         openBookAndChooseModel();
         buildViewModel();
+        final int savedBeforeTheStart = projects.briefs().size();
 
         startAndPrepare();
 
         assertThat(models.selections()).containsExactly(new ModelSelection("ollama", MODEL));
         assertThat(models.askedOnFxThread()).containsExactly(false);
         assertThat(projects.imports()).containsExactly(BOOK);
+        assertThat(projects.briefs()).hasSize(savedBeforeTheStart);
         assertThat(projects.briefs())
                 .extracting(BookBrief::sourceLanguage, BookBrief::targetLanguage)
                 .containsExactly(tuple("en", "uk"));

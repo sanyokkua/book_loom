@@ -10,10 +10,13 @@ import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The book-brief screen's frame, which shows the brief while a book is open and the no-book state while none is.
@@ -30,6 +33,9 @@ public final class BookBriefController {
     private final CurrentProject project;
     private final Messages messages;
     private final Navigator navigator;
+    private final LanguageNames names;
+    private final SettingsViewModel settings;
+    private final WorkflowProgress progress;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now != null);
 
     @FXML
@@ -42,6 +48,9 @@ public final class BookBriefController {
      * @param project the holder of the open book they are about
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Back, Continue and the route from the no-book state lead
+     * @param names how the language boxes name and recognise languages
+     * @param settings where the model row reads the chosen model from
+     * @param progress where Continue records that the brief step is done
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -50,11 +59,17 @@ public final class BookBriefController {
             final BookBriefViewModel viewModel,
             final CurrentProject project,
             final Messages messages,
-            final Navigator navigator) {
+            final Navigator navigator,
+            final LanguageNames names,
+            final SettingsViewModel settings,
+            final WorkflowProgress progress) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.names = Objects.requireNonNull(names, "names");
+        this.settings = Objects.requireNonNull(settings, "settings");
+        this.progress = Objects.requireNonNull(progress, "progress");
     }
 
     @FXML
@@ -68,8 +83,9 @@ public final class BookBriefController {
 
     private void show(final boolean bookOpen) {
         log.debug("showing the {}", bookOpen ? "brief" : "no-book state");
-        final Node content =
-                bookOpen ? new BriefView(viewModel, messages, navigator).root() : NoBookView.build(messages, navigator);
+        final Node content = bookOpen
+                ? new BriefView(viewModel, messages, navigator, names, settings, progress).root()
+                : NoBookView.build(messages, navigator);
         stateHost.getChildren().setAll(content);
     }
 }

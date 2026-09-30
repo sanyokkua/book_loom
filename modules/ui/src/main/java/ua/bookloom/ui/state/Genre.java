@@ -1,5 +1,7 @@
 package ua.bookloom.ui.state;
 
+import java.util.Arrays;
+import java.util.function.Function;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
@@ -112,5 +114,36 @@ public enum Genre {
      */
     public MessageKey messageKey() {
         return messageKey;
+    }
+
+    /**
+     * Turns what the genre box shows into what the brief holds.
+     *
+     * @param shown the box's text
+     * @param displayName how a genre is named for the person
+     * @return the English name when the text is a predefined genre's display name, ignoring case; otherwise the text
+     *     as written
+     */
+    public static String toStored(final String shown, final Function<Genre, String> displayName) {
+        return Arrays.stream(values())
+                .filter(genre -> displayName.apply(genre).equalsIgnoreCase(shown.strip()))
+                .map(Genre::english)
+                .findFirst()
+                .orElse(shown);
+    }
+
+    /**
+     * Turns what the brief holds into what the genre box shows.
+     *
+     * @param stored the brief's genre
+     * @param displayName how a genre is named for the person
+     * @return the display name when the text is a predefined genre's English name, otherwise the text as written
+     */
+    public static String toShown(final String stored, final Function<Genre, String> displayName) {
+        return Arrays.stream(values())
+                .filter(genre -> genre.english().equals(stored))
+                .map(displayName)
+                .findFirst()
+                .orElse(stored);
     }
 }

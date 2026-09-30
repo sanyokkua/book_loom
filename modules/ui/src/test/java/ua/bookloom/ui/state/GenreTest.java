@@ -71,4 +71,28 @@ class GenreTest {
         assertThat(messages.get(Genre.GOTHIC_NOVEL.messageKey())).isEqualTo("Готичний роман");
         assertThat(Genre.GOTHIC_NOVEL.english()).isEqualTo("Gothic novel");
     }
+
+    @Test
+    void toStored_shownUkrainianName_isTheEnglishName() {
+        final Messages messages = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
+
+        assertThat(Genre.toStored("готичний роман", genre -> messages.get(genre.messageKey())))
+                .isEqualTo("Gothic novel");
+    }
+
+    @Test
+    void toStored_textThatNamesNoGenre_isKeptAsWritten() {
+        assertThat(Genre.toStored("Cosy mystery set in 1920s Kyiv", Genre::english))
+                .isEqualTo("Cosy mystery set in 1920s Kyiv");
+    }
+
+    @Test
+    void toShown_englishName_isTheDisplayNameAndFreeTextIsKept() {
+        final Messages messages = new Messages((LocaleProvider) () -> Locale.forLanguageTag("uk"));
+
+        assertThat(Genre.toShown("Gothic novel", genre -> messages.get(genre.messageKey())))
+                .isEqualTo("Готичний роман");
+        assertThat(Genre.toShown("Cosy mystery", genre -> messages.get(genre.messageKey())))
+                .isEqualTo("Cosy mystery");
+    }
 }

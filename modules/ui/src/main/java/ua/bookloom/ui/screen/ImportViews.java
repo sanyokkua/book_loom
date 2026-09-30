@@ -2,7 +2,6 @@ package ua.bookloom.ui.screen;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -30,7 +29,6 @@ import ua.bookloom.ui.state.LanguageWarning;
 final class ImportViews {
 
     private static final double SECTION_SPACING = 6;
-    private static final double BANNER_SPACING = 3;
     private static final double CARD_MAX_WIDTH = 720;
     private static final String ERROR_GLYPH = "⛔";
     static final String WARNING_GLYPH = "⚠";
@@ -150,28 +148,6 @@ final class ImportViews {
         final Label hint = wrapped(text, "hint");
         hint.setId(id);
         return hint;
-    }
-
-    /** The language's name in the display language with its code, or the code alone when the JDK knows no name for it. */
-    static String languageLabel(final Messages messages, final String code) {
-        final String name = Locale.forLanguageTag(code).getDisplayLanguage(messages.locale());
-        return name.isBlank() || name.equalsIgnoreCase(code)
-                ? code
-                : messages.get(MessageKey.IMPORT_LANGUAGE, name, code);
-    }
-
-    static Node banner(
-            final String id, final String styleClass, final String glyph, final List<? extends Node> content) {
-        final Label icon = new Label(glyph);
-        icon.getStyleClass().add("banner-icon");
-        final VBox text = new VBox(BANNER_SPACING);
-        text.getChildren().addAll(content);
-        final HBox banner = new HBox(icon, text);
-        banner.setId(id);
-        banner.setAlignment(Pos.TOP_LEFT);
-        banner.getStyleClass().addAll("banner", styleClass);
-        banner.setMaxWidth(CARD_MAX_WIDTH);
-        return banner;
     }
 
     static Label wrapped(final String text, final String styleClass) {

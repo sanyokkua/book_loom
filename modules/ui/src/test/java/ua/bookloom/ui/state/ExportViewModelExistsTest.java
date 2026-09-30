@@ -17,7 +17,7 @@ import ua.bookloom.ui.BookFixtures;
  * background executor, and only if nobody has asked something newer in the meantime. A queued executor lets each test
  * decide when an answer arrives.
  */
-class BookBriefViewModelExistsTest extends BookBriefViewModelTestBase {
+class ExportViewModelExistsTest extends ExportViewModelTestBase {
 
     @TempDir
     private Path dir;
@@ -26,7 +26,7 @@ class BookBriefViewModelExistsTest extends BookBriefViewModelTestBase {
 
     @BeforeEach
     void useTheQueuedExecutor() {
-        brief = onFx(() -> new BookBriefViewModel(current, queue));
+        exports = onFx(() -> new ExportViewModel(current, queue));
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         runQueue();
     }

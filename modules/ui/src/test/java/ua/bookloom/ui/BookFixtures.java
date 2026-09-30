@@ -3,6 +3,7 @@ package ua.bookloom.ui;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -71,6 +72,41 @@ public final class BookFixtures {
                 inspection,
                 profile,
                 BookBrief.defaults(declaredLang == null ? DEFAULT_LANGUAGE : declaredLang));
+    }
+
+    /**
+     * A book whose brief has no source language, as the project service leaves it when the book declares none the
+     * application recognises.
+     *
+     * @param projectId the project's id
+     * @param format the book's format
+     * @param segmentsPerNode the segment count of each top-level node
+     * @return the answer, whose brief holds neither language
+     */
+    public static ImportedBook declaringNoLanguage(
+            final String projectId, final BookFormat format, final int... segmentsPerNode) {
+        final ImportedBook book = imported(projectId, format, null, null, null, segmentsPerNode);
+        return new ImportedBook(
+                book.projectId(),
+                book.inspection(),
+                book.profile(),
+                Objects.requireNonNull(book.brief()).withLanguages(null, null));
+    }
+
+    /**
+     * The same book with another source language preselected in its brief, as the project service does from the
+     * language evidence.
+     *
+     * @param book the imported book
+     * @param sourceLanguage the preselected source language tag
+     * @return the book with that source in its brief
+     */
+    public static ImportedBook withSource(final ImportedBook book, final String sourceLanguage) {
+        return new ImportedBook(
+                book.projectId(),
+                book.inspection(),
+                book.profile(),
+                Objects.requireNonNull(book.brief()).withLanguages(sourceLanguage, null));
     }
 
     /** The book the specification's first scenario opens: project {@code p1}, an EPUB in English, three nodes, nine segments. */

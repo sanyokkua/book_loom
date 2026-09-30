@@ -2,286 +2,387 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
-import javafx.application.Platform;
+import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.pipeline.ProjectService;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.project.AlsoTranslate;
+import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.FootnotePolicy;
+import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Register;
+import ua.bookloom.api.project.UnitPolicy;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.util.paths.DestinationPath;
 
 /**
- * The parts of an {@link InterimRunRequest} a person chooses before a run: the target language, where the
- * translation is written and whether an existing file may be replaced. Nothing else on the brief screen is read here,
- * because nothing else on it is available yet.
+ * The choices a person makes about the open book before a run: the languages, the tone, the four policies, the
+ * balance, the auxiliary text that is also translated and the quality dial.
  *
- * <p>A singleton, like {@link CurrentProject}, because the screen's controller is rebuilt on every visit while the
- * choices must survive it. It is first constructed when the brief is first shown, which can be long after the book
- * was opened, so it proposes a destination for a book that is already open. The proposed file name is never built
- * here: {@link DestinationPath} owns that rule, so the command line and this screen cannot drift apart.
+ * <p>The brief itself lives in {@link CurrentProject}, so that a run started from any screen reads it as it stands and
+ * a trip to another screen keeps it; this class changes it and saves it. The source language is preselected by the
+ * project service when the book is imported, and is never derived again here.
  *
- * <p>Looking for a file at the destination is I/O, so it runs on the background executor and its answer is published
- * back with {@code Platform.runLater}. Each question bumps a counter and an answer is published only if the counter
- * is what it was when the question was asked, so a slow answer about a path typed earlier can never overwrite a newer
- * one. While an answer is in flight {@link #destinationExists()} keeps its previous value rather than flickering
- * through a guessed one. Everything else here is touched on the FX thread only.
+ * <p>Every change replaces the brief in {@link CurrentProject} at once and is saved through
+ * {@link ProjectService#updateBrief} on the background executor. Saves are sent one at a time and in order: a change
+ * made while one is in flight waits, and only the newest waiting brief is sent, because the pool would otherwise let an
+ * older brief overtake a newer one and leave the project holding it. Everything here is touched on the FX thread only.
  */
 @Slf4j
 @Singleton
 public final class BookBriefViewModel {
 
-    /** The languages a translation can be written in: the four the reference draws, in the order it draws them. */
-    public static final List<String> TARGET_LANGUAGES = List.of("uk", "en", "pl", "de");
-
-    private static final String DEFAULT_TARGET = TARGET_LANGUAGES.get(0);
+    private static final int MIN_BALANCE = 0;
+    private static final int MAX_BALANCE = 100;
 
     private final CurrentProject project;
-    private final ExecutorService executor;
-    private final ReadOnlyStringWrapper targetLanguage = new ReadOnlyStringWrapper(DEFAULT_TARGET);
-    private final ReadOnlyStringWrapper destination = new ReadOnlyStringWrapper("");
-    private final ReadOnlyBooleanWrapper overwrite = new ReadOnlyBooleanWrapper(false);
-    private final ReadOnlyBooleanWrapper destinationExists = new ReadOnlyBooleanWrapper(false);
-    // Whether the person, and not a proposal, put the text in the destination. FX thread only.
-    private boolean destinationEdited;
-    // Counts the questions asked about the destination; an answer for any other count is stale. FX thread only.
-    private long epoch;
+    private final BriefSaver saver;
+    private final ReadOnlyBooleanWrapper sourceUndeclared = new ReadOnlyBooleanWrapper(false);
+    private final ReadOnlyBooleanWrapper sameLanguage = new ReadOnlyBooleanWrapper(false);
+    private final ReadOnlyBooleanWrapper canContinue = new ReadOnlyBooleanWrapper(false);
 
     /**
-     * Follows the open book, and proposes a destination for one that is already open.
+     * Follows the open book's brief.
      *
-     * @param project the holder of the open book, which outlives this view model
-     * @param executor the daemon executor the existence check runs on, never the FX thread
+     * @param project the holder of the open book and its brief, which outlives this view model
+     * @param projects the port a changed brief is saved through
+     * @param executor the daemon executor a save runs on, never the FX thread
      */
     @Inject
-    public BookBriefViewModel(final CurrentProject project, @BackgroundExecutor final ExecutorService executor) {
+    public BookBriefViewModel(
+            final CurrentProject project,
+            final ProjectService projects,
+            @BackgroundExecutor final ExecutorService executor) {
         this.project = Objects.requireNonNull(project, "project");
-        this.executor = Objects.requireNonNull(executor, "executor");
-        project.book().addListener((observed, was, now) -> onBookChanged(now));
+        this.saver = new BriefSaver(
+                Objects.requireNonNull(projects, "projects"), Objects.requireNonNull(executor, "executor"));
+        project.brief().addListener((observed, was, now) -> derive(now));
+        derive(project.brief().get());
         log.debug(
                 "book brief created, a book is already open: {}", project.book().get() != null);
-        propose(project.book().get());
-        refreshExists();
     }
 
     /**
-     * The language the translation is written in.
+     * The brief as it stands.
      *
-     * @return a read-only property; always one of {@link #TARGET_LANGUAGES}
+     * @return a read-only property holding {@code null} while no book is open
      */
-    public ReadOnlyStringProperty targetLanguage() {
-        return targetLanguage.getReadOnlyProperty();
+    public ReadOnlyObjectProperty<@Nullable BookBrief> brief() {
+        return project.brief();
     }
 
     /**
-     * Where the translation is written, as the person sees and edits it.
+     * Whether a book is open whose brief has no source language, because the book declares none the application
+     * recognises and none has been chosen.
      *
-     * @return a read-only property holding the path text, empty while no book is open or after it was cleared by hand
+     * @return a read-only property
      */
-    public ReadOnlyStringProperty destination() {
-        return destination.getReadOnlyProperty();
+    public ReadOnlyBooleanProperty sourceUndeclared() {
+        return sourceUndeclared.getReadOnlyProperty();
     }
 
     /**
-     * Whether an existing destination file may be replaced.
+     * Whether the source and the target language are the same language.
      *
-     * @return a read-only property; off until a person allows it
+     * @return a read-only property
      */
-    public ReadOnlyBooleanProperty overwrite() {
-        return overwrite.getReadOnlyProperty();
+    public ReadOnlyBooleanProperty sameLanguage() {
+        return sameLanguage.getReadOnlyProperty();
     }
 
     /**
-     * Whether the run would be refused for an occupied destination, so the screen can say so before it starts.
+     * Whether the brief can go on to the next step: both languages are chosen and they differ.
      *
-     * @return a read-only property, true only while a file exists at the destination and replacing is not allowed
+     * @return a read-only property
      */
-    public ReadOnlyBooleanProperty destinationExists() {
-        return destinationExists.getReadOnlyProperty();
+    public ReadOnlyBooleanProperty canContinue() {
+        return canContinue.getReadOnlyProperty();
     }
 
     /**
-     * Looks again for a file at the destination, because one can appear or vanish while nothing here changes and the
-     * warning is only worth showing if it is current. Called whenever the brief is built. The answer arrives later on
-     * the FX thread.
-     */
-    public void refresh() {
-        log.debug("destination existence refreshed");
-        refreshExists();
-    }
-
-    /**
-     * The language the open book declares, which is shown and never edited.
+     * Whether a changed brief is still on its way to the project, so that a caller which needs the stored brief can
+     * wait for it.
      *
-     * @return the declared language code, or empty when no book is open or it declares none
+     * @return a read-only property; true from a change until its save, and any save that waited behind it, finished
      */
-    public Optional<String> sourceLanguage() {
-        final OpenedBook book = project.book().get();
-        if (book == null) {
-            return Optional.empty();
-        }
-        final String declared = book.inspection().languageEvidence().declared();
-        return declared == null || declared.isBlank() ? Optional.empty() : Optional.of(declared);
+    public ReadOnlyBooleanProperty saving() {
+        return saver.saving();
     }
 
     /**
-     * Chooses the target language; a proposed destination follows it, a destination the person chose does not.
+     * Chooses the source language.
      *
-     * @param code one of {@link #TARGET_LANGUAGES}; anything else is ignored, because the picker offers nothing else
+     * @param tag a normalized language tag
      */
-    public void selectTarget(final String code) {
-        Objects.requireNonNull(code, "code");
-        if (!TARGET_LANGUAGES.contains(code)) {
-            log.debug("target {} ignored: it is not one of {}", code, TARGET_LANGUAGES);
-            return;
-        }
-        targetLanguage.set(code);
-        log.debug("target language is now {}, destination hand-edited: {}", code, destinationEdited);
-        if (!destinationEdited) {
-            propose(project.book().get());
-        }
-        refreshExists();
+    public void setSourceLanguage(final String tag) {
+        Objects.requireNonNull(tag, "tag");
+        change("source language", tag, brief -> brief.withLanguages(tag, brief.targetLanguage()));
     }
 
     /**
-     * Takes a path a person typed. From here on a target change leaves it alone.
+     * Chooses the target language.
      *
-     * @param text the path as typed; blank or unparsable text is kept as typed and simply yields no request
+     * @param tag a normalized language tag
      */
-    public void editDestination(final String text) {
+    public void setTargetLanguage(final String tag) {
+        Objects.requireNonNull(tag, "tag");
+        change("target language", tag, brief -> brief.withLanguages(brief.sourceLanguage(), tag));
+    }
+
+    /**
+     * Sets the genre the prompt names.
+     *
+     * @param genre the English name of a predefined genre, or free text as typed; blank clears it
+     */
+    public void setGenre(final String genre) {
+        final String text = blankToNull(genre);
+        log.trace("genre is now '{}'", text);
+        change(
+                "genre",
+                text == null ? "cleared" : "set",
+                brief -> new BookBrief(
+                        brief.sourceLanguage(),
+                        brief.targetLanguage(),
+                        text,
+                        brief.register(),
+                        brief.voiceEra(),
+                        brief.audience(),
+                        brief.names(),
+                        brief.foreignPassages(),
+                        brief.footnotes(),
+                        brief.units(),
+                        brief.balance(),
+                        brief.alsoTranslate(),
+                        brief.dial()));
+    }
+
+    /**
+     * Sets the narrative voice and era notes.
+     *
+     * @param voiceEra free text; blank clears it
+     */
+    public void setVoiceEra(final String voiceEra) {
+        final String text = blankToNull(voiceEra);
+        log.trace("voice and era are now '{}'", text);
+        change(
+                "voice and era",
+                text == null ? "cleared" : "set",
+                brief -> new BookBrief(
+                        brief.sourceLanguage(),
+                        brief.targetLanguage(),
+                        brief.genre(),
+                        brief.register(),
+                        text,
+                        brief.audience(),
+                        brief.names(),
+                        brief.foreignPassages(),
+                        brief.footnotes(),
+                        brief.units(),
+                        brief.balance(),
+                        brief.alsoTranslate(),
+                        brief.dial()));
+    }
+
+    /**
+     * Sets the audience.
+     *
+     * @param audience free text; blank clears it
+     */
+    public void setAudience(final String audience) {
+        final String text = blankToNull(audience);
+        log.trace("audience is now '{}'", text);
+        change(
+                "audience",
+                text == null ? "cleared" : "set",
+                brief -> new BookBrief(
+                        brief.sourceLanguage(),
+                        brief.targetLanguage(),
+                        brief.genre(),
+                        brief.register(),
+                        brief.voiceEra(),
+                        text,
+                        brief.names(),
+                        brief.foreignPassages(),
+                        brief.footnotes(),
+                        brief.units(),
+                        brief.balance(),
+                        brief.alsoTranslate(),
+                        brief.dial()));
+    }
+
+    /**
+     * Sets the register.
+     *
+     * @param register the register the translation is written in
+     */
+    public void setRegister(final Register register) {
+        Objects.requireNonNull(register, "register");
+        change("register", register.name(), brief -> rebuild(brief, register, null, null, null, null, null, null));
+    }
+
+    /**
+     * Sets how character and place names are rendered.
+     *
+     * @param names the name policy
+     */
+    public void setNames(final NamePolicy names) {
+        Objects.requireNonNull(names, "names");
+        change("name policy", names.name(), brief -> rebuild(brief, null, names, null, null, null, null, null));
+    }
+
+    /**
+     * Sets how foreign-language passages are handled.
+     *
+     * @param foreign the foreign-passage policy
+     */
+    public void setForeignPassages(final ForeignPassagePolicy foreign) {
+        Objects.requireNonNull(foreign, "foreign");
+        change(
+                "foreign-passage policy",
+                foreign.name(),
+                brief -> rebuild(brief, null, null, foreign, null, null, null, null));
+    }
+
+    /**
+     * Sets how footnotes are handled.
+     *
+     * @param footnotes the footnote policy
+     */
+    public void setFootnotes(final FootnotePolicy footnotes) {
+        Objects.requireNonNull(footnotes, "footnotes");
+        change(
+                "footnote policy",
+                footnotes.name(),
+                brief -> rebuild(brief, null, null, null, footnotes, null, null, null));
+    }
+
+    /**
+     * Sets how units of measurement are handled.
+     *
+     * @param units the unit policy
+     */
+    public void setUnits(final UnitPolicy units) {
+        Objects.requireNonNull(units, "units");
+        change("unit policy", units.name(), brief -> rebuild(brief, null, null, null, null, units, null, null));
+    }
+
+    /**
+     * Sets the faithful-to-natural balance.
+     *
+     * @param balance the balance; a value outside 0 to 100 is brought to the nearest end
+     */
+    public void setBalance(final int balance) {
+        final int clamped = Math.max(MIN_BALANCE, Math.min(MAX_BALANCE, balance));
+        change(
+                "balance",
+                Integer.toString(clamped),
+                brief -> rebuild(brief, null, null, null, null, null, clamped, null));
+    }
+
+    /**
+     * Sets which auxiliary text is also translated.
+     *
+     * @param alsoTranslate the four switches
+     */
+    public void setAlsoTranslate(final AlsoTranslate alsoTranslate) {
+        Objects.requireNonNull(alsoTranslate, "alsoTranslate");
+        change(
+                "also translate",
+                alsoTranslate.toString(),
+                brief -> rebuild(brief, null, null, null, null, null, null, alsoTranslate));
+    }
+
+    /**
+     * Sets the quality dial.
+     *
+     * @param dial the speed and quality choice
+     */
+    public void setDial(final QualityDial dial) {
+        Objects.requireNonNull(dial, "dial");
+        change(
+                "quality dial",
+                dial.name(),
+                brief -> new BookBrief(
+                        brief.sourceLanguage(),
+                        brief.targetLanguage(),
+                        brief.genre(),
+                        brief.register(),
+                        brief.voiceEra(),
+                        brief.audience(),
+                        brief.names(),
+                        brief.foreignPassages(),
+                        brief.footnotes(),
+                        brief.units(),
+                        brief.balance(),
+                        brief.alsoTranslate(),
+                        dial));
+    }
+
+    private static BookBrief rebuild(
+            final BookBrief brief,
+            final @Nullable Register register,
+            final @Nullable NamePolicy names,
+            final @Nullable ForeignPassagePolicy foreign,
+            final @Nullable FootnotePolicy footnotes,
+            final @Nullable UnitPolicy units,
+            final @Nullable Integer balance,
+            final @Nullable AlsoTranslate alsoTranslate) {
+        return new BookBrief(
+                brief.sourceLanguage(),
+                brief.targetLanguage(),
+                brief.genre(),
+                register == null ? brief.register() : register,
+                brief.voiceEra(),
+                brief.audience(),
+                names == null ? brief.names() : names,
+                foreign == null ? brief.foreignPassages() : foreign,
+                footnotes == null ? brief.footnotes() : footnotes,
+                units == null ? brief.units() : units,
+                balance == null ? brief.balance() : balance,
+                alsoTranslate == null ? brief.alsoTranslate() : alsoTranslate,
+                brief.dial());
+    }
+
+    private static @Nullable String blankToNull(final String text) {
         Objects.requireNonNull(text, "text");
-        log.debug("destination edited by hand to '{}'", text);
-        destinationEdited = true;
-        destination.set(text);
-        refreshExists();
+        return text.isBlank() ? null : text;
     }
 
-    /**
-     * Takes a path picked in the file chooser, which counts as a choice like typing one does.
-     *
-     * @param chosen the file the person picked
-     */
-    public void chooseDestination(final Path chosen) {
-        Objects.requireNonNull(chosen, "chosen");
-        log.debug("destination chosen in the file chooser: {}", chosen);
-        editDestination(chosen.toString());
-    }
-
-    /**
-     * Allows or forbids replacing a file that already exists at the destination.
-     *
-     * @param allowed whether replacing is allowed
-     */
-    public void setOverwrite(final boolean allowed) {
-        log.debug("overwrite is now {}", allowed);
-        overwrite.set(allowed);
-        refreshExists();
-    }
-
-    /**
-     * The destination as a path.
-     *
-     * @return the parsed destination, or empty when the text is blank or is not a valid path on this system
-     */
-    public Optional<Path> destinationPath() {
-        final String text = destination.get();
-        if (text.isBlank()) {
-            log.debug("destination has no path: the text is blank");
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Path.of(text));
-        } catch (InvalidPathException invalid) {
-            log.debug("destination has no path: '{}' is not valid here ({})", text, invalid.getReason());
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Assembles what a run needs from the choices made here.
-     *
-     * @return the request, or empty while no book is open or the destination names no usable path; the source
-     *     language is left null so that the one the import preselected is used
-     */
-    public Optional<InterimRunRequest> request() {
+    private void change(final String field, final String value, final UnaryOperator<BookBrief> edit) {
         final OpenedBook book = project.book().get();
-        if (book == null) {
-            log.debug("no request: no book is open");
-            return Optional.empty();
+        final BookBrief current = project.brief().get();
+        if (book == null || current == null) {
+            log.debug("{} not changed: no book is open", field);
+            return;
         }
-        return destinationPath()
-                .map(path -> new InterimRunRequest(book.source(), path, targetLanguage.get(), null, overwrite.get()));
+        final BookBrief changed = edit.apply(current);
+        log.debug("{} is now {}", field, value);
+        if (changed.equals(current)) {
+            log.debug("{} was already so; nothing is saved", field);
+            return;
+        }
+        project.replaceBrief(changed);
+        saver.enqueue(book.projectId(), changed);
     }
 
-    private void onBookChanged(final @Nullable OpenedBook book) {
+    private void derive(final @Nullable BookBrief brief) {
+        final String source = brief == null ? null : brief.sourceLanguage();
+        final String target = brief == null ? null : brief.targetLanguage();
+        final boolean same = source != null && source.equals(target);
+        sourceUndeclared.set(brief != null && source == null);
+        sameLanguage.set(same);
+        canContinue.set(source != null && target != null && !same);
         log.debug(
-                "the open book changed to {}; the destination is proposed afresh",
-                book == null ? null : book.projectId());
-        destinationEdited = false;
-        overwrite.set(false);
-        propose(book);
-        refreshExists();
-    }
-
-    private void propose(final @Nullable OpenedBook book) {
-        if (book == null) {
-            log.debug("no proposal: no book is open");
-            destination.set("");
-            return;
-        }
-        final BookFormat format = Objects.requireNonNull(book.inspection().format(), "format");
-        final Path proposed = DestinationPath.destinationFor(book.source(), format, targetLanguage.get());
-        log.debug("proposing destination {} for project {} ({})", proposed, book.projectId(), format);
-        destination.set(proposed.toString());
-    }
-
-    private void refreshExists() {
-        epoch++;
-        final long asked = epoch;
-        final Optional<Path> path = destinationPath();
-        if (overwrite.get() || path.isEmpty()) {
-            log.debug("existence not asked: overwrite allowed {}, usable path {}", overwrite.get(), path.isPresent());
-            destinationExists.set(false);
-            return;
-        }
-        submit(path.get(), asked);
-    }
-
-    private void submit(final Path path, final long asked) {
-        log.debug("existence of {} asked as question {}", path, asked);
-        try {
-            executor.execute(() -> answer(path, asked));
-        } catch (RejectedExecutionException rejected) {
-            log.warn("existence of {} could not be asked; the warning keeps its last value", path, rejected);
-        }
-    }
-
-    private void answer(final Path path, final long asked) {
-        final boolean exists = Files.exists(path);
-        log.debug(
-                "question {} answered on {}: exists {}",
-                asked,
-                Thread.currentThread().getName(),
-                exists);
-        Platform.runLater(() -> publish(asked, exists));
-    }
-
-    private void publish(final long asked, final boolean exists) {
-        if (asked != epoch) {
-            log.debug("answer to question {} discarded: the current one is {}", asked, epoch);
-            return;
-        }
-        log.debug("answer to question {} published: destination occupied {}", asked, exists);
-        destinationExists.set(exists);
+                "brief languages source {} target {}: same {}, can continue {}",
+                source,
+                target,
+                same,
+                canContinue.get());
     }
 }
