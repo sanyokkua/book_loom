@@ -37,9 +37,11 @@ context the first draft saw), Max revises backwards after the last segment, expo
 the chosen side files, the command line refuses an existing destination before any model call and cancels cleanly, the
 review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam. The window opens a book on the stored project (one current project, the import states chosen from the
 inspection's verdict, a replace-run prompt, start and resume without importing again), shows the run in its title bar,
-numbers six workflow steps with a provider footer, and its Book Brief and Structure screens are live. Not built:
-saving (nothing survives a restart, no remembered settings), Names & style, the rebuilt Translating, review panel,
-Export and Settings screens (the window still exports through an interim bridge). Next: groups 14–15 of
+numbers six workflow steps with a provider footer, and its Book Brief, Structure, Names & style and Translating screens are live (the glossary table with scans and CSV,
+the seven run states with the live panel, tagged log and provider-error state, the review panel with retry and
+proposals, and review pauses that open their segment; one end-to-end test runs each review mode). Not built:
+saving (nothing survives a restart, no remembered settings), the rebuilt Export and Settings screens (the window still
+exports through an interim bridge). Next: group 15 of
 `openspec/changes/complete-translation-workflow`.
 
 ## Commands
