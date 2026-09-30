@@ -1,8 +1,6 @@
 package ua.bookloom.ui.screen;
 
 import java.text.NumberFormat;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
@@ -10,12 +8,11 @@ import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -25,15 +22,18 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.control.Banner;
+import ua.bookloom.ui.control.LiveChunkPanel;
 import ua.bookloom.ui.control.StatTile;
+import ua.bookloom.ui.control.TaggedLog;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ControlState;
 import ua.bookloom.ui.state.Controls;
-import ua.bookloom.ui.state.LogEntry;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.StateMirror;
-import ua.bookloom.ui.state.StatusRole;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
@@ -58,8 +58,7 @@ final class TranslatingView {
     private static final double TILE_SPACING = 12;
     private static final double ACTION_SPACING = 10;
     private static final double LOG_HEIGHT = 220;
-    private static final List<String> ROLE_CLASSES =
-            Arrays.stream(StatusRole.values()).map(StatusRole::styleClass).toList();
+    private static final double WATCH_PANE_WIDTH = 300;
 
     /** One run control: its id suffix, its look, its label and which part of the view model's table decides it. */
     private record Control(
@@ -76,21 +75,25 @@ final class TranslatingView {
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
+            final CurrentProject current,
+            final LanguageNames names,
             final Messages messages,
             final Runnable openSettings) {
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(mirror, "mirror");
+        Objects.requireNonNull(current, "current");
+        Objects.requireNonNull(names, "names");
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(openSettings, "openSettings");
         log.debug("building the translating dashboard");
         final TranslatingDashboard.LiveBanner banner = banner(messages, openSettings);
-        final ListView<LogEntry> logList = logList(mirror, messages);
+        final TaggedLog logList = new TaggedLog(mirror.activityLog(), messages);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
                 banner.banner(),
                 progressCard(mirror, messages),
                 tiles(mirror, messages),
-                logCard(logList, messages),
+                watch(logList, mirror, current, names, messages),
                 actions(viewModel, messages));
         return new TranslatingDashboard(screen, banner, logList, messages);
     }
@@ -152,28 +155,55 @@ final class TranslatingView {
         return new StatTile("translating-tile-" + name, number, messages.get(caption));
     }
 
-    private static Node logCard(final ListView<LogEntry> logList, final Messages messages) {
+    private static Node logCard(final TaggedLog logList, final Messages messages) {
         final Label heading = new Label(messages.get(MessageKey.TRANSLATING_LOG_TITLE));
         heading.getStyleClass().add("card-title");
+        logList.setId("translating-log");
+        logList.setPrefHeight(LOG_HEIGHT);
+        VBox.setVgrow(logList, Priority.ALWAYS);
         final VBox card = new VBox(CARD_SPACING, heading, logList);
         card.setId("translating-log-card");
         card.getStyleClass().add("card");
-        VBox.setVgrow(card, Priority.ALWAYS);
         return card;
     }
 
-    private static ListView<LogEntry> logList(final StateMirror mirror, final Messages messages) {
-        final ListView<LogEntry> list = new ListView<>(mirror.activityLog());
-        list.setId("translating-log");
-        list.getStyleClass().add("activity-log");
-        list.setPrefHeight(LOG_HEIGHT);
-        list.setFocusTraversable(false);
-        final Label empty = new Label(messages.get(MessageKey.TRANSLATING_LOG_EMPTY));
-        empty.getStyleClass().add("muted");
-        list.setPlaceholder(empty);
-        list.setCellFactory(view -> new EntryCell(messages));
-        VBox.setVgrow(list, Priority.ALWAYS);
-        return list;
+    private static Node watch(
+            final TaggedLog logList,
+            final StateMirror mirror,
+            final CurrentProject current,
+            final LanguageNames names,
+            final Messages messages) {
+        final LiveChunkPanel live = new LiveChunkPanel(
+                "translating-live-card",
+                mirror.live().liveRows(),
+                languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages),
+                languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages),
+                messages);
+        final Node logCard = logCard(logList, messages);
+        for (final Region side : new Region[] {live, (Region) logCard}) {
+            side.setPrefWidth(WATCH_PANE_WIDTH);
+            side.setMinWidth(0);
+            HBox.setHgrow(side, Priority.ALWAYS);
+        }
+        final HBox row = new HBox(TILE_SPACING, live, logCard);
+        row.setId("translating-watch");
+        VBox.setVgrow(row, Priority.ALWAYS);
+        return row;
+    }
+
+    private static ObservableValue<String> languageName(
+            final CurrentProject current,
+            final Function<BookBrief, @Nullable String> tagOf,
+            final MessageKey fallback,
+            final LanguageNames names,
+            final Messages messages) {
+        return Bindings.createStringBinding(
+                () -> {
+                    final BookBrief brief = current.brief().get();
+                    final String tag = brief == null ? null : tagOf.apply(brief);
+                    return tag == null ? messages.get(fallback) : names.nameOf(tag, messages.locale());
+                },
+                current.brief());
     }
 
     private static Node actions(final TranslatingViewModel viewModel, final Messages messages) {
@@ -214,28 +244,5 @@ final class TranslatingView {
         label.getStyleClass().add(styleClass);
         label.textProperty().bind(Bindings.createStringBinding(text, sources));
         return label;
-    }
-
-    /** Draws one log entry as its mark and its catalogue message, in the role's colour, and does nothing else. */
-    private static final class EntryCell extends ListCell<LogEntry> {
-
-        private final Messages messages;
-
-        EntryCell(final Messages messages) {
-            this.messages = messages;
-        }
-
-        @Override
-        protected void updateItem(final @Nullable LogEntry entry, final boolean empty) {
-            super.updateItem(entry, empty);
-            getStyleClass().removeAll(ROLE_CLASSES);
-            if (empty || entry == null) {
-                setText(null);
-                return;
-            }
-            setText(entry.kind().mark() + " "
-                    + messages.get(entry.messageKey(), entry.args().toArray()));
-            getStyleClass().add(entry.role().styleClass());
-        }
     }
 }

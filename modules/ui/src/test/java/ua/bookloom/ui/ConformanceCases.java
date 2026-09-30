@@ -248,6 +248,8 @@ final class ConformanceCases {
                             new Part("#translating-tile-accepted", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#translating-log-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#translating-log-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#translating-live-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#translating-live-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
                             new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
             new Screen(

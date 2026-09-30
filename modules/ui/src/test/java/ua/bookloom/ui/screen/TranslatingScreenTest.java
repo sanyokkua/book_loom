@@ -191,7 +191,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
 
         assertThat(logCells().stream().map(cell -> cell.getText()).toList())
-                .containsExactly("✓ Segment 741 was accepted.", "✕ Segment 742 failed with a recoverable error.");
+                .containsExactly(
+                        "ok    ✓ Segment 741 was accepted.", "err   ✕ Segment 742 failed with a recoverable error.");
     }
 
     // IF a role were drawn in the wrong token, THEN a flagged segment would look like an accepted one.

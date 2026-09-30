@@ -12,7 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
@@ -36,6 +38,8 @@ public final class TranslatingController {
     private final StateMirror mirror;
     private final Messages messages;
     private final Navigator navigator;
+    private final CurrentProject current;
+    private final LanguageNames names;
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
@@ -53,6 +57,8 @@ public final class TranslatingController {
      * @param mirror the run's state, figures and log the dashboard shows
      * @param messages the catalogue the built parts are worded from
      * @param navigator where the provider-error banner's route to the settings leads
+     * @param current the open book, whose languages head the live panel's panes
+     * @param names the names of those languages
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -61,18 +67,22 @@ public final class TranslatingController {
             final TranslatingViewModel viewModel,
             final StateMirror mirror,
             final Messages messages,
-            final Navigator navigator) {
+            final Navigator navigator,
+            final CurrentProject current,
+            final LanguageNames names) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.current = Objects.requireNonNull(current, "current");
+        this.names = Objects.requireNonNull(names, "names");
     }
 
     @FXML
     void initialize() {
         log.debug(
                 "building the translating screen in state {}", mirror.runState().get());
-        dashboard = TranslatingView.build(viewModel, mirror, messages, this::openSettings);
+        dashboard = TranslatingView.build(viewModel, mirror, current, names, messages, this::openSettings);
         host.getChildren().setAll(dashboard.root());
         host.getProperties().put(TranslatingController.class, this);
         mirror.runState().addListener(new WeakChangeListener<>(onState));

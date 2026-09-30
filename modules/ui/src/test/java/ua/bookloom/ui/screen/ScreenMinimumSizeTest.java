@@ -3,13 +3,22 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.ScrollPane;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.LiveRow;
+import ua.bookloom.ui.state.LiveRows;
+import ua.bookloom.ui.state.LogEntry;
+import ua.bookloom.ui.state.LogKind;
+import ua.bookloom.ui.state.StateMirror;
 
 /**
  * Every screen with a working view, shown in the content area the 960 by 640 window minimum leaves with no book and with one open: none needs
@@ -18,6 +27,8 @@ import ua.bookloom.ui.ViewNames;
 class ScreenMinimumSizeTest extends ImportScreenTestBase {
 
     private static final Path BOOK = Path.of("Frankenstein.epub");
+    private static final String LONG_TEXT =
+            "She had lost her mother, and the poor girl wept as she followed the coffin. ".repeat(6);
 
     private void assertFitsTheWidth(final ViewNames view) {
         onFx(() -> shell.activate(view));
@@ -51,5 +62,20 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
         openBook(BOOK);
 
         assertFitsTheWidth(view);
+    }
+
+    // A run in progress is the fullest the dashboard gets: the live panel and the log side by side, with text in both.
+    @Test
+    void translating_runningWithLiveRowsAndLog_atMinimumWidth_needsNoSidewaysScrolling() {
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.live()
+                .publishLiveRows(new LiveRows(
+                        new LiveRow("s-1", "ch7 · p41", LONG_TEXT, LONG_TEXT, 0.93, SegmentPath.DRAFT, false, false),
+                        new LiveRow("s-2", "ch7 · p42", LONG_TEXT, null, null, null, true, false)));
+        mirror.publishLogEntries(List.of(new LogEntry(LogKind.RETRIED, List.of("format", "ch7 · p42"))));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertFitsTheWidth(ViewNames.TRANSLATING);
     }
 }

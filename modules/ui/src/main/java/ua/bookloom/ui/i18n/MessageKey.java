@@ -565,6 +565,28 @@ public enum MessageKey {
     TRANSLATING_LOG_TITLE("translating.log.title"),
     /** Text shown in the activity log before the run has decided anything. */
     TRANSLATING_LOG_EMPTY("translating.log.empty"),
+    /** Heading of the live chunk card. */
+    LIVE_TITLE("live.title"),
+    /** Target text of the segment in progress until its draft arrives. */
+    LIVE_WAITING("live.waiting"),
+    /** Badge on a draft the judge has not decided yet. */
+    LIVE_AWAITING_JUDGE("live.awaitingJudge"),
+    /** Badge with the judge's score; argument 0 is the formatted score. */
+    LIVE_JUDGE("live.judge"),
+    /** Badge of a segment accepted as drafted. */
+    LIVE_PATH_DRAFT("live.path.draft"),
+    /** Badge of a segment accepted after a repair. */
+    LIVE_PATH_REPAIRED("live.path.repaired"),
+    /** Badge of a segment reused from the translation memory. */
+    LIVE_PATH_TM_REUSE("live.path.tmReuse"),
+    /** Badge of a segment the person edited. */
+    LIVE_PATH_USER("live.path.user"),
+    /** Badge of a segment kept as source. */
+    LIVE_PATH_SOURCE_KEPT("live.path.sourceKept"),
+    /** Heading of the source pane when no source language is set. */
+    LIVE_SOURCE_FALLBACK("live.source.fallback"),
+    /** Heading of the target pane when no target language is set. */
+    LIVE_TARGET_FALLBACK("live.target.fallback"),
     /** Banner title of a run state; argument 0 is the state's token (idle to failed); stopped and failed are neutral. */
     TRANSLATING_STATE_TITLE("translating.stateTitle"),
     /** Banner text of a run state; argument 0 is the same token as for {@link #TRANSLATING_STATE_TITLE}. */
