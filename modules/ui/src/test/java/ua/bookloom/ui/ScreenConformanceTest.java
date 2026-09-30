@@ -23,6 +23,7 @@ import ua.bookloom.ui.ConformanceCases.Kind;
 import ua.bookloom.ui.ConformanceCases.Part;
 import ua.bookloom.ui.ConformanceCases.Screen;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
+import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.theme.ThemeMode;
@@ -75,6 +76,8 @@ class ScreenConformanceTest extends ShellTestBase {
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
             case REVIEW_PANEL -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
             case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
+            case RETRY ->
+                onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
             case REPLACE_RUN ->
                 onFx(() -> injector.getInstance(ReplaceRunPrompt.class)
                         .ask("Frankenstein.epub", "Dracula.epub", RunState.RUNNING, () -> {}));

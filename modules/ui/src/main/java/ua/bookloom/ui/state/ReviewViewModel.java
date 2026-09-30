@@ -8,7 +8,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -16,7 +15,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -24,8 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -38,12 +34,12 @@ import ua.bookloom.ui.notify.Toasts;
 
 /**
  * What the review panel does: list the flagged segments through the review desk, hold the selected segment's editor
- * text, and accept, save, revert or skip it.
+ * text, and accept, save, revert, skip, retry or apply a proposal to it.
  *
  * <p>A singleton because the screen is rebuilt on every visit while the count and the open list must outlive it. Every
- * desk call runs on the background executor and every property changes on the FX Application Thread. Review happens
- * beside the run it reviews, so every action is unavailable while the run translates (running, pausing or stopping)
- * and the desk answers {@code busy} if a run starts in between; that answer is one warning, never a dialog.
+ * desk call runs on the background executor and every property changes on the FX Application Thread. Every action is
+ * unavailable while the run translates or a retry is in flight, and the desk answers {@code busy} if a run starts in
+ * between; that answer is one warning, never a dialog.
  *
  * <p>The flagged count is read from the desk, not from the mirror's queue, because the mirror clears its queue when a
  * run session starts; the mirror's queue changing is only the cue to read it again. A refused accept or save is shown
@@ -54,23 +50,21 @@ import ua.bookloom.ui.notify.Toasts;
 public final class ReviewViewModel {
 
     private final ReviewDesk desk;
+    private final ReviewQueries queries;
     private final StateMirror mirror;
     private final CurrentProject current;
-    private final ReviewMode reviewMode;
     private final Toasts toasts;
     private final ReviewRefusals refusals;
+    private final ReviewRetry retry;
     private final ExecutorService executor;
     private final ObservableList<ReviewRow> rows = FXCollections.observableArrayList();
     private final ObservableList<ReviewRow> readOnlyRows = FXCollections.unmodifiableObservableList(rows);
     private final ReadOnlyObjectWrapper<ReviewFilter> filter = new ReadOnlyObjectWrapper<>(ReviewFilter.ALL_FLAGGED);
-    private final ReadOnlyBooleanWrapper allSegmentsOffered = new ReadOnlyBooleanWrapper();
     private final ReadOnlyIntegerWrapper flaggedCount = new ReadOnlyIntegerWrapper();
     private final ReadOnlyObjectWrapper<@Nullable SegmentView> selected = new ReadOnlyObjectWrapper<>();
     private final ReviewEditor editor = new ReviewEditor(this::refreshAvailability);
     private final ReadOnlyStringWrapper problem = new ReadOnlyStringWrapper();
-    private final ReadOnlyBooleanWrapper actionsAvailable = new ReadOnlyBooleanWrapper();
-    private final ReadOnlyBooleanWrapper acceptAvailable = new ReadOnlyBooleanWrapper();
-    private final ChangeListener<RunState> onRunState = (observed, was, now) -> refreshAvailability();
+    private final ReviewAvailability availability;
     private final ListChangeListener<FlaggedRow> onMirrorQueue = change -> refreshCount();
 
     /**
@@ -82,6 +76,7 @@ public final class ReviewViewModel {
      * @param reviewMode the mode of this launch, which decides whether All segments is offered
      * @param toasts where the accept and the busy refusal are announced
      * @param errors where a failure that is neither busy nor validation is shown
+     * @param retry the model, the desk call and the hold on the run for a retry
      * @param executor the daemon executor desk calls run on, never the FX thread
      */
     @Inject
@@ -92,15 +87,19 @@ public final class ReviewViewModel {
             final ReviewMode reviewMode,
             final Toasts toasts,
             final ErrorPresenter errors,
+            final ReviewRetry retry,
             @BackgroundExecutor final ExecutorService executor) {
         this.desk = Objects.requireNonNull(desk, "desk");
+        this.queries = new ReviewQueries(desk);
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.current = Objects.requireNonNull(current, "current");
-        this.reviewMode = Objects.requireNonNull(reviewMode, "reviewMode");
+        this.availability = new ReviewAvailability(mirror, Objects.requireNonNull(reviewMode, "reviewMode"));
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.refusals = new ReviewRefusals(toasts, Objects.requireNonNull(errors, "errors"), problem::set);
+        this.retry = Objects.requireNonNull(retry, "retry");
         this.executor = Objects.requireNonNull(executor, "executor");
-        mirror.runState().addListener(onRunState);
+        mirror.runState().addListener((observed, was, now) -> refreshAvailability());
+        mirror.review().retryInFlight().addListener((observed, was, now) -> refreshAvailability());
         mirror.live().flaggedQueue().addListener(onMirrorQueue);
         refreshAvailability();
         log.debug("review view model ready");
@@ -130,7 +129,7 @@ public final class ReviewViewModel {
      * @return a read-only property; FX thread only
      */
     public ReadOnlyBooleanProperty allSegmentsOffered() {
-        return allSegmentsOffered.getReadOnlyProperty();
+        return availability.allSegments();
     }
 
     /**
@@ -193,7 +192,7 @@ public final class ReviewViewModel {
      * @return a read-only property; FX thread only
      */
     public ReadOnlyBooleanProperty actionsAvailable() {
-        return actionsAvailable.getReadOnlyProperty();
+        return availability.actions();
     }
 
     /**
@@ -202,7 +201,18 @@ public final class ReviewViewModel {
      * @return a read-only property; FX thread only
      */
     public ReadOnlyBooleanProperty acceptAvailable() {
-        return acceptAvailable.getReadOnlyProperty();
+        return availability.accept();
+    }
+
+    /** Reads the flagged count again for the open book; call when the Translating screen is shown. FX thread only. */
+    public void refreshCount() {
+        final OpenedBook book = current.book().get();
+        if (book != null) {
+            executor.execute(() -> {
+                final int flagged = queries.flagged(book.projectId(), flaggedCount.get());
+                Platform.runLater(() -> publishCount(flagged));
+            });
+        }
     }
 
     /** Reads the list and the count again for the open book; call when the panel opens. FX thread only. */
@@ -215,7 +225,7 @@ public final class ReviewViewModel {
         }
         log.debug("review panel opened on project {} with filter {}", book.projectId(), filter.get());
         loadRows(book.projectId(), filter.get());
-        readCount(book.projectId());
+        refreshCount();
     }
 
     /**
@@ -225,7 +235,7 @@ public final class ReviewViewModel {
      */
     public void selectFilter(final ReviewFilter chosen) {
         Objects.requireNonNull(chosen, "chosen");
-        if (chosen == ReviewFilter.ALL_SEGMENTS && !allSegmentsOffered.get()) {
+        if (chosen == ReviewFilter.ALL_SEGMENTS && !availability.allSegments().get()) {
             log.debug("filter {} refused: All segments is not offered", chosen);
             return;
         }
@@ -256,7 +266,7 @@ public final class ReviewViewModel {
 
     /** Accepts the selected segment, if Accept is offered. FX thread only. */
     public void accept() {
-        if (acceptAvailable.get()) {
+        if (availability.accept().get()) {
             act("accept", desk::accept);
         } else {
             log.debug("accept not offered");
@@ -283,11 +293,40 @@ public final class ReviewViewModel {
         act("skip", desk::skip);
     }
 
+    /**
+     * Retries the selected segment off the FX thread; a translating run makes it one busy warning, and no model
+     * chosen a message in place. FX thread only.
+     *
+     * @param note the person's guidance for the model, or null for none
+     * @param lowerTemperature whether the retry samples at a lower temperature
+     */
+    public void retry(final @Nullable String note, final boolean lowerTemperature) {
+        final SegmentView segment = selected.get();
+        if (segment == null
+                || current.book().get() == null
+                || mirror.review().retryInFlight().get()) {
+            log.debug("retry not offered: segment {}", segment);
+        } else if (availability.isTranslating()) {
+            refusals.refuseBusy("retry", segment.segmentId());
+        } else {
+            final var call = retry.begin(segment.segmentId(), note, lowerTemperature, problem::set);
+            if (call != null) {
+                act("retry", call);
+            }
+        }
+    }
+
+    /** Applies the selected segment's backward-revision proposal as the person's edit. FX thread only. */
+    public void acceptProposal() {
+        act("acceptProposal", desk::acceptProposal);
+    }
+
     private void act(final String name, final BiFunction<String, String, Result<SegmentRecord>> call) {
         final SegmentView segment = selected.get();
         final OpenedBook book = current.book().get();
-        if (segment == null || book == null || !actionsAvailable.get()) {
-            log.debug("{} not offered: segment {}, actions {}", name, segment, actionsAvailable.get());
+        final boolean offered = availability.actions().get();
+        if (segment == null || book == null || !offered) {
+            log.debug("{} not offered: segment {}, actions {}", name, segment, offered);
             return;
         }
         problem.set(null);
@@ -304,10 +343,10 @@ public final class ReviewViewModel {
             return;
         }
         log.info("review {} of segment {} left it {}", name, segment.segmentId(), stored.status());
-        final int remaining = readFlagged(projectId);
+        final int remaining = queries.flagged(projectId, flaggedCount.get());
         final String nextId = "skip".equals(name) ? stored.segmentId() : segment.segmentId();
-        final SegmentView next = desk.segment(projectId, nextId).data();
-        final List<SegmentView> listed = readList(projectId, filter.get());
+        final SegmentView next = queries.segment(projectId, nextId);
+        final List<SegmentView> listed = Objects.requireNonNullElse(queries.list(projectId, filter.get()), List.of());
         Platform.runLater(() -> {
             publishCount(remaining);
             publishRows(listed);
@@ -320,48 +359,18 @@ public final class ReviewViewModel {
 
     private void loadRows(final String projectId, final ReviewFilter chosen) {
         executor.execute(() -> {
-            final Result<List<SegmentView>> queue = desk.queue(projectId, chosen);
-            final List<SegmentView> views = queue.data();
-            if (views == null) {
-                log.debug("the {} list could not be read: it is left as it was", chosen);
-                return;
+            final List<SegmentView> views = queries.list(projectId, chosen);
+            if (views != null) {
+                Platform.runLater(() -> publishRows(views));
             }
-            Platform.runLater(() -> publishRows(views));
         });
-    }
-
-    private void refreshCount() {
-        final OpenedBook book = current.book().get();
-        if (book != null) {
-            readCount(book.projectId());
-        }
-    }
-
-    private void readCount(final String projectId) {
-        executor.execute(() -> {
-            final int flagged = readFlagged(projectId);
-            Platform.runLater(() -> publishCount(flagged));
-        });
-    }
-
-    /** Reads the flagged count; a failed read keeps the count shown, so the shown value is answered back. */
-    private int readFlagged(final String projectId) {
-        final ReviewCounts counts = desk.counts(projectId).data();
-        return counts == null ? flaggedCount.get() : counts.flagged();
-    }
-
-    private List<SegmentView> readList(final String projectId, final ReviewFilter chosen) {
-        final List<SegmentView> views = desk.queue(projectId, chosen).data();
-        return views == null ? List.of() : views;
     }
 
     private void readSegment(final String projectId, final String segmentId) {
-        final SegmentView view = desk.segment(projectId, segmentId).data();
-        if (view == null) {
-            log.debug("segment {} could not be read: the selection is left as it was", segmentId);
-            return;
+        final SegmentView view = queries.segment(projectId, segmentId);
+        if (view != null) {
+            Platform.runLater(() -> show(view));
         }
-        Platform.runLater(() -> show(view));
     }
 
     private void publishCount(final int flagged) {
@@ -385,15 +394,6 @@ public final class ReviewViewModel {
     }
 
     private void refreshAvailability() {
-        final RunState state = mirror.runState().get();
-        final boolean translating =
-                state == RunState.RUNNING || state == RunState.PAUSING || state == RunState.STOPPING;
-        final SegmentView segment = selected.get();
-        final boolean actions = segment != null && !translating;
-        actionsAvailable.set(actions);
-        acceptAvailable.set(actions
-                && !editor.dirty().get()
-                && (segment.status() == SegmentStatus.FLAGGED || segment.status() == SegmentStatus.ACCEPTED));
-        allSegmentsOffered.set(reviewMode == ReviewMode.UNATTENDED && state == RunState.COMPLETED);
+        availability.refresh(selected.get(), editor.dirty().get());
     }
 }

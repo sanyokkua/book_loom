@@ -11,6 +11,7 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -20,6 +21,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.ui.control.ComparePanes;
+import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ContextLine;
@@ -41,6 +43,7 @@ final class ReviewComparePane extends VBox {
 
     private final ReviewViewModel viewModel;
     private final Messages messages;
+    private final RetryWithNoteDialog retryDialog;
     private final NumberFormat score;
     private final ComparePanes panes;
     private final Label locator = new Label();
@@ -49,14 +52,18 @@ final class ReviewComparePane extends VBox {
     private final Label contextLine = new Label();
     private final HBox contextRow = new HBox(SPACING);
     private final VBox findings = new VBox(SPACING / 2);
+    private final VBox proposalBox = new VBox(SPACING / 2);
+    private final Label proposal = new Label();
     private final ChangeListener<@Nullable SegmentView> onSelected = (observed, was, now) -> show(now);
 
     ReviewComparePane(
             final ReviewViewModel viewModel,
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
-            final Messages messages) {
+            final Messages messages,
+            final RetryWithNoteDialog retryDialog) {
         super(SPACING);
+        this.retryDialog = Objects.requireNonNull(retryDialog, "retryDialog");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.score = NumberFormat.getNumberInstance(messages.locale());
@@ -69,6 +76,7 @@ final class ReviewComparePane extends VBox {
                         header(),
                         contextRow(),
                         panes,
+                        proposalBox(),
                         note("review-hint", viewModel.hint().map(this::wording)),
                         note("review-problem", viewModel.problem()),
                         findingsBox(),
@@ -122,35 +130,63 @@ final class ReviewComparePane extends VBox {
         return new VBox(SPACING / 2, heading, findings);
     }
 
-    private HBox actions() {
-        final HBox row = new HBox(
-                SPACING,
-                action(
-                        "review-accept",
-                        MessageKey.REVIEW_ACCEPT,
-                        "btn-primary",
-                        viewModel::accept,
-                        viewModel.acceptAvailable()),
-                action(
-                        "review-save",
-                        MessageKey.REVIEW_SAVE,
-                        "btn-secondary",
-                        viewModel::saveEdit,
-                        Bindings.and(viewModel.actionsAvailable(), viewModel.dirty())),
-                action(
-                        "review-revert",
-                        MessageKey.REVIEW_REVERT,
-                        "btn-secondary",
-                        viewModel::revert,
-                        viewModel.actionsAvailable()),
-                action(
-                        "review-skip",
-                        MessageKey.REVIEW_SKIP,
-                        "btn-ghost",
-                        viewModel::skip,
-                        viewModel.actionsAvailable()));
+    private VBox proposalBox() {
+        final Label caption = new Label(messages.get(MessageKey.REVIEW_PROPOSAL));
+        caption.getStyleClass().add("stat-caption");
+        proposal.setId("review-proposal-text");
+        proposal.setWrapText(true);
+        proposal.setMinHeight(Region.USE_PREF_SIZE);
+        final Button accept = action(
+                "review-accept-proposal",
+                MessageKey.REVIEW_ACCEPT_PROPOSAL,
+                "btn-secondary",
+                viewModel::acceptProposal,
+                viewModel.actionsAvailable());
+        proposalBox.setId("review-proposal");
+        proposalBox.getChildren().addAll(caption, proposal, accept);
+        return proposalBox;
+    }
+
+    private void askForNote() {
+        final SegmentView view = viewModel.selected().get();
+        if (view != null) {
+            log.debug("asking for a retry note on segment {}", view.segmentId());
+            retryDialog.ask(view.locator(), choice -> viewModel.retry(choice.note(), choice.lowerTemperature()));
+        }
+    }
+
+    private FlowPane actions() {
+        final FlowPane row = new FlowPane(SPACING, SPACING / 2);
+        row.getChildren()
+                .addAll(
+                        action(
+                                "review-accept",
+                                MessageKey.REVIEW_ACCEPT,
+                                "btn-primary",
+                                viewModel::accept,
+                                viewModel.acceptAvailable()),
+                        action(
+                                "review-save",
+                                MessageKey.REVIEW_SAVE,
+                                "btn-secondary",
+                                viewModel::saveEdit,
+                                Bindings.and(viewModel.actionsAvailable(), viewModel.dirty())),
+                        available("review-revert", MessageKey.REVIEW_REVERT, "btn-secondary", viewModel::revert),
+                        available("review-skip", MessageKey.REVIEW_SKIP, "btn-ghost", viewModel::skip));
+        row.getChildren()
+                .addAll(
+                        available(
+                                "review-retry",
+                                MessageKey.REVIEW_RETRY,
+                                "btn-secondary",
+                                () -> viewModel.retry(null, false)),
+                        available("review-retry-note", MessageKey.REVIEW_RETRY_NOTE, "btn-ghost", this::askForNote));
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
+    }
+
+    private Button available(final String id, final MessageKey label, final String style, final Runnable run) {
+        return action(id, label, style, run, viewModel.actionsAvailable());
     }
 
     private Button action(
@@ -184,6 +220,9 @@ final class ReviewComparePane extends VBox {
         final String line = view.context() == null ? "" : ContextLine.of(view.context());
         contextLine.setText(line);
         findingsFor(view);
+        proposal.setText(view.proposal() == null ? "" : view.proposal());
+        proposalBox.setVisible(view.proposal() != null);
+        proposalBox.setManaged(view.proposal() != null);
         panes.source().setText(view.maskedSource());
         setRowShown(line);
     }

@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
@@ -42,6 +43,7 @@ public final class TranslatingController {
     private final CurrentProject current;
     private final LanguageNames names;
     private final ReviewViewModel review;
+    private final RetryWithNoteDialog retryDialog;
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
@@ -63,6 +65,7 @@ public final class TranslatingController {
      * @param current the open book, whose languages head the live panel's panes
      * @param names the names of those languages
      * @param review the review panel's view model, which counts the flagged segments the panel's button names
+     * @param retryDialog the card a retry with a note is asked in
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -74,7 +77,8 @@ public final class TranslatingController {
             final Navigator navigator,
             final CurrentProject current,
             final LanguageNames names,
-            final ReviewViewModel review) {
+            final ReviewViewModel review,
+            final RetryWithNoteDialog retryDialog) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -82,6 +86,7 @@ public final class TranslatingController {
         this.current = Objects.requireNonNull(current, "current");
         this.names = Objects.requireNonNull(names, "names");
         this.review = Objects.requireNonNull(review, "review");
+        this.retryDialog = Objects.requireNonNull(retryDialog, "retryDialog");
     }
 
     @FXML
@@ -94,8 +99,9 @@ public final class TranslatingController {
                 current,
                 names,
                 messages,
-                new TranslatingView.Exits(navigator, this::openSettings, review));
+                new TranslatingView.Exits(navigator, this::openSettings, review, retryDialog));
         viewModel.refreshPending();
+        review.refreshCount();
         host.getChildren().setAll(dashboard.root());
         host.getProperties().put(TranslatingController.class, this);
         mirror.runState().addListener(new WeakChangeListener<>(onState));

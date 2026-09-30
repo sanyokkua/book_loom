@@ -63,6 +63,20 @@ public record Controls(ControlState start, ControlState pause, ControlState resu
         };
     }
 
+    /**
+     * The same table while a segment retry is in flight: whatever would begin or continue a run, start and resume,
+     * is unavailable, so the run and the retry never race for the model. A control that is not offered stays hidden.
+     *
+     * @return the held controls; never null
+     */
+    public Controls heldForRetry() {
+        return new Controls(held(start), pause, held(resume), stop);
+    }
+
+    private static ControlState held(final ControlState control) {
+        return control == ControlState.HIDDEN ? control : ControlState.DISABLED;
+    }
+
     private static ControlState hidden() {
         return ControlState.HIDDEN;
     }

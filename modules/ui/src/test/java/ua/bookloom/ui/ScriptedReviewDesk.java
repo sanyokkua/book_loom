@@ -80,7 +80,8 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             final boolean lowerTemperature,
             final ChatModel model) {
         return action(
-                "retry(" + projectId + ", " + segmentId + ", lowerTemperature=" + lowerTemperature + ")",
+                "retry(" + projectId + ", " + segmentId + ", note=" + note + ", lowerTemperature=" + lowerTemperature
+                        + ")",
                 projectId,
                 segmentId);
     }

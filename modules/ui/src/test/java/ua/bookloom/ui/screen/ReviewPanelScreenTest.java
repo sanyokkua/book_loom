@@ -221,4 +221,82 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
         assertThat(pane.getContent().getLayoutBounds().getWidth())
                 .isLessThanOrEqualTo(pane.getViewportBounds().getWidth());
     }
+
+    // IF the count were read only when the panel opened, THEN the button on a first visit would read zero flagged.
+    @Test
+    void reviewFlagged_firstVisit_namesTheCountTheDeskHolds() throws Exception {
+        readyToStart();
+        script(4, ReviewFixtures.nameIssue());
+        showTranslating();
+        publish(RunState.PAUSED);
+
+        awaitFx(() -> button(REVIEW).getText().equals("Review flagged (4)"));
+    }
+
+    // IF Resume stayed live during a retry, THEN the run and the retry would race for the model.
+    @Test
+    void retryInFlight_pausedRun_disablesResumeOnTheScreenAndInTheTitleBar() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        mirror().publishRunStarted("Frankenstein.epub");
+        publish(RunState.PAUSED);
+        assertThat(button("translating-resume").isDisabled()).isFalse();
+        assertThat(button("shell-run-control").isDisabled()).isFalse();
+
+        mirror().review().publishRetryInFlight(true);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(button("translating-resume").isDisabled()).isTrue();
+        assertThat(button("shell-run-control").isDisabled()).isTrue();
+    }
+
+    @Test
+    void retry_plainButton_asksTheDeskWithNoNoteAndNoLowerTemperature() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+
+        onFx(() -> button("review-retry").fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        awaitFx(() -> desk.calls()
+                .contains("retry(" + projectIdOfOpenBook() + ", ch07.xhtml:39, note=null, lowerTemperature=false)"));
+    }
+
+    @Test
+    void retryWithNote_dialogRetry_asksTheDeskWithTheTypedNoteAndTheCheckBox() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+
+        onFx(() -> button("review-retry-note").fire());
+        onFx(() -> ((TextArea) required("retry-note-text")).setText("keep it more formal"));
+        onFx(() -> ((javafx.scene.control.CheckBox) required("retry-note-lower")).setSelected(true));
+        onFx(() -> button("retry-note-confirm").fire());
+
+        awaitFx(() -> desk.calls()
+                .contains("retry("
+                        + projectIdOfOpenBook()
+                        + ", ch07.xhtml:39, note=keep it more formal, lowerTemperature=true)"));
+    }
+
+    // IF a proposal applied itself, THEN the person's text would change before they had read it.
+    @Test
+    void acceptProposal_segmentWithProposal_isShownBesideTheTextAndAppliedOnlyWhenPressed() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.withProposal());
+        selectFirstRow();
+        final String call = "acceptProposal(" + projectIdOfOpenBook() + ", ch03.xhtml:2)";
+
+        assertThat(textOf("review-proposal")).contains("Він пішов.");
+        assertThat(desk.calls()).doesNotContain(call);
+
+        onFx(() -> button("review-accept-proposal").fire());
+
+        awaitFx(() -> desk.calls().contains(call));
+    }
+
+    @Test
+    void acceptProposal_segmentWithoutProposal_isNotShown() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+
+        assertThat(isShown("review-proposal")).isFalse();
+    }
 }

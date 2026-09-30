@@ -14,6 +14,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ReviewViewModel;
@@ -38,7 +39,8 @@ final class ReviewPanel extends VBox {
             final ReviewViewModel viewModel,
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
-            final Messages messages) {
+            final Messages messages,
+            final RetryWithNoteDialog retryDialog) {
         super(SPACING);
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(messages, "messages");
@@ -56,7 +58,7 @@ final class ReviewPanel extends VBox {
         list.setPrefWidth(LIST_WIDTH);
         list.setMinWidth(LIST_WIDTH);
         list.setMaxWidth(LIST_WIDTH);
-        final HBox body = new HBox(SPACING, list, right(sourceName, targetName, messages));
+        final HBox body = new HBox(SPACING, list, right(sourceName, targetName, messages, retryDialog));
         setId("review-panel");
         getStyleClass().add("card");
         getChildren().addAll(header, body);
@@ -74,8 +76,10 @@ final class ReviewPanel extends VBox {
     private StackPane right(
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
-            final Messages messages) {
-        final ReviewComparePane compare = new ReviewComparePane(viewModel, sourceName, targetName, messages);
+            final Messages messages,
+            final RetryWithNoteDialog retryDialog) {
+        final ReviewComparePane compare =
+                new ReviewComparePane(viewModel, sourceName, targetName, messages, retryDialog);
         final Label empty = new Label(messages.get(MessageKey.REVIEW_EMPTY));
         empty.setId("review-empty-text");
         empty.setWrapText(true);

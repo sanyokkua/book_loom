@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Toasts;
@@ -24,6 +25,11 @@ final class ReviewRefusals {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.inPlace = Objects.requireNonNull(inPlace, "inPlace");
+    }
+
+    /** Refuses an action before any call, because a run is translating: the same one warning a desk answer gives. */
+    void refuseBusy(final String action, final String segmentId) {
+        show(action, segmentId, AppError.of(ErrorCode.busy, "Busy", "A run is translating."));
     }
 
     void show(final String action, final String segmentId, final AppError error) {

@@ -26,6 +26,7 @@ import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.LiveChunkPanel;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TaggedLog;
+import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -81,9 +82,9 @@ final class TranslatingView {
 
     /**
      * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
-     * open the review panel, whose view model counts the flagged segments.
+     * open the review panel, whose view model counts the flagged segments and whose retry asks its note in a card.
      */
-    record Exits(Navigator navigator, Runnable openSettings, ReviewViewModel review) {}
+    record Exits(Navigator navigator, Runnable openSettings, ReviewViewModel review, RetryWithNoteDialog retryDialog) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
@@ -106,7 +107,7 @@ final class TranslatingView {
                 languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages);
         final ObservableValue<String> targetName =
                 languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages);
-        final ReviewPanel review = reviewPanel(exits.review(), sourceName, targetName, messages, state);
+        final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
                 banner.banner(),
@@ -191,12 +192,13 @@ final class TranslatingView {
     // An open panel is shown only while the run is in a state that offers Review flagged, so it never outlives its
     // button.
     private static ReviewPanel reviewPanel(
-            final ReviewViewModel review,
+            final Exits exits,
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
             final Messages messages,
             final ReadOnlyObjectProperty<RunState> state) {
-        final ReviewPanel panel = new ReviewPanel(review, sourceName, targetName, messages);
+        final ReviewPanel panel =
+                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.retryDialog());
         panel.visibleProperty()
                 .bind(Bindings.createBooleanBinding(
                         () -> panel.openProperty().get() && REVIEWABLE.contains(state.get()),

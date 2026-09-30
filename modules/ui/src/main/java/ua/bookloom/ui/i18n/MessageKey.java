@@ -817,7 +817,27 @@ public enum MessageKey {
     /** Filter chip listing flagged segments with a foreign passage kept. */
     REVIEW_CHIP_FOREIGN_KEPT("review.chip.foreignKept"),
     /** Browse chip listing every segment, offered after an Unattended run. */
-    REVIEW_CHIP_ALL_SEGMENTS("review.chip.allSegments");
+    REVIEW_CHIP_ALL_SEGMENTS("review.chip.allSegments"),
+    /** Button that retries the selected segment's translation as it is. */
+    REVIEW_RETRY("review.retry"),
+    /** Button that opens the card asking for a note and a lower temperature before a retry. */
+    REVIEW_RETRY_NOTE("review.retryNote"),
+    /** Caption of a backward-revision proposal shown beside the person's text. */
+    REVIEW_PROPOSAL("review.proposal"),
+    /** Button that applies the shown proposal as the person's own edit. */
+    REVIEW_ACCEPT_PROPOSAL("review.acceptProposal"),
+    /** Shown in place when a retry is asked for and no model is chosen. */
+    REVIEW_RETRY_NO_MODEL("review.retryNoModel"),
+    /** Heading of the retry-with-note card. */
+    DIALOG_RETRY_TITLE("dialog.retry.title"),
+    /** Caption of the note field of the retry card. */
+    DIALOG_RETRY_NOTE("dialog.retry.note"),
+    /** Check box of the retry card that lowers the sampling temperature. */
+    DIALOG_RETRY_LOWER("dialog.retry.lower"),
+    /** Button that closes the retry card without retrying. */
+    DIALOG_RETRY_CANCEL("dialog.retry.cancel"),
+    /** Button that retries the segment with the note and the temperature chosen. */
+    DIALOG_RETRY_CONFIRM("dialog.retry.confirm");
 
     private final String key;
 

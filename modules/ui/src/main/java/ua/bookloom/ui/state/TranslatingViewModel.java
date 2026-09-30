@@ -108,6 +108,7 @@ public final class TranslatingViewModel {
         preparing.addListener((observed, was, now) -> refreshControls());
         pending.remains().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener((observed, was, now) -> refreshControls());
+        mirror.review().retryInFlight().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
         current.book().addListener(onOpenedBook);
@@ -336,8 +337,9 @@ public final class TranslatingViewModel {
 
     private void refreshControls() {
         final RunState state = mirror.runState().get();
-        final Controls next =
+        final Controls table =
                 Controls.of(state, preparing.get(), pending.remains().get());
+        final Controls next = mirror.review().retryInFlight().get() ? table.heldForRetry() : table;
         log.debug(
                 "controls for state {} preparing {} pending remain {}: {}",
                 state,

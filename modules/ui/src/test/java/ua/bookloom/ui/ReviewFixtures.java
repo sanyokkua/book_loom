@@ -85,6 +85,27 @@ public final class ReviewFixtures {
         return view("ch03.xhtml:2", "ch3 · p02", SegmentStatus.FLAGGED, List.of(), null, null);
     }
 
+    /** A flagged segment holding a backward-revision proposal beside the machine target. */
+    public static SegmentView withProposal() {
+        final SegmentView base = machineTargetOnly();
+        return new SegmentView(
+                base.segmentId(),
+                base.locator(),
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                base.maskedMachineTarget(),
+                null,
+                null,
+                base.findings(),
+                base.judgeScore(),
+                base.path(),
+                base.reviewed(),
+                null,
+                "Він пішов.");
+    }
+
     public static SegmentView accepted() {
         return view("ch02.xhtml:4", "ch2 · p04", SegmentStatus.ACCEPTED, List.of(), null, null);
     }

@@ -56,4 +56,21 @@ class ControlsTest {
         assertThat(state.isShown()).isEqualTo(shown);
         assertThat(state.isEnabled()).isEqualTo(enabled);
     }
+
+    // IF Resume or Start stayed live during a retry, THEN a run and the retry would race for the model.
+    @ParameterizedTest
+    @CsvSource({
+        "PAUSED,    HIDDEN,   HIDDEN,   DISABLED, ENABLED",
+        "STOPPED,   HIDDEN,   HIDDEN,   DISABLED, HIDDEN",
+        "COMPLETED, DISABLED, HIDDEN,   HIDDEN,   HIDDEN",
+        "RUNNING,   HIDDEN,   ENABLED,  HIDDEN,   ENABLED",
+    })
+    void heldForRetry_state_disablesOnlyTheControlsThatWouldBeginARun(
+            final RunState state,
+            final ControlState start,
+            final ControlState pause,
+            final ControlState resume,
+            final ControlState stop) {
+        assertThat(Controls.of(state, false, true).heldForRetry()).isEqualTo(new Controls(start, pause, resume, stop));
+    }
 }

@@ -3,6 +3,8 @@ package ua.bookloom.ui.state;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import org.jspecify.annotations.Nullable;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.document.SegmentKind;
@@ -12,6 +14,7 @@ import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.ui.i18n.Messages;
 
 /** What the review view model tests share: an open book, the recording desk and the segments the desk holds. */
 // The view model is built by each test after it has scripted its fakes, which NullAway cannot see.
@@ -96,6 +99,11 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
 
     /** Opens the book, scripts three flagged segments and builds the view model; call once. */
     protected void buildReview() {
+        buildReview(new DirectExecutor());
+    }
+
+    /** As {@link #buildReview()}, with desk calls going to {@code deskExecutor}. */
+    protected void buildReview(final ExecutorService deskExecutor) {
         openBook();
         projectId = onFx(() -> current.book().get().projectId());
         desk.willAnswerQueue(List.of(lowScore(), nameIssue(), wrongLanguage()));
@@ -103,9 +111,13 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
         desk.willAnswerSegment(nameIssue());
         desk.willAnswerSegment(wrongLanguage());
         desk.willAnswerCounts(flaggedCount(3));
-        review = onFx(
-                () -> new ReviewViewModel(desk, mirror, current, reviewMode, toasts, errors, new DirectExecutor()));
+        review = onFx(() -> newReviewViewModel(deskExecutor));
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    protected ReviewViewModel newReviewViewModel(final ExecutorService deskExecutor) {
+        final ReviewRetry retry = new ReviewRetry(desk, models, mirror, settings, new Messages(() -> Locale.ENGLISH));
+        return new ReviewViewModel(desk, mirror, current, reviewMode, toasts, errors, retry, deskExecutor);
     }
 
     protected void open() {

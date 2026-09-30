@@ -144,12 +144,22 @@ class ReviewViewModelListTest extends ReviewViewModelTestBase {
 
     @Test
     void open_noBookOpen_asksNothing() {
-        review = onFx(
-                () -> new ReviewViewModel(desk, mirror, current, reviewMode, toasts, errors, new DirectExecutor()));
+        review = onFx(() -> newReviewViewModel(new DirectExecutor()));
 
         open();
 
         assertThat(desk.calls()).isEmpty();
         assertThat(locators()).isEmpty();
+    }
+
+    // IF the count were read only when the panel opens, THEN the button on a first visit would read zero flagged.
+    @Test
+    void refreshCount_beforeThePanelOpens_readsTheCountFromTheDesk() {
+        buildReview();
+        desk.willAnswerCounts(flaggedCount(7));
+
+        press(review::refreshCount);
+
+        assertThat(onFx(() -> review.flaggedCount().get())).isEqualTo(7);
     }
 }

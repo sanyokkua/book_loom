@@ -2,6 +2,8 @@ package ua.bookloom.ui.state;
 
 import java.util.Objects;
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +12,7 @@ import ua.bookloom.api.AppError;
 
 /**
  * The part of the run's state that says why a paused run is waiting: the model error it paused on, or the segment a
- * review pause stopped at.
+ * review pause stopped at; and whether a retry of one segment is in flight, which holds the run's Resume.
  *
  * <p>Kept apart from {@link StateMirror} so that class stays a readable size. The properties are read-only; each
  * {@code publish*} method wraps its mutation in {@link Platform#runLater(Runnable)}, the same bridge the mirror uses.
@@ -20,6 +22,7 @@ public final class ReviewSection {
 
     private final ReadOnlyObjectWrapper<@Nullable AppError> providerError = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> reviewPauseSegment = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyBooleanWrapper retryInFlight = new ReadOnlyBooleanWrapper();
 
     /**
      * The model error the run is paused on, whatever its code.
@@ -37,6 +40,25 @@ public final class ReviewSection {
      */
     public ReadOnlyObjectProperty<@Nullable String> reviewPauseSegment() {
         return reviewPauseSegment.getReadOnlyProperty();
+    }
+
+    /**
+     * Whether a segment retry is waiting for the model. It is not part of a run, so a new run does not clear it.
+     *
+     * @return a read-only property; read on the FX thread
+     */
+    public ReadOnlyBooleanProperty retryInFlight() {
+        return retryInFlight.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows that a segment retry began or ended.
+     *
+     * @param inFlight whether a retry is now waiting for the model
+     */
+    public void publishRetryInFlight(final boolean inFlight) {
+        log.debug("publishing retry in flight: {}", inFlight);
+        Platform.runLater(() -> retryInFlight.set(inFlight));
     }
 
     /**
