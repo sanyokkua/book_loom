@@ -5,19 +5,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.util.Modules;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import javafx.scene.Scene;
@@ -41,7 +38,6 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.app.bootstrap.ReviewModeResolver;
 import ua.bookloom.ui.AppShellView;
-import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -111,9 +107,7 @@ class ReviewPauseDeskIntegrationTest {
     @AfterEach
     void cleanup() throws Exception {
         FxToolkit.cleanupStages();
-        Optional.ofNullable(injector)
-                .map(built -> built.getInstance(Key.get(ExecutorService.class, BackgroundExecutor.class)))
-                .ifPresent(ExecutorService::shutdownNow);
+        WorkspaceTestBase.shutDown(injector);
     }
 
     // IF the fake's answer to Accept & continue differed from the real desk's, THEN the :ui tests would prove nothing.
