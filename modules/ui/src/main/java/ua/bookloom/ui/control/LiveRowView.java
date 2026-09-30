@@ -5,6 +5,7 @@ import java.util.Objects;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -18,9 +19,10 @@ import ua.bookloom.ui.state.LiveRow;
 /** One row of the live panel: a locator and badges above a source pane and a target pane. */
 final class LiveRowView extends VBox {
 
-    private static final double SPACING = 6;
-    private static final double PANE_SPACING = 12;
+    private static final double SPACING = 8;
+    private static final double PANE_SPACING = 16;
     private static final int SCORE_DIGITS = 2;
+    private static final double ROW_HEIGHT = 150;
 
     private final Messages messages;
     private final NumberFormat score;
@@ -30,6 +32,8 @@ final class LiveRowView extends VBox {
     private final Label path = badge("chip-neutral");
     private final Label source = text();
     private final Label target = text();
+    private final ScrollPane sourceScroll = scrolling(source);
+    private final ScrollPane targetScroll = scrolling(target);
 
     LiveRowView(
             final String idPrefix,
@@ -48,10 +52,17 @@ final class LiveRowView extends VBox {
         final HBox header = new HBox(SPACING, locator, spacer, judge, awaiting, path);
         final HBox panes = new HBox(
                 PANE_SPACING,
-                pane(idPrefix + "-source", sourceName, source),
-                pane(idPrefix + "-target", targetName, target));
+                pane(idPrefix + "-source", sourceName, sourceScroll),
+                pane(idPrefix + "-target", targetName, targetScroll));
+        VBox.setVgrow(panes, Priority.ALWAYS);
+        sourceScroll.setId(idPrefix + "-source-scroll");
+        targetScroll.setId(idPrefix + "-target-scroll");
+        setPrefHeight(ROW_HEIGHT);
+        setMinHeight(ROW_HEIGHT);
+        setMaxHeight(ROW_HEIGHT);
         getChildren().addAll(header, panes);
         setPadding(new Insets(SPACING));
+        getStyleClass().add("live-row");
         show(null);
     }
 
@@ -79,18 +90,28 @@ final class LiveRowView extends VBox {
 
     private static Label text() {
         final Label label = new Label();
+        label.getStyleClass().add("live-body");
         label.setWrapText(true);
         label.setMinHeight(Region.USE_PREF_SIZE);
         label.setMaxWidth(Double.MAX_VALUE);
         return label;
     }
 
-    private static VBox pane(final String id, final ObservableValue<String> heading, final Label body) {
+    private static ScrollPane scrolling(final Label body) {
+        final ScrollPane scroll = new ScrollPane(body);
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.getStyleClass().add("edge-to-edge");
+        return scroll;
+    }
+
+    private static VBox pane(final String id, final ObservableValue<String> heading, final ScrollPane body) {
         final Label head = new Label();
         head.setId(id + "-head");
         head.getStyleClass().add("stat-caption");
         head.textProperty().bind(heading);
         final VBox pane = new VBox(SPACING, head, body);
+        VBox.setVgrow(body, Priority.ALWAYS);
         pane.setPrefWidth(0);
         pane.setMinWidth(0);
         HBox.setHgrow(pane, Priority.ALWAYS);
@@ -98,6 +119,8 @@ final class LiveRowView extends VBox {
     }
 
     void show(final @Nullable LiveRow row) {
+        sourceScroll.setVvalue(0);
+        targetScroll.setVvalue(0);
         if (row == null) {
             locator.setText("");
             source.setText("");

@@ -13,7 +13,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -59,8 +58,7 @@ final class TranslatingView {
     private static final double CARD_SPACING = 8;
     private static final double TILE_SPACING = 12;
     private static final double ACTION_SPACING = 10;
-    private static final double LOG_HEIGHT = 220;
-    private static final double WATCH_PANE_WIDTH = 300;
+    private static final double LOG_HEIGHT = 260;
 
     private static final Set<RunState> UNDER_WAY =
             Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPING, RunState.STOPPED);
@@ -169,12 +167,7 @@ final class TranslatingView {
         final LiveChunkPanel live =
                 new LiveChunkPanel("translating-live-card", mirror.live().liveRows(), sourceName, targetName, messages);
         final Node logCard = logCard(logList, messages);
-        for (final Region side : new Region[] {live, (Region) logCard}) {
-            side.setPrefWidth(WATCH_PANE_WIDTH);
-            side.setMinWidth(0);
-            HBox.setHgrow(side, Priority.ALWAYS);
-        }
-        final HBox row = new HBox(TILE_SPACING, live, logCard);
+        final VBox row = new VBox(TILE_SPACING, live, logCard);
         row.setId("translating-watch");
         VBox.setVgrow(row, Priority.ALWAYS);
         return row;

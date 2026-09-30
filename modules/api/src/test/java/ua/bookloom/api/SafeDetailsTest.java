@@ -49,7 +49,7 @@ class SafeDetailsTest {
                 .render();
 
         assertThat(details)
-                .isEqualTo("httpStatus=429, endpointHost=localhost, model=llama3.1:8b, timeoutMs=30000, "
+                .isEqualTo("httpStatus=429, endpointHost=localhost:11434, model=llama3.1:8b, timeoutMs=30000, "
                         + "attempt=2/3, qaFindings=tagMismatch,lengthRatio, "
                         + "expectedPlaceholders=⟦g0⟧ ⟦g1⟧, observedPlaceholders=⟦g0⟧");
     }

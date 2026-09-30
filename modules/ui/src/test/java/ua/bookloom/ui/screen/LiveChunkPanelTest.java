@@ -3,6 +3,7 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.TimeoutException;
+import javafx.scene.control.ScrollPane;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -116,5 +117,18 @@ class LiveChunkPanelTest extends TranslatingScreenTestBase {
         assertThat(labelText("live-last-target-head")).isEqualTo("Ukrainian");
         assertThat(labelText("live-current-source-head")).isEqualTo("English");
         assertThat(labelText("live-current-target-head")).isEqualTo("Ukrainian");
+    }
+
+    // IF a stale vertical offset survived a row change, THEN the card would show an empty area instead of its rows.
+    @Test
+    void rows_change_scrollsTheCardBackToTheTop() throws TimeoutException {
+        showRows(decided(0.93, SegmentPath.DRAFT), started());
+        final ScrollPane scroll = (ScrollPane) required("live-current-source-scroll");
+        onFx(() -> scroll.setVvalue(1));
+
+        mirror().live().publishLiveRows(new LiveRows(decided(0.93, SegmentPath.DRAFT), drafted(true)));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(scroll.getVvalue()).isZero();
     }
 }

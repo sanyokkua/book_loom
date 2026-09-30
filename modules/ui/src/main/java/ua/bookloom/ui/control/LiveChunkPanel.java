@@ -6,8 +6,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -26,7 +24,7 @@ import ua.bookloom.ui.state.LiveRows;
 @Slf4j
 public final class LiveChunkPanel extends VBox {
 
-    private static final double SPACING = 8;
+    private static final double SPACING = 10;
 
     private final LiveRowView lastDecided;
     private final LiveRowView current;
@@ -55,13 +53,7 @@ public final class LiveChunkPanel extends VBox {
         current = new LiveRowView("live-current", sourceName, targetName, messages);
         final Label heading = new Label(messages.get(MessageKey.LIVE_TITLE));
         heading.getStyleClass().add("card-title");
-        final ScrollPane scroll = new ScrollPane(new VBox(SPACING, lastDecided, current));
-        scroll.setId(id + "-scroll");
-        scroll.setFitToWidth(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.getStyleClass().add("edge-to-edge");
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        getChildren().addAll(heading, scroll);
+        getChildren().addAll(heading, lastDecided, current);
         setId(id);
         getStyleClass().add("card");
         log.debug("live panel {} bound to the mirror", id);

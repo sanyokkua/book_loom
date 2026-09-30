@@ -64,7 +64,7 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
         assertFitsTheWidth(view);
     }
 
-    // A run in progress is the fullest the dashboard gets: the live panel and the log side by side, with text in both.
+    // A run in progress is the fullest the dashboard gets: the live panel above the log, with text in both.
     @Test
     void translating_runningWithLiveRowsAndLog_atMinimumWidth_needsNoSidewaysScrolling() {
         final StateMirror mirror = injector.getInstance(StateMirror.class);

@@ -726,7 +726,7 @@
     -fx-border-color: transparent;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
-    -fx-padding: 8px 10px 8px 10px;
+    -fx-padding: 6px 10px 6px 10px;
     -fx-cursor: hand;
 }
 
@@ -1360,7 +1360,7 @@
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-padding: 0;
-    -fx-min-height: 120px;
+    -fx-min-height: 240px;
 }
 
 .activity-log .list-cell {
@@ -1369,8 +1369,22 @@
     -fx-border-color: transparent transparent -color-divider transparent;
     -fx-border-width: 0 0 1px 0;
     -fx-font-family: "Monospaced";
-    -fx-font-size: 12px;
-    -fx-padding: 5px 6px 5px 6px;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 10px 6px 10px;
+    -fx-pref-width: 0;
+    -fx-text-overrun: ellipsis;
+}
+
+.live-body {
+    -fx-font-size: 14px;
+    -fx-line-spacing: 3px;
+    -fx-text-fill: -color-text-strong;
+}
+
+.live-row {
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-padding: 10px 4px 12px 4px;
 }
 
 .activity-log .list-cell:filled:selected,
