@@ -8,6 +8,7 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -47,7 +48,7 @@ final class AboutDialog {
      * @return the card's root node, ready for {@link ModalHost#show(Node, boolean)}
      */
     Node card() {
-        final DialogPane card = new DialogPane();
+        final DialogPane card = new ModalCard();
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         card.setHeader(header());

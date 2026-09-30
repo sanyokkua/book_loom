@@ -50,6 +50,34 @@ class ExportCompleteDialogTest extends ShellTestBase {
     }
 
     @Test
+    void footer_threeButtons_areContiguousAtTheRightInMockupOrder() {
+        show();
+
+        final Button close = (Button) required(ExportCompleteDialog.CLOSE_ID);
+        final Button folder = (Button) required(ExportCompleteDialog.FOLDER_ID);
+        final Button open = (Button) required(ExportCompleteDialog.OPEN_ID);
+        final double[] edges = new double[5];
+        onFx(() -> {
+            final Node card = required(ExportCompleteDialog.CARD_ID);
+            final var c = close.localToScene(close.getBoundsInLocal());
+            final var f = folder.localToScene(folder.getBoundsInLocal());
+            final var o = open.localToScene(open.getBoundsInLocal());
+            final double cardRight = card.localToScene(card.getLayoutBounds()).getMaxX();
+            edges[0] = f.getMinX() - c.getMaxX();
+            edges[1] = o.getMinX() - f.getMaxX();
+            edges[2] = cardRight - o.getMaxX();
+            edges[3] = c.getMinX();
+            edges[4] = f.getMinX();
+        });
+
+        assertThat(edges[0]).isBetween(0.0, 16.0);
+        assertThat(edges[1]).isBetween(0.0, 16.0);
+        assertThat(edges[0]).isEqualTo(edges[1]);
+        assertThat(edges[2]).isLessThan(40.0);
+        assertThat(edges[3]).isLessThan(edges[4]);
+    }
+
+    @Test
     void openFolder_pressed_revealsTheFile() {
         show();
 
