@@ -351,6 +351,7 @@ public final class ReviewViewModel {
             publishCount(remaining);
             publishRows(listed);
             show(next);
+            mirror.review().publishDecided(name, segment.segmentId());
             if ("accept".equals(name)) {
                 toasts.success(MessageKey.REVIEW_ACCEPTED, segment.locator(), remaining);
             }

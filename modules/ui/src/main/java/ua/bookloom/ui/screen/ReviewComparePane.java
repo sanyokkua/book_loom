@@ -44,6 +44,7 @@ final class ReviewComparePane extends VBox {
     private final ReviewViewModel viewModel;
     private final Messages messages;
     private final RetryWithNoteDialog retryDialog;
+    private final ObservableBooleanValue acceptContinues;
     private final NumberFormat score;
     private final ComparePanes panes;
     private final Label locator = new Label();
@@ -61,8 +62,10 @@ final class ReviewComparePane extends VBox {
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
             final Messages messages,
-            final RetryWithNoteDialog retryDialog) {
+            final RetryWithNoteDialog retryDialog,
+            final ObservableBooleanValue acceptContinues) {
         super(SPACING);
+        this.acceptContinues = Objects.requireNonNull(acceptContinues, "acceptContinues");
         this.retryDialog = Objects.requireNonNull(retryDialog, "retryDialog");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -155,16 +158,25 @@ final class ReviewComparePane extends VBox {
         }
     }
 
+    private Button acceptButton() {
+        final Button accept = action(
+                "review-accept",
+                MessageKey.REVIEW_ACCEPT,
+                "btn-primary",
+                viewModel::accept,
+                viewModel.acceptAvailable());
+        accept.textProperty()
+                .bind(Bindings.when(acceptContinues)
+                        .then(messages.get(MessageKey.REVIEW_ACCEPT_CONTINUE))
+                        .otherwise(messages.get(MessageKey.REVIEW_ACCEPT)));
+        return accept;
+    }
+
     private FlowPane actions() {
         final FlowPane row = new FlowPane(SPACING, SPACING / 2);
         row.getChildren()
                 .addAll(
-                        action(
-                                "review-accept",
-                                MessageKey.REVIEW_ACCEPT,
-                                "btn-primary",
-                                viewModel::accept,
-                                viewModel.acceptAvailable()),
+                        acceptButton(),
                         action(
                                 "review-save",
                                 MessageKey.REVIEW_SAVE,

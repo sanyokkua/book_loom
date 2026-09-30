@@ -17,6 +17,7 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.LogEntry;
+import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
@@ -44,6 +45,7 @@ public final class TranslatingController {
     private final LanguageNames names;
     private final ReviewViewModel review;
     private final RetryWithNoteDialog retryDialog;
+    private final ReviewPauseFollower pauses;
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
@@ -66,6 +68,7 @@ public final class TranslatingController {
      * @param names the names of those languages
      * @param review the review panel's view model, which counts the flagged segments the panel's button names
      * @param retryDialog the card a retry with a note is asked in
+     * @param pauses what opens the review panel on a review pause and continues the run after the person's decision
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -78,7 +81,8 @@ public final class TranslatingController {
             final CurrentProject current,
             final LanguageNames names,
             final ReviewViewModel review,
-            final RetryWithNoteDialog retryDialog) {
+            final RetryWithNoteDialog retryDialog,
+            final ReviewPauseFollower pauses) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -87,6 +91,7 @@ public final class TranslatingController {
         this.names = Objects.requireNonNull(names, "names");
         this.review = Objects.requireNonNull(review, "review");
         this.retryDialog = Objects.requireNonNull(retryDialog, "retryDialog");
+        this.pauses = Objects.requireNonNull(pauses, "pauses");
     }
 
     @FXML
@@ -99,7 +104,7 @@ public final class TranslatingController {
                 current,
                 names,
                 messages,
-                new TranslatingView.Exits(navigator, this::openSettings, review, retryDialog));
+                new TranslatingView.Exits(navigator, this::openSettings, review, retryDialog, pauses));
         viewModel.refreshPending();
         review.refreshCount();
         host.getChildren().setAll(dashboard.root());

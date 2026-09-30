@@ -31,6 +31,7 @@ import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.PlatformFileRevealer;
+import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.RunStarter;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
@@ -84,6 +85,7 @@ public final class UiModule extends AbstractModule {
         bind(ExportViewModel.class);
         bind(RunStarter.class);
         bind(TranslatingViewModel.class);
+        bind(ReviewPauseFollower.class);
     }
 
     private void bindShell() {

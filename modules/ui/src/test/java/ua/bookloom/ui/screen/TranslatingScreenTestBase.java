@@ -18,6 +18,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -53,6 +54,7 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
     final ScriptedReviewDesk desk = new ScriptedReviewDesk();
     final ScriptedGlossaryService glossary = new ScriptedGlossaryService();
     final ScriptedTranslationEngine engine = ScriptedTranslationEngine.returning(job);
+    private ReviewMode launchMode = ReviewMode.UNATTENDED;
 
     @Override
     protected Injector createInjector(final Locale locale) {
@@ -62,7 +64,14 @@ abstract class TranslatingScreenTestBase extends ImportScreenTestBase {
                 .engine(engine)
                 .glossary(glossary)
                 .reviewDesk(desk)
+                .reviewMode(launchMode)
                 .build();
+    }
+
+    /** Rebuilds the window from a graph launched with this review mode, as the launch flag would. */
+    void launchWith(final ReviewMode mode) {
+        launchMode = mode;
+        useLocale(Locale.ENGLISH);
     }
 
     /** Lets a job that is still waiting for instructions end, so its thread does not outlive the test. */

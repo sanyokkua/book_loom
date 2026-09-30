@@ -33,6 +33,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ControlState;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
@@ -84,7 +85,12 @@ final class TranslatingView {
      * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
      * open the review panel, whose view model counts the flagged segments and whose retry asks its note in a card.
      */
-    record Exits(Navigator navigator, Runnable openSettings, ReviewViewModel review, RetryWithNoteDialog retryDialog) {}
+    record Exits(
+            Navigator navigator,
+            Runnable openSettings,
+            ReviewViewModel review,
+            RetryWithNoteDialog retryDialog,
+            ReviewPauseFollower pauses) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
@@ -198,7 +204,7 @@ final class TranslatingView {
             final Messages messages,
             final ReadOnlyObjectProperty<RunState> state) {
         final ReviewPanel panel =
-                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.retryDialog());
+                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.retryDialog(), exits.pauses());
         panel.visibleProperty()
                 .bind(Bindings.createBooleanBinding(
                         () -> panel.openProperty().get() && REVIEWABLE.contains(state.get()),

@@ -6,6 +6,8 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -23,11 +25,15 @@ import ua.bookloom.api.project.SegmentRecord;
  */
 public final class ScriptedReviewDesk implements ReviewDesk {
 
+    private static final long WAIT_SECONDS = 10;
+
     private final List<String> calls = new CopyOnWriteArrayList<>();
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
     private final Map<String, SegmentView> views = new ConcurrentHashMap<>();
     private volatile @Nullable Result<List<SegmentView>> queueView;
     private volatile @Nullable Result<ReviewCounts> countsView;
+    private volatile @Nullable CountDownLatch acceptGate;
+    private final CountDownLatch acceptEntered = new CountDownLatch(1);
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
     public void willAnswer(final Result<?> answer) {
@@ -52,6 +58,26 @@ public final class ScriptedReviewDesk implements ReviewDesk {
         countsView = Result.ok(counts);
     }
 
+    /** From now on {@code accept} blocks before it answers until {@link #releaseAccept()}, as a slow desk would. */
+    public void holdAccept() {
+        acceptGate = new CountDownLatch(1);
+    }
+
+    /** Lets the held {@code accept} answer; a no-op when none is held. */
+    public void releaseAccept() {
+        final CountDownLatch held = acceptGate;
+        if (held != null) {
+            held.countDown();
+        }
+    }
+
+    /** Blocks the caller until an {@code accept} call has been made and is being held or answered. */
+    public void awaitAcceptCalled() throws InterruptedException {
+        if (!acceptEntered.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("accept was never called");
+        }
+    }
+
     /** Every call as {@code method(arguments)}, in order. */
     public List<String> calls() {
         return List.copyOf(calls);
@@ -59,6 +85,8 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     @Override
     public Result<SegmentRecord> accept(final String projectId, final String segmentId) {
+        acceptEntered.countDown();
+        awaitAcceptGate();
         return action("accept(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
@@ -124,6 +152,18 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             return view;
         }
         return answer("counts(" + projectId + ")");
+    }
+
+    private void awaitAcceptGate() {
+        final CountDownLatch held = acceptGate;
+        try {
+            if (held != null && !held.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("the test never released the accept");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("interrupted while the accept was held", e);
+        }
     }
 
     private Result<SegmentRecord> action(final String call, final String projectId, final String segmentId) {

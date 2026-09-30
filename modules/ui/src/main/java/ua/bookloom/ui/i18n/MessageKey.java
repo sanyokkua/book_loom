@@ -804,6 +804,8 @@ public enum MessageKey {
     REVIEW_RAISED_BY("review.raisedBy"),
     /** Button that accepts the selected segment as it stands. */
     REVIEW_ACCEPT("review.accept"),
+    /** Manual mode's Accept while the run waits on the segment: confirms it and lets the run go on. */
+    REVIEW_ACCEPT_CONTINUE("review.acceptContinue"),
     /** Button that saves the person's edit of the target. */
     REVIEW_SAVE("review.save"),
     /** Button that restores the machine target. */

@@ -20,8 +20,24 @@ import ua.bookloom.api.AppError;
 @Slf4j
 public final class ReviewSection {
 
+    /**
+     * A review action the desk confirmed on a segment.
+     *
+     * @param action the non-null name of the action, such as {@code accept} or {@code saveEdit}
+     * @param segmentId the non-null id of the segment it was made on
+     */
+    public record Decision(String action, String segmentId) {
+
+        /** Rejects a missing part. */
+        public Decision {
+            Objects.requireNonNull(action, "action");
+            Objects.requireNonNull(segmentId, "segmentId");
+        }
+    }
+
     private final ReadOnlyObjectWrapper<@Nullable AppError> providerError = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> reviewPauseSegment = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable Decision> decided = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper retryInFlight = new ReadOnlyBooleanWrapper();
 
     /**
@@ -43,6 +59,16 @@ public final class ReviewSection {
     }
 
     /**
+     * The last review action the desk confirmed. Each confirmation is announced by clearing the property and then
+     * setting it, so the same action on the same segment twice is still seen.
+     *
+     * @return a read-only property holding {@code null} until an action is confirmed; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable Decision> decided() {
+        return decided.getReadOnlyProperty();
+    }
+
+    /**
      * Whether a segment retry is waiting for the model. It is not part of a run, so a new run does not clear it.
      *
      * @return a read-only property; read on the FX thread
@@ -59,6 +85,21 @@ public final class ReviewSection {
     public void publishRetryInFlight(final boolean inFlight) {
         log.debug("publishing retry in flight: {}", inFlight);
         Platform.runLater(() -> retryInFlight.set(inFlight));
+    }
+
+    /**
+     * Announces that the desk confirmed a review action.
+     *
+     * @param action the non-null name of the action
+     * @param segmentId the non-null id of the segment it was made on
+     */
+    public void publishDecided(final String action, final String segmentId) {
+        final Decision decision = new Decision(action, segmentId);
+        log.debug("publishing that {} of segment {} was confirmed", action, segmentId);
+        Platform.runLater(() -> {
+            decided.set(null);
+            decided.set(decision);
+        });
     }
 
     /**
@@ -93,5 +134,6 @@ public final class ReviewSection {
     void reset() {
         providerError.set(null);
         reviewPauseSegment.set(null);
+        decided.set(null);
     }
 }
