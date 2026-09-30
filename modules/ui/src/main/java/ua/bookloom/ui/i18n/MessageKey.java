@@ -767,7 +767,33 @@ public enum MessageKey {
     /** Button that discards the run and imports the other book. */
     DIALOG_REPLACE_RUN_CONFIRM("dialog.replaceRun.confirm"),
     /** Line shown while the discarded run is being stopped. */
-    DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping");
+    DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping"),
+    /** Success toast after an accept; argument 0 is the segment's locator, argument 1 how many flagged segments remain. */
+    REVIEW_ACCEPTED("review.accepted"),
+    /** Warning toast when a review action is refused because a run is translating. */
+    REVIEW_BUSY("review.busy"),
+    /** Hint shown while the editor holds unsaved changes and Accept is off. */
+    REVIEW_EDITING_HINT("review.editingHint"),
+    /** Mark on a row of the All segments list whose record was kept as source by choice. */
+    REVIEW_KEPT_AS_SOURCE("review.keptAsSource"),
+    /** Badge of a flagged segment whose main finding concerns a name. */
+    REVIEW_BADGE_NAME("review.badge.name"),
+    /** Badge of a flagged segment whose main finding is a wrong language. */
+    REVIEW_BADGE_WRONG_LANGUAGE("review.badge.wrongLanguage"),
+    /** Badge of a flagged segment whose main finding is an omission. */
+    REVIEW_BADGE_OMISSION("review.badge.omission"),
+    /** Badge of a flagged segment whose main finding is any other kind or only a low judge score. */
+    REVIEW_BADGE_LOW_SCORE("review.badge.lowScore"),
+    /** Filter chip listing every flagged segment. */
+    REVIEW_CHIP_ALL("review.chip.all"),
+    /** Filter chip listing flagged segments about names. */
+    REVIEW_CHIP_NAMES("review.chip.names"),
+    /** Filter chip listing flagged segments with omissions. */
+    REVIEW_CHIP_OMISSIONS("review.chip.omissions"),
+    /** Filter chip listing flagged segments with a foreign passage kept. */
+    REVIEW_CHIP_FOREIGN_KEPT("review.chip.foreignKept"),
+    /** Browse chip listing every segment, offered after an Unattended run. */
+    REVIEW_CHIP_ALL_SEGMENTS("review.chip.allSegments");
 
     private final String key;
 

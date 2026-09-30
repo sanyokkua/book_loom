@@ -1,7 +1,9 @@
 package ua.bookloom.ui;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.jspecify.annotations.Nullable;
@@ -23,6 +25,7 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     private final List<String> calls = new CopyOnWriteArrayList<>();
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
+    private final Map<String, SegmentView> views = new ConcurrentHashMap<>();
     private volatile @Nullable Result<List<SegmentView>> queueView;
     private volatile @Nullable Result<ReviewCounts> countsView;
 
@@ -34,6 +37,14 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     /** Makes every {@code queue} call answer these views, whatever else was queued; the queue is not consumed. */
     public void willAnswerQueue(final List<SegmentView> views) {
         queueView = Result.ok(List.copyOf(views));
+    }
+
+    /**
+     * Makes {@code segment} answer this view for its id, and every action on that id answer a record of it when
+     * nothing was queued; a later call for the same id replaces the view.
+     */
+    public void willAnswerSegment(final SegmentView view) {
+        views.put(view.segmentId(), view);
     }
 
     /** Makes every {@code counts} call answer these counts, whatever else was queued. */
@@ -48,17 +59,17 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     @Override
     public Result<SegmentRecord> accept(final String projectId, final String segmentId) {
-        return answer("accept(" + projectId + ", " + segmentId + ")");
+        return action("accept(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
     @Override
     public Result<SegmentRecord> saveEdit(final String projectId, final String segmentId, final String maskedText) {
-        return answer("saveEdit(" + projectId + ", " + segmentId + ")");
+        return action("saveEdit(" + projectId + ", " + segmentId + ", " + maskedText + ")", projectId, segmentId);
     }
 
     @Override
     public Result<SegmentRecord> revert(final String projectId, final String segmentId) {
-        return answer("revert(" + projectId + ", " + segmentId + ")");
+        return action("revert(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
     @Override
@@ -68,17 +79,20 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             @Nullable final String note,
             final boolean lowerTemperature,
             final ChatModel model) {
-        return answer("retry(" + projectId + ", " + segmentId + ", lowerTemperature=" + lowerTemperature + ")");
+        return action(
+                "retry(" + projectId + ", " + segmentId + ", lowerTemperature=" + lowerTemperature + ")",
+                projectId,
+                segmentId);
     }
 
     @Override
     public Result<SegmentRecord> skip(final String projectId, final String segmentId) {
-        return answer("skip(" + projectId + ", " + segmentId + ")");
+        return action("skip(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
     @Override
     public Result<SegmentRecord> acceptProposal(final String projectId, final String segmentId) {
-        return answer("acceptProposal(" + projectId + ", " + segmentId + ")");
+        return action("acceptProposal(" + projectId + ", " + segmentId + ")", projectId, segmentId);
     }
 
     @Override
@@ -93,6 +107,11 @@ public final class ScriptedReviewDesk implements ReviewDesk {
 
     @Override
     public Result<SegmentView> segment(final String projectId, final String segmentId) {
+        final SegmentView view = views.get(segmentId);
+        if (view != null) {
+            calls.add("segment(" + projectId + ", " + segmentId + ")");
+            return Result.ok(view);
+        }
         return answer("segment(" + projectId + ", " + segmentId + ")");
     }
 
@@ -104,6 +123,37 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             return view;
         }
         return answer("counts(" + projectId + ")");
+    }
+
+    private Result<SegmentRecord> action(final String call, final String projectId, final String segmentId) {
+        final SegmentView view = views.get(segmentId);
+        if (view == null || !answers.isEmpty()) {
+            return answer(call);
+        }
+        calls.add(call);
+        return Result.ok(recordOf(projectId, view));
+    }
+
+    /** The stored record a desk would answer for this view. */
+    public static SegmentRecord recordOf(final String projectId, final SegmentView view) {
+        return new SegmentRecord(
+                projectId,
+                view.segmentId(),
+                "unit",
+                0,
+                view.kind(),
+                view.status(),
+                view.maskedMachineTarget(),
+                view.maskedMachineTarget(),
+                view.userTarget(),
+                view.maskedUserTarget(),
+                0.0,
+                view.judgeScore(),
+                view.findings(),
+                view.path(),
+                0,
+                view.reviewed(),
+                view.context());
     }
 
     @SuppressWarnings("unchecked")
