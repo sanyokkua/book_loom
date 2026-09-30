@@ -35,9 +35,11 @@ deferrals are kept as the run goes, and it pauses for review as the review mode 
 model call as events. The review desk acts on segments (accept, edit, revert, skip, apply a proposal, retry with the
 context the first draft saw), Max revises backwards after the last segment, export is checked per segment and writes
 the chosen side files, the command line refuses an existing destination before any model call and cancels cleanly, the
-review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam. Not built: saving
-(nothing survives a restart, no remembered settings) and the window's real start and resume on a project (the window
-still runs through an interim import-and-export bridge). Next: the screens, groups 12–15 of
+review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam. The window opens a book on the stored project (one current project, the import states chosen from the
+inspection's verdict, a replace-run prompt, start and resume without importing again), shows the run in its title bar,
+numbers six workflow steps with a provider footer, and its Book Brief and Structure screens are live. Not built:
+saving (nothing survives a restart, no remembered settings), Names & style, the rebuilt Translating, review panel,
+Export and Settings screens (the window still exports through an interim bridge). Next: groups 14–15 of
 `openspec/changes/complete-translation-workflow`.
 
 ## Commands
