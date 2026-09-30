@@ -7,47 +7,61 @@ import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.document.StructureNode;
 
 /**
- * What the structure screen shows for an opened book: one flat row per top-level node of its structure and, on request,
- * the sum of their segment counts. It is built here, away from the scene graph, so the numbers a person reads can be
- * checked without a window and cannot drift from the profile.
+ * What the structure screen shows for an opened book: the top-level nodes of its structure tree, in navigation order,
+ * and the sum of their segment counts. It is built here, away from the scene graph, so the numbers a person reads can
+ * be checked without a window and cannot drift from the profile.
  *
- * @param rows the top-level nodes in navigation order, unmodifiable
+ * @param roots the top-level nodes in navigation order, unmodifiable; each carries its own children
  */
 @Slf4j
-public record StructureListing(List<StructureRow> rows) {
+public record StructureListing(List<StructureNode> roots) {
 
-    /** Copies the rows so a caller's later change cannot alter what the screen shows. */
+    /** Copies the roots so a caller's later change cannot alter what the screen shows. */
     public StructureListing {
-        Objects.requireNonNull(rows, "rows");
-        rows = List.copyOf(rows);
+        Objects.requireNonNull(roots, "roots");
+        roots = List.copyOf(roots);
     }
 
     /**
-     * Lists the top-level nodes of a book's structure.
+     * Lists the structure of a book.
      *
      * @param profile the opened book's profile; its structure is taken in the order it holds it
-     * @return the rows and their total; no rows and a zero total when the book has no structure
+     * @return the tree and its total; no roots and a zero total when the book has no structure
      */
     public static StructureListing of(final BookProfile profile) {
         Objects.requireNonNull(profile, "profile");
-        final List<StructureRow> rows =
-                profile.structure().stream().map(StructureListing::rowOf).toList();
-        log.debug("structure listing built with {} row(s)", rows.size());
-        return new StructureListing(rows);
+        final StructureListing listing = new StructureListing(profile.structure());
+        log.debug(
+                "structure listing built with {} top-level node(s), {} node(s) in all, {} segment(s)",
+                listing.roots.size(),
+                listing.nodeCount(),
+                listing.totalSegments());
+        return listing;
     }
 
     /**
-     * Sums the rows rather than storing a figure, so the total cannot disagree with them.
+     * Sums the top-level counts rather than storing a figure, so the total cannot disagree with them; a node's count
+     * already includes its children, and a node that only points into a unit another node counts adds nothing.
      *
-     * @return the segments across every row; zero when there are none
+     * @return the segments across every top-level node; zero when there are none
      */
     public int totalSegments() {
-        return rows.stream().mapToInt(StructureRow::segmentCount).sum();
+        return roots.stream()
+                .map(StructureNode::segmentCount)
+                .mapToInt(count -> count == null ? 0 : count)
+                .sum();
     }
 
-    // A node that only points into a unit another node counts carries no figure of its own.
-    private static StructureRow rowOf(final StructureNode node) {
-        final Integer count = node.segmentCount();
-        return new StructureRow(node.title(), count == null ? 0 : count);
+    /**
+     * Counts every node of the tree at any depth.
+     *
+     * @return the number of nodes; zero when the book has no structure
+     */
+    public int nodeCount() {
+        return roots.stream().mapToInt(StructureListing::sizeOf).sum();
+    }
+
+    private static int sizeOf(final StructureNode node) {
+        return 1 + node.children().stream().mapToInt(StructureListing::sizeOf).sum();
     }
 }

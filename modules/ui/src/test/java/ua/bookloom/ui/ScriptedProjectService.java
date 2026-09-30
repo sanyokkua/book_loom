@@ -25,7 +25,8 @@ import ua.bookloom.api.project.Project;
  * A hand-written {@link ProjectService} that answers {@code importBook} with what the test scripted for that path (or
  * an {@code internal} error, or a thrown exception), records every source it was asked to import, every brief it was asked to
  * save and every project it was asked to close together with whether the call arrived on the FX Application Thread,
- * and can hold each import until the test releases it.
+ * and can hold each import, and each round-trip check, until the test releases it. Round-trip and plan answers are
+ * scripted by the test; unscripted, they answer an {@code internal} error.
  */
 public final class ScriptedProjectService implements ProjectService {
 
@@ -39,7 +40,16 @@ public final class ScriptedProjectService implements ProjectService {
     private final List<String> closed = new CopyOnWriteArrayList<>();
     private final List<Boolean> closedOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> events = new CopyOnWriteArrayList<>();
+    private final List<String> roundTrips = new CopyOnWriteArrayList<>();
+    private final List<Boolean> roundTripsOnFxThread = new CopyOnWriteArrayList<>();
+    private final List<String> plans = new CopyOnWriteArrayList<>();
+    private final List<Boolean> plansOnFxThread = new CopyOnWriteArrayList<>();
     private final CountDownLatch entered = new CountDownLatch(1);
+    private final CountDownLatch roundTripEntered = new CountDownLatch(1);
+    private volatile Result<RoundTripReport> roundTripAnswer = notScripted();
+    private volatile Result<BookPlan> planAnswer = notScripted();
+    private volatile @Nullable CountDownLatch roundTripGate;
+    private volatile @Nullable RuntimeException roundTripFailure;
     private volatile Result<ImportedBook> fallback =
             Result.err(AppError.of(ErrorCode.internal, "Not scripted", "The test scripted no answer for this file."));
     private volatile @Nullable RuntimeException failure;
@@ -71,6 +81,41 @@ public final class ScriptedProjectService implements ProjectService {
         final CountDownLatch held = gate;
         if (held != null) {
             held.countDown();
+        }
+    }
+
+    /** From now on answers every round-trip check with {@code answer}. */
+    public void onRoundTrip(final Result<RoundTripReport> answer) {
+        roundTripAnswer = Objects.requireNonNull(answer, "answer");
+    }
+
+    /** From now on answers every plan with {@code answer}. */
+    public void onPlan(final Result<BookPlan> answer) {
+        planAnswer = Objects.requireNonNull(answer, "answer");
+    }
+
+    /** From now on throws {@code thrown} from every round-trip check, the way a defective adapter would. */
+    public void throwingOnRoundTrip(final RuntimeException thrown) {
+        roundTripFailure = thrown;
+    }
+
+    /** From now on blocks each round-trip check until {@link #releaseRoundTrip()}. */
+    public void holdRoundTrip() {
+        roundTripGate = new CountDownLatch(1);
+    }
+
+    /** Lets the held round-trip checks answer. */
+    public void releaseRoundTrip() {
+        final CountDownLatch held = roundTripGate;
+        if (held != null) {
+            held.countDown();
+        }
+    }
+
+    /** Blocks until a round-trip check has been entered, so a test knows the call is truly in flight. */
+    public void awaitRoundTripEntered() throws InterruptedException {
+        if (!roundTripEntered.await(WAIT_SECONDS, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("the service was never asked for a round-trip check");
         }
     }
 
@@ -110,12 +155,23 @@ public final class ScriptedProjectService implements ProjectService {
 
     @Override
     public Result<BookPlan> plan(final String projectId) {
-        return notScripted();
+        plans.add(Objects.requireNonNull(projectId, "projectId"));
+        plansOnFxThread.add(Platform.isFxApplicationThread());
+        return planAnswer;
     }
 
     @Override
     public Result<RoundTripReport> roundTrip(final String projectId) {
-        return notScripted();
+        final CountDownLatch held = roundTripGate;
+        roundTrips.add(Objects.requireNonNull(projectId, "projectId"));
+        roundTripsOnFxThread.add(Platform.isFxApplicationThread());
+        roundTripEntered.countDown();
+        awaitGate(held);
+        final RuntimeException thrown = roundTripFailure;
+        if (thrown != null) {
+            throw thrown;
+        }
+        return roundTripAnswer;
     }
 
     @Override
@@ -149,6 +205,26 @@ public final class ScriptedProjectService implements ProjectService {
     /** For each {@link #updateBrief}, in call order, whether it arrived on the FX Application Thread. */
     public List<Boolean> briefCallsOnFxThread() {
         return List.copyOf(briefsOnFxThread);
+    }
+
+    /** The id of every project a round-trip check was asked for, in call order. */
+    public List<String> roundTripProjects() {
+        return List.copyOf(roundTrips);
+    }
+
+    /** For each round-trip check, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> roundTripCallsOnFxThread() {
+        return List.copyOf(roundTripsOnFxThread);
+    }
+
+    /** The id of every project a plan was asked for, in call order. */
+    public List<String> planProjects() {
+        return List.copyOf(plans);
+    }
+
+    /** For each plan, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> planCallsOnFxThread() {
+        return List.copyOf(plansOnFxThread);
     }
 
     /** The id of every project {@link #close} was asked to release, in call order. */

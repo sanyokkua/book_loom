@@ -395,12 +395,68 @@ public enum MessageKey {
     NOBOOK_OPEN("nobook.open"),
     /** Heading of the structure screen. */
     STRUCTURE_TITLE("structure.title"),
-    /** Position of a unit in reading order; argument 0 is the zero-based position, passed as an Integer. */
+    /** Title shown for a structure node the book gives none. */
     STRUCTURE_UNTITLED("structure.untitled"),
     /** Total of translatable segments beneath the list; argument 0 is the count, passed as an Integer. */
     STRUCTURE_TOTAL("structure.total"),
     /** Button that moves on from the structure screen to the next available step. */
     STRUCTURE_CONTINUE("structure.continue"),
+    /** Heading of the card holding the structure tree. */
+    STRUCTURE_READING_ORDER("structure.readingOrder"),
+    /** Caption of the translatable-segment count in the statistics card. */
+    STRUCTURE_STAT_SEGMENTS("structure.stat.segments"),
+    /** Caption of the word count in the statistics card. */
+    STRUCTURE_STAT_WORDS("structure.stat.words"),
+    /** The estimated word count; argument 0 is the rounded count, passed as an Integer. */
+    STRUCTURE_STAT_WORDS_VALUE("structure.stat.wordsValue"),
+    /** Caption of the image count in the statistics card. */
+    STRUCTURE_STAT_IMAGES("structure.stat.images"),
+    /** Caption of the code-block count in the statistics card. */
+    STRUCTURE_STAT_CODE("structure.stat.code"),
+    /** Note under the code-block count saying code is carried through. */
+    STRUCTURE_STAT_CODE_NOTE("structure.stat.codeNote"),
+    /** Caption of the embedded-font count in the statistics card. */
+    STRUCTURE_STAT_FONTS("structure.stat.fonts"),
+    /** Caption of the verse-line count in the statistics card. */
+    STRUCTURE_STAT_VERSE("structure.stat.verse"),
+    /** Value shown in place of a zero verse count or an empty formatting list. */
+    STRUCTURE_STAT_NONE("structure.stat.none"),
+    /** Caption of the footnote and table counts in the statistics card. */
+    STRUCTURE_STAT_NOTES("structure.stat.notes"),
+    /** Caption of the inline formatting row in the statistics card. */
+    STRUCTURE_STAT_FORMATTING("structure.stat.formatting"),
+    /** The formatting kinds the book carries; argument 0 is their names, joined. */
+    STRUCTURE_STAT_FORMATTING_VALUE("structure.stat.formattingValue"),
+    /** Name of italic formatting in the statistics card. */
+    STRUCTURE_FORMAT_ITALICS("structure.format.italics"),
+    /** Name of bold formatting in the statistics card. */
+    STRUCTURE_FORMAT_BOLD("structure.format.bold"),
+    /** Name of hyperlinks in the statistics card. */
+    STRUCTURE_FORMAT_LINKS("structure.format.links"),
+    /** Name of quotations in the statistics card. */
+    STRUCTURE_FORMAT_QUOTES("structure.format.quotes"),
+    /** Name of inline code in the statistics card. */
+    STRUCTURE_FORMAT_CODE("structure.format.code"),
+    /** Name of explicit line breaks in the statistics card. */
+    STRUCTURE_FORMAT_LINE_BREAKS("structure.format.lineBreaks"),
+    /** Name of any other formatting in the statistics card. */
+    STRUCTURE_FORMAT_OTHER("structure.format.other"),
+    /** The round-trip check has been asked for and has not answered. */
+    STRUCTURE_CHECK_RUNNING("structure.check.running"),
+    /** The round-trip check found the structure and text preserved. */
+    STRUCTURE_CHECK_PASSED("structure.check.passed"),
+    /** The round-trip check found the structure changed. */
+    STRUCTURE_CHECK_FAILED("structure.check.failed"),
+    /** The round-trip check found fewer segments; argument 0 is the copy's count, already formatted, argument 1 the source's count, passed as an Integer. */
+    STRUCTURE_CHECK_FAILED_COUNTS("structure.check.failedCounts"),
+    /** The round-trip check could not be run. */
+    STRUCTURE_CHECK_UNAVAILABLE("structure.check.unavailable"),
+    /** Every image, font and link identifier survived the round trip. */
+    STRUCTURE_CHECK_IDS_OK("structure.check.idsOk"),
+    /** Identifiers lost in the round trip; argument 0 is the joined identifiers. */
+    STRUCTURE_CHECK_IDS_MISSING("structure.check.idsMissing"),
+    /** Warning that segments exceed the chunk budget; argument 0 is the count, passed as an Integer. */
+    STRUCTURE_CHECK_OVERSIZED("structure.check.oversized"),
     /** Heading of the names and style screen. */
     NAMES_STYLE_TITLE("namesStyle.title"),
     /** One line under the heading saying what the screen is for. */

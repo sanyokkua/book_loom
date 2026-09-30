@@ -11,7 +11,7 @@ import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.document.BookStats;
 import ua.bookloom.api.document.StructureNode;
 
-/** The flat listing the structure screen shows, built from a book's profile with nothing invented. */
+/** The tree listing the structure screen shows, built from a book's profile with nothing invented. */
 class StructureListingTest {
 
     private static BookProfile profileOf(final StructureNode... nodes) {
@@ -23,71 +23,60 @@ class StructureListingTest {
         return new StructureNode(title, null, segments, List.of());
     }
 
-    // IF the rows were reordered, retitled or miscounted, THEN the screen would misreport how the book is structured.
+    // IF the roots were reordered, retitled or miscounted, THEN the screen would misreport how the book is structured.
     @Test
-    void of_threeTopLevelNodes_yieldsOneRowEachInOrderAndTheSumAsTotal() {
+    void of_threeTopLevelNodes_keepsThemInOrderAndSumsTheirCounts() {
         final StructureListing listing =
                 StructureListing.of(profileOf(node("Letter 1", 2), node("Chapter 1", 3), node("Chapter 2", 4)));
 
-        assertThat(listing.rows())
-                .containsExactly(
-                        new StructureRow("Letter 1", 2),
-                        new StructureRow("Chapter 1", 3),
-                        new StructureRow("Chapter 2", 4));
+        assertThat(listing.roots())
+                .extracting(StructureNode::title)
+                .containsExactly("Letter 1", "Chapter 1", "Chapter 2");
         assertThat(listing.totalSegments()).isEqualTo(9);
     }
 
-    // IF the nested children of a node became rows, THEN the flat screen would list a chapter's sections as chapters.
+    // IF a child's count were added to the total besides its parent's, THEN the total would count it twice.
     @Test
-    void of_nodeWithChildren_listsOnlyTheTopLevelNode() {
+    void totalSegments_nodeWithChildren_countsOnlyTheTopLevelNode() {
         final StructureNode part =
-                new StructureNode("Part I", null, 5, List.of(node("Section 1", 2), node("Section 2", 3)));
+                new StructureNode("Part I", null, 8, List.of(node("Section 1", 2), node("Section 2", 3)));
 
         final StructureListing listing = StructureListing.of(profileOf(part));
 
-        assertThat(listing.rows()).containsExactly(new StructureRow("Part I", 5));
-        assertThat(listing.totalSegments()).isEqualTo(5);
+        assertThat(listing.roots()).containsExactly(part);
+        assertThat(listing.totalSegments()).isEqualTo(8);
+        assertThat(listing.nodeCount()).isEqualTo(3);
     }
 
     // IF a node that only points into a unit counted elsewhere were given a count, THEN the total would count twice.
     @Test
-    void of_nodeWithNoCountOfItsOwn_showsAZero() {
+    void totalSegments_nodeWithNoCountOfItsOwn_addsNothing() {
         final StructureNode entry = new StructureNode("Chapter 1", "unit-0", null, List.of());
 
         final StructureListing listing = StructureListing.of(profileOf(entry, node("Chapter 2", 2)));
 
-        assertThat(listing.rows()).containsExactly(new StructureRow("Chapter 1", 0), new StructureRow("Chapter 2", 2));
         assertThat(listing.totalSegments()).isEqualTo(2);
     }
 
-    // IF a book with nothing in it invented a row or a count, THEN the screen would show structure that is not there.
+    // IF a book with nothing in it invented a node or a count, THEN the screen would show structure that is not there.
     @Test
-    void of_profileWithNoStructure_hasNoRowsAndAZeroTotal() {
+    void of_profileWithNoStructure_hasNoRootsAndAZeroTotal() {
         final StructureListing listing = StructureListing.of(profileOf());
 
-        assertThat(listing.rows()).isEmpty();
+        assertThat(listing.roots()).isEmpty();
         assertThat(listing.totalSegments()).isZero();
+        assertThat(listing.nodeCount()).isZero();
     }
 
     // IF the listing kept the caller's list, THEN a later change to it would silently alter what the screen shows.
     @Test
     void constructor_callersListChangedAfterwards_doesNotChangeTheListing() {
-        final List<StructureRow> source = new ArrayList<>(List.of(new StructureRow("a", 3)));
+        final List<StructureNode> source = new ArrayList<>(List.of(node("a", 3)));
 
         final StructureListing listing = new StructureListing(source);
-        source.add(new StructureRow("b", 4));
+        source.add(node("b", 4));
 
-        assertThat(listing.rows()).containsExactly(new StructureRow("a", 3));
-        assertThatThrownBy(() -> listing.rows().add(new StructureRow("c", 1)))
-                .isInstanceOf(UnsupportedOperationException.class);
-    }
-
-    // IF the total were stored beside the rows, THEN a caller could build a listing that contradicts itself.
-    @Test
-    void totalSegments_builtFromRowsAlone_isTheSumOfTheirCounts() {
-        final StructureListing listing =
-                new StructureListing(List.of(new StructureRow("a", 3), new StructureRow("b", 4)));
-
-        assertThat(listing.totalSegments()).isEqualTo(7);
+        assertThat(listing.roots()).containsExactly(node("a", 3));
+        assertThatThrownBy(() -> listing.roots().add(node("c", 1))).isInstanceOf(UnsupportedOperationException.class);
     }
 }

@@ -44,6 +44,7 @@ final class ConformanceCases {
     enum Preparation {
         NONE,
         BOOK_OPENED,
+        BOOK_CHECKED,
         BOOK_REFUSED,
         BOOK_DRM_BLOCKED,
         BOOK_UNSUPPORTED,
@@ -191,11 +192,17 @@ final class ConformanceCases {
             new Screen(
                     "STRUCTURE",
                     ViewNames.STRUCTURE,
-                    Preparation.BOOK_OPENED,
+                    Preparation.BOOK_CHECKED,
                     Overlay.NONE,
                     List.of(
                             new Part("#structure-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
-                            new Part("#structure-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+                            new Part("#structure-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#structure-stats-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#structure-checks-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part(".count-pill", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),
+                            new Part(".count-pill", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#structure-chunk-warning", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                            new Part("#structure-chunk-warning", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
             new Screen(
                     "STRUCTURE_NO_BOOK",
                     ViewNames.STRUCTURE,

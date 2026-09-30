@@ -1398,7 +1398,7 @@
     -fx-background-color: transparent;
 }
 
-/* --- Structure: the flat, read-only tree of a book's units (ui-mockup.html: the chapter tree) --------------- */
+/* --- Structure: the read-only tree of a book's own structure and its side cards (ui-mockup.html: the chapter tree) --- */
 .structure-tree {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
@@ -1441,4 +1441,25 @@
 
 .structure-row-title {
     -fx-text-fill: -color-text-strong;
+}
+
+.count-pill {
+    -fx-background-color: -color-surface-2;
+    -fx-background-radius: 11px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 11px;
+    -fx-padding: 1px 9px 1px 9px;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+}
+
+.stats-value {
+    -fx-text-fill: -color-text;
+}
+
+.stats-value-strong {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-weight: bold;
 }

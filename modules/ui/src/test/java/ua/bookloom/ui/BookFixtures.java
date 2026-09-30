@@ -75,6 +75,30 @@ public final class BookFixtures {
     }
 
     /**
+     * What importing a readable book answers when a test states the whole structure tree and the statistics.
+     *
+     * @param projectId the id of the project the import created
+     * @param format the format the inspection reports
+     * @param structure the top-level structure nodes, each with its own children
+     * @param stats the statistics the profile carries
+     * @return the answer
+     */
+    public static ImportedBook structured(
+            final String projectId,
+            final BookFormat format,
+            final List<StructureNode> structure,
+            final BookStats stats) {
+        final ImportedBook base = imported(projectId, format, "en", "Title", "Author");
+        final BookProfile profile = new BookProfile("Title", "Author", null, structure, stats, Set.of());
+        return new ImportedBook(base.projectId(), base.inspection(), profile, base.brief());
+    }
+
+    /** A structure node with a unit and a count and no children. */
+    public static StructureNode leaf(final String title, final int segments) {
+        return new StructureNode(title, "unit-" + title, segments, List.of());
+    }
+
+    /**
      * A book whose brief has no source language, as the project service leaves it when the book declares none the
      * application recognises.
      *

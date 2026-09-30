@@ -1,74 +1,116 @@
 package ua.bookloom.ui.screen;
 
+import java.text.NumberFormat;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.control.OverrunStyle;
-import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.BookStats;
+import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.StructureChecksViewModel;
 import ua.bookloom.ui.state.StructureListing;
-import ua.bookloom.ui.state.StructureRow;
+import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
- * The structure screen's content for an open book: the card listing the top-level nodes of its structure, in
- * navigation order, with the segment total beneath, and the Back and Continue actions under it.
+ * The structure screen's content for an open book: the tree of the book's own structure with the segment total beneath
+ * it, the statistics and the background checks beside it, and the Back and Continue actions under them.
  *
- * <p>The card is a {@link TreeView} although the list is flat, because the tree virtualizes its rows: a book with
- * thousands of units materialises only the cells the viewport shows. Its cells log nothing, since they are refreshed
- * on every scroll, and each cell builds its nodes once and only changes their text as it is reused. A title too long
- * for the row is shortened with an ellipsis rather than cut off: the cell is given no width of its own, so the title
- * label, the only one allowed to shrink, gives way first.
+ * <p>The tree is a {@link TreeView} because it virtualizes its rows: a book with thousands of units materialises only
+ * the cells the viewport shows. The screen is read-only, and Continue is never held back by a check.
  */
-// Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
-// cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
-@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @Slf4j
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class StructureView {
 
     private static final double CARD_SPACING = 10;
-    private static final double ROW_SPACING = 12;
     private static final double SCREEN_SPACING = 14;
+    private static final double COLUMN_SPACING = 14;
+    private static final double SIDE_WIDTH = 420;
 
-    static Node build(final StructureListing listing, final Messages messages, final Navigator navigator) {
-        Objects.requireNonNull(listing, "listing");
-        Objects.requireNonNull(messages, "messages");
-        Objects.requireNonNull(navigator, "navigator");
-        log.debug("listing {} rows, {} segments in total", listing.rows().size(), listing.totalSegments());
-        final VBox screen = new VBox(SCREEN_SPACING, card(listing, messages), actions(messages, navigator));
-        VBox.setVgrow(screen, Priority.ALWAYS);
-        return screen;
+    private final Messages messages;
+    private final Navigator navigator;
+    private final WorkflowProgress progress;
+    private final StructureChecksViewModel checks;
+    private final NumberFormat numbers;
+
+    StructureView(
+            final Messages messages,
+            final Navigator navigator,
+            final WorkflowProgress progress,
+            final StructureChecksViewModel checks) {
+        this.messages = Objects.requireNonNull(messages, "messages");
+        this.navigator = Objects.requireNonNull(navigator, "navigator");
+        this.progress = Objects.requireNonNull(progress, "progress");
+        this.checks = Objects.requireNonNull(checks, "checks");
+        this.numbers = NumberFormat.getIntegerInstance(messages.locale());
     }
 
-    private static Node card(final StructureListing listing, final Messages messages) {
-        final TreeView<StructureRow> tree = tree(listing, messages);
+    Node build(final StructureListing listing, final BookStats stats, final String projectId) {
+        Objects.requireNonNull(listing, "listing");
+        Objects.requireNonNull(stats, "stats");
+        log.debug(
+                "showing {} top-level node(s), {} segments in total",
+                listing.roots().size(),
+                listing.totalSegments());
+        checks.run(projectId);
+        final VBox side = new VBox(
+                CARD_SPACING,
+                new StructureStatsCard(messages, numbers).build(stats),
+                new StructureChecksCard(checks, messages, numbers));
+        side.setPrefWidth(SIDE_WIDTH);
+        side.setMinWidth(SIDE_WIDTH);
+        final Node treeCard = card(listing);
+        HBox.setHgrow(treeCard, Priority.ALWAYS);
+        final HBox columns = new HBox(COLUMN_SPACING, treeCard, side);
+        VBox.setVgrow(columns, Priority.ALWAYS);
+        return new VBox(SCREEN_SPACING, columns, actions());
+    }
+
+    private Node card(final StructureListing listing) {
+        final Label heading = new Label(messages.get(MessageKey.STRUCTURE_READING_ORDER));
+        heading.getStyleClass().add("card-title");
         final Label total = new Label(messages.get(MessageKey.STRUCTURE_TOTAL, listing.totalSegments()));
         total.setId("structure-total");
         total.getStyleClass().add("muted");
-        final VBox card = new VBox(CARD_SPACING, tree, total);
+        final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots()), total);
         card.setId("structure-card");
         card.getStyleClass().add("card");
-        VBox.setVgrow(card, Priority.ALWAYS);
         return card;
     }
 
-    private static Node actions(final Messages messages, final Navigator navigator) {
+    private TreeView<StructureNode> tree(final List<StructureNode> roots) {
+        final TreeItem<StructureNode> root = new TreeItem<>();
+        roots.forEach(node -> root.getChildren().add(itemOf(node)));
+        final TreeView<StructureNode> tree = new TreeView<>(root);
+        tree.setId("structure-tree");
+        tree.getStyleClass().add("structure-tree");
+        tree.setShowRoot(false);
+        tree.setEditable(false);
+        tree.setCellFactory(view -> new StructureNodeCell(messages, numbers));
+        VBox.setVgrow(tree, Priority.ALWAYS);
+        return tree;
+    }
+
+    // Expanded so that the chapters a person recognises are visible without opening each part.
+    private static TreeItem<StructureNode> itemOf(final StructureNode node) {
+        final TreeItem<StructureNode> item = new TreeItem<>(node);
+        node.children().forEach(child -> item.getChildren().add(itemOf(child)));
+        item.setExpanded(true);
+        return item;
+    }
+
+    private Node actions() {
         return StepFooter.of(
                 new StepFooter.Action(
                         "structure-back",
@@ -79,65 +121,13 @@ final class StructureView {
                         "structure-continue",
                         messages.get(MessageKey.STRUCTURE_CONTINUE),
                         "btn-primary",
-                        () -> onContinue(navigator)));
+                        this::onContinue));
     }
 
-    private static void onContinue(final Navigator navigator) {
+    private void onContinue() {
         final Optional<ViewNames> next = navigator.nextAvailableStep(ViewNames.STRUCTURE);
         log.debug("continue pressed, the next step is {}", next);
+        progress.markDone(ViewNames.STRUCTURE);
         next.ifPresent(navigator::navigate);
-    }
-
-    private static TreeView<StructureRow> tree(final StructureListing listing, final Messages messages) {
-        final TreeItem<StructureRow> root = new TreeItem<>();
-        listing.rows().forEach(row -> root.getChildren().add(new TreeItem<>(row)));
-        final TreeView<StructureRow> tree = new TreeView<>(root);
-        tree.setId("structure-tree");
-        tree.getStyleClass().add("structure-tree");
-        tree.setShowRoot(false);
-        tree.setEditable(false);
-        tree.setCellFactory(view -> new RowCell(messages));
-        VBox.setVgrow(tree, Priority.ALWAYS);
-        return tree;
-    }
-
-    /** Draws one node as its title and its segment count, and does nothing else. */
-    private static final class RowCell extends TreeCell<StructureRow> {
-
-        private final Messages messages;
-        private final Label title = label("structure-row-title");
-        private final Label count = label("muted");
-        private final HBox box = new HBox(ROW_SPACING, title, count);
-
-        RowCell(final Messages messages) {
-            this.messages = messages;
-            // A cell never narrows below its preferred width, so it is given none: it takes the tree's width, and
-            // the title label alone may then shrink and show its ellipsis.
-            setPrefWidth(0);
-            count.setMinWidth(Region.USE_PREF_SIZE);
-            title.setMinWidth(0);
-            HBox.setHgrow(title, Priority.ALWAYS);
-            box.setAlignment(Pos.CENTER_LEFT);
-            setText(null);
-        }
-
-        @Override
-        protected void updateItem(final @Nullable StructureRow row, final boolean empty) {
-            super.updateItem(row, empty);
-            if (empty || row == null) {
-                setGraphic(null);
-                return;
-            }
-            title.setText(row.title().isBlank() ? messages.get(MessageKey.STRUCTURE_UNTITLED) : row.title());
-            count.setText(messages.get(MessageKey.IMPORT_COUNT_SEGMENTS, row.segmentCount()));
-            setGraphic(box);
-        }
-
-        private static Label label(final String styleClass) {
-            final Label label = new Label();
-            label.getStyleClass().add(styleClass);
-            label.setTextOverrun(OverrunStyle.CENTER_ELLIPSIS);
-            return label;
-        }
     }
 }

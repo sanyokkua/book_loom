@@ -7,15 +7,16 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeView;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.state.StructureRow;
 
 /**
  * What the structure screen tests share, on top of the import screen's scripted port and lookups: showing the screen
@@ -40,8 +41,8 @@ abstract class StructureScreenTestBase extends ImportScreenTestBase {
 
     /** The tree the screen draws its rows in. */
     @SuppressWarnings("unchecked")
-    TreeView<StructureRow> tree() {
-        return (TreeView<StructureRow>) required("structure-tree");
+    TreeView<StructureNode> tree() {
+        return (TreeView<StructureNode>) required("structure-tree");
     }
 
     /** Every {@code .tree-cell} the scene currently holds, filled or not, exactly as the tree materialised them. */
@@ -62,9 +63,20 @@ abstract class StructureScreenTestBase extends ImportScreenTestBase {
                 .toList();
     }
 
-    /** The last text of each rendered row, which is the segment count the row shows. */
+    /** The last text of each rendered row, which is the count pill the row shows. */
     List<String> renderedCountTexts() {
         return renderedRows().stream().map(row -> row.get(row.size() - 1)).toList();
+    }
+
+    /** The text of the label with this id. */
+    String labelText(final String id) {
+        return ThemeTestSupport.onFx(() -> ((Label) required(id)).getText());
+    }
+
+    /** Waits until the background checks have answered and the card shows the round-trip row's final wording. */
+    void awaitChecksFinished() throws TimeoutException {
+        awaitFx(() -> optional("structure-check-roundtrip") != null
+                && !((Label) required("structure-check-roundtrip")).getText().startsWith("Checking"));
     }
 
     /** Every node at or below the node with this id, the node itself excluded. */

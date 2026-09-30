@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import javafx.scene.control.ButtonBase;
@@ -18,30 +19,32 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookProfile;
+import ua.bookloom.api.document.BookStats;
 import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ViewNames;
 
 /**
- * The structure screen the application builds, read from the real scene: the flat, read-only list of the book's units
- * with each unit's path, position and segment count, the total beneath it, the bounded number of rows a huge book
- * materialises, and the state with no book open. Row texts are read from the rendered cells, never from the model.
+ * The structure screen's tree, read from the real scene: the book's nodes with their count pills, the nesting, the
+ * localized {@code Untitled}, the total beneath it, the bounded number of rows a huge book materialises, and the state
+ * with no book open. Row texts are read from the rendered cells, never from the model. The statistics and the checks
+ * beside the tree are proven in {@link StructureChecksScreenTest}.
  */
 class StructureScreenTest extends StructureScreenTestBase {
 
     private static final List<List<String>> ELEVEN_ROWS = List.of(
-            List.of("Chapter 1", "120 segments"),
-            List.of("Chapter 2", "95 segments"),
-            List.of("Chapter 3", "130 segments"),
-            List.of("Chapter 4", "110 segments"),
-            List.of("Chapter 5", "100 segments"),
-            List.of("Chapter 6", "115 segments"),
-            List.of("Chapter 7", "105 segments"),
-            List.of("Chapter 8", "125 segments"),
-            List.of("Chapter 9", "135 segments"),
-            List.of("Chapter 10", "90 segments"),
-            List.of("Chapter 11", "115 segments"));
+            List.of("Chapter 1", "120"),
+            List.of("Chapter 2", "95"),
+            List.of("Chapter 3", "130"),
+            List.of("Chapter 4", "110"),
+            List.of("Chapter 5", "100"),
+            List.of("Chapter 6", "115"),
+            List.of("Chapter 7", "105"),
+            List.of("Chapter 8", "125"),
+            List.of("Chapter 9", "135"),
+            List.of("Chapter 10", "90"),
+            List.of("Chapter 11", "115"));
 
     private static final int UNITS_IN_A_HUGE_BOOK = 5_000;
     private static final int FAR_FEWER_THAN_ALL = 200;
@@ -82,7 +85,7 @@ class StructureScreenTest extends StructureScreenTestBase {
         openBookThenShowStructure(dir.resolve("book.epub"), book);
 
         assertThat(renderedRows()).hasSize(1);
-        assertThat(renderedRows().get(0)).containsExactly("Chapter 1", "1 segment");
+        assertThat(renderedRows().get(0)).containsExactly("Chapter 1", "1");
     }
 
     // IF a node without a title showed an empty row, THEN the person could not tell the row from a gap.
@@ -103,7 +106,103 @@ class StructureScreenTest extends StructureScreenTestBase {
                 titled.brief());
         openBookThenShowStructure(dir.resolve("book.epub"), book);
 
-        assertThat(renderedRows().get(0)).containsExactly("Untitled", "3 segments");
+        assertThat(renderedRows().get(0)).containsExactly("Untitled", "3");
+    }
+
+    private static StructureNode node(final String title, final int segments, final StructureNode... children) {
+        return new StructureNode(title, null, segments, List.of(children));
+    }
+
+    private static ImportedBook bookOf(final BookFormat format, final int total, final StructureNode... roots) {
+        return BookFixtures.structured(
+                "p1", format, List.of(roots), new BookStats(total, 0, 0, 0, 0, 0, 0, 0, Set.of()));
+    }
+
+    // IF the tree showed a file name where the book's navigation gives a chapter title, THEN the person would not
+    // recognise their chapters.
+    @Test
+    void tree_epubNavigationTitles_showLettersAndChaptersFirstWithTheirCounts() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.epub"),
+                bookOf(BookFormat.EPUB, 12, node("Letter 1", 2), node("Chapter 1", 4), node("Chapter 2", 6)));
+
+        assertThat(renderedRows())
+                .containsExactly(List.of("Letter 1", "2"), List.of("Chapter 1", "4"), List.of("Chapter 2", "6"));
+    }
+
+    // IF a unit no navigation entry names showed no row, THEN the person would lose its segments from the picture.
+    @Test
+    void tree_unitWithNeitherEntryNorHeading_showsItsFileName() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.epub"), bookOf(BookFormat.EPUB, 5, node("Chapter 8", 2), node("ch09.xhtml", 3)));
+
+        assertThat(renderedRows()).containsExactly(List.of("Chapter 8", "2"), List.of("ch09.xhtml", "3"));
+    }
+
+    // IF nested sections were flattened, THEN the screen would state a structure the book does not have.
+    @Test
+    void tree_fb2PartHoldingTwoChapters_nestsThemAndCountsAllThreeInThePill() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.fb2"),
+                bookOf(BookFormat.FB2, 9, node("Part One", 9, node("Chapter 1", 3), node("Chapter 2", 3))));
+
+        assertThat(tree().getRoot().getChildren()).hasSize(1);
+        assertThat(tree().getRoot().getChildren().get(0).getChildren()).hasSize(2);
+        assertThat(renderedRows())
+                .containsExactly(List.of("Part One", "9"), List.of("Chapter 1", "3"), List.of("Chapter 2", "3"));
+    }
+
+    // IF text outside any section or the notes body were left out, THEN the counts would not add up to the book.
+    @Test
+    void tree_fb2TextOutsideSectionsAndNotesBody_showsUntitledFirstAndNotes() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.fb2"),
+                bookOf(BookFormat.FB2, 10, node("", 2), node("Chapter 1", 7), node("Notes", 1)));
+
+        assertThat(renderedRows())
+                .containsExactly(List.of("Untitled", "2"), List.of("Chapter 1", "7"), List.of("Notes", "1"));
+    }
+
+    // IF Markdown text before the first heading vanished, THEN its segments would be counted but never shown.
+    @Test
+    void tree_markdownTextBeforeTheFirstHeading_showsUntitledThenChapterOne() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.md"), bookOf(BookFormat.MARKDOWN, 5, node("", 1), node("Chapter 1", 4)));
+
+        assertThat(renderedRows()).containsExactly(List.of("Untitled", "1"), List.of("Chapter 1", "4"));
+    }
+
+    // IF the title, navigation labels or image descriptions became nodes or were counted, THEN the numbers would not
+    // add up to what a reader sees.
+    @Test
+    void tree_bookWithTitleNavigationLabelsAndAltTexts_showsNoneOfThemAndCountsNone() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.epub"), bookOf(BookFormat.EPUB, 8, node("Chapter 1", 3), node("Chapter 2", 5)));
+
+        assertThat(renderedRows()).containsExactly(List.of("Chapter 1", "3"), List.of("Chapter 2", "5"));
+        assertThat(labelText("structure-total")).isEqualTo("8 segments in total");
+    }
+
+    // IF a node that only points into a counted unit showed a zero, THEN the person would read it as an empty chapter.
+    @Test
+    void row_nodeWithNoCountOfItsOwn_showsItsTitleAndNoPill() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.epub"),
+                BookFixtures.structured(
+                        "p1",
+                        BookFormat.EPUB,
+                        List.of(new StructureNode("Letter 1", "unit-0", null, List.of())),
+                        new BookStats(0, 0, 0, 0, 0, 0, 0, 0, Set.of())));
+
+        assertThat(renderedRows()).containsExactly(List.of("Letter 1"));
+    }
+
+    // IF the pill were not styled as one, THEN the count would read as part of the title.
+    @Test
+    void row_bookOpened_countIsALabelWithThePillClass() throws TimeoutException {
+        openBookThenShowStructure(dir.resolve("book.epub"), elevenUnitBook());
+
+        assertThat(scene.getRoot().lookupAll(".count-pill")).isNotEmpty().allMatch(pill -> pill instanceof Label);
     }
 
     // IF the total were not the sum of the rows, THEN the screen would contradict itself.
@@ -112,18 +211,7 @@ class StructureScreenTest extends StructureScreenTestBase {
         openBookThenShowStructure(dir.resolve("book.epub"), elevenUnitBook());
 
         assertThat(renderedCountTexts())
-                .containsExactly(
-                        "120 segments",
-                        "95 segments",
-                        "130 segments",
-                        "110 segments",
-                        "100 segments",
-                        "115 segments",
-                        "105 segments",
-                        "125 segments",
-                        "135 segments",
-                        "90 segments",
-                        "115 segments");
+                .containsExactly("120", "95", "130", "110", "100", "115", "105", "125", "135", "90", "115");
         assertThat(((Label) required("structure-total")).getText()).isEqualTo("1,240 segments in total");
     }
 

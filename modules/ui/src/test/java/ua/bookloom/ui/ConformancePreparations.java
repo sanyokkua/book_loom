@@ -5,6 +5,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import com.google.inject.Injector;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.testfx.util.WaitForAsyncUtils;
@@ -14,12 +15,16 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.document.LanguageEvidence;
+import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.StructureChecks;
+import ua.bookloom.ui.state.StructureChecksViewModel;
 
 /** What a conformance case does to the application before its view is read, one method per preparation. */
 final class ConformancePreparations {
@@ -40,6 +45,7 @@ final class ConformancePreparations {
                 // nothing to do before the view is read
             }
             case BOOK_OPENED -> openABook();
+            case BOOK_CHECKED -> checkABook();
             case BOOK_REFUSED -> refuseABook();
             case BOOK_DRM_BLOCKED -> blockABook();
             case BOOK_UNSUPPORTED -> refuseAnUnsupportedFile();
@@ -55,6 +61,19 @@ final class ConformancePreparations {
         final Path source = Path.of("Frankenstein.epub");
         projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
         openAndAwait(source, ImportState.Detected.class);
+    }
+
+    // The structure screen asks for its checks when a book is open: one oversized segment shows its warning.
+    private void checkABook() throws TimeoutException {
+        projects.onRoundTrip(Result.ok(new RoundTripReport(true, true, List.of(), 9, 9)));
+        projects.onPlan(Result.ok(new BookPlan(Map.of("unit-0", 3), List.of("s-4"))));
+        openABook();
+        final StructureChecksViewModel checks = injector.getInstance(StructureChecksViewModel.class);
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> checks.state().get() instanceof StructureChecks.Finished));
+        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private void refuseABook() throws TimeoutException {
