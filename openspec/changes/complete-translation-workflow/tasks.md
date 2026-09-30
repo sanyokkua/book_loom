@@ -1164,7 +1164,7 @@ planned and applied in a session that remembers nothing about the others. These 
 - [x] A. Theme and contrast: Modena re-based on theme tokens, readable dark theme, live boxes, toggles (5872d86)
 - [x] B. Dialog footers group their buttons at the right (645d6e2)
 - [x] C. Hover explanations on every control; clearer Names & style instructions (24e6bfa)
-- [x] D. Export screen clarity: the consistency note and tip worded truthfully, the consistency result and the written side files shown on the screen and in the complete dialog, a missing model no longer fails the export, a finished result forgotten when its choices change, and the just-exported file named in the refusal (commit below)
+- [x] D. Export screen clarity: the consistency note and tip worded truthfully, the consistency result and the written side files shown on the screen and in the complete dialog, a missing model no longer fails the export, a finished result forgotten when its choices change, and the just-exported file named in the refusal (d5dfaf0)
 - [ ] E. Responsiveness: smaller minimum widths for the Structure and Export side columns (optional)
 
 ## 16. The gate — after every group above
