@@ -78,4 +78,17 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
 
         assertFitsTheWidth(ViewNames.TRANSLATING);
     }
+
+    // The review panel open beside a paused run, with no segment listed, still fits the content area.
+    @Test
+    void translating_reviewPanelOpen_atMinimumWidth_needsNoSidewaysScrolling() {
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunState(ua.bookloom.ui.state.RunState.PAUSED);
+        WaitForAsyncUtils.waitForFxEvents();
+        onFx(() -> shell.activate(ViewNames.TRANSLATING));
+        onFx(() -> ((javafx.scene.control.Button) required("translating-review-flagged")).fire());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertFitsTheWidth(ViewNames.TRANSLATING);
+    }
 }

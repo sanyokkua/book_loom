@@ -38,7 +38,8 @@ final class ConformanceCases {
         ABOUT,
         ERROR_DIALOG,
         REPLACE_RUN,
-        ADD_TERM
+        ADD_TERM,
+        REVIEW_PANEL
     }
 
     /** What must have happened before the view is read: nothing, or a state reached through the import view model. */
@@ -53,6 +54,7 @@ final class ConformanceCases {
         RUN_COMPLETED,
         RUN_PROVIDER_FAILED,
         RUN_STARTED,
+        REVIEW_SELECTED,
         BOOK_REPORTED
     }
 
@@ -279,6 +281,16 @@ final class ConformanceCases {
                                     "#33424a"),
                             new Part("#translating-banner", Kind.BACKGROUND, "ok-bg", "#e7efe8", "#2b3a33"),
                             new Part("#translating-banner", Kind.BORDER, "ok-bd", "#bcd4c1", "#3f5a49"))),
+            // The review panel open beside a paused run: its card on the surface role, the judge badge on surface-2.
+            new Screen(
+                    "TRANSLATING_REVIEW",
+                    ViewNames.TRANSLATING,
+                    Preparation.REVIEW_SELECTED,
+                    Overlay.REVIEW_PANEL,
+                    List.of(
+                            new Part("#review-panel", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#review-panel", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#review-judge", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"))),
             // A pause on a provider error is the run's own state: the banner takes the err role, light and dark.
             new Screen(
                     "TRANSLATING_PROVIDER_ERROR",

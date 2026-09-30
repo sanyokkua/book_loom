@@ -18,9 +18,13 @@ import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.ReviewCounts;
+import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.ui.state.FlaggedRow;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StructureChecks;
@@ -53,6 +57,7 @@ final class ConformancePreparations {
             case RUN_COMPLETED -> completeARun();
             case RUN_PROVIDER_FAILED -> pauseARunOnAProviderError();
             case RUN_STARTED -> startARun();
+            case REVIEW_SELECTED -> selectAFlaggedSegment();
             case BOOK_REPORTED -> reportAFinishedBook();
         }
     }
@@ -118,6 +123,29 @@ final class ConformancePreparations {
     private void completeARun() {
         final JobReport report = new JobReport(BookFormat.TXT, JobState.COMPLETED, 10, 10, 0, List.of(), null);
         injector.getInstance(StateMirror.class).publishOutcome(RunState.COMPLETED, report, null);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // A paused run with one flagged segment selected in the review view model; the overlay opens the panel.
+    private void selectAFlaggedSegment() throws TimeoutException {
+        final ScriptedReviewDesk desk = (ScriptedReviewDesk) injector.getInstance(ReviewDesk.class);
+        desk.willAnswerQueue(List.of(ReviewFixtures.lowScore()));
+        desk.willAnswerSegment(ReviewFixtures.lowScore());
+        desk.willAnswerCounts(new ReviewCounts(100, 99, 0, 1, 0, 0, 0, 0));
+        openABook();
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunState(RunState.PAUSED);
+        mirror.live().publishFlaggedQueue(List.of(new FlaggedRow("s-1", "ch5 · p12", List.of(), null)));
+        WaitForAsyncUtils.waitForFxEvents();
+        final ReviewViewModel review = injector.getInstance(ReviewViewModel.class);
+        onFx(() -> {
+            review.select(ReviewFixtures.lowScore().segmentId());
+            return null;
+        });
+        WaitForAsyncUtils.waitFor(
+                WAIT_SECONDS,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> review.selected().get() != null));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

@@ -158,19 +158,23 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
 
     // IF Review flagged showed no count, THEN a person could not tell whether anything waits for them.
     @Test
-    void reviewFlagged_threeFlaggedInTheQueue_readsWithTheCountWhileRunning() {
+    void reviewFlagged_threeFlaggedInTheQueue_readsWithTheCountWhileRunning() throws Exception {
+        bookReadyWithPending(0);
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0));
         showTranslating();
         publishRunning(700, 68, 3, 469);
 
         publishFlaggedQueue(3);
 
-        assertThat(button("translating-review-flagged").getText()).isEqualTo("Review flagged (3)");
+        awaitFx(() ->
+                "Review flagged (3)".equals(button("translating-review-flagged").getText()));
     }
 
     // IF a completed run showed only counts, THEN a person would have nowhere to go next.
     @Test
     void completed_noPending_showsTheOutcomeAndContinueToExportAndNoStartPauseOrResume() throws Exception {
         bookReadyWithPending(0);
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0));
         showTranslating();
 
         completeWith(1180, 45, 3, 12);

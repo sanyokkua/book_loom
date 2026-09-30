@@ -1521,3 +1521,59 @@
     -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
+
+/* --- Review panel: the filter chips and the list of flagged segments beside the compare ---------------- */
+.review-chip {
+    -fx-background-color: -color-surface;
+    -fx-background-insets: 0;
+    -fx-background-radius: 10px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 11.5px;
+    -fx-padding: 2px 9px 2px 9px;
+    -fx-cursor: hand;
+}
+
+.review-chip:selected {
+    -fx-background-color: -color-primary-soft;
+    -fx-border-color: -color-primary;
+    -fx-text-fill: -color-text-strong;
+}
+
+.review-list {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-min-height: 140px;
+}
+
+.review-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 6px 6px 6px;
+}
+
+.review-list .list-cell:filled:selected,
+.review-list .list-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+}
+
+.review-list .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.review-list .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.review-list .scroll-bar > .track {
+    -fx-background-color: transparent;
+}

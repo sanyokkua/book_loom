@@ -73,6 +73,7 @@ class ScreenConformanceTest extends ShellTestBase {
                 onFx(() -> injector.getInstance(ErrorPresenter.class)
                         .present(AppError.of(
                                 ErrorCode.timeout, "Translation failed", "The provider did not answer in time.")));
+            case REVIEW_PANEL -> onFx(() -> ((Button) required("translating-review-flagged")).fire());
             case ADD_TERM -> onFx(() -> ((Button) required("names-style-add")).fire());
             case REPLACE_RUN ->
                 onFx(() -> injector.getInstance(ReplaceRunPrompt.class)

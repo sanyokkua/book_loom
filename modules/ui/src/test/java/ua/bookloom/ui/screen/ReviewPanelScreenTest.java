@@ -1,0 +1,224 @@
+package ua.bookloom.ui.screen;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+import java.util.concurrent.TimeoutException;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextArea;
+import org.junit.jupiter.api.Test;
+import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.pipeline.ReviewCounts;
+import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.ui.ReviewFixtures;
+import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.FlaggedRow;
+import ua.bookloom.ui.state.ReviewRow;
+import ua.bookloom.ui.state.RunState;
+
+/** The review panel inside Translating, read from the real scene with the recording desk behind it. */
+class ReviewPanelScreenTest extends TranslatingScreenTestBase {
+
+    private static final String REVIEW = "translating-review-flagged";
+
+    private void script(final int flagged, final SegmentView... views) {
+        desk.willAnswerQueue(List.of(views));
+        for (final SegmentView view : views) {
+            desk.willAnswerSegment(view);
+        }
+        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0));
+    }
+
+    private void publishFlagged(final int count) {
+        mirror().live()
+                .publishFlaggedQueue(java.util.stream.IntStream.range(0, count)
+                        .mapToObj(i -> new FlaggedRow("s-" + i, "ch7 · p" + i, List.of(), null))
+                        .toList());
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void openPanelWith(final RunState state, final int flagged, final SegmentView... views) throws Exception {
+        readyToStart();
+        script(flagged, views);
+        showTranslating();
+        publish(state);
+        publishFlagged(flagged);
+        awaitFx(() -> button(REVIEW).getText().equals("Review flagged (" + flagged + ")"));
+        onFx(() -> button(REVIEW).fire());
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    @SuppressWarnings("unchecked")
+    private ListView<ReviewRow> rowList() {
+        return (ListView<ReviewRow>) required("review-list");
+    }
+
+    private void selectFirstRow() throws TimeoutException {
+        awaitFx(() -> !rowList().getItems().isEmpty());
+        onFx(() -> rowList().getSelectionModel().select(0));
+        awaitFx(() -> !((TextArea) required("review-target")).getText().isEmpty());
+    }
+
+    private List<String> rowTexts() {
+        return rowList().lookupAll(".list-cell").stream()
+                .map(node -> (ListCell<?>) node)
+                .filter(cell -> cell.getItem() != null)
+                .map(cell -> String.join(
+                        " ",
+                        ((javafx.scene.Parent) cell.getGraphic())
+                                .getChildrenUnmodifiable().stream()
+                                        .filter(javafx.scene.control.Label.class::isInstance)
+                                        .map(child -> ((javafx.scene.control.Label) child).getText())
+                                        .filter(text -> !text.isEmpty())
+                                        .toList()))
+                .toList();
+    }
+
+    // IF the panel showed before the person asked, THEN it would push the run's figures off the screen.
+    @Test
+    void panel_beforeReviewFlaggedIsPressed_isNotShown() {
+        showTranslating();
+        publish(RunState.PAUSED);
+
+        assertThat(isShown("review-panel")).isFalse();
+    }
+
+    // IF a clean run showed an empty list with no words, THEN a person would think the panel was broken.
+    @Test
+    void emptyState_cleanRun_showsTheTextAndBackToProgress() throws Exception {
+        openPanelWith(RunState.COMPLETED, 0);
+
+        assertThat(isShown("review-panel")).isTrue();
+        assertThat(labelText("review-empty-text")).isEqualTo("Nothing flagged — every chunk cleared the checks");
+        assertThat(button("review-back").getText()).isEqualTo("Back to progress");
+    }
+
+    @Test
+    void reviewFlagged_threeFlagged_opensThePanelAndBackToProgressClosesIt() throws Exception {
+        openPanelWith(
+                RunState.PAUSED,
+                3,
+                ReviewFixtures.lowScore(),
+                ReviewFixtures.nameIssue(),
+                ReviewFixtures.wrongLanguage());
+
+        assertThat(isShown("review-panel")).isTrue();
+        onFx(() -> button("review-back").fire());
+
+        assertThat(isShown("review-panel")).isFalse();
+    }
+
+    @Test
+    void list_threeFlagged_readsLocatorAndBadgeOfEachRow() throws Exception {
+        openPanelWith(
+                RunState.PAUSED,
+                3,
+                ReviewFixtures.lowScore(),
+                ReviewFixtures.nameIssue(),
+                ReviewFixtures.wrongLanguage());
+        awaitFx(() -> rowList().getItems().size() == 3);
+
+        assertThat(rowTexts()).containsExactly("ch5 · p12 low score", "ch7 · p40 name", "ch9 · p03 wrong lang?");
+    }
+
+    // IF All segments did not open a decided segment, THEN an Unattended run could never be spot-checked.
+    @Test
+    void allSegments_afterAnUnattendedRun_opensAnAcceptedSegmentInTheCompare() throws Exception {
+        openPanelWith(RunState.COMPLETED, 0, ReviewFixtures.accepted());
+
+        onFx(() -> ((javafx.scene.control.ToggleButton) required("review-chip-all-segments")).fire());
+        selectFirstRow();
+
+        assertThat(((TextArea) required("review-target")).getText()).isEqualTo(ReviewFixtures.MASKED_TARGET);
+        assertThat(desk.calls()).contains("queue(" + projectIdOfOpenBook() + ", ALL_SEGMENTS)");
+    }
+
+    private String projectIdOfOpenBook() {
+        return ThemeTestSupport.onFx(() -> injector.getInstance(ua.bookloom.ui.state.CurrentProject.class)
+                .book()
+                .get()
+                .projectId());
+    }
+
+    // IF the source could be typed into, THEN a person could corrupt what the model is asked to translate.
+    @Test
+    void compare_machineTargetWithTokens_showsItAsTypedAndOnlyTheTargetIsEditable() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.machineTargetOnly());
+        selectFirstRow();
+
+        assertThat(((TextArea) required("review-source")).isEditable()).isFalse();
+        assertThat(((TextArea) required("review-source")).getText()).isEqualTo("Gale opened the ⟦g0⟧old⟦g1⟧ door.");
+        assertThat(((TextArea) required("review-target")).isEditable()).isTrue();
+        assertThat(((TextArea) required("review-target")).getText()).isEqualTo("Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.");
+        assertThat(labelText("review-editable-mark")).isEqualTo("EDITABLE");
+    }
+
+    @Test
+    void compare_judgedSegmentWithContext_showsTheJudgeBadgeAndTheContextLine() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.lowScore());
+        selectFirstRow();
+
+        assertThat(labelText("review-judge")).isEqualTo("judge 0.58");
+        assertThat(labelText("review-context-line")).isEqualTo("brief · glossary(2) · previous paragraph · summary");
+    }
+
+    // IF a Fast-dial segment showed a judge badge, THEN it would claim a score nothing produced.
+    @Test
+    void compare_segmentWithoutJudgeScore_showsNoJudgeBadge() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+
+        assertThat(isShown("review-judge")).isFalse();
+    }
+
+    @Test
+    void findings_scriptFinding_listsWhoRaisedIt() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.wrongLanguage());
+        selectFirstRow();
+
+        assertThat(textOf("review-findings"))
+                .contains("language")
+                .contains("Looks Russian")
+                .contains("script");
+    }
+
+    // IF an action stayed live while the model translated, THEN it would race the run for the same segment.
+    @Test
+    void actions_runIsRunning_areAllUnavailable() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+        assertThat(button("review-accept").isDisabled()).isFalse();
+
+        publish(RunState.RUNNING);
+
+        assertThat(List.of("review-accept", "review-save", "review-revert", "review-skip"))
+                .allSatisfy(id -> assertThat(button(id).isDisabled()).as(id).isTrue());
+    }
+
+    @Test
+    void editing_targetTyped_disablesAcceptAndShowsTheHint() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+
+        onFx(() -> ((TextArea) required("review-target")).setText("Гейл відчинив двері."));
+
+        assertThat(button("review-accept").isDisabled()).isTrue();
+        assertThat(labelText("review-hint")).isEqualTo("Editing disables Accept until you Save or Revert.");
+    }
+
+    // IF a long segment made a pane wider than the window, THEN the person would scroll sideways to read a finding.
+    @Test
+    void panel_longSegmentAtMinimumWidth_needsNoSidewaysScrolling() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.longSegment());
+        awaitFx(() -> !rowList().getItems().isEmpty());
+        onFx(() -> rowList().getSelectionModel().select(0));
+        awaitFx(() -> !((TextArea) required("review-target")).getText().isEmpty());
+
+        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+
+        final javafx.scene.control.ScrollPane pane = (javafx.scene.control.ScrollPane) required("shell-content-scroll");
+        assertThat(pane.getContent().getLayoutBounds().getWidth())
+                .isLessThanOrEqualTo(pane.getViewportBounds().getWidth());
+    }
+}

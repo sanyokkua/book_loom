@@ -786,6 +786,30 @@ public enum MessageKey {
     REVIEW_BADGE_LOW_SCORE("review.badge.lowScore"),
     /** Filter chip listing every flagged segment. */
     REVIEW_CHIP_ALL("review.chip.all"),
+    /** Heading of the review panel. */
+    REVIEW_TITLE("review.title"),
+    /** Button that closes the review panel and returns to the run's progress. */
+    REVIEW_BACK("review.back"),
+    /** Empty state of the review panel when no segment is listed. */
+    REVIEW_EMPTY("review.empty"),
+    /** Mark on the target pane, which the person can edit. */
+    REVIEW_EDITABLE("review.editable"),
+    /** Caption of the line that names what the model knew when it drafted the segment. */
+    REVIEW_CONTEXT("review.context"),
+    /** Caption of the list of a segment's findings. */
+    REVIEW_FINDINGS("review.findings"),
+    /** Kind and severity of one finding; argument 0 is the kind, argument 1 the severity in lower case. */
+    REVIEW_FINDING_KIND("review.finding.kind"),
+    /** Muted label naming the check or the judge that raised a finding; argument 0 is its name. */
+    REVIEW_RAISED_BY("review.raisedBy"),
+    /** Button that accepts the selected segment as it stands. */
+    REVIEW_ACCEPT("review.accept"),
+    /** Button that saves the person's edit of the target. */
+    REVIEW_SAVE("review.save"),
+    /** Button that restores the machine target. */
+    REVIEW_REVERT("review.revert"),
+    /** Button that leaves the selected segment flagged and moves on to the next one. */
+    REVIEW_SKIP("review.skip"),
     /** Filter chip listing flagged segments about names. */
     REVIEW_CHIP_NAMES("review.chip.names"),
     /** Filter chip listing flagged segments with omissions. */

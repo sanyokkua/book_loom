@@ -32,6 +32,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ControlState;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -78,8 +79,11 @@ final class TranslatingView {
             new Control("resume", "btn-primary", MessageKey.TRANSLATING_RESUME, Controls::resume);
     private static final Control STOP = new Control("stop", "btn-ghost", MessageKey.TRANSLATING_STOP, Controls::stop);
 
-    /** What the screen's own buttons do that the view model does not: leave for another step, or open the settings. */
-    record Exits(Navigator navigator, Runnable openSettings) {}
+    /**
+     * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
+     * open the review panel, whose view model counts the flagged segments.
+     */
+    record Exits(Navigator navigator, Runnable openSettings, ReviewViewModel review) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
@@ -98,6 +102,11 @@ final class TranslatingView {
         final ReadOnlyObjectProperty<RunState> state = mirror.runState();
         final TranslatingDashboard.LiveBanner banner = banner(viewModel, messages, exits.openSettings());
         final TaggedLog logList = new TaggedLog(mirror.activityLog(), messages);
+        final ObservableValue<String> sourceName =
+                languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages);
+        final ObservableValue<String> targetName =
+                languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages);
+        final ReviewPanel review = reviewPanel(exits.review(), sourceName, targetName, messages, state);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
                 banner.banner(),
@@ -106,8 +115,9 @@ final class TranslatingView {
                 StateVisibility.shownIn(TranslatingFigures.progressCard(mirror, messages), state, UNDER_WAY),
                 StateVisibility.shownIn(TranslatingFigures.runningTiles(mirror, messages), state, UNDER_WAY),
                 StateVisibility.shownIn(TranslatingFigures.outcomeCard(mirror, messages), state, ENDED),
-                StateVisibility.shownIn(watch(logList, mirror, current, names, messages), state, WATCHED),
-                actions(viewModel, mirror, messages),
+                StateVisibility.shownIn(watch(logList, mirror, sourceName, targetName, messages), state, WATCHED),
+                actions(viewModel, mirror, exits.review(), review, messages),
+                review,
                 footer(mirror, messages, exits.navigator()));
         return new TranslatingDashboard(screen, banner, logList, messages, mirror);
     }
@@ -146,15 +156,11 @@ final class TranslatingView {
     private static Node watch(
             final TaggedLog logList,
             final StateMirror mirror,
-            final CurrentProject current,
-            final LanguageNames names,
+            final ObservableValue<String> sourceName,
+            final ObservableValue<String> targetName,
             final Messages messages) {
-        final LiveChunkPanel live = new LiveChunkPanel(
-                "translating-live-card",
-                mirror.live().liveRows(),
-                languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages),
-                languageName(current, BookBrief::targetLanguage, MessageKey.LIVE_TARGET_FALLBACK, names, messages),
-                messages);
+        final LiveChunkPanel live =
+                new LiveChunkPanel("translating-live-card", mirror.live().liveRows(), sourceName, targetName, messages);
         final Node logCard = logCard(logList, messages);
         for (final Region side : new Region[] {live, (Region) logCard}) {
             side.setPrefWidth(WATCH_PANE_WIDTH);
@@ -182,8 +188,30 @@ final class TranslatingView {
                 current.brief());
     }
 
+    // An open panel is shown only while the run is in a state that offers Review flagged, so it never outlives its
+    // button.
+    private static ReviewPanel reviewPanel(
+            final ReviewViewModel review,
+            final ObservableValue<String> sourceName,
+            final ObservableValue<String> targetName,
+            final Messages messages,
+            final ReadOnlyObjectProperty<RunState> state) {
+        final ReviewPanel panel = new ReviewPanel(review, sourceName, targetName, messages);
+        panel.visibleProperty()
+                .bind(Bindings.createBooleanBinding(
+                        () -> panel.openProperty().get() && REVIEWABLE.contains(state.get()),
+                        panel.openProperty(),
+                        state));
+        panel.managedProperty().bind(panel.visibleProperty());
+        return panel;
+    }
+
     private static Node actions(
-            final TranslatingViewModel viewModel, final StateMirror mirror, final Messages messages) {
+            final TranslatingViewModel viewModel,
+            final StateMirror mirror,
+            final ReviewViewModel review,
+            final ReviewPanel panel,
+            final Messages messages) {
         final ReadOnlyObjectProperty<Controls> controls = viewModel.controls();
         final HBox row = new HBox(
                 ACTION_SPACING,
@@ -191,12 +219,13 @@ final class TranslatingView {
                 control(PAUSE, viewModel::pause, controls, messages),
                 control(RESUME, viewModel::resume, controls, messages),
                 control(STOP, viewModel::stop, controls, messages),
-                reviewFlagged(mirror, messages));
+                reviewFlagged(mirror, review, panel, messages));
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
     }
 
-    private static Button reviewFlagged(final StateMirror mirror, final Messages messages) {
+    private static Button reviewFlagged(
+            final StateMirror mirror, final ReviewViewModel review, final ReviewPanel panel, final Messages messages) {
         final Button button = new Button();
         button.setId("translating-review-flagged");
         button.getStyleClass().add("btn-ghost");
@@ -204,12 +233,14 @@ final class TranslatingView {
                 .bind(Bindings.createStringBinding(
                         () -> messages.get(
                                 MessageKey.TRANSLATING_REVIEW_FLAGGED,
-                                mirror.live().flaggedQueue().size()),
-                        mirror.live().flaggedQueue()));
-        button.disableProperty().bind(Bindings.isEmpty(mirror.live().flaggedQueue()));
-        button.setOnAction(event -> log.debug(
-                "review flagged pressed with {} flagged segments; the review panel is not built yet",
-                mirror.live().flaggedQueue().size()));
+                                review.flaggedCount().get()),
+                        review.flaggedCount()));
+        button.setOnAction(event -> {
+            log.debug(
+                    "review flagged pressed with {} flagged segments: opening the panel",
+                    review.flaggedCount().get());
+            panel.setOpen(true);
+        });
         return StateVisibility.shownIn(button, mirror.runState(), REVIEWABLE);
     }
 
