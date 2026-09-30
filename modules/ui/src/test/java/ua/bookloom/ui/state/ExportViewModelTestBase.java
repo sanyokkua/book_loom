@@ -3,6 +3,8 @@ package ua.bookloom.ui.state;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.testfx.framework.junit5.ApplicationTest;
@@ -12,6 +14,9 @@ import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedProjectService;
+import ua.bookloom.ui.ScriptedReviewDesk;
+import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * What the export view model tests share: a real {@link ImportViewModel} over the scripted project service and a
@@ -27,6 +32,9 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
     ImportViewModel imports;
     BookBriefViewModel brief;
     ExportViewModel exports;
+    StateMirror mirror;
+    ScriptedReviewDesk desk;
+    Messages messages;
 
     @Override
     public final void start(final Stage stage) {
@@ -40,13 +48,21 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
-        exports = onFx(() -> new ExportViewModel(current, new DirectExecutor()));
+        mirror = onFx(StateMirror::new);
+        desk = new ScriptedReviewDesk();
+        messages = new Messages((LocaleProvider) () -> Locale.ENGLISH);
+        exports = onFx(() -> newExports(new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    /** Builds an export view model over this test's collaborators and the given executor. */
+    ExportViewModel newExports(final ExecutorService executor) {
+        return new ExportViewModel(current, mirror, desk, messages, executor);
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */
     void recreateExports() {
-        exports = onFx(() -> new ExportViewModel(current, new DirectExecutor()));
+        exports = onFx(() -> newExports(new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

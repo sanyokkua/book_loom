@@ -26,7 +26,7 @@ class ExportViewModelExistsTest extends ExportViewModelTestBase {
 
     @BeforeEach
     void useTheQueuedExecutor() {
-        exports = onFx(() -> new ExportViewModel(current, queue));
+        exports = onFx(() -> newExports(queue));
         openBook(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
         runQueue();
     }

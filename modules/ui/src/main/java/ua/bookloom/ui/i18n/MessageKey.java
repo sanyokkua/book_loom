@@ -676,6 +676,20 @@ public enum MessageKey {
     EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
     /** Note under the consistency-pass switch saying what it would do. */
     EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
+    /** Refusal beside Save to when the destination is the source file itself. */
+    EXPORT_REFUSAL_SOURCE("export.refusal.source"),
+    /** Refusal beside Save to when the destination's file type differs from the source's. */
+    EXPORT_REFUSAL_TYPE("export.refusal.type"),
+    /** Refusal naming an occupied book or side-file path; argument: the path. */
+    EXPORT_REFUSAL_OCCUPIED("export.refusal.occupied"),
+    /** Note shown while a run is translating, so the book cannot be exported yet. */
+    EXPORT_NOTE_PAUSE("export.note.pause"),
+    /** Counted line: segments written in the source language. */
+    EXPORT_PARTIAL_SOURCE("export.partial.source"),
+    /** Counted line: flagged segments written with their machine translation. */
+    EXPORT_PARTIAL_FLAGGED("export.partial.flagged"),
+    /** Counted line: segments kept as source by choice. */
+    EXPORT_PARTIAL_KEPT("export.partial.kept"),
     /** Display name of the literary fiction genre offered on the Book Brief. */
     GENRE_LITERARY_FICTION("genre.literaryFiction"),
     /** Display name of the classic literature genre offered on the Book Brief. */

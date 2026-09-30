@@ -4,6 +4,7 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +23,9 @@ import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
+import ua.bookloom.ui.i18n.LocaleProvider;
 import ua.bookloom.ui.i18n.MessageKey;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * What the translating view model tests share, on top of the runner fixtures: a real {@link TranslationRunner}
@@ -70,7 +73,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
-        destinations = onFx(() -> new ExportViewModel(current, new DirectExecutor()));
+        destinations = onFx(() -> new ExportViewModel(
+                current, mirror, desk, new Messages((LocaleProvider) () -> Locale.ENGLISH), new DirectExecutor()));
         settings = onFx(() -> new SettingsViewModel(
                 new FakeProviderConfigs(),
                 ScriptedProviderVerifier.idle(),
