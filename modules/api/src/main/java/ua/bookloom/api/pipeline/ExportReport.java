@@ -16,6 +16,7 @@ import java.util.Objects;
  * @param reviewed segments a person acted on
  * @param sideFiles the side files written beside the book
  * @param verifiedSegments the body segments the consistency check verified
+ * @param consistency what the final consistency pass did; {@link ConsistencySummary#NOT_RUN} when it was off
  */
 public record ExportReport(
         Path destination,
@@ -26,12 +27,14 @@ public record ExportReport(
         int autoAccepted,
         int reviewed,
         List<Path> sideFiles,
-        int verifiedSegments) {
+        int verifiedSegments,
+        ConsistencySummary consistency) {
 
     /** Rejects a report without its destination, a negative count, or defensively copies {@code sideFiles}. */
     public ExportReport {
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(sideFiles, "sideFiles");
+        Objects.requireNonNull(consistency, "consistency");
         if (written < 0
                 || pending < 0
                 || sourceKept < 0

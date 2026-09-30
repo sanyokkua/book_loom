@@ -17,6 +17,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.SideFile;
@@ -79,7 +80,17 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     }
 
     private static ExportReport report(final int written, final int auto, final int reviewed) {
-        return new ExportReport(Path.of("Frankenstein.uk.epub"), written, 0, 0, 0, auto, reviewed, List.of(), written);
+        return new ExportReport(
+                Path.of("Frankenstein.uk.epub"),
+                written,
+                0,
+                0,
+                0,
+                auto,
+                reviewed,
+                List.of(),
+                written,
+                ConsistencySummary.NOT_RUN);
     }
 
     // IF the tiles were not filled from the report, THEN a person would not see what the written book contains.
@@ -95,6 +106,67 @@ class ExportScreenTest extends TranslatingScreenTestBase {
         assertThat(labelText("export-valid-value")).isEqualTo("✓");
         assertThat(textOf("export-check-reopened")).contains("Re-opened and verified");
         assertThat(isShown("export-actions")).isTrue();
+    }
+
+    private static ExportReport reportWith(final List<Path> sideFiles, final ConsistencySummary consistency) {
+        return new ExportReport(Path.of("Frankenstein.uk.epub"), 10, 0, 0, 0, 10, 0, sideFiles, 10, consistency);
+    }
+
+    // IF the written side files were not listed, THEN a person ticking three could not tell what was written.
+    @Test
+    void screen_afterExportWithSideFiles_listsEachFileOnItsOwnLine() throws TimeoutException {
+        openEpubAndShowExport();
+
+        exportBook(reportWith(
+                List.of(Path.of("/out/Frankenstein.uk.glossary.csv"), Path.of("/out/Frankenstein.uk.report.md")),
+                ConsistencySummary.NOT_RUN));
+
+        assertThat(textOf("export-check-side-file-0")).contains("Frankenstein.uk.glossary.csv");
+        assertThat(textOf("export-check-side-file-1")).contains("Frankenstein.uk.report.md");
+        assertThat(optional("export-check-consistency")).isNull();
+    }
+
+    // IF a pass that changed segments said nothing, THEN the person could not tell it had done anything.
+    @Test
+    void screen_afterConsistencyPassThatAdjusted_countsTheSegments() throws TimeoutException {
+        openEpubAndShowExport();
+
+        exportBook(reportWith(List.of(), new ConsistencySummary(ConsistencySummary.Status.RAN, 2, 1)));
+
+        assertThat(textOf("export-check-consistency")).contains("Consistency pass: 3 segments adjusted");
+    }
+
+    @Test
+    void screen_afterConsistencyPassThatChangedNothing_saysItRan() throws TimeoutException {
+        openEpubAndShowExport();
+
+        exportBook(reportWith(List.of(), new ConsistencySummary(ConsistencySummary.Status.RAN, 0, 0)));
+
+        assertThat(textOf("export-check-consistency")).contains("Consistency pass ran — nothing needed changing");
+    }
+
+    @Test
+    void screen_afterConsistencyPassWithNoModel_saysTheGenderStepWasSkipped() throws TimeoutException {
+        openEpubAndShowExport();
+
+        exportBook(reportWith(List.of(), new ConsistencySummary(ConsistencySummary.Status.RAN_WITHOUT_MODEL, 0, 0)));
+
+        assertThat(textOf("export-check-consistency"))
+                .contains("Consistency pass: the gender step was skipped — no model available");
+    }
+
+    // IF the result stayed after Replace changed, THEN the tiles and Open buttons would vouch for another run.
+    @Test
+    void screen_replaceChangedAfterExport_clearsTheResult() throws TimeoutException {
+        openEpubAndShowExport();
+        exportBook(report(10, 10, 0));
+
+        onFx(() -> ((ToggleSwitch) required("export-replace")).setSelected(true));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(labelText("export-written-value")).isEqualTo("—");
+        assertThat(isShown("export-actions")).isFalse();
+        assertThat(optional("export-check-reopened")).isNull();
     }
 
     // IF nothing written still showed a percentage, THEN the tile would divide by zero.

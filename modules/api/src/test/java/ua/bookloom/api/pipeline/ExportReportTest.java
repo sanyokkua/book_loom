@@ -18,7 +18,8 @@ class ExportReportTest {
         final Path sideFile = Path.of("Book.glossary.csv");
         final List<Path> sideFiles = new ArrayList<>(List.of(sideFile));
 
-        final ExportReport report = new ExportReport(Path.of("Book.uk.md"), 10, 1, 0, 1, 8, 9, sideFiles, 10);
+        final ExportReport report =
+                new ExportReport(Path.of("Book.uk.md"), 10, 1, 0, 1, 8, 9, sideFiles, 10, ConsistencySummary.NOT_RUN);
         sideFiles.clear();
 
         assertThat(report.sideFiles()).containsExactly(sideFile);
@@ -27,6 +28,7 @@ class ExportReportTest {
     @Test
     void constructor_negativeCount_isRejected() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ExportReport(Path.of("Book.uk.md"), -1, 0, 0, 0, 0, 0, List.of(), 0));
+                .isThrownBy(() -> new ExportReport(
+                        Path.of("Book.uk.md"), -1, 0, 0, 0, 0, 0, List.of(), 0, ConsistencySummary.NOT_RUN));
     }
 }

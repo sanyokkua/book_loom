@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ViewNames;
 
 /** What pressing Export book does: the request it builds, the work it moves off the FX thread and the outcome it keeps. */
@@ -190,5 +191,103 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
         awaitOutcome();
 
         assertThat(exportService.ranOnFxThread()).containsExactly(false);
+    }
+
+    // IF a model that cannot be created failed the whole export, THEN a provider that is down would block a book
+    // that needs no model to be written.
+    @Test
+    void export_modelCannotBeCreated_writesTheBookWithNoModel() {
+        models = ScriptedChatModelFactory.failing(
+                AppError.of(ErrorCode.unreachable, "Provider down", "The provider is not reachable."));
+        exports = onFx(() -> newExports(new DirectExecutor()));
+        onFx(() -> {
+            brief.setDial(QualityDial.MAX);
+            settings.model().set("gemma3:12b");
+            return null;
+        });
+        setOverwrite(true);
+
+        export();
+
+        assertThat(models.selections()).hasSize(1);
+        assertThat(exportService.models()).containsOnlyNulls();
+        assertThat(exportService.requests().getFirst().consistencyPass()).isTrue();
+        assertThat(onFx(() -> exports.outcome().get())).isNotNull();
+        assertThat(onFx(() -> exports.failure().get())).isEmpty();
+    }
+
+    // IF the file just written were offered as a free name, THEN a second press would be refused by the job with a
+    // message that does not say why.
+    @Test
+    void export_success_refusesTheFileJustWrittenAndSaysSo() throws IOException {
+        Files.delete(destination);
+        refresh();
+        exportService.writeFiles(true);
+
+        export();
+
+        assertThat(onFx(() -> exports.refusal().get()))
+                .isEqualTo("This is the file you just exported. Turn on Replace to write it again, or choose another"
+                        + " name.");
+        assertThat(onFx(() -> exports.exportAvailable().get())).isFalse();
+    }
+
+    // IF a result stayed after the choices that produced it changed, THEN its tiles and Open buttons would describe a
+    // file the next press will not write.
+    @Test
+    void export_thenDestinationEdited_forgetsTheOutcome() {
+        exportedOnce();
+
+        editDestination(dir.resolve("Other.epub").toString());
+
+        assertThat(onFx(() -> exports.outcome().get())).isNull();
+    }
+
+    @Test
+    void export_thenReplaceChanged_forgetsTheOutcome() {
+        exportedOnce();
+
+        setOverwrite(false);
+
+        assertThat(onFx(() -> exports.outcome().get())).isNull();
+    }
+
+    @Test
+    void export_thenSideFileChosen_forgetsTheOutcome() {
+        exportedOnce();
+
+        onFx(() -> {
+            exports.setSideFile(SideFile.QUALITY_REPORT, true);
+            return null;
+        });
+
+        assertThat(onFx(() -> exports.outcome().get())).isNull();
+    }
+
+    @Test
+    void export_thenConsistencySwitched_forgetsTheOutcome() {
+        exportedOnce();
+
+        onFx(() -> {
+            exports.setConsistencyPass(true);
+            return null;
+        });
+
+        assertThat(onFx(() -> exports.outcome().get())).isNull();
+    }
+
+    @Test
+    void export_thenNothingChanges_keepsTheOutcome() {
+        exportedOnce();
+
+        refresh();
+
+        assertThat(onFx(() -> exports.outcome().get())).isNotNull();
+    }
+
+    private void exportedOnce() {
+        setOverwrite(true);
+        export();
+        assertThat(onFx(() -> exports.outcome().get())).isNotNull();
     }
 }

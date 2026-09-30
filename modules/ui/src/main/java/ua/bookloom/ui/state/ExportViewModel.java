@@ -2,7 +2,6 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.List;
@@ -18,6 +17,7 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
@@ -105,6 +105,11 @@ public final class ExportViewModel {
         this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
         this.run = new ExportRun(exports, models, settings, progress, executor);
         run.running().addListener((observed, was, now) -> recompute());
+        run.outcome().addListener((observed, was, now) -> onOutcomeChanged());
+        destination.addListener((observed, was, now) -> run.forgetStale("the destination"));
+        overwrite.addListener((observed, was, now) -> run.forgetStale("replace"));
+        consistencyPass.addListener((observed, was, now) -> run.forgetStale("the consistency pass"));
+        sideFiles.addListener((SetChangeListener<SideFile>) change -> run.forgetStale("the side files"));
         project.book().addListener((observed, was, now) -> onBookChanged(now));
         project.brief().addListener((observed, was, now) -> onBriefChanged(now));
         mirror.runState().addListener((observed, was, now) -> onRunStateChanged(now));
@@ -274,17 +279,7 @@ public final class ExportViewModel {
      * @return the parsed destination, or empty when the text is blank or is not a valid path on this system
      */
     public Optional<Path> destinationPath() {
-        final String text = destination.get();
-        if (text.isBlank()) {
-            log.debug("destination has no path: the text is blank");
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Path.of(text));
-        } catch (InvalidPathException invalid) {
-            log.debug("destination has no path: the text is not valid here ({})", invalid.getReason());
-            return Optional.empty();
-        }
+        return ExportPathRules.parse(destination.get());
     }
 
     private void onBookChanged(final @Nullable OpenedBook book) {
@@ -348,6 +343,14 @@ public final class ExportViewModel {
                                 Set.copyOf(sideFiles)));
     }
 
+    private void onOutcomeChanged() {
+        if (run.outcome().get() != null) {
+            refreshExists();
+        } else {
+            recompute();
+        }
+    }
+
     private void onOccupancyAnswered() {
         destinationExists.set(occupancy.isBookTaken());
         recompute();
@@ -371,8 +374,8 @@ public final class ExportViewModel {
     }
 
     private void recompute() {
-        final String text =
-                ExportRefusals.text(messages, project.book().get(), destinationPath(), occupancy.occupied());
+        final String text = ExportRefusals.text(
+                messages, project.book().get(), destinationPath(), occupancy.occupied(), run.justExported());
         if (!text.equals(refusal.get())) {
             log.debug("refusal beside Save to is now '{}'", text.isEmpty() ? "none" : text);
         }

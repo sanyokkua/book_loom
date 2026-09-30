@@ -57,12 +57,8 @@ public final class TooltipProbe {
         return missing;
     }
 
-    // The consistency switch's tip is worded together with the export screen's consistency note, so it is exempt until
-    // that text is written.
-    private static final String PENDING_TIP_ID = "export-aux-consistency";
-
     private static void collect(final Node node, final List<String> missing) {
-        if (isOperable(node) && !PENDING_TIP_ID.equals(node.getId()) && !isExplained(node)) {
+        if (isOperable(node) && !isExplained(node)) {
             missing.add(describe(node));
         }
         if (node instanceof TableView<?> table) {

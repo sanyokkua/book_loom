@@ -7,6 +7,7 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ShellTestBase;
@@ -20,7 +21,11 @@ class ExportCompleteDialogTest extends ShellTestBase {
     private static final int SIZE = 958_464;
 
     private void show() {
-        final ExportReport report = new ExportReport(BOOK, 10, 0, 0, 0, 8, 2, List.of(), 10);
+        show(List.of(), ConsistencySummary.NOT_RUN);
+    }
+
+    private void show(final List<Path> sideFiles, final ConsistencySummary consistency) {
+        final ExportReport report = new ExportReport(BOOK, 10, 0, 0, 0, 8, 2, sideFiles, 10, consistency);
         onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
     }
 
@@ -47,6 +52,28 @@ class ExportCompleteDialogTest extends ShellTestBase {
                         "Close",
                         "Open folder",
                         "Open book");
+    }
+
+    @Test
+    void show_sideFilesAndAConsistencyPass_listsEachFileAndTheResult() {
+        show(
+                List.of(Path.of("/books/Frankenstein.uk.glossary.csv"), Path.of("/books/Frankenstein.uk.report.md")),
+                new ConsistencySummary(ConsistencySummary.Status.RAN, 1, 0));
+
+        assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
+                .contains(
+                        "Also written",
+                        "Frankenstein.uk.glossary.csv",
+                        "Frankenstein.uk.report.md",
+                        "Consistency pass: 1 segment adjusted");
+    }
+
+    @Test
+    void show_noSideFilesAndNoPass_mentionsNeither() {
+        show();
+
+        assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
+                .noneMatch(text -> text.startsWith("Also written") || text.startsWith("Consistency pass"));
     }
 
     @Test

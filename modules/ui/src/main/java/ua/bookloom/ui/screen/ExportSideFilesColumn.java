@@ -44,6 +44,7 @@ final class ExportSideFilesColumn {
         consistency.selectedProperty().addListener((observed, was, now) -> viewModel.setConsistencyPass(now));
         viewModel.consistencyPass().addListener(new WeakChangeListener<>(onConsistency));
         consistency.disableProperty().bind(viewModel.runNote().isNotEmpty());
+        Tips.install(consistency, messages.get(MessageKey.EXPORT_CONSISTENCY_TITLE_TIP));
         final VBox pass = BriefCards.card(
                 "export-consistency-card",
                 messages,

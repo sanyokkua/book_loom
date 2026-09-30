@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.project.SegmentRecord;
@@ -77,9 +78,10 @@ record ExportCounts(
      *
      * @param destination the non-null written book
      * @param sideFiles the non-null side files written beside it
+     * @param consistency the non-null summary of the consistency pass
      * @return the report carrying these counts
      */
-    ExportReport report(final Path destination, final List<Path> sideFiles) {
+    ExportReport report(final Path destination, final List<Path> sideFiles, final ConsistencySummary consistency) {
         return new ExportReport(
                 destination,
                 written,
@@ -89,6 +91,7 @@ record ExportCounts(
                 autoAccepted,
                 reviewed,
                 sideFiles,
-                bodySegments);
+                bodySegments,
+                consistency);
     }
 }

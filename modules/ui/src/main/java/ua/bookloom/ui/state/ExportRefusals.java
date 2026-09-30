@@ -21,13 +21,15 @@ final class ExportRefusals {
      * @param book the open book, or null when none is open
      * @param destination the destination as a path, empty when it names none
      * @param occupied the first existing file among the book and the chosen side files, or null when none
+     * @param justExported the file the last export wrote and whose result is still shown, or null when none
      * @return the refusal text; empty when nothing is refused
      */
     static String text(
             final Messages messages,
             final @Nullable OpenedBook book,
             final Optional<Path> destination,
-            final @Nullable Path occupied) {
+            final @Nullable Path occupied,
+            final @Nullable Path justExported) {
         if (book == null || destination.isEmpty()) {
             return "";
         }
@@ -39,6 +41,12 @@ final class ExportRefusals {
                         case CHANGED_TYPE -> MessageKey.EXPORT_REFUSAL_TYPE;
                     });
         }
-        return occupied == null ? "" : messages.get(MessageKey.EXPORT_REFUSAL_OCCUPIED, occupied.toString());
+        if (occupied == null) {
+            return "";
+        }
+        if (occupied.equals(justExported)) {
+            return messages.get(MessageKey.EXPORT_REFUSAL_JUST_EXPORTED);
+        }
+        return messages.get(MessageKey.EXPORT_REFUSAL_OCCUPIED, occupied.toString());
     }
 }

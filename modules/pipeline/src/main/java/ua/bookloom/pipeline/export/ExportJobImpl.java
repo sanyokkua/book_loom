@@ -16,6 +16,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
@@ -200,7 +201,21 @@ final class ExportJobImpl implements ExportJob {
                 .map(glossary -> SideFiles.build(
                         request.sideFiles(),
                         new SideFiles.Sources(request.destination(), targets, stored, kept, counts, pass, glossary)))
-                .flatMap(sideFiles -> publish(project, targets, counts, sideFiles));
+                .flatMap(sideFiles -> publish(project, targets, counts, sideFiles, summary(pass)));
+    }
+
+    private ConsistencySummary summary(@Nullable final ConsistencyReport pass) {
+        if (pass == null) {
+            return ConsistencySummary.NOT_RUN;
+        }
+        final ConsistencySummary.Status status =
+                calls == null ? ConsistencySummary.Status.RAN_WITHOUT_MODEL : ConsistencySummary.Status.RAN;
+        log.debug(
+                "export consistency summary status={} termSubstitutions={} genderReRenders={}",
+                status,
+                pass.termSubstitutions(),
+                pass.genderReRenders());
+        return new ConsistencySummary(status, pass.termSubstitutions(), pass.genderReRenders());
     }
 
     private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {
@@ -213,7 +228,8 @@ final class ExportJobImpl implements ExportJob {
             final Project project,
             final EffectiveTargets targets,
             final ExportCounts counts,
-            final List<SideFiles.Content> sideFiles) {
+            final List<SideFiles.Content> sideFiles,
+            final ConsistencySummary consistency) {
         final ExportPlan plan = new ExportPlan(
                 project.source(),
                 request.destination(),
@@ -230,7 +246,7 @@ final class ExportJobImpl implements ExportJob {
         }
         final Path destination = Objects.requireNonNull(written.data(), "written path");
         return SideFiles.write(sideFiles, request.overwrite(), parts.moves(), () -> isCancelledBefore("side-file"))
-                .map(paths -> counts.report(destination, paths));
+                .map(paths -> counts.report(destination, paths, consistency));
     }
 
     private Result<Project> findProject() {
@@ -261,7 +277,7 @@ final class ExportJobImpl implements ExportJob {
         final ExportReport report = Objects.requireNonNull(result.data(), "report");
         log.info(
                 "export finished project={} destination={} written={} pending={} sourceKept={} flaggedWritten={}"
-                        + " autoAccepted={} reviewed={} verifiedSegments={} sideFiles={}",
+                        + " autoAccepted={} reviewed={} verifiedSegments={} sideFiles={} consistency={}",
                 request.projectId(),
                 report.destination(),
                 report.written(),
@@ -271,7 +287,8 @@ final class ExportJobImpl implements ExportJob {
                 report.autoAccepted(),
                 report.reviewed(),
                 report.verifiedSegments(),
-                report.sideFiles());
+                report.sideFiles(),
+                report.consistency());
     }
 
     private static AppError refused(final String check, final String title, final String message) {

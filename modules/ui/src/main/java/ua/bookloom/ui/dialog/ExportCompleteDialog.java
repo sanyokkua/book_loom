@@ -3,6 +3,7 @@ package ua.bookloom.ui.dialog;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.scene.Node;
@@ -15,11 +16,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportOutcome;
+import ua.bookloom.ui.state.ExportReportLines;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.FileSizes;
 
@@ -72,24 +75,47 @@ public final class ExportCompleteDialog {
         final VBox header = new VBox(title);
         header.getStyleClass().add("dialog-h");
         card.setHeader(header);
-        card.setContent(body(file, outcome.sizeBytes()));
+        card.setContent(body(file, outcome));
         buttons(card, file);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         modalHost.show(card, false);
     }
 
-    private Node body(final Path file, final long sizeBytes) {
+    private Node body(final Path file, final ExportOutcome outcome) {
+        final long sizeBytes = outcome.sizeBytes();
+        final ExportReport report = outcome.report();
         final Label written = new Label(messages.get(MessageKey.EXPORT_COMPLETE_WRITTEN, file.getFileName()));
         written.setWrapText(true);
         written.getStyleClass().add("dialog-text");
         final Path folder = file.getParent();
         final Label verified = new Label(messages.get(MessageKey.EXPORT_COMPLETE_VERIFIED));
         verified.getStyleClass().add("chip-ok");
-        return new VBox(
+        final VBox body = new VBox(
                 written,
                 row(MessageKey.EXPORT_COMPLETE_LOCATION, plain(folder == null ? "" : folder.toString())),
                 row(MessageKey.EXPORT_COMPLETE_VALIDATION, verified),
                 row(MessageKey.EXPORT_COMPLETE_SIZE, plain(FileSizes.format(sizeBytes, messages))));
+        addReport(body, report);
+        return body;
+    }
+
+    private void addReport(final VBox body, final ExportReport report) {
+        final List<String> names = ExportReportLines.sideFileNames(report);
+        if (!names.isEmpty()) {
+            final VBox files = new VBox();
+            names.forEach(name -> files.getChildren().add(plain(name)));
+            final Label key = new Label(messages.get(MessageKey.EXPORT_COMPLETE_SIDE_FILES));
+            key.getStyleClass().add("kv-key");
+            final HBox row = new HBox(key, files);
+            row.getStyleClass().add("kv");
+            body.getChildren().add(row);
+        }
+        for (final String line : ExportReportLines.consistency(messages, report.consistency())) {
+            final Label text = new Label(line);
+            text.setWrapText(true);
+            text.getStyleClass().add("dialog-text");
+            body.getChildren().add(text);
+        }
     }
 
     private static Label plain(final String text) {

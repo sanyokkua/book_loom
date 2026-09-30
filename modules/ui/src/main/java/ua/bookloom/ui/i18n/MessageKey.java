@@ -872,8 +872,12 @@ public enum MessageKey {
     EXPORT_AUX_REPORT_TIP("export.aux.report.tip"),
     /** Heading of the card holding the final consistency pass. */
     EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_CONSISTENCY_TITLE}. */
+    EXPORT_CONSISTENCY_TITLE_TIP("export.consistency.title.tip"),
     /** Note under the consistency-pass switch saying what it does. */
     EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
+    /** Refusal beside Save to when the occupied book is the file the last export wrote. */
+    EXPORT_REFUSAL_JUST_EXPORTED("export.refusal.justExported"),
     /** Refusal beside Save to when the destination is the source file itself. */
     EXPORT_REFUSAL_SOURCE("export.refusal.source"),
     /** Refusal beside Save to when the destination's file type differs from the source's. */
@@ -906,6 +910,8 @@ public enum MessageKey {
     EXPORT_COMPLETE_VERIFIED("export.complete.verified"),
     /** Label of the size row of the export-complete dialog. */
     EXPORT_COMPLETE_SIZE("export.complete.size"),
+    /** Label of the row of the export-complete dialog listing the side files written beside the book. */
+    EXPORT_COMPLETE_SIDE_FILES("export.complete.sideFiles"),
     /** Button that opens the written book in the program the system associates with it. */
     EXPORT_OPEN_BOOK("export.openBook"),
     /** Hover explanation of the control labelled by {@link #EXPORT_OPEN_BOOK}. */
@@ -940,6 +946,14 @@ public enum MessageKey {
     EXPORT_CHECK_REOPENED("export.check.reopened"),
     /** Check line after an export: the language metadata changed; arguments are the source and the target tags. */
     EXPORT_CHECK_LANGUAGE("export.check.language"),
+    /** Check line after an export: one side file written beside the book; argument 0 is its file name. */
+    EXPORT_CHECK_SIDE_FILE("export.check.sideFile"),
+    /** Check line after an export: the consistency pass adjusted segments; argument 0 is the count. */
+    EXPORT_CHECK_CONSISTENCY_ADJUSTED("export.check.consistency.adjusted"),
+    /** Check line after an export: the consistency pass ran and changed nothing. */
+    EXPORT_CHECK_CONSISTENCY_NOTHING("export.check.consistency.nothing"),
+    /** Check line after an export: the consistency pass skipped its gender step because no model was available. */
+    EXPORT_CHECK_CONSISTENCY_NO_MODEL("export.check.consistency.noModel"),
     /** The forward action of the last step, always unavailable. */
     EXPORT_NEXT("export.next"),
     /** Hover explanation of the control labelled by {@link #EXPORT_NEXT}. */

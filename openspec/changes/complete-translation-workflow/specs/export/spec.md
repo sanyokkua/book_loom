@@ -250,8 +250,8 @@ next book. The bilingual copy is self-contained so it opens offline and leaks no
 
 ### Requirement: Run the final consistency pass before writing when it is switched on
 
-The export screen SHALL offer a final consistency pass as a switch labelled "Whole-book name sweep & resolve later
-reveals", off by default, and on by default when the book brief's quality dial is Max.
+The export screen SHALL offer a final consistency pass as a switch labelled "Final consistency pass" with a note and a
+hover explanation saying what it does and that its gender step needs the selected model, off by default, and on by default when the book brief's quality dial is Max.
 
 WHEN an export starts with the switch on, the system SHALL run the whole-book backward revision — the locked-name sweep
 and the resolution of deferred items — before the book is written, and SHALL leave every segment the person edited as the
@@ -284,6 +284,20 @@ is a plain text substitution, so it can only find a spelling it knew: the one th
   added `Justine` → `Жустіна` locked, and the book is exported with the switch on
 - **THEN** chapter 2 in the written book still reads `Джастін`, because the sweep replaces only a rendering the glossary
   itself held before the change
+
+#### Scenario: The pass is reported after the export
+
+- **WHEN** the book is exported with the switch on and the pass adjusted 3 segments
+- **THEN** the screen's checks and the export-complete dialog read "Consistency pass: 3 segments adjusted"
+- **AND** when it adjusted none they read "Consistency pass ran — nothing needed changing"
+- **AND** with the switch off neither mentions the pass
+
+#### Scenario: A model that cannot be created does not stop the export
+
+- **WHEN** the book is exported with the switch on and the chosen provider cannot be reached, or its model cannot be
+  created
+- **THEN** the book is written with the name sweep only, and one warning is logged
+- **AND** the result reads "Consistency pass: the gender step was skipped — no model available"
 
 #### Scenario: A person's edit survives the pass
 
@@ -517,6 +531,15 @@ The export screen's Open folder action and the dialog's SHALL show the written f
 selecting it where the platform supports it (macOS, Windows) and otherwise opening its folder; an exit code of 1 from the
 Windows file manager SHALL count as success. Open book SHALL open the written file in the application the system
 associates with its type.
+
+WHEN an export succeeds, the screen's checks and the dialog SHALL also name each side file written, one per line, and,
+when the consistency pass was on, what it did: the number of segments it adjusted, that it ran and changed nothing, or
+that its gender step was skipped because no model was available.
+
+WHEN the destination, Replace, the chosen side files or the consistency switch changes after a success, the export
+screen SHALL forget that result, so its tiles, checks, Open folder and Open book never describe a file the next press
+will not write. WHEN the destination occupied after a success is the file just exported, the refusal beside Save to
+SHALL say so: "This is the file you just exported. Turn on Replace to write it again, or choose another name."
 
 WHILE no export of the open book has succeeded in the session, the export screen SHALL list no checks, SHALL show the
 file-validates tile as not yet known, and SHALL offer nothing to reveal or open. WHILE a run is translating, the export

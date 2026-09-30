@@ -1,5 +1,8 @@
 package ua.bookloom.ui;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
@@ -27,10 +31,16 @@ public final class ScriptedExportService implements ExportService {
     private final List<Boolean> ranOnFxThread = new CopyOnWriteArrayList<>();
     private volatile @Nullable AppError failure;
     private volatile @Nullable ExportReport report;
+    private volatile boolean isWritingFiles;
 
     /** Makes every successful export answer with {@code scripted}; {@code null} answers a one-segment report. */
     public void reportWith(@Nullable final ExportReport scripted) {
         report = scripted;
+    }
+
+    /** Makes every successful export create its destination file, as a real one does, holding one byte. */
+    public void writeFiles(final boolean writing) {
+        isWritingFiles = writing;
     }
 
     /** Makes every export from now on fail with {@code error}; {@code null} makes them succeed again. */
@@ -75,12 +85,24 @@ public final class ScriptedExportService implements ExportService {
             if (error != null) {
                 return Result.err(error);
             }
+            writeDestination();
             final ExportReport scripted = report;
             if (scripted != null) {
                 return Result.ok(scripted);
             }
             final Path destination = request.destination();
-            return Result.ok(new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0));
+            return Result.ok(new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0, ConsistencySummary.NOT_RUN));
+        }
+
+        private void writeDestination() {
+            if (!isWritingFiles) {
+                return;
+            }
+            try {
+                Files.write(request.destination(), new byte[1]);
+            } catch (IOException cause) {
+                throw new UncheckedIOException(cause);
+            }
         }
 
         @Override

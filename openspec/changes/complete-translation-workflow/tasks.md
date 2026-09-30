@@ -1159,6 +1159,14 @@ planned and applied in a session that remembers nothing about the others. These 
   - **Log:** INFO each test's outcome with the stage reached, the elapsed time and the model count; DEBUG each press with the provider id and model; never a credential.
   - **Done when:** `./gradlew :ui:test :llm:test` is green and, closing the group, `./gradlew build :app:archTest` is green, and in `./gradlew :app:run` the three buttons against a real Ollama show measured times and a model count, Test connection working with no model chosen.
 
+## 15a. Polish after the hand test — between groups 15 and 16
+
+- [x] A. Theme and contrast: Modena re-based on theme tokens, readable dark theme, live boxes, toggles (5872d86)
+- [x] B. Dialog footers group their buttons at the right (645d6e2)
+- [x] C. Hover explanations on every control; clearer Names & style instructions (24e6bfa)
+- [x] D. Export screen clarity: the consistency note and tip worded truthfully, the consistency result and the written side files shown on the screen and in the complete dialog, a missing model no longer fails the export, a finished result forgotten when its choices change, and the just-exported file named in the refusal (commit below)
+- [ ] E. Responsiveness: smaller minimum widths for the Structure and Export side columns (optional)
+
 ## 16. The gate — after every group above
 
 - [ ] 16.1 Bring the whole project green with no pre-existing-failure exemption, and paste the gate's tail as evidence. Each group ended on `./gradlew build :app:archTest`; only the whole-project clean gate — `clean`, `check` with its coverage gate, and `spotlessCheck` — proves the groups agree with each other, and a red check anywhere means the change is not done. → all modules, build

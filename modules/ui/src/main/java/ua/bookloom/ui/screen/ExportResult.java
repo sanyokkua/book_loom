@@ -2,6 +2,7 @@ package ua.bookloom.ui.screen;
 
 import java.nio.file.Path;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.Objects;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -19,6 +20,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportOutcome;
+import ua.bookloom.ui.state.ExportReportLines;
 import ua.bookloom.ui.state.FileRevealer;
 
 /**
@@ -122,7 +124,23 @@ final class ExportResult {
                     .add(check(
                             "export-check-language", messages.get(MessageKey.EXPORT_CHECK_LANGUAGE, source, target)));
         }
+        addReportChecks(report);
         setActionsShown(true);
+    }
+
+    private void addReportChecks(final ExportReport report) {
+        final List<String> names = ExportReportLines.sideFileNames(report);
+        for (int index = 0; index < names.size(); index++) {
+            checks.getChildren()
+                    .add(check(
+                            "export-check-side-file-" + index,
+                            messages.get(MessageKey.EXPORT_CHECK_SIDE_FILE, names.get(index))));
+        }
+        final List<String> passLines = ExportReportLines.consistency(messages, report.consistency());
+        for (int index = 0; index < passLines.size(); index++) {
+            checks.getChildren()
+                    .add(check("export-check-consistency" + (index == 0 ? "" : "-" + index), passLines.get(index)));
+        }
     }
 
     private void reset() {

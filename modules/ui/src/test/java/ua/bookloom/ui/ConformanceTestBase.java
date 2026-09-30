@@ -8,6 +8,7 @@ import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ConformanceCases.Screen;
 import ua.bookloom.ui.dialog.ExportCompleteDialog;
@@ -51,14 +52,16 @@ abstract class ConformanceTestBase extends ShellTestBase {
             case RETRY ->
                 onFx(() -> injector.getInstance(RetryWithNoteDialog.class).ask("ch5 · p12", choice -> {}));
             case EXPORT_COMPLETE ->
-                onFx(() -> injector.getInstance(ExportCompleteDialog.class)
-                        .show(new ExportOutcome(
-                                new ExportReport(
-                                        Path.of("/books/Frankenstein.uk.epub"), 10, 0, 0, 0, 8, 2, List.of(), 10),
-                                958_464)));
+                onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(finishedExport()));
             case REPLACE_RUN ->
                 onFx(() -> injector.getInstance(ReplaceRunPrompt.class)
                         .ask("Frankenstein.epub", "Dracula.epub", RunState.RUNNING, () -> {}));
         }
+    }
+
+    private static ExportOutcome finishedExport() {
+        final Path book = Path.of("/books/Frankenstein.uk.epub");
+        return new ExportOutcome(
+                new ExportReport(book, 10, 0, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN), 958_464);
     }
 }

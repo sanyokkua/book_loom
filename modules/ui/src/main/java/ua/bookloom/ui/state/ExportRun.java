@@ -99,7 +99,23 @@ final class ExportRun {
         }
     }
 
-    /** Forgets the last outcome and failure, which described another book. FX thread only. */
+    /** The file the shown outcome wrote, or null when no outcome is shown. FX thread only. */
+    @Nullable
+    Path justExported() {
+        final ExportOutcome done = outcome.get();
+        return done == null ? null : done.report().destination();
+    }
+
+    // A result describes the choices that produced it; once one changes it would vouch for a file the next press will
+    // not write. A run still in flight is left alone, because its answer has not arrived yet.
+    void forgetStale(final String why) {
+        if (!running.get() && (outcome.get() != null || !failure.get().isEmpty())) {
+            log.debug("the last export result is forgotten: {} changed", why);
+            clear();
+        }
+    }
+
+    /** Forgets the last outcome and failure, which described another book or other choices. FX thread only. */
     void clear() {
         log.debug("the last export outcome is forgotten");
         outcome.set(null);
@@ -129,19 +145,24 @@ final class ExportRun {
     private Result<ExportReport> run(final ExportRequest request, final @Nullable ModelSelection selection) {
         ChatModel model = null;
         if (selection != null) {
-            final Result<ChatModel> created = models.create(selection);
-            if (created.isErr()) {
-                final AppError refused = Objects.requireNonNull(created.error(), "error");
-                log.debug("no model was created for the consistency pass: code {}", refused.code());
-                return Result.err(refused);
-            }
-            model = created.data();
+            model = modelOrNull(selection);
         }
         final Result<ExportJob> job = service.newExport(request, model);
         if (job.isErr()) {
             return Result.err(Objects.requireNonNull(job.error(), "error"));
         }
         return Objects.requireNonNull(job.data(), "job").run();
+    }
+
+    // The pass's name sweep needs no model, so a provider that is down must not stop the book being written.
+    private @Nullable ChatModel modelOrNull(final ModelSelection selection) {
+        final Result<ChatModel> created = models.create(selection);
+        if (created.isErr()) {
+            final AppError refused = Objects.requireNonNull(created.error(), "error");
+            log.warn("no model for the consistency pass, its gender step is skipped: code {}", refused.code());
+            return null;
+        }
+        return created.data();
     }
 
     private long sizeOf(final Path file) {

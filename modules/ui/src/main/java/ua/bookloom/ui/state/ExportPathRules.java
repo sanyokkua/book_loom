@@ -1,5 +1,6 @@
 package ua.bookloom.ui.state;
 
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,20 @@ import ua.bookloom.api.pipeline.SideFile;
 final class ExportPathRules {
 
     private static final String ZIP = ".zip";
+
+    /** The path the text names, or empty when it is blank or not a valid path on this system. */
+    static Optional<Path> parse(final String text) {
+        if (text.isBlank()) {
+            log.debug("destination has no path: the text is blank");
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Path.of(text));
+        } catch (InvalidPathException invalid) {
+            log.debug("destination has no path: the text is not valid here ({})", invalid.getReason());
+            return Optional.empty();
+        }
+    }
 
     /** Why a destination cannot take the book. */
     enum Refusal {
