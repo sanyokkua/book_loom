@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -51,15 +52,8 @@ final class BriefToneCard {
                         new BriefChoice.Option<>(Register.NEUTRAL, MessageKey.BRIEF_REGISTER_NEUTRAL),
                         new BriefChoice.Option<>(Register.CASUAL, MessageKey.BRIEF_REGISTER_CASUAL)),
                 viewModel::setRegister);
-        voice.setId("brief-tone-voice");
-        voice.getStyleClass().add("brief-input");
-        voice.setPromptText(messages.get(MessageKey.BRIEF_TONE_VOICE_PROMPT));
-        voice.setPrefRowCount(VOICE_ROWS);
-        voice.setWrapText(true);
-        voice.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setVoiceEra));
-        audience.setId("brief-tone-audience");
-        audience.setPromptText(messages.get(MessageKey.BRIEF_TONE_AUDIENCE_PROMPT));
-        audience.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setAudience));
+        Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
+        configureInputs(viewModel);
         this.node = BriefCards.card(
                 "brief-tone-card",
                 messages,
@@ -70,10 +64,25 @@ final class BriefToneCard {
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_AUDIENCE, audience));
     }
 
+    private void configureInputs(final BookBriefViewModel viewModel) {
+        voice.setId("brief-tone-voice");
+        Tips.install(messages, voice, MessageKey.BRIEF_TONE_VOICE_TIP);
+        voice.getStyleClass().add("brief-input");
+        voice.setPromptText(messages.get(MessageKey.BRIEF_TONE_VOICE_PROMPT));
+        voice.setPrefRowCount(VOICE_ROWS);
+        voice.setWrapText(true);
+        voice.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setVoiceEra));
+        audience.setId("brief-tone-audience");
+        Tips.install(messages, audience, MessageKey.BRIEF_TONE_AUDIENCE_TIP);
+        audience.setPromptText(messages.get(MessageKey.BRIEF_TONE_AUDIENCE_PROMPT));
+        audience.textProperty().addListener((observed, was, now) -> typed(now, viewModel::setAudience));
+    }
+
     private SearchableCombo<String> genreBox(final BookBriefViewModel viewModel) {
         final SearchableCombo<String> box = SearchableCombo.freeText(
                 Arrays.stream(Genre.values()).map(this::genreName).toList(), Function.identity(), Function.identity());
         box.setId("brief-tone-genre");
+        Tips.install(messages, box, MessageKey.BRIEF_TONE_GENRE_TIP);
         box.setPromptText(messages.get(MessageKey.BRIEF_TONE_GENRE_PROMPT));
         box.setMaxWidth(Double.MAX_VALUE);
         box.committedProperty().addListener((observed, was, now) -> genrePicked(viewModel, now));

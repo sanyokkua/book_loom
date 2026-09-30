@@ -102,10 +102,15 @@ final class BriefView {
                 new StepFooter.Action(
                         "brief-back",
                         messages.get(MessageKey.BRIEF_BACK),
+                        messages.get(MessageKey.BRIEF_BACK_TIP),
                         "btn-ghost",
                         () -> navigator.navigate(ViewNames.IMPORT)),
                 new StepFooter.Action(
-                        "brief-continue", messages.get(MessageKey.BRIEF_CONTINUE), "btn-primary", this::onContinue));
+                        "brief-continue",
+                        messages.get(MessageKey.BRIEF_CONTINUE),
+                        messages.get(MessageKey.BRIEF_CONTINUE_TIP),
+                        "btn-primary",
+                        this::onContinue));
     }
 
     private void show(final @Nullable BookBrief brief) {

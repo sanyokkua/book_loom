@@ -17,6 +17,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -59,6 +60,7 @@ final class ReviewPanel extends VBox {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final Button back = new Button(messages.get(MessageKey.REVIEW_BACK));
         back.setId("review-back");
+        Tips.install(messages, back, MessageKey.REVIEW_BACK_TIP);
         back.getStyleClass().add("btn-ghost");
         back.setOnAction(event -> setOpen(false));
         final HBox header = new HBox(SPACING, title, spacer, back);

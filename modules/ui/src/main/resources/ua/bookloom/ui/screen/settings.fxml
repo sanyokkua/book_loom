@@ -26,7 +26,7 @@
                     <HBox alignment="CENTER_LEFT">
                         <Label styleClass="card-title" text="%settings.providers.title"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Button id="settings-provider-add" styleClass="btn-ghost" disable="true"
+                        <Button fx:id="providerAdd" id="settings-provider-add" styleClass="btn-ghost" disable="true"
                                 text="%settings.provider.add"/>
                     </HBox>
                     <VBox fx:id="providerList" id="settings-provider-list" spacing="6"/>
@@ -35,9 +35,9 @@
                     <HBox alignment="CENTER_LEFT" spacing="8">
                         <Label fx:id="detailName" styleClass="card-title"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Button id="settings-provider-edit" styleClass="btn-ghost" disable="true"
+                        <Button fx:id="providerEdit" id="settings-provider-edit" styleClass="btn-ghost" disable="true"
                                 text="%settings.provider.edit"/>
-                        <Button id="settings-provider-delete" styleClass="btn-danger-outline" disable="true"
+                        <Button fx:id="providerDelete" id="settings-provider-delete" styleClass="btn-danger-outline" disable="true"
                                 text="%settings.provider.delete"/>
                     </HBox>
                     <HBox spacing="8">

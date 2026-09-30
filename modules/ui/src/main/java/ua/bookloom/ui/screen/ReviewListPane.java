@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import javafx.application.Platform;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ReviewRow;
@@ -40,6 +42,35 @@ final class ReviewListPane extends VBox {
     private static final double SPACING = 8;
     private static final double CHIP_GAP = 6;
 
+    private record Chip(String id, ReviewFilter filter, MessageKey label, MessageKey tip) {}
+
+    private static final List<Chip> CHIPS = List.of(
+            new Chip(
+                    "review-chip-all",
+                    ReviewFilter.ALL_FLAGGED,
+                    MessageKey.REVIEW_CHIP_ALL,
+                    MessageKey.REVIEW_CHIP_ALL_TIP),
+            new Chip(
+                    "review-chip-names",
+                    ReviewFilter.NAMES,
+                    MessageKey.REVIEW_CHIP_NAMES,
+                    MessageKey.REVIEW_CHIP_NAMES_TIP),
+            new Chip(
+                    "review-chip-omissions",
+                    ReviewFilter.OMISSIONS,
+                    MessageKey.REVIEW_CHIP_OMISSIONS,
+                    MessageKey.REVIEW_CHIP_OMISSIONS_TIP),
+            new Chip(
+                    "review-chip-foreign",
+                    ReviewFilter.FOREIGN_KEPT,
+                    MessageKey.REVIEW_CHIP_FOREIGN_KEPT,
+                    MessageKey.REVIEW_CHIP_FOREIGN_KEPT_TIP),
+            new Chip(
+                    "review-chip-all-segments",
+                    ReviewFilter.ALL_SEGMENTS,
+                    MessageKey.REVIEW_CHIP_ALL_SEGMENTS,
+                    MessageKey.REVIEW_CHIP_ALL_SEGMENTS_TIP));
+
     private final ReviewViewModel viewModel;
     private final Messages messages;
     private final ListView<ReviewRow> list = new ListView<>();
@@ -56,15 +87,7 @@ final class ReviewListPane extends VBox {
         super(SPACING);
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
-        final FlowPane chipRow = new FlowPane(CHIP_GAP, CHIP_GAP);
-        addChip(chipRow, "review-chip-all", ReviewFilter.ALL_FLAGGED, MessageKey.REVIEW_CHIP_ALL);
-        addChip(chipRow, "review-chip-names", ReviewFilter.NAMES, MessageKey.REVIEW_CHIP_NAMES);
-        addChip(chipRow, "review-chip-omissions", ReviewFilter.OMISSIONS, MessageKey.REVIEW_CHIP_OMISSIONS);
-        addChip(chipRow, "review-chip-foreign", ReviewFilter.FOREIGN_KEPT, MessageKey.REVIEW_CHIP_FOREIGN_KEPT);
-        final ToggleButton browse = addChip(
-                chipRow, "review-chip-all-segments", ReviewFilter.ALL_SEGMENTS, MessageKey.REVIEW_CHIP_ALL_SEGMENTS);
-        browse.visibleProperty().bind(viewModel.allSegmentsOffered());
-        browse.managedProperty().bind(browse.visibleProperty());
+        final FlowPane chipRow = chipRow();
         list.setId("review-list");
         list.getStyleClass().add("review-list");
         list.setItems(viewModel.rows());
@@ -83,16 +106,24 @@ final class ReviewListPane extends VBox {
         return list;
     }
 
-    private ToggleButton addChip(
-            final FlowPane row, final String id, final ReviewFilter filter, final MessageKey label) {
-        final ToggleButton chip = new ToggleButton(messages.get(label));
-        chip.setId(id);
+    private FlowPane chipRow() {
+        final FlowPane chipRow = new FlowPane(CHIP_GAP, CHIP_GAP);
+        CHIPS.forEach(chip -> addChip(chipRow, chip));
+        final ToggleButton browse =
+                Objects.requireNonNull(chipOf.get(ReviewFilter.ALL_SEGMENTS), "the All segments chip");
+        browse.visibleProperty().bind(viewModel.allSegmentsOffered());
+        browse.managedProperty().bind(browse.visibleProperty());
+        return chipRow;
+    }
+
+    private void addChip(final FlowPane row, final Chip spec) {
+        final ToggleButton chip = Tips.install(messages, new ToggleButton(messages.get(spec.label())), spec.tip());
+        chip.setId(spec.id());
         chip.getStyleClass().add("review-chip");
         chip.setToggleGroup(chips);
-        chip.setUserData(filter);
-        chipOf.put(filter, chip);
+        chip.setUserData(spec.filter());
+        chipOf.put(spec.filter(), chip);
         row.getChildren().add(chip);
-        return chip;
     }
 
     private void showChip(final ReviewFilter filter) {

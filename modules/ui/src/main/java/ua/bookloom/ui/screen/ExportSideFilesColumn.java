@@ -9,6 +9,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportViewModel;
@@ -36,13 +37,7 @@ final class ExportSideFilesColumn {
     }
 
     Node build() {
-        final VBox also = BriefCards.card(
-                "export-also-card",
-                messages,
-                MessageKey.EXPORT_ALSO_TITLE,
-                sideFile("export-aux-glossary", MessageKey.EXPORT_AUX_GLOSSARY, SideFile.GLOSSARY_CSV),
-                sideFile("export-aux-bilingual", MessageKey.EXPORT_AUX_BILINGUAL, SideFile.BILINGUAL_HTML),
-                sideFile("export-aux-report", MessageKey.EXPORT_AUX_REPORT, SideFile.QUALITY_REPORT));
+        final VBox also = sideFilesCard();
         consistency.setId("export-aux-consistency");
         consistency.setAccessibleText(messages.get(MessageKey.EXPORT_CONSISTENCY_TITLE));
         consistency.setSelected(viewModel.consistencyPass().get());
@@ -62,8 +57,30 @@ final class ExportSideFilesColumn {
         return column;
     }
 
-    private CheckBox sideFile(final String id, final MessageKey label, final SideFile file) {
-        final CheckBox box = new CheckBox(messages.get(label));
+    private VBox sideFilesCard() {
+        return BriefCards.card(
+                "export-also-card",
+                messages,
+                MessageKey.EXPORT_ALSO_TITLE,
+                sideFile(
+                        "export-aux-glossary",
+                        MessageKey.EXPORT_AUX_GLOSSARY,
+                        MessageKey.EXPORT_AUX_GLOSSARY_TIP,
+                        SideFile.GLOSSARY_CSV),
+                sideFile(
+                        "export-aux-bilingual",
+                        MessageKey.EXPORT_AUX_BILINGUAL,
+                        MessageKey.EXPORT_AUX_BILINGUAL_TIP,
+                        SideFile.BILINGUAL_HTML),
+                sideFile(
+                        "export-aux-report",
+                        MessageKey.EXPORT_AUX_REPORT,
+                        MessageKey.EXPORT_AUX_REPORT_TIP,
+                        SideFile.QUALITY_REPORT));
+    }
+
+    private CheckBox sideFile(final String id, final MessageKey label, final MessageKey tip, final SideFile file) {
+        final CheckBox box = Tips.install(messages, new CheckBox(messages.get(label)), tip);
         box.setId(id);
         box.setSelected(viewModel.sideFiles().contains(file));
         box.selectedProperty().addListener((observed, was, now) -> viewModel.setSideFile(file, now));

@@ -104,6 +104,15 @@ This build departs from the mockup on purpose, each for a stated reason:
 - **The design-reference group** — a specimen sheet for the designer, not a navigation group of the application.
 - **"EPUBCheck passed"** — the round-trip and resource-id checks this build runs are its own checks, not EPUBCheck's.
 
+### Hover explanations {#hover-explanations}
+
+Every button, toggle, field, combo, segmented choice and table header a person can operate explains itself in a
+tooltip that appears after 400 ms, wraps at 320 px and stays long enough to read. The text is a `<label key>.tip`
+catalogue entry in both languages, set once through `Tips`, and it is also the control's accessible help. The bubble is
+painted with the title bar's colour pair, so it is dark on the light block and stays readable on the dark one. A
+disabled control shows none, because JavaFX delivers it no pointer events. The Names & style subtitle lists the three
+things to do: fill Target, set Type and Gender, lock what must never change.
+
 ## screen-projects {#screen-projects}
 
 Purpose: list existing projects and start a new one.

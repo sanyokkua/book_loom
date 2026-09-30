@@ -99,6 +99,7 @@ public final class RunStatusBar {
         control.setContentDisplay(ContentDisplay.TEXT_ONLY);
         control.setMinWidth(Region.USE_PREF_SIZE);
         control.setOnAction(event -> press());
+        Tips.install(messages, control, MessageKey.SHELL_RUN_PAUSE_TIP);
         view.getChildren().addAll(fileName, stateText, elapsed, timeLeft, control);
     }
 
@@ -178,6 +179,7 @@ public final class RunStatusBar {
     private void setControl(final boolean pauses, final MessageKey label, final boolean enabled) {
         controlPauses = pauses;
         control.setText(messages.get(label));
+        Tips.install(messages, control, pauses ? MessageKey.SHELL_RUN_PAUSE_TIP : MessageKey.SHELL_RUN_RESUME_TIP);
         control.setDisable(!enabled);
         control.setVisible(true);
         control.setManaged(true);

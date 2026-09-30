@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 import org.controlsfx.control.ToggleSwitch;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.NamesStyleViewModel;
@@ -87,7 +88,7 @@ final class GlossaryCells {
             term.getStyleClass().add("glossary-term");
             final Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
-            final Button remove = new Button("✕");
+            final Button remove = Tips.install(messages, new Button("✕"), MessageKey.NAMES_STYLE_REMOVE_TIP);
             remove.getStyleClass().addAll("btn-ghost", "glossary-remove");
             remove.setAccessibleText(messages.get(MessageKey.NAMES_STYLE_REMOVE));
             remove.setOnAction(event -> {
@@ -113,8 +114,8 @@ final class GlossaryCells {
         private @Nullable String syncedId;
         private String syncedText = "";
 
-        TargetCell(final NamesStyleViewModel model) {
-            super(new TextField());
+        TargetCell(final Messages messages, final NamesStyleViewModel model) {
+            super(Tips.install(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP));
             this.model = model;
             control().setOnAction(event -> commit());
             control().focusedProperty().addListener((observed, was, now) -> {
@@ -148,11 +149,13 @@ final class GlossaryCells {
         private final Function<GlossaryEntry, T> read;
 
         ChoiceCell(
+                final Messages messages,
+                final MessageKey tip,
                 final T[] values,
                 final Function<T, String> label,
                 final Function<GlossaryEntry, T> read,
                 final BiConsumer<String, T> write) {
-            super(new ComboBox<>(FXCollections.observableArrayList(values)));
+            super(Tips.install(messages, new ComboBox<>(FXCollections.observableArrayList(values)), tip));
             this.read = read;
             control().setConverter(new StringConverter<>() {
                 @Override
@@ -182,8 +185,8 @@ final class GlossaryCells {
     /** The lock as a switch, written as soon as it is turned. */
     static final class LockCell extends EntryCell<ToggleSwitch> {
 
-        LockCell(final NamesStyleViewModel model) {
-            super(new ToggleSwitch());
+        LockCell(final Messages messages, final NamesStyleViewModel model) {
+            super(Tips.install(messages, new ToggleSwitch(), MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP));
             control().selectedProperty().addListener((observed, was, now) -> {
                 final GlossaryEntry shown = getItem();
                 if (!isSyncing() && shown != null) {

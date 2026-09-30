@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
@@ -47,7 +48,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         showNamesStyle();
 
         assertThat(labelText("names-style-title")).isEqualTo("Names & style");
-        assertThat(labelText("names-style-subtitle")).startsWith("A quick scan proposes");
+        assertThat(labelText("names-style-subtitle")).startsWith("The scan lists the names and terms");
         assertThat(labelText("names-style-banner-text"))
                 .isEqualTo("Skip this and the app builds names on the fly as it translates.");
         assertThat(button("names-style-back").getText()).isEqualTo("Back to Structure");
@@ -151,7 +152,7 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         showNamesStyle();
 
         assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
-                        .map(column -> column.getText())
+                        .map(column -> ((Label) column.getGraphic()).getText())
                         .toList()))
                 .containsExactly("Source term", "Type", "Target", "Gender", "Locked");
         assertThat(ThemeTestSupport.onFx(() -> table().getItems())).isEmpty();

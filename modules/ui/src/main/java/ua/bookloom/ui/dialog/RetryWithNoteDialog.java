@@ -16,6 +16,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -70,10 +71,12 @@ public final class RetryWithNoteDialog {
         log.debug("asking for a note to retry segment at {}", locator);
         final TextArea note = new TextArea();
         note.setId(NOTE_ID);
+        Tips.install(messages, note, MessageKey.DIALOG_RETRY_NOTE_TIP);
         note.setPrefRowCount(NOTE_ROWS);
         note.setWrapText(true);
         final CheckBox lower = new CheckBox(messages.get(MessageKey.DIALOG_RETRY_LOWER));
         lower.setId(LOWER_ID);
+        Tips.install(messages, lower, MessageKey.DIALOG_RETRY_LOWER_TIP);
         final Label caption = new Label(messages.get(MessageKey.DIALOG_RETRY_NOTE));
         caption.getStyleClass().add("dialog-text");
         final DialogPane card = card(locator, new VBox(caption, note, lower));
@@ -107,12 +110,14 @@ public final class RetryWithNoteDialog {
         final Button cancel = (Button) card.lookupButton(cancelType);
         final Button retry = (Button) card.lookupButton(retryType);
         cancel.setId(CANCEL_ID);
+        Tips.install(messages, cancel, MessageKey.DIALOG_RETRY_CANCEL_TIP);
         cancel.getStyleClass().add("btn-secondary");
         cancel.setOnAction(event -> {
             log.debug("the retry was cancelled");
             modalHost.hide();
         });
         retry.setId(RETRY_ID);
+        Tips.install(messages, retry, MessageKey.DIALOG_RETRY_CONFIRM_TIP);
         retry.getStyleClass().add("btn-primary");
         retry.setOnAction(event -> {
             final String typed = note.getText().strip();

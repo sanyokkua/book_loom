@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
@@ -27,7 +26,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelListing;
@@ -48,8 +47,6 @@ public final class SettingsController {
 
     private static final String SELECTED_ROW = "list-item-selected";
 
-    private static final int MODELS_SHOWN = 3;
-
     /**
      * A provider row and the badge that marks it as the current one.
      *
@@ -61,6 +58,7 @@ public final class SettingsController {
     private final SettingsViewModel viewModel;
     private final Messages messages;
     private final StageChipRows chipRows;
+    private final ProviderDetailText detail;
     private final Map<String, RowNodes> rows = new LinkedHashMap<>();
     private final ChangeListener<String> onSelection = (observed, was, now) -> markSelectedRow();
     private final ListChangeListener<StageChip> onStages = change -> showChips();
@@ -105,6 +103,15 @@ public final class SettingsController {
     private Label detailModels;
 
     @FXML
+    private Button providerAdd;
+
+    @FXML
+    private Button providerEdit;
+
+    @FXML
+    private Button providerDelete;
+
+    @FXML
     private Button testConnection;
 
     @FXML
@@ -135,6 +142,7 @@ public final class SettingsController {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.chipRows = new StageChipRows(messages);
+        this.detail = new ProviderDetailText(viewModel, messages);
     }
 
     @FXML
@@ -142,6 +150,13 @@ public final class SettingsController {
         log.debug(
                 "building the settings screen for {} provider(s)",
                 viewModel.providers().size());
+        Tips.install(messages, providerAdd, MessageKey.SETTINGS_PROVIDER_ADD_TIP);
+        Tips.install(messages, providerEdit, MessageKey.SETTINGS_PROVIDER_EDIT_TIP);
+        Tips.install(messages, providerDelete, MessageKey.SETTINGS_PROVIDER_DELETE_TIP);
+        Tips.install(messages, modelCombo, MessageKey.SETTINGS_MODEL_LABEL_TIP);
+        Tips.install(messages, testConnection, MessageKey.SETTINGS_TEST_CONNECTION_TIP);
+        Tips.install(messages, testModels, MessageKey.SETTINGS_TEST_MODELS_TIP);
+        Tips.install(messages, testInference, MessageKey.SETTINGS_TEST_INFERENCE_TIP);
         viewModel.providers().forEach(this::addRow);
         markSelectedRow();
         viewModel.selectedProviderId().addListener(new WeakChangeListener<>(onSelection));
@@ -160,18 +175,16 @@ public final class SettingsController {
                         () -> ProviderNames.displayName(
                                 messages, viewModel.selectedProviderId().get()),
                         viewModel.selectedProviderId()));
-        detailKind
-                .textProperty()
-                .bind(Bindings.createStringBinding(this::selectedKind, viewModel.selectedProviderId()));
+        detailKind.textProperty().bind(Bindings.createStringBinding(detail::kind, viewModel.selectedProviderId()));
         detailModels
                 .textProperty()
                 .bind(Bindings.createStringBinding(
-                        this::modelsFound,
+                        detail::modelsFound,
                         viewModel.selectedProviderId(),
                         viewModel.modelListing().offered()));
         detailEndpoint
                 .textProperty()
-                .bind(Bindings.createStringBinding(this::selectedEndpoint, viewModel.selectedProviderId()));
+                .bind(Bindings.createStringBinding(detail::endpoint, viewModel.selectedProviderId()));
     }
 
     /**
@@ -287,37 +300,6 @@ public final class SettingsController {
         button.setOnAction(event -> viewModel.tests().run(test));
     }
 
-    private Optional<ProviderRow> selectedRow() {
-        final String selected = viewModel.selectedProviderId().get();
-        return viewModel.providers().stream()
-                .filter(row -> row.id().equals(selected))
-                .findFirst();
-    }
-
-    private String selectedEndpoint() {
-        return selectedRow().map(ProviderRow::endpoint).orElse("");
-    }
-
-    private String selectedKind() {
-        return selectedRow()
-                .map(row -> messages.get(
-                        row.kind() == ProviderKind.OLLAMA
-                                ? MessageKey.SETTINGS_KIND_OLLAMA
-                                : MessageKey.SETTINGS_KIND_OPENAI))
-                .orElse("");
-    }
-
-    /** The count and the first names of the last listing, or a plain statement that none was made. */
-    private String modelsFound() {
-        final List<String> offered = List.copyOf(viewModel.modelListing().offered());
-        return offered.isEmpty()
-                ? messages.get(MessageKey.SETTINGS_MODELS_NONE)
-                : messages.get(
-                        MessageKey.SETTINGS_MODELS_FOUND,
-                        offered.size(),
-                        String.join(", ", offered.subList(0, Math.min(MODELS_SHOWN, offered.size()))));
-    }
-
     private void addRow(final ProviderRow provider) {
         log.debug("adding the row of provider '{}'", provider.id());
         final Label name = new Label(ProviderNames.displayName(messages, provider.id()));
@@ -330,6 +312,7 @@ public final class SettingsController {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final HBox row = new HBox(new VBox(name, endpoint), spacer, badge);
         row.setId("provider-row-" + provider.id());
+        Tips.install(messages, row, MessageKey.SETTINGS_PROVIDERS_TITLE_TIP);
         row.getStyleClass().add("list-item");
         row.setAlignment(Pos.CENTER_LEFT);
         row.setFocusTraversable(true);

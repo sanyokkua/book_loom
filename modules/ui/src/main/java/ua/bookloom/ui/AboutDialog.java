@@ -8,6 +8,7 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -56,6 +57,7 @@ final class AboutDialog {
         card.getButtonTypes().add(ButtonType.CLOSE);
         final Button close = (Button) card.lookupButton(ButtonType.CLOSE);
         close.setId(CLOSE_ID);
+        Tips.install(messages, close, MessageKey.COMMON_CLOSE_TIP);
         close.setText(messages.get(MessageKey.COMMON_CLOSE));
         close.getStyleClass().add("btn-primary");
         close.setOnAction(event -> onClose.run());

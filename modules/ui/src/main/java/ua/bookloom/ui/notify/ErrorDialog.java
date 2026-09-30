@@ -18,6 +18,7 @@ import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.api.AppError;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -137,6 +138,7 @@ final class ErrorDialog {
     private Node detailsToggle(final VBox body) {
         final ToggleButton toggle = new ToggleButton(messages.get(MessageKey.ERROR_DETAILS_SHOW));
         toggle.setId(TOGGLE_ID);
+        Tips.install(messages, toggle, MessageKey.ERROR_DETAILS_SHOW_TIP);
         toggle.getStyleClass().add("btn-secondary");
         final TextArea details = detailsArea();
         toggle.setOnAction(event -> {
@@ -170,12 +172,14 @@ final class ErrorDialog {
             card.getButtonTypes().add(retryType);
             final Button retry = (Button) card.lookupButton(retryType);
             retry.setId(RETRY_ID);
+            Tips.install(messages, retry, MessageKey.ERROR_RETRY_TIP);
             retry.getStyleClass().add("btn-primary");
             retry.setOnAction(event -> retryAction.run());
         }
         card.getButtonTypes().add(ButtonType.CLOSE);
         final Button dismiss = (Button) card.lookupButton(ButtonType.CLOSE);
         dismiss.setId(DISMISS_ID);
+        Tips.install(messages, dismiss, MessageKey.COMMON_CLOSE_TIP);
         dismiss.setText(messages.get(MessageKey.COMMON_CLOSE));
         dismiss.getStyleClass().add(retryOffered ? "btn-secondary" : "btn-primary");
         dismiss.setOnAction(event -> onDismiss.run());

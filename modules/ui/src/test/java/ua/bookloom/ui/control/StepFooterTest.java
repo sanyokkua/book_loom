@@ -9,13 +9,14 @@ import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import org.testfx.framework.junit5.ApplicationTest;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.TooltipProbe;
 
 /** The footer's placement, its ids and its unavailable forward action. */
 @SuppressWarnings("NullAway.Init")
 class StepFooterTest extends ApplicationTest {
 
     private static StepFooter.Action action(final String id, final String styleClass, final List<String> fired) {
-        return new StepFooter.Action(id, "label " + id, styleClass, () -> fired.add(id));
+        return new StepFooter.Action(id, "label " + id, "tip " + id, styleClass, () -> fired.add(id));
     }
 
     // IF back were not first and forward last, THEN the buttons would not sit bottom left and bottom right.
@@ -30,6 +31,16 @@ class StepFooterTest extends ApplicationTest {
         assertThat(footer.getChildren().get(2).getId()).isEqualTo("a-next");
         assertThat(footer.getChildren().get(0).getStyleClass()).contains("btn-ghost");
         assertThat(footer.getChildren().get(2).getStyleClass()).contains("btn-primary");
+    }
+
+    // IF the footer dropped the action's tip, THEN the step's two buttons would be the only silent ones.
+    @Test
+    void of_backAndForward_eachButtonCarriesTheTipOfItsAction() {
+        final StepFooter footer = ThemeTestSupport.onFx(() -> StepFooter.of(
+                action("c-back", "btn-ghost", new ArrayList<>()), action("c-next", "btn-primary", new ArrayList<>())));
+
+        assertThat(TooltipProbe.tipText(footer.getChildren().get(0))).isEqualTo("tip c-back");
+        assertThat(TooltipProbe.tipText(footer.forwardButton())).isEqualTo("tip c-next");
     }
 
     // IF an unavailable forward action were absent or pressable, THEN the last step would hide or fake its end.

@@ -22,6 +22,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.AddTermDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -70,8 +71,10 @@ final class NamesStyleView {
         Objects.requireNonNull(projectId, "projectId");
         log.debug("showing the glossary of project {}", projectId);
         glossary.show(projectId);
-        final Banner skip =
-                new Banner("names-style-banner", Banner.Role.INFO, "ℹ", "", messages.get(MessageKey.NAMES_STYLE_SKIP));
+        final Banner skip = Tips.install(
+                messages,
+                new Banner("names-style-banner", Banner.Role.INFO, "ℹ", "", messages.get(MessageKey.NAMES_STYLE_SKIP)),
+                MessageKey.NAMES_STYLE_SKIP_TIP);
         return new VBox(SCREEN_SPACING, noticeBanner(), card(), skip, footer());
     }
 
@@ -113,18 +116,34 @@ final class NamesStyleView {
     }
 
     private Node actions() {
-        final Button scan = action("names-style-model-scan", MessageKey.NAMES_STYLE_MODEL_SCAN, glossary::modelScan);
+        final Button scan = action(
+                "names-style-model-scan",
+                MessageKey.NAMES_STYLE_MODEL_SCAN,
+                MessageKey.NAMES_STYLE_MODEL_SCAN_TIP,
+                glossary::modelScan);
         scan.disableProperty().bind(glossary.busy());
         return new HBox(
                 ACTION_SPACING,
-                action("names-style-add", MessageKey.NAMES_STYLE_ADD, this::openAddTerm),
+                action(
+                        "names-style-add",
+                        MessageKey.NAMES_STYLE_ADD,
+                        MessageKey.NAMES_STYLE_ADD_TIP,
+                        this::openAddTerm),
                 scan,
-                action("names-style-import", MessageKey.NAMES_STYLE_IMPORT, this::chooseImport),
-                action("names-style-export", MessageKey.NAMES_STYLE_EXPORT, this::chooseExport));
+                action(
+                        "names-style-import",
+                        MessageKey.NAMES_STYLE_IMPORT,
+                        MessageKey.NAMES_STYLE_IMPORT_TIP,
+                        this::chooseImport),
+                action(
+                        "names-style-export",
+                        MessageKey.NAMES_STYLE_EXPORT,
+                        MessageKey.NAMES_STYLE_EXPORT_TIP,
+                        this::chooseExport));
     }
 
-    private Button action(final String id, final MessageKey caption, final Runnable onPress) {
-        final Button button = new Button(messages.get(caption));
+    private Button action(final String id, final MessageKey caption, final MessageKey tip, final Runnable onPress) {
+        final Button button = Tips.install(messages, new Button(messages.get(caption)), tip);
         button.setId(id);
         button.getStyleClass().add("btn-ghost");
         button.setOnAction(event -> {
@@ -166,10 +185,15 @@ final class NamesStyleView {
                 new StepFooter.Action(
                         "names-style-back",
                         messages.get(MessageKey.NAMES_STYLE_BACK),
+                        messages.get(MessageKey.NAMES_STYLE_BACK_TIP),
                         "btn-ghost",
                         () -> navigator.navigate(ViewNames.STRUCTURE)),
                 new StepFooter.Action(
-                        "names-style-start", messages.get(MessageKey.NAMES_STYLE_START), "btn-primary", this::onStart));
+                        "names-style-start",
+                        messages.get(MessageKey.NAMES_STYLE_START),
+                        messages.get(MessageKey.NAMES_STYLE_START_TIP),
+                        "btn-primary",
+                        this::onStart));
     }
 
     private void onStart() {

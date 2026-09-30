@@ -558,6 +558,18 @@
     -fx-spacing: 8px;
 }
 
+/* --- Hover explanations: the title bar's pair, so the bubble is dark on the light block and stays readable on the dark one ---- */
+.tooltip {
+    -fx-background-color: -color-title-bg;
+    -fx-background-radius: 5px;
+    -fx-background-insets: 0;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 5px;
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12px;
+    -fx-padding: 6px 10px 6px 10px;
+}
+
 /* --- Toasts: a status-coloured left edge and icon, the rest neutral surface --------------------------------- */
 .toast {
     -fx-background-color: -color-surface;

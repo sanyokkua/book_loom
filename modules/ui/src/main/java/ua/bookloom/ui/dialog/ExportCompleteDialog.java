@@ -16,6 +16,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportOutcome;
@@ -111,18 +112,32 @@ public final class ExportCompleteDialog {
         final ButtonType folder = new ButtonType(messages.get(MessageKey.EXPORT_REVEAL), ButtonBar.ButtonData.OTHER);
         final ButtonType open = new ButtonType(messages.get(MessageKey.EXPORT_OPEN_BOOK), ButtonBar.ButtonData.OK_DONE);
         card.getButtonTypes().setAll(close, folder, open);
-        wire((Button) card.lookupButton(close), CLOSE_ID, "btn-ghost", path -> {}, file);
-        wire((Button) card.lookupButton(folder), FOLDER_ID, "btn-secondary", revealer::reveal, file);
-        wire((Button) card.lookupButton(open), OPEN_ID, "btn-primary", revealer::open, file);
+        wire((Button) card.lookupButton(close), CLOSE_ID, MessageKey.COMMON_CLOSE_TIP, "btn-ghost", path -> {}, file);
+        wire(
+                (Button) card.lookupButton(folder),
+                FOLDER_ID,
+                MessageKey.EXPORT_REVEAL_TIP,
+                "btn-secondary",
+                revealer::reveal,
+                file);
+        wire(
+                (Button) card.lookupButton(open),
+                OPEN_ID,
+                MessageKey.EXPORT_OPEN_BOOK_TIP,
+                "btn-primary",
+                revealer::open,
+                file);
     }
 
     private void wire(
             final Button button,
             final String id,
+            final MessageKey tip,
             final String styleClass,
             final Consumer<Path> action,
             final Path file) {
         button.setId(id);
+        Tips.install(messages, button, tip);
         button.getStyleClass().add(styleClass);
         button.setOnAction(event -> {
             log.debug("export-complete button {} pressed", id);

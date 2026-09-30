@@ -14,6 +14,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.DestinationChooser;
@@ -48,12 +49,14 @@ final class ExportDestinationCard {
 
     Node build() {
         field.setId("export-save-to");
+        Tips.install(messages, field, MessageKey.EXPORT_SAVE_TO_TIP);
         field.setText(viewModel.destination().get());
         field.textProperty().addListener((observed, was, now) -> onTyped(now));
         viewModel.destination().addListener(new WeakChangeListener<>(onDestination));
         HBox.setHgrow(field, Priority.ALWAYS);
         final Button browse = new Button(messages.get(MessageKey.EXPORT_BROWSE));
         browse.setId("export-browse");
+        Tips.install(messages, browse, MessageKey.EXPORT_BROWSE_TIP);
         browse.getStyleClass().add("btn-secondary");
         browse.setOnAction(event -> browse());
         final HBox row = new HBox(ROW_SPACING, field, browse);
@@ -73,6 +76,7 @@ final class ExportDestinationCard {
 
     private Node replaceSwitch() {
         replace.setId("export-replace");
+        Tips.install(messages, replace, MessageKey.EXPORT_REPLACE_TIP);
         replace.setText(messages.get(MessageKey.EXPORT_REPLACE));
         replace.setSelected(viewModel.overwrite().get());
         replace.selectedProperty().addListener((observed, was, now) -> {

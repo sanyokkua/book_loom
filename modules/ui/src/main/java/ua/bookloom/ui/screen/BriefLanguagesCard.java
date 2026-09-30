@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.SearchableCombo;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -35,8 +36,10 @@ final class BriefLanguagesCard {
     BriefLanguagesCard(final BookBriefViewModel viewModel, final Messages messages, final LanguageNames names) {
         final Locale locale = messages.locale();
         final List<String> tags = names.list(locale);
-        this.source = box("brief-source", tags, names, locale);
-        this.target = box("brief-target", tags, names, locale);
+        this.source =
+                Tips.install(messages, box("brief-source", tags, names, locale), MessageKey.BRIEF_SOURCE_LABEL_TIP);
+        this.target =
+                Tips.install(messages, box("brief-target", tags, names, locale), MessageKey.BRIEF_TARGET_LABEL_TIP);
         source.committedProperty().addListener((observed, was, now) -> picked(now, viewModel::setSourceLanguage));
         target.committedProperty().addListener((observed, was, now) -> picked(now, viewModel::setTargetLanguage));
         final Label undeclared = BriefCards.shownWhile(

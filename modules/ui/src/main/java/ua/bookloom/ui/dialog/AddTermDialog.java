@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.GlossaryLabels;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -82,6 +83,7 @@ public final class AddTermDialog {
         card.setId(CARD_ID);
         card.getStyleClass().addAll("dialog-card", "elevation-lg");
         card.setHeader(header());
+        addTips();
         card.setContent(new VBox(
                 ROW_SPACING,
                 pair(
@@ -95,6 +97,14 @@ public final class AddTermDialog {
         buttons(card);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
         return card;
+    }
+
+    private void addTips() {
+        Tips.install(messages, source, MessageKey.DIALOG_ADD_TERM_SOURCE_TIP);
+        Tips.install(messages, target, MessageKey.DIALOG_ADD_TERM_TARGET_TIP);
+        Tips.install(messages, type, MessageKey.DIALOG_ADD_TERM_TYPE_TIP);
+        Tips.install(messages, gender, MessageKey.DIALOG_ADD_TERM_GENDER_TIP);
+        Tips.install(messages, lock, MessageKey.DIALOG_ADD_TERM_LOCK_TIP);
     }
 
     private void confirm() {
@@ -133,10 +143,12 @@ public final class AddTermDialog {
         card.getButtonTypes().setAll(cancelType, addType);
         final Button cancel = (Button) card.lookupButton(cancelType);
         cancel.setId("add-term-cancel");
+        Tips.install(messages, cancel, MessageKey.DIALOG_ADD_TERM_CANCEL_TIP);
         cancel.getStyleClass().add("btn-ghost");
         cancel.setOnAction(event -> onClose.run());
         final Button add = (Button) card.lookupButton(addType);
         add.setId("add-term-confirm");
+        Tips.install(messages, add, MessageKey.DIALOG_ADD_TERM_CONFIRM_TIP);
         add.getStyleClass().add("btn-primary");
         add.setOnAction(event -> confirm());
     }

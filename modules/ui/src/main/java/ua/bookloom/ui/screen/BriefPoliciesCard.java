@@ -11,6 +11,7 @@ import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.UnitPolicy;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -37,6 +38,11 @@ final class BriefPoliciesCard {
         this.footnotes = footnoteChoice(viewModel, messages);
         this.units = unitChoice(viewModel, messages);
         balance.setId("brief-policy-balance");
+        Tips.install(messages, balance, MessageKey.BRIEF_POLICY_BALANCE_TIP);
+        Tips.install(messages, names.node(), MessageKey.BRIEF_POLICY_NAMES_TIP);
+        Tips.install(messages, foreign.node(), MessageKey.BRIEF_POLICY_FOREIGN_TIP);
+        Tips.install(messages, footnotes.node(), MessageKey.BRIEF_POLICY_FOOTNOTES_TIP);
+        Tips.install(messages, units.node(), MessageKey.BRIEF_POLICY_UNITS_TIP);
         balance.valueProperty().addListener((observed, was, now) -> dragged(viewModel, now.doubleValue()));
         this.node = BriefCards.card(
                 "brief-policies-card",

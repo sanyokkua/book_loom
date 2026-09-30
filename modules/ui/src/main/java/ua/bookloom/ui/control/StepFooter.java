@@ -13,8 +13,8 @@ import org.jspecify.annotations.Nullable;
  * The row that closes a workflow step: a backward action on the left and a forward action on the right, so onward is
  * always bottom right on every screen.
  *
- * <p>The caller supplies each action's node id, label, button style class and effect, so the ids the screens and their
- * tests already address stay as they were. The forward action can be drawn unavailable, for the last step.
+ * <p>The caller supplies each action's node id, label, hover explanation, button style class and effect, so the ids the
+ * screens and their tests already address stay as they were. The forward action can be drawn unavailable, for the last step.
  */
 @Slf4j
 public final class StepFooter extends HBox {
@@ -26,15 +26,17 @@ public final class StepFooter extends HBox {
      *
      * @param id the button's node id
      * @param label the visible, already translated text
+     * @param tip the already translated hover explanation
      * @param styleClass the button style class, such as {@code btn-primary}
      * @param onAction what pressing the button does
      */
-    public record Action(String id, String label, String styleClass, Runnable onAction) {
+    public record Action(String id, String label, String tip, String styleClass, Runnable onAction) {
 
         /** Rejects a missing part. */
         public Action {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(label, "label");
+            Objects.requireNonNull(tip, "tip");
             Objects.requireNonNull(styleClass, "styleClass");
             Objects.requireNonNull(onAction, "onAction");
         }
@@ -92,6 +94,7 @@ public final class StepFooter extends HBox {
         final Button button = new Button(action.label());
         button.setId(action.id());
         button.getStyleClass().add(action.styleClass());
+        Tips.install(button, action.tip());
         button.setOnAction(event -> {
             log.debug("footer action {} pressed", action.id());
             action.onAction().run();

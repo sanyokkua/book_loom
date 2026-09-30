@@ -6,6 +6,7 @@ import javafx.scene.layout.VBox;
 import org.controlsfx.control.ToggleSwitch;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -24,10 +25,21 @@ final class BriefAlsoCard {
     private boolean applying;
 
     BriefAlsoCard(final BookBriefViewModel viewModel, final Messages messages) {
-        this.navigation = toggle("brief-aux-nav", messages, MessageKey.BRIEF_AUX_NAV, viewModel);
-        this.alt = toggle("brief-aux-alt", messages, MessageKey.BRIEF_AUX_ALT, viewModel);
-        this.metadata = toggle("brief-aux-metadata", messages, MessageKey.BRIEF_AUX_METADATA, viewModel);
-        this.frontmatter = toggle("brief-aux-frontmatter", messages, MessageKey.BRIEF_AUX_FRONTMATTER, viewModel);
+        this.navigation =
+                toggle("brief-aux-nav", messages, MessageKey.BRIEF_AUX_NAV, MessageKey.BRIEF_AUX_NAV_TIP, viewModel);
+        this.alt = toggle("brief-aux-alt", messages, MessageKey.BRIEF_AUX_ALT, MessageKey.BRIEF_AUX_ALT_TIP, viewModel);
+        this.metadata = toggle(
+                "brief-aux-metadata",
+                messages,
+                MessageKey.BRIEF_AUX_METADATA,
+                MessageKey.BRIEF_AUX_METADATA_TIP,
+                viewModel);
+        this.frontmatter = toggle(
+                "brief-aux-frontmatter",
+                messages,
+                MessageKey.BRIEF_AUX_FRONTMATTER,
+                MessageKey.BRIEF_AUX_FRONTMATTER_TIP,
+                viewModel);
         final Label frontmatterHint = BriefCards.hint(messages, MessageKey.BRIEF_AUX_FRONTMATTER_HINT);
         this.node = BriefCards.card(
                 "brief-aux-card",
@@ -57,8 +69,12 @@ final class BriefAlsoCard {
     }
 
     private ToggleSwitch toggle(
-            final String id, final Messages messages, final MessageKey label, final BookBriefViewModel viewModel) {
-        final ToggleSwitch toggle = new ToggleSwitch(messages.get(label));
+            final String id,
+            final Messages messages,
+            final MessageKey label,
+            final MessageKey tip,
+            final BookBriefViewModel viewModel) {
+        final ToggleSwitch toggle = Tips.install(messages, new ToggleSwitch(messages.get(label)), tip);
         toggle.setId(id);
         toggle.selectedProperty().addListener((observed, was, now) -> switched(viewModel));
         return toggle;

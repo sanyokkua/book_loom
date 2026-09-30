@@ -17,6 +17,7 @@ import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.StructureChecksViewModel;
@@ -80,6 +81,7 @@ final class StructureView {
     private Node card(final StructureListing listing) {
         final Label heading = new Label(messages.get(MessageKey.STRUCTURE_READING_ORDER));
         heading.getStyleClass().add("card-title");
+        Tips.install(messages, heading, MessageKey.STRUCTURE_READING_ORDER_TIP);
         final Label total = new Label(messages.get(MessageKey.STRUCTURE_TOTAL, listing.totalSegments()));
         total.setId("structure-total");
         total.getStyleClass().add("muted");
@@ -115,11 +117,13 @@ final class StructureView {
                 new StepFooter.Action(
                         "structure-back",
                         messages.get(MessageKey.BRIEF_BACK),
+                        messages.get(MessageKey.BRIEF_BACK_TIP),
                         "btn-ghost",
                         () -> navigator.navigate(ViewNames.BOOK_BRIEF)),
                 new StepFooter.Action(
                         "structure-continue",
                         messages.get(MessageKey.STRUCTURE_CONTINUE),
+                        messages.get(MessageKey.STRUCTURE_CONTINUE_TIP),
                         "btn-primary",
                         this::onContinue));
     }

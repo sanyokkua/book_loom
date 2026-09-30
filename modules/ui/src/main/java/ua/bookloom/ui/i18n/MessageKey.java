@@ -15,20 +15,36 @@ public enum MessageKey {
     NAV_GROUP_APPLICATION("nav.group.application"),
     /** Navigation entry and breadcrumb of the projects screen. */
     NAV_PROJECTS("nav.projects"),
+    /** Hover explanation of the control labelled by {@link #NAV_PROJECTS}. */
+    NAV_PROJECTS_TIP("nav.projects.tip"),
     /** Navigation entry and breadcrumb of the import screen. */
     NAV_IMPORT("nav.import"),
+    /** Hover explanation of the control labelled by {@link #NAV_IMPORT}. */
+    NAV_IMPORT_TIP("nav.import.tip"),
     /** Navigation entry and breadcrumb of the book brief screen. */
     NAV_BRIEF("nav.brief"),
+    /** Hover explanation of the control labelled by {@link #NAV_BRIEF}. */
+    NAV_BRIEF_TIP("nav.brief.tip"),
     /** Navigation entry and breadcrumb of the structure screen. */
     NAV_STRUCTURE("nav.structure"),
+    /** Hover explanation of the control labelled by {@link #NAV_STRUCTURE}. */
+    NAV_STRUCTURE_TIP("nav.structure.tip"),
     /** Navigation entry and breadcrumb of the names-and-style screen. */
     NAV_NAMES_AND_STYLE("nav.namesAndStyle"),
+    /** Hover explanation of the control labelled by {@link #NAV_NAMES_AND_STYLE}. */
+    NAV_NAMES_AND_STYLE_TIP("nav.namesAndStyle.tip"),
     /** Navigation entry and breadcrumb of the translating dashboard. */
     NAV_TRANSLATING("nav.translating"),
+    /** Hover explanation of the control labelled by {@link #NAV_TRANSLATING}. */
+    NAV_TRANSLATING_TIP("nav.translating.tip"),
     /** Navigation entry and breadcrumb of the export screen. */
     NAV_EXPORT("nav.export"),
+    /** Hover explanation of the control labelled by {@link #NAV_EXPORT}. */
+    NAV_EXPORT_TIP("nav.export.tip"),
     /** Navigation entry and breadcrumb of the settings screen. */
     NAV_SETTINGS("nav.settings"),
+    /** Hover explanation of the control labelled by {@link #NAV_SETTINGS}. */
+    NAV_SETTINGS_TIP("nav.settings.tip"),
     /** The navigation footer naming the chosen provider and model: provider, model. */
     NAV_FOOTER_SELECTION("nav.footer.selection"),
     /** The navigation footer while no model is chosen. */
@@ -37,10 +53,16 @@ public enum MessageKey {
     SHELL_TITLE("shell.title"),
     /** Title-bar control label offered while the light block is in force. */
     SHELL_THEME_TO_DARK("shell.themeToDark"),
+    /** Hover explanation of the control labelled by {@link #SHELL_THEME_TO_DARK}. */
+    SHELL_THEME_TO_DARK_TIP("shell.themeToDark.tip"),
     /** Title-bar control label offered while the dark block is in force. */
     SHELL_THEME_TO_LIGHT("shell.themeToLight"),
+    /** Hover explanation of the control labelled by {@link #SHELL_THEME_TO_LIGHT}. */
+    SHELL_THEME_TO_LIGHT_TIP("shell.themeToLight.tip"),
     /** Title-bar action that opens the About dialog. */
     SHELL_ABOUT("shell.about"),
+    /** Hover explanation of the control labelled by {@link #SHELL_ABOUT}. */
+    SHELL_ABOUT_TIP("shell.about.tip"),
     /** About dialog subtitle; argument 0 is the build version. */
     ABOUT_SUBTITLE("about.subtitle"),
     /** About dialog description of the product. */
@@ -67,8 +89,12 @@ public enum MessageKey {
     SHELL_RUN_LEFT("shell.run.left"),
     /** Title-bar run control that pauses the run. */
     SHELL_RUN_PAUSE("shell.run.pause"),
+    /** Hover explanation of the control labelled by {@link #SHELL_RUN_PAUSE}. */
+    SHELL_RUN_PAUSE_TIP("shell.run.pause.tip"),
     /** Title-bar run control that resumes the run. */
     SHELL_RUN_RESUME("shell.run.resume"),
+    /** Hover explanation of the control labelled by {@link #SHELL_RUN_RESUME}. */
+    SHELL_RUN_RESUME_TIP("shell.run.resume.tip"),
     /** A duration of an hour or more; argument 0 is the hours, argument 1 the two-digit minutes, both Strings. */
     DURATION_HM("duration.hm"),
     /** A duration of a minute or more, under an hour; argument 0 is the minutes, a String. */
@@ -77,6 +103,8 @@ public enum MessageKey {
     DURATION_S("duration.s"),
     /** Label of a button that dismisses a dialog. */
     COMMON_CLOSE("common.close"),
+    /** Hover explanation of the control labelled by {@link #COMMON_CLOSE}. */
+    COMMON_CLOSE_TIP("common.close.tip"),
     /** Activity-log entry for an accepted segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_ACCEPTED("log.accepted"),
     /** Activity-log entry for a repaired segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
@@ -95,8 +123,12 @@ public enum MessageKey {
     TRANSLATING_SEGMENTS_REMAINING("translating.segmentsRemaining"),
     /** Label of the error dialog's button that runs the failed action again. */
     ERROR_RETRY("error.retry"),
+    /** Hover explanation of the control labelled by {@link #ERROR_RETRY}. */
+    ERROR_RETRY_TIP("error.retry.tip"),
     /** Label of the error dialog's control that reveals the failure's details while they are folded away. */
     ERROR_DETAILS_SHOW("error.details.show"),
+    /** Hover explanation of the control labelled by {@link #ERROR_DETAILS_SHOW}. */
+    ERROR_DETAILS_SHOW_TIP("error.details.show.tip"),
     /** Label of the error dialog's control that folds the failure's details away while they are shown. */
     ERROR_DETAILS_HIDE("error.details.hide"),
     /** Line under a run failure's message: decided segments survive, but only until the application closes. */
@@ -129,12 +161,20 @@ public enum MessageKey {
     SETTINGS_TAB_STORAGE("settings.tab.storage"),
     /** Title of the card that lists the providers. */
     SETTINGS_PROVIDERS_TITLE("settings.providers.title"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_PROVIDERS_TITLE}. */
+    SETTINGS_PROVIDERS_TITLE_TIP("settings.providers.title.tip"),
     /** Label of the unavailable action that adds a provider. */
     SETTINGS_PROVIDER_ADD("settings.provider.add"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_PROVIDER_ADD}. */
+    SETTINGS_PROVIDER_ADD_TIP("settings.provider.add.tip"),
     /** Label of the unavailable action that edits the selected provider. */
     SETTINGS_PROVIDER_EDIT("settings.provider.edit"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_PROVIDER_EDIT}. */
+    SETTINGS_PROVIDER_EDIT_TIP("settings.provider.edit.tip"),
     /** Label of the unavailable action that deletes the selected provider. */
     SETTINGS_PROVIDER_DELETE("settings.provider.delete"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_PROVIDER_DELETE}. */
+    SETTINGS_PROVIDER_DELETE_TIP("settings.provider.delete.tip"),
     /** Display name of the built-in Ollama provider. */
     SETTINGS_PROVIDER_OLLAMA("settings.provider.ollama"),
     /** Display name of the built-in LM Studio provider. */
@@ -145,6 +185,8 @@ public enum MessageKey {
     SETTINGS_ENDPOINT_LABEL("settings.endpoint.label"),
     /** Label before the model chosen for the selected provider. */
     SETTINGS_MODEL_LABEL("settings.model.label"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_MODEL_LABEL}. */
+    SETTINGS_MODEL_LABEL_TIP("settings.model.label.tip"),
     /** Shown in place of the model while none is chosen. */
     SETTINGS_MODEL_NOT_CHOSEN("settings.model.notChosen"),
     /** Subtitle of the settings screen: the promise that nothing leaves the machine. */
@@ -165,10 +207,16 @@ public enum MessageKey {
     SETTINGS_MODELS_NONE("settings.models.none"),
     /** Label of the action that asks whether the provider answers at all. */
     SETTINGS_TEST_CONNECTION("settings.test.connection"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_CONNECTION}. */
+    SETTINGS_TEST_CONNECTION_TIP("settings.test.connection.tip"),
     /** Label of the action that also reads the provider's model list. */
     SETTINGS_TEST_MODELS("settings.test.models"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_MODELS}. */
+    SETTINGS_TEST_MODELS_TIP("settings.test.models.tip"),
     /** Label of the action that also asks the chosen model for a short answer. */
     SETTINGS_TEST_INFERENCE("settings.test.inference"),
+    /** Hover explanation of the control labelled by {@link #SETTINGS_TEST_INFERENCE}. */
+    SETTINGS_TEST_INFERENCE_TIP("settings.test.inference.tip"),
     /** Measured connection finding; argument 0 is the round-trip time already worded. */
     SETTINGS_BADGE_REACHABLE("settings.badge.reachable"),
     /** Measured models finding; argument 0 is the number of models listed. */
@@ -207,10 +255,16 @@ public enum MessageKey {
     APPEARANCE_THEME_LABEL("appearance.theme.label"),
     /** Option of the theme selector that always uses the light block. */
     APPEARANCE_THEME_LIGHT("appearance.theme.light"),
+    /** Hover explanation of the control labelled by {@link #APPEARANCE_THEME_LIGHT}. */
+    APPEARANCE_THEME_LIGHT_TIP("appearance.theme.light.tip"),
     /** Option of the theme selector that always uses the dark block. */
     APPEARANCE_THEME_DARK("appearance.theme.dark"),
+    /** Hover explanation of the control labelled by {@link #APPEARANCE_THEME_DARK}. */
+    APPEARANCE_THEME_DARK_TIP("appearance.theme.dark.tip"),
     /** Option of the theme selector that follows the operating system's colour scheme. */
     APPEARANCE_THEME_SYSTEM("appearance.theme.system"),
+    /** Hover explanation of the control labelled by {@link #APPEARANCE_THEME_SYSTEM}. */
+    APPEARANCE_THEME_SYSTEM_TIP("appearance.theme.system.tip"),
     /** Hint under the theme selector saying what the options mean. */
     APPEARANCE_THEME_HINT("appearance.theme.hint"),
     /** Label of the accent row in the appearance tab. */
@@ -229,6 +283,8 @@ public enum MessageKey {
     IMPORT_DROPZONE_OR("import.dropzone.or"),
     /** Button that opens the system file picker. */
     IMPORT_BROWSE("import.browse"),
+    /** Hover explanation of the control labelled by {@link #IMPORT_BROWSE}. */
+    IMPORT_BROWSE_TIP("import.browse.tip"),
     /** Title of the system file picker. */
     IMPORT_CHOOSER_TITLE("import.chooser.title"),
     /** Name of the picker's filter that lists every openable format. */
@@ -259,6 +315,8 @@ public enum MessageKey {
     IMPORT_REFUSAL_FILE("import.refusal.file"),
     /** Button of a refusal that lets the person pick a different file. */
     IMPORT_CHOOSE_ANOTHER("import.refusal.chooseAnother"),
+    /** Hover explanation of the control labelled by {@link #IMPORT_CHOOSE_ANOTHER}. */
+    IMPORT_CHOOSE_ANOTHER_TIP("import.refusal.chooseAnother.tip"),
     /** Heading of the language-mismatch warning. */
     IMPORT_MISMATCH_TITLE("import.mismatch.title"),
     /** Body of the language-mismatch warning; argument 0 is the declared language and argument 1 the language of the text, both Strings. */
@@ -281,6 +339,8 @@ public enum MessageKey {
     IMPORT_CARD_COVER("import.card.cover"),
     /** Button that discards the opened book and returns to the drop zone. */
     IMPORT_CANCEL("import.cancel"),
+    /** Hover explanation of the control labelled by {@link #IMPORT_CANCEL}. */
+    IMPORT_CANCEL_TIP("import.cancel.tip"),
     /** Heading of the warning about a declared language the application cannot name. */
     IMPORT_UNRECOGNIZED_TITLE("import.unrecognized.title"),
     /** Body of that warning; argument 0 is the code as the book wrote it. */
@@ -313,6 +373,8 @@ public enum MessageKey {
     IMPORT_UNSUPPORTED_HINT("import.unsupported.hint"),
     /** Button that moves on from an opened book to the brief. */
     IMPORT_CONTINUE("import.continue"),
+    /** Hover explanation of the control labelled by {@link #IMPORT_CONTINUE}. */
+    IMPORT_CONTINUE_TIP("import.continue.tip"),
     /** Heading of the book-brief screen. */
     BRIEF_TITLE("brief.title"),
     /** Line under the heading saying what the brief is for. */
@@ -327,20 +389,30 @@ public enum MessageKey {
     BRIEF_CARD_ALSO("brief.card.also"),
     /** Heading of the quality-versus-speed card. */
     BRIEF_CARD_QUALITY("brief.card.quality"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_CARD_QUALITY}. */
+    BRIEF_CARD_QUALITY_TIP("brief.card.quality.tip"),
     /** Tag on a card whose choices nothing reads yet. */
     BRIEF_SOON("brief.soon"),
     /** Label of the source language box. */
     BRIEF_SOURCE_LABEL("brief.source.label"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_SOURCE_LABEL}. */
+    BRIEF_SOURCE_LABEL_TIP("brief.source.label.tip"),
     /** Shown in place of the source language when the book declares none. */
     BRIEF_SOURCE_UNDECLARED("brief.source.undeclared"),
     /** Label of the target-language picker. */
     BRIEF_TARGET_LABEL("brief.target.label"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TARGET_LABEL}. */
+    BRIEF_TARGET_LABEL_TIP("brief.target.label.tip"),
     /** Label of the genre field. */
     BRIEF_TONE_GENRE("brief.tone.genre"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_GENRE}. */
+    BRIEF_TONE_GENRE_TIP("brief.tone.genre.tip"),
     /** Prompt text of the genre field. */
     BRIEF_TONE_GENRE_PROMPT("brief.tone.genre.prompt"),
     /** Label of the register picker. */
     BRIEF_TONE_REGISTER("brief.tone.register"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_REGISTER}. */
+    BRIEF_TONE_REGISTER_TIP("brief.tone.register.tip"),
     /** Register option: formal and literary. */
     BRIEF_REGISTER_FORMAL("brief.register.formal"),
     /** Register option: neutral. */
@@ -349,24 +421,38 @@ public enum MessageKey {
     BRIEF_REGISTER_CASUAL("brief.register.casual"),
     /** Label of the narrative-voice and era notes field. */
     BRIEF_TONE_VOICE("brief.tone.voice"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_VOICE}. */
+    BRIEF_TONE_VOICE_TIP("brief.tone.voice.tip"),
     /** Prompt text of the narrative-voice field. */
     BRIEF_TONE_VOICE_PROMPT("brief.tone.voice.prompt"),
     /** Label of the audience field. */
     BRIEF_TONE_AUDIENCE("brief.tone.audience"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_AUDIENCE}. */
+    BRIEF_TONE_AUDIENCE_TIP("brief.tone.audience.tip"),
     /** Prompt text of the audience field. */
     BRIEF_TONE_AUDIENCE_PROMPT("brief.tone.audience.prompt"),
     /** Label of the character-and-place-names policy. */
     BRIEF_POLICY_NAMES("brief.policy.names"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_NAMES}. */
+    BRIEF_POLICY_NAMES_TIP("brief.policy.names.tip"),
     /** Label of the foreign-language-passages policy. */
     BRIEF_POLICY_FOREIGN("brief.policy.foreign"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_FOREIGN}. */
+    BRIEF_POLICY_FOREIGN_TIP("brief.policy.foreign.tip"),
     /** Hint under the foreign-passages policy. */
     BRIEF_POLICY_FOREIGN_HINT("brief.policy.foreign.hint"),
     /** Label of the footnotes policy. */
     BRIEF_POLICY_FOOTNOTES("brief.policy.footnotes"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_FOOTNOTES}. */
+    BRIEF_POLICY_FOOTNOTES_TIP("brief.policy.footnotes.tip"),
     /** Label of the units policy. */
     BRIEF_POLICY_UNITS("brief.policy.units"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_UNITS}. */
+    BRIEF_POLICY_UNITS_TIP("brief.policy.units.tip"),
     /** Label of the faithful-to-natural balance slider. */
     BRIEF_POLICY_BALANCE("brief.policy.balance"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_BALANCE}. */
+    BRIEF_POLICY_BALANCE_TIP("brief.policy.balance.tip"),
     /** Hint naming the three regions of the balance slider. */
     BRIEF_POLICY_BALANCE_HINT("brief.policy.balance.hint"),
     /** Policy option: translate. */
@@ -385,12 +471,20 @@ public enum MessageKey {
     BRIEF_OPTION_METRIC("brief.option.metric"),
     /** Switch for translating table-of-contents and navigation labels. */
     BRIEF_AUX_NAV("brief.aux.nav"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_AUX_NAV}. */
+    BRIEF_AUX_NAV_TIP("brief.aux.nav.tip"),
     /** Switch for translating image alternative text. */
     BRIEF_AUX_ALT("brief.aux.alt"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_AUX_ALT}. */
+    BRIEF_AUX_ALT_TIP("brief.aux.alt.tip"),
     /** Switch for translating the book's title and author metadata. */
     BRIEF_AUX_METADATA("brief.aux.metadata"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_AUX_METADATA}. */
+    BRIEF_AUX_METADATA_TIP("brief.aux.metadata.tip"),
     /** Switch for translating values in the front matter. */
     BRIEF_AUX_FRONTMATTER("brief.aux.frontmatter"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_AUX_FRONTMATTER}. */
+    BRIEF_AUX_FRONTMATTER_TIP("brief.aux.frontmatter.tip"),
     /** Hint under the front-matter switch. */
     BRIEF_AUX_FRONTMATTER_HINT("brief.aux.frontmatter.hint"),
     /** Quality option: fastest. */
@@ -413,18 +507,26 @@ public enum MessageKey {
     BRIEF_MODEL_NONE("brief.model.none"),
     /** Link on the model row that opens the settings. */
     BRIEF_MODEL_CHANGE("brief.model.change"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_MODEL_CHANGE}. */
+    BRIEF_MODEL_CHANGE_TIP("brief.model.change.tip"),
     /** Message beside the language boxes when source and target are the same language. */
     BRIEF_LANGUAGES_SAME("brief.languages.same"),
     /** Button that returns from the brief to the import screen. */
     BRIEF_BACK("brief.back"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_BACK}. */
+    BRIEF_BACK_TIP("brief.back.tip"),
     /** Button that moves on from the brief to the next step. */
     BRIEF_CONTINUE("brief.continue"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_CONTINUE}. */
+    BRIEF_CONTINUE_TIP("brief.continue.tip"),
     /** Heading of the state shown by a screen that needs a book when none is open. */
     NOBOOK_TITLE("nobook.title"),
     /** Sentence reporting that no book has been opened yet. */
     NOBOOK_REPORT("nobook.report"),
     /** Button from the no-book state to the import screen. */
     NOBOOK_OPEN("nobook.open"),
+    /** Hover explanation of the control labelled by {@link #NOBOOK_OPEN}. */
+    NOBOOK_OPEN_TIP("nobook.open.tip"),
     /** Heading of the structure screen. */
     STRUCTURE_TITLE("structure.title"),
     /** Title shown for a structure node the book gives none. */
@@ -433,8 +535,12 @@ public enum MessageKey {
     STRUCTURE_TOTAL("structure.total"),
     /** Button that moves on from the structure screen to the next available step. */
     STRUCTURE_CONTINUE("structure.continue"),
+    /** Hover explanation of the control labelled by {@link #STRUCTURE_CONTINUE}. */
+    STRUCTURE_CONTINUE_TIP("structure.continue.tip"),
     /** Heading of the card holding the structure tree. */
     STRUCTURE_READING_ORDER("structure.readingOrder"),
+    /** Hover explanation of the control labelled by {@link #STRUCTURE_READING_ORDER}. */
+    STRUCTURE_READING_ORDER_TIP("structure.readingOrder.tip"),
     /** Caption of the translatable-segment count in the statistics card. */
     STRUCTURE_STAT_SEGMENTS("structure.stat.segments"),
     /** Caption of the word count in the statistics card. */
@@ -495,32 +601,58 @@ public enum MessageKey {
     NAMES_STYLE_SUBTITLE("namesStyle.subtitle"),
     /** Information banner saying the step can be skipped. */
     NAMES_STYLE_SKIP("namesStyle.skip"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_SKIP}. */
+    NAMES_STYLE_SKIP_TIP("namesStyle.skip.tip"),
     /** Button that returns from names and style to the structure screen. */
     NAMES_STYLE_BACK("namesStyle.back"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_BACK}. */
+    NAMES_STYLE_BACK_TIP("namesStyle.back.tip"),
     /** Button that starts the run from names and style. */
     NAMES_STYLE_START("namesStyle.start"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_START}. */
+    NAMES_STYLE_START_TIP("namesStyle.start.tip"),
     /** Heading of the glossary card. */
     NAMES_STYLE_GLOSSARY_TITLE("namesStyle.glossary.title"),
     /** Button that opens the Add term card. */
     NAMES_STYLE_ADD("namesStyle.add"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_ADD}. */
+    NAMES_STYLE_ADD_TIP("namesStyle.add.tip"),
     /** Button that runs the model name scan. */
     NAMES_STYLE_MODEL_SCAN("namesStyle.modelScan"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_MODEL_SCAN}. */
+    NAMES_STYLE_MODEL_SCAN_TIP("namesStyle.modelScan.tip"),
     /** Button that imports a glossary CSV file. */
     NAMES_STYLE_IMPORT("namesStyle.import"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_IMPORT}. */
+    NAMES_STYLE_IMPORT_TIP("namesStyle.import.tip"),
     /** Button that exports the glossary to a CSV file. */
     NAMES_STYLE_EXPORT("namesStyle.export"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_EXPORT}. */
+    NAMES_STYLE_EXPORT_TIP("namesStyle.export.tip"),
     /** Glossary column of the source term. */
     NAMES_STYLE_COLUMN_SOURCE("namesStyle.column.source"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_SOURCE}. */
+    NAMES_STYLE_COLUMN_SOURCE_TIP("namesStyle.column.source.tip"),
     /** Glossary column of the term's type. */
     NAMES_STYLE_COLUMN_TYPE("namesStyle.column.type"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_TYPE}. */
+    NAMES_STYLE_COLUMN_TYPE_TIP("namesStyle.column.type.tip"),
     /** Glossary column of the chosen rendering. */
     NAMES_STYLE_COLUMN_TARGET("namesStyle.column.target"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_TARGET}. */
+    NAMES_STYLE_COLUMN_TARGET_TIP("namesStyle.column.target.tip"),
     /** Glossary column of the grammatical gender. */
     NAMES_STYLE_COLUMN_GENDER("namesStyle.column.gender"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_GENDER}. */
+    NAMES_STYLE_COLUMN_GENDER_TIP("namesStyle.column.gender.tip"),
     /** Glossary column of the lock switch. */
     NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_LOCKED}. */
+    NAMES_STYLE_COLUMN_LOCKED_TIP("namesStyle.column.locked.tip"),
     /** Accessible name of the row's remove action. */
     NAMES_STYLE_REMOVE("namesStyle.remove"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_REMOVE}. */
+    NAMES_STYLE_REMOVE_TIP("namesStyle.remove.tip"),
     /** Refusal of a lock on a term that has no target. */
     NAMES_STYLE_LOCK_NEEDS_TARGET("namesStyle.lockNeedsTarget"),
     /** Refusal of a duplicate term; argument 0 is the typed term. */
@@ -559,30 +691,52 @@ public enum MessageKey {
     DIALOG_ADD_TERM_SUBTITLE("dialog.addTerm.subtitle"),
     /** Label of the source field. */
     DIALOG_ADD_TERM_SOURCE("dialog.addTerm.source"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_SOURCE}. */
+    DIALOG_ADD_TERM_SOURCE_TIP("dialog.addTerm.source.tip"),
     /** Label of the target field. */
     DIALOG_ADD_TERM_TARGET("dialog.addTerm.target"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_TARGET}. */
+    DIALOG_ADD_TERM_TARGET_TIP("dialog.addTerm.target.tip"),
     /** Label of the type choice. */
     DIALOG_ADD_TERM_TYPE("dialog.addTerm.type"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_TYPE}. */
+    DIALOG_ADD_TERM_TYPE_TIP("dialog.addTerm.type.tip"),
     /** Label of the gender choice. */
     DIALOG_ADD_TERM_GENDER("dialog.addTerm.gender"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_GENDER}. */
+    DIALOG_ADD_TERM_GENDER_TIP("dialog.addTerm.gender.tip"),
     /** Label of the lock switch. */
     DIALOG_ADD_TERM_LOCK("dialog.addTerm.lock"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_LOCK}. */
+    DIALOG_ADD_TERM_LOCK_TIP("dialog.addTerm.lock.tip"),
     /** Button that closes the Add term card without adding. */
     DIALOG_ADD_TERM_CANCEL("dialog.addTerm.cancel"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_CANCEL}. */
+    DIALOG_ADD_TERM_CANCEL_TIP("dialog.addTerm.cancel.tip"),
     /** Button that adds the term. */
     DIALOG_ADD_TERM_CONFIRM("dialog.addTerm.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_ADD_TERM_CONFIRM}. */
+    DIALOG_ADD_TERM_CONFIRM_TIP("dialog.addTerm.confirm.tip"),
     /** Refusal of an Add term with no source text. */
     DIALOG_ADD_TERM_REQUIRED("dialog.addTerm.required"),
     /** Heading of the translating dashboard. */
     TRANSLATING_TITLE("translating.title"),
     /** Button that starts the first run from the dashboard. */
     TRANSLATING_START("translating.start"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_START}. */
+    TRANSLATING_START_TIP("translating.start.tip"),
     /** Button that asks the run to pause at its next boundary. */
     TRANSLATING_PAUSE("translating.pause"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_PAUSE}. */
+    TRANSLATING_PAUSE_TIP("translating.pause.tip"),
     /** Button that asks a paused run to continue. */
     TRANSLATING_RESUME("translating.resume"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_RESUME}. */
+    TRANSLATING_RESUME_TIP("translating.resume.tip"),
     /** Button that asks the run to end. */
     TRANSLATING_STOP("translating.stop"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_STOP}. */
+    TRANSLATING_STOP_TIP("translating.stop.tip"),
     /** Caption of the accepted-segments tile. */
     TRANSLATING_COUNT_ACCEPTED("translating.count.accepted"),
     /** Caption of the flagged-segments tile. */
@@ -653,10 +807,16 @@ public enum MessageKey {
     TRANSLATING_PAUSED_TEXT("translating.pausedText"),
     /** Button that opens the flagged segments for review; argument 0 is the number of flagged segments. */
     TRANSLATING_REVIEW_FLAGGED("translating.reviewFlagged"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_REVIEW_FLAGGED}. */
+    TRANSLATING_REVIEW_FLAGGED_TIP("translating.reviewFlagged.tip"),
     /** Button that leaves a completed run for the Export step. */
     TRANSLATING_CONTINUE("translating.continue"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_CONTINUE}. */
+    TRANSLATING_CONTINUE_TIP("translating.continue.tip"),
     /** Button that goes back to the Names and style step. */
     TRANSLATING_BACK("translating.back"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_BACK}. */
+    TRANSLATING_BACK_TIP("translating.back.tip"),
     /** Banner title of a run state; argument 0 is the state's token (idle to failed); stopped and failed are neutral. */
     TRANSLATING_STATE_TITLE("translating.stateTitle"),
     /** Banner text of a run state; argument 0 is the same token as for {@link #TRANSLATING_STATE_TITLE}. */
@@ -665,7 +825,11 @@ public enum MessageKey {
     TRANSLATING_PROVIDER_TEXT("translating.providerText"),
     TRANSLATING_PROVIDER_TEXT_NO_HOST("translating.providerTextNoHost"),
     TRANSLATING_RETRY_NOW("translating.retryNow"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_RETRY_NOW}. */
+    TRANSLATING_RETRY_NOW_TIP("translating.retryNow.tip"),
     TRANSLATING_STAY_PAUSED("translating.stayPaused"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_STAY_PAUSED}. */
+    TRANSLATING_STAY_PAUSED_TIP("translating.stayPaused.tip"),
     /** Banner title of a failure reported in place, such as a destination that may not be replaced. */
     TRANSLATING_REFUSED_TITLE("translating.refusedTitle"),
     /** Banner title of a start refused because an input is missing. */
@@ -676,6 +840,8 @@ public enum MessageKey {
     TRANSLATING_WAITING_FOR_MODEL("translating.waitingForModel"),
     /** Button on the provider-error banner that opens the provider settings. */
     TRANSLATING_OPEN_SETTINGS("translating.openSettings"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_OPEN_SETTINGS}. */
+    TRANSLATING_OPEN_SETTINGS_TIP("translating.openSettings.tip"),
     /** Heading of the export screen once a book was written. */
     EXPORT_TITLE("export.title"),
     /** Line under the export heading: the book is written when Export book is pressed, at any time. */
@@ -688,14 +854,22 @@ public enum MessageKey {
     EXPORT_FORMAT_HINT("export.format.hint"),
     /** Button that shows the written file in the system file manager. */
     EXPORT_REVEAL("export.reveal"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_REVEAL}. */
+    EXPORT_REVEAL_TIP("export.reveal.tip"),
     /** Heading of the card of side files written beside the book. */
     EXPORT_ALSO_TITLE("export.also.title"),
     /** Label of the glossary side file. */
     EXPORT_AUX_GLOSSARY("export.aux.glossary"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_AUX_GLOSSARY}. */
+    EXPORT_AUX_GLOSSARY_TIP("export.aux.glossary.tip"),
     /** Label of the bilingual-copy side file. */
     EXPORT_AUX_BILINGUAL("export.aux.bilingual"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_AUX_BILINGUAL}. */
+    EXPORT_AUX_BILINGUAL_TIP("export.aux.bilingual.tip"),
     /** Label of the quality-report side file. */
     EXPORT_AUX_REPORT("export.aux.report"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_AUX_REPORT}. */
+    EXPORT_AUX_REPORT_TIP("export.aux.report.tip"),
     /** Heading of the card holding the final consistency pass. */
     EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
     /** Note under the consistency-pass switch saying what it does. */
@@ -734,16 +908,26 @@ public enum MessageKey {
     EXPORT_COMPLETE_SIZE("export.complete.size"),
     /** Button that opens the written book in the program the system associates with it. */
     EXPORT_OPEN_BOOK("export.openBook"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_OPEN_BOOK}. */
+    EXPORT_OPEN_BOOK_TIP("export.openBook.tip"),
     /** Label of the destination field beside Browse. */
     EXPORT_SAVE_TO("export.saveTo"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_SAVE_TO}. */
+    EXPORT_SAVE_TO_TIP("export.saveTo.tip"),
     /** Button that opens the system save dialog for the destination. */
     EXPORT_BROWSE("export.browse"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_BROWSE}. */
+    EXPORT_BROWSE_TIP("export.browse.tip"),
     /** Label of the switch that allows replacing an existing file at the destination. */
     EXPORT_REPLACE("export.replace"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_REPLACE}. */
+    EXPORT_REPLACE_TIP("export.replace.tip"),
     /** The read-only format row; argument 0 is the format's display name. */
     EXPORT_FORMAT_SAME("export.format.same"),
     /** The button that writes the book. */
     EXPORT_ACTION("export.action"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_ACTION}. */
+    EXPORT_ACTION_TIP("export.action.tip"),
     /** Caption of the tile counting the segments written translated. */
     EXPORT_TILE_WRITTEN("export.tile.written"),
     /** Caption of the tile giving the share of written segments accepted without repair. */
@@ -758,6 +942,8 @@ public enum MessageKey {
     EXPORT_CHECK_LANGUAGE("export.check.language"),
     /** The forward action of the last step, always unavailable. */
     EXPORT_NEXT("export.next"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_NEXT}. */
+    EXPORT_NEXT_TIP("export.next.tip"),
     /** Display name of the literary fiction genre offered on the Book Brief. */
     GENRE_LITERARY_FICTION("genre.literaryFiction"),
     /** Display name of the classic literature genre offered on the Book Brief. */
@@ -846,8 +1032,12 @@ public enum MessageKey {
     DIALOG_REPLACE_RUN_STOPPED("dialog.replaceRun.stopped"),
     /** Button that leaves the run and the open book untouched. */
     DIALOG_REPLACE_RUN_KEEP("dialog.replaceRun.keep"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_REPLACE_RUN_KEEP}. */
+    DIALOG_REPLACE_RUN_KEEP_TIP("dialog.replaceRun.keep.tip"),
     /** Button that discards the run and imports the other book. */
     DIALOG_REPLACE_RUN_CONFIRM("dialog.replaceRun.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_REPLACE_RUN_CONFIRM}. */
+    DIALOG_REPLACE_RUN_CONFIRM_TIP("dialog.replaceRun.confirm.tip"),
     /** Line shown while the discarded run is being stopped. */
     DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping"),
     /** Success toast after an accept; argument 0 is the segment's locator, argument 1 how many flagged segments remain. */
@@ -868,14 +1058,20 @@ public enum MessageKey {
     REVIEW_BADGE_LOW_SCORE("review.badge.lowScore"),
     /** Filter chip listing every flagged segment. */
     REVIEW_CHIP_ALL("review.chip.all"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_ALL}. */
+    REVIEW_CHIP_ALL_TIP("review.chip.all.tip"),
     /** Heading of the review panel. */
     REVIEW_TITLE("review.title"),
     /** Button that closes the review panel and returns to the run's progress. */
     REVIEW_BACK("review.back"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_BACK}. */
+    REVIEW_BACK_TIP("review.back.tip"),
     /** Empty state of the review panel when no segment is listed. */
     REVIEW_EMPTY("review.empty"),
     /** Mark on the target pane, which the person can edit. */
     REVIEW_EDITABLE("review.editable"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_EDITABLE}. */
+    REVIEW_EDITABLE_TIP("review.editable.tip"),
     /** Caption of the line that names what the model knew when it drafted the segment. */
     REVIEW_CONTEXT("review.context"),
     /** Caption of the list of a segment's findings. */
@@ -886,42 +1082,72 @@ public enum MessageKey {
     REVIEW_RAISED_BY("review.raisedBy"),
     /** Button that accepts the selected segment as it stands. */
     REVIEW_ACCEPT("review.accept"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_ACCEPT}. */
+    REVIEW_ACCEPT_TIP("review.accept.tip"),
     /** Manual mode's Accept while the run waits on the segment: confirms it and lets the run go on. */
     REVIEW_ACCEPT_CONTINUE("review.acceptContinue"),
     /** Button that saves the person's edit of the target. */
     REVIEW_SAVE("review.save"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_SAVE}. */
+    REVIEW_SAVE_TIP("review.save.tip"),
     /** Button that restores the machine target. */
     REVIEW_REVERT("review.revert"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_REVERT}. */
+    REVIEW_REVERT_TIP("review.revert.tip"),
     /** Button that leaves the selected segment flagged and moves on to the next one. */
     REVIEW_SKIP("review.skip"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_SKIP}. */
+    REVIEW_SKIP_TIP("review.skip.tip"),
     /** Filter chip listing flagged segments about names. */
     REVIEW_CHIP_NAMES("review.chip.names"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_NAMES}. */
+    REVIEW_CHIP_NAMES_TIP("review.chip.names.tip"),
     /** Filter chip listing flagged segments with omissions. */
     REVIEW_CHIP_OMISSIONS("review.chip.omissions"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_OMISSIONS}. */
+    REVIEW_CHIP_OMISSIONS_TIP("review.chip.omissions.tip"),
     /** Filter chip listing flagged segments with a foreign passage kept. */
     REVIEW_CHIP_FOREIGN_KEPT("review.chip.foreignKept"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_FOREIGN_KEPT}. */
+    REVIEW_CHIP_FOREIGN_KEPT_TIP("review.chip.foreignKept.tip"),
     /** Browse chip listing every segment, offered after an Unattended run. */
     REVIEW_CHIP_ALL_SEGMENTS("review.chip.allSegments"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_ALL_SEGMENTS}. */
+    REVIEW_CHIP_ALL_SEGMENTS_TIP("review.chip.allSegments.tip"),
     /** Button that retries the selected segment's translation as it is. */
     REVIEW_RETRY("review.retry"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_RETRY}. */
+    REVIEW_RETRY_TIP("review.retry.tip"),
     /** Button that opens the card asking for a note and a lower temperature before a retry. */
     REVIEW_RETRY_NOTE("review.retryNote"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_RETRY_NOTE}. */
+    REVIEW_RETRY_NOTE_TIP("review.retryNote.tip"),
     /** Caption of a backward-revision proposal shown beside the person's text. */
     REVIEW_PROPOSAL("review.proposal"),
     /** Button that applies the shown proposal as the person's own edit. */
     REVIEW_ACCEPT_PROPOSAL("review.acceptProposal"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_ACCEPT_PROPOSAL}. */
+    REVIEW_ACCEPT_PROPOSAL_TIP("review.acceptProposal.tip"),
     /** Shown in place when a retry is asked for and no model is chosen. */
     REVIEW_RETRY_NO_MODEL("review.retryNoModel"),
     /** Heading of the retry-with-note card. */
     DIALOG_RETRY_TITLE("dialog.retry.title"),
     /** Caption of the note field of the retry card. */
     DIALOG_RETRY_NOTE("dialog.retry.note"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_NOTE}. */
+    DIALOG_RETRY_NOTE_TIP("dialog.retry.note.tip"),
     /** Check box of the retry card that lowers the sampling temperature. */
     DIALOG_RETRY_LOWER("dialog.retry.lower"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_LOWER}. */
+    DIALOG_RETRY_LOWER_TIP("dialog.retry.lower.tip"),
     /** Button that closes the retry card without retrying. */
     DIALOG_RETRY_CANCEL("dialog.retry.cancel"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_CANCEL}. */
+    DIALOG_RETRY_CANCEL_TIP("dialog.retry.cancel.tip"),
     /** Button that retries the segment with the note and the temperature chosen. */
-    DIALOG_RETRY_CONFIRM("dialog.retry.confirm");
+    DIALOG_RETRY_CONFIRM("dialog.retry.confirm"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_RETRY_CONFIRM}. */
+    DIALOG_RETRY_CONFIRM_TIP("dialog.retry.confirm.tip");
 
     private final String key;
 

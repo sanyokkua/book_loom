@@ -22,6 +22,7 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -111,6 +112,7 @@ public final class ImportController {
         // The card carries the book's title, author and file name, which are book content, so they go no higher than
         // TRACE.
         log.trace("import screen state {}", viewModel.state().get());
+        Tips.install(messages, browseButton, MessageKey.IMPORT_BROWSE_TIP);
         browseButton.setOnAction(event -> chooseFile());
         browseButton.disableProperty().bind(viewModel.opening());
         dropzone.setOnDragEntered(event -> markDropzone(isDroppable(event)));
@@ -209,6 +211,7 @@ public final class ImportController {
                 new StepFooter.Action(
                         "import-choose-another",
                         messages.get(MessageKey.IMPORT_CHOOSE_ANOTHER),
+                        messages.get(MessageKey.IMPORT_CHOOSE_ANOTHER_TIP),
                         "btn-secondary",
                         this::chooseFile)));
         return nodes;
@@ -217,9 +220,17 @@ public final class ImportController {
     private Node detectedFooter() {
         return StepFooter.of(
                 new StepFooter.Action(
-                        "import-cancel", messages.get(MessageKey.IMPORT_CANCEL), "btn-ghost", this::onCancel),
+                        "import-cancel",
+                        messages.get(MessageKey.IMPORT_CANCEL),
+                        messages.get(MessageKey.IMPORT_CANCEL_TIP),
+                        "btn-ghost",
+                        this::onCancel),
                 new StepFooter.Action(
-                        "import-continue", messages.get(MessageKey.IMPORT_CONTINUE), "btn-primary", this::onContinue));
+                        "import-continue",
+                        messages.get(MessageKey.IMPORT_CONTINUE),
+                        messages.get(MessageKey.IMPORT_CONTINUE_TIP),
+                        "btn-primary",
+                        this::onContinue));
     }
 
     private void onCancel() {

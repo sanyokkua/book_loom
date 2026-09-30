@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import javafx.beans.binding.Bindings;
@@ -21,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.ui.control.ComparePanes;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -73,6 +75,7 @@ final class ReviewComparePane extends VBox {
         score.setMinimumFractionDigits(SCORE_DIGITS);
         score.setMaximumFractionDigits(SCORE_DIGITS);
         panes = new ComparePanes(sourceName, targetName, messages);
+        Tips.install(messages, panes.target(), MessageKey.REVIEW_EDITABLE_TIP);
         panes.target().textProperty().bindBidirectional(viewModel.editorText());
         getChildren()
                 .addAll(
@@ -144,6 +147,7 @@ final class ReviewComparePane extends VBox {
         final Button accept = action(
                 "review-accept-proposal",
                 MessageKey.REVIEW_ACCEPT_PROPOSAL,
+                MessageKey.REVIEW_ACCEPT_PROPOSAL_TIP,
                 "btn-secondary",
                 viewModel::acceptProposal,
                 viewModel.actionsAvailable());
@@ -164,6 +168,7 @@ final class ReviewComparePane extends VBox {
         final Button accept = action(
                 "review-accept",
                 MessageKey.REVIEW_ACCEPT,
+                MessageKey.REVIEW_ACCEPT_TIP,
                 "btn-primary",
                 viewModel::accept,
                 viewModel.acceptAvailable());
@@ -176,40 +181,65 @@ final class ReviewComparePane extends VBox {
 
     private FlowPane actions() {
         final FlowPane row = new FlowPane(SPACING, SPACING / 2);
-        row.getChildren()
-                .addAll(
-                        acceptButton(),
-                        action(
-                                "review-save",
-                                MessageKey.REVIEW_SAVE,
-                                "btn-secondary",
-                                viewModel::saveEdit,
-                                Bindings.and(viewModel.actionsAvailable(), viewModel.dirty())),
-                        available("review-revert", MessageKey.REVIEW_REVERT, "btn-secondary", viewModel::revert),
-                        available("review-skip", MessageKey.REVIEW_SKIP, "btn-ghost", viewModel::skip));
-        row.getChildren()
-                .addAll(
-                        available(
-                                "review-retry",
-                                MessageKey.REVIEW_RETRY,
-                                "btn-secondary",
-                                () -> viewModel.retry(null, false)),
-                        available("review-retry-note", MessageKey.REVIEW_RETRY_NOTE, "btn-ghost", this::askForNote));
+        row.getChildren().addAll(decisions());
+        row.getChildren().addAll(retries());
         row.setAlignment(Pos.CENTER_LEFT);
         return row;
     }
 
-    private Button available(final String id, final MessageKey label, final String style, final Runnable run) {
-        return action(id, label, style, run, viewModel.actionsAvailable());
+    private List<Button> decisions() {
+        return List.of(
+                acceptButton(),
+                action(
+                        "review-save",
+                        MessageKey.REVIEW_SAVE,
+                        MessageKey.REVIEW_SAVE_TIP,
+                        "btn-secondary",
+                        viewModel::saveEdit,
+                        Bindings.and(viewModel.actionsAvailable(), viewModel.dirty())),
+                available(
+                        "review-revert",
+                        MessageKey.REVIEW_REVERT,
+                        MessageKey.REVIEW_REVERT_TIP,
+                        "btn-secondary",
+                        viewModel::revert),
+                available(
+                        "review-skip",
+                        MessageKey.REVIEW_SKIP,
+                        MessageKey.REVIEW_SKIP_TIP,
+                        "btn-ghost",
+                        viewModel::skip));
+    }
+
+    private List<Button> retries() {
+        return List.of(
+                available(
+                        "review-retry",
+                        MessageKey.REVIEW_RETRY,
+                        MessageKey.REVIEW_RETRY_TIP,
+                        "btn-secondary",
+                        () -> viewModel.retry(null, false)),
+                available(
+                        "review-retry-note",
+                        MessageKey.REVIEW_RETRY_NOTE,
+                        MessageKey.REVIEW_RETRY_NOTE_TIP,
+                        "btn-ghost",
+                        this::askForNote));
+    }
+
+    private Button available(
+            final String id, final MessageKey label, final MessageKey tip, final String style, final Runnable run) {
+        return action(id, label, tip, style, run, viewModel.actionsAvailable());
     }
 
     private Button action(
             final String id,
             final MessageKey label,
+            final MessageKey tip,
             final String style,
             final Runnable run,
             final ObservableBooleanValue available) {
-        final Button button = new Button(messages.get(label));
+        final Button button = Tips.install(messages, new Button(messages.get(label)), tip);
         button.setId(id);
         button.getStyleClass().add(style);
         button.disableProperty().bind(Bindings.not(available));

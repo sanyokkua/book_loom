@@ -25,6 +25,7 @@ import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.LiveChunkPanel;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TaggedLog;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -69,15 +70,24 @@ final class TranslatingView {
 
     /** One run control: its id suffix, its look, its label and which part of the view model's table decides it. */
     private record Control(
-            String name, String styleClass, MessageKey label, Function<Controls, ControlState> availability) {}
+            String name,
+            String styleClass,
+            MessageKey label,
+            MessageKey tip,
+            Function<Controls, ControlState> availability) {}
 
-    private static final Control START =
-            new Control("start", "btn-primary", MessageKey.TRANSLATING_START, Controls::start);
-    private static final Control PAUSE =
-            new Control("pause", "btn-secondary", MessageKey.TRANSLATING_PAUSE, Controls::pause);
-    private static final Control RESUME =
-            new Control("resume", "btn-primary", MessageKey.TRANSLATING_RESUME, Controls::resume);
-    private static final Control STOP = new Control("stop", "btn-ghost", MessageKey.TRANSLATING_STOP, Controls::stop);
+    private static final Control START = new Control(
+            "start", "btn-primary", MessageKey.TRANSLATING_START, MessageKey.TRANSLATING_START_TIP, Controls::start);
+    private static final Control PAUSE = new Control(
+            "pause", "btn-secondary", MessageKey.TRANSLATING_PAUSE, MessageKey.TRANSLATING_PAUSE_TIP, Controls::pause);
+    private static final Control RESUME = new Control(
+            "resume",
+            "btn-primary",
+            MessageKey.TRANSLATING_RESUME,
+            MessageKey.TRANSLATING_RESUME_TIP,
+            Controls::resume);
+    private static final Control STOP = new Control(
+            "stop", "btn-ghost", MessageKey.TRANSLATING_STOP, MessageKey.TRANSLATING_STOP_TIP, Controls::stop);
 
     /**
      * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
@@ -140,6 +150,9 @@ final class TranslatingView {
         final Button stay =
                 banner.addAction("translating-stay-paused", messages.get(MessageKey.TRANSLATING_STAY_PAUSED), () -> {});
         stay.getStyleClass().setAll("btn-ghost");
+        Tips.install(messages, retry, MessageKey.TRANSLATING_RETRY_NOW_TIP);
+        Tips.install(messages, settings, MessageKey.TRANSLATING_OPEN_SETTINGS_TIP);
+        Tips.install(messages, stay, MessageKey.TRANSLATING_STAY_PAUSED_TIP);
         for (final Button action : new Button[] {retry, settings, stay}) {
             Banner.setActionShown(action, false);
         }
@@ -229,6 +242,7 @@ final class TranslatingView {
             final StateMirror mirror, final ReviewViewModel review, final ReviewPanel panel, final Messages messages) {
         final Button button = new Button();
         button.setId("translating-review-flagged");
+        Tips.install(messages, button, MessageKey.TRANSLATING_REVIEW_FLAGGED_TIP);
         button.getStyleClass().add("btn-ghost");
         button.textProperty()
                 .bind(Bindings.createStringBinding(
@@ -250,11 +264,13 @@ final class TranslatingView {
                 new StepFooter.Action(
                         "translating-back",
                         messages.get(MessageKey.TRANSLATING_BACK),
+                        messages.get(MessageKey.TRANSLATING_BACK_TIP),
                         "btn-ghost",
                         () -> navigator.navigate(ViewNames.NAMES_STYLE)),
                 new StepFooter.Action(
                         "translating-continue",
                         messages.get(MessageKey.TRANSLATING_CONTINUE),
+                        messages.get(MessageKey.TRANSLATING_CONTINUE_TIP),
                         "btn-primary",
                         () -> navigator.navigate(ViewNames.EXPORT)));
         StateVisibility.shownIn(footer.forwardButton(), mirror.runState(), Set.of(RunState.COMPLETED));
@@ -266,7 +282,7 @@ final class TranslatingView {
             final Runnable action,
             final ReadOnlyObjectProperty<Controls> controls,
             final Messages messages) {
-        final Button button = new Button(messages.get(spec.label()));
+        final Button button = Tips.install(messages, new Button(messages.get(spec.label())), spec.tip());
         button.setId("translating-" + spec.name());
         button.getStyleClass().add(spec.styleClass());
         button.setOnAction(event -> action.run());

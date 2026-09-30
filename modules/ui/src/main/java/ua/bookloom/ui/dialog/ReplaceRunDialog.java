@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.RunState;
@@ -106,12 +107,14 @@ public final class ReplaceRunDialog implements ReplaceRunPrompt {
         final Button keep = (Button) card.lookupButton(keepType);
         final Button confirm = (Button) card.lookupButton(confirmType);
         keep.setId(KEEP_ID);
+        Tips.install(messages, keep, MessageKey.DIALOG_REPLACE_RUN_KEEP_TIP);
         keep.getStyleClass().add("btn-secondary");
         keep.setOnAction(event -> {
             log.debug("the run is kept");
             modalHost.hide();
         });
         confirm.setId(CONFIRM_ID);
+        Tips.install(messages, confirm, MessageKey.DIALOG_REPLACE_RUN_CONFIRM_TIP);
         confirm.getStyleClass().add("btn-danger-outline");
         confirm.setOnAction(event -> {
             log.debug("the run is to be discarded, run already stopped: {}", stopped);

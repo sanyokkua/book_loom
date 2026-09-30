@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.screen.ProviderNames;
@@ -157,6 +158,7 @@ final class NavColumn {
     private Button entry(final ViewNames view) {
         final Button button = new Button(messages.get(view.messageKey()));
         button.setId(idOf(view));
+        Tips.install(messages, button, view.tipKey());
         button.getStyleClass().add("nav-item");
         if (!view.isAvailable()) {
             button.getStyleClass().add(UNAVAILABLE_STYLE_CLASS);

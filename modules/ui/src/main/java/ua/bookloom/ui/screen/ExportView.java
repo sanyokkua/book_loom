@@ -16,6 +16,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
@@ -96,9 +97,15 @@ final class ExportView {
                 new StepFooter.Action(
                         "export-back",
                         messages.get(MessageKey.BRIEF_BACK),
+                        messages.get(MessageKey.BRIEF_BACK_TIP),
                         "btn-ghost",
                         () -> navigator.navigate(ViewNames.TRANSLATING)),
-                new StepFooter.Action("export-next", messages.get(MessageKey.EXPORT_NEXT), "btn-primary", () -> {}));
+                new StepFooter.Action(
+                        "export-next",
+                        messages.get(MessageKey.EXPORT_NEXT),
+                        messages.get(MessageKey.EXPORT_NEXT_TIP),
+                        "btn-primary",
+                        () -> {}));
     }
 
     private Node writeCard(final OpenedBook book) {
@@ -141,6 +148,7 @@ final class ExportView {
     private Node runRow() {
         final Button run = new Button(messages.get(MessageKey.EXPORT_ACTION));
         run.setId("export-run");
+        Tips.install(messages, run, MessageKey.EXPORT_ACTION_TIP);
         run.getStyleClass().add("btn-primary");
         run.disableProperty().bind(viewModel.exportAvailable().not());
         run.setOnAction(event -> {

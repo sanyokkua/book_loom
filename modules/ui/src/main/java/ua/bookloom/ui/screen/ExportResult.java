@@ -15,6 +15,7 @@ import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.control.StatTile;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ExportOutcome;
@@ -51,8 +52,16 @@ final class ExportResult {
         actions.setId("export-actions");
         actions.getChildren()
                 .addAll(
-                        action("export-reveal", MessageKey.EXPORT_REVEAL, () -> revealer.reveal(target())),
-                        action("export-open-book", MessageKey.EXPORT_OPEN_BOOK, () -> revealer.open(target())));
+                        action(
+                                "export-reveal",
+                                MessageKey.EXPORT_REVEAL,
+                                MessageKey.EXPORT_REVEAL_TIP,
+                                () -> revealer.reveal(target())),
+                        action(
+                                "export-open-book",
+                                MessageKey.EXPORT_OPEN_BOOK,
+                                MessageKey.EXPORT_OPEN_BOOK_TIP,
+                                () -> revealer.open(target())));
         reset();
     }
 
@@ -162,8 +171,8 @@ final class ExportResult {
         return line;
     }
 
-    private Button action(final String id, final MessageKey caption, final Runnable onPress) {
-        final Button button = new Button(messages.get(caption));
+    private Button action(final String id, final MessageKey caption, final MessageKey tip, final Runnable onPress) {
+        final Button button = Tips.install(messages, new Button(messages.get(caption)), tip);
         button.setId(id);
         button.getStyleClass().add("btn-secondary");
         button.setOnAction(event -> {

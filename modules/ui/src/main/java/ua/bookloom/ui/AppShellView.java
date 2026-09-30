@@ -23,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.RunStatusBar;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ToastStack;
@@ -196,6 +197,7 @@ public final class AppShellView {
         themeToggle.setOnAction(event -> themeController.toggle());
         final Button about = new Button(messages.get(MessageKey.SHELL_ABOUT), new FontIcon(Feather.INFO));
         about.setId("shell-about");
+        Tips.install(messages, about, MessageKey.SHELL_ABOUT_TIP);
         about.getStyleClass().add("shell-title-button");
         about.setOnAction(event -> openAbout());
         final HBox bar = new HBox(product, spacer, runStatus.view(), themeToggle, about);
@@ -270,6 +272,8 @@ public final class AppShellView {
     private void syncThemeToggle(final ThemeBlock block) {
         final boolean dark = block == ThemeBlock.DARK;
         themeToggle.setText(messages.get(dark ? MessageKey.SHELL_THEME_TO_LIGHT : MessageKey.SHELL_THEME_TO_DARK));
+        Tips.install(
+                messages, themeToggle, dark ? MessageKey.SHELL_THEME_TO_LIGHT_TIP : MessageKey.SHELL_THEME_TO_DARK_TIP);
         themeToggle.setGraphic(new FontIcon(dark ? Feather.SUN : Feather.MOON));
         themeToggle.setSelected(dark);
     }

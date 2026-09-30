@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
@@ -63,6 +64,7 @@ final class BriefQualityCard {
                         new BriefChoice.Option<>(QualityDial.BALANCED, MessageKey.BRIEF_QUALITY_BALANCED),
                         new BriefChoice.Option<>(QualityDial.MAX, MessageKey.BRIEF_QUALITY_MAX)),
                 viewModel::setDial);
+        Tips.install(messages, dial.node(), MessageKey.BRIEF_CARD_QUALITY_TIP);
         hint.setId("brief-quality-hint");
         hint.getStyleClass().add("hint");
         hint.setWrapText(true);
@@ -88,6 +90,7 @@ final class BriefQualityCard {
         name.getStyleClass().add("muted");
         final Button change = new Button(messages.get(MessageKey.BRIEF_MODEL_CHANGE));
         change.setId("brief-model-change");
+        Tips.install(messages, change, MessageKey.BRIEF_MODEL_CHANGE_TIP);
         change.getStyleClass().add("btn-ghost");
         change.setOnAction(event -> {
             log.debug("the model row's change link pressed: opening the settings");

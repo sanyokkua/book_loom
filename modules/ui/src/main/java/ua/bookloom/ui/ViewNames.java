@@ -15,28 +15,66 @@ import ua.bookloom.ui.i18n.MessageKey;
  */
 public enum ViewNames {
     /** Project list; has no screen and no step number. */
-    PROJECTS(MessageKey.NAV_PROJECTS, NavGroup.WORKFLOW, null, null, Feather.FOLDER),
+    PROJECTS(MessageKey.NAV_PROJECTS, MessageKey.NAV_PROJECTS_TIP, NavGroup.WORKFLOW, null, null, Feather.FOLDER),
     /** Choosing the book to translate. */
-    IMPORT(MessageKey.NAV_IMPORT, NavGroup.WORKFLOW, 1, "/ua/bookloom/ui/screen/import.fxml", null),
+    IMPORT(
+            MessageKey.NAV_IMPORT,
+            MessageKey.NAV_IMPORT_TIP,
+            NavGroup.WORKFLOW,
+            1,
+            "/ua/bookloom/ui/screen/import.fxml",
+            null),
     /** Describing the book to the translator. */
-    BOOK_BRIEF(MessageKey.NAV_BRIEF, NavGroup.WORKFLOW, 2, "/ua/bookloom/ui/screen/book-brief.fxml", null),
+    BOOK_BRIEF(
+            MessageKey.NAV_BRIEF,
+            MessageKey.NAV_BRIEF_TIP,
+            NavGroup.WORKFLOW,
+            2,
+            "/ua/bookloom/ui/screen/book-brief.fxml",
+            null),
     /** Choosing which parts of the book to translate. */
-    STRUCTURE(MessageKey.NAV_STRUCTURE, NavGroup.WORKFLOW, 3, "/ua/bookloom/ui/screen/structure.fxml", null),
+    STRUCTURE(
+            MessageKey.NAV_STRUCTURE,
+            MessageKey.NAV_STRUCTURE_TIP,
+            NavGroup.WORKFLOW,
+            3,
+            "/ua/bookloom/ui/screen/structure.fxml",
+            null),
     /** Glossary and style, where a run is started. */
-    NAMES_STYLE(MessageKey.NAV_NAMES_AND_STYLE, NavGroup.WORKFLOW, 4, "/ua/bookloom/ui/screen/names-style.fxml", null),
+    NAMES_STYLE(
+            MessageKey.NAV_NAMES_AND_STYLE,
+            MessageKey.NAV_NAMES_AND_STYLE_TIP,
+            NavGroup.WORKFLOW,
+            4,
+            "/ua/bookloom/ui/screen/names-style.fxml",
+            null),
     /** The running translation dashboard. */
-    TRANSLATING(MessageKey.NAV_TRANSLATING, NavGroup.WORKFLOW, 5, "/ua/bookloom/ui/screen/translating.fxml", null),
+    TRANSLATING(
+            MessageKey.NAV_TRANSLATING,
+            MessageKey.NAV_TRANSLATING_TIP,
+            NavGroup.WORKFLOW,
+            5,
+            "/ua/bookloom/ui/screen/translating.fxml",
+            null),
     /** Writing the translated book out. */
-    EXPORT(MessageKey.NAV_EXPORT, NavGroup.WORKFLOW, 6, "/ua/bookloom/ui/screen/export.fxml", null),
+    EXPORT(
+            MessageKey.NAV_EXPORT,
+            MessageKey.NAV_EXPORT_TIP,
+            NavGroup.WORKFLOW,
+            6,
+            "/ua/bookloom/ui/screen/export.fxml",
+            null),
     /** Provider and appearance settings. */
     SETTINGS(
             MessageKey.NAV_SETTINGS,
+            MessageKey.NAV_SETTINGS_TIP,
             NavGroup.APPLICATION,
             null,
             "/ua/bookloom/ui/screen/settings.fxml",
             Feather.SETTINGS);
 
     private final MessageKey messageKey;
+    private final MessageKey tipKey;
     private final NavGroup group;
     private final @Nullable Integer step;
     private final @Nullable String resource;
@@ -44,11 +82,13 @@ public enum ViewNames {
 
     ViewNames(
             final MessageKey messageKey,
+            final MessageKey tipKey,
             final NavGroup group,
             final @Nullable Integer step,
             final @Nullable String resource,
             final @Nullable Feather icon) {
         this.messageKey = messageKey;
+        this.tipKey = tipKey;
         this.group = group;
         this.step = step;
         this.resource = resource;
@@ -62,6 +102,15 @@ public enum ViewNames {
      */
     public MessageKey messageKey() {
         return messageKey;
+    }
+
+    /**
+     * Returns the catalogue entry explaining this screen on hover.
+     *
+     * @return the key of the navigation entry's tooltip; never null
+     */
+    public MessageKey tipKey() {
+        return tipKey;
     }
 
     /**
