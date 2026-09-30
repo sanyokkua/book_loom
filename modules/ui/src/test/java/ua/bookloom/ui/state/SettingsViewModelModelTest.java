@@ -59,7 +59,7 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
 
         onFx(() -> {
             viewModel.setModelText("  mistral-small:24b \t");
-            viewModel.check();
+            viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
@@ -90,19 +90,25 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
     @Test
     void checkAvailable_followsWhetherAModelIsChosen() {
         final SettingsViewModel viewModel = viewModel();
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isFalse();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isFalse();
 
         onFx(() -> {
             viewModel.setModelText(MODEL);
             return null;
         });
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isTrue();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isTrue();
 
         onFx(() -> {
             viewModel.setModelText("   ");
             return null;
         });
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isFalse();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isFalse();
     }
 
     // IF a model and list from one server survived a switch to another, THEN the screen would offer identifiers that
@@ -179,7 +185,9 @@ class SettingsViewModelModelTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> viewModel.modelListing().listing().get())).isTrue();
         assertThat(onFx(() -> viewModel.model().get())).isEqualTo("mistral-small:24b");
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isTrue();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isTrue();
 
         catalog.release();
         WaitForAsyncUtils.waitFor(

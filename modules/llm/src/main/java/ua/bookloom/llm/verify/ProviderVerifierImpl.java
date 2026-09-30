@@ -87,6 +87,27 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
         return verifyConfigured(selection, policy, configured.orElseThrow());
     }
 
+    @Override
+    public Result<VerificationReport> verifyConnection(String providerId) {
+        Objects.requireNonNull(providerId, "providerId");
+        final Optional<ProviderConfig> configured = providerConfigs.find(providerId);
+        log.info(
+                "Provider connection check started provider={} kind={} host={}",
+                providerId,
+                configured.map(value -> value.kind().name()).orElse("unknown"),
+                configured.map(value -> value.baseUrl().getHost()).orElse("unknown"));
+        if (configured.isEmpty()) {
+            final AppError error =
+                    AppError.of(ErrorCode.validation, "Unknown provider", "The selected provider is not registered.");
+            log.warn("Provider connection check refused unknown provider={} code={}", providerId, error.code());
+            return Result.err(error);
+        }
+        final ProviderClient client = clients.create(configured.orElseThrow());
+        final StageOutcome connection = timed(() -> verifyConnection(client, providerId));
+        log.info("Provider connection check finished provider={} stage={}", providerId, stageSummary(connection));
+        return Result.ok(new VerificationReport(List.of(connection)));
+    }
+
     private Result<VerificationReport> verifyConfigured(
             ModelSelection selection, VerificationPolicy policy, ProviderConfig config) {
         final ProviderClient client = clients.create(config);

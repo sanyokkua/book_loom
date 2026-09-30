@@ -2,78 +2,43 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import java.util.Arrays;
+import java.net.URI;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
-import javafx.beans.binding.BooleanBinding;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ObservableBooleanValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
-import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
-import ua.bookloom.api.llm.StageOutcome;
-import ua.bookloom.api.llm.StageStatus;
-import ua.bookloom.api.llm.VerificationPolicy;
-import ua.bookloom.api.llm.VerificationReport;
-import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.notify.ErrorPresenter;
 import ua.bookloom.ui.notify.Toasts;
 
 /**
  * What the settings screen shows and does about providers: which one is selected, which model is chosen for it, and
- * the outcome of checking the pair.
+ * the tests run against the pair (see {@link ProviderTestRunner}).
  *
- * <p>A singleton because the screen's controller is rebuilt on every visit while the choice must survive it. The
- * check is a plain submission to the background executor, not a JavaFX {@code Task}: the verifier reports failure by
- * <em>returning</em> it, so {@code Task.setOnFailed} would never fire (D12 of the workspace design). Everything that
- * touches a property runs on the FX Application Thread, which the methods below state; the verifier alone runs
- * elsewhere.
+ * <p>A singleton because the screen's controller is rebuilt on every visit while the choice must survive it.
+ * Everything that touches a property runs on the FX Application Thread, which the methods below state.
  */
 @Slf4j
 @Singleton
 public final class SettingsViewModel {
 
-    private final ProviderVerifier verifier;
     private final ModelListing modelListing;
-    private final Toasts toasts;
-    private final ErrorPresenter errors;
-    private final ExecutorService executor;
+    private final ProviderTestRunner tests;
     private final ObservableList<ProviderRow> providers;
     private final ReadOnlyStringWrapper selectedProviderId = new ReadOnlyStringWrapper("");
     private final StringProperty model = new SimpleStringProperty("");
-    private final ReadOnlyBooleanWrapper checking = new ReadOnlyBooleanWrapper(false);
-    private final ReadOnlyStringWrapper checkRefusal = new ReadOnlyStringWrapper("");
-    private final BooleanBinding checkAvailable;
-    private final ObservableList<StageChip> stages = FXCollections.observableArrayList();
-    private final ObservableList<StageChip> stagesView = FXCollections.unmodifiableObservableList(stages);
-
-    /**
-     * Counts every event that makes a report in flight meaningless: a check starting, another provider, another model.
-     * A report is shown only if the count is what it was when its check began; FX thread only.
-     */
-    private long checkEpoch;
 
     /**
      * Reads the registry once and selects its first provider in {@link ua.bookloom.api.llm.ProviderKind} order.
@@ -95,24 +60,39 @@ public final class SettingsViewModel {
             final ErrorPresenter errors,
             @BackgroundExecutor final ExecutorService executor) {
         Objects.requireNonNull(configs, "configs");
-        this.verifier = Objects.requireNonNull(verifier, "verifier");
         this.modelListing = Objects.requireNonNull(modelListing, "modelListing");
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
-        this.errors = Objects.requireNonNull(errors, "errors");
-        this.executor = Objects.requireNonNull(executor, "executor");
+        this.tests = new ProviderTestRunner(
+                Objects.requireNonNull(verifier, "verifier"),
+                Objects.requireNonNull(toasts, "toasts"),
+                Objects.requireNonNull(errors, "errors"),
+                Objects.requireNonNull(executor, "executor"),
+                selectedProviderId.getReadOnlyProperty(),
+                model);
         this.providers = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(rowsOf(configs)));
-        this.checkAvailable =
-                Bindings.createBooleanBinding(() -> !model.get().isBlank() && !checking.get(), model, checking);
         providers.stream().findFirst().ifPresent(first -> selectedProviderId.set(first.id()));
-        model.addListener((observed, was, now) -> onModelChanged());
         log.info("settings ready: {} provider(s), selected '{}'", providers.size(), selectedProviderId.get());
     }
 
     private static List<ProviderRow> rowsOf(final ProviderConfigs configs) {
         return configs.all().stream()
                 .sorted(Comparator.comparing(ProviderConfig::kind).thenComparing(ProviderConfig::id))
-                .map(config -> new ProviderRow(config.id(), config.baseUrl().toString()))
+                .map(SettingsViewModel::rowOf)
                 .toList();
+    }
+
+    private static ProviderRow rowOf(final ProviderConfig config) {
+        final URI url = config.baseUrl();
+        final String hostPort = url.getPort() < 0 ? url.getHost() : url.getHost() + ":" + url.getPort();
+        return new ProviderRow(config.id(), config.kind(), url.toString(), hostPort);
+    }
+
+    /**
+     * The three provider tests and the findings of the last one.
+     *
+     * @return the runner over this view model's selected provider and model
+     */
+    public ProviderTestRunner tests() {
+        return tests;
     }
 
     /**
@@ -183,43 +163,6 @@ public final class SettingsViewModel {
     }
 
     /**
-     * Whether a check is running and its report has not arrived.
-     *
-     * @return a read-only property
-     */
-    public ReadOnlyBooleanProperty checking() {
-        return checking.getReadOnlyProperty();
-    }
-
-    /**
-     * Whether a check may be started now: a model is chosen and none is already running.
-     *
-     * @return a value that follows the model and the in-progress mark
-     */
-    public ObservableBooleanValue checkAvailable() {
-        return checkAvailable;
-    }
-
-    /**
-     * Why the last check was refused as a whole for a reason the person can fix, e.g. an unknown provider.
-     *
-     * @return a read-only property holding the error's own message, empty when there is none; it is cleared when a
-     *     check starts and when the provider or the model changes
-     */
-    public ReadOnlyStringProperty checkRefusal() {
-        return checkRefusal.getReadOnlyProperty();
-    }
-
-    /**
-     * The findings of the last check, always all three in stage order once there is a report.
-     *
-     * @return a read-only list, empty before any report, after a provider or model change and while a check runs
-     */
-    public ObservableList<StageChip> stages() {
-        return stagesView;
-    }
-
-    /**
      * Selects a provider; a different one also discards the model, the offered models and the last findings, which
      * meant something only for the server they came from, then asks the new provider for its models. FX thread only.
      *
@@ -234,7 +177,6 @@ public final class SettingsViewModel {
             log.debug("selection ignored: '{}' is already selected", id);
         } else {
             selectedProviderId.set(id);
-            invalidateCheck("the provider changed");
             model.set("");
             modelListing.discard();
             modelListing.refresh(id);
@@ -254,146 +196,5 @@ public final class SettingsViewModel {
         final boolean complete = !provider.isEmpty() && !chosen.isEmpty();
         log.debug("selection complete {}: provider '{}', model chosen {}", complete, provider, !chosen.isEmpty());
         return complete ? Optional.of(new ModelSelection(provider, chosen)) : Optional.empty();
-    }
-
-    /**
-     * Starts checking the selected provider against the chosen model, in all three stages. Does nothing while no
-     * model is chosen or a check is already running. Returns at once; the report arrives on the FX thread. FX thread
-     * only.
-     */
-    public void check() {
-        if (checking.get()) {
-            log.debug("check refused: one is already running");
-            return;
-        }
-        final Optional<ModelSelection> selection = selection();
-        if (selection.isEmpty()) {
-            log.debug("check refused: no model is chosen");
-            return;
-        }
-        final ModelSelection chosen = selection.get();
-        log.info("provider check starting: provider {}, model {}", chosen.providerId(), chosen.modelId());
-        stages.clear();
-        checkRefusal.set("");
-        checkEpoch++;
-        checking.set(true);
-        submit(chosen, checkEpoch);
-    }
-
-    private void onModelChanged() {
-        invalidateCheck("the model changed");
-    }
-
-    /**
-     * Makes whatever is in flight or on screen stale. Clearing {@code checking} here, not when the stale report
-     * arrives, is what keeps the new selection from looking busy and lets the arrival be ignored outright.
-     */
-    private void invalidateCheck(final String reason) {
-        final boolean somethingShown = checking.get() || !checkRefusal.get().isEmpty() || !stages.isEmpty();
-        checkEpoch++;
-        checking.set(false);
-        checkRefusal.set("");
-        stages.clear();
-        if (somethingShown) {
-            log.debug("check state invalidated, now epoch {}: {}", checkEpoch, reason);
-        } else {
-            log.trace("nothing to invalidate, now epoch {}: {}", checkEpoch, reason);
-        }
-    }
-
-    private void submit(final ModelSelection selection, final long epoch) {
-        try {
-            executor.execute(() -> verifyOffThread(selection, epoch));
-        } catch (RuntimeException rejected) {
-            log.error("the provider check could not be submitted", rejected);
-            publish(epoch, Result.err(internalError(rejected)));
-        }
-    }
-
-    private void verifyOffThread(final ModelSelection selection, final long epoch) {
-        log.debug(
-                "verifying provider {} on {}",
-                selection.providerId(),
-                Thread.currentThread().getName());
-        final Result<VerificationReport> result = verifyGuarded(selection);
-        Platform.runLater(() -> publish(epoch, result));
-    }
-
-    private Result<VerificationReport> verifyGuarded(final ModelSelection selection) {
-        try {
-            return verifier.verify(selection, VerificationPolicy.FULL);
-        } catch (Throwable thrown) {
-            log.error("the verifier threw instead of returning a result", thrown);
-            return Result.err(internalError(thrown));
-        }
-    }
-
-    private static AppError internalError(final Throwable cause) {
-        return AppError.of(
-                ErrorCode.internal,
-                "Unexpected error",
-                "The provider check stopped because of an unexpected error.",
-                null,
-                cause);
-    }
-
-    private void publish(final long epoch, final Result<VerificationReport> result) {
-        if (epoch != checkEpoch) {
-            log.debug("report of check {} discarded: the current one is {}", epoch, checkEpoch);
-            return;
-        }
-        try {
-            final AppError refusal = result.error();
-            if (refusal != null) {
-                refuse(refusal);
-            } else {
-                show(Objects.requireNonNull(result.data()));
-            }
-        } finally {
-            checking.set(false);
-        }
-    }
-
-    private void refuse(final AppError refusal) {
-        log.debug("the check was refused as a whole with {}", refusal.code());
-        if (refusal.code() == ErrorCode.validation) {
-            checkRefusal.set(refusal.message());
-        } else {
-            errors.present(refusal);
-        }
-    }
-
-    private void show(final VerificationReport report) {
-        final Map<VerificationStage, StageOutcome> reported = new EnumMap<>(VerificationStage.class);
-        report.stages().forEach(outcome -> reported.putIfAbsent(outcome.stage(), outcome));
-        final List<StageChip> chips = Arrays.stream(VerificationStage.values())
-                .map(stage -> chipOf(stage, reported.get(stage)))
-                .toList();
-        chips.forEach(SettingsViewModel::logStage);
-        stages.setAll(chips);
-        if (chips.stream().allMatch(SettingsViewModel::isPass)) {
-            log.info("provider check passed");
-            toasts.success(MessageKey.TOAST_PROVIDER_PASSED);
-        } else {
-            log.info("provider check did not pass");
-        }
-    }
-
-    private static StageChip chipOf(final VerificationStage stage, final @Nullable StageOutcome outcome) {
-        return outcome == null
-                ? new StageChip(stage, StageStatus.SKIPPED, null, null)
-                : new StageChip(stage, outcome.status(), outcome.error(), outcome.note());
-    }
-
-    private static boolean isPass(final StageChip chip) {
-        return chip.status() == StageStatus.PASSED || chip.status() == StageStatus.SOFT_PASS;
-    }
-
-    private static void logStage(final StageChip chip) {
-        log.info("stage {}: {}", chip.stage(), chip.status());
-        final AppError error = chip.error();
-        if (chip.status() == StageStatus.FAILED) {
-            log.warn("stage {} failed with {}", chip.stage(), error == null ? "no error code" : error.code());
-        }
     }
 }

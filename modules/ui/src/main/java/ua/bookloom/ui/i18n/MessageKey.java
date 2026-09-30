@@ -147,11 +147,41 @@ public enum MessageKey {
     SETTINGS_MODEL_LABEL("settings.model.label"),
     /** Shown in place of the model while none is chosen. */
     SETTINGS_MODEL_NOT_CHOSEN("settings.model.notChosen"),
-    /** Label of the action that checks the selected provider. */
-    SETTINGS_CHECK_ACTION("settings.check.action"),
+    /** Subtitle of the settings screen: the promise that nothing leaves the machine. */
+    SETTINGS_SUBTITLE("settings.subtitle"),
+    /** Badge on every provider row that is not the selected one. */
+    SETTINGS_PROVIDER_IDLE("settings.provider.idle"),
+    /** Label before the selected provider's kind on its detail card. */
+    SETTINGS_KIND_LABEL("settings.kind.label"),
+    /** Name of the Ollama-native provider kind. */
+    SETTINGS_KIND_OLLAMA("settings.kind.ollama"),
+    /** Name of the OpenAI-compatible provider kind. */
+    SETTINGS_KIND_OPENAI("settings.kind.openai"),
+    /** Label before the models the last listing found. */
+    SETTINGS_MODELS_LABEL("settings.models.label"),
+    /** The models found: argument 0 is their count, argument 1 the first names, joined. */
+    SETTINGS_MODELS_FOUND("settings.models.found"),
+    /** Said in place of the models found while no listing has been made. */
+    SETTINGS_MODELS_NONE("settings.models.none"),
+    /** Label of the action that asks whether the provider answers at all. */
+    SETTINGS_TEST_CONNECTION("settings.test.connection"),
+    /** Label of the action that also reads the provider's model list. */
+    SETTINGS_TEST_MODELS("settings.test.models"),
+    /** Label of the action that also asks the chosen model for a short answer. */
+    SETTINGS_TEST_INFERENCE("settings.test.inference"),
+    /** Measured connection finding; argument 0 is the round-trip time already worded. */
+    SETTINGS_BADGE_REACHABLE("settings.badge.reachable"),
+    /** Measured models finding; argument 0 is the number of models listed. */
+    SETTINGS_BADGE_MODELS("settings.badge.models"),
+    /** Measured inference finding; argument 0 is the duration already worded. */
+    SETTINGS_BADGE_INFERENCE("settings.badge.inference"),
+    /** A duration under one second; argument 0 is the whole milliseconds. */
+    SETTINGS_DURATION_MS("settings.duration.ms"),
+    /** A duration of a second or more; argument 0 is the seconds, one decimal. */
+    SETTINGS_DURATION_S("settings.duration.s"),
     /** Shown while a provider check is running. */
     SETTINGS_CHECK_PROGRESS("settings.check.progress"),
-    /** Hint shown while no model is chosen, because the check needs one. */
+    /** Hint shown while no model is chosen, because two of the provider tests need one. */
     SETTINGS_CHECK_NEEDS_MODEL("settings.check.needsModel"),
     /** Name of the first check stage: does the server answer. */
     SETTINGS_STAGE_CONNECTION("settings.stage.connection"),

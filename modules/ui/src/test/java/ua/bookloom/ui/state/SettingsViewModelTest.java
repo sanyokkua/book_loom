@@ -10,6 +10,7 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
@@ -31,8 +32,12 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> List.copyOf(viewModel.providers())))
                 .containsExactly(
-                        new ProviderRow("ollama", "http://localhost:11434"),
-                        new ProviderRow("lmstudio", "http://localhost:1234/v1"));
+                        new ProviderRow("ollama", ProviderKind.OLLAMA, "http://localhost:11434", "localhost:11434"),
+                        new ProviderRow(
+                                "lmstudio",
+                                ProviderKind.OPENAI_COMPATIBLE,
+                                "http://localhost:1234/v1",
+                                "localhost:1234"));
         assertThat(onFx(() -> viewModel.selectedProviderId().get())).isEqualTo("ollama");
     }
 
@@ -67,7 +72,9 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
     void checkAvailable_noModel_isFalse() {
         final SettingsViewModel viewModel = viewModel(ScriptedProviderVerifier.idle());
 
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isFalse();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isFalse();
     }
 
     // IF choosing a model did not make the check available, THEN a person could never run it.
@@ -80,7 +87,9 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
             return null;
         });
 
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isTrue();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isTrue();
     }
 
     // IF a check ran with no model chosen, THEN the verifier would be asked about an empty model id.
@@ -90,13 +99,13 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
         final SettingsViewModel viewModel = viewModel(verifier);
 
         onFx(() -> {
-            viewModel.check();
+            viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(verifier.callCount()).isZero();
-        assertThat(onFx(() -> viewModel.checking().get())).isFalse();
+        assertThat(onFx(() -> viewModel.tests().checking().get())).isFalse();
         assertThat(stagesOf(viewModel)).isEmpty();
     }
 
@@ -202,8 +211,10 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
 
         checkWithModel(viewModel);
 
-        assertThat(onFx(() -> viewModel.checking().get())).isFalse();
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isTrue();
+        assertThat(onFx(() -> viewModel.tests().checking().get())).isFalse();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isTrue();
         assertThat(errors.presented()).extracting(AppError::code).containsExactly(ErrorCode.internal);
         assertThat(toasts.raised()).isEmpty();
     }
@@ -222,7 +233,9 @@ class SettingsViewModelTest extends SettingsViewModelTestBase {
 
         assertThat(onFx(() -> viewModel.model().get())).isEmpty();
         assertThat(stagesOf(viewModel)).isEmpty();
-        assertThat(onFx(() -> viewModel.checkAvailable().get())).isFalse();
+        assertThat(onFx(() ->
+                        viewModel.tests().available(ProviderTest.INFERENCE).get()))
+                .isFalse();
     }
 
     // IF re-selecting the current provider cleared the model, THEN clicking the already-selected row would silently

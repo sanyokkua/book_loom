@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
@@ -26,12 +27,12 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.AppError;
+import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.ProviderRow;
+import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StageChip;
 
@@ -47,7 +48,7 @@ public final class SettingsController {
 
     private static final String SELECTED_ROW = "list-item-selected";
 
-    private static final double DETAIL_MAX_WIDTH = 280;
+    private static final int MODELS_SHOWN = 3;
 
     /**
      * A provider row and the badge that marks it as the current one.
@@ -59,6 +60,7 @@ public final class SettingsController {
 
     private final SettingsViewModel viewModel;
     private final Messages messages;
+    private final StageChipRows chipRows;
     private final Map<String, RowNodes> rows = new LinkedHashMap<>();
     private final ChangeListener<String> onSelection = (observed, was, now) -> markSelectedRow();
     private final ListChangeListener<StageChip> onStages = change -> showChips();
@@ -97,7 +99,19 @@ public final class SettingsController {
     private Label checkHint;
 
     @FXML
-    private Button checkButton;
+    private Label detailKind;
+
+    @FXML
+    private Label detailModels;
+
+    @FXML
+    private Button testConnection;
+
+    @FXML
+    private Button testModels;
+
+    @FXML
+    private Button testInference;
 
     @FXML
     private Label checkProgress;
@@ -120,6 +134,7 @@ public final class SettingsController {
     public SettingsController(final SettingsViewModel viewModel, final Messages messages) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.chipRows = new StageChipRows(messages);
     }
 
     @FXML
@@ -132,8 +147,8 @@ public final class SettingsController {
         viewModel.selectedProviderId().addListener(new WeakChangeListener<>(onSelection));
         bindDetail();
         bindModel();
-        bindCheck();
-        viewModel.stages().addListener(new WeakListChangeListener<>(onStages));
+        bindTests();
+        viewModel.tests().stages().addListener(new WeakListChangeListener<>(onStages));
         showChips();
         viewModel.refreshModels();
     }
@@ -145,6 +160,15 @@ public final class SettingsController {
                         () -> ProviderNames.displayName(
                                 messages, viewModel.selectedProviderId().get()),
                         viewModel.selectedProviderId()));
+        detailKind
+                .textProperty()
+                .bind(Bindings.createStringBinding(this::selectedKind, viewModel.selectedProviderId()));
+        detailModels
+                .textProperty()
+                .bind(Bindings.createStringBinding(
+                        this::modelsFound,
+                        viewModel.selectedProviderId(),
+                        viewModel.modelListing().offered()));
         detailEndpoint
                 .textProperty()
                 .bind(Bindings.createStringBinding(this::selectedEndpoint, viewModel.selectedProviderId()));
@@ -238,42 +262,70 @@ public final class SettingsController {
         }
     }
 
-    private void bindCheck() {
-        checkButton.disableProperty().bind(Bindings.not(viewModel.checkAvailable()));
-        checkButton.setOnAction(event -> viewModel.check());
-        checkProgress.visibleProperty().bind(viewModel.checking());
+    private void bindTests() {
+        bindTest(testConnection, ProviderTest.CONNECTION);
+        bindTest(testModels, ProviderTest.MODELS);
+        bindTest(testInference, ProviderTest.INFERENCE);
+        checkProgress.visibleProperty().bind(viewModel.tests().checking());
         checkProgress.managedProperty().bind(checkProgress.visibleProperty());
         checkHint
                 .visibleProperty()
                 .bind(Bindings.createBooleanBinding(
                         () -> viewModel.model().get().isBlank(), viewModel.model()));
         checkHint.managedProperty().bind(checkHint.visibleProperty());
-        checkRefusal.textProperty().bind(viewModel.checkRefusal());
+        checkRefusal.textProperty().bind(viewModel.tests().checkRefusal());
         checkRefusal
                 .visibleProperty()
                 .bind(Bindings.createBooleanBinding(
-                        () -> !viewModel.checkRefusal().get().isEmpty(), viewModel.checkRefusal()));
+                        () -> !viewModel.tests().checkRefusal().get().isEmpty(),
+                        viewModel.tests().checkRefusal()));
         checkRefusal.managedProperty().bind(checkRefusal.visibleProperty());
     }
 
-    private String selectedEndpoint() {
+    private void bindTest(final Button button, final ProviderTest test) {
+        button.disableProperty().bind(Bindings.not(viewModel.tests().available(test)));
+        button.setOnAction(event -> viewModel.tests().run(test));
+    }
+
+    private Optional<ProviderRow> selectedRow() {
         final String selected = viewModel.selectedProviderId().get();
         return viewModel.providers().stream()
                 .filter(row -> row.id().equals(selected))
-                .map(ProviderRow::endpoint)
-                .findFirst()
+                .findFirst();
+    }
+
+    private String selectedEndpoint() {
+        return selectedRow().map(ProviderRow::endpoint).orElse("");
+    }
+
+    private String selectedKind() {
+        return selectedRow()
+                .map(row -> messages.get(
+                        row.kind() == ProviderKind.OLLAMA
+                                ? MessageKey.SETTINGS_KIND_OLLAMA
+                                : MessageKey.SETTINGS_KIND_OPENAI))
                 .orElse("");
+    }
+
+    /** The count and the first names of the last listing, or a plain statement that none was made. */
+    private String modelsFound() {
+        final List<String> offered = List.copyOf(viewModel.modelListing().offered());
+        return offered.isEmpty()
+                ? messages.get(MessageKey.SETTINGS_MODELS_NONE)
+                : messages.get(
+                        MessageKey.SETTINGS_MODELS_FOUND,
+                        offered.size(),
+                        String.join(", ", offered.subList(0, Math.min(MODELS_SHOWN, offered.size()))));
     }
 
     private void addRow(final ProviderRow provider) {
         log.debug("adding the row of provider '{}'", provider.id());
         final Label name = new Label(ProviderNames.displayName(messages, provider.id()));
         name.getStyleClass().add("provider-name");
-        final Label endpoint = new Label(provider.endpoint());
+        final Label endpoint = new Label(provider.hostPort());
         endpoint.getStyleClass().add("provider-endpoint");
-        final Label badge = new Label(messages.get(MessageKey.SETTINGS_PROVIDER_CURRENT));
-        badge.getStyleClass().addAll("chip", "chip-ok");
-        badge.managedProperty().bind(badge.visibleProperty());
+        final Label badge = new Label();
+        badge.getStyleClass().add("chip");
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final HBox row = new HBox(new VBox(name, endpoint), spacer, badge);
@@ -312,54 +364,20 @@ public final class SettingsController {
             if (isSelected) {
                 nodes.row().getStyleClass().add(SELECTED_ROW);
             }
-            nodes.badge().setVisible(isSelected);
+            nodes.badge()
+                    .setText(messages.get(
+                            isSelected ? MessageKey.SETTINGS_PROVIDER_CURRENT : MessageKey.SETTINGS_PROVIDER_IDLE));
+            nodes.badge().getStyleClass().removeAll("chip-ok", "chip-neutral");
+            nodes.badge().getStyleClass().add(isSelected ? "chip-ok" : "chip-neutral");
         });
     }
 
     private void showChips() {
-        final List<Node> built = viewModel.stages().stream()
-                .map(this::chipRowOf)
+        final List<Node> built = viewModel.tests().stages().stream()
+                .map(chipRows::rowOf)
                 .map(Node.class::cast)
                 .toList();
         log.debug("showing {} stage chip(s)", built.size());
         chips.getChildren().setAll(built);
-    }
-
-    private VBox chipRowOf(final StageChip stage) {
-        final ChipLook look = ChipLook.of(stage.status());
-        final Label chip = new Label(messages.get(
-                MessageKey.SETTINGS_CHIP,
-                look.glyph(),
-                messages.get(ChipLook.nameOf(stage.stage())),
-                messages.get(look.status())));
-        chip.setId("chip-" + stage.stage().name());
-        chip.getStyleClass().addAll("chip", look.styleClass());
-        final VBox row = new VBox(4, chip);
-        row.setId("chip-row-" + stage.stage().name());
-        row.setMaxWidth(DETAIL_MAX_WIDTH);
-        final String reason = reasonOf(stage);
-        if (reason != null) {
-            row.getChildren().add(detailOf(stage, reason));
-        }
-        return row;
-    }
-
-    private static Label detailOf(final StageChip stage, final String reason) {
-        final Label detail = new Label(reason);
-        detail.setId("chip-detail-" + stage.stage().name());
-        detail.getStyleClass().add("hint");
-        detail.setWrapText(true);
-        return detail;
-    }
-
-    /** What a person needs to read under a chip: the failure for a failed stage, the qualifier for a soft pass. */
-    private static @Nullable String reasonOf(final StageChip stage) {
-        final AppError error = stage.error();
-        final String errorMessage = error == null ? null : error.message();
-        return switch (stage.status()) {
-            case FAILED -> errorMessage != null ? errorMessage : stage.note();
-            case SOFT_PASS -> stage.note() != null ? stage.note() : errorMessage;
-            case PASSED, SKIPPED -> null;
-        };
     }
 }

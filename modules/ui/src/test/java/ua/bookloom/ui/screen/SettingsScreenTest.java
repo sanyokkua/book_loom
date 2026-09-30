@@ -14,6 +14,9 @@ import javafx.scene.control.Tab;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -21,7 +24,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.ProviderTest;
 
 /**
  * The settings screen the application builds: its tabs, the providers area and the check control, all read from the
@@ -68,14 +73,15 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                 .containsExactly("provider-row-ollama", "provider-row-lmstudio");
     }
 
-    // IF a row named the wrong server or showed another endpoint, THEN the person would check a server they did not
-    // mean.
+    // IF a row named the wrong server or showed another host, THEN the person would check a server they did not
+    // mean; the badge says which one is in use.
     @ParameterizedTest
     @CsvSource({
-        "ollama, Ollama, http://localhost:11434",
-        "lmstudio, LM Studio, http://localhost:1234/v1",
+        "ollama, Ollama, localhost:11434, current",
+        "lmstudio, LM Studio, localhost:1234, idle",
     })
-    void providerRow_settingsScreen_showsItsNameAndEndpoint(final String id, final String name, final String endpoint) {
+    void providerRow_settingsScreen_showsNameHostAndBadge(
+            final String id, final String name, final String hostPort, final String badge) {
         openSettings();
 
         final Node row = required("provider-row-" + id);
@@ -85,7 +91,89 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                         Label.class, label -> assertThat(label.getText()).isEqualTo(name));
         assertThat(row.lookup(".provider-endpoint"))
                 .isInstanceOfSatisfying(
-                        Label.class, label -> assertThat(label.getText()).isEqualTo(endpoint));
+                        Label.class, label -> assertThat(label.getText()).isEqualTo(hostPort));
+        assertThat(row.lookup(".chip"))
+                .isInstanceOfSatisfying(
+                        Label.class, label -> assertThat(label.getText()).isEqualTo(badge));
+    }
+
+    // IF the card showed a listing that was never made, or hid the one that was, THEN the person could not tell what
+    // the server offers.
+    @Test
+    void detailCard_beforeAnyListing_showsKindEndpointAndSaysNoListingWasMade() {
+        openSettings();
+
+        assertThat(label("settings-detail-kind").getText()).isEqualTo("Ollama");
+        assertThat(label("settings-detail-endpoint").getText()).isEqualTo("http://localhost:11434");
+        assertThat(label("settings-detail-models").getText()).isEqualTo("No listing has been made yet");
+    }
+
+    @Test
+    void detailCard_afterAListing_showsTheCountAndTheFirstThreeNames() throws TimeoutException {
+        catalog.respondWith("gemma3:12b", "qwen3:8b", "mistral-small:24b", "phi4:14b");
+
+        openSettingsSettled();
+
+        assertThat(label("settings-detail-models").getText()).isEqualTo("4 · gemma3:12b, qwen3:8b, mistral-small:24b");
+    }
+
+    @Test
+    void detailCard_lmStudioSelected_showsItsKindAndFullEndpoint() {
+        openSettings();
+
+        onFx(() -> viewModel().selectProvider("lmstudio"));
+
+        assertThat(label("settings-detail-kind").getText()).isEqualTo("OpenAI-compatible");
+        assertThat(label("settings-detail-endpoint").getText()).isEqualTo("http://localhost:1234/v1");
+        assertThat(label("settings-detail-models").getText()).isEqualTo("No listing has been made yet");
+    }
+
+    // IF the chooser were drawn on another area, THEN two controls would edit one choice.
+    @Test
+    void modelChooser_settingsScreen_isOnTheProvidersCardOnly() {
+        openSettings();
+
+        assertThat(required("settings-detail-card").lookup("#settings-model")).isNotNull();
+        assertThat(tab("settings-tab-appearance").getContent().lookup("#settings-model"))
+                .isNull();
+    }
+
+    // IF the subtitle were missing, THEN the screen would not state the promise the application keeps.
+    @Test
+    void subtitle_settingsScreen_statesEverythingIsLocal() {
+        openSettings();
+
+        assertThat(label("settings-subtitle").getText()).isEqualTo("Everything is local. Nothing leaves your machine.");
+    }
+
+    // IF the selected tab were not marked by an underline of the primary role, or another tab were, THEN the tab
+    // strip would not match the reference rendering.
+    @Test
+    void tabs_providersSelected_onlyItsHeaderIsUnderlined() {
+        openSettings();
+
+        assertThat(underline("settings-tab-providers")).isEqualTo(Color.web("#a58075"));
+        assertThat(underline("settings-tab-appearance")).isEqualTo(Color.TRANSPARENT);
+        assertThat(underline("settings-tab-models")).isEqualTo(Color.TRANSPARENT);
+    }
+
+    // IF Appearance did not open, or Generation opened, THEN the tabs would misstate what this build can do.
+    @Test
+    void tabs_appearanceActivated_opensItAndGenerationLeavesProvidersShown() {
+        openSettings();
+
+        clickOn("#settings-tab-appearance");
+        assertThat(selectedTabId()).isEqualTo("settings-tab-appearance");
+
+        clickOn("#settings-tab-providers");
+        clickOn("#settings-tab-generation");
+
+        assertThat(selectedTabId()).isEqualTo("settings-tab-providers");
+    }
+
+    private String selectedTabId() {
+        return ThemeTestSupport.onFx(
+                () -> tabs().getSelectionModel().getSelectedItem().getId());
     }
 
     // IF the selection mark did not follow the model, THEN the list would show a different provider from the one a
@@ -104,24 +192,51 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         assertThat(required("provider-row-ollama").getStyleClass()).doesNotContain("list-item-selected");
     }
 
-    // IF the check were offered before a model is chosen, THEN a person could fire it against nothing.
+    // IF Test connection waited for a model, or the other two did not, THEN a person could not ask whether anything
+    // is listening first, or could fire a model test against nothing.
     @Test
-    void checkControl_noModel_presentAndDisabled() {
+    void testControls_noModel_connectionAvailableOthersPresentAndDisabled() {
         openSettings();
 
-        assertThat(required("settings-check")).isInstanceOfSatisfying(Button.class, button -> {
-            assertThat(button.getText()).isEqualTo("Check provider");
+        assertThat(required("settings-test-connection")).isInstanceOfSatisfying(Button.class, button -> {
+            assertThat(button.getText()).isEqualTo("Test connection");
+            assertThat(button.isDisable()).isFalse();
+        });
+        assertThat(required("settings-test-models")).isInstanceOfSatisfying(Button.class, button -> {
+            assertThat(button.getText()).isEqualTo("Test models");
+            assertThat(button.isDisable()).isTrue();
+        });
+        assertThat(required("settings-test-inference")).isInstanceOfSatisfying(Button.class, button -> {
+            assertThat(button.getText()).isEqualTo("Test inference");
             assertThat(button.isDisable()).isTrue();
         });
     }
 
-    // IF the control were not wired to the view model, THEN choosing a model would not enable it, and firing it would
-    // not ask the verifier about the selected provider and model.
+    // IF Test connection asked about a model, THEN it would be impossible before one is chosen.
     @Test
-    void checkControl_modelSet_enabledAndFiringItCallsTheVerifierOnce() throws InterruptedException {
+    void testConnection_noModel_callsTheConnectionOnlyPort() throws InterruptedException {
+        openSettings();
+
+        onFx(((Button) required("settings-test-connection"))::fire);
+        verifier.awaitEntered();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(verifier.connectionCalls()).containsExactly("ollama");
+        assertThat(verifier.selections()).isEmpty();
+    }
+
+    // IF a control were not wired to the view model, THEN choosing a model would not enable it, and firing it would
+    // not ask the verifier about the selected provider and model with the depth it names.
+    @ParameterizedTest
+    @CsvSource({
+        "settings-test-models, CONNECTION_AND_MODELS",
+        "settings-test-inference, FULL",
+    })
+    void testControl_modelSet_enabledAndFiringItAsksForItsDepth(final String id, final VerificationPolicy policy)
+            throws InterruptedException {
         openSettings();
         onFx(() -> viewModel().model().set(MODEL));
-        final Button button = (Button) required("settings-check");
+        final Button button = (Button) required(id);
         assertThat(button.isDisable()).isFalse();
 
         onFx(button::fire);
@@ -130,6 +245,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
 
         assertThat(verifier.callCount()).isEqualTo(1);
         assertThat(verifier.selections()).containsExactly(new ModelSelection("ollama", MODEL));
+        assertThat(verifier.policies()).containsExactly(policy);
     }
 
     // IF the in-progress line were shown or laid out when nothing is running, THEN it would claim work that is not
@@ -145,7 +261,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> {
             viewModel().model().set(MODEL);
-            viewModel().check();
+            viewModel().tests().run(ProviderTest.INFERENCE);
         });
         verifier.awaitEntered();
         WaitForAsyncUtils.waitForFxEvents();
@@ -153,7 +269,7 @@ class SettingsScreenTest extends SettingsScreenTestBase {
         assertThat(progress.isVisible()).isTrue();
         assertThat(progress.isManaged()).isTrue();
         assertThat(progress.getText()).isEqualTo("Checking…");
-        assertThat(((Button) required("settings-check")).isDisable()).isTrue();
+        assertThat(((Button) required("settings-test-connection")).isDisable()).isTrue();
 
         verifier.release();
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> !ThemeTestSupport.onFx(progress::isVisible));
@@ -166,13 +282,13 @@ class SettingsScreenTest extends SettingsScreenTestBase {
     @Test
     void screenInUkrainian_labelsDifferFromEnglish() {
         openSettings();
-        final String englishCheck = ((Button) required("settings-check")).getText();
+        final String englishCheck = ((Button) required("settings-test-connection")).getText();
         final List<String> englishTabs =
                 tabs().getTabs().stream().map(Tab::getText).toList();
 
         useLocale(Locale.forLanguageTag("uk"));
         openSettings();
-        final String ukrainianCheck = ((Button) required("settings-check")).getText();
+        final String ukrainianCheck = ((Button) required("settings-test-connection")).getText();
         final List<String> ukrainianTabs =
                 tabs().getTabs().stream().map(Tab::getText).toList();
 
@@ -181,6 +297,26 @@ class SettingsScreenTest extends SettingsScreenTestBase {
                 .hasSize(6)
                 .allSatisfy(title -> assertThat(title).isNotBlank());
         assertThat(ukrainianTabs).doesNotContainAnyElementsOf(englishTabs);
+    }
+
+    private Label label(final String id) {
+        return (Label) required(id);
+    }
+
+    private Tab tab(final String id) {
+        return tabs().getTabs().stream()
+                .filter(candidate -> id.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    /** The bottom edge colour of a tab's header: the underline when it is the primary role, transparent otherwise. */
+    private Paint underline(final String tabId) {
+        return ThemeTestSupport.onFx(() -> ((Region) tabs().lookup("#" + tabId))
+                .getBorder()
+                .getStrokes()
+                .get(0)
+                .getBottomStroke());
     }
 
     private static MouseEvent click() {

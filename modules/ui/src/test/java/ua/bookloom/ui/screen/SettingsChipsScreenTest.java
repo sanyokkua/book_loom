@@ -2,6 +2,8 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
@@ -15,8 +17,12 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.StageOutcome;
 import ua.bookloom.api.llm.StageStatus;
+import ua.bookloom.api.llm.VerificationReport;
+import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.state.ProviderTest;
 
 /**
  * The findings the settings screen draws for a check: the chips, the visible reason under a failed or qualified one,
@@ -32,7 +38,7 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
             value = {
                 "PASSED    | chip-ok      | ✓ Connection: Passed",
                 "SOFT_PASS | chip-warn    | ! Connection: Passed with a note",
-                "FAILED    | chip-err     | ✕ Connection: Failed",
+                "FAILED    | chip-err     | ✕ Connection: unreachable",
                 "SKIPPED   | chip-neutral | – Connection: Not attempted",
             })
     void chips_fourStatuses_renderDistinctly(final StageStatus status, final String styleClass, final String text)
@@ -62,7 +68,24 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
                 .containsExactly("chip-row-CONNECTION", "chip-row-MODELS", "chip-row-INFERENCE");
         assertThat(chips().getChildren())
                 .extracting(child -> ((Labeled) child.lookup(".chip")).getText())
-                .containsExactly("✕ Connection: Failed", "– Models: Not attempted", "– Inference: Not attempted");
+                .containsExactly("✕ Connection: unreachable", "– Models: Not attempted", "– Inference: Not attempted");
+    }
+
+    // IF a passed stage said only "passed", THEN a 1.2-second model and a 40-second one would look the same.
+    @Test
+    void chips_allThreePassedWithMeasurements_showTheMeasuredValues() throws TimeoutException {
+        openSettings();
+
+        checkWithReport(Result.ok(new VerificationReport(List.of(
+                new StageOutcome(
+                        VerificationStage.CONNECTION, StageStatus.PASSED, null, null, Duration.ofMillis(41), null),
+                new StageOutcome(VerificationStage.MODELS, StageStatus.PASSED, null, null, Duration.ofMillis(5), 3),
+                new StageOutcome(
+                        VerificationStage.INFERENCE, StageStatus.PASSED, null, null, Duration.ofMillis(1200), null)))));
+
+        assertThat(chips().getChildren())
+                .extracting(child -> ((Labeled) child.lookup(".chip")).getText())
+                .containsExactly("✓ reachable 41 ms", "✓ 3 models", "✓ inference 1.2 s");
     }
 
     // IF a failed stage's reason lived only in a tooltip, THEN a person who cannot hover would see a red chip and
@@ -112,7 +135,7 @@ class SettingsChipsScreenTest extends SettingsScreenTestBase {
 
         onFx(() -> {
             viewModel().model().set(MODEL);
-            viewModel().check();
+            viewModel().tests().run(ProviderTest.INFERENCE);
         });
         WaitForAsyncUtils.waitFor(WAIT_SECONDS, TimeUnit.SECONDS, () -> ThemeTestSupport.onFx(refusal::isVisible));
 

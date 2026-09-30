@@ -104,6 +104,11 @@ final class TranslateCommandTestFakes {
             return Result.ok(report);
         }
 
+        @Override
+        public Result<VerificationReport> verifyConnection(String providerId) {
+            return Result.ok(report);
+        }
+
         List<ModelSelection> selections() {
             return List.copyOf(selections);
         }

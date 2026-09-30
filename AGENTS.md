@@ -40,9 +40,10 @@ inspection's verdict, a replace-run prompt, start and resume without importing a
 numbers six workflow steps with a provider footer, and its Book Brief, Structure, Names & style, Translating and Export screens are live (the glossary table with scans and CSV,
 the seven run states with the live panel, tagged log and provider-error state, the review panel with retry and
 proposals, and review pauses that open their segment; one end-to-end test runs each review mode). Not built:
-saving (nothing survives a restart, no remembered settings), the rebuilt Settings screen. The Export screen writes the book (Save to, side files, consistency
-pass, result tiles and checks, the export-complete dialog); a finished run writes nothing. Next: task 15.4 of
-`openspec/changes/complete-translation-workflow`.
+saving (nothing survives a restart, no remembered settings). The Export screen writes the book (Save to, side files, consistency
+pass, result tiles and checks, the export-complete dialog); a finished run writes nothing. The Settings Providers tab
+tests a provider three ways (connection, models, inference) with measured values, connection working before a model is
+chosen. Next: group 16 (the gate) of `openspec/changes/complete-translation-workflow`.
 
 ## Commands
 

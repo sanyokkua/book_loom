@@ -60,7 +60,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         onFx(() -> modelCombo().getSelectionModel().select("qwen3:8b"));
 
         assertThat(ThemeTestSupport.onFx(() -> viewModel().model().get())).isEqualTo("qwen3:8b");
-        assertThat(((Button) required("settings-check")).isDisable()).isFalse();
+        assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
     }
 
     // IF typing did not set the model as it happens, THEN the check would stay disabled: a disabled button never
@@ -68,12 +68,12 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
     @Test
     void modelControl_textTyped_setsTheModelAndEnablesTheCheck() throws TimeoutException {
         openSettingsSettled();
-        assertThat(((Button) required("settings-check")).isDisable()).isTrue();
+        assertThat(((Button) required("settings-test-inference")).isDisable()).isTrue();
 
         typeIntoModelEntry("mistral-small:24b");
 
         assertThat(ThemeTestSupport.onFx(() -> viewModel().model().get())).isEqualTo("mistral-small:24b");
-        assertThat(((Button) required("settings-check")).isDisable()).isFalse();
+        assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
     }
 
     // IF the control did not follow the view model, THEN a model chosen elsewhere would not show in the entry.
@@ -96,7 +96,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
         onFx(() -> viewModel().selectProvider("lmstudio"));
 
         assertThat(modelCombo().getEditor().getText()).isEmpty();
-        assertThat(((Button) required("settings-check")).isDisable()).isTrue();
+        assertThat(((Button) required("settings-test-inference")).isDisable()).isTrue();
     }
 
     // IF the listing note showed or took room when nothing was being listed, THEN it would claim work that is not
@@ -173,7 +173,7 @@ class SettingsModelScreenTest extends SettingsScreenTestBase {
 
         assertThat(modelCombo().getEditor().getText()).isEqualTo("mistral-small:24b");
         assertThat(ThemeTestSupport.onFx(() -> viewModel().model().get())).isEqualTo("mistral-small:24b");
-        assertThat(((Button) required("settings-check")).isDisable()).isFalse();
+        assertThat(((Button) required("settings-test-inference")).isDisable()).isFalse();
     }
 
     // IF a list that does not contain a committed identifier replaced it in the entry, THEN a person who named a model

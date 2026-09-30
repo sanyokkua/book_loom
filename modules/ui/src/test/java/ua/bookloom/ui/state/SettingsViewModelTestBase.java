@@ -91,7 +91,7 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     void startCheck(final SettingsViewModel viewModel) {
         onFx(() -> {
             viewModel.model().set(MODEL);
-            viewModel.check();
+            viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
     }
@@ -131,7 +131,7 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     void checkWithModel(final SettingsViewModel viewModel) {
         onFx(() -> {
             viewModel.model().set(MODEL);
-            viewModel.check();
+            viewModel.tests().run(ProviderTest.INFERENCE);
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
@@ -146,7 +146,7 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     }
 
     static List<StageChip> stagesOf(final SettingsViewModel viewModel) {
-        return onFx(() -> List.copyOf(viewModel.stages()));
+        return onFx(() -> List.copyOf(viewModel.tests().stages()));
     }
 
     static Result<VerificationReport> allPassed() {

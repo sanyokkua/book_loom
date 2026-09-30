@@ -141,7 +141,9 @@ final class ConformanceCases {
                     List.of(
                             new Part("#settings-provider-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#settings-provider-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#settings-model", Kind.BORDER, "border", "#ddd5c8", "#48585f"))),
+                            new Part("#settings-model", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            // The selected tab is an underline of the primary role, not a filled tab.
+                            new Part("#settings-tab-providers", Kind.BORDER, "primary", "#a58075", "#c4917e"))),
             // The drop zone is the mockup's dashed sand box: sand-soft fill, sand-strong line.
             new Screen(
                     "IMPORT",

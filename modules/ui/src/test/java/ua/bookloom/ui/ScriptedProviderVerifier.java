@@ -31,6 +31,7 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
     private final CountDownLatch entered = new CountDownLatch(1);
     private final List<ModelSelection> selections = new CopyOnWriteArrayList<>();
     private final List<VerificationPolicy> policies = new CopyOnWriteArrayList<>();
+    private final List<String> connectionCalls = new CopyOnWriteArrayList<>();
     private final AtomicInteger calls = new AtomicInteger();
 
     private ScriptedProviderVerifier(final @Nullable Result<VerificationReport> answer) {
@@ -77,6 +78,13 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         gate = latch;
     }
 
+    /** Records the provider id and answers as {@code verify} does, holding and throwing the same way. */
+    @Override
+    public Result<VerificationReport> verifyConnection(final String providerId) {
+        connectionCalls.add(providerId);
+        return answer();
+    }
+
     @Override
     public Result<VerificationReport> verify(final ModelSelection selection, final VerificationPolicy policy) {
         final CountDownLatch held = gate;
@@ -84,6 +92,17 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         policies.add(policy);
         calls.incrementAndGet();
         entered.countDown();
+        return answer(held);
+    }
+
+    private Result<VerificationReport> answer() {
+        final CountDownLatch held = gate;
+        calls.incrementAndGet();
+        entered.countDown();
+        return answer(held);
+    }
+
+    private Result<VerificationReport> answer(final @Nullable CountDownLatch held) {
         awaitGate(held);
         final RuntimeException thrown = failure;
         if (thrown != null) {
@@ -114,7 +133,7 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
         }
     }
 
-    /** Blocks until {@code verify} has been entered {@code expected} times in all. */
+    /** Blocks until {@code verify} or {@code verifyConnection} has been entered {@code expected} times in all. */
     public void awaitCalls(final int expected) throws InterruptedException {
         final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(WAIT_SECONDS);
         while (calls.get() < expected) {
@@ -138,6 +157,11 @@ public final class ScriptedProviderVerifier implements ProviderVerifier {
 
     public List<ModelSelection> selections() {
         return List.copyOf(selections);
+    }
+
+    /** The provider ids of every connection-only call, kept apart from {@link #selections()}. */
+    public List<String> connectionCalls() {
+        return List.copyOf(connectionCalls);
     }
 
     public List<VerificationPolicy> policies() {

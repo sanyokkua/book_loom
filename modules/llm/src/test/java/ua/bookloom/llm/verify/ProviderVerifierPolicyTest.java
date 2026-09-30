@@ -168,6 +168,44 @@ class ProviderVerifierPolicyTest {
         assertThat(error(report.stages().getFirst()).code()).isEqualTo(ErrorCode.unreachable);
     }
 
+    // With no model chosen, only the connection stage runs, for either dialect, and nothing is asked to generate.
+    @Test
+    void verifyConnection_noModelChosen_reportsOnlyTheConnectionStageOnOllama() {
+        registerProvider("ollama", ProviderKind.OLLAMA, "");
+        server.stubFor(get(urlEqualTo(OLLAMA_VERSION_PATH)).willReturn(okJson("{\"version\":\"0.6.0\"}")));
+
+        final VerificationReport report =
+                report(verifier(scriptedNanoTime(0L, 12_000_000L)).verifyConnection("ollama"));
+
+        assertThat(report.stages()).extracting(StageOutcome::stage).containsExactly(VerificationStage.CONNECTION);
+        assertThat(report.stages().getFirst().status()).isEqualTo(StageStatus.PASSED);
+        assertThat(report.stages().getFirst().elapsed()).isEqualTo(Duration.ofMillis(12));
+        server.verify(0, postRequestedFor(urlEqualTo(OLLAMA_CHAT_PATH)));
+    }
+
+    @Test
+    void verifyConnection_noModelChosen_reportsOnlyTheConnectionStageOnLmStudio() {
+        registerProvider("lmstudio", ProviderKind.OPENAI_COMPATIBLE, "/v1");
+        server.stubFor(get(urlEqualTo(OPENAI_MODELS_PATH)).willReturn(okJson("""
+                {"object":"list","data":[]}
+                """)));
+
+        final VerificationReport report =
+                report(verifier(scriptedNanoTime(0L, 12_000_000L)).verifyConnection("lmstudio"));
+
+        assertThat(report.stages()).extracting(StageOutcome::stage).containsExactly(VerificationStage.CONNECTION);
+        assertThat(report.stages().getFirst().elapsed()).isEqualTo(Duration.ofMillis(12));
+        server.verify(0, postRequestedFor(urlEqualTo(OPENAI_CHAT_PATH)));
+    }
+
+    @Test
+    void verifyConnection_unknownProvider_returnsValidation() {
+        final Result<VerificationReport> result = verifier(scriptedNanoTime()).verifyConnection("nobody");
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.validation);
+    }
+
     private static URI closedEndpoint() throws IOException {
         try (ServerSocket socket = new ServerSocket(0)) {
             return URI.create("http://127.0.0.1:" + socket.getLocalPort());

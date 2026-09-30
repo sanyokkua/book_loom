@@ -680,13 +680,14 @@
     -fx-background-color: transparent;
 }
 
+/* The selected tab is marked by an underline of the primary role, nothing else changes about it. */
 .tab {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
-    -fx-background-radius: 7px 7px 0 0;
+    -fx-background-radius: 0;
     -fx-border-color: transparent;
-    -fx-border-width: 1px;
-    -fx-border-radius: 7px 7px 0 0;
+    -fx-border-width: 0 0 2px 0;
+    -fx-border-radius: 0;
     -fx-padding: 5px 12px 5px 12px;
 }
 
@@ -696,8 +697,7 @@
 }
 
 .tab:selected {
-    -fx-background-color: -color-surface;
-    -fx-border-color: -color-border -color-border transparent -color-border;
+    -fx-border-color: transparent transparent -color-primary transparent;
 }
 
 .tab:selected .tab-label {

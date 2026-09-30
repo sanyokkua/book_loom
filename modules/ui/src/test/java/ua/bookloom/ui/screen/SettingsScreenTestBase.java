@@ -26,6 +26,7 @@ import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.ProviderTest;
 import ua.bookloom.ui.state.SettingsViewModel;
 
 /** What the settings screen tests share: the recording verifier, the view model, and reading and driving a check. */
@@ -136,7 +137,7 @@ abstract class SettingsScreenTestBase extends ShellTestBase {
         verifier.respondWith(report);
         onFx(() -> {
             viewModel().model().set(MODEL);
-            viewModel().check();
+            viewModel().tests().run(ProviderTest.INFERENCE);
         });
         WaitForAsyncUtils.waitFor(
                 WAIT_SECONDS,
