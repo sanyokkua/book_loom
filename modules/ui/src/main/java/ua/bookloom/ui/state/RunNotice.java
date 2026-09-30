@@ -1,6 +1,9 @@
 package ua.bookloom.ui.state;
 
 import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import ua.bookloom.api.AppError;
 
 /**
@@ -18,8 +21,25 @@ public sealed interface RunNotice {
      * @param error the failure that ended the run or its preparation; never {@code null}
      */
     record ProviderError(AppError error) implements RunNotice {
+
+        private static final Pattern ENDPOINT_HOST = Pattern.compile("endpointHost=([^,\\s]+)");
+
         public ProviderError {
             Objects.requireNonNull(error, "error");
+        }
+
+        /**
+         * The server the failed call went to, read from the error's allowlisted details only.
+         *
+         * @return the host as the details name it, or empty when the error carries none
+         */
+        public Optional<String> endpointHost() {
+            final String details = error.details();
+            if (details == null) {
+                return Optional.empty();
+            }
+            final Matcher found = ENDPOINT_HOST.matcher(details);
+            return found.find() ? Optional.of(found.group(1)) : Optional.empty();
         }
     }
 

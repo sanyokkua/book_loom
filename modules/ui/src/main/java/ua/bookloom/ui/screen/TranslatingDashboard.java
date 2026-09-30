@@ -5,7 +5,9 @@ import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -24,6 +26,7 @@ import ua.bookloom.ui.state.StateMirror;
  * A notice, when there is one, is worded in the same banner in place of the plain state; only a provider failure
  * shows the button that opens the provider settings.
  */
+@Slf4j
 final class TranslatingDashboard {
 
     private static final Banner.Role INFO = Banner.Role.INFO;
@@ -31,18 +34,29 @@ final class TranslatingDashboard {
     private static final Banner.Role WARN = Banner.Role.WARN;
     private static final Banner.Role ERR = Banner.Role.ERR;
 
-    /** How the banner is told: its glyph, its role class, its words and whether it offers the provider settings. */
-    private record Look(String glyph, Banner.Role role, String title, String text, boolean offersSettings) {}
+    /** Which of the banner's actions a look offers. */
+    private enum Offer {
+        NONE,
+        SETTINGS_ONLY,
+        ALL_THREE
+    }
 
-    /** The banner, which {@link #render(RunState, RunNotice, int)} rewrites, and its provider-settings action. */
-    record LiveBanner(Banner banner, Button settings) {}
+    /** How the banner is told: its glyph, its role class, its words and which actions it offers. */
+    private record Look(String glyph, Banner.Role role, String title, String text, Offer offer) {}
+
+    /** The banner, which {@link #render(RunState, RunNotice, int)} rewrites, and its three provider-error actions. */
+    record LiveBanner(Banner banner, Button retry, Button settings, Button stay) {}
 
     private final Node root;
     private final LiveBanner banner;
-    private final ListView<LogEntry> log;
+    private final ListView<LogEntry> logList;
     private final Messages messages;
     private final StateMirror mirror;
     private boolean scrollQueued;
+    private RunState shownState = RunState.IDLE;
+    private @Nullable RunNotice shownNotice;
+    private int shownWait = StateMirror.NOT_WAITING;
+    private @Nullable AppError stayedPausedOn;
 
     TranslatingDashboard(
             final Node root,
@@ -52,7 +66,8 @@ final class TranslatingDashboard {
             final StateMirror mirror) {
         this.root = Objects.requireNonNull(root, "root");
         this.banner = Objects.requireNonNull(banner, "banner");
-        this.log = Objects.requireNonNull(log, "log");
+        this.logList = Objects.requireNonNull(log, "log");
+        banner.stay().setOnAction(event -> stayPaused());
         this.messages = Objects.requireNonNull(messages, "messages");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
     }
@@ -73,12 +88,28 @@ final class TranslatingDashboard {
      */
     void render(final RunState state, final @Nullable RunNotice notice, final int waitingSeconds) {
         Objects.requireNonNull(state, "state");
+        shownState = state;
+        shownNotice = notice;
+        shownWait = waitingSeconds;
         final Look look = lookOf(state, notice, waitingSeconds);
         banner.banner().setGlyph(look.glyph());
         banner.banner().setTitle(look.title());
         banner.banner().setText(look.text());
         banner.banner().setRole(look.role());
-        Banner.setActionShown(banner.settings(), look.offersSettings());
+        Banner.setActionShown(banner.retry(), look.offer() == Offer.ALL_THREE);
+        Banner.setActionShown(banner.settings(), look.offer() != Offer.NONE);
+        Banner.setActionShown(banner.stay(), look.offer() == Offer.ALL_THREE);
+    }
+
+    // The withdrawal belongs to the error it was pressed on: the next error published is a new value and offers again.
+    private void stayPaused() {
+        if (shownNotice instanceof RunNotice.ProviderError provider) {
+            log.debug(
+                    "stay paused pressed: withdrawing the provider-error actions for {}",
+                    provider.error().code());
+            stayedPausedOn = provider.error();
+            render(shownState, shownNotice, shownWait);
+        }
     }
 
     /**
@@ -93,16 +124,16 @@ final class TranslatingDashboard {
         scrollQueued = true;
         Platform.runLater(() -> {
             scrollQueued = false;
-            final int last = log.getItems().size() - 1;
+            final int last = logList.getItems().size() - 1;
             if (last >= 0) {
-                log.scrollTo(last);
+                logList.scrollTo(last);
             }
         });
     }
 
     private Look lookOf(final RunState state, final @Nullable RunNotice notice, final int waitingSeconds) {
         if (notice != null) {
-            return lookOf(notice);
+            return lookOf(state, notice);
         }
         final Look plain = lookOf(state);
         if (state != RunState.RUNNING || waitingSeconds == StateMirror.NOT_WAITING) {
@@ -113,27 +144,20 @@ final class TranslatingDashboard {
                 plain.role(),
                 plain.title(),
                 messages.get(MessageKey.TRANSLATING_WAITING_FOR_MODEL, DurationText.clock(waitingSeconds)),
-                false);
+                Offer.NONE);
     }
 
-    private Look lookOf(final RunNotice notice) {
+    private Look lookOf(final RunState state, final RunNotice notice) {
         return switch (notice) {
             case RunNotice.ProviderError provider ->
-                new Look(
-                        "⛔",
-                        ERR,
-                        messages.get(
-                                MessageKey.TRANSLATING_PROVIDER_TITLE,
-                                provider.error().code().name()),
-                        provider.error().message(),
-                        true);
+                new Look("⛔", ERR, provider.error().title(), providerText(provider), providerOffer(state, provider));
             case RunNotice.Refused refused ->
                 new Look(
                         "⚠",
                         WARN,
                         messages.get(MessageKey.TRANSLATING_REFUSED_TITLE),
                         refused.error().message(),
-                        false);
+                        Offer.NONE);
             case RunNotice.MissingInput missing ->
                 new Look(
                         "⚠",
@@ -142,8 +166,28 @@ final class TranslatingDashboard {
                         messages.get(
                                 MessageKey.TRANSLATING_MISSING_TEXT,
                                 missing.which().token()),
-                        false);
+                        Offer.NONE);
         };
+    }
+
+    private String providerText(final RunNotice.ProviderError provider) {
+        return provider.endpointHost()
+                .map(host -> messages.get(MessageKey.TRANSLATING_PROVIDER_TEXT, host))
+                .orElseGet(() -> messages.get(MessageKey.TRANSLATING_PROVIDER_TEXT_NO_HOST));
+    }
+
+    // Identity, not equality: a later pause with an equal error is still a new pause and offers the actions again.
+    @SuppressWarnings("ReferenceEquality")
+    private boolean isStayedPausedOn(final RunNotice.ProviderError provider) {
+        return provider.error() == stayedPausedOn;
+    }
+
+    // Retry now and Stay paused belong to the paused run; a failed preparation has no run to resume, only the settings.
+    private Offer providerOffer(final RunState state, final RunNotice.ProviderError provider) {
+        if (state != RunState.PAUSED) {
+            return Offer.SETTINGS_ONLY;
+        }
+        return isStayedPausedOn(provider) ? Offer.NONE : Offer.ALL_THREE;
     }
 
     private Look lookOf(final RunState state) {
@@ -172,7 +216,7 @@ final class TranslatingDashboard {
                         MessageKey.TRANSLATING_PAUSED_TEXT,
                         mirror.chunk().get(),
                         mirror.chunks().get()),
-                false);
+                Offer.NONE);
     }
 
     private Look stateLook(final String glyph, final Banner.Role role, final String token) {
@@ -181,6 +225,6 @@ final class TranslatingDashboard {
                 role,
                 messages.get(MessageKey.TRANSLATING_STATE_TITLE, token),
                 messages.get(MessageKey.TRANSLATING_STATE_TEXT, token),
-                false);
+                Offer.NONE);
     }
 }

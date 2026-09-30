@@ -8,6 +8,7 @@ import java.util.concurrent.Callable;
 import java.util.function.ToIntFunction;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -22,6 +23,7 @@ import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.RunFigures;
+import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.Throughput;
 
@@ -43,12 +45,14 @@ final class TranslatingFigures {
     private static final double TILE_SPACING = 12;
     private static final int PERCENT = 100;
     private static final String PART_SEPARATOR = " · ";
+    private static final String ERR_BAR = "bar-err";
 
     static Node progressCard(final StateMirror mirror, final Messages messages) {
         final ProgressBar bar = new ProgressBar();
         bar.setId("translating-progress");
         bar.setMaxWidth(Double.MAX_VALUE);
         bar.progressProperty().bind(mirror.progressFraction());
+        followProviderError(bar, mirror);
         final Label line = boundLabel(
                 "translating-progress-text",
                 "muted",
@@ -69,6 +73,24 @@ final class TranslatingFigures {
         card.setId("translating-progress-card");
         card.getStyleClass().add("card");
         return card;
+    }
+
+    // The danger role belongs to the pause on an error only: a resume clears the error, and any other state drops it.
+    private static void followProviderError(final ProgressBar bar, final StateMirror mirror) {
+        final BooleanBinding failing = Bindings.createBooleanBinding(
+                () -> mirror.runState().get() == RunState.PAUSED
+                        && mirror.review().providerError().get() != null,
+                mirror.runState(),
+                mirror.review().providerError());
+        bar.getProperties().put(BooleanBinding.class, failing);
+        final Runnable paint = () -> {
+            bar.getStyleClass().remove(ERR_BAR);
+            if (failing.get()) {
+                bar.getStyleClass().add(ERR_BAR);
+            }
+        };
+        failing.addListener((observed, was, now) -> paint.run());
+        paint.run();
     }
 
     /** One count tile: the ids of its tile and its number, which figure it shows, its caption and its role. */

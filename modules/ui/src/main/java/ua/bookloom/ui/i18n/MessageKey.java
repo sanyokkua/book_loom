@@ -632,7 +632,10 @@ public enum MessageKey {
     /** Banner text of a run state; argument 0 is the same token as for {@link #TRANSLATING_STATE_TITLE}. */
     TRANSLATING_STATE_TEXT("translating.stateText"),
     /** Banner title of a provider failure; argument 0 is the failure's error code name, passed as data. */
-    TRANSLATING_PROVIDER_TITLE("translating.providerTitle"),
+    TRANSLATING_PROVIDER_TEXT("translating.providerText"),
+    TRANSLATING_PROVIDER_TEXT_NO_HOST("translating.providerTextNoHost"),
+    TRANSLATING_RETRY_NOW("translating.retryNow"),
+    TRANSLATING_STAY_PAUSED("translating.stayPaused"),
     /** Banner title of a failure reported in place, such as a destination that may not be replaced. */
     TRANSLATING_REFUSED_TITLE("translating.refusedTitle"),
     /** Banner title of a start refused because an input is missing. */

@@ -1323,6 +1323,11 @@
     -fx-padding: 0;
 }
 
+/* A pause on a provider error paints the bar in the danger role. */
+.progress-bar.bar-err > .bar {
+    -fx-background-color: -color-err;
+}
+
 .stat {
     -fx-min-width: 120px;
     -fx-background-color: -color-surface;

@@ -131,6 +131,9 @@ public final class TranslatingController {
                 "showing run state {}, notice {}",
                 state,
                 notice == null ? null : notice.getClass().getSimpleName());
+        if (notice instanceof RunNotice.ProviderError provider) {
+            log.debug("provider-error state shown for code {}", provider.error().code());
+        }
         dashboard.render(state, notice, mirror.waitingSeconds().get());
     }
 

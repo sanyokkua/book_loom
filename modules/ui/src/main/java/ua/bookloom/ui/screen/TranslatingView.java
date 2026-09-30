@@ -96,7 +96,7 @@ final class TranslatingView {
         Objects.requireNonNull(exits, "exits");
         log.debug("building the translating dashboard");
         final ReadOnlyObjectProperty<RunState> state = mirror.runState();
-        final TranslatingDashboard.LiveBanner banner = banner(messages, exits.openSettings());
+        final TranslatingDashboard.LiveBanner banner = banner(viewModel, messages, exits.openSettings());
         final TaggedLog logList = new TaggedLog(mirror.activityLog(), messages);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
@@ -112,12 +112,23 @@ final class TranslatingView {
         return new TranslatingDashboard(screen, banner, logList, messages, mirror);
     }
 
-    private static TranslatingDashboard.LiveBanner banner(final Messages messages, final Runnable openSettings) {
+    private static TranslatingDashboard.LiveBanner banner(
+            final TranslatingViewModel viewModel, final Messages messages, final Runnable openSettings) {
         final Banner banner = new Banner("translating-banner", Banner.Role.INFO, "", "", "");
+        final Button retry =
+                banner.addAction("translating-retry-now", messages.get(MessageKey.TRANSLATING_RETRY_NOW), () -> {
+                    log.debug("retry now pressed: resuming the paused run");
+                    viewModel.resume();
+                });
         final Button settings = banner.addAction(
                 "translating-open-settings", messages.get(MessageKey.TRANSLATING_OPEN_SETTINGS), openSettings);
-        Banner.setActionShown(settings, false);
-        return new TranslatingDashboard.LiveBanner(banner, settings);
+        final Button stay =
+                banner.addAction("translating-stay-paused", messages.get(MessageKey.TRANSLATING_STAY_PAUSED), () -> {});
+        stay.getStyleClass().setAll("btn-ghost");
+        for (final Button action : new Button[] {retry, settings, stay}) {
+            Banner.setActionShown(action, false);
+        }
+        return new TranslatingDashboard.LiveBanner(banner, retry, settings, stay);
     }
 
     private static Node logCard(final TaggedLog logList, final Messages messages) {

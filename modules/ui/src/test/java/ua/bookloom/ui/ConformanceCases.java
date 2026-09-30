@@ -287,7 +287,8 @@ final class ConformanceCases {
                     Overlay.NONE,
                     List.of(
                             new Part("#translating-banner", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
-                            new Part("#translating-banner", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"))),
+                            new Part("#translating-banner", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"),
+                            new Part("#translating-progress > .bar", Kind.BACKGROUND, "err", "#b0574c", "#cc7a6f"))),
             // The report screen: cards and count tiles on the surface role, the unavailable controls' boxes and track
             // on
             // the cool border role. Both states keep the right-hand "also export" cards, so both have a card.
