@@ -43,6 +43,8 @@ public final class SearchableCombo<T> extends ComboBox<T> {
         PROGRAM
     }
 
+    private static final int MAX_VISIBLE_ROWS = 10;
+
     private final Mode mode;
     private final List<T> allItems;
     private final Function<T, String> name;
@@ -140,10 +142,15 @@ public final class SearchableCombo<T> extends ComboBox<T> {
         final String typed = text == null ? "" : text;
         final String needle = TextMatch.normalize(typed);
         // Changing the list makes the selection model pick another entry and rewrite the editor; neither is a choice.
+        // The popup keeps the height it was first shown at, so it is closed here and opened again at the new size.
+        if (isShowing()) {
+            hide();
+        }
         updating = true;
         try {
             filtered.setPredicate(item ->
                     needle.isEmpty() || TextMatch.normalize(displayName(item)).contains(needle));
+            setVisibleRowCount(Math.clamp(filtered.size(), 1, MAX_VISIBLE_ROWS));
             if (!Objects.equals(getValue(), committed.get())) {
                 setValue(committed.get());
             }
