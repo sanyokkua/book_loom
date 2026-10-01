@@ -22,15 +22,16 @@ class LogKindTest {
     @ParameterizedTest
     @CsvSource({
         "ACCEPTED, SUCCESS, LOG_ACCEPTED",
-        "REPAIRED, INFO, LOG_REPAIRED",
+        "MODEL_CALL, INFO, LOG_MODEL_CALL",
+        "CALL_FAILED, WARNING, LOG_CALL_FAILED",
+        "ROUND, INFO, LOG_ROUND",
         "GLOSSARY_APPLIED, INFO, LOG_GLOSSARY_APPLIED",
         "SUMMARY_UPDATED, INFO, LOG_SUMMARY_UPDATED",
         "RETRIED, WARNING, LOG_RETRIED",
         "SEGMENT_ERROR, DANGER, LOG_SEGMENT_ERROR",
         "MILESTONE, INFO, LOG_MILESTONE"
     })
-    void kind_eachOfTheSeven_hasItsRoleAndCatalogueKey(
-            final LogKind kind, final StatusRole role, final MessageKey key) {
+    void kind_eachOfTheNine_hasItsRoleAndCatalogueKey(final LogKind kind, final StatusRole role, final MessageKey key) {
         assertThat(kind.role()).isEqualTo(role);
         assertThat(kind.messageKey()).isEqualTo(key);
     }
@@ -39,14 +40,16 @@ class LogKindTest {
     @ParameterizedTest
     @CsvSource({
         "ACCEPTED, ok",
-        "REPAIRED, fix",
+        "MODEL_CALL, call",
+        "CALL_FAILED, fail",
+        "ROUND, round",
         "GLOSSARY_APPLIED, mem",
         "SUMMARY_UPDATED, sum",
         "RETRIED, retry",
         "SEGMENT_ERROR, err",
         "MILESTONE, info"
     })
-    void tag_eachOfTheSeven_isItsFixedWord(final LogKind kind, final String tag) {
+    void tag_eachOfTheNine_isItsFixedWord(final LogKind kind, final String tag) {
         assertThat(kind.tag()).isEqualTo(tag);
     }
 
@@ -72,7 +75,7 @@ class LogKindTest {
         final List<String> marks =
                 Arrays.stream(LogKind.values()).map(LogKind::mark).collect(Collectors.toList());
 
-        assertThat(LogKind.values()).hasSize(7);
+        assertThat(LogKind.values()).hasSize(9);
         assertThat(marks).doesNotHaveDuplicates();
     }
 

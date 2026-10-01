@@ -21,6 +21,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
@@ -29,7 +30,10 @@ import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FlaggedRow;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
+import ua.bookloom.ui.state.LiveRow;
+import ua.bookloom.ui.state.LiveRows;
 import ua.bookloom.ui.state.ReviewViewModel;
+import ua.bookloom.ui.state.RoundTrack;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StructureChecks;
@@ -188,8 +192,24 @@ final class ConformancePreparations {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
+    // A run with one segment in progress whose draft was sent a context, so the live row's parts are drawn.
     private void startARun() {
-        injector.getInstance(StateMirror.class).publishRunStarted("Frankenstein.epub");
+        final StateMirror mirror = injector.getInstance(StateMirror.class);
+        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.live()
+                .publishLiveRows(new LiveRows(
+                        null,
+                        new LiveRow(
+                                "s-2",
+                                "ch1 · p02",
+                                "You will rejoice to hear.",
+                                null,
+                                null,
+                                null,
+                                true,
+                                false,
+                                new RoundTrack(1, 3, 0.85, "meaning"),
+                                new ContextSnapshot(List.of("Ви зрадієте."), List.of(), List.of(), "A letter.", ""))));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

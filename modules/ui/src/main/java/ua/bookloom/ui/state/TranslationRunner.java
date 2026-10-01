@@ -124,6 +124,19 @@ public final class TranslationRunner {
         }
     }
 
+    /**
+     * Asks a job paused on a provider error, or paused while a call hung, to flag the failing segment and go on instead
+     * of sending its call again; the running state is published when the engine reports it resumed.
+     */
+    public void skipSegment() {
+        final ActiveRun run = active.get();
+        if (run == null) {
+            log.debug("skip ignored: no run is active");
+        } else if (run.session().requestResume()) {
+            delegate("skip segment", run.job()::skipSegment);
+        }
+    }
+
     /** Publishes that a stop is pending, then asks the job to cancel; the stopped state waits for the run to return. */
     public void cancel() {
         final ActiveRun run = active.get();

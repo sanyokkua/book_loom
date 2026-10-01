@@ -74,10 +74,10 @@ class ModelCallUsageWireMockTest {
         assertThat(usageOf(finished()).generation()).isEqualTo(Duration.ofMillis(3200));
     }
 
-    // The client's second attempt is the same ask; a second start would restart the screen's waiting clock.
+    // Each attempt has its own clock: the screen restarts its waiting clock and says "attempt 2 of 2".
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void call_firstAttemptTimesOutThenSucceeds_announcesOneStartAndOneFinish(final ProviderKind kind) {
+    void call_firstAttemptTimesOutThenSucceeds_announcesEachAttemptWithItsEnd(final ProviderKind kind) {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubSequence(List.of(
                     provider.reply("Він відчинив двері.", Duration.ofMillis(1500)),
@@ -88,8 +88,9 @@ class ModelCallUsageWireMockTest {
             assertThat(provider.chatRequests()).isEqualTo(2);
         }
 
-        assertThat(events).filteredOn(ModelCallStarted.class::isInstance).hasSize(1);
-        assertThat(events).filteredOn(ModelCallFinished.class::isInstance).hasSize(1);
+        assertThat(events)
+                .map(ModelCallUsageWireMockTest::attemptLine)
+                .containsExactly("start 1/2 PT0.3S", "end 1 timeout", "start 2/2 PT0.3S", "end 2 answered");
     }
 
     // 300 Cyrillic characters at 3.0 per token and the 1.15 safety factor are 115 tokens.
@@ -133,5 +134,15 @@ class ModelCallUsageWireMockTest {
         final TokenUsage usage = finished.usage();
         assertThat(usage).isNotNull();
         return java.util.Objects.requireNonNull(usage, "usage");
+    }
+
+    private static String attemptLine(final JobEvent event) {
+        return switch (event) {
+            case ModelCallStarted started ->
+                "start " + started.attempt() + "/" + started.maxAttempts() + " " + started.timeout();
+            case ModelCallFinished finished ->
+                "end " + finished.attempt() + " " + (finished.isAnswered() ? "answered" : finished.failure());
+            default -> event.getClass().getSimpleName();
+        };
     }
 }

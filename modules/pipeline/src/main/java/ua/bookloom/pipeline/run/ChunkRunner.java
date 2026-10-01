@@ -218,7 +218,7 @@ public final class ChunkRunner {
         final Step<ChunkDecider> decider = calls.untilAnsweredOrFlagged(
                 current.work(),
                 segmentId,
-                "judge:" + items.getFirst().segment().id(),
+                new RoutedCalls.StepName("judge", items.getFirst().segment().id()),
                 () -> steps.loop()
                         .start(outcomes, current.loop(), current.context().gate(), steps.calls()),
                 error -> steps.loop()
@@ -259,10 +259,11 @@ public final class ChunkRunner {
 
     private Step<DraftOutcome> drafted(
             final Current current, final Segment segment, final ContextPackage context, final ProtectedMask mask) {
+        events.contextAssembled(segment.id(), context.snapshot());
         final Step<DraftOutcome> drafted = calls.untilAnsweredOrFlagged(
                 current.work(),
                 segment.id(),
-                "draft:" + segment.id(),
+                new RoutedCalls.StepName("draft", segment.id()),
                 () -> current.translator()
                         .translateSplit(segment, context.draftContext(), mask, steps.splitter(), current.budget()),
                 error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
@@ -300,7 +301,11 @@ public final class ChunkRunner {
     private Optional<RunEnd> decideOne(final Current current, final WorkItem item, final ChunkDecider decider) {
         final String segmentId = item.segment().id();
         return switch (calls.untilAnsweredOrFlagged(
-                current.work(), segmentId, "decide:" + segmentId, decider::nextDecision, decider::flagCurrent)) {
+                current.work(),
+                segmentId,
+                new RoutedCalls.StepName("decide", segmentId),
+                decider::nextDecision,
+                decider::flagCurrent)) {
             case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
             case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome, decider);
         };

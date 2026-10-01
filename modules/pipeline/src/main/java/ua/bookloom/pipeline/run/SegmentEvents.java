@@ -9,15 +9,18 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.heal.DraftEvaluation;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -63,6 +66,33 @@ final class SegmentEvents {
             log.trace("Started segment text segmentId={} displaySource={}", segment.id(), displaySource);
         }
         emit.accept(new SegmentStarted(segment.id(), locator.text(), displaySource, position));
+    }
+
+    /**
+     * Announces the context a segment's draft is about to be sent with, in display text, so the screen can show what
+     * the model was given.
+     *
+     * @param segmentId the segment the draft is for
+     * @param snapshot the context as the draft sees it, with the document's placeholders still in place
+     */
+    void contextAssembled(final String segmentId, final ContextSnapshot snapshot) {
+        final ContextSnapshot shown = new ContextSnapshot(
+                snapshot.precedingTargets().stream().map(DisplayText::of).toList(),
+                snapshot.glossary(),
+                snapshot.tmHits().stream()
+                        .map(hit -> new SnapshotTmHit(
+                                hit.kind(), DisplayText.of(hit.source()), DisplayText.of(hit.target())))
+                        .toList(),
+                snapshot.summary(),
+                snapshot.styleSheet());
+        log.debug(
+                "Sending ContextAssembled segmentId={} preceding={} summary={} names={} tmHits={}",
+                segmentId,
+                shown.precedingTargets().size(),
+                shown.summary() != null,
+                shown.glossary().size(),
+                shown.tmHits().size());
+        emit.accept(new ContextAssembled(segmentId, shown));
     }
 
     /**

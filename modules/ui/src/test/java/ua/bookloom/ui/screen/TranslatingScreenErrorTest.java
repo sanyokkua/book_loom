@@ -85,7 +85,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
     // IF the banner did not name the failure and the server, THEN a person could not tell a dead server from a wrong
     // key.
     @Test
-    void banner_runPausesOnUnreachable_namesTheTitleTheHostAndThatNoWorkWasLost() {
+    void banner_runPausesOnUnreachable_namesTheTitleAndTheHostWithoutClaimingNoWorkWasLost() {
         showTranslating();
         publish(RunState.RUNNING);
 
@@ -94,7 +94,7 @@ class TranslatingScreenErrorTest extends TranslatingScreenTestBase {
         assertThat(labelText("translating-banner-title")).isEqualTo("Model server unreachable");
         assertThat(labelText("translating-banner-text"))
                 .contains("localhost:11434")
-                .contains("no work was lost");
+                .doesNotContain("no work was lost");
         assertThat(required("translating-banner").getStyleClass())
                 .contains("banner", "banner-err")
                 .doesNotContain("banner-info", "banner-warn");

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.judge.JudgeCall;
@@ -161,6 +162,7 @@ final class SegmentHealer {
                 SegmentFindings.concrete(state.qa(), state.routingVerdict(), segmentId), state.lastGateFinding());
         SegmentHealerLogging.logRoundChoice(
                 segmentId, round, concreteFindings, state.qa(), state.routingVerdict(), tau);
+        announceRound(segmentId, round, state, concreteFindings);
         final RoundOutcome result = rounds.run(outcome, state.rewriteBase(), concreteFindings, tau, round);
         return switch (result) {
             case RoundOutcome.StepError stepError -> new RoundStep.Interrupted(stepError.error(), null);
@@ -173,6 +175,15 @@ final class SegmentHealer {
             case RoundOutcome.Failed failed -> RoundStep.continueWith(carryingFinding(state, failed));
             case RoundOutcome.Evaluated evaluated -> decideEvaluated(outcome, segmentId, tau, round, state, evaluated);
         };
+    }
+
+    // The score shown is the last verdict that judged any text of the segment; an unreadable one has no meaning.
+    private void announceRound(
+            final String segmentId, final int round, final RoundState state, final List<QaFinding> findings) {
+        final JudgeVerdict verdict = state.recordedVerdict();
+        final Double score = verdict == null || !verdict.readable() || verdict.isUnavailable() ? null : verdict.score();
+        final String blocking = findings.isEmpty() ? null : findings.getFirst().kind();
+        calls.announce(new RoundStarted(segmentId, round, settings.dial().repairRounds(), score, blocking));
     }
 
     private static RoundState carryingFinding(final RoundState state, final RoundOutcome.Failed failed) {

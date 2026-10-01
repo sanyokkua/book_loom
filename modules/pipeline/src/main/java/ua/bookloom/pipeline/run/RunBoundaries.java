@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.run;
 
 import java.util.Objects;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.JobProgress;
 
@@ -29,6 +30,22 @@ public interface RunBoundaries {
     }
 
     /**
+     * Which step a provider error stopped, as a pause on it names it to the person.
+     *
+     * @param segmentId the segment the failing step is for — the first of a chunk for a chunk's judge call — or null
+     *     for a step of no segment
+     * @param pauses how many times this step has paused the run, the pause about to happen included; zero when the
+     *     step is never flagged for failing
+     * @param pausesBeforeFlagging how many pauses the step may cause before its next failure flags it; zero when the
+     *     step is never flagged for failing
+     */
+    record FailingStep(@Nullable String segmentId, int pauses, int pausesBeforeFlagging) {
+
+        /** A step of no segment that is never flagged for failing. */
+        public static final FailingStep NONE = new FailingStep(null, 0, 0);
+    }
+
+    /**
      * Answers the boundary after a segment was decided and its decision recorded.
      *
      * @param decision the non-null place the decision leaves the run
@@ -51,9 +68,10 @@ public interface RunBoundaries {
      *
      * @param error the non-null error the call answered
      * @param progress the non-null progress as it stands
+     * @param step the non-null step that failed, which a pause names
      * @return empty to make the call again, or how the run ends
      */
-    Optional<RunEnd> afterRoutedError(AppError error, JobProgress progress);
+    Optional<RunEnd> afterRoutedError(AppError error, JobProgress progress, FailingStep step);
 
     /**
      * Takes the person's request, made while the run was paused on a provider error, to flag the failing segment and go

@@ -120,8 +120,10 @@ count it reports.
 
 IF a run meets a failure whose code this capability assigns to the provider-error state, THEN the run SHALL be paused
 with the counts it had reached kept, and the translating screen SHALL show that paused state as a provider error: a
-banner of error severity naming what happened and the endpoint's host, saying that no work was lost; the progress bar
-drawn in the danger role; and three actions — Retry now, Open provider settings and Stay paused. Every pause on error
+banner of error severity naming what happened and the endpoint's host, the call that failed with its segment and code,
+how many of the step's pauses are spent, what Retry now will do, and that finished segments are kept in memory until
+the application closes; the progress bar drawn in the danger role; and four actions — Retry now, Skip segment, Open
+provider settings and Stay paused. Every pause on error
 SHALL be shown this way, including a pause on a `validation` refusal the provider returned.
 
 IF a run ends on `ErrorCode.internal`, THEN the screen SHALL NOT show the provider-error state; the run is Failed and the
@@ -151,9 +153,9 @@ leave it for later. Retry now redoes the one segment that was interrupted, so no
 - **WHEN** the run over `Frankenstein.epub` is at 62% and nothing is listening at `http://localhost:11434` after the
   retries
 - **THEN** the run is paused and the translating screen shows an error banner naming `Model server unreachable` and
-  `localhost:11434` and saying no work was lost
+  `localhost:11434` and saying finished segments are kept in memory until the application closes
 - **AND** the progress bar is drawn in the danger role, which resolves to `#b0574c` under the light values
-- **AND** Retry now, Open provider settings and Stay paused are offered, and no dialog is opened
+- **AND** Retry now, Skip segment, Open provider settings and Stay paused are offered, and no dialog is opened
 
 #### Scenario: The counts survive the failure
 
@@ -164,7 +166,7 @@ leave it for later. Retry now redoes the one segment that was interrupted, so no
 
 - **WHEN** LM Studio answers `400` `{"error":"Model unloaded"}` for `ch7 · p41` and the run pauses with
   `ErrorCode.validation`
-- **THEN** the translating screen shows the provider-error banner with Retry now, Open provider settings and Stay paused
+- **THEN** the translating screen shows the provider-error banner with Retry now, Skip segment, Open provider settings and Stay paused
 - **AND** no dialog is opened
 
 #### Scenario: An internal failure is not a provider error

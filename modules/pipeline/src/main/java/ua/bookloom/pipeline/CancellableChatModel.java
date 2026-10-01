@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -32,7 +33,13 @@ final class CancellableChatModel implements ChatModel {
 
     @Override
     public Result<ChatResponse> chat(final ChatRequest request) {
+        return chat(request, CallAttemptListener.NONE);
+    }
+
+    @Override
+    public Result<ChatResponse> chat(final ChatRequest request, final CallAttemptListener attempts) {
         Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(attempts, "attempts");
         if (!control.enterModelCall()) {
             log.debug("Refused model call because a stop or a pause is already requested state={}", control.state());
             return Result.err(AppError.of(
@@ -42,7 +49,7 @@ final class CancellableChatModel implements ChatModel {
         }
         try {
             onCallEntered.run();
-            return delegate.chat(request);
+            return delegate.chat(request, attempts);
         } finally {
             control.exitModelCall();
         }

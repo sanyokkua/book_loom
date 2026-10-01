@@ -53,8 +53,13 @@ import ua.bookloom.api.pipeline.Subscription;
 class TranslationJobEventsTest {
 
     /** What one segment accepted on its first call announces, in order. */
-    private static final List<String> ACCEPTED_ON_FIRST_CALL =
-            List.of("SegmentStarted", "ModelCallStarted", "ModelCallFinished", "SegmentDrafted", "SegmentDecided");
+    private static final List<String> ACCEPTED_ON_FIRST_CALL = List.of(
+            "SegmentStarted",
+            "ContextAssembled",
+            "ModelCallStarted",
+            "ModelCallFinished",
+            "SegmentDrafted",
+            "SegmentDecided");
 
     @TempDir
     private Path tempDir;
@@ -156,7 +161,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(9);
+        assertThat(healthy).hasSize(10);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -293,6 +298,7 @@ class TranslationJobEventsTest {
     private static List<String> acceptedOnFirstCall(final String segmentId, final int pendingAfter) {
         return List.of(
                 "SegmentStarted " + segmentId,
+                "ContextAssembled",
                 "ModelCallStarted DRAFT " + segmentId,
                 "ModelCallFinished DRAFT " + segmentId,
                 "SegmentDrafted " + segmentId,

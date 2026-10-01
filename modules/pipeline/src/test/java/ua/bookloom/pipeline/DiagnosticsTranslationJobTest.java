@@ -308,9 +308,9 @@ class DiagnosticsTranslationJobTest {
                                 .map(event -> event.getClass().getSimpleName())
                                 .toList()))
                 .isEqualTo("StageStarted StageStarted"
-                        + " SegmentStarted ModelCallStarted ModelCallFinished SegmentDrafted SegmentDecided"
-                        + " SegmentStarted ModelCallStarted ModelCallFinished SegmentDecided"
-                        + " SegmentStarted ModelCallStarted ModelCallFinished Finished");
+                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished SegmentDrafted SegmentDecided"
+                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished SegmentDecided"
+                        + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished Finished");
         assertThat(((Finished) events.getLast()).report()).isEqualTo(result);
         assertOnlyErrorCarries(cause);
     }

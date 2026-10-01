@@ -66,9 +66,9 @@ class WholeBookPipelineEndToEndTest {
     private static final int UNAVAILABLE = 503;
     private static final int PARAGRAPHS = 50;
     private static final String SEA_TARGET = "Том дивився на сіре море тієї ночі.";
-    // Measured once: 4,802 events at DEBUG or higher in each dialect (6 of them at INFO or higher); the bound is the
-    // next multiple of 500 above that count.
-    private static final int DEBUG_OR_HIGHER_BOUND = 5_000;
+    // Measured once: 5,203 events at DEBUG or higher in each dialect once every attempt and context was announced (6 of
+    // them at INFO or higher); the bound is the next multiple of 500 above that count.
+    private static final int DEBUG_OR_HIGHER_BOUND = 5_500;
     private static final int INFO_OR_HIGHER_BOUND = 30;
 
     @TempDir

@@ -3,6 +3,9 @@ package ua.bookloom.ui.control;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.Pos;
@@ -10,11 +13,16 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ConnectionStatus;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
@@ -22,8 +30,9 @@ import ua.bookloom.ui.state.Throughput;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
 /**
- * The run in the window's title bar: the book's file name, a state text, the time elapsed and left, and the one
- * control that pauses or resumes the run, so a person can act on it from any screen.
+ * The run in the window's title bar: the book's file name, a state text, the time elapsed and left, a chip saying how
+ * the model server has been answering (which opens the provider settings), and the one control that pauses or resumes
+ * the run, so a person can act on it from any screen.
  *
  * <p>The bar holds no state of its own. It is redrawn from the mirror and from the view model's controls, and its button
  * calls the view model's {@code pause} and {@code resume}, the methods the translating screen uses, so both places
@@ -36,6 +45,10 @@ public final class RunStatusBar {
 
     private static final double PERCENT = 100.0;
     private static final double PART_SPACING = 12;
+    private static final long SECONDS_PER_MINUTE = 60;
+    private static final List<String> HEALTH_CLASSES = Arrays.stream(ConnectionStatus.Health.values())
+            .map(ConnectionStatus.Health::styleClass)
+            .toList();
 
     private final StateMirror mirror;
     private final TranslatingViewModel viewModel;
@@ -46,6 +59,9 @@ public final class RunStatusBar {
     private final Label elapsed = new Label();
     private final Label timeLeft = new Label();
     private final Button control = new Button();
+    private final Button connection = new Button();
+    private final Tooltip connectionTip = new Tooltip();
+    private final Navigator navigator;
     private boolean controlPauses;
     private boolean shown;
 
@@ -55,10 +71,16 @@ public final class RunStatusBar {
      * @param mirror where the run's state, figures and file name are read from
      * @param viewModel what the button calls and where the controls on offer are read from
      * @param messages the catalogue every text comes from
+     * @param navigator where the connection chip leads: the provider settings
      */
     @Inject
-    public RunStatusBar(final StateMirror mirror, final TranslatingViewModel viewModel, final Messages messages) {
+    public RunStatusBar(
+            final StateMirror mirror,
+            final TranslatingViewModel viewModel,
+            final Messages messages,
+            final Navigator navigator) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
+        this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         build();
@@ -68,6 +90,7 @@ public final class RunStatusBar {
         mirror.progressFraction().addListener(redraw);
         mirror.review().providerError().addListener(redraw);
         mirror.live().throughput().addListener(redraw);
+        mirror.live().connection().addListener(redraw);
         viewModel.controls().addListener(redraw);
         refresh();
     }
@@ -100,7 +123,16 @@ public final class RunStatusBar {
         control.setMinWidth(Region.USE_PREF_SIZE);
         control.setOnAction(event -> press());
         Tips.install(messages, control, MessageKey.SHELL_RUN_PAUSE_TIP);
-        view.getChildren().addAll(fileName, stateText, elapsed, timeLeft, control);
+        connection.setId("shell-run-connection");
+        connection.getStyleClass().addAll("shell-title-button", "connection-chip");
+        connection.setMinWidth(Region.USE_PREF_SIZE);
+        connectionTip.setText(messages.get(MessageKey.SHELL_CONNECTION));
+        connection.setTooltip(connectionTip);
+        connection.setOnAction(event -> {
+            log.debug("connection chip pressed: opening the provider settings");
+            navigator.navigate(ViewNames.SETTINGS);
+        });
+        view.getChildren().addAll(fileName, stateText, elapsed, timeLeft, connection, control);
     }
 
     private static void name(final Label label, final String id, final String styleClass) {
@@ -128,6 +160,7 @@ public final class RunStatusBar {
         final int percent = (int) Math.round(mirror.progressFraction().get() * PERCENT);
         stateText.setText(stateText(state, percent));
         showTimes(mirror.live().throughput().get());
+        showConnection(mirror.live().connection().get());
         showControl(state, viewModel.controls().get());
     }
 
@@ -161,6 +194,42 @@ public final class RunStatusBar {
         if (left != null) {
             timeLeft.setText(messages.get(MessageKey.SHELL_RUN_LEFT, DurationText.format(messages, left)));
         }
+    }
+
+    private void showConnection(final ConnectionStatus status) {
+        final ConnectionStatus.Health health = status.health();
+        final Duration since = status.sinceLastAnswer();
+        connection.setText(
+                switch (health) {
+                    case UNKNOWN -> messages.get(MessageKey.SHELL_CONNECTION_UNKNOWN);
+                    case STEADY -> messages.get(MessageKey.SHELL_CONNECTION_STEADY, clock(since));
+                    case UNSTEADY -> messages.get(MessageKey.SHELL_CONNECTION_UNSTEADY, status.failuresRecently());
+                });
+        connection.getStyleClass().removeAll(HEALTH_CLASSES);
+        connection.getStyleClass().add(health.styleClass());
+        final String model = viewModel.modelText().get();
+        connectionTip.setText(messages.get(MessageKey.SHELL_CONNECTION) + "\n"
+                + messages.get(
+                        MessageKey.SHELL_CONNECTION_TIP,
+                        model == null || model.isBlank() ? none() : model,
+                        since == null ? none() : clock(since),
+                        String.valueOf(status.timeoutsRecently()),
+                        String.valueOf(status.failuresRecently()),
+                        rate(status.draftTokensPerSecond()),
+                        rate(status.judgeTokensPerSecond())));
+    }
+
+    private String none() {
+        return messages.get(MessageKey.SHELL_CONNECTION_NONE);
+    }
+
+    private String rate(final @Nullable Double tokensPerSecond) {
+        return tokensPerSecond == null ? none() : String.valueOf(Math.round(tokensPerSecond));
+    }
+
+    private static String clock(final @Nullable Duration duration) {
+        final long seconds = duration == null ? 0 : duration.toSeconds();
+        return String.format(Locale.ROOT, "%d:%02d", seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE);
     }
 
     private void showControl(final RunState state, final Controls offered) {

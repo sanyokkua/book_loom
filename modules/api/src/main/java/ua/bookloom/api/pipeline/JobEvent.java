@@ -13,4 +13,6 @@ public sealed interface JobEvent
                 SegmentStarted,
                 SegmentDrafted,
                 ModelCallFinished,
-                MemoryUpdated {}
+                MemoryUpdated,
+                ContextAssembled,
+                RoundStarted {}

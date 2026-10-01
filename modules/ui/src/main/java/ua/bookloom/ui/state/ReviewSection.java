@@ -36,6 +36,7 @@ public final class ReviewSection {
     }
 
     private final ReadOnlyObjectWrapper<@Nullable AppError> providerError = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable PauseNotice> pauseNotice = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> reviewPauseSegment = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable Decision> decided = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper retryInFlight = new ReadOnlyBooleanWrapper();
@@ -47,6 +48,32 @@ public final class ReviewSection {
      */
     public ReadOnlyObjectProperty<@Nullable AppError> providerError() {
         return providerError.getReadOnlyProperty();
+    }
+
+    /**
+     * What the provider-error banner names about the pause: the segment, the failed call and the pauses spent.
+     *
+     * @return a read-only property holding {@code null} unless the run paused on an error; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable PauseNotice> pauseNotice() {
+        return pauseNotice.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows what a pause on an error is about. Published before the error itself, so the banner the error opens can
+     * already name it.
+     *
+     * @param notice the non-null details of the pause
+     */
+    public void publishPauseNotice(final PauseNotice notice) {
+        Objects.requireNonNull(notice, "notice");
+        log.debug(
+                "publishing the pause details: code {}, call {}, pause {} of {}",
+                notice.code(),
+                notice.kind(),
+                notice.pauses(),
+                notice.pausesBeforeFlagging());
+        Platform.runLater(() -> pauseNotice.set(notice));
     }
 
     /**
@@ -133,6 +160,7 @@ public final class ReviewSection {
     /** Clears every field; runs on the FX thread as part of the mirror's reset for a new run. */
     void reset() {
         providerError.set(null);
+        pauseNotice.set(null);
         reviewPauseSegment.set(null);
         decided.set(null);
     }

@@ -107,8 +107,14 @@ public enum MessageKey {
     COMMON_CLOSE_TIP("common.close.tip"),
     /** Activity-log entry for an accepted segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_ACCEPTED("log.accepted"),
-    /** Activity-log entry for a repaired segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
-    LOG_REPAIRED("log.repaired"),
+    /** Activity-log entry for an answered model-call attempt; arguments: 0 the call's name, 1 the locator part (empty or {@code " · ch7 · p42"}), 2 the repair round or {@code 0}, 3 the attempt, 4 the time it took as {@code m:ss}; all Strings. */
+    LOG_MODEL_CALL("log.modelCall"),
+    /** Activity-log entry for a failed model-call attempt; arguments as {@link #LOG_MODEL_CALL}, and 5 the error code; all Strings. */
+    LOG_CALL_FAILED("log.callFailed"),
+    /** Activity-log entry for a segment entering a repair round; arguments: 0 the locator, 1 the round, 2 the rounds allowed, 3 the finding it repairs or {@code none}; all Strings. */
+    LOG_ROUND("log.round"),
+    /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code judge} or {@code directed_fix}. */
+    RUN_CALL_KIND("run.callKind"),
     /** Activity-log entry for an applied glossary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_GLOSSARY_APPLIED("log.glossaryApplied"),
     /** Activity-log entry for an updated rolling summary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
@@ -751,6 +757,32 @@ public enum MessageKey {
     LIVE_TITLE("live.title"),
     /** Target text of the segment in progress until its draft arrives. */
     LIVE_WAITING("live.waiting"),
+    /** Live-row tracker; arguments: 0 the round, 1 the rounds allowed, 2 the judge's score or {@code none}, 3 the finding being repaired or {@code none}; all Strings. */
+    LIVE_ROUND("live.round"),
+    /** Source pane of a segment that has no visible text. */
+    LIVE_EMPTY_SOURCE("live.emptySource"),
+    /** Target pane of a decided segment whose target is empty. */
+    LIVE_NO_TARGET("live.noTarget"),
+    /** Heading of the collapsed section that shows what a draft was sent with. */
+    LIVE_CONTEXT_TITLE("live.context.title"),
+    /** Counts beside {@link #LIVE_CONTEXT_TITLE}; arguments: 0 preceding translations, 1 {@code yes} when a summary was sent else {@code no}, 2 names, 3 memory hits. */
+    LIVE_CONTEXT_COUNTS("live.context.counts"),
+    /** Hover explanation of the context section. */
+    LIVE_CONTEXT_TIP("live.context.title.tip"),
+    /** Context-section heading of the preceding translations. */
+    LIVE_CONTEXT_PRECEDING("live.context.preceding"),
+    /** Context-section heading of the rolling summary. */
+    LIVE_CONTEXT_SUMMARY("live.context.summary"),
+    /** Context-section heading of the glossary names. */
+    LIVE_CONTEXT_NAMES("live.context.names"),
+    /** Context-section heading of the translation-memory hits. */
+    LIVE_CONTEXT_MEMORY("live.context.memory"),
+    /** Context-section line of one glossary name; arguments: 0 the term, 1 its rendering or {@code none}, 2 {@code locked} or {@code free}; all Strings. */
+    LIVE_CONTEXT_TERM("live.context.term"),
+    /** Context-section line of one memory hit; arguments: 0 the source, 1 the target; both Strings. */
+    LIVE_CONTEXT_HIT("live.context.hit"),
+    /** Context-section body when the draft was sent nothing besides its source and the style sheet. */
+    LIVE_CONTEXT_EMPTY("live.context.empty"),
     /** Badge on a draft the judge has not decided yet. */
     LIVE_AWAITING_JUDGE("live.awaitingJudge"),
     /** Badge with the judge's score; argument 0 is the formatted score. */
@@ -838,6 +870,46 @@ public enum MessageKey {
     TRANSLATING_MISSING_TEXT("translating.missingText"),
     /** Banner text while the model has not answered for a while; argument 0 is the wait as {@code m:ss}, passed as a String. */
     TRANSLATING_WAITING_FOR_MODEL("translating.waitingForModel"),
+    /** Banner text naming the request the run waits on; arguments: 0 the call's name, 1 the locator part, 2 the attempt, 3 the attempts allowed, 4 the attempt's wait as {@code m:ss}, 5 its timeout as {@code m:ss} or {@code none}, 6 the call's whole wait as {@code m:ss} or {@code none}; all Strings. */
+    TRANSLATING_WAITING_CALL("translating.waitingCall"),
+    /** Banner title once a request has waited long enough to offer a way out. */
+    TRANSLATING_STUCK_TITLE("translating.stuckTitle"),
+    /** Banner hint under a stuck request, naming the three ways out. */
+    TRANSLATING_STUCK_HINT("translating.stuckHint"),
+    /** Button that flags the failing or stalled segment and lets the run go on. */
+    TRANSLATING_SKIP_SEGMENT("translating.skipSegment"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_SKIP_SEGMENT}. */
+    TRANSLATING_SKIP_SEGMENT_TIP("translating.skipSegment.tip"),
+    /** Button on the stuck banner that cancels the stalled request and sends it again. */
+    TRANSLATING_RETRY_CALL("translating.retryCall"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_RETRY_CALL}. */
+    TRANSLATING_RETRY_CALL_TIP("translating.retryCall.tip"),
+    /** Button on the stuck banner that pauses the run. */
+    TRANSLATING_PAUSE_STUCK("translating.pauseStuck"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_PAUSE_STUCK}. */
+    TRANSLATING_PAUSE_STUCK_TIP("translating.pauseStuck.tip"),
+    /** Provider-error detail line; arguments: 0 the failed call's name, 1 the locator part, 2 the error code, 3 the pauses spent, 4 the pauses allowed; all Strings. */
+    TRANSLATING_PROVIDER_DETAIL("translating.providerDetail"),
+    /** Provider-error line saying what Retry now and Skip segment do; argument 0 is {@code last} when the next failure flags the segment, else {@code more}. */
+    TRANSLATING_PROVIDER_RESUME("translating.providerResume"),
+    /** Toggle over the activity log that shows only the lines about something that went wrong. */
+    TRANSLATING_LOG_ERRORS_ONLY("translating.log.errorsOnly"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_LOG_ERRORS_ONLY}. */
+    TRANSLATING_LOG_ERRORS_ONLY_TIP("translating.log.errorsOnly.tip"),
+    /** Hover explanation of a collapsed activity-log line; argument 0 is how many times it happened in a row. */
+    TRANSLATING_LOG_REPEATS("translating.log.repeats"),
+    /** Heading of the connection chip's hover explanation. */
+    SHELL_CONNECTION("shell.connection"),
+    /** Status-bar chip before the server has answered anything. */
+    SHELL_CONNECTION_UNKNOWN("shell.connection.unknown"),
+    /** Status-bar chip while the server answers; argument 0 is how long ago it last answered, as {@code m:ss}, a String. */
+    SHELL_CONNECTION_STEADY("shell.connection.steady"),
+    /** Status-bar chip after recent failures; argument 0 is how many attempts failed in the last ten minutes. */
+    SHELL_CONNECTION_UNSTEADY("shell.connection.unsteady"),
+    /** Hover explanation of the connection chip; arguments: 0 the model, 1 the last answer's age, 2 the timeouts, 3 the failures, 4 the drafting speed, 5 the judging speed; all Strings. */
+    SHELL_CONNECTION_TIP("shell.connection.tip"),
+    /** A figure the connection chip's explanation does not know yet. */
+    SHELL_CONNECTION_NONE("shell.connection.none"),
     /** Button on the provider-error banner that opens the provider settings. */
     TRANSLATING_OPEN_SETTINGS("translating.openSettings"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_OPEN_SETTINGS}. */

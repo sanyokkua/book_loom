@@ -13,7 +13,6 @@ import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
-import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 
@@ -39,11 +38,13 @@ class TranslationJobModelCallEventTest {
                         "StageStarted",
                         "StageStarted",
                         "SegmentStarted",
+                        "ContextAssembled",
                         "ModelCallStarted",
                         "ModelCallFinished",
                         "SegmentDrafted",
                         "SegmentDecided",
                         "SegmentStarted",
+                        "ContextAssembled",
                         "ModelCallStarted",
                         "ModelCallFinished",
                         "SegmentDrafted",
@@ -70,8 +71,7 @@ class TranslationJobModelCallEventTest {
 
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
-                .containsExactly(
-                        new ModelCallStarted("Book.md:0", CallKind.DRAFT),
-                        new ModelCallStarted("Book.md:0", CallKind.STRUCTURAL_REPAIR));
+                .map(event -> ((ModelCallStarted) event).segmentId() + " " + ((ModelCallStarted) event).kind())
+                .containsExactly("Book.md:0 DRAFT", "Book.md:0 STRUCTURAL_REPAIR");
     }
 }

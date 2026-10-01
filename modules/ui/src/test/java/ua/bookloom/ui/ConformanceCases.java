@@ -294,6 +294,11 @@ final class ConformanceCases {
                                     "surface-alt",
                                     "#fbf9f4",
                                     "#38474f"),
+                            // The context the draft was sent with is a tinted, framed body under the panes.
+                            new Part(
+                                    "#live-current-context-body", Kind.BACKGROUND, "surface-alt", "#fbf9f4", "#38474f"),
+                            new Part("#live-current-context-body", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#live-current-round", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
                             new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
                             new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
             new Screen(

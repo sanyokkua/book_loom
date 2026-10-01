@@ -69,8 +69,7 @@ public final class JudgeCall {
                     OutputLimit.forJudge(pairs.size()),
                     false);
             logTraceMessages(request);
-            final String soleSegmentId = pairs.size() == 1 ? pairs.get(0).segmentId() : null;
-            final Result<ChatResponse> reply = calls.call(CallKind.JUDGE, soleSegmentId, request);
+            final Result<ChatResponse> reply = calls.callAbout(CallKind.JUDGE, segmentIds, request);
             return reply.isErr()
                     ? routeFailure(segmentIds, Objects.requireNonNull(reply.error()))
                     : Result.ok(readVerdict(segmentIds, pairs, Objects.requireNonNull(reply.data())));

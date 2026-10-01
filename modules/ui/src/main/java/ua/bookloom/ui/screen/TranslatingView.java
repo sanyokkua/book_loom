@@ -11,8 +11,10 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -35,6 +37,7 @@ import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
+import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -89,6 +92,34 @@ final class TranslatingView {
     private static final Control STOP = new Control(
             "stop", "btn-ghost", MessageKey.TRANSLATING_STOP, MessageKey.TRANSLATING_STOP_TIP, Controls::stop);
 
+    /** One action the banner may offer: its node id, its label, its hover explanation and whether it is a ghost. */
+    private record BannerAction(String id, MessageKey label, MessageKey tip, boolean ghost) {}
+
+    private static final BannerAction RETRY_NOW = new BannerAction(
+            "translating-retry-now", MessageKey.TRANSLATING_RETRY_NOW, MessageKey.TRANSLATING_RETRY_NOW_TIP, false);
+    private static final BannerAction SKIP_SEGMENT = new BannerAction(
+            "translating-skip-segment",
+            MessageKey.TRANSLATING_SKIP_SEGMENT,
+            MessageKey.TRANSLATING_SKIP_SEGMENT_TIP,
+            false);
+    private static final BannerAction OPEN_SETTINGS = new BannerAction(
+            "translating-open-settings",
+            MessageKey.TRANSLATING_OPEN_SETTINGS,
+            MessageKey.TRANSLATING_OPEN_SETTINGS_TIP,
+            false);
+    private static final BannerAction STAY_PAUSED = new BannerAction(
+            "translating-stay-paused",
+            MessageKey.TRANSLATING_STAY_PAUSED,
+            MessageKey.TRANSLATING_STAY_PAUSED_TIP,
+            true);
+    private static final BannerAction SEND_AGAIN = new BannerAction(
+            "translating-send-again", MessageKey.TRANSLATING_RETRY_CALL, MessageKey.TRANSLATING_RETRY_CALL_TIP, false);
+    private static final BannerAction PAUSE_STUCK = new BannerAction(
+            "translating-pause-stuck",
+            MessageKey.TRANSLATING_PAUSE_STUCK,
+            MessageKey.TRANSLATING_PAUSE_STUCK_TIP,
+            true);
+
     /**
      * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
      * open the review panel, whose view model counts the flagged segments and whose retry asks its note in a card.
@@ -98,7 +129,8 @@ final class TranslatingView {
             Runnable openSettings,
             ReviewViewModel review,
             RetryWithNoteDialog retryDialog,
-            ReviewPauseFollower pauses) {}
+            ReviewPauseFollower pauses,
+            RunInterventions interventions) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
@@ -115,7 +147,7 @@ final class TranslatingView {
         Objects.requireNonNull(exits, "exits");
         log.debug("building the translating dashboard");
         final ReadOnlyObjectProperty<RunState> state = mirror.runState();
-        final TranslatingDashboard.LiveBanner banner = banner(viewModel, messages, exits.openSettings());
+        final TranslatingDashboard.LiveBanner banner = banner(viewModel, messages, exits);
         final TaggedLog logList = new TaggedLog(mirror.activityLog(), messages);
         final ObservableValue<String> sourceName =
                 languageName(current, BookBrief::sourceLanguage, MessageKey.LIVE_SOURCE_FALLBACK, names, messages);
@@ -124,48 +156,79 @@ final class TranslatingView {
         final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
-                banner.banner(),
+                head(banner, actions(viewModel, mirror, exits.review(), review, messages)),
                 StateVisibility.shownIn(
                         TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
                 StateVisibility.shownIn(TranslatingFigures.progressCard(mirror, messages), state, UNDER_WAY),
                 StateVisibility.shownIn(TranslatingFigures.runningTiles(mirror, messages), state, UNDER_WAY),
                 StateVisibility.shownIn(TranslatingFigures.outcomeCard(mirror, messages), state, ENDED),
                 StateVisibility.shownIn(watch(logList, mirror, sourceName, targetName, messages), state, WATCHED),
-                actions(viewModel, mirror, exits.review(), review, messages),
                 review,
                 footer(mirror, messages, exits.navigator()));
         return new TranslatingDashboard(screen, banner, logList, messages, mirror);
     }
 
+    // The run controls sit under the banner, so they stay in view above the live panel during a long stall.
+    private static Node head(final TranslatingDashboard.LiveBanner banner, final Node actions) {
+        final VBox head = new VBox(CARD_SPACING, banner.banner(), actions);
+        head.setId("translating-head");
+        return head;
+    }
+
     private static TranslatingDashboard.LiveBanner banner(
-            final TranslatingViewModel viewModel, final Messages messages, final Runnable openSettings) {
+            final TranslatingViewModel viewModel, final Messages messages, final Exits exits) {
         final Banner banner = new Banner("translating-banner", Banner.Role.INFO, "", "", "");
-        final Button retry =
-                banner.addAction("translating-retry-now", messages.get(MessageKey.TRANSLATING_RETRY_NOW), () -> {
-                    log.debug("retry now pressed: resuming the paused run");
-                    viewModel.resume();
-                });
-        final Button settings = banner.addAction(
-                "translating-open-settings", messages.get(MessageKey.TRANSLATING_OPEN_SETTINGS), openSettings);
-        final Button stay =
-                banner.addAction("translating-stay-paused", messages.get(MessageKey.TRANSLATING_STAY_PAUSED), () -> {});
-        stay.getStyleClass().setAll("btn-ghost");
-        Tips.install(messages, retry, MessageKey.TRANSLATING_RETRY_NOW_TIP);
-        Tips.install(messages, settings, MessageKey.TRANSLATING_OPEN_SETTINGS_TIP);
-        Tips.install(messages, stay, MessageKey.TRANSLATING_STAY_PAUSED_TIP);
-        for (final Button action : new Button[] {retry, settings, stay}) {
-            Banner.setActionShown(action, false);
+        final RunInterventions interventions = exits.interventions();
+        final Button retry = action(RETRY_NOW, messages, () -> {
+            log.debug("retry now pressed: resuming the paused run");
+            viewModel.resume();
+        });
+        final Button skip = action(SKIP_SEGMENT, messages, interventions::skipSegment);
+        final Button settings = action(OPEN_SETTINGS, messages, exits.openSettings());
+        final Button stay = action(STAY_PAUSED, messages, () -> {});
+        final Button again = action(SEND_AGAIN, messages, interventions::sendAgain);
+        final Button pause = action(PAUSE_STUCK, messages, viewModel::pause);
+        final HBox row = new HBox(ACTION_SPACING, retry, skip, again, settings, pause, stay);
+        row.setId("translating-banner-actions");
+        row.setAlignment(Pos.CENTER_LEFT);
+        banner.addDetail(row);
+        return new TranslatingDashboard.LiveBanner(banner, retry, skip, settings, stay, again, pause);
+    }
+
+    // Hidden until a look offers it; the ghost ones take only their own class, as the plain secondary look would
+    // otherwise frame them.
+    private static Button action(final BannerAction spec, final Messages messages, final Runnable run) {
+        final Button button = Tips.install(messages, new Button(messages.get(spec.label())), spec.tip());
+        button.setId(spec.id());
+        if (spec.ghost()) {
+            button.getStyleClass().setAll("btn-ghost");
+        } else {
+            button.getStyleClass().add("btn-secondary");
         }
-        return new TranslatingDashboard.LiveBanner(banner, retry, settings, stay);
+        button.setOnAction(event -> run.run());
+        Banner.setActionShown(button, false);
+        return button;
     }
 
     private static Node logCard(final TaggedLog logList, final Messages messages) {
         final Label heading = new Label(messages.get(MessageKey.TRANSLATING_LOG_TITLE));
         heading.getStyleClass().add("card-title");
+        final ToggleButton errorsOnly = new ToggleButton(messages.get(MessageKey.TRANSLATING_LOG_ERRORS_ONLY));
+        errorsOnly.setId("translating-log-errors-only");
+        errorsOnly.getStyleClass().add("review-chip");
+        Tips.install(messages, errorsOnly, MessageKey.TRANSLATING_LOG_ERRORS_ONLY_TIP);
+        errorsOnly.selectedProperty().addListener((observed, was, now) -> {
+            log.debug("activity log errors-only {}", now);
+            logList.errorsOnlyProperty().set(now);
+        });
+        final Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        final HBox header = new HBox(CARD_SPACING, heading, spacer, errorsOnly);
+        header.setAlignment(Pos.CENTER_LEFT);
         logList.setId("translating-log");
         logList.setPrefHeight(LOG_HEIGHT);
         VBox.setVgrow(logList, Priority.ALWAYS);
-        final VBox card = new VBox(CARD_SPACING, heading, logList);
+        final VBox card = new VBox(CARD_SPACING, header, logList);
         card.setId("translating-log-card");
         card.getStyleClass().add("card");
         return card;

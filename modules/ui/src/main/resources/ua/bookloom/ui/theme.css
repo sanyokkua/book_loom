@@ -1583,6 +1583,105 @@
     -fx-background-color: transparent;
 }
 
+/* The log line's parts: the time is muted, the tag and mark carry the role, the words stay in the text colour so a */
+/* line reads on both themes; a repeated line ends in a neutral count. */
+.activity-log .list-cell .label {
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 13px;
+}
+
+.activity-log .list-cell .log-time {
+    -fx-text-fill: -color-muted;
+}
+
+.activity-log .list-cell .log-text {
+    -fx-text-fill: -color-text;
+}
+
+.activity-log .list-cell .log-tag.status-ok {
+    -fx-text-fill: -color-ok;
+}
+
+.activity-log .list-cell .log-tag.status-info {
+    -fx-text-fill: -color-info;
+}
+
+.activity-log .list-cell .log-tag.status-warn {
+    -fx-text-fill: -color-warn;
+}
+
+.activity-log .list-cell .log-tag.status-err {
+    -fx-text-fill: -color-err;
+}
+
+.activity-log .list-cell .log-repeats {
+    -fx-background-color: -color-surface-2;
+    -fx-background-radius: 8px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 8px;
+    -fx-text-fill: -color-text-strong;
+    -fx-padding: 0 6px 0 6px;
+}
+
+/* A pane that says why it has no text (none visible, none yet, waiting) is slanted, never an empty box; it keeps the */
+/* body text colour so it stays readable at body size. */
+.live-body.live-placeholder {
+    -fx-text-fill: -color-text;
+    -fx-font-style: italic;
+}
+
+/* A review source with nothing visible in it is worded and slanted. */
+.text-area:placeholder {
+    -fx-font-style: italic;
+}
+
+/* The context a draft was sent with: a quiet titled section whose body is selectable, scrolling text. */
+.context-section > .title {
+    -fx-background-color: transparent;
+    -fx-padding: 4px 2px 4px 2px;
+}
+
+.context-section > .title > .text {
+    -fx-fill: -color-muted;
+    -fx-font-size: 12px;
+}
+
+.context-section > .title > .arrow-button > .arrow {
+    -fx-background-color: -color-muted;
+}
+
+.context-section > .content {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 4px 0 0 0;
+}
+
+.context-body,
+.context-body .content {
+    -fx-background-color: -color-surface-alt;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 12.5px;
+}
+
+.context-body {
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 6px;
+}
+
+/* The connection chip in the title bar: its dot and words in the role of how the server has been answering. */
+.connection-chip.conn-steady {
+    -fx-text-fill: -color-ok;
+}
+
+.connection-chip.conn-unsteady {
+    -fx-text-fill: -color-warn;
+}
+
+.connection-chip.conn-unknown {
+    -fx-text-fill: -color-title-fg;
+}
+
 /* --- Structure: the read-only tree of a book's own structure and its side cards (ui-mockup.html: the chapter tree) --- */
 .structure-tree {
     -fx-background-color: transparent;

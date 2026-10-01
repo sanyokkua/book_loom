@@ -5,7 +5,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -76,7 +75,7 @@ final class JobBoundaries implements RunBoundaries {
         final PauseReason reason = answer.pauseReason();
         if (reason != null && PauseDecider.namesSegment(reason)) {
             JobPauseLogger.reviewPause(reason, decision.segmentId(), progress);
-            return pause(reason, null, decision.segmentId(), progress);
+            return pause(new Paused(reason, null, progress, decision.segmentId()));
         }
         return honor(answer, progress);
     }
@@ -88,8 +87,9 @@ final class JobBoundaries implements RunBoundaries {
     }
 
     @Override
-    public Optional<RunEnd> afterRoutedError(final AppError error, final JobProgress progress) {
+    public Optional<RunEnd> afterRoutedError(final AppError error, final JobProgress progress, final FailingStep step) {
         Objects.requireNonNull(error, "error");
+        Objects.requireNonNull(step, "step");
         forgetSkip();
         final BoundaryDecision decision = control.failureBoundary(error);
         if (decision.cancelled()) {
@@ -101,7 +101,12 @@ final class JobBoundaries implements RunBoundaries {
             return Optional.of(new RunEnd(JobState.FAILED, error));
         }
         JobPauseLogger.recoveryPause(error, reason, progress);
-        return pause(reason, error, null, progress);
+        log.debug(
+                "Pausing on a provider error segmentId={} pauses={} of {}",
+                step.segmentId(),
+                step.pauses(),
+                step.pausesBeforeFlagging());
+        return pause(new Paused(reason, error, progress, step.segmentId(), step.pauses(), step.pausesBeforeFlagging()));
     }
 
     // Cleared before a boundary can pause, so only a skip asked during the pause that follows may skip anything.
@@ -114,20 +119,19 @@ final class JobBoundaries implements RunBoundaries {
             return Optional.of(new RunEnd(JobState.CANCELLED, null));
         }
         final PauseReason reason = decision.pauseReason();
-        return reason == null ? Optional.empty() : pause(reason, null, null, progress);
+        return reason == null ? Optional.empty() : pause(new Paused(reason, null, progress));
     }
 
-    private Optional<RunEnd> pause(
-            final PauseReason reason,
-            @Nullable final AppError error,
-            @Nullable final String segmentId,
-            final JobProgress progress) {
+    // A pause on an error names its segment for the person only; nothing about it was decided, so nothing is re-read.
+    private Optional<RunEnd> pause(final Paused paused) {
+        final JobProgress progress = paused.progress();
+        final String segmentId = paused.error() == null ? paused.segmentId() : null;
         final Result<Integer> flushed = pending.flush();
         if (flushed.isErr()) {
             return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(flushed.error(), "error")));
         }
         recorder.paused();
-        emit.accept(new Paused(reason, error, progress, segmentId));
+        emit.accept(paused);
         if (control.awaitPause() == PauseWait.CANCELLED) {
             return Optional.of(new RunEnd(JobState.CANCELLED, null));
         }

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
@@ -83,16 +84,17 @@ class LiveTextEventsTest {
                 .containsExactly(0.91, SegmentPath.DRAFT);
     }
 
-    // The judge scores the whole chunk, so its call belongs to no one segment.
+    // The judge scores the whole chunk, so its call belongs to no one segment but names every segment it judges.
     @Test
-    void run_judgedChunkOfFortyAndFortyOne_announcesOneJudgeCallWithNoSegment() {
+    void run_judgedChunkOfFortyAndFortyOne_announcesOneJudgeCallNamingBothSegments() {
         final List<JobEvent> events = runDoor();
 
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
                 .map(ModelCallStarted.class::cast)
                 .filteredOn(started -> started.kind() == CallKind.JUDGE)
-                .containsExactly(new ModelCallStarted(null, CallKind.JUDGE));
+                .extracting(ModelCallStarted::segmentId, ModelCallStarted::segmentIds)
+                .containsExactly(tuple(null, List.of("ch07.xhtml:40", "ch07.xhtml:41")));
     }
 
     @Test

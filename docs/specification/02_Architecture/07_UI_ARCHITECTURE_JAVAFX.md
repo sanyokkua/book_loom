@@ -62,15 +62,25 @@ testable.
 - `SegmentStarted(segmentId, locator, displaySource, ChunkPosition(section, sections, chunk, chunks))` announces a
   segment's text as its translation starts.
 - `SegmentDrafted(segmentId, displayTarget, confidence)` announces the drafted text once the model returns it.
-- `ModelCallStarted(segmentId?, CallKind)` and `ModelCallFinished(segmentId?, CallKind, elapsed, usage?, outputChars,
-  usageEstimated)` bracket each model call by its kind (draft, repair, judge, name scan, summary); `usageEstimated`
-  marks a token count the client estimated rather than one the provider reported.
+- `ModelCallStarted(segmentId?, CallKind, segmentIds, attempt, maxAttempts, timeout?, RequestSummary(messageChars,
+  contextWindow?, maxOutputTokens?)?)` and `ModelCallFinished(segmentId?, CallKind, elapsed, usage?, outputChars,
+  usageEstimated, segmentIds, attempt, failure?)` bracket each **attempt** of a model call by its kind (draft, repair,
+  judge, name scan, summary): the provider client reports every request it sends through a `CallAttemptListener`
+  (`:api`), so a retry after a timeout is announced as attempt 2 with its own clock; a chunk's judge call names every
+  segment it judges in `segmentIds`; a failed attempt finishes with its `ErrorCode`; `usageEstimated` marks a token
+  count the client estimated rather than one the provider reported.
+- `ContextAssembled(segmentId, ContextSnapshot)` announces, in display text, what a draft is sent with besides its
+  source (preceding translations, rolling summary, glossary names, memory hits); the live row shows it collapsed.
+- `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces each repair round a segment
+  enters, for the live row's round tracker and the log.
 - `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds)` and the point-in-time `JobProgress`
   snapshot, announcing a segment as decided.
 - `MemoryUpdated(kind, label)` is sent only when a name scan (preparation or a body unit's end) adds at least one
   glossary entry (label `+n`), on each memory reuse (labelled with the segment's locator), and on each summary
   refresh (labelled with its version).
-- `Paused` names the segment the run paused on.
+- `Paused` names the segment the run paused on — for a pause on a provider error, the segment whose step failed (a
+  chunk's judge call by its first segment) with `pauses` and `pausesBeforeFlagging`, so the banner can say what Retry
+  now and Skip segment will do.
 
 The count snapshot is `JobProgress(JobStage stage, int section, int sections, int chunk, int chunks, int
 autoAccepted, int repairedAccepted, int accepted, int flagged, int pending)`, where `JobStage` is `PREP | TRANSLATE |

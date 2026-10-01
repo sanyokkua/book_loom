@@ -7,6 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallAttempt;
+import ua.bookloom.api.llm.CallAttemptListener;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -39,11 +41,17 @@ public final class GatedChatModel implements ChatModel {
 
     @Override
     public Result<ChatResponse> chat(ChatRequest request) {
+        return chat(request, CallAttemptListener.NONE);
+    }
+
+    @Override
+    public Result<ChatResponse> chat(ChatRequest request, CallAttemptListener attempts) {
         Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(attempts, "attempts");
         ChatRequest candidate = request;
         final EnumSet<RejectedCapability> downgraded = EnumSet.noneOf(RejectedCapability.class);
         while (true) {
-            final ProviderCallResult<ChatResponse> call = callWithTransportRetry(candidate);
+            final ProviderCallResult<ChatResponse> call = callWithTransportRetry(candidate, attempts);
             if (call.result().isOk()) {
                 return call.result();
             }
@@ -55,12 +63,13 @@ public final class GatedChatModel implements ChatModel {
         }
     }
 
-    private ProviderCallResult<ChatResponse> callWithTransportRetry(ChatRequest original) {
+    private ProviderCallResult<ChatResponse> callWithTransportRetry(
+            ChatRequest original, CallAttemptListener attempts) {
         ChatRequest request = original;
         int attempt = 1;
         int timedOut = 0;
         while (true) {
-            final AttemptResult outcome = attempt(request, attempt, timedOut);
+            final AttemptResult outcome = attempt(request, new Tries(attempt, timedOut, attempts));
             timedOut += outcome.timedOut() ? 1 : 0;
             if (!outcome.retry()) {
                 return outcome.call();
@@ -73,16 +82,14 @@ public final class GatedChatModel implements ChatModel {
         }
     }
 
-    private AttemptResult attempt(ChatRequest request, int attempt, int timedOutBefore) {
-        log.debug(
-                "Provider chat attempt started model={} kind={} attempt={} maxAttempts={} seed={} maxOutputTokens={}",
-                modelId,
-                request.callKind(),
-                attempt,
-                RetryPolicy.MAX_ATTEMPTS,
-                request.seed(),
-                request.maxOutputTokens());
-        final Result<ProviderCallResult<ChatResponse>> gated = gate.run(() -> Result.ok(client.chat(modelId, request)));
+    private AttemptResult attempt(ChatRequest request, Tries tries) {
+        final int attempt = tries.attempt();
+        final CallAttempt reported = reported(request, tries);
+        logStarted(request, reported);
+        final Result<ProviderCallResult<ChatResponse>> gated = gate.run(() -> {
+            tries.listener().started(reported);
+            return Result.ok(client.chat(modelId, request));
+        });
         if (gated.isErr()) {
             return finished(ProviderCallResult.withoutRetryAfter(
                     Result.err(Objects.requireNonNull(gated.error(), "gate error"))));
@@ -93,8 +100,30 @@ public final class GatedChatModel implements ChatModel {
             logSucceeded(request, attempt);
             return finished(call);
         }
-        return failure(
-                call, Objects.requireNonNull(result.error(), "provider error"), request, attempt, timedOutBefore);
+        final AppError error = Objects.requireNonNull(result.error(), "provider error");
+        tries.listener().failed(reported, error.code());
+        return failure(call, error, request, attempt, tries.timedOut());
+    }
+
+    // An attempt after the timeout budget is spent is the last one if it stalls too, which is what a waiting person
+    // needs to know; a transient failure of another kind may still earn one more within the total budget.
+    private CallAttempt reported(ChatRequest request, Tries tries) {
+        final int stallBound = tries.attempt() + RetryPolicy.MAX_TIMEOUT_ATTEMPTS - 1 - tries.timedOut();
+        final int maxAttempts = Math.max(tries.attempt(), Math.min(RetryPolicy.MAX_ATTEMPTS, stallBound));
+        return new CallAttempt(tries.attempt(), maxAttempts, client.chatTimeout(request), request.maxOutputTokens());
+    }
+
+    private void logStarted(ChatRequest request, CallAttempt reported) {
+        log.debug(
+                "Provider chat attempt started model={} kind={} attempt={} maxAttempts={} timeout={} seed={}"
+                        + " maxOutputTokens={}",
+                modelId,
+                request.callKind(),
+                reported.number(),
+                reported.maxAttempts(),
+                reported.timeout(),
+                request.seed(),
+                request.maxOutputTokens());
     }
 
     private void logSucceeded(ChatRequest request, int attempt) {
@@ -202,6 +231,9 @@ public final class GatedChatModel implements ChatModel {
         return Result.err(
                 AppError.of(ErrorCode.cancelled, "Inference cancelled", "The provider retry wait was interrupted."));
     }
+
+    /** Where one call stands between its attempts: the attempt about to go, the timeouts so far, who hears it. */
+    private record Tries(int attempt, int timedOut, CallAttemptListener listener) {}
 
     private record AttemptResult(
             ProviderCallResult<ChatResponse> call, boolean retry, Duration delay, boolean timedOut) {}

@@ -3,6 +3,7 @@ package ua.bookloom.llm.client.ollama;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -186,6 +187,12 @@ public final class OllamaClient implements ProviderClient {
 
     private OllamaChatRequest.Message toOllamaMessage(ChatMessage message) {
         return new OllamaChatRequest.Message(message.role().name().toLowerCase(Locale.ROOT), message.content());
+    }
+
+    @Override
+    public Duration chatTimeout(ChatRequest request) {
+        return RequestTimeouts.forChat(config, Objects.requireNonNull(request, "request"))
+                .requestTimeout();
     }
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {

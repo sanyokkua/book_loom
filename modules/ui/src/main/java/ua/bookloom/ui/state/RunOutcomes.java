@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -19,6 +20,7 @@ import ua.bookloom.api.pipeline.JobReport;
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class RunOutcomes {
 
@@ -58,5 +60,23 @@ final class RunOutcomes {
         }
         final RunFigures figures = RunFigures.from(lastSeen);
         return new Counts(figures.total(), figures.accepted(), figures.flagged());
+    }
+
+    /**
+     * Logs how a run ended, with the counts its report or its last snapshot gives.
+     *
+     * @param outcome the run's outcome
+     * @param lastSeen the last progress snapshot the session saw, or {@code null} for none
+     */
+    static void logEnded(final Outcome outcome, final @Nullable JobProgress lastSeen) {
+        final Counts counts = countsOf(outcome.report(), lastSeen);
+        final AppError error = outcome.error();
+        log.info(
+                "run ended {}: {} segments, {} accepted, {} flagged, error code {}",
+                outcome.state(),
+                counts.segments(),
+                counts.accepted(),
+                counts.flagged(),
+                error == null ? "none" : error.code());
     }
 }

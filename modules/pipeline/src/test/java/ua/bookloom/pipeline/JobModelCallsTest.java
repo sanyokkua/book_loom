@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -23,6 +24,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
+import ua.bookloom.api.pipeline.RequestSummary;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /** The one place a run's model calls go through: each is announced as it goes out, and a refused one is not. */
@@ -49,18 +51,42 @@ class JobModelCallsTest {
         assertThat(result.isOk()).isTrue();
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
-                .containsExactly(new ModelCallStarted("Book.md:0", CallKind.STRUCTURAL_REPAIR));
+                .map(ModelCallStarted.class::cast)
+                .extracting(ModelCallStarted::segmentId, ModelCallStarted::kind, ModelCallStarted::attempt)
+                .containsExactly(tuple("Book.md:0", CallKind.STRUCTURAL_REPAIR, 1));
         assertThat(model.requests()).hasSize(1);
     }
 
-    // A judge call scores a whole chunk, so it names no segment.
+    // A judge call scores a whole chunk, so it names no single segment but lists every segment it judges.
     @Test
-    void call_judgeWithoutSegment_announcesJudgeWithNoSegmentId() {
-        calls.call(CallKind.JUDGE, null, REQUEST);
+    void callAbout_judgeOfTwoSegments_announcesBothSegmentsAndNoSoleSegment() {
+        calls.callAbout(CallKind.JUDGE, List.of("Book.md:0", "Book.md:1"), REQUEST);
 
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
-                .containsExactly(new ModelCallStarted(null, CallKind.JUDGE));
+                .map(ModelCallStarted.class::cast)
+                .extracting(ModelCallStarted::segmentId, ModelCallStarted::segmentIds)
+                .containsExactly(tuple(null, List.of("Book.md:0", "Book.md:1")));
+    }
+
+    // The size of the request is what tells a long prompt from a stalled server; its text never leaves the job.
+    @Test
+    void call_cappedRequest_announcesItsSizeAndCap() {
+        final ChatRequest capped = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.SYSTEM, "Rules."), new ChatMessage(ChatRole.USER, "Hello.")),
+                null,
+                null,
+                null,
+                8192,
+                null,
+                256);
+
+        calls.call(CallKind.DRAFT, "Book.md:0", capped);
+
+        assertThat(events)
+                .filteredOn(ModelCallStarted.class::isInstance)
+                .map(event -> ((ModelCallStarted) event).request())
+                .containsExactly(new RequestSummary(12, 8192, 256));
     }
 
     // The start and the finish bracket one call, timed by the job's clock from the moment the request leaves.
@@ -80,9 +106,9 @@ class JobModelCallsTest {
                                 .containsExactly(CallKind.DRAFT, "Book.md:0", Duration.ofSeconds(3)));
     }
 
-    // A failed call has no reply to count, so only its start is announced; the pause or flag that follows says why.
+    // A failed attempt has no reply to count; its end carries the code it failed with and no usage.
     @Test
-    void call_answeredWithAnError_announcesNoFinish() {
+    void call_answeredWithAnError_announcesTheFailedAttemptWithItsCode() {
         final ScriptedChatModel failing = new ScriptedChatModel()
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.")));
         final JobModelCalls failingCalls = new JobModelCalls(
@@ -90,7 +116,16 @@ class JobModelCallsTest {
 
         failingCalls.call(CallKind.DRAFT, "Book.md:0", REQUEST);
 
-        assertThat(events).containsExactly(new ModelCallStarted("Book.md:0", CallKind.DRAFT));
+        assertThat(events).hasSize(2);
+        assertThat(events.getLast())
+                .isInstanceOfSatisfying(
+                        ModelCallFinished.class,
+                        finished -> assertThat(finished)
+                                .extracting(
+                                        ModelCallFinished::failure,
+                                        ModelCallFinished::usage,
+                                        ModelCallFinished::elapsed)
+                                .containsExactly(ErrorCode.unreachable, null, Duration.ofSeconds(3)));
     }
 
     // An announcement for a call that never went out would start a "waiting for the model" clock over nothing.

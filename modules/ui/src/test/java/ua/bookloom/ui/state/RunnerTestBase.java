@@ -147,7 +147,13 @@ abstract class RunnerTestBase extends ApplicationTest {
         return onFx(() -> mirror.runState().get());
     }
 
+    /** The log's lines by their wording only: no time and no repeat count. */
     protected List<LogEntry> logEntries() {
+        return onFx(() -> mirror.activityLog().stream().map(LogEntry::wording).toList());
+    }
+
+    /** The log's lines as shown: with their times and repeat counts. */
+    protected List<LogEntry> shownLogEntries() {
         return onFx(() -> List.copyOf(mirror.activityLog()));
     }
 

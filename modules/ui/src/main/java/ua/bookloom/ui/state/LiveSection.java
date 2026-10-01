@@ -10,6 +10,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 
 /**
  * The part of the run's state that shows what the model is doing now and how fast: the two live rows, the pace, the
@@ -25,6 +26,9 @@ public final class LiveSection {
     private final ReadOnlyObjectWrapper<LiveRows> liveRows = new ReadOnlyObjectWrapper<>(LiveRows.EMPTY);
     private final ReadOnlyObjectWrapper<Throughput> throughput = new ReadOnlyObjectWrapper<>(Throughput.EMPTY);
     private final ReadOnlyIntegerWrapper sourceKept = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyObjectWrapper<@Nullable WaitingCall> waitingCall = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<ConnectionStatus> connection =
+            new ReadOnlyObjectWrapper<>(ConnectionStatus.UNKNOWN);
     private final ObservableList<FlaggedRow> queue = FXCollections.observableArrayList();
     private final ObservableList<FlaggedRow> readOnlyQueue = FXCollections.unmodifiableObservableList(queue);
 
@@ -44,6 +48,43 @@ public final class LiveSection {
      */
     public ReadOnlyObjectProperty<Throughput> throughput() {
         return throughput.getReadOnlyProperty();
+    }
+
+    /**
+     * The model request the run has been waiting on long enough to mention.
+     *
+     * @return a read-only property holding {@code null} while nothing is worth mentioning; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable WaitingCall> waitingCall() {
+        return waitingCall.getReadOnlyProperty();
+    }
+
+    /**
+     * How the model server has been answering this run.
+     *
+     * @return the read-only status, {@link ConnectionStatus#UNKNOWN} before a call; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<ConnectionStatus> connection() {
+        return connection.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows the request the run waits on, or withdraws it. Not logged: called once a second while a wait lasts.
+     *
+     * @param call the request, or {@code null} to withdraw the notice
+     */
+    public void publishWaitingCall(final @Nullable WaitingCall call) {
+        Platform.runLater(() -> waitingCall.set(call));
+    }
+
+    /**
+     * Shows how the server has been answering. Not logged: called once a second while a run lives.
+     *
+     * @param status the status to show
+     */
+    public void publishConnection(final ConnectionStatus status) {
+        Objects.requireNonNull(status, "status");
+        Platform.runLater(() -> connection.set(status));
     }
 
     /**
@@ -110,6 +151,8 @@ public final class LiveSection {
         liveRows.set(LiveRows.EMPTY);
         throughput.set(Throughput.EMPTY);
         sourceKept.set(0);
+        waitingCall.set(null);
+        connection.set(ConnectionStatus.UNKNOWN);
         queue.clear();
     }
 }

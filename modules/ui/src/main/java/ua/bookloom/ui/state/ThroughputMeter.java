@@ -26,15 +26,30 @@ final class ThroughputMeter {
     private record Sample(int completionTokens, Duration generation, boolean estimated) {}
 
     private final Deque<Sample> samples = new ArrayDeque<>();
+    private final CallKind counted;
+
+    /** A meter of the drafts, which the pace figures are taken from. */
+    ThroughputMeter() {
+        this(CallKind.DRAFT);
+    }
+
+    /**
+     * A meter of the calls of one kind.
+     *
+     * @param counted the kind whose answered calls are counted
+     */
+    ThroughputMeter(final CallKind counted) {
+        this.counted = Objects.requireNonNull(counted, "counted");
+    }
 
     void finished(final ModelCallFinished event) {
-        if (event.kind() != CallKind.DRAFT) {
+        if (event.kind() != counted) {
             return;
         }
         final TokenUsage usage = event.usage();
         final Integer tokens = usage == null ? null : usage.completion();
         if (usage == null || tokens == null) {
-            log.debug("throughput: a draft call reported no completion tokens, not counted");
+            log.debug("throughput: a {} call reported no completion tokens, not counted", counted);
             return;
         }
         final Duration reported = usage.generation();
@@ -43,7 +58,7 @@ final class ThroughputMeter {
         if (samples.size() > WINDOW) {
             samples.removeFirst();
         }
-        log.debug("throughput: draft call counted, {} tokens, window {}", tokens, samples.size());
+        log.debug("throughput: {} call counted, {} tokens, window {}", counted, tokens, samples.size());
     }
 
     @Nullable

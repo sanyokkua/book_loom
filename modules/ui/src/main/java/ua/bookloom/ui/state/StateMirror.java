@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import com.google.inject.Singleton;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
@@ -280,7 +281,8 @@ public final class StateMirror {
     }
 
     /**
-     * Appends entries to the activity log, dropping the oldest beyond {@link #MAX_LOG_ENTRIES}.
+     * Appends entries to the activity log, counting a line that repeats the one before it on that line, and dropping the
+     * oldest beyond {@link #MAX_LOG_ENTRIES}.
      *
      * @param entries the entries in the order they happened
      */
@@ -361,12 +363,27 @@ public final class StateMirror {
         progressFraction.set(figures.fraction());
     }
 
+    // A line that says what the previous one said is counted on it instead of repeated, so a stalled call that fails
+    // four times reads as one line with "×4".
     private void appendToLog(final List<LogEntry> entries) {
-        if (entries.size() >= MAX_LOG_ENTRIES) {
-            logEntries.setAll(entries.subList(entries.size() - MAX_LOG_ENTRIES, entries.size()));
+        final List<LogEntry> merged = new ArrayList<>();
+        for (final LogEntry entry : entries) {
+            final int last = merged.size() - 1;
+            if (last >= 0 && merged.get(last).saysTheSameAs(entry)) {
+                merged.set(last, merged.get(last).repeatedBy(entry));
+            } else {
+                merged.add(entry);
+            }
+        }
+        final int shown = logEntries.size() - 1;
+        if (shown >= 0 && !merged.isEmpty() && logEntries.get(shown).saysTheSameAs(merged.getFirst())) {
+            logEntries.set(shown, logEntries.get(shown).repeatedBy(merged.removeFirst()));
+        }
+        if (merged.size() >= MAX_LOG_ENTRIES) {
+            logEntries.setAll(merged.subList(merged.size() - MAX_LOG_ENTRIES, merged.size()));
             return;
         }
-        logEntries.addAll(entries);
+        logEntries.addAll(merged);
         final int excess = logEntries.size() - MAX_LOG_ENTRIES;
         if (excess > 0) {
             logEntries.remove(0, excess);

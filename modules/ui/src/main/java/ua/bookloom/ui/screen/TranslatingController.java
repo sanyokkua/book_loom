@@ -17,8 +17,10 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.LogEntry;
+import ua.bookloom.ui.state.PauseNotice;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
+import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
@@ -46,10 +48,12 @@ public final class TranslatingController {
     private final ReviewViewModel review;
     private final RetryWithNoteDialog retryDialog;
     private final ReviewPauseFollower pauses;
+    private final RunInterventions interventions;
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
     private final ChangeListener<Number> onChunk = (observed, was, now) -> renderChunk();
+    private final ChangeListener<@Nullable PauseNotice> onPauseNotice = (observed, was, now) -> renderChunk();
     private final ListChangeListener<LogEntry> onLog = change -> scrollLog();
 
     @FXML
@@ -69,6 +73,7 @@ public final class TranslatingController {
      * @param review the review panel's view model, which counts the flagged segments the panel's button names
      * @param retryDialog the card a retry with a note is asked in
      * @param pauses what opens the review panel on a review pause and continues the run after the person's decision
+     * @param interventions what skips a stuck or failed segment and sends a stuck request again
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -82,7 +87,8 @@ public final class TranslatingController {
             final LanguageNames names,
             final ReviewViewModel review,
             final RetryWithNoteDialog retryDialog,
-            final ReviewPauseFollower pauses) {
+            final ReviewPauseFollower pauses,
+            final RunInterventions interventions) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -92,6 +98,7 @@ public final class TranslatingController {
         this.review = Objects.requireNonNull(review, "review");
         this.retryDialog = Objects.requireNonNull(retryDialog, "retryDialog");
         this.pauses = Objects.requireNonNull(pauses, "pauses");
+        this.interventions = Objects.requireNonNull(interventions, "interventions");
     }
 
     @FXML
@@ -104,7 +111,7 @@ public final class TranslatingController {
                 current,
                 names,
                 messages,
-                new TranslatingView.Exits(navigator, this::openSettings, review, retryDialog, pauses));
+                new TranslatingView.Exits(navigator, this::openSettings, review, retryDialog, pauses, interventions));
         viewModel.refreshPending();
         review.refreshCount();
         host.getChildren().setAll(dashboard.root());
@@ -114,6 +121,7 @@ public final class TranslatingController {
         mirror.waitingSeconds().addListener(new WeakChangeListener<>(onWaiting));
         mirror.chunk().addListener(new WeakChangeListener<>(onChunk));
         mirror.chunks().addListener(new WeakChangeListener<>(onChunk));
+        mirror.review().pauseNotice().addListener(new WeakChangeListener<>(onPauseNotice));
         mirror.activityLog().addListener(new WeakListChangeListener<>(onLog));
         dashboard.render(
                 mirror.runState().get(),

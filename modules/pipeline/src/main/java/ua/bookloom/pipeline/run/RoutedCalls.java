@@ -28,6 +28,10 @@ final class RoutedCalls {
     /** How many pauses one step may cause before the run flags it and goes on. */
     static final int PAUSES_BEFORE_FLAGGING = 2;
 
+    // The answer a step skipped while its call waited is flagged with: the person left it, so it has no other error.
+    private static final AppError SKIPPED = AppError.of(
+            ErrorCode.cancelled, "Segment skipped", "The segment was skipped while its model call was waiting.");
+
     private final RunBoundaries boundaries;
     // The pauses each give-up-able step caused so far in this run. Used from the job thread only.
     private final Map<String, Integer> pauses = new HashMap<>();
@@ -69,13 +73,15 @@ final class RoutedCalls {
 
     /**
      * Makes a call until it answers, the run ends, or the run gives up on it: after {@link #PAUSES_BEFORE_FLAGGING}
-     * pauses for the same step, or when the person skips it from the pause, the step's error is turned into a flagged
+     * pauses for the same step, or when the person skips it from a pause, the step's error is turned into a flagged
      * answer by {@code flag} and the run goes on ({@code specs/translation-pipeline/spec.md} "Give up on a step that
      * keeps failing").
      *
      * @param work the run's work list, whose progress a pause reports
-     * @param segmentId the segment the call is for, or {@code null} for a call of no single segment
-     * @param step names the step for the pause count, unique within the run (its kind and its first segment's id)
+     * @param segmentId the segment the call is for, put into the log context, or {@code null} for a call of no single
+     *     segment
+     * @param step names the step for the pause count and for the person: its kind and the segment it is for (a
+     *     chunk's judge call is named by the chunk's first segment)
      * @param call the call
      * @param flag turns the error the step last answered into its flagged answer
      * @return the answer, the flagged answer, or how the run ended while the call was routed
@@ -83,7 +89,7 @@ final class RoutedCalls {
     <T> Step<T> untilAnsweredOrFlagged(
             final WorkList work,
             @Nullable final String segmentId,
-            final String step,
+            final StepName step,
             final Supplier<Result<T>> call,
             final Function<AppError, T> flag) {
         Objects.requireNonNull(step, "step");
@@ -123,16 +129,31 @@ final class RoutedCalls {
     private <T> Optional<Step<T>> afterError(
             final AppError error, final JobProgress progress, @Nullable final GiveUp<T> giveUp) {
         return switch (PauseDecider.route(error.code())) {
-            case CANCELLED -> boundaries.afterAbortedCall(progress).<Step<T>>map(Step.Stopped::new);
+            case CANCELLED -> afterAbortedCall(progress, giveUp);
             case PAUSE_OR_FAIL -> afterProviderError(error, progress, giveUp);
             case FLAG_AT_ONCE, FAIL -> Optional.of(new Step.Stopped<>(failedBy(endingError(error))));
         };
     }
 
+    // A call the person paused while it hung may be skipped from that pause too, so a stalled step can be left behind.
+    private <T> Optional<Step<T>> afterAbortedCall(final JobProgress progress, @Nullable final GiveUp<T> giveUp) {
+        final Optional<RunEnd> end = boundaries.afterAbortedCall(progress);
+        if (end.isPresent()) {
+            return Optional.of(new Step.Stopped<>(end.get()));
+        }
+        if (giveUp != null && boundaries.takeSkipRequest()) {
+            log.info("Skipping step={} as asked from a pause while its call waited; it is flagged", giveUp.step());
+            return Optional.of(new Step.Done<>(giveUp.flag().apply(SKIPPED)));
+        }
+        return Optional.empty();
+    }
+
     // The budget is checked before the pause, so the third failure of a step flags it instead of pausing again.
     private <T> Optional<Step<T>> afterProviderError(
             final AppError error, final JobProgress progress, @Nullable final GiveUp<T> giveUp) {
-        if (giveUp != null && pauses.getOrDefault(giveUp.step(), 0) >= PAUSES_BEFORE_FLAGGING) {
+        final int pausedBefore =
+                giveUp == null ? 0 : pauses.getOrDefault(giveUp.step().key(), 0);
+        if (giveUp != null && pausedBefore >= PAUSES_BEFORE_FLAGGING) {
             log.warn(
                     "Flagging step={} after {} pauses for it code={}; the run goes on",
                     giveUp.step(),
@@ -140,7 +161,10 @@ final class RoutedCalls {
                     error.code());
             return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
         }
-        final Optional<RunEnd> end = boundaries.afterRoutedError(error, progress);
+        final RunBoundaries.FailingStep failing = giveUp == null
+                ? RunBoundaries.FailingStep.NONE
+                : new RunBoundaries.FailingStep(giveUp.step().segmentId(), pausedBefore + 1, PAUSES_BEFORE_FLAGGING);
+        final Optional<RunEnd> end = boundaries.afterRoutedError(error, progress, failing);
         if (end.isPresent()) {
             return Optional.of(new Step.Stopped<>(end.get()));
         }
@@ -148,7 +172,7 @@ final class RoutedCalls {
     }
 
     private <T> Optional<Step<T>> afterResume(final AppError error, final GiveUp<T> giveUp) {
-        final int paused = pauses.merge(giveUp.step(), 1, Integer::sum);
+        final int paused = pauses.merge(giveUp.step().key(), 1, Integer::sum);
         if (boundaries.takeSkipRequest()) {
             log.info("Skipping step={} as asked from the pause code={}; it is flagged", giveUp.step(), error.code());
             return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
@@ -179,10 +203,35 @@ final class RoutedCalls {
     }
 
     /**
+     * A step the run may give up on: what kind of step it is and the segment it is for.
+     *
+     * @param kind the step's kind, such as {@code draft}, {@code judge} or {@code decide}
+     * @param segmentId the segment the step is for, the first of its chunk for a chunk's judge call
+     */
+    record StepName(String kind, String segmentId) {
+
+        /** Rejects a missing part. */
+        StepName {
+            Objects.requireNonNull(kind, "kind");
+            Objects.requireNonNull(segmentId, "segmentId");
+        }
+
+        /** The step's key in the pause count, unique within the run. */
+        String key() {
+            return kind + ":" + segmentId;
+        }
+
+        @Override
+        public String toString() {
+            return key();
+        }
+    }
+
+    /**
      * How a step the run may give up on is flagged.
      *
      * @param step the step's name in the pause count
      * @param flag turns the step's last error into its flagged answer
      */
-    private record GiveUp<T>(String step, Function<AppError, T> flag) {}
+    private record GiveUp<T>(StepName step, Function<AppError, T> flag) {}
 }

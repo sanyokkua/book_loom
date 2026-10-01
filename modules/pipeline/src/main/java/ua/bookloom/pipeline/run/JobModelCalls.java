@@ -3,13 +3,17 @@ package ua.bookloom.pipeline.run;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.CallAttempt;
+import ua.bookloom.api.llm.CallAttemptListener;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -18,21 +22,22 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
+import ua.bookloom.api.pipeline.RequestSummary;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
- * The run's {@link ModelCalls}: every call goes through the job's guarded model, the start of a call that really goes
- * out is announced with its own kind, and its reply is announced with the time it took and the tokens it cost.
+ * The run's {@link ModelCalls}: every call goes through the job's guarded model, and each attempt of a call that
+ * really goes out is announced with its kind, its segments, its number, its timeout and the request's size; each
+ * attempt's end is announced too, with the time it took and either the tokens it cost or the code it failed with.
  *
- * <p>The guard is asked for a model per call, given the hook it must run at the moment the request leaves. A call the
- * guard refuses because a stop or a pause was requested never runs the hook, so it announces nothing. The provider
- * client's own retries happen inside the one call, so they are timed with it and never announced apart.
+ * <p>The guard is asked for a model per call. A call the guard refuses because a stop or a pause was requested sends
+ * no attempt, so it announces nothing. The model reports its own attempts: the provider client's retry after a
+ * timeout is a second attempt with its own clock, which is what lets a screen say "attempt 2 of 2" instead of one
+ * clock counting across both.
  *
  * <p>A provider that reports no usage still gets a tokens-per-second figure: the reply's completion tokens are
- * estimated in the target language and its generation time is the call's wall time, so the screen never estimates.
- * A call answered with an error has no reply to count and announces no finish; the pause or flag that follows it
- * says what happened.
+ * estimated in the target language and its generation time is the attempt's wall time, so the screen never estimates.
  */
 @Slf4j
 public final class JobModelCalls implements ModelCalls {
@@ -48,7 +53,7 @@ public final class JobModelCalls implements ModelCalls {
      * @param guard the non-null factory of the guarded model; the runnable it receives is run once when a request
      *     goes out
      * @param announce the non-null receiver of each start and finish
-     * @param clock the non-null clock a call is timed by
+     * @param clock the non-null clock an attempt is timed by
      * @param targetLanguage the non-null language tag a reply is written in, which a usage estimate counts by
      */
     public JobModelCalls(
@@ -64,63 +69,174 @@ public final class JobModelCalls implements ModelCalls {
 
     @Override
     public Result<ChatResponse> call(final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
+        return callAbout(kind, segmentId == null ? List.of() : List.of(segmentId), request);
+    }
+
+    @Override
+    public Result<ChatResponse> callAbout(
+            final CallKind kind, final List<String> segmentIds, final ChatRequest request) {
         Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(segmentIds, "segmentIds");
         Objects.requireNonNull(request, "request");
-        final AtomicReference<@Nullable Instant> sentAt = new AtomicReference<>();
-        final Result<ChatResponse> result = guard.apply(() -> {
-                    sentAt.set(clock.instant());
-                    log.debug("Announcing model call kind={} segmentId={}", kind, segmentId);
-                    announce.accept(new ModelCallStarted(segmentId, kind));
-                })
-                .chat(request);
-        final Instant started = sentAt.get();
-        if (started == null) {
-            log.debug("Model call refused before it went out kind={} segmentId={}", kind, segmentId);
-        } else {
-            answered(kind, segmentId, Duration.between(started, clock.instant()), result);
-        }
+        final Attempts attempts = new Attempts(new Call(kind, List.copyOf(segmentIds), summaryOf(request)));
+        final Result<ChatResponse> result = guard.apply(
+                        () -> log.debug("Model call going out kind={} segmentIds={}", kind, segmentIds))
+                .chat(request, attempts);
+        attempts.ended(result);
         return result;
     }
 
-    private void answered(
-            final CallKind kind,
-            @Nullable final String segmentId,
-            final Duration elapsed,
-            final Result<ChatResponse> result) {
-        final ChatResponse reply = result.data();
-        if (reply != null) {
-            announce.accept(finished(kind, segmentId, elapsed, reply));
-            return;
-        }
-        log.debug(
-                "Model call answered an error kind={} segmentId={} elapsedMs={} code={}; no finish is announced",
-                kind,
-                segmentId,
-                elapsed.toMillis(),
-                Objects.requireNonNull(result.error(), "error").code());
+    @Override
+    public void announce(final JobEvent event) {
+        Objects.requireNonNull(event, "event");
+        log.debug("Announcing a model-call step event type={}", event.getClass().getSimpleName());
+        announce.accept(event);
     }
 
-    private ModelCallFinished finished(
-            final CallKind kind, @Nullable final String segmentId, final Duration elapsed, final ChatResponse reply) {
-        final String content = reply.content();
-        final int outputChars = content.codePointCount(0, content.length());
-        final TokenUsage reported = reply.usage();
-        final boolean estimated = reported == null;
-        final TokenUsage usage = reported == null
-                ? new TokenUsage(null, TokenEstimator.estimate(content, targetLanguage), elapsed)
-                : reported;
-        final Duration generation = usage.generation();
-        log.debug(
-                "Model call finished kind={} segmentId={} elapsedMs={} usage={} promptTokens={} completionTokens={}"
-                        + " generationMs={} outputChars={}",
-                kind,
-                segmentId,
-                elapsed.toMillis(),
-                estimated ? "estimated" : "reported",
-                usage.prompt(),
-                usage.completion(),
-                generation == null ? null : generation.toMillis(),
-                outputChars);
-        return new ModelCallFinished(segmentId, kind, elapsed, usage, outputChars, estimated);
+    private static RequestSummary summaryOf(final ChatRequest request) {
+        final int chars = request.messages().stream()
+                .map(ChatMessage::content)
+                .mapToInt(String::length)
+                .sum();
+        return new RequestSummary(chars, request.contextWindow(), request.maxOutputTokens());
+    }
+
+    /**
+     * What every attempt of one call shares.
+     *
+     * @param kind what the call is for
+     * @param segmentIds the segments it is about
+     * @param summary the request's size as first built; an attempt's own cap may be lower
+     */
+    private record Call(CallKind kind, List<String> segmentIds, RequestSummary summary) {
+
+        @Nullable
+        String soleSegment() {
+            return segmentIds.size() == 1 ? segmentIds.getFirst() : null;
+        }
+    }
+
+    /** Hears one call's attempts on the job thread and turns each into a start and a finish. */
+    private final class Attempts implements CallAttemptListener {
+
+        private final Call call;
+        private @Nullable CallAttempt current;
+        private @Nullable Instant startedAt;
+
+        Attempts(final Call call) {
+            this.call = call;
+        }
+
+        @Override
+        public void started(final CallAttempt attempt) {
+            current = attempt;
+            startedAt = clock.instant();
+            final RequestSummary summary = new RequestSummary(
+                    call.summary().messageChars(), call.summary().contextWindow(), attempt.maxOutputTokens());
+            log.debug(
+                    "Announcing model call kind={} segmentIds={} attempt={} of {} timeout={} chars={} cap={}",
+                    call.kind(),
+                    call.segmentIds(),
+                    attempt.number(),
+                    attempt.maxAttempts(),
+                    attempt.timeout(),
+                    summary.messageChars(),
+                    summary.maxOutputTokens());
+            announce.accept(new ModelCallStarted(
+                    call.soleSegment(),
+                    call.kind(),
+                    call.segmentIds(),
+                    attempt.number(),
+                    attempt.maxAttempts(),
+                    attempt.timeout(),
+                    summary));
+        }
+
+        @Override
+        public void failed(final CallAttempt attempt, final ErrorCode code) {
+            final Duration elapsed = elapsed();
+            current = null;
+            log.debug(
+                    "Model call attempt failed kind={} segmentIds={} attempt={} elapsedMs={} code={}",
+                    call.kind(),
+                    call.segmentIds(),
+                    attempt.number(),
+                    elapsed.toMillis(),
+                    code);
+            announce.accept(new ModelCallFinished(
+                    call.soleSegment(),
+                    call.kind(),
+                    elapsed,
+                    null,
+                    0,
+                    false,
+                    call.segmentIds(),
+                    attempt.number(),
+                    code));
+        }
+
+        // An attempt that failed was announced by failed(); only an answered one is still current here.
+        void ended(final Result<ChatResponse> result) {
+            final CallAttempt attempt = current;
+            final ChatResponse reply = result.data();
+            if (attempt == null || reply == null) {
+                log.debug(
+                        "Model call ended kind={} segmentIds={} answered={} attemptOpen={}",
+                        call.kind(),
+                        call.segmentIds(),
+                        reply != null,
+                        attempt != null);
+                return;
+            }
+            announce.accept(finished(attempt, elapsed(), reply));
+        }
+
+        private void logFinished(
+                final CallAttempt attempt,
+                final Duration elapsed,
+                final TokenUsage usage,
+                final boolean estimated,
+                final int outputChars) {
+            final Duration generation = usage.generation();
+            log.debug(
+                    "Model call finished kind={} segmentIds={} attempt={} elapsedMs={} usage={} promptTokens={}"
+                            + " completionTokens={} generationMs={} outputChars={}",
+                    call.kind(),
+                    call.segmentIds(),
+                    attempt.number(),
+                    elapsed.toMillis(),
+                    estimated ? "estimated" : "reported",
+                    usage.prompt(),
+                    usage.completion(),
+                    generation == null ? null : generation.toMillis(),
+                    outputChars);
+        }
+
+        private Duration elapsed() {
+            final Instant started = startedAt;
+            return started == null ? Duration.ZERO : Duration.between(started, clock.instant());
+        }
+
+        private ModelCallFinished finished(
+                final CallAttempt attempt, final Duration elapsed, final ChatResponse reply) {
+            final String content = reply.content();
+            final int outputChars = content.codePointCount(0, content.length());
+            final TokenUsage reported = reply.usage();
+            final boolean estimated = reported == null;
+            final TokenUsage usage = reported == null
+                    ? new TokenUsage(null, TokenEstimator.estimate(content, targetLanguage), elapsed)
+                    : reported;
+            logFinished(attempt, elapsed, usage, estimated, outputChars);
+            return new ModelCallFinished(
+                    call.soleSegment(),
+                    call.kind(),
+                    elapsed,
+                    usage,
+                    outputChars,
+                    estimated,
+                    call.segmentIds(),
+                    attempt.number(),
+                    null);
+        }
     }
 }

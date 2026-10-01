@@ -5,7 +5,9 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
@@ -54,17 +56,35 @@ final class LiveChunkState {
         }
         log.debug("live panel: segment {} drafted, awaiting judge {}", event.segmentId(), judged);
         log.trace("live panel: {} draft '{}'", row.locator(), event.displayTarget());
+        undecided.put(event.segmentId(), row.drafted(event.displayTarget(), judged));
+    }
+
+    void contextAssembled(final ContextAssembled event) {
+        final LiveRow row = undecided.get(event.segmentId());
+        if (row == null) {
+            log.debug("live panel: a context for segment {}, which is not in progress", event.segmentId());
+            return;
+        }
+        log.debug(
+                "live panel: segment {} context with {} preceding, {} names, {} memory hits",
+                event.segmentId(),
+                event.context().precedingTargets().size(),
+                event.context().glossary().size(),
+                event.context().tmHits().size());
+        undecided.put(event.segmentId(), row.withContext(event.context()));
+    }
+
+    void roundStarted(final RoundStarted event) {
+        final LiveRow row = undecided.get(event.segmentId());
+        if (row == null) {
+            log.debug("live panel: a round for segment {}, which is not in progress", event.segmentId());
+            return;
+        }
+        log.debug("live panel: segment {} in round {} of {}", event.segmentId(), event.round(), event.rounds());
         undecided.put(
                 event.segmentId(),
-                new LiveRow(
-                        row.segmentId(),
-                        row.locator(),
-                        row.sourceText(),
-                        event.displayTarget(),
-                        null,
-                        null,
-                        false,
-                        judged));
+                row.inRound(
+                        new RoundTrack(event.round(), event.rounds(), event.judgeScore(), event.blockingFinding())));
     }
 
     void decided(final SegmentDecided event) {
@@ -75,15 +95,7 @@ final class LiveChunkState {
         }
         final SegmentDetail detail = event.detail();
         log.debug("live panel: segment {} decided {}", event.segmentId(), event.status());
-        lastDecided = new LiveRow(
-                row.segmentId(),
-                row.locator(),
-                row.sourceText(),
-                row.targetText(),
-                detail == null ? null : detail.judgeScore(),
-                detail == null ? null : detail.path(),
-                false,
-                false);
+        lastDecided = row.decided(detail == null ? null : detail.judgeScore(), detail == null ? null : detail.path());
     }
 
     LiveRows rows() {

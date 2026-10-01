@@ -1,15 +1,19 @@
 package ua.bookloom.ui.state;
 
+import java.time.Duration;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentStarted;
 
@@ -27,14 +31,17 @@ final class ActivityLogFeed {
     static final String RESUMED = "resumed";
     static final String FINISHED = "finished";
     static final String RESUME_AFTER_ERROR = "resume";
-    static final String REPAIR = "repair";
     static final String GLOSSARY = "glossary";
     static final String MEMORY = "memory";
 
     /** A chunk holds a handful of segments, so far fewer locators than this are ever looked up after their start. */
     private static final int MAX_LOCATORS = 256;
 
+    private static final long SECONDS_PER_MINUTE = 60;
+
     private final Map<String, String> locators = new LinkedHashMap<>();
+    // The round each segment in repair is in, so a call's line can say which round it belongs to.
+    private final Map<String, Integer> rounds = new HashMap<>();
     private boolean pausedOnError;
 
     void segmentStarted(final SegmentStarted event) {
@@ -55,6 +62,7 @@ final class ActivityLogFeed {
     }
 
     Optional<LogEntry> decided(final SegmentDecided event) {
+        rounds.remove(event.segmentId());
         final String locator = locatorOf(event.segmentId());
         return switch (event.status()) {
             case ACCEPTED -> Optional.of(new LogEntry(LogKind.ACCEPTED, List.of(locator)));
@@ -69,20 +77,55 @@ final class ActivityLogFeed {
         };
     }
 
-    Optional<LogEntry> modelCall(final ModelCallFinished event) {
-        final String segmentId = event.segmentId();
-        final @Nullable LogKind kind =
-                switch (event.kind()) {
-                    case DIRECTED_FIX, REFLECT, IMPROVE, POLISH -> LogKind.REPAIRED;
-                    case STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR -> LogKind.RETRIED;
-                    case DRAFT, JUDGE, PRESCAN, SUMMARY, REVISION -> null;
-                };
-        if (kind == null || segmentId == null) {
-            log.trace("a {} call is not an activity-log entry", event.kind());
-            return Optional.empty();
+    /**
+     * The locator a call is named by: its one segment, the first of several with how many more, or nothing.
+     *
+     * @param segmentIds the segments the call is about
+     * @return the locator text, possibly empty
+     */
+    String callLocator(final List<String> segmentIds) {
+        if (segmentIds.isEmpty()) {
+            return "";
         }
-        final String locator = locatorOf(segmentId);
-        return Optional.of(new LogEntry(kind, kind == LogKind.RETRIED ? List.of(REPAIR, locator) : List.of(locator)));
+        final String first = locatorOf(segmentIds.getFirst());
+        return segmentIds.size() == 1 ? first : first + " +" + (segmentIds.size() - 1);
+    }
+
+    LogEntry modelCall(final ModelCallFinished event) {
+        final String locator = callLocator(event.segmentIds());
+        final String round =
+                event.segmentId() == null ? "0" : String.valueOf(rounds.getOrDefault(event.segmentId(), 0));
+        final List<String> args = List.of(
+                WaitingCall.tokenOf(event.kind()),
+                locator.isEmpty() ? "" : " · " + locator,
+                round,
+                String.valueOf(event.attempt()),
+                clock(event.elapsed()));
+        final ErrorCode failure = event.failure();
+        if (failure == null) {
+            return new LogEntry(LogKind.MODEL_CALL, args);
+        }
+        log.debug("a {} call for {} failed with {} on attempt {}", event.kind(), locator, failure, event.attempt());
+        return new LogEntry(
+                LogKind.CALL_FAILED,
+                List.of(args.get(0), args.get(1), args.get(2), args.get(3), args.get(4), failure.name()));
+    }
+
+    LogEntry roundStarted(final RoundStarted event) {
+        rounds.put(event.segmentId(), event.round());
+        final String finding = event.blockingFinding();
+        return new LogEntry(
+                LogKind.ROUND,
+                List.of(
+                        locatorOf(event.segmentId()),
+                        String.valueOf(event.round()),
+                        String.valueOf(event.rounds()),
+                        finding == null ? "none" : finding.toLowerCase(Locale.ROOT)));
+    }
+
+    private static String clock(final Duration elapsed) {
+        final long seconds = elapsed.toSeconds();
+        return String.format(Locale.ROOT, "%d:%02d", seconds / SECONDS_PER_MINUTE, seconds % SECONDS_PER_MINUTE);
     }
 
     LogEntry memory(final MemoryUpdated event) {

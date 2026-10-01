@@ -9,6 +9,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -28,6 +29,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ContextLine;
 import ua.bookloom.ui.state.ReviewViewModel;
+import ua.bookloom.ui.state.VisibleText;
 
 /**
  * The review panel's right side: the selected segment's two panes, what the model knew, why it was flagged, and the
@@ -39,6 +41,8 @@ import ua.bookloom.ui.state.ReviewViewModel;
  */
 @Slf4j
 final class ReviewComparePane extends VBox {
+
+    private static final PseudoClass EMPTY_SOURCE = PseudoClass.getPseudoClass("placeholder");
 
     private static final double SPACING = 10;
     private static final int SCORE_DIGITS = 2;
@@ -267,8 +271,18 @@ final class ReviewComparePane extends VBox {
         proposal.setText(view.proposal() == null ? "" : view.proposal());
         proposalBox.setVisible(view.proposal() != null);
         proposalBox.setManaged(view.proposal() != null);
-        panes.source().setText(view.maskedSource());
+        showSource(view);
         setRowShown(line);
+    }
+
+    // A source with nothing visible in it still says so, rather than standing as an empty box.
+    private void showSource(final SegmentView view) {
+        final boolean blank = VisibleText.isBlank(view.maskedSource());
+        if (blank) {
+            log.debug("segment {} has no visible source text", view.segmentId());
+        }
+        panes.source().setText(blank ? messages.get(MessageKey.LIVE_EMPTY_SOURCE) : view.maskedSource());
+        panes.source().pseudoClassStateChanged(EMPTY_SOURCE, blank);
     }
 
     private void setRowShown(final String line) {

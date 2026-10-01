@@ -11,13 +11,17 @@ import ua.bookloom.ui.i18n.MessageKey;
 public enum LogKind {
     /** A segment was accepted. */
     ACCEPTED(MessageKey.LOG_ACCEPTED, StatusRole.SUCCESS, "✓", "ok"),
-    /** One repair call ran over a segment: a directed fix, a reflect, an improve or a polish. */
-    REPAIRED(MessageKey.LOG_REPAIRED, StatusRole.INFO, "✎", "fix"),
+    /** One attempt of a model call was answered; its first argument names the call's kind. */
+    MODEL_CALL(MessageKey.LOG_MODEL_CALL, StatusRole.INFO, "⇄", "call"),
+    /** One attempt of a model call failed, timed out or was refused; its first argument names the call's kind. */
+    CALL_FAILED(MessageKey.LOG_CALL_FAILED, StatusRole.WARNING, "⚠", "fail"),
+    /** A segment the checks did not accept entered a repair round. */
+    ROUND(MessageKey.LOG_ROUND, StatusRole.INFO, "↺", "round"),
     /** The glossary grew from a name scan, or a segment was reused from the translation memory. */
     GLOSSARY_APPLIED(MessageKey.LOG_GLOSSARY_APPLIED, StatusRole.INFO, "≡", "mem"),
     /** The rolling summary was refreshed. */
     SUMMARY_UPDATED(MessageKey.LOG_SUMMARY_UPDATED, StatusRole.INFO, "Σ", "sum"),
-    /** A format repair sent a segment to the model again, or the run resumed after a provider error. */
+    /** The run resumed after a provider error. */
     RETRIED(MessageKey.LOG_RETRIED, StatusRole.WARNING, "↻", "retry"),
     /** A segment was flagged instead of accepted. */
     SEGMENT_ERROR(MessageKey.LOG_SEGMENT_ERROR, StatusRole.DANGER, "✕", "err"),
@@ -66,9 +70,28 @@ public enum LogKind {
     /**
      * The short tag that starts this kind's entry in the log.
      *
-     * @return one of {@code ok}, {@code fix}, {@code mem}, {@code sum}, {@code retry}, {@code err} or {@code info}
+     * @return one of {@code ok}, {@code call}, {@code fail}, {@code round}, {@code mem}, {@code sum}, {@code retry},
+     *     {@code err} or {@code info}
      */
     public String tag() {
         return tag;
+    }
+
+    /**
+     * Whether the entry's first argument is a call kind's token, which the log words by the catalogue's call names.
+     *
+     * @return {@code true} for a model call's line, {@code false} otherwise
+     */
+    public boolean namesACall() {
+        return this == MODEL_CALL || this == CALL_FAILED;
+    }
+
+    /**
+     * Whether the entry reports something that went wrong, which the log's errors-only view keeps.
+     *
+     * @return {@code true} for a warning or a danger, {@code false} otherwise
+     */
+    public boolean isTrouble() {
+        return role == StatusRole.WARNING || role == StatusRole.DANGER;
     }
 }

@@ -186,20 +186,26 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
 
-        assertThat(logCells().stream().map(cell -> cell.getText()).toList())
+        assertThat(logCells().stream().map(cell -> cell.getAccessibleText()).toList())
                 .containsExactly(
                         "ok    ✓ Segment 741 was accepted.", "err   ✕ Segment 742 failed with a recoverable error.");
     }
 
-    // IF a role were drawn in the wrong token, THEN a flagged segment would look like an accepted one.
+    // IF a role were drawn in the wrong token, THEN a flagged segment would look like an accepted one; IF the words
+    // took the role's colour too, THEN a pale green line would be hard to read on the light surface.
     @Test
-    void log_acceptedAndSegmentError_areDrawnInTheSuccessAndDangerColours() {
+    void log_acceptedAndSegmentError_drawTheirTagInTheRoleAndTheirWordsInTheTextColour() {
         showTranslating();
 
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
 
-        ThemeTestSupport.assertSameColour(logCells().get(0).getTextFill(), "#5f8a6b", "accepted entry text");
-        ThemeTestSupport.assertSameColour(logCells().get(1).getTextFill(), "#b0574c", "segment-error entry text");
+        ThemeTestSupport.assertSameColour(partOf(0, ".log-tag").getTextFill(), "#5f8a6b", "accepted entry tag");
+        ThemeTestSupport.assertSameColour(partOf(1, ".log-tag").getTextFill(), "#b0574c", "segment-error entry tag");
+        ThemeTestSupport.assertSameColour(partOf(0, ".log-text").getTextFill(), "#2c3941", "accepted entry words");
+    }
+
+    private Label partOf(final int row, final String selector) {
+        return (Label) logCells().get(row).lookup(selector);
     }
 
     // IF the newest entries were left below the fold, THEN a person watching a long run would see a stale log.
@@ -285,16 +291,16 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(contentWidth).isLessThanOrEqualTo(pane.getViewportBounds().getWidth());
     }
 
-    // IF the Pause and Stop row could not be reached in the content area the minimum leaves, THEN a person could not
-    // stop a run; scrolling to the bottom brings it into the viewport.
+    // IF the Pause and Stop row sat at the bottom, THEN during a long stall a person would have to scroll past the live
+    // panel and the log to stop the run; it sits under the banner, in view at the top of the content area.
     @Test
-    void controls_atMinimum_stopIsReachableByScrolling() {
+    void controls_atMinimum_stopIsInViewAtTheTop() {
         showTranslating();
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
         publish(RunState.RUNNING);
         final ScrollPane pane = (ScrollPane) required("shell-content-scroll");
 
-        onFx(() -> pane.setVvalue(pane.getVmax()));
+        onFx(() -> pane.setVvalue(0));
 
         final Bounds viewport = pane.localToScene(pane.getLayoutBounds());
         final Bounds stop = required("translating-stop")
@@ -303,10 +309,10 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
         assertThat(stop.getMaxY()).isLessThanOrEqualTo(viewport.getMaxY());
     }
 
-    // IF a screen taller than the window were clipped rather than scrolled, THEN the run controls below the fold of a
-    // short window could never be pressed; scrolling to the bottom brings the Stop button into the viewport.
+    // IF a screen taller than the window were clipped rather than scrolled, THEN the parts below the fold of a short
+    // window could never be reached; the Stop button stays in view at the top.
     @Test
-    void screen_sceneShorterThanDashboard_scrollsToTheRunControls() {
+    void screen_sceneShorterThanDashboard_scrollsAndKeepsTheRunControlsAtTheTop() {
         showTranslating();
         resizeScene(960, 300);
         publish(RunState.RUNNING);
@@ -314,7 +320,7 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         assertThat(pane.getContent().getLayoutBounds().getHeight())
                 .isGreaterThan(pane.getViewportBounds().getHeight());
-        onFx(() -> pane.setVvalue(pane.getVmax()));
+        onFx(() -> pane.setVvalue(0));
 
         final Bounds viewport = pane.localToScene(pane.getLayoutBounds());
         final Bounds stop = required("translating-stop")

@@ -15,14 +15,21 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LiveRow;
+import ua.bookloom.ui.state.RoundTrack;
+import ua.bookloom.ui.state.VisibleText;
 
-/** One row of the live panel: a locator and badges above a source pane and a target pane. */
+/**
+ * One row of the live panel: a locator and badges, the repair-round tracker, a source pane and a target pane, and the
+ * collapsed context the draft was sent with. A row with no segment is not shown at all, and a pane whose text shows
+ * nothing says why instead of standing empty.
+ */
 final class LiveRowView extends VBox {
 
     private static final double SPACING = 8;
     private static final double PANE_SPACING = 16;
     private static final int SCORE_DIGITS = 2;
-    private static final double ROW_HEIGHT = 150;
+    private static final double PANES_HEIGHT = 120;
+    private static final String PLACEHOLDER = "live-placeholder";
 
     private final Messages messages;
     private final NumberFormat score;
@@ -30,10 +37,12 @@ final class LiveRowView extends VBox {
     private final Label judge = badge("chip-neutral");
     private final Label awaiting = badge("chip-warn");
     private final Label path = badge("chip-neutral");
+    private final Label round = badge("chip-warn");
     private final Label source = text();
     private final Label target = text();
     private final ScrollPane sourceScroll = scrolling(source);
     private final ScrollPane targetScroll = scrolling(target);
+    private final ContextSection context;
 
     LiveRowView(
             final String idPrefix,
@@ -46,25 +55,33 @@ final class LiveRowView extends VBox {
         score.setMinimumFractionDigits(SCORE_DIGITS);
         score.setMaximumFractionDigits(SCORE_DIGITS);
         name(idPrefix, locator, judge, awaiting, path, source, target);
+        round.setId(idPrefix + "-round");
+        context = new ContextSection(idPrefix + "-context", messages);
         locator.getStyleClass().add("muted");
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox header = new HBox(SPACING, locator, spacer, judge, awaiting, path);
+        final HBox header = new HBox(SPACING, locator, spacer, round, judge, awaiting, path);
+        getChildren().addAll(header, panes(idPrefix, sourceName, targetName), context);
+        setPadding(new Insets(SPACING));
+        setId(idPrefix);
+        getStyleClass().add("live-row");
+        show(null);
+    }
+
+    // The panes keep one height whatever the row holds, so the context section below opens without moving them.
+    private HBox panes(
+            final String idPrefix, final ObservableValue<String> sourceName, final ObservableValue<String> targetName) {
         final HBox panes = new HBox(
                 PANE_SPACING,
                 pane(idPrefix + "-source", sourceName, sourceScroll),
                 pane(idPrefix + "-target", targetName, targetScroll));
-        VBox.setVgrow(panes, Priority.ALWAYS);
+        panes.setPrefHeight(PANES_HEIGHT);
+        panes.setMinHeight(PANES_HEIGHT);
+        panes.setMaxHeight(PANES_HEIGHT);
         sourceScroll.setId(idPrefix + "-source-scroll");
         targetScroll.setId(idPrefix + "-target-scroll");
         targetScroll.getStyleClass().add("live-target");
-        setPrefHeight(ROW_HEIGHT);
-        setMinHeight(ROW_HEIGHT);
-        setMaxHeight(ROW_HEIGHT);
-        getChildren().addAll(header, panes);
-        setPadding(new Insets(SPACING));
-        getStyleClass().add("live-row");
-        show(null);
+        return panes;
     }
 
     private static void name(
@@ -122,28 +139,64 @@ final class LiveRowView extends VBox {
     void show(final @Nullable LiveRow row) {
         sourceScroll.setVvalue(0);
         targetScroll.setVvalue(0);
+        setVisible(row != null);
+        setManaged(row != null);
         if (row == null) {
             locator.setText("");
             source.setText("");
             target.setText("");
-            hide(judge, awaiting, path);
+            hide(judge, awaiting, path, round);
+            context.show(null);
             return;
         }
         locator.setText(row.locator());
-        source.setText(row.sourceText());
-        target.setText(targetOf(row));
+        showText(source, row.sourceText(), MessageKey.LIVE_EMPTY_SOURCE);
+        showTarget(row);
         set(
                 judge,
                 row.judgeScore() == null ? null : messages.get(MessageKey.LIVE_JUDGE, score.format(row.judgeScore())));
         set(awaiting, row.awaitingJudge() ? messages.get(MessageKey.LIVE_AWAITING_JUDGE) : null);
         set(path, row.path() == null ? null : messages.get(pathKey(row.path())));
+        set(round, roundText(row.round()));
+        context.show(row.context());
     }
 
-    private String targetOf(final LiveRow row) {
+    private void showTarget(final LiveRow row) {
         if (row.awaitingDraft()) {
-            return messages.get(MessageKey.LIVE_WAITING);
+            showPlaceholder(target, messages.get(MessageKey.LIVE_WAITING));
+            return;
         }
-        return row.targetText() == null ? "" : row.targetText();
+        showText(target, row.targetText() == null ? "" : row.targetText(), MessageKey.LIVE_NO_TARGET);
+    }
+
+    private void showText(final Label pane, final String text, final MessageKey whenBlank) {
+        if (VisibleText.isBlank(text)) {
+            showPlaceholder(pane, messages.get(whenBlank));
+        } else {
+            pane.setText(text);
+            pane.getStyleClass().remove(PLACEHOLDER);
+        }
+    }
+
+    private static void showPlaceholder(final Label pane, final String text) {
+        pane.setText(text);
+        if (!pane.getStyleClass().contains(PLACEHOLDER)) {
+            pane.getStyleClass().add(PLACEHOLDER);
+        }
+    }
+
+    private @Nullable String roundText(final @Nullable RoundTrack track) {
+        if (track == null) {
+            return null;
+        }
+        final Double judged = track.judgeScore();
+        final String finding = track.blockingFinding();
+        return messages.get(
+                MessageKey.LIVE_ROUND,
+                String.valueOf(track.round()),
+                String.valueOf(track.rounds()),
+                judged == null ? "none" : score.format(judged),
+                finding == null ? "none" : finding);
     }
 
     private static MessageKey pathKey(final SegmentPath path) {
