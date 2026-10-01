@@ -100,24 +100,24 @@ class OllamaClientUsageTest {
                 arguments(
                         new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), 0.2, null, null, 8192, null),
                         """
-                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":false,"options":{"temperature":0.2,"num_ctx":8192}}
+                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":true,"options":{"temperature":0.2,"num_ctx":8192}}
                         """),
                 arguments(
                         new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, 8192, null),
                         """
-                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":false,"options":{"num_ctx":8192}}
+                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":true,"options":{"num_ctx":8192}}
                         """),
                 arguments(
                         new ChatRequest(
                                 List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, 8192, null, 80),
                         """
-                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":false,"options":{"num_ctx":8192,"num_predict":80}}
+                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":true,"options":{"num_ctx":8192,"num_predict":80}}
                         """),
                 arguments(
                         new ChatRequest(
                                 List.of(new ChatMessage(ChatRole.USER, "hello")), null, null, null, null, null, 80),
                         """
-                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":false,"options":{"num_predict":80}}
+                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":true,"options":{"num_predict":80}}
                         """));
     }
 

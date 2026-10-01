@@ -76,7 +76,13 @@ final class OpenAiRequestMapper {
                 request.messages().stream().map(this::toOpenAiMessage).toList();
         try {
             final OpenAiChatRequest payload = new OpenAiChatRequest(
-                    modelId, messages, false, request.temperature(), responseFormat, request.maxOutputTokens());
+                    modelId,
+                    messages,
+                    false,
+                    request.temperature(),
+                    responseFormat,
+                    request.maxOutputTokens(),
+                    request.seed());
             return Result.ok(mapper.writeValueAsString(payload));
         } catch (JsonProcessingException failure) {
             return Result.err(serializationFailure.apply(modelId, failure));

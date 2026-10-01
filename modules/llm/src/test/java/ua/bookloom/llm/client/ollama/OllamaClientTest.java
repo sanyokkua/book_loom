@@ -83,7 +83,7 @@ class OllamaClientTest {
                         {
                           "model":"gemma4:e4b-mlx",
                           "messages":[{"role":"system","content":"Translate faithfully."},{"role":"user","content":"hello"},{"role":"assistant","content":"prior"}],
-                          "stream":false,
+                          "stream":true,
                           "options":{"temperature":0.2},
                           "format":{"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}
                         }
@@ -99,7 +99,7 @@ class OllamaClientTest {
         sendChat(messageOnlyRequest());
 
         server.verify(postRequestedFor(urlEqualTo(CHAT_PATH)).withRequestBody(equalToJson("""
-                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":false}
+                        {"model":"gemma4:e4b-mlx","messages":[{"role":"user","content":"hello"}],"stream":true}
                         """)));
     }
 

@@ -20,6 +20,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
@@ -61,8 +62,11 @@ public final class JudgeCall {
                 pairs.stream().map(JudgedPair::segmentId).toList();
         log.debug("Judging chunk pairCount={} labels={}", pairs.size(), labelsOf(pairs.size()));
         try {
-            final ChatRequest request =
-                    ChatRequests.build(PromptName.JUDGE, messagesFor(pairs, frame, glossaryTerms), null, false);
+            final ChatRequest request = ChatRequests.build(
+                    PromptName.JUDGE,
+                    messagesFor(pairs, frame, glossaryTerms),
+                    OutputLimit.forJudge(pairs.size()),
+                    false);
             logTraceMessages(request);
             final String soleSegmentId = pairs.size() == 1 ? pairs.get(0).segmentId() : null;
             final Result<ChatResponse> reply = calls.call(CallKind.JUDGE, soleSegmentId, request);

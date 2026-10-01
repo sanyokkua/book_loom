@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
@@ -59,5 +61,14 @@ class ChatRequestsTest {
 
         assertThat(request.expectedOutputTokens()).isNull();
         assertThat(request.maxOutputTokens()).isNull();
+    }
+
+    @ParameterizedTest
+    @EnumSource(PromptName.class)
+    void build_anyName_carriesThatNamesCallKindAndNoSeed(final PromptName name) {
+        final ChatRequest request = ChatRequests.build(name, MESSAGES, null, false);
+
+        assertThat(request.callKind()).isEqualTo(name.callKind());
+        assertThat(request.seed()).isNull();
     }
 }

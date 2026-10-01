@@ -14,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Severity;
@@ -53,7 +54,7 @@ class JudgeCallTest {
                     + "\"note\":\"n/a\"}]}";
 
     @Test
-    void judge_threePairs_sendsOneCallAtJudgeTemperatureWithLabelsStyleSheetAndNoExpectedOutput() {
+    void judge_threePairs_sendsOneCallAtJudgeTemperatureWithLabelsStyleSheetAndAnOutputCap() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(NO_FINDINGS_OR_DEFERRALS));
 
         CALL.judge(THREE_PAIRS, FRAME, List.of(), calls(model));
@@ -61,7 +62,10 @@ class JudgeCallTest {
         assertThat(model.requests()).hasSize(1);
         final ChatRequest request = model.requests().getFirst();
         assertThat(request.temperature()).isEqualTo(0.1);
-        assertThat(request.expectedOutputTokens()).isNull();
+        assertThat(request.expectedOutputTokens()).isEqualTo(352);
+        assertThat(request.maxOutputTokens()).isEqualTo(704);
+        assertThat(request.reasoningEnabled()).isFalse();
+        assertThat(request.callKind()).isEqualTo(CallKind.JUDGE);
         assertThat(request.messages()).hasSize(2);
         assertThat(request.messages().getFirst().content())
                 .contains(FRAME.styleSheet().text());

@@ -3,7 +3,6 @@ package ua.bookloom.llm.client.ollama;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -16,14 +15,11 @@ import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
-import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.dto.OllamaChatRequest;
-import ua.bookloom.llm.dto.OllamaChatResponse;
 import ua.bookloom.llm.dto.OllamaTagsResponse;
 import ua.bookloom.llm.http.HttpErrorMapper;
 import ua.bookloom.llm.http.HttpErrorMapper.CallPurpose;
@@ -34,7 +30,6 @@ import ua.bookloom.llm.provider.CapabilityRejections;
 import ua.bookloom.llm.provider.DiscoveryErrors;
 import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
-import ua.bookloom.llm.response.ReplySanitizer;
 
 /** Speaks Ollama's native chat dialect so request fields and provider errors retain their intended meaning. */
 @Slf4j
@@ -47,12 +42,15 @@ public final class OllamaClient implements ProviderClient {
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
+    private final OllamaReplyReader replies;
 
     /** Keeps each client bound to one provider endpoint and the shared HTTP/JSON infrastructure. */
     public OllamaClient(ProviderConfig config, HttpExchange exchange, ObjectMapper mapper) {
         this.config = Objects.requireNonNull(config, "config");
         this.exchange = Objects.requireNonNull(exchange, "exchange");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
+        this.replies = new OllamaReplyReader(
+                config, mapper, (modelId, cause) -> unexpectedError("read chat response", modelId, cause));
     }
 
     @Override
@@ -140,7 +138,7 @@ public final class OllamaClient implements ProviderClient {
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
         return new ProviderCallResult<>(
-                readChatResponse(modelId, Objects.requireNonNull(response.data(), "reply")), call.retryAfter());
+                replies.read(modelId, Objects.requireNonNull(response.data(), "reply")), call.retryAfter());
     }
 
     private Result<ParsedFormat> parseFormat(@Nullable ResponseFormat format, String modelId) {
@@ -176,10 +174,10 @@ public final class OllamaClient implements ProviderClient {
         final List<OllamaChatRequest.Message> messages =
                 request.messages().stream().map(this::toOllamaMessage).toList();
         final OllamaChatRequest.Options options = new OllamaChatRequest.Options(
-                request.temperature(), request.contextWindow(), request.maxOutputTokens());
+                request.temperature(), request.contextWindow(), request.maxOutputTokens(), request.seed());
         try {
             final OllamaChatRequest payload =
-                    new OllamaChatRequest(modelId, messages, false, options, schema, request.reasoningEnabled());
+                    new OllamaChatRequest(modelId, messages, true, options, schema, request.reasoningEnabled());
             return Result.ok(mapper.writeValueAsString(payload));
         } catch (JsonProcessingException failure) {
             return Result.err(unexpectedError("serialize chat request", modelId, failure));
@@ -191,8 +189,9 @@ public final class OllamaClient implements ProviderClient {
     }
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
-        final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request.expectedOutputTokens());
-        final Result<HttpReply> response = exchange.post(chatConfig, CHAT_PATH, body);
+        final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
+        final Result<HttpReply> response =
+                exchange.postStreamed(chatConfig, CHAT_PATH, body, RequestTimeouts.streamIdle(config));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }
@@ -201,80 +200,6 @@ public final class OllamaClient implements ProviderClient {
                 HttpErrorMapper.map(reply, chatConfig, CallPurpose.CHAT, modelId),
                 reply,
                 CapabilityRejections.from(reply, request));
-    }
-
-    private Result<ChatResponse> readChatResponse(String requestedModel, HttpReply reply) {
-        final OllamaChatResponse decoded;
-        try {
-            decoded = mapper.readValue(reply.body(), OllamaChatResponse.class);
-        } catch (JsonProcessingException failure) {
-            return unreadableChatResponse(requestedModel, failure);
-        }
-        if (decoded == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        return chatResponse(requestedModel, reply, decoded);
-    }
-
-    private Result<ChatResponse> chatResponse(String requestedModel, HttpReply reply, OllamaChatResponse decoded) {
-        if (decoded.message() == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        final String content = decoded.message().content();
-        if (content == null) {
-            return unreadableChatResponse(requestedModel, null);
-        }
-        if (content.isBlank()) {
-            return emptyCompletion(requestedModel, reply);
-        }
-        logModelMismatch(requestedModel, decoded.model());
-        final FinishReason finishReason = finishReason(decoded.doneReason());
-        final TokenUsage usage = usage(decoded);
-        log.debug(
-                "Ollama chat outcome host={} model={} status={} bodyLength={} finish={} usage={}",
-                config.baseUrl().getHost(),
-                requestedModel,
-                reply.status(),
-                reply.body().length(),
-                finishReason,
-                usage);
-        return Result.ok(new ChatResponse(ReplySanitizer.clean(content), finishReason, usage));
-    }
-
-    private static @Nullable TokenUsage usage(OllamaChatResponse decoded) {
-        final Long evalDuration = decoded.evalDuration();
-        if (decoded.promptEvalCount() == null && decoded.evalCount() == null && evalDuration == null) {
-            return null;
-        }
-        return new TokenUsage(
-                decoded.promptEvalCount(),
-                decoded.evalCount(),
-                evalDuration == null ? null : Duration.ofNanos(evalDuration));
-    }
-
-    private Result<ChatResponse> emptyCompletion(String modelId, HttpReply reply) {
-        log.debug(
-                "Ollama chat outcome host={} model={} status={} bodyLength={} code={}",
-                config.baseUrl().getHost(),
-                modelId,
-                reply.status(),
-                reply.body().length(),
-                ErrorCode.emptyCompletion);
-        return Result.err(AppError.of(
-                ErrorCode.emptyCompletion,
-                "Model returned an empty response",
-                "Ollama completed the request without response text.",
-                details(modelId),
-                null));
-    }
-
-    private void logModelMismatch(String requestedModel, @Nullable String answeredModel) {
-        if (answeredModel != null && !requestedModel.equals(answeredModel)) {
-            log.warn(
-                    "Ollama answered with a different model requested={} answered={}",
-                    SafeDetails.empty().withModelName(requestedModel).render(),
-                    SafeDetails.empty().withModelName(answeredModel).render());
-        }
     }
 
     private Result<List<ModelInfo>> readModels(String body) {
@@ -336,10 +261,6 @@ public final class OllamaClient implements ProviderClient {
                 cause);
     }
 
-    private Result<ChatResponse> unreadableChatResponse(String modelId, @Nullable Throwable cause) {
-        return Result.err(unexpectedError("read chat response", modelId, cause));
-    }
-
     private AppError unexpectedError(String operation, @Nullable String modelId, @Nullable Throwable failure) {
         log.error(
                 "Unexpected Ollama client failure operation={} host={} modelPresent={} failureType={}",
@@ -369,17 +290,6 @@ public final class OllamaClient implements ProviderClient {
                 config.baseUrl().getHost(),
                 modelId != null,
                 error == null ? "none" : error.code());
-    }
-
-    private static FinishReason finishReason(@Nullable String doneReason) {
-        if (doneReason == null) {
-            return FinishReason.OTHER;
-        }
-        return switch (doneReason) {
-            case "stop" -> FinishReason.STOP;
-            case "length" -> FinishReason.LENGTH;
-            default -> FinishReason.OTHER;
-        };
     }
 
     private record ParsedFormat(@Nullable JsonNode schema) {}

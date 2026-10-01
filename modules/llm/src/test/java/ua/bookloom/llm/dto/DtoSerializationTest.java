@@ -28,7 +28,7 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(null, null, null),
+                new OllamaChatRequest.Options(null, null, null, null),
                 null,
                 null));
         final JsonNode bodyWithoutOptions = mapper.valueToTree(new OllamaChatRequest(
@@ -47,7 +47,7 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(0.2, null, null),
+                new OllamaChatRequest.Options(0.2, null, null, null),
                 null,
                 null));
 
@@ -61,7 +61,7 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(null, 8192, null),
+                new OllamaChatRequest.Options(null, 8192, null, null),
                 null,
                 null));
 
@@ -77,7 +77,7 @@ class DtoSerializationTest {
                 "gemma4:e4b-mlx",
                 List.of(new OllamaChatRequest.Message("user", "hello")),
                 false,
-                new OllamaChatRequest.Options(null, numCtx, numPredict),
+                new OllamaChatRequest.Options(null, numCtx, numPredict, null),
                 null,
                 null));
 
@@ -95,7 +95,8 @@ class DtoSerializationTest {
                 false,
                 null,
                 null,
-                maxTokens));
+                maxTokens,
+                null));
 
         assertThat(body.has("max_tokens")).isEqualTo(expectedPresent);
         assertThat(body.path("max_tokens").asInt(-1)).isEqualTo(expectedPresent ? 80 : -1);

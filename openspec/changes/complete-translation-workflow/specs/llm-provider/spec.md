@@ -29,7 +29,7 @@ and to an OpenAI-compatible provider as `max_tokens`. WHEN the request carries n
 `openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
 In plain words: a model that loops on one sentence would otherwise write until the server's own limit, and the run would
 wait for all of it. The request states where the server must stop, each dialect names that field its own way, and a call
-that states no cap (a judge, a summary) is left as unbounded as before. Which calls carry a cap, and how large it is, is
+that states no cap (a summary) is left as unbounded as before. Which calls carry a cap, and how large it is, is
 the `translation-pipeline` capability's rule.
 
 #### Scenario: LM Studio receives max_tokens
@@ -47,29 +47,34 @@ the `translation-pipeline` capability's rule.
 - **WHEN** a request with the context size `8192` and an output cap of `80` is sent to the provider `ollama`
 - **THEN** the body posted to `/api/chat` has `"options":{"num_ctx":8192,"num_predict":80}`
 
-### Requirement: Scale a chat call's timeout with its expected output
+### Requirement: Choose a chat call's timeout by its kind and its expected output
 
-The system SHALL wait for each attempt of a chat call for the longer of the provider's request timeout and 0.5 seconds
-per output token the request expects, the latter at most 600 seconds — `max(request timeout, min(600 s, expected output
-tokens × 0.5 s))`. WHEN a request states no expected output, the system SHALL wait for the provider's request timeout.
-The request timeout is the provider description's own — 180 seconds by default, or the command line's `--timeout` — and
-the system SHALL never wait less than it.
+The system SHALL wait for each attempt of a judge call for 90 seconds, and for each attempt of a glossary prescan or a
+rolling-summary call for 120 seconds, whatever the provider's request timeout. For every other chat call it SHALL wait
+for the longer of the provider's request timeout and 0.5 seconds per output token the request expects, the latter at
+most 600 seconds — `max(request timeout, min(600 s, expected output tokens × 0.5 s))`. WHEN such a request states no
+expected output, the system SHALL wait for the provider's request timeout. The request timeout is the provider
+description's own — 180 seconds by default, or the command line's `--timeout` — and the system SHALL never wait less
+than it for a call that is neither a judge, a prescan nor a summary call.
 
 **Source:** FR-INFER-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#provider-config`,
-`docs/next_features.md` §15.
+`docs/next_features.md` §15; the stalled re-judge of the Bartimaeus hand test (tasks 15b).
 In plain words: a page from a slow model can need far longer than the three minutes a line needs, so a call that expects
-a long answer waits longer, up to ten minutes. The configured timeout is the floor: a short call never gets less than the
-default or the person's `--timeout`, because the first call after Ollama reloads a model for a larger context, or a
-prompt read on a CPU, can take minutes before the first word, and cutting it off would pause the run for nothing. A
-timeout set above ten minutes is kept as set. Which calls state an expected output is the `translation-pipeline`
+a long answer waits longer, up to ten minutes. The configured timeout is the floor for those calls: a short call never
+gets less than the default or the person's `--timeout`, because the first call after Ollama reloads a model for a larger
+context, or a prompt read on a CPU, can take minutes before the first word, and cutting it off would pause the run for
+nothing. A timeout set above ten minutes is kept as set. The judge and the helper calls are different: their replies are
+short and capped, so one still running after a minute and a half (two minutes for a helper) is stuck rather than slow,
+and the flat three minutes only delayed the retry. Which calls state an expected output is the `translation-pipeline`
 capability's rule; the short verification calls state none and keep the request timeout.
 
 #### Scenario: A medium segment gets a proportional wait
 
 - **WHEN** a draft request expects 400 output tokens, the provider has the default request timeout, and the server sends
   nothing
-- **THEN** the attempt ends with `ErrorCode.timeout` after 200 seconds, with the details naming the 200-second timeout
+- **THEN** the attempt ends with `ErrorCode.timeout` once the reply has sent nothing for its idle gap or 200 seconds have
+  passed, whichever comes first
 
 #### Scenario: A short segment keeps the request timeout
 
@@ -85,7 +90,16 @@ capability's rule; the short verification calls state none and keep the request 
 
 - **WHEN** the inference stage of verification sends its probe to a provider with the default request timeout
 - **THEN** its attempt waits up to 180 seconds
-- **AND** a judge call, which states no expected output, also waits up to 180 seconds
+
+#### Scenario: A judge call has its own bound
+
+- **WHEN** a judge call is sent to a provider with the default request timeout, or with a request timeout of 600 seconds
+- **THEN** its attempt waits up to 90 seconds
+
+#### Scenario: A prescan or summary call has its own bound
+
+- **WHEN** a glossary prescan call or a rolling-summary call is sent to a provider with the default request timeout
+- **THEN** its attempt waits up to 120 seconds
 
 #### Scenario: The command line's timeout is the floor
 
@@ -98,6 +112,63 @@ capability's rule; the short verification calls state none and keep the request 
 - **WHEN** the provider's request timeout is 900 seconds and a draft request expects 2,000 output tokens
 - **THEN** its attempt waits up to 900 seconds
 
+### Requirement: Read an Ollama-native reply as a stream that must keep arriving
+
+The system SHALL ask an Ollama-native provider for a streamed reply and SHALL read it line by line, each line one JSON
+object. It SHALL join the `message.content` of every line in order and take the finish reason and the token counts from
+the last line, so the caller receives the same single response a whole reply gives. WHEN no line arrives for the idle
+gap — 60 seconds, or the provider's request timeout when that is shorter — before the first line or between two lines,
+or the whole reply runs past the attempt's timeout, the system SHALL end the attempt with `ErrorCode.timeout` and close
+the connection. WHEN a line carries an `error` field, the attempt SHALL end with `ErrorCode.upstream`. An interrupted
+caller SHALL end the attempt at once with `ErrorCode.cancelled`. `ChatModel.chat` stays synchronous: no caller sees a
+partial reply, and the OpenAI-compatible client keeps asking for a whole reply.
+
+**Source:** FR-INFER-04a, FR-INFER-05 (`docs/specification/01_Product/04_LLM_PROVIDERS_AND_MODELS.md#fr-infer`),
+`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`; tasks 15b.
+In plain words: the JDK's request timeout stops counting once the reply begins, so a model that stalls halfway — or a
+runner that stays busy after a cut connection — held the call for the whole three minutes. A stream shows whether the
+model is still writing, so a stall is caught within a minute while a long, steady reply is never cut short.
+
+#### Scenario: A streamed reply reads as one
+
+- **WHEN** Ollama streams the lines `Hel`, `lo` and a last line with `done_reason` `stop`, 12 prompt tokens and 2
+  completion tokens
+- **THEN** the reply is `Hello`, finished `STOP`, with those token counts
+
+#### Scenario: A stream that stops sending
+
+- **WHEN** the provider's request timeout is 1 second, a draft expecting 400 tokens is sent, and the stream sends its
+  second line 8 seconds after its first
+- **THEN** the attempt ends with `ErrorCode.timeout` after about 1 second of silence, not after 200 seconds
+
+#### Scenario: A pause during a stalled stream
+
+- **WHEN** the calling thread is interrupted while the stream sends nothing
+- **THEN** the attempt ends at once with `ErrorCode.cancelled`
+
+### Requirement: Retry a timed-out call once, and never as the same request
+
+WHEN an attempt of a chat call ends with `ErrorCode.timeout`, the system SHALL send at most one more attempt for that
+call, and that attempt SHALL carry a sampling seed and, when the request states an output cap, three quarters of that cap.
+A call SHALL make at most 2 attempts that time out; the other retryable codes keep the 3-attempt budget and the
+`Retry-After` wait of the provider retry requirement. Each attempt SHALL be logged with its call kind and attempt
+number, and a call that gives up SHALL be logged as a warning with its code.
+
+**Source:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`; tasks 15b.
+In plain words: a reply that ran until the timeout most likely looped, and the identical request at a low temperature
+loops the same way, so three identical retries cost nine minutes for nothing. One varied retry gives the model a
+different path and a shorter leash, and then the failure goes to the run, which decides what to do with it.
+
+#### Scenario: A timeout then an answer
+
+- **WHEN** the first attempt of a request capped at 400 tokens times out and the second is answered
+- **THEN** the second request carries `"seed":2` and the cap 300, and the call succeeds after 2 requests
+
+#### Scenario: Two timeouts end the call
+
+- **WHEN** every attempt times out
+- **THEN** the result is `ErrorCode.timeout` and the server received exactly 2 requests
+
 ## MODIFIED Requirements
 
 ### Requirement: Shape an Ollama-native chat request
@@ -107,9 +178,10 @@ with:
 
 - `model`: the bound model id;
 - `messages`: the conversation as `{"role","content"}` objects with the roles `system`, `user` and `assistant`;
-- `stream`: `false`;
+- `stream`: `true` (the reply is read as the stream requirement above says);
 - `options`: an object holding `temperature`, the request's temperature, only when one is given, and `num_ctx`, the
-  request's context size, only when one is given, and `num_predict`, the request's output cap, only when one is given;
+  request's context size, only when one is given, and `num_predict`, the request's output cap, only when one is given,
+  and `seed`, the request's sampling seed, only when one is given;
   the `options` object itself is left out when none of them is given;
 - `format`: the request's JSON schema, only when a response format is given.
 - `think`: `false`, only when the request explicitly disables reasoning output.
@@ -128,7 +200,7 @@ size it needs; absent fields remain omitted because a strict server rejects an e
 
 - **WHEN** a request with temperature `0.2`, the context size `8192` and a JSON-schema response format is sent to the
   provider `ollama` for the model `gemma4:e4b-mlx` with reasoning disabled
-- **THEN** the body posted to `/api/chat` has `"model":"gemma4:e4b-mlx"`, `"stream":false`,
+- **THEN** the body posted to `/api/chat` has `"model":"gemma4:e4b-mlx"`, `"stream":true`,
   `"options":{"temperature":0.2,"num_ctx":8192}` and a `"format"` object holding that schema
 - **AND** it has `"think":false`, no `keep_alive` key, and `/api/show` is never requested
 

@@ -47,8 +47,9 @@ public record ProviderConfig(
 The per-dialect `ProviderClient` is an internal `:llm` interface, not a public port. It supplies `probe()`,
 `listModels()`, `chat(modelId, request)` and `kind()` to the factory and verifier. `probe()` is a lightweight
 reachability check so the Connection and Models stages remain separable: Ollama uses `/api/version` and the
-OpenAI-compatible dialect uses `/models`. Calls are synchronous and return the whole `ChatResponse`; streaming remains
-deferred.
+OpenAI-compatible dialect uses `/models`. Calls are synchronous and return the whole `ChatResponse`; the Ollama-native
+client reads its reply as a stream internally, so a reply that stops sending is ended by an idle gap of 60 seconds,
+while caller-visible streaming remains deferred.
 
 ### client-implementations {#client-implementations}
 
@@ -56,7 +57,8 @@ Two concrete clients implement the internal interface, both returning the same `
 the pipeline stays dialect-agnostic:
 
 - **Ollama-native client** (`kind = OLLAMA`) — uses `/api/version` to probe, `/api/tags` to discover models and
-  `/api/chat` for inference. It sends `stream:false`, plus `options.temperature` and `format` only when the request
+  `/api/chat` for inference. It sends `stream:true` and reads the NDJSON lines into one reply (idle gap 60 s, the
+  call's per-kind timeout as the ceiling), plus `options.temperature` and `format` only when the request
   provides them. It deliberately sends no `think`, `num_ctx`, `keep_alive`, or `/api/show` request in this change.
 - **OpenAI-compatible client** (`kind = OPENAI_COMPATIBLE`) — uses `/models` to probe and discover and
   `/chat/completions` for inference relative to the configured base URL. It covers LM Studio and other

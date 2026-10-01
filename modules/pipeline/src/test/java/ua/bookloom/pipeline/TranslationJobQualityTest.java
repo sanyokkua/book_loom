@@ -155,7 +155,7 @@ class TranslationJobQualityTest {
     }
 
     @Test
-    void run_draft_statesItsOutputAllowance() {
+    void run_draftAndOnePairJudge_stateTheirOutputAllowanceAndCap() {
         final ScriptedChatModel model = replies(DOOR_TARGET).answerTo(JUDGE, judged());
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
@@ -163,7 +163,7 @@ class TranslationJobQualityTest {
 
         assertThat(model.requests())
                 .extracting(ChatRequest::expectedOutputTokens, ChatRequest::maxOutputTokens)
-                .containsExactly(tuple(16, 64), tuple(null, null));
+                .containsExactly(tuple(16, 64), tuple(160, 320));
     }
 
     @Test

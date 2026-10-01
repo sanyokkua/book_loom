@@ -133,14 +133,14 @@ class WholeBookPipelineEndToEndTest {
         assertThat(WholeBookRun.userMessage(run.bodies().get(6))).contains("s1", WholeBookRun.FIX_1);
     }
 
-    // The draft of a short paragraph with no token is capped at the floor; the judge states no expected output.
+    // The draft of a short paragraph with no token is capped at the floor; the judge of four pairs at 896 tokens.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void run_draftAndJudge_capOnlyTheDraftAtTheFloor(final ProviderKind kind) {
+    void run_draftAndJudge_capTheDraftAtTheFloorAndTheJudgeByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
         assertThat(run.bodies().get(0)).contains(capField(kind) + ":64");
-        assertThat(run.bodies().get(4)).doesNotContain("num_predict", "max_tokens");
+        assertThat(run.bodies().get(4)).contains(capField(kind) + ":896");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.

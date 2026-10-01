@@ -25,4 +25,19 @@ class OutputLimitTest {
     void forSource_emptyDisplayText_answersNull() {
         assertThat(OutputLimit.forSource("⟦g0⟧ ⟦g1⟧", "en", "uk")).isNull();
     }
+
+    @Test
+    void forJudge_onePair_expectsOneHundredSixtyAndCapsAtThreeHundredTwenty() {
+        assertThat(OutputLimit.forJudge(1)).isEqualTo(new OutputLimit(160, 320));
+    }
+
+    @Test
+    void forJudge_threePairs_expectsThreeHundredFiftyTwoAndCapsAtSevenHundredFour() {
+        assertThat(OutputLimit.forJudge(3)).isEqualTo(new OutputLimit(352, 704));
+    }
+
+    @Test
+    void forJudge_tenPairs_capsAtTenTwentyFour() {
+        assertThat(OutputLimit.forJudge(10)).isEqualTo(new OutputLimit(512, 1024));
+    }
 }

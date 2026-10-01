@@ -402,8 +402,8 @@ count as translation time.
 The system SHALL give every model call a run makes a context size of 8192 tokens, and SHALL use 8192 as the effective
 context when it sizes chunks. Every draft, directed fix, improve, polish and revision call SHALL also state the output
 it expects: its segment's output allowance, estimated from the length of the source display text, the upper bound of
-the language pair's length band and the target language's script. A judge, reflect, pre-scan or summary call SHALL
-state no expected output.
+the language pair's length band and the target language's script. A judge call SHALL state the judge limit the next
+requirement gives. A reflect, pre-scan or summary call SHALL state no expected output.
 
 **Source:** `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `#service-owned-retry`.
@@ -422,14 +422,16 @@ expected output sets: a call that writes a long paragraph may wait longer than o
 - **WHEN** a Balanced run drafts `Book.md:0`, whose source display text `He opened the old door.` has 23 characters,
   from `en` to `uk`
 - **THEN** the draft request states 16 expected output tokens
-- **AND** the judge call for its chunk states no expected output
+- **AND** the judge call for its one-pair chunk states 160 expected output tokens
 
 ### Requirement: Cap the output of every call that states an expected output
 
 The system SHALL give every call that states an expected output — draft, directed fix, improve, polish and revision —
 also an output cap of `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, where the allowance is the expected
-output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A judge,
-reflect, pre-scan or summary call SHALL state no output cap. IF a capped reply ends with a finish of cut off by length,
+output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A judge
+call SHALL carry the cap `min(1024, 128 + 192 × pairs)` and state half of it as its expected output, and the judge's
+response schema SHALL bound its lists and its text fields (at most 12 findings, 8 deferrals, a 240-character note or
+reason). A reflect, pre-scan or summary call SHALL state no output cap. IF a capped reply ends with a finish of cut off by length,
 THEN the system SHALL treat it as any other cut-off reply ("Flag a segment whose reply cannot be used, and continue").
 
 **Source:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#response-handling`,
@@ -437,7 +439,9 @@ THEN the system SHALL treat it as any other cut-off reply ("Flag a segment whose
 In plain words: a small model sometimes loops on one sentence and would otherwise write until the three-minute timeout,
 three attempts in a row, for one paragraph. The cap is a generous multiple of the length the segment should need —
 half as much again, a fixed margin for the `{"target":…}` wrapper, and room for every placeholder token — so a normal
-reply never reaches it and a runaway one is cut off, flagged and left behind. How each server receives the cap is the
+reply never reaches it and a runaway one is cut off, flagged and left behind. The judge was once left unbounded and a
+looping re-judge then held a whole run for three minutes per attempt; its reply is a score and a few short findings per
+pair, so its cap grows with the pairs and stops at 1,024 tokens. How each server receives the cap is the
 `llm-provider` capability's rule.
 
 #### Scenario: A short draft gets the floor
@@ -445,7 +449,7 @@ reply never reaches it and a runaway one is cut off, flagged and left behind. Ho
 - **WHEN** a Balanced run drafts `Book.md:0`, whose source display text `He opened the old door.` states 16 expected
   output tokens and holds no placeholder token
 - **THEN** the draft request carries an output cap of `64`
-- **AND** the judge call for its chunk carries no output cap
+- **AND** the judge call for its one-pair chunk carries an output cap of `320`
 
 #### Scenario: A long paragraph with tokens gets a proportional cap
 

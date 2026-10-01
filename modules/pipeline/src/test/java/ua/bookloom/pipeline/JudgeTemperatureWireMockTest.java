@@ -28,7 +28,7 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
  * A draft then a judge call each reach the wire at their own temperature, reasoning off, and their own schema; the
- * draft states an output cap and the judge none.
+ * draft and the judge each state their own output cap.
  */
 class JudgeTemperatureWireMockTest {
 
@@ -68,8 +68,8 @@ class JudgeTemperatureWireMockTest {
                     .contains("\"temperature\":0.1", "\"score\"")
                     .doesNotContain("\"target\"");
             assertReasoningOff(kind, bodies);
-            assertThat(bodies.get(0)).contains(capField(kind));
-            assertThat(bodies.get(1)).doesNotContain("num_predict", "max_tokens");
+            assertThat(bodies.get(0)).contains(capField(kind) + ":64");
+            assertThat(bodies.get(1)).contains(capField(kind) + ":320");
         }
     }
 
@@ -85,8 +85,8 @@ class JudgeTemperatureWireMockTest {
 
     private static String capField(final ProviderKind kind) {
         return switch (kind) {
-            case OLLAMA -> "\"num_predict\":64";
-            case OPENAI_COMPATIBLE -> "\"max_tokens\":64";
+            case OLLAMA -> "\"num_predict\"";
+            case OPENAI_COMPATIBLE -> "\"max_tokens\"";
         };
     }
 

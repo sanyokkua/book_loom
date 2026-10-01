@@ -16,6 +16,7 @@ import org.jspecify.annotations.Nullable;
  * @param temperature optional generation control, omitted when absent
  * @param responseFormat optional strict structured-output mode, omitted when absent
  * @param maxTokens optional cap on the completion length, omitted when absent
+ * @param seed optional sampling seed, omitted when absent
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OpenAiChatRequest(
@@ -24,7 +25,8 @@ public record OpenAiChatRequest(
         @JsonProperty("stream") boolean stream,
         @JsonProperty("temperature") @Nullable Double temperature,
         @JsonProperty("response_format") @Nullable ResponseFormatDto responseFormat,
-        @JsonProperty("max_tokens") @Nullable Integer maxTokens) {
+        @JsonProperty("max_tokens") @Nullable Integer maxTokens,
+        @JsonProperty("seed") @Nullable Integer seed) {
 
     /** Rejects incomplete requests and protects the message order from caller mutation. */
     public OpenAiChatRequest {

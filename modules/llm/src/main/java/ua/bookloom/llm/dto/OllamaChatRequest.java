@@ -34,7 +34,8 @@ public record OllamaChatRequest(
         if (options != null
                 && options.temperature() == null
                 && options.numCtx() == null
-                && options.numPredict() == null) {
+                && options.numPredict() == null
+                && options.seed() == null) {
             options = null;
         }
     }
@@ -63,10 +64,12 @@ public record OllamaChatRequest(
      * @param temperature nullable so an unspecified temperature is omitted from the wire body
      * @param numCtx nullable so an unspecified context size is omitted from the wire body
      * @param numPredict nullable so an unspecified output cap is omitted from the wire body
+     * @param seed nullable so an unspecified sampling seed is omitted from the wire body
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Options(
             @JsonProperty("temperature") @Nullable Double temperature,
             @JsonProperty("num_ctx") @Nullable Integer numCtx,
-            @JsonProperty("num_predict") @Nullable Integer numPredict) {}
+            @JsonProperty("num_predict") @Nullable Integer numPredict,
+            @JsonProperty("seed") @Nullable Integer seed) {}
 }

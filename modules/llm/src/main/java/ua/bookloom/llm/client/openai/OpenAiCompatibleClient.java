@@ -147,7 +147,7 @@ public final class OpenAiCompatibleClient implements ProviderClient {
     }
 
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
-        final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request.expectedOutputTokens());
+        final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
         final Result<HttpReply> response = exchange.post(chatConfig, CHAT_PATH, body);
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);

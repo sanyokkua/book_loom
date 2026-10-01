@@ -90,7 +90,7 @@ class ProviderVerifierImplTest {
         server.stubFor(
                 post(urlEqualTo(OLLAMA_CHAT_PATH))
                         .withRequestBody(equalToJson("""
-                                        {"model":"test-model","messages":[{"role":"user","content":"Return exactly one JSON object: {\\"status\\":\\"ok\\"}."}],"stream":false,"format":{"type":"object","properties":{"status":{"const":"ok"}},"required":["status"],"additionalProperties":false},"think":false}
+                                        {"model":"test-model","messages":[{"role":"user","content":"Return exactly one JSON object: {\\"status\\":\\"ok\\"}."}],"stream":true,"format":{"type":"object","properties":{"status":{"const":"ok"}},"required":["status"],"additionalProperties":false},"think":false}
                                         """))
                         .willReturn(
                                 okJson(

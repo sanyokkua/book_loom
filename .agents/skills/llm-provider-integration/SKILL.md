@@ -62,8 +62,9 @@ resolution, and verification. It is FX-free and reaches the network only through
    A new kind is a new implementation + enum constant + factory entry — callers never change
    and never branch on kind.
 2. **Build the request.** `chat` is **synchronous**, returning `Result<ChatResponse>`
-   (whole body) — streaming is deferred from v1, so there is NO `ChatRequest.stream`
-   field or streaming path (cancellation = request timeout + cooperative interrupt at
+   (whole body) — there is NO `ChatRequest.stream` field and no caller-visible streaming
+   (the Ollama-native client reads `stream:true` NDJSON internally with a 60 s idle gap
+   and assembles the whole reply; cancellation = per-kind timeout + cooperative interrupt at
    chunk boundary). `ChatRequest` fields `temperature`, `topP`, `maxTokens`,
    `numCtx`, `responseFormat` are NULLABLE and OMITTED from JSON when null
    (Jackson `@JsonInclude(NON_NULL)`) — a `null` temperature is absent, never sent as
@@ -171,7 +172,8 @@ empty-after-sanitize repair retry, then an empty text-fallback result that QA fl
 - [ ] One injected `HttpClient`, fresh per-request timeout, record DTOs in internal `dto`
       package (`@JsonInclude(NON_NULL)`), tolerant `ObjectMapper`; secrets/book text never logged.
 - [ ] Nullable `ChatRequest` params are omitted from JSON when null; there is no
-      `ChatRequest.stream` field or streaming path (`chat` is synchronous; streaming
+      `ChatRequest.stream` field or caller-visible streaming (`chat` is synchronous; the
+      Ollama client streams internally with an idle gap; caller-visible streaming
       FR-INFER-04 is deferred from v1).
 - [ ] Credential resolution (planned) will store a reference only, never the secret; today no
       secret is stored/logged/echoed because no credential mechanism exists yet.
