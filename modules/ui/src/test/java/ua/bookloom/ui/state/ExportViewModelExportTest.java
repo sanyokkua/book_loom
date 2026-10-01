@@ -217,18 +217,20 @@ class ExportViewModelExportTest extends ExportViewModelTestBase {
     }
 
     // IF the file just written were offered as a free name, THEN a second press would be refused by the job with a
-    // message that does not say why.
+    // message that does not say why; IF it were said as an error, THEN a red line would sit beside the green checks of
+    // an export that went well.
     @Test
-    void export_success_refusesTheFileJustWrittenAndSaysSo() throws IOException {
+    void export_success_holdsTheFileJustWrittenWithANeutralNoteNotARefusal() throws IOException {
         Files.delete(destination);
         refresh();
         exportService.writeFiles(true);
 
         export();
 
-        assertThat(onFx(() -> exports.refusal().get()))
-                .isEqualTo("This is the file you just exported. Turn on Replace to write it again, or choose another"
-                        + " name.");
+        assertThat(onFx(() -> exports.refusal().get())).isEmpty();
+        assertThat(onFx(() -> exports.currentNote().get()))
+                .isEqualTo(
+                        "This is the file just exported. To write it again, turn on Replace or choose another name.");
         assertThat(onFx(() -> exports.exportAvailable().get())).isFalse();
     }
 

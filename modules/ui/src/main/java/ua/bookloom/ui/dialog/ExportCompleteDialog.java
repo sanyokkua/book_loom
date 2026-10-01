@@ -90,9 +90,16 @@ public final class ExportCompleteDialog {
         final Path folder = file.getParent();
         final Label verified = new Label(messages.get(MessageKey.EXPORT_COMPLETE_VERIFIED));
         verified.getStyleClass().add("chip-ok");
+        // A long folder is cut short in its row, so the whole path is one hover away, as is the written file's.
+        Tips.install(written, file.toString());
+        final Label location = plain(folder == null ? "" : folder.toString());
+        location.setId("export-complete-location");
+        if (folder != null) {
+            Tips.install(location, folder.toString());
+        }
         final VBox body = new VBox(
                 written,
-                row(MessageKey.EXPORT_COMPLETE_LOCATION, plain(folder == null ? "" : folder.toString())),
+                row(MessageKey.EXPORT_COMPLETE_LOCATION, location),
                 row(MessageKey.EXPORT_COMPLETE_VALIDATION, verified),
                 row(MessageKey.EXPORT_COMPLETE_SIZE, plain(FileSizes.format(sizeBytes, messages))));
         addReport(body, report);

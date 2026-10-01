@@ -794,9 +794,15 @@
     -fx-padding: 5px 12px 5px 12px;
 }
 
+/* Three looks, so an available tab never passes for an unavailable one: the chosen tab is strong and underlined, an
+   available one is ordinary text, and an unavailable one is muted and dimmed. */
 .tab .tab-label {
-    -fx-text-fill: -color-muted;
+    -fx-text-fill: -color-text;
     -fx-font-size: 12.5px;
+}
+
+.tab:disabled .tab-label {
+    -fx-text-fill: -color-muted;
 }
 
 .tab:selected {
@@ -1278,7 +1284,13 @@
     -fx-border-color: -color-primary;
 }
 
+/* The tick is painted only on a chosen box: painted always, the light tick showed on the dark surface of an unchosen
+   box in the dark theme and read as checked. */
 .check-box .mark {
+    -fx-background-color: transparent;
+}
+
+.check-box:selected .mark {
     -fx-background-color: -color-primary-fg;
 }
 
@@ -1833,6 +1845,11 @@
 
 .glossary-choice:focused {
     -fx-border-color: -color-focus;
+}
+
+/* A field that must be filled says so in the warning role while it is empty. */
+.hint.field-required {
+    -fx-text-fill: -color-warn;
 }
 
 .field-label {

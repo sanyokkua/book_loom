@@ -213,7 +213,7 @@ public final class BookFixtures {
         return inspected(
                 "p1",
                 BookFormat.EPUB,
-                "2.0",
+                "EPUB 2.0",
                 "Frankenstein",
                 "Mary Shelley",
                 new LanguageEvidence("en", "en", "en", LanguageEvidence.Verdict.MATCH),

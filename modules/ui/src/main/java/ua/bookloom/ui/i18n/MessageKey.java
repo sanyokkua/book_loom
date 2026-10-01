@@ -409,6 +409,7 @@ public enum MessageKey {
     BRIEF_TARGET_LABEL("brief.target.label"),
     /** Hover explanation of the control labelled by {@link #BRIEF_TARGET_LABEL}. */
     BRIEF_TARGET_LABEL_TIP("brief.target.label.tip"),
+    BRIEF_TARGET_REQUIRED("brief.target.required"),
     /** Label of the genre field. */
     BRIEF_TONE_GENRE("brief.tone.genre"),
     /** Hover explanation of the control labelled by {@link #BRIEF_TONE_GENRE}. */
@@ -976,7 +977,7 @@ public enum MessageKey {
     /** Note under the consistency-pass switch saying what it does. */
     EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
     /** Refusal beside Save to when the occupied book is the file the last export wrote. */
-    EXPORT_REFUSAL_JUST_EXPORTED("export.refusal.justExported"),
+    EXPORT_NOTE_JUST_EXPORTED("export.note.justExported"),
     /** Refusal beside Save to when the destination is the source file itself. */
     EXPORT_REFUSAL_SOURCE("export.refusal.source"),
     /** Refusal beside Save to when the destination's file type differs from the source's. */

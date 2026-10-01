@@ -109,6 +109,19 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         assertThat(box("brief-target").getCommitted()).isNull();
     }
 
+    // IF an empty target looked like any optional field, THEN a person would not see why Continue stays unavailable.
+    @Test
+    void target_empty_isMarkedRequiredUntilALanguageIsChosen() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+        assertThat(isShown("brief-target-required")).isTrue();
+        assertThat(((Label) required("brief-target-required")).getText())
+                .isEqualTo("Required: choose the language to translate into.");
+
+        onFx(() -> box("brief-target").select("uk"));
+
+        assertThat(isShown("brief-target-required")).isFalse();
+    }
+
     // IF a choice in the box did not reach the brief, THEN the run would use a language the person did not pick.
     @ParameterizedTest
     @ValueSource(strings = {"pl", "de", "la"})

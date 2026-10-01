@@ -8,45 +8,67 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
-/** Words the refusal beside Save to: the path rules first, then an occupied path the disk check found. */
+/**
+ * Words what stands beside Save to: a refusal from the path rules first, then an occupied path the disk check found —
+ * unless the occupied file is the one the shown result just wrote, which is said as a neutral note, since nothing went
+ * wrong and the success lines above must not sit beside an error.
+ */
 // Checkstyle parses source before Lombok runs, so it cannot see the private constructor (ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ExportRefusals {
 
     /**
-     * Picks the refusal that stands.
+     * What stands beside Save to.
+     *
+     * @param refusal the error text, empty when nothing is refused
+     * @param note the neutral text about the file just exported, empty otherwise
+     */
+    record Verdict(String refusal, String note) {
+
+        static final Verdict NONE = new Verdict("", "");
+
+        /** Whether Export book must wait: something is refused, or the file was just written and Replace is off. */
+        boolean isBlocking() {
+            return !refusal.isEmpty() || !note.isEmpty();
+        }
+    }
+
+    /**
+     * Picks what stands.
      *
      * @param messages the catalogue the text comes from
      * @param book the open book, or null when none is open
      * @param destination the destination as a path, empty when it names none
      * @param occupied the first existing file among the book and the chosen side files, or null when none
      * @param justExported the file the last export wrote and whose result is still shown, or null when none
-     * @return the refusal text; empty when nothing is refused
+     * @return the verdict; {@link Verdict#NONE} when nothing stands
      */
-    static String text(
+    static Verdict verdict(
             final Messages messages,
             final @Nullable OpenedBook book,
             final Optional<Path> destination,
             final @Nullable Path occupied,
             final @Nullable Path justExported) {
         if (book == null || destination.isEmpty()) {
-            return "";
+            return Verdict.NONE;
         }
         final Optional<ExportPathRules.Refusal> rule = ExportPathRules.refusal(book.source(), destination.get());
         if (rule.isPresent()) {
-            return messages.get(
-                    switch (rule.get()) {
-                        case SOURCE_ITSELF -> MessageKey.EXPORT_REFUSAL_SOURCE;
-                        case CHANGED_TYPE -> MessageKey.EXPORT_REFUSAL_TYPE;
-                    });
+            return new Verdict(
+                    messages.get(
+                            switch (rule.get()) {
+                                case SOURCE_ITSELF -> MessageKey.EXPORT_REFUSAL_SOURCE;
+                                case CHANGED_TYPE -> MessageKey.EXPORT_REFUSAL_TYPE;
+                            }),
+                    "");
         }
         if (occupied == null) {
-            return "";
+            return Verdict.NONE;
         }
         if (occupied.equals(justExported)) {
-            return messages.get(MessageKey.EXPORT_REFUSAL_JUST_EXPORTED);
+            return new Verdict("", messages.get(MessageKey.EXPORT_NOTE_JUST_EXPORTED));
         }
-        return messages.get(MessageKey.EXPORT_REFUSAL_OCCUPIED, occupied.toString());
+        return new Verdict(messages.get(MessageKey.EXPORT_REFUSAL_OCCUPIED, occupied.toString()), "");
     }
 }

@@ -62,7 +62,11 @@ final class ExportDestinationCard {
         final HBox row = new HBox(ROW_SPACING, field, browse);
         row.setAlignment(Pos.CENTER_LEFT);
         return new VBox(
-                ROW_SPACING, BriefCards.field(messages, MessageKey.EXPORT_SAVE_TO, row), refusal(), replaceSwitch());
+                ROW_SPACING,
+                BriefCards.field(messages, MessageKey.EXPORT_SAVE_TO, row),
+                refusal(),
+                currentNote(),
+                replaceSwitch());
     }
 
     private Node refusal() {
@@ -72,6 +76,16 @@ final class ExportDestinationCard {
         refusal.getStyleClass().add("status-err");
         refusal.textProperty().bind(viewModel.refusal());
         return BriefCards.shownWhile(refusal, viewModel.refusal().isNotEmpty());
+    }
+
+    // Not an error: the result above is current, and this only says why Export book waits for Replace.
+    private Node currentNote() {
+        final Label note = new Label();
+        note.setId("export-current-note");
+        note.setWrapText(true);
+        note.getStyleClass().add("hint");
+        note.textProperty().bind(viewModel.currentNote());
+        return BriefCards.shownWhile(note, viewModel.currentNote().isNotEmpty());
     }
 
     private Node replaceSwitch() {

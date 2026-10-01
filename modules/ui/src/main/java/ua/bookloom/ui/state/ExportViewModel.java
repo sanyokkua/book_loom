@@ -58,6 +58,7 @@ public final class ExportViewModel {
     private final ObservableSet<SideFile> sideFiles = FXCollections.observableSet(EnumSet.of(SideFile.GLOSSARY_CSV));
     private final ReadOnlyBooleanWrapper consistencyPass = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper refusal = new ReadOnlyStringWrapper("");
+    private final ReadOnlyStringWrapper currentNote = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper runNote = new ReadOnlyStringWrapper("");
     private final ReadOnlyBooleanWrapper exportAvailable = new ReadOnlyBooleanWrapper(false);
     private final ExportStatement statement;
@@ -180,6 +181,11 @@ public final class ExportViewModel {
     /** The refusal beside Save to, worded for the person; empty when the destination stands. */
     public ReadOnlyStringProperty refusal() {
         return refusal.getReadOnlyProperty();
+    }
+
+    /** The neutral note beside Save to when it names the file just exported; empty otherwise. */
+    public ReadOnlyStringProperty currentNote() {
+        return currentNote.getReadOnlyProperty();
     }
 
     /** The note that says exporting waits for the run; empty unless a run is running, pausing or stopping. */
@@ -374,14 +380,13 @@ public final class ExportViewModel {
     }
 
     private void recompute() {
-        final String text = ExportRefusals.text(
+        final ExportRefusals.Verdict verdict = ExportRefusals.verdict(
                 messages, project.book().get(), destinationPath(), occupancy.occupied(), run.justExported());
-        if (!text.equals(refusal.get())) {
-            log.debug("refusal beside Save to is now '{}'", text.isEmpty() ? "none" : text);
-        }
-        refusal.set(text);
+        log.debug("beside Save to: refusal '{}', note '{}'", verdict.refusal(), verdict.note());
+        refusal.set(verdict.refusal());
+        currentNote.set(verdict.note());
         final boolean available = destinationPath().isPresent()
-                && text.isEmpty()
+                && !verdict.isBlocking()
                 && runNote.get().isEmpty()
                 && !run.running().get();
         if (available != exportAvailable.get()) {

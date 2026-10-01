@@ -53,13 +53,24 @@ final class BriefLanguagesCard {
                         "",
                         messages.get(MessageKey.BRIEF_LANGUAGES_SAME)),
                 viewModel.sameLanguage());
+        final Label required = required(messages, target);
         this.node = BriefCards.card(
                 "brief-languages-card",
                 messages,
                 MessageKey.BRIEF_CARD_LANGUAGES,
                 new VBox(FIELD_SPACING, BriefCards.field(messages, MessageKey.BRIEF_SOURCE_LABEL, source), undeclared),
-                BriefCards.field(messages, MessageKey.BRIEF_TARGET_LABEL, target),
+                new VBox(FIELD_SPACING, BriefCards.field(messages, MessageKey.BRIEF_TARGET_LABEL, target), required),
                 same);
+    }
+
+    // Nothing can be translated without a target, so an empty one says so under the box until one is chosen.
+    private static Label required(final Messages messages, final SearchableCombo<String> target) {
+        final Label required = BriefCards.shownWhile(
+                BriefCards.hint(messages, MessageKey.BRIEF_TARGET_REQUIRED),
+                target.committedProperty().isNull());
+        required.setId("brief-target-required");
+        required.getStyleClass().add("field-required");
+        return required;
     }
 
     Node node() {

@@ -10,6 +10,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.testfx.util.WaitForAsyncUtils;
@@ -154,6 +155,27 @@ class ExportScreenTest extends TranslatingScreenTestBase {
 
         assertThat(textOf("export-check-consistency"))
                 .contains("Consistency pass: the gender step was skipped — no model available");
+    }
+
+    // IF the file just written were named in the red refusal, THEN an export that went well would read as a failure
+    // beside its own green checks; the screen says it in a neutral line instead.
+    @Test
+    void screen_afterExportOfANewFile_namesItInANeutralLineNotARefusal(@TempDir final Path dir)
+            throws TimeoutException {
+        openBookAndShowExport(dir.resolve("Frankenstein.epub"), BookFixtures.frankensteinImport());
+        exportService().writeFiles(true);
+        exportService().reportWith(null);
+
+        onFx(() -> button("export-run").fire());
+        awaitFx(() ->
+                !injector.getInstance(ExportViewModel.class).currentNote().get().isEmpty());
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(isShown("export-current-note")).isTrue();
+        assertThat(required("export-current-note").getStyleClass())
+                .contains("hint")
+                .doesNotContain("status-err");
+        assertThat(isShown("export-refusal")).isFalse();
     }
 
     // IF the result stayed after Replace changed, THEN the tiles and Open buttons would vouch for another run.

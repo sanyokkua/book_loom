@@ -437,8 +437,8 @@ slow model look fast.
 
 ### Requirement: Estimate the time left and the time spent
 
-WHILE a run translates, the system SHALL estimate the time left as a moving average of wall-clock seconds per decided
-segment, weighting the newest segment by `0.2`, times the pending segments remaining — a segment kept as source by
+WHILE a run translates, the system SHALL estimate the time left as the average of wall-clock seconds per decided segment
+over the last 20 such segments, times the pending segments remaining — a segment kept as source by
 choice is not pending — and SHALL report no estimate until 5 segments of the run have been decided. A segment kept as it
 is with no model call SHALL not enter the average. The elapsed time
 SHALL count only the time the run was not paused.
@@ -452,6 +452,11 @@ count as translation time.
 
 - **WHEN** 5 segments were each decided in 12 seconds and 100 remain
 - **THEN** the time left is 20 minutes
+
+#### Scenario: Only the last twenty segments count
+
+- **WHEN** 19 segments were each decided in 12 seconds, the next took 252 seconds, and 100 remain
+- **THEN** the time left is 40 minutes
 
 #### Scenario: No estimate too early
 

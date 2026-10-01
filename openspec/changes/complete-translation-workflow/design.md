@@ -343,7 +343,8 @@ log line above TRACE. `RunSession` turns events into mirror state on its 100 ms 
   finished, from the usage `ModelCallFinished` carries; when the provider reported none the pipeline has already
   estimated completion tokens with `TokenEstimator` from `outputChars` and set `usageEstimated` (shown with a leading
   `~`), so `:ui` never estimates.
-- **Time left** (`RunClock`): EWMA (α 0.2) of wall seconds per decided segment × remaining pending segments; hidden
+- **Time left** (`RunClock`): the plain average of wall seconds per decided segment over the last 20 timed segments ×
+  remaining pending segments (group 15b step 6: the EWMA α 0.2 swung from minutes to hours on one slow segment); hidden
   until 5 segments are decided in this run. **Elapsed** excludes paused time.
 - **Log** (`ActivityLogFeed`): the existing seven `LogKind`s gain their tags — `ACCEPTED` `ok`, `REPAIRED` `fix`,
   `GLOSSARY_APPLIED` `mem`, `SUMMARY_UPDATED` `sum`, `RETRIED` `retry`, `SEGMENT_ERROR` `err`, `MILESTONE` `info`
@@ -984,7 +985,7 @@ starting points, each in one place.
 | output allowance | `ceil(chars(source) × band hi / K(target) × 1.15)` | chosen here | `chunk.TokenEstimator` |
 | output cap | `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, never below 128 for a translation call (group 15b step 3: a one-word source under 64 came back empty); none where no expected output is stated | chosen here (owner decision, 2026-09-29) | `chunk.TokenEstimator`, `prompt.OutputLimit` |
 | sentence-start exceptions of the name scan | `Mr.`, `Mrs.`, `Ms.`, `Dr.`, `St.`, `Prof.` | chosen here | `glossary.FrequencyScan` |
-| time left | EWMA α 0.2; shown after 5 decisions | chosen here | `ui.state.RunClock` |
+| time left | average of the last 20 timed segments; shown after 5 decisions | chosen here | `ui.state.RunClock` |
 | tokens per second | last 20 `DRAFT` calls | chosen here | `ui.state.ThroughputMeter` |
 | token estimator | K per script (Latin 4.0, Cyrillic 3.0, Greek 3.5, Han/Japanese/Hangul 1.5, unknown 3.0), × 1.15 | reference `05_TRANSLATION_ALGORITHM.md#token-budget` | `util.lang.Script`, `chunk.TokenEstimator` |
 | live tick | 100 ms | existing | `ui.state.RunSession` |

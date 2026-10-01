@@ -69,7 +69,7 @@ class ImportViewModelTest extends ImportViewModelTestBase {
                         new BookCard(
                                 "Frankenstein.epub",
                                 BookFormat.EPUB,
-                                "2.0",
+                                "EPUB 2.0",
                                 "Frankenstein",
                                 "Mary Shelley",
                                 "en",

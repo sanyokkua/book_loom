@@ -11,6 +11,7 @@ import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ShellTestBase;
+import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.FileRevealer;
 
@@ -52,6 +53,14 @@ class ExportCompleteDialogTest extends ShellTestBase {
                         "Close",
                         "Open folder",
                         "Open book");
+    }
+
+    // IF a long folder were only cut short, THEN a person could not tell where the book went.
+    @Test
+    void show_outcome_locationShowsTheWholeFolderOnHover() {
+        show();
+
+        assertThat(TooltipProbe.tipText(required("export-complete-location"))).isEqualTo("/books");
     }
 
     @Test

@@ -3,6 +3,8 @@ package ua.bookloom.ui.state;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -15,10 +17,12 @@ import ua.bookloom.api.project.SegmentPath;
  * How long a run has been running and how long it has left.
  *
  * <p>The elapsed time leaves out the spans the run was paused, and so does the time each decided segment took, so a
- * lunch break does not make the next estimate absurd. The time left is the moving average of those per-segment times
- * times the segments still pending, and it stays unknown until enough segments of this run are decided for the average
- * to mean something (the first ones include loading the model). Not thread-safe: {@link RunSession} calls it under its
- * publish lock.
+ * lunch break does not make the next estimate absurd. The time left is the plain average of the last
+ * {@value #WINDOW} of those per-segment times, times the segments still pending: a window that long lets one slow
+ * segment move the estimate by a twentieth of its excess rather than by a fifth, so it no longer swings from minutes
+ * to hours between two glances. It stays unknown until enough segments of this run are decided for the average to mean
+ * something (the first ones include loading the model). Not thread-safe: {@link RunSession} calls it under its publish
+ * lock.
  */
 @Slf4j
 final class RunClock {
@@ -26,8 +30,8 @@ final class RunClock {
     /** Decided segments the run needs before an estimate is worth showing. */
     static final int MIN_DECIDED = 5;
 
-    /** The weight the newest segment's time carries in the moving average. */
-    static final double NEWEST_WEIGHT = 0.2;
+    /** How many of the latest timed segments the average is taken over. */
+    static final int WINDOW = 20;
 
     private static final double MILLIS_PER_SECOND = 1000.0;
 
@@ -36,7 +40,8 @@ final class RunClock {
     private @Nullable Instant pausedSince;
     private @Nullable Instant ended;
     private Duration activeAtLastDecision = Duration.ZERO;
-    private double averageSeconds;
+    private final Deque<Double> recentSeconds = new ArrayDeque<>();
+    private double windowSeconds;
     private int decided;
 
     RunClock(final Instant started) {
@@ -68,7 +73,11 @@ final class RunClock {
         final Duration active = active(now);
         final double seconds = active.minus(activeAtLastDecision).toMillis() / MILLIS_PER_SECOND;
         activeAtLastDecision = active;
-        averageSeconds = decided == 0 ? seconds : NEWEST_WEIGHT * seconds + (1 - NEWEST_WEIGHT) * averageSeconds;
+        recentSeconds.addLast(seconds);
+        windowSeconds += seconds;
+        if (recentSeconds.size() > WINDOW) {
+            windowSeconds -= recentSeconds.removeFirst();
+        }
         decided++;
         if (decided == MIN_DECIDED) {
             log.debug("time left: {} segments decided, the estimate is now shown", decided);
@@ -97,6 +106,7 @@ final class RunClock {
         if (decided < MIN_DECIDED) {
             return null;
         }
+        final double averageSeconds = windowSeconds / recentSeconds.size();
         return Duration.ofMillis(Math.round(averageSeconds * pending * MILLIS_PER_SECOND))
                 .truncatedTo(ChronoUnit.SECONDS);
     }

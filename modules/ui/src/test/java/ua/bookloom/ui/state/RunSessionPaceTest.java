@@ -87,6 +87,32 @@ class RunSessionPaceTest extends LiveSessionTestBase {
         assertThat(throughput().timeLeft()).isEqualTo(Duration.ofMinutes(20));
     }
 
+    // IF the segments before the last twenty still weighed in, THEN a run that sped up after warming would keep
+    // promising its slow start.
+    @Test
+    void timeLeft_twentySlowThenTwentyFastSegments_followsOnlyTheLastTwenty() {
+        final RunSession session = session();
+
+        decideEvery(session, WINDOW, 60);
+        decideEvery(session, WINDOW, 12);
+        tick(session);
+
+        assertThat(throughput().timeLeft()).isEqualTo(Duration.ofMinutes(20));
+    }
+
+    // IF one slow segment moved the estimate by a fifth of its excess, THEN the time left would leap from minutes to
+    // hours on a single hard paragraph; over twenty segments it moves by a twentieth.
+    @Test
+    void timeLeft_oneSlowSegmentAfterNineteenSteadyOnes_movesByATwentiethOfItsExcess() {
+        final RunSession session = session();
+
+        decideEvery(session, WINDOW - 1, 12);
+        decideEvery(session, 1, 252);
+        tick(session);
+
+        assertThat(throughput().timeLeft()).isEqualTo(Duration.ofMinutes(40));
+    }
+
     // IF a pause counted as translation time, THEN a lunch break would be shown as a very slow run.
     @Test
     void elapsed_tenMinutesThreePausedFiveMore_isFifteenMinutes() {

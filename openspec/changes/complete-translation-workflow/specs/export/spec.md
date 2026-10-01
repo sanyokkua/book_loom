@@ -550,8 +550,9 @@ that its gender step was skipped because no model was available.
 
 WHEN the destination, Replace, the chosen side files or the consistency switch changes after a success, the export
 screen SHALL forget that result, so its tiles, checks, Open folder and Open book never describe a file the next press
-will not write. WHEN the destination occupied after a success is the file just exported, the refusal beside Save to
-SHALL say so: "This is the file you just exported. Turn on Replace to write it again, or choose another name."
+will not write. WHEN the destination occupied after a success is the file just exported, the screen SHALL say so beside
+Save to in a neutral line, not as a refusal, and Export book SHALL wait for Replace or another name: "This is the file
+just exported. To write it again, turn on Replace or choose another name."
 
 WHILE no export of the open book has succeeded in the session, the export screen SHALL list no checks, SHALL show the
 file-validates tile as not yet known, and SHALL offer nothing to reveal or open. WHILE a run is translating, the export

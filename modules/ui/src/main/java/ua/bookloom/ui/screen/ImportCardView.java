@@ -60,6 +60,21 @@ final class ImportCardView {
         return name.equalsIgnoreCase(tag) ? tag : messages.get(MessageKey.IMPORT_LANGUAGE, name, tag);
     }
 
+    /**
+     * The format row's text. An EPUB inspection reports its version as {@code EPUB 2.0}, already naming the format, so
+     * the name is written once; a bare version such as {@code 2.0} gets the name in front.
+     *
+     * @param format the format's display name
+     * @param version the inspection's version string, or {@code null} when it reports none
+     * @return the name and the version, the name never twice
+     */
+    static String formatText(final String format, final @Nullable String version) {
+        if (version == null || version.isBlank()) {
+            return format;
+        }
+        return version.regionMatches(true, 0, format, 0, format.length()) ? version : format + " " + version;
+    }
+
     /** From 1,000 the figure is rounded to the nearest thousand; below it stays exact. */
     static int approximateWords(final int words) {
         return words < WORD_ROUNDING ? words : Math.round((float) words / WORD_ROUNDING) * WORD_ROUNDING;
@@ -71,9 +86,7 @@ final class ImportCardView {
         final String format = messages.get(ImportViews.formatName(card.format()));
         rows.add(ImportViews.keyValue("import-row-file", messages.get(MessageKey.IMPORT_CARD_FILE), card.fileName()));
         rows.add(ImportViews.keyValue(
-                "import-row-format",
-                messages.get(MessageKey.IMPORT_CARD_FORMAT),
-                version == null ? format : format + " " + version));
+                "import-row-format", messages.get(MessageKey.IMPORT_CARD_FORMAT), formatText(format, version)));
         final String titleAuthor = titleAuthor(card);
         if (titleAuthor != null) {
             rows.add(ImportViews.keyValue(
