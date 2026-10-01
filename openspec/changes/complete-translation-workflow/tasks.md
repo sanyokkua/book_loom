@@ -1280,6 +1280,17 @@ check leaves evidence.
   (no headings, title lines or marked foreign text), never propose a number word or language name alone, and the model
   scan's proposals pass the review's verdict step before anything is written (e04be8b); the validator's names check
   skips untranslated blocks and wants a target-script rendering (25c871e)
+- [x] 8h. UI polish from the same run: the Names & style toolbar sits under its title and wraps, so no caption (Stop
+  included) is cut at 960×640, 1024×700 or 1400×900; the page keeps its scroll position when a focused control goes
+  away (the slow-model banner's Skip/Retry/Pause, a replaced row); the title bar and the progress card read one
+  percent, rounded down (`RunFigures.percent`); Structure names the segments a run translates as book text + other
+  texts (titles, alt texts, contents, metadata) and the remaining tile explains it on hover; Review flagged opens its
+  panel under the run controls, with "Nothing flagged — every segment passed the checks" when empty; Names & style's
+  forward action is Start translation, Resume the run or Back to the run as the run stands; the export-complete card
+  names the untranslated segments written in the source and shows "✓ Re-opened and verified" as success-coloured text;
+  the "Context sent to the model" sections stay as the person left them across visits (`SectionMemory`); long chapter
+  names wrap in the structure tree with the full name on hover; a failed call answered on its retry no longer counts
+  in the title bar's failed-call warning (8bdcbf2)
 - [ ] 9. Prompts: the audit's rewrites (placeholder pairs, data-not-instructions, literal replies, judge anchors,
   `<Source>`/`<Translation>`), bundled examples, `PromptShapeTest`, golden files for judge and directed fix, the
   `promptEval` harness
