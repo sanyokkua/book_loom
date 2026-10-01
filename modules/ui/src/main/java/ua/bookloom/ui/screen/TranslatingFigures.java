@@ -20,6 +20,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.control.StatTile;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.RunFigures;
@@ -43,7 +44,6 @@ final class TranslatingFigures {
 
     private static final double CARD_SPACING = 8;
     private static final double TILE_SPACING = 12;
-    private static final int PERCENT = 100;
     private static final String PART_SEPARATOR = " · ";
     private static final String ERR_BAR = "bar-err";
 
@@ -152,6 +152,8 @@ final class TranslatingFigures {
     static Node runningTiles(final StateMirror mirror, final Messages messages) {
         final HBox row = new HBox(TILE_SPACING);
         RUNNING.forEach(spec -> row.getChildren().add(tile(spec, mirror, messages)));
+        // The remaining count starts above the book-text total Structure shows, so its tile says what else it counts.
+        Tips.install(messages, row.lookup("#translating-tile-remaining"), MessageKey.TRANSLATING_COUNT_REMAINING_TIP);
         row.setId("translating-tiles");
         return row;
     }
@@ -183,10 +185,8 @@ final class TranslatingFigures {
 
     static String progressLine(final StateMirror mirror, final Messages messages) {
         final RunFigures figures = mirror.figures().get();
-        final int decided = figures.total() - figures.remaining();
-        final int percent = figures.total() == 0 ? 0 : (int) ((long) decided * PERCENT / figures.total());
         final List<String> parts = new ArrayList<>();
-        parts.add(messages.get(MessageKey.TRANSLATING_LINE_PERCENT, percent));
+        parts.add(messages.get(MessageKey.TRANSLATING_LINE_PERCENT, figures.percent()));
         if (mirror.sections().get() > 0) {
             parts.add(messages.get(
                     MessageKey.TRANSLATING_LINE_SECTION,

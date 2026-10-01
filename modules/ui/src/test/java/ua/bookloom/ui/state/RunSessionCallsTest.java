@@ -78,21 +78,22 @@ class RunSessionCallsTest extends LiveSessionTestBase {
         assertThat(waitingCall()).isNull();
     }
 
-    // IF the chip did not count recent timeouts, THEN a server that keeps stalling would look as healthy as any other.
+    // IF the chip did not count recent timeouts, THEN a server that keeps stalling would look as healthy as any other;
+    // the judge of s-2 never succeeded, so both its failures count beside the answered judge of s-3.
     @Test
     void timeoutsAndAnswers_areCountedForTheConnectionChip() {
         final RunSession session = session();
         session.onEvent(failed(1, ErrorCode.timeout));
         session.onEvent(failed(2, ErrorCode.unreachable));
         session.onEvent(new ModelCallFinished(
-                "s-2",
+                "s-3",
                 CallKind.JUDGE,
                 Duration.ofSeconds(6),
                 new TokenUsage(500, 60, Duration.ofSeconds(2)),
                 120,
                 false,
-                List.of("s-2"),
-                3,
+                List.of("s-3"),
+                1,
                 null));
         clock.advance(Duration.ofSeconds(4));
 

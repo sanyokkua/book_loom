@@ -13,6 +13,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LiveRow;
 import ua.bookloom.ui.state.LiveRows;
+import ua.bookloom.ui.state.SectionMemory;
 
 /**
  * The "Current chunk (live)" card: the segment decided last above the one in progress.
@@ -59,6 +60,18 @@ public final class LiveChunkPanel extends VBox {
         log.debug("live panel {} bound to the mirror", id);
         show(rows.get());
         rows.addListener(new WeakChangeListener<>(onRows));
+    }
+
+    /**
+     * Keeps each row's "Context sent to the model" open or closed as the person last left it this session, so it
+     * survives the screen being rebuilt on the next visit as well as the rows it shows changing.
+     *
+     * @param memory the session's memory of open sections
+     */
+    public void rememberSectionsIn(final SectionMemory memory) {
+        Objects.requireNonNull(memory, "memory");
+        lastDecided.rememberContextIn(memory);
+        current.rememberContextIn(memory);
     }
 
     private void show(final LiveRows rows) {

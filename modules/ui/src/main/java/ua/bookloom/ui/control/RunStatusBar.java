@@ -43,7 +43,6 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 @Singleton
 public final class RunStatusBar {
 
-    private static final double PERCENT = 100.0;
     private static final double PART_SPACING = 12;
     private static final long SECONDS_PER_MINUTE = 60;
     private static final List<String> HEALTH_CLASSES = Arrays.stream(ConnectionStatus.Health.values())
@@ -87,7 +86,7 @@ public final class RunStatusBar {
         final InvalidationListener redraw = observed -> refresh();
         mirror.runFileName().addListener(redraw);
         mirror.runState().addListener(redraw);
-        mirror.progressFraction().addListener(redraw);
+        mirror.figures().addListener(redraw);
         mirror.review().providerError().addListener(redraw);
         mirror.live().throughput().addListener(redraw);
         mirror.live().connection().addListener(redraw);
@@ -157,7 +156,7 @@ public final class RunStatusBar {
         }
         fileName.setText(file);
         final RunState state = mirror.runState().get();
-        final int percent = (int) Math.round(mirror.progressFraction().get() * PERCENT);
+        final int percent = mirror.figures().get().percent();
         stateText.setText(stateText(state, percent));
         showTimes(mirror.live().throughput().get());
         showConnection(mirror.live().connection().get());

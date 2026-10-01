@@ -4,12 +4,14 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import javafx.beans.binding.Bindings;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.BookStats;
@@ -20,6 +22,7 @@ import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.StructureChecks;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 import ua.bookloom.ui.state.StructureListing;
 import ua.bookloom.ui.state.WorkflowProgress;
@@ -85,10 +88,35 @@ final class StructureView {
         final Label total = new Label(messages.get(MessageKey.STRUCTURE_TOTAL, listing.totalSegments()));
         total.setId("structure-total");
         total.getStyleClass().add("muted");
-        final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots()), total);
+        final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots()), total, runTotal(listing));
         card.setId("structure-card");
         card.getStyleClass().add("card");
         return card;
+    }
+
+    // Translating starts its remaining count from every segment a run translates, which is more than the tree's book
+    // text whenever the brief also translates titles, image descriptions, contents or book details; this line says so.
+    private Label runTotal(final StructureListing listing) {
+        final int bookText = listing.totalSegments();
+        final Label line = new Label();
+        line.setId("structure-run-total");
+        line.getStyleClass().add("muted");
+        line.setWrapText(true);
+        line.setMinHeight(Region.USE_PREF_SIZE);
+        line.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> checks.state().get() instanceof StructureChecks.Finished finished
+                                        && finished.runSegments() > bookText
+                                ? messages.get(
+                                        MessageKey.STRUCTURE_RUN_TOTAL,
+                                        bookText,
+                                        finished.runSegments() - bookText,
+                                        finished.runSegments())
+                                : "",
+                        checks.state()));
+        line.visibleProperty().bind(line.textProperty().isNotEmpty());
+        line.managedProperty().bind(line.visibleProperty());
+        return line;
     }
 
     private TreeView<StructureNode> tree(final List<StructureNode> roots) {

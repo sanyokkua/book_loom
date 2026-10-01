@@ -35,6 +35,8 @@ public record RunFigures(
         int chunks,
         int keptVerbatim) {
 
+    private static final int PERCENT = 100;
+
     /** The figures of a run that has not counted anything. */
     public static final RunFigures EMPTY = new RunFigures(0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0);
 
@@ -71,5 +73,15 @@ public record RunFigures(
      */
     public int accepted() {
         return autoAccepted + repaired + keptVerbatim;
+    }
+
+    /**
+     * The decided share as a whole percent, the one figure the title bar and the progress card both show. It is rounded
+     * down, so 100% means every segment is decided and two places reading the same figures never differ by a point.
+     *
+     * @return the percent from 0 to 100; zero when the total is zero
+     */
+    public int percent() {
+        return total == 0 ? 0 : (int) ((long) (total - remaining) * PERCENT / total);
     }
 }

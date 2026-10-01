@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -22,11 +24,15 @@ import ua.bookloom.api.project.GlossaryEntry;
  */
 public final class ScriptedGlossaryService implements GlossaryService {
 
+    private static final long HOLD_SECONDS = 10;
+
     private final List<String> calls = new CopyOnWriteArrayList<>();
     private final List<GlossaryEntry> added = new CopyOnWriteArrayList<>();
     private final List<GlossaryEntry> updated = new CopyOnWriteArrayList<>();
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
     private final Queue<JobEvent> events = new ConcurrentLinkedQueue<>();
+    private final CountDownLatch release = new CountDownLatch(1);
+    private volatile boolean holding;
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
     public void willAnswer(final Result<?> answer) {
@@ -58,6 +64,31 @@ public final class ScriptedGlossaryService implements GlossaryService {
         return answer("scan(" + projectId + ")");
     }
 
+    /**
+     * Makes every later model scan and review wait, as a slow model would, until {@link #releaseModelCalls()}; the
+     * wait ends by itself after a few seconds so a test that forgets the release cannot hang.
+     */
+    public void holdModelCalls() {
+        holding = true;
+    }
+
+    /** Lets every held model scan and review answer. */
+    public void releaseModelCalls() {
+        holding = false;
+        release.countDown();
+    }
+
+    private void waitIfHeld() {
+        if (!holding) {
+            return;
+        }
+        try {
+            release.await(HOLD_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     /** Queues an event the next model scan or review reports to its progress receiver before it answers. */
     public void willReport(final JobEvent event) {
         events.add(event);
@@ -67,6 +98,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
     public Result<List<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         report(progress);
+        waitIfHeld();
         return answer("prescan(" + projectId + ")");
     }
 
@@ -74,6 +106,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
     public Result<GlossaryReviewReport> review(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         report(progress);
+        waitIfHeld();
         return answer("review(" + projectId + ")");
     }
 

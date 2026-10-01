@@ -17,14 +17,28 @@ public sealed interface StructureChecks {
      *
      * @param report what the round-trip check found, or {@code null} when it could not be run
      * @param oversizedSegments how many segments are larger than one chunk; zero when the plan was not available
+     * @param runSegments how many segments a run translates — the book text and the other texts the brief also
+     *     translates (titles, image descriptions, contents, book details), the figure the Translating screen starts
+     *     its remaining count from; zero when the counts could not be read
      */
-    record Finished(@Nullable RoundTripReport report, int oversizedSegments) implements StructureChecks {
+    record Finished(@Nullable RoundTripReport report, int oversizedSegments, int runSegments)
+            implements StructureChecks {
 
         /** Rejects a negative count. */
         public Finished {
-            if (oversizedSegments < 0) {
-                throw new IllegalArgumentException("oversizedSegments must be >= 0");
+            if (oversizedSegments < 0 || runSegments < 0) {
+                throw new IllegalArgumentException("counts must be >= 0");
             }
+        }
+
+        /**
+         * The checks' answer without the run's segment count.
+         *
+         * @param report what the round-trip check found, or {@code null} when it could not be run
+         * @param oversizedSegments how many segments are larger than one chunk
+         */
+        public Finished(final @Nullable RoundTripReport report, final int oversizedSegments) {
+            this(report, oversizedSegments, 0);
         }
 
         /**

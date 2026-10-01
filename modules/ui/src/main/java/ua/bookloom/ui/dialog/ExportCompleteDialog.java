@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -88,8 +89,14 @@ public final class ExportCompleteDialog {
         written.setWrapText(true);
         written.getStyleClass().add("dialog-text");
         final Path folder = file.getParent();
-        final Label verified = new Label(messages.get(MessageKey.EXPORT_COMPLETE_VERIFIED));
-        verified.getStyleClass().add("chip-ok");
+        // Plain success-coloured words after a check mark, as the export screen's own checks read: a row value, not a
+        // chip.
+        final Label mark = new Label("✓");
+        mark.getStyleClass().add("status-ok");
+        final Label verified = plain(messages.get(MessageKey.EXPORT_COMPLETE_VERIFIED));
+        verified.setId("export-complete-verified");
+        verified.getStyleClass().add("status-ok");
+        verified.setGraphic(mark);
         // A long folder is cut short in its row, so the whole path is one hover away, as is the written file's.
         Tips.install(written, file.toString());
         final Label location = plain(folder == null ? "" : folder.toString());
@@ -117,19 +124,31 @@ public final class ExportCompleteDialog {
             row.getStyleClass().add("kv");
             body.getChildren().add(row);
         }
-        ExportReportLines.sourceFallbacks(messages, report).ifPresent(line -> {
-            final Label text = new Label(line);
-            text.setId("export-complete-source-fallbacks");
-            text.setWrapText(true);
-            text.getStyleClass().addAll("dialog-text", "status-warn");
-            body.getChildren().add(text);
-        });
+        addPartialWarnings(body, report);
         for (final String line : ExportReportLines.consistency(messages, report.consistency())) {
             final Label text = new Label(line);
             text.setWrapText(true);
             text.getStyleClass().add("dialog-text");
             body.getChildren().add(text);
         }
+    }
+
+    // A partial book is never a surprise: segments nobody translated yet, and those whose translation broke the
+    // formatting, were written in the source language. Each is a warning strip, so its words keep the body contrast.
+    private void addPartialWarnings(final VBox body, final ExportReport report) {
+        final int untranslated = report.pending() - report.sourceFallbacks().size();
+        if (untranslated > 0) {
+            log.debug("the export wrote {} untranslated segment(s) in the source language", untranslated);
+            body.getChildren()
+                    .add(warning(
+                            "export-complete-pending", messages.get(MessageKey.EXPORT_COMPLETE_PENDING, untranslated)));
+        }
+        ExportReportLines.sourceFallbacks(messages, report)
+                .ifPresent(line -> body.getChildren().add(warning("export-complete-source-fallbacks", line)));
+    }
+
+    private static Banner warning(final String id, final String text) {
+        return new Banner(id, Banner.Role.WARN, "⚠", "", text);
     }
 
     private static Label plain(final String text) {

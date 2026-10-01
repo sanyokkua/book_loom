@@ -16,8 +16,11 @@ import ua.bookloom.api.document.BookStats.Formatting;
 import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
+import ua.bookloom.api.pipeline.ReviewCounts;
+import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ScriptedReviewDesk;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.WorkflowProgress;
@@ -55,6 +58,34 @@ class StructureChecksScreenTest extends StructureScreenTestBase {
         projects.onPlan(Result.ok(plan));
         openBookThenShowStructure(dir.resolve("book.epub"), frankenstein());
         awaitChecksFinished();
+    }
+
+    private void runTranslates(final int segments, final int keptAsSource) {
+        ((ScriptedReviewDesk) injector.getInstance(ReviewDesk.class))
+                .willAnswerCounts(new ReviewCounts(segments + keptAsSource, 0, 0, 0, 0, segments, keptAsSource, 0, 0));
+    }
+
+    // IF Structure said 1,240 and Translating then counted 1,271 remaining, THEN the person could not tell where the
+    // other 31 came from; the line names the book text, the other texts and their sum.
+    @Test
+    void runTotal_runTranslatesMoreThanTheBookText_namesTheOtherTextsAndTheSum() throws TimeoutException {
+        runTranslates(1271, 3);
+
+        showChecked(FAITHFUL, plan());
+
+        assertThat(labelText("structure-run-total"))
+                .isEqualTo("1,240 segments in the book text + 31 other texts (titles, alt texts, contents, metadata)"
+                        + " = 1,271 to translate");
+    }
+
+    // IF the line showed when the run translates only the book text, THEN it would repeat the total in other words.
+    @Test
+    void runTotal_runTranslatesOnlyTheBookText_isNotShown() throws TimeoutException {
+        runTranslates(1240, 0);
+
+        showChecked(FAITHFUL, plan());
+
+        assertThat(isShown("structure-run-total")).isFalse();
     }
 
     // IF the card misread a figure, THEN the person would judge the book by numbers it does not have.

@@ -1,10 +1,15 @@
 package ua.bookloom.ui.control;
 
 import java.util.Objects;
+import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Keeps a scroll pane's content at the distance from the top the person scrolled it to while the content grows and
@@ -15,6 +20,11 @@ import lombok.extern.slf4j.Slf4j;
  * to its new end and stays there when the content grows back, so the view lands somewhere else. This class remembers
  * where the person put the view — every change of the value while the content keeps its height is theirs — and puts it
  * back whenever the content's height or the viewport changes. Its listeners run on every scroll, so they log nothing.
+ *
+ * <p>One change of the value is not the person's although the height stays: when the focused control goes away (a
+ * banner's action hidden once the model answers, a row's control replaced), JavaFX moves the focus to the next control
+ * and the pane scrolls that one into view, which can be a screen away. From the moment the focus leaves a control that
+ * lost its place until the next pulse, the anchor puts the view back where the person had it.
  */
 @Slf4j
 public final class ScrollAnchor {
@@ -24,6 +34,9 @@ public final class ScrollAnchor {
     private double knownHeight;
     private boolean restoring;
     private boolean attached;
+    private boolean holding;
+    private @Nullable Scene watched;
+    private final ChangeListener<@Nullable Node> onFocus = (observed, was, now) -> focusMoved(was);
 
     private ScrollAnchor(final ScrollPane pane) {
         this.pane = pane;
@@ -42,7 +55,9 @@ public final class ScrollAnchor {
         pane.vvalueProperty().addListener(observed -> anchor.onValue());
         pane.viewportBoundsProperty().addListener(observed -> anchor.restore());
         pane.skinProperty().addListener((observed, was, now) -> anchor.attach());
+        pane.sceneProperty().addListener((observed, was, now) -> anchor.watchFocus(now));
         anchor.attach();
+        anchor.watchFocus(pane.getScene());
         return anchor;
     }
 
@@ -68,6 +83,38 @@ public final class ScrollAnchor {
         content.layoutBoundsProperty().addListener((observed, was, now) -> onBounds(now));
     }
 
+    // The scene outlives a shell rebuilt in it, so it holds this anchor's listener weakly.
+    private void watchFocus(final @Nullable Scene scene) {
+        if (scene == null || scene.equals(watched)) {
+            return;
+        }
+        watched = scene;
+        scene.focusOwnerProperty().addListener(new WeakChangeListener<>(onFocus));
+    }
+
+    private void focusMoved(final @Nullable Node was) {
+        if (was == null || holding || !hasLostItsPlace(was)) {
+            return;
+        }
+        log.debug("the focused {} of {} went away: keeping the view where it was", was.getId(), pane.getId());
+        holding = true;
+        Platform.runLater(() -> holding = false);
+    }
+
+    private static boolean hasLostItsPlace(final Node node) {
+        if (node.getScene() == null || node.isDisabled()) {
+            return true;
+        }
+        Node walk = node;
+        while (walk != null) {
+            if (!walk.isVisible()) {
+                return true;
+            }
+            walk = walk.getParent();
+        }
+        return false;
+    }
+
     private void onBounds(final Bounds now) {
         if (now.getHeight() != knownHeight) {
             knownHeight = now.getHeight();
@@ -76,8 +123,15 @@ public final class ScrollAnchor {
     }
 
     private void onValue() {
+        if (restoring) {
+            return;
+        }
+        if (holding) {
+            restore();
+            return;
+        }
         final Node content = pane.getContent();
-        if (restoring || content == null || content.getLayoutBounds().getHeight() != knownHeight) {
+        if (content == null || content.getLayoutBounds().getHeight() != knownHeight) {
             return;
         }
         final double range = pane.getVmax() - pane.getVmin();

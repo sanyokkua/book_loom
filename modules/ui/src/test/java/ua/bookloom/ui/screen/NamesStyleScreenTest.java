@@ -14,6 +14,7 @@ import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.ViewNames;
 
 /** Start translation on the names and style screen: it begins a run only when Translating would offer a start. */
@@ -94,9 +95,32 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
     }
 
-    // IF a paused run were started again from here, THEN two jobs would work on one project.
+    private void runningThenBackToNamesStyle() throws Exception {
+        readyToStart();
+        showTranslating();
+        onFx(() -> button("translating-start").fire());
+        job.awaitRunStarted();
+        awaitBanner("Translating");
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+    }
+
+    // IF a run under way were offered "Start translation" here, THEN the person would think a second one could begin;
+    // the button says it goes back to the run, and pressing it asks nothing of the run.
     @Test
-    void startTranslation_runPaused_asksForNoNewJobAndTranslatingOffersResume() throws Exception {
+    void forward_runUnderWay_offersBackToTheRunAndOnlyShowsIt() throws Exception {
+        runningThenBackToNamesStyle();
+
+        assertThat(button("names-style-start").getText()).isEqualTo("Back to the run");
+        onFx(() -> button("names-style-start").fire());
+
+        assertThat(engine.requests()).hasSize(1);
+        assertThat(job.calls()).doesNotContain("pause", "resume");
+        assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
+    }
+
+    // IF a paused run were started again from here, THEN two jobs would work on one project; the button resumes it.
+    @Test
+    void forward_runPaused_offersResumeAndResumesTheSameJob() throws Exception {
         readyToStart();
         showTranslating();
         onFx(() -> button("translating-start").fire());
@@ -107,17 +131,17 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         awaitBanner("Paused");
         onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
 
+        assertThat(button("names-style-start").getText()).isEqualTo("Resume the run");
         onFx(() -> button("names-style-start").fire());
 
         assertThat(engine.requests()).hasSize(1);
+        assertThat(job.calls()).contains("resume");
         assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
-        assertThat(enabledControls()).contains("translating-resume");
-        assertThat(button("translating-resume").isDisabled()).isFalse();
     }
 
-    // IF a stopped run were started again from here, THEN Resume would be bypassed by a fresh first-segment run.
+    // IF a stopped run were offered a fresh start here, THEN Resume would be bypassed by a first-segment run.
     @Test
-    void startTranslation_runStopped_asksForNoNewJobAndTranslatingOffersResume() throws Exception {
+    void forward_runStopped_offersResumeNotStart() throws Exception {
         readyToStart();
         showTranslating();
         onFx(() -> button("translating-start").fire());
@@ -126,15 +150,12 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("translating-stop").fire());
         job.finish(Result.ok(cancelledReport()));
         awaitBanner("Run stopped");
-        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
 
-        onFx(() -> button("names-style-start").fire());
-
-        assertThat(engine.requests()).hasSize(1);
-        assertThat(currentView()).isEqualTo(ViewNames.TRANSLATING);
-        assertThat(enabledControls()).containsExactly("translating-resume");
         showNamesStyleAgain();
-        assertThat(button("names-style-start").getText()).isEqualTo("Start translation");
+
+        assertThat(button("names-style-start").getText()).isEqualTo("Resume the run");
+        assertThat(TooltipProbe.tipText(required("names-style-start")))
+                .startsWith("Continues the paused or stopped translation");
     }
 
     private void showNamesStyleAgain() {

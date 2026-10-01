@@ -30,6 +30,7 @@ import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.SectionMemory;
 
 /**
  * A collapsed "Context sent to the model" section, under each live row and in the review panel: its header counts what
@@ -82,6 +83,18 @@ public final class ContextSection extends TitledPane {
         setContent(content);
         Tips.install(messages, this, MessageKey.LIVE_CONTEXT_TIP);
         show(null);
+    }
+
+    /**
+     * Keeps this section open or closed as the person last left a section with the same id this session, and records
+     * each later change there, so a screen rebuilt on the next visit does not close it.
+     *
+     * @param memory the session's memory of open sections
+     */
+    public void rememberIn(final SectionMemory memory) {
+        Objects.requireNonNull(memory, "memory");
+        setExpanded(memory.isOpen(getId()));
+        expandedProperty().addListener((observed, was, now) -> memory.remember(getId(), now));
     }
 
     private HBox copyRow(final String id) {

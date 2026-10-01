@@ -1764,9 +1764,8 @@
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 140px;
-    /* A fixed row height spares measuring rows while scrolling: 7px + 7px padding, 1px divider and a title with its
-       count pill (33px measured), rounded up so no font clips it. */
-    -fx-fixed-cell-size: 34px;
+    /* No fixed row height: a long chapter name wraps onto a second line instead of being cut, so each row takes the
+       height of its title. The tree still builds only the rows its viewport shows. */
 }
 
 .structure-tree .tree-cell {

@@ -12,7 +12,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -29,6 +29,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.AddTermDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.GlossaryNotice;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -38,9 +39,10 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  * table and the four actions of its header, the note that the step can be skipped, and the footer that goes back to
  * the structure or starts the run.
  *
- * <p>Start translation asks {@link TranslatingViewModel#start()} and then shows the translating screen whatever came
- * of it: the view model begins a run only when the controls offer a start, so with a run already under way the screen
- * just shows that run, and a missing input is named on the translating screen's banner. The view model outlives this
+ * <p>The forward action follows the run controls Translating offers: Start translation asks
+ * {@link TranslatingViewModel#start()} when a start is offered, Resume the run continues a paused or stopped run, and
+ * Back to the run only shows a run under way, so this screen never offers a second translation. Each then shows the
+ * translating screen whatever came of it, where a missing input is named on the banner. The view model outlives this
  * view, so what listens to it does so weakly, with the strong reference held by the node that reacts.
  */
 @Slf4j
@@ -49,6 +51,7 @@ final class NamesStyleView {
     private static final double SCREEN_SPACING = 14;
     private static final double CARD_SPACING = 10;
     private static final double ACTION_SPACING = 8;
+    private static final double SEARCH_WIDTH = 220;
     private static final String LISTENER_KEY = "names-style-listener";
 
     private final Messages messages;
@@ -107,12 +110,7 @@ final class NamesStyleView {
         final ChangeListener<Number> onRestore = (observed, was, now) -> table.refresh();
         table.getProperties().put(LISTENER_KEY, onRestore);
         glossary.restorations().addListener(new WeakChangeListener<>(onRestore));
-        final Label title = new Label(messages.get(MessageKey.NAMES_STYLE_GLOSSARY_TITLE));
-        title.getStyleClass().add("card-title");
-        final Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox header = new HBox(ACTION_SPACING, title, spacer, search, actions());
-        header.setAlignment(Pos.CENTER_LEFT);
+        final VBox header = new VBox(CARD_SPACING, title(), toolbar(search));
         final VBox card = new VBox(CARD_SPACING, header, blockedNote(), table);
         card.setId("names-style-card");
         card.getStyleClass().add("card");
@@ -120,16 +118,30 @@ final class NamesStyleView {
         return card;
     }
 
-    private Node actions() {
-        final HBox actions = new HBox(
-                ACTION_SPACING,
-                action(
+    // The title sits above the toolbar, which wraps onto a further line rather than cutting a caption short.
+    private Label title() {
+        final Label title = new Label(messages.get(MessageKey.NAMES_STYLE_GLOSSARY_TITLE));
+        title.setId("names-style-glossary-title");
+        title.getStyleClass().add("card-title");
+        title.setWrapText(true);
+        title.setMinHeight(Region.USE_PREF_SIZE);
+        return title;
+    }
+
+    private FlowPane toolbar(final TextField search) {
+        search.setPrefWidth(SEARCH_WIDTH);
+        search.setMinWidth(Region.USE_PREF_SIZE);
+        final FlowPane toolbar = new FlowPane(ACTION_SPACING, ACTION_SPACING, search);
+        toolbar.setId("names-style-toolbar");
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+        toolbar.getChildren()
+                .add(action(
                         "names-style-add",
                         MessageKey.NAMES_STYLE_ADD,
                         MessageKey.NAMES_STYLE_ADD_TIP,
                         this::openAddTerm));
-        actions.getChildren().addAll(modelActions());
-        actions.getChildren()
+        toolbar.getChildren().addAll(modelActions());
+        toolbar.getChildren()
                 .addAll(
                         action(
                                 "names-style-import",
@@ -141,7 +153,7 @@ final class NamesStyleView {
                                 MessageKey.NAMES_STYLE_EXPORT,
                                 MessageKey.NAMES_STYLE_EXPORT_TIP,
                                 this::chooseExport));
-        return actions;
+        return toolbar;
     }
 
     // Says why the model actions are off while other model work (a run, an export, a provider test) is under way.
@@ -187,6 +199,8 @@ final class NamesStyleView {
         final Button button = Tips.install(messages, new Button(messages.get(caption)), tip);
         button.setId(id);
         button.getStyleClass().add("btn-ghost");
+        // A caption is never cut to an ellipsis: the toolbar wraps the button onto the next line instead.
+        button.setMinWidth(Region.USE_PREF_SIZE);
         button.setOnAction(event -> {
             log.debug("{} pressed", id);
             onPress.run();
@@ -222,7 +236,7 @@ final class NamesStyleView {
     }
 
     private Node footer() {
-        return StepFooter.of(
+        final StepFooter footer = StepFooter.of(
                 new StepFooter.Action(
                         "names-style-back",
                         messages.get(MessageKey.NAMES_STYLE_BACK),
@@ -234,14 +248,66 @@ final class NamesStyleView {
                         messages.get(MessageKey.NAMES_STYLE_START),
                         messages.get(MessageKey.NAMES_STYLE_START_TIP),
                         "btn-primary",
-                        this::onStart));
+                        this::onForward));
+        followTheRun(footer.forwardButton());
+        return footer;
     }
 
-    private void onStart() {
-        log.debug(
-                "start translation pressed, a start is offered: {}",
-                translating.controls().get().start().isEnabled());
-        translating.start();
+    // The forward action names what it will do with the run as it stands, so it never offers a second translation.
+    private void followTheRun(final Button forward) {
+        final ChangeListener<Controls> onControls = (observed, was, now) -> showForward(forward, Forward.of(now));
+        forward.getProperties().put(LISTENER_KEY, onControls);
+        translating.controls().addListener(new WeakChangeListener<>(onControls));
+        showForward(forward, Forward.of(translating.controls().get()));
+    }
+
+    private void showForward(final Button forward, final Forward action) {
+        log.debug("names and style offers {} as its forward action", action);
+        forward.setText(messages.get(action.label()));
+        Tips.install(messages, forward, action.tip());
+    }
+
+    private void onForward() {
+        final Forward action = Forward.of(translating.controls().get());
+        log.debug("forward pressed on names and style: {}", action);
+        switch (action) {
+            case START -> translating.start();
+            case RESUME -> translating.resume();
+            case TO_RUN -> log.debug("a run is under way: showing it");
+        }
         navigator.navigate(ViewNames.TRANSLATING);
+    }
+
+    /** What the forward button does, read from the run controls Translating offers. */
+    private enum Forward {
+        /** No run can be continued: start one, as Translating's Start would. */
+        START(MessageKey.NAMES_STYLE_START, MessageKey.NAMES_STYLE_START_TIP),
+        /** A paused or stopped run can be continued: resume it rather than start another. */
+        RESUME(MessageKey.NAMES_STYLE_RESUME, MessageKey.NAMES_STYLE_RESUME_TIP),
+        /** A run is under way or has nothing left: only show it. */
+        TO_RUN(MessageKey.NAMES_STYLE_TO_RUN, MessageKey.NAMES_STYLE_TO_RUN_TIP);
+
+        private final MessageKey label;
+        private final MessageKey tip;
+
+        Forward(final MessageKey label, final MessageKey tip) {
+            this.label = label;
+            this.tip = tip;
+        }
+
+        MessageKey label() {
+            return label;
+        }
+
+        MessageKey tip() {
+            return tip;
+        }
+
+        static Forward of(final Controls controls) {
+            if (controls.start().isShown()) {
+                return START;
+            }
+            return controls.resume().isShown() ? RESUME : TO_RUN;
+        }
     }
 }

@@ -13,6 +13,7 @@ import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ShellTestBase;
+import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.ExportOutcome;
 import ua.bookloom.ui.state.FileRevealer;
@@ -107,10 +108,57 @@ class ExportCompleteDialogTest extends ShellTestBase {
                         new SourceFallback("part0009.html:5", "ch12 · p06")));
         onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
 
-        final Label line = (Label) scene.getRoot().lookup("#export-complete-source-fallbacks");
+        final Label line = (Label) scene.getRoot().lookup("#export-complete-source-fallbacks-text");
         assertThat(line.getText())
                 .isEqualTo("2 segments were written in the source language because their translation broke the"
                         + " formatting: ch12 · p02, ch12 · p06");
+    }
+
+    // IF a partial book were reported as only "written and validated", THEN the untranslated part would be a surprise;
+    // the two segments written in the source for a broken translation are named on their own line, not counted here.
+    @Test
+    void show_pendingSegments_saysHowManyAreStillUntranslatedAndWrittenInTheSource() {
+        final ExportReport report = new ExportReport(
+                BOOK,
+                8,
+                58,
+                0,
+                0,
+                8,
+                0,
+                List.of(),
+                10,
+                ConsistencySummary.NOT_RUN,
+                0,
+                List.of(
+                        new SourceFallback("part0009.html:1", "ch12 · p02"),
+                        new SourceFallback("part0009.html:5", "ch12 · p06")));
+        onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
+
+        assertThat(((Label) required("export-complete-pending-text")).getText())
+                .isEqualTo("56 segments are still untranslated and were written in the source language");
+    }
+
+    // IF nothing is pending, THEN the card says nothing about untranslated segments.
+    @Test
+    void show_nothingPending_hasNoUntranslatedLine() {
+        show();
+
+        assertThat(scene.getRoot().lookup("#export-complete-pending")).isNull();
+    }
+
+    // IF the validation value were drawn as a framed chip in a row of plain values, THEN it would look like a control;
+    // it is the success colour's words after a check mark.
+    @Test
+    void show_outcome_validationIsSuccessColouredWordsAfterACheckMark() {
+        show();
+
+        final Label verified = (Label) required("export-complete-verified");
+        assertThat(verified.getStyleClass()).contains("status-ok").doesNotContain("chip-ok");
+        assertThat(verified.getGraphic()).isInstanceOf(Label.class);
+        assertThat(((Label) verified.getGraphic()).getText()).isEqualTo("✓");
+        assertThat(ThemeTestSupport.onFx(() -> verified.getTextFill()))
+                .isEqualTo(ThemeTestSupport.onFx(() -> ((Label) verified.getGraphic()).getTextFill()));
     }
 
     @Test

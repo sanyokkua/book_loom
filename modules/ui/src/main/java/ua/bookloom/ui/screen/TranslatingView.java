@@ -11,10 +11,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -40,6 +38,7 @@ import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
@@ -63,7 +62,6 @@ final class TranslatingView {
     private static final double CARD_SPACING = 8;
     private static final double TILE_SPACING = 12;
     private static final double ACTION_SPACING = 10;
-    private static final double LOG_HEIGHT = 260;
 
     private static final Set<RunState> UNDER_WAY =
             Set.of(RunState.RUNNING, RunState.PAUSING, RunState.PAUSED, RunState.STOPPING, RunState.STOPPED);
@@ -123,7 +121,8 @@ final class TranslatingView {
 
     /**
      * What the screen's own buttons do that the view model does not: leave for another step, open the settings, or
-     * open the review panel, whose view model counts the flagged segments and whose retry asks its note in a card.
+     * open the review panel, whose view model counts the flagged segments and whose retry asks its note in a card; and
+     * the session's memory of which sections the person left open, which outlives the rebuilt screen.
      */
     record Exits(
             Navigator navigator,
@@ -131,7 +130,8 @@ final class TranslatingView {
             ReviewViewModel review,
             RetryWithNoteDialog retryDialog,
             ReviewPauseFollower pauses,
-            RunInterventions interventions) {}
+            RunInterventions interventions,
+            SectionMemory sections) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
@@ -158,13 +158,14 @@ final class TranslatingView {
         final VBox screen = new VBox(
                 SCREEN_SPACING,
                 head(banner, actions(viewModel, mirror, exits.review(), review, messages)),
+                review,
                 StateVisibility.shownIn(
                         TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
                 StateVisibility.shownIn(TranslatingFigures.progressCard(mirror, messages), state, UNDER_WAY),
                 StateVisibility.shownIn(TranslatingFigures.runningTiles(mirror, messages), state, UNDER_WAY),
                 StateVisibility.shownIn(TranslatingFigures.outcomeCard(mirror, messages), state, ENDED),
-                StateVisibility.shownIn(watch(logList, mirror, sourceName, targetName, messages), state, WATCHED),
-                review,
+                StateVisibility.shownIn(
+                        watch(logList, mirror, sourceName, targetName, messages, exits), state, WATCHED),
                 footer(mirror, messages, exits.navigator()));
         return new TranslatingDashboard(screen, banner, messages, mirror);
     }
@@ -211,53 +212,17 @@ final class TranslatingView {
         return button;
     }
 
-    private static Node logCard(final TaggedLog logList, final Messages messages) {
-        final Label heading = new Label(messages.get(MessageKey.TRANSLATING_LOG_TITLE));
-        heading.getStyleClass().add("card-title");
-        final ToggleButton errorsOnly = new ToggleButton(messages.get(MessageKey.TRANSLATING_LOG_ERRORS_ONLY));
-        errorsOnly.setId("translating-log-errors-only");
-        errorsOnly.getStyleClass().add("review-chip");
-        Tips.install(messages, errorsOnly, MessageKey.TRANSLATING_LOG_ERRORS_ONLY_TIP);
-        errorsOnly.selectedProperty().addListener((observed, was, now) -> {
-            log.debug("activity log errors-only {}", now);
-            logList.errorsOnlyProperty().set(now);
-        });
-        final Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox header = new HBox(CARD_SPACING, heading, spacer, jumpToLatest(logList, messages), errorsOnly);
-        header.setAlignment(Pos.CENTER_LEFT);
-        logList.setId("translating-log");
-        logList.setPrefHeight(LOG_HEIGHT);
-        VBox.setVgrow(logList, Priority.ALWAYS);
-        final VBox card = new VBox(CARD_SPACING, header, logList);
-        card.setId("translating-log-card");
-        card.getStyleClass().add("card");
-        return card;
-    }
-
-    // Offered only while the person has scrolled the log up, which stops it following its newest line.
-    private static Button jumpToLatest(final TaggedLog logList, final Messages messages) {
-        final Button jump = Tips.install(
-                messages,
-                new Button(messages.get(MessageKey.TRANSLATING_LOG_JUMP)),
-                MessageKey.TRANSLATING_LOG_JUMP_TIP);
-        jump.setId("translating-log-jump");
-        jump.getStyleClass().add("review-chip");
-        jump.visibleProperty().bind(logList.followingProperty().not());
-        jump.managedProperty().bind(jump.visibleProperty());
-        jump.setOnAction(event -> logList.jumpToLatest());
-        return jump;
-    }
-
     private static Node watch(
             final TaggedLog logList,
             final StateMirror mirror,
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
-            final Messages messages) {
+            final Messages messages,
+            final Exits exits) {
         final LiveChunkPanel live =
                 new LiveChunkPanel("translating-live-card", mirror.live().liveRows(), sourceName, targetName, messages);
-        final Node logCard = logCard(logList, messages);
+        live.rememberSectionsIn(exits.sections());
+        final Node logCard = TranslatingLogCard.build(logList, messages);
         final VBox row = new VBox(TILE_SPACING, live, logCard);
         row.setId("translating-watch");
         VBox.setVgrow(row, Priority.ALWAYS);
@@ -280,7 +245,8 @@ final class TranslatingView {
     }
 
     // An open panel is shown only while the run is in a state that offers Review flagged, so it never outlives its
-    // button.
+    // button. It opens right under the run controls, where Review flagged is, so pressing it always shows something —
+    // with nothing flagged, the empty state that says so.
     private static ReviewPanel reviewPanel(
             final Exits exits,
             final ObservableValue<String> sourceName,

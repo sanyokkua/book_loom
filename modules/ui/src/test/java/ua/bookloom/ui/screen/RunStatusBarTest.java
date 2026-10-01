@@ -67,6 +67,19 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
                 .containsSubsequence(required(BAR), required("shell-theme-toggle"));
     }
 
+    // IF the title bar rounded the share while the card floored it, THEN at 81 of 163 the two would read 50% and 49%.
+    @Test
+    void bar_andTheProgressCard_atOneShare_showTheSamePercent() {
+        showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishProgress(ProgressFixtures.progress(8, 12, 81, 0, 82));
+        mirror().publishRunState(RunState.RUNNING);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(textsUnder(required(BAR))).contains("Progress 49%");
+        assertThat(labelText("translating-progress-text")).startsWith("49%");
+    }
+
     // IF the time left were shown when the run reports none, THEN the bar would claim an estimate it does not have.
     @Test
     void bar_noTimeLeft_showsNoTimeLeft() {

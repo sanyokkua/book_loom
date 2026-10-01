@@ -25,7 +25,7 @@ import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 
 /**
- * The review panel that expands under the Translating dashboard: the flagged list on the left, the compare with its
+ * The review panel that expands under the Translating dashboard's run controls: the flagged list on the left, the compare with its
  * findings and actions on the right, or the empty state when nothing is listed.
  *
  * <p>Whether the panel is open is this screen's own state; the view model reads its list when the panel opens. The

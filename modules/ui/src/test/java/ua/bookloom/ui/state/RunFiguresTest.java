@@ -49,6 +49,16 @@ class RunFiguresTest {
         assertThat(figures.fraction()).isCloseTo(0.6217741935483871, within(TOLERANCE));
     }
 
+    // IF the percent were rounded, THEN 81 of 163 would read 50% and 162 of 163 would read 100% with one still pending.
+    @ParameterizedTest(name = "{0} decided, {1} pending: {2}%")
+    @CsvSource({"81, 82, 49", "162, 1, 99", "163, 0, 100", "0, 0, 0"})
+    void percent_decidedAndPending_isTheShareRoundedDown(final int decided, final int pending, final int percent) {
+        final RunFigures figures =
+                RunFigures.from(new JobProgress(JobStage.TRANSLATE, 1, 1, decided, 0, pending, 1, 1, decided, 0));
+
+        assertThat(figures.percent()).isEqualTo(percent);
+    }
+
     // IF an empty snapshot divided by its zero total, THEN the dashboard would show NaN instead of no progress.
     @ParameterizedTest
     @CsvSource({"PREP", "TRANSLATE", "REVISE"})

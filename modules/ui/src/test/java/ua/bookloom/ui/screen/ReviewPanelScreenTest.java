@@ -98,7 +98,7 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
         openPanelWith(RunState.COMPLETED, 0);
 
         assertThat(isShown("review-panel")).isTrue();
-        assertThat(labelText("review-empty-text")).isEqualTo("Nothing flagged — every chunk cleared the checks");
+        assertThat(labelText("review-empty-text")).isEqualTo("Nothing flagged — every segment passed the checks");
         assertThat(button("review-back").getText()).isEqualTo("Back to progress");
     }
 

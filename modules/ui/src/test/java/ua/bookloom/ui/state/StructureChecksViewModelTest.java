@@ -18,9 +18,11 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.BookPlan;
+import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedProjectService;
+import ua.bookloom.ui.ScriptedReviewDesk;
 
 /** The background checks of the structure screen: what they ask, on which thread, and what they publish. */
 class StructureChecksViewModelTest extends FxTestBase {
@@ -30,6 +32,7 @@ class StructureChecksViewModelTest extends FxTestBase {
     private static final RoundTripReport LOST_AN_IMAGE = new RoundTripReport(true, false, List.of("img-7"), 1240, 1240);
 
     private ScriptedProjectService projects;
+    private ScriptedReviewDesk desk;
     private ExecutorService executor;
 
     @Override
@@ -40,6 +43,7 @@ class StructureChecksViewModelTest extends FxTestBase {
     @BeforeEach
     void setUpFakes() {
         projects = new ScriptedProjectService();
+        desk = new ScriptedReviewDesk();
         executor = new DirectExecutor();
     }
 
@@ -53,7 +57,7 @@ class StructureChecksViewModelTest extends FxTestBase {
     }
 
     private StructureChecksViewModel viewModel() {
-        return onFx(() -> new StructureChecksViewModel(projects, executor));
+        return onFx(() -> new StructureChecksViewModel(projects, desk, executor));
     }
 
     private static StructureChecks stateOf(final StructureChecksViewModel viewModel) {
@@ -66,6 +70,21 @@ class StructureChecksViewModelTest extends FxTestBase {
             return null;
         });
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // IF the run's segment count were not read, THEN Structure could not say why Translating starts above the book
+    // text;
+    // the segments the brief keeps as source are not translated, so they are left out.
+    @Test
+    void run_countsAnswer_publishesTheSegmentsARunTranslates() {
+        projects.onRoundTrip(Result.ok(LOST_AN_IMAGE));
+        projects.onPlan(Result.ok(planWith()));
+        desk.willAnswerCounts(new ReviewCounts(167, 0, 0, 0, 0, 163, 4, 0, 0));
+        final StructureChecksViewModel viewModel = viewModel();
+
+        run(viewModel, "p1");
+
+        assertThat(stateOf(viewModel)).isEqualTo(new StructureChecks.Finished(LOST_AN_IMAGE, 0, 163));
     }
 
     // IF the checks published nothing but a report, THEN the oversized warning could never be shown.

@@ -13,6 +13,7 @@ import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TreeItem;
+import javafx.scene.text.Text;
 import org.controlsfx.control.ToggleSwitch;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -23,6 +24,8 @@ import ua.bookloom.api.document.BookStats;
 import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.ViewNames;
 
 /**
@@ -53,6 +56,9 @@ class StructureScreenTest extends StructureScreenTestBase {
     private Path dir;
 
     /** Eleven top-level nodes whose segment counts add up to 1,240. */
+    private static final String LONG_TITLE =
+            "Chapter Three: The Law of Universal Gravitation and the Formula Newton Wrote for It";
+
     private static ImportedBook elevenUnitBook() {
         return BookFixtures.imported(
                 "eleven", BookFormat.EPUB, null, null, null, 120, 95, 130, 110, 100, 115, 105, 125, 135, 90, 115);
@@ -66,13 +72,34 @@ class StructureScreenTest extends StructureScreenTestBase {
         assertThat(renderedRows()).containsExactlyElementsOf(ELEVEN_ROWS);
     }
 
-    // IF the tree measured every row as it scrolled, THEN a book of thousands of units would stutter; its rows share
-    // one fixed height.
+    // IF a long chapter name were cut in its middle ("Chapter Three: ...Gravity Formula"), THEN the person could not
+    // read
+    // which chapter a row is; at the window minimum the name wraps whole onto a taller row and is its own hover text.
     @Test
-    void tree_elevenUnitBook_rowsShareOneFixedHeight() throws TimeoutException {
-        openBookThenShowStructure(dir.resolve("book.epub"), elevenUnitBook());
+    void row_longChapterNameAtTheMinimumWidth_wrapsWholeOntoATallerRow() throws TimeoutException {
+        openBookThenShowStructure(
+                dir.resolve("book.epub"), bookOf(BookFormat.EPUB, 27, node("Notes", 4), node(LONG_TITLE, 23)));
 
-        assertThat(tree().getFixedCellSize()).isEqualTo(34.0);
+        resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
+
+        final List<Label> titles = ThemeTestSupport.onFx(() -> renderedCells().stream()
+                .filter(cell -> cell.getItem() != null)
+                .sorted(java.util.Comparator.comparingInt(cell -> cell.getIndex()))
+                .map(cell -> (Label) cell.lookup(".structure-row-title"))
+                .toList());
+        assertThat(titles).hasSize(2);
+        final Label longOne = titles.get(1);
+        assertThat(ThemeTestSupport.onFx(() -> drawn(longOne))).isEqualTo(LONG_TITLE);
+        assertThat(ThemeTestSupport.onFx(() -> longOne.getHeight()))
+                .isGreaterThan(ThemeTestSupport.onFx(() -> titles.get(0).getHeight()) * 1.5);
+        assertThat(TooltipProbe.tipText(longOne)).isEqualTo(LONG_TITLE);
+    }
+
+    private static String drawn(final Label label) {
+        return label.getChildrenUnmodifiable().stream()
+                .filter(Text.class::isInstance)
+                .map(node -> ((Text) node).getText().replace("\n", " "))
+                .collect(java.util.stream.Collectors.joining());
     }
 
     // IF a unit were nested under another, THEN the screen would state a hierarchy the parsed model does not have.

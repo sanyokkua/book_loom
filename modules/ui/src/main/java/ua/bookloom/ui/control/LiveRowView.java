@@ -16,6 +16,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LiveRow;
 import ua.bookloom.ui.state.RoundTrack;
+import ua.bookloom.ui.state.SectionMemory;
 import ua.bookloom.ui.state.VisibleText;
 
 /**
@@ -66,6 +67,10 @@ final class LiveRowView extends VBox {
         setId(idPrefix);
         getStyleClass().add("live-row");
         show(null);
+    }
+
+    void rememberContextIn(final SectionMemory memory) {
+        context.rememberIn(memory);
     }
 
     // The panes keep one height whatever the row holds, so the context section below opens without moving them.

@@ -120,9 +120,10 @@ abstract class ConformanceTestBase extends ShellTestBase {
         }
     }
 
+    // A partial export, so the card's untranslated-segments line is checked in both themes with the rest.
     private static ExportOutcome finishedExport() {
         final Path book = Path.of("/books/Frankenstein.uk.epub");
         return new ExportOutcome(
-                new ExportReport(book, 10, 0, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0), 958_464);
+                new ExportReport(book, 10, 3, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0), 958_464);
     }
 }

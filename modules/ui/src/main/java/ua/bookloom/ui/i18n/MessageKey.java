@@ -594,6 +594,11 @@ public enum MessageKey {
     STRUCTURE_UNTITLED("structure.untitled"),
     /** Total of translatable segments beneath the list; argument 0 is the count, passed as an Integer. */
     STRUCTURE_TOTAL("structure.total"),
+    /**
+     * The segments a run translates, beneath the total: argument 0 the book-text segments, 1 the other texts (titles,
+     * image descriptions, contents, book details), 2 their sum, each an Integer.
+     */
+    STRUCTURE_RUN_TOTAL("structure.runTotal"),
     /** Button that moves on from the structure screen to the next available step. */
     STRUCTURE_CONTINUE("structure.continue"),
     /** Hover explanation of the control labelled by {@link #STRUCTURE_CONTINUE}. */
@@ -672,6 +677,14 @@ public enum MessageKey {
     NAMES_STYLE_START("namesStyle.start"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_START}. */
     NAMES_STYLE_START_TIP("namesStyle.start.tip"),
+    /** Footer button of names and style that resumes the paused or stopped run and shows it. */
+    NAMES_STYLE_RESUME("namesStyle.resume"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_RESUME}. */
+    NAMES_STYLE_RESUME_TIP("namesStyle.resume.tip"),
+    /** Footer button of names and style that shows the run under way instead of starting another. */
+    NAMES_STYLE_TO_RUN("namesStyle.toRun"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_TO_RUN}. */
+    NAMES_STYLE_TO_RUN_TIP("namesStyle.toRun.tip"),
     /** Heading of the glossary card. */
     NAMES_STYLE_GLOSSARY_TITLE("namesStyle.glossary.title"),
     /** Button that opens the Add term card. */
@@ -827,6 +840,8 @@ public enum MessageKey {
     TRANSLATING_COUNT_FLAGGED("translating.count.flagged"),
     /** Caption of the remaining-segments tile. */
     TRANSLATING_COUNT_REMAINING("translating.count.remaining"),
+    /** Hover explanation of the remaining-segments tile: what the count includes besides the book text. */
+    TRANSLATING_COUNT_REMAINING_TIP("translating.count.remaining.tip"),
     /** Heading of the activity log card. */
     TRANSLATING_LOG_TITLE("translating.log.title"),
     /** Text shown in the activity log before the run has decided anything. */
@@ -1089,6 +1104,8 @@ public enum MessageKey {
     EXPORT_COMPLETE_VALIDATION("export.complete.validation"),
     /** Verification result of the export-complete dialog. */
     EXPORT_COMPLETE_VERIFIED("export.complete.verified"),
+    /** Line of the export-complete dialog naming the untranslated segments written in the source; argument 0 the count. */
+    EXPORT_COMPLETE_PENDING("export.complete.pending"),
     /** Label of the size row of the export-complete dialog. */
     EXPORT_COMPLETE_SIZE("export.complete.size"),
     /** Label of the row of the export-complete dialog listing the side files written beside the book. */
