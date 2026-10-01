@@ -262,4 +262,91 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
         assertThat(desk.calls()).contains("skip(" + projectId + ", ch05.xhtml:11)");
         assertThat(onFx(() -> review.selected().get().locator())).isEqualTo("ch7 · p40");
     }
+
+    // A segment that kept no translation shows the model's refused reply, labelled, and can be saved as it is.
+    @Test
+    void select_flaggedWithOnlyARejectedReply_showsItLabelledAndSavable() {
+        buildReview();
+        desk.willAnswerSegment(withRejected(lowScore(), "Він відчинив ⟦g0⟧старі двері."));
+
+        select("ch05.xhtml:11");
+
+        assertThat(editor()).isEqualTo("Він відчинив ⟦g0⟧старі двері.");
+        assertThat(onFx(() -> review.editor().targetNote().get())).isEqualTo(MessageKey.REVIEW_TARGET_REJECTED);
+        assertThat(onFx(() -> review.editor().savable().get())).isTrue();
+    }
+
+    // With no reply kept either, the source is shown and labelled as the source, and Save waits for a change.
+    @Test
+    void select_flaggedWithNothingKept_labelsTheSourceAndWaitsForAnEdit() {
+        buildReview();
+        desk.willAnswerSegment(withEditor(lowScore(), null, null));
+
+        select("ch05.xhtml:11");
+
+        assertThat(onFx(() -> review.editor().targetNote().get())).isEqualTo(MessageKey.REVIEW_TARGET_SOURCE);
+        assertThat(onFx(() -> review.editor().savable().get())).isFalse();
+    }
+
+    // A refused save names the tokens the edit lacks, keeps the typing, and a list refresh does not undo it.
+    @Test
+    void saveEdit_refusedForMissingTokens_namesThemAndKeepsTheTypingThroughARefresh() {
+        buildReview();
+        select("ch05.xhtml:11");
+        onFx(() -> {
+            review.editorText().set("Він відчинив старі двері.");
+            return null;
+        });
+        desk.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Edit refused", "Placeholders differ.")));
+
+        press(review::saveEdit);
+        select("ch05.xhtml:11");
+
+        assertThat(onFx(() -> List.copyOf(review.editor().neededTokens()))).containsExactly("⟦g0⟧", "⟦g1⟧");
+        assertThat(editor()).isEqualTo("Він відчинив старі двері.");
+    }
+
+    // Once the typing holds every token again, the banner's list empties.
+    @Test
+    void editorText_tokensTypedBackAfterARefusal_emptiesTheNeededTokens() {
+        buildReview();
+        select("ch05.xhtml:11");
+        onFx(() -> {
+            review.editorText().set("Він відчинив старі двері.");
+            return null;
+        });
+        desk.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Edit refused", "Placeholders differ.")));
+        press(review::saveEdit);
+
+        onFx(() -> {
+            review.editorText().set("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.");
+            return null;
+        });
+
+        assertThat(onFx(() -> List.copyOf(review.editor().neededTokens()))).isEmpty();
+    }
+
+    // While a run translates, the selected segment says why it can only be read.
+    @ParameterizedTest
+    @EnumSource(
+            value = RunState.class,
+            names = {"RUNNING", "PAUSING", "STOPPING"})
+    void lockReason_runTranslating_isTheRunningNote(final RunState state) {
+        buildReview();
+        select("ch05.xhtml:11");
+
+        setRunState(state);
+
+        assertThat(onFx(() -> review.lockReason().get())).isEqualTo(MessageKey.REVIEW_LOCKED_RUNNING);
+    }
+
+    @Test
+    void lockReason_runPaused_isNone() {
+        buildReview();
+        select("ch05.xhtml:11");
+
+        setRunState(RunState.PAUSED);
+
+        assertThat(onFx(() -> review.lockReason().get())).isNull();
+    }
 }

@@ -332,12 +332,13 @@ against the pairs and the line-break tokens recorded when the segment was masked
 - every pair whose content in the masked form holds text — a character other than whitespace that is not part of a
   token — still holds such a character between its two tokens in the target;
 - every line-break token has the same innermost enclosing pair in the target as in the masked form, or no enclosing
-  pair in both.
+  pair in both;
+- when the masked form holds text outside every pair, the target does too.
 
 IF the two multisets differ in any way — a token missing, a token added that the source did not contain, or a token
 occurring a different number of times — or IF a pair's closing token precedes its opening token, two pairs overlap
-without one enclosing the other, a pair that held text holds none, or a line-break token has changed its innermost
-enclosing pair, THEN the system SHALL return a failed result carrying `ErrorCode.validation`, SHALL NOT restore any
+without one enclosing the other, a pair that held text holds none, a line-break token has changed its innermost
+enclosing pair, or every word of the target sits inside a pair although the masked form left text outside them, THEN the system SHALL return a failed result carrying `ErrorCode.validation`, SHALL NOT restore any
 placeholder, SHALL NOT alter the target text, and SHALL NOT attempt a repair or a reconciliation of any kind.
 
 Apart from those rules, the position of an **atomic** token — an image, a code span, a line break — SHALL NOT affect
@@ -357,7 +358,11 @@ export failed at the very end with no segment named. Checking order here flags t
 shapes passed the count and the order and still damaged the book: a pair emptied of its words — `⟦g0⟧⟦g1⟧OLD` for
 `⟦g0⟧old⟦g1⟧` — keeps the tokens and loses the emphasis on the word, so a pair that held text must still hold text;
 and a line break moved across a pair's edge changes where the written paragraph splits into runs, so the re-opened book
-has a different number of segments and the whole export fails at its final check. An image may still move freely, and
+has a different number of segments and the whole export fails at its final check. A pair stretched over every word —
+`⟦g0⟧«Понад усе», — сказав він.⟦g1⟧` for the drop cap `⟦g0⟧“A⟦g1⟧bove all,” he said.` — kept count, order and text,
+yet a tree reader makes the outermost element owning text of its own the segment's block, so the written paragraph
+re-opened as a segment of that `<span>` with no markup left, and its drop-cap style covered the whole paragraph; a
+target must therefore keep text outside its pairs when the source did. An image may still move freely, and
 a line break may move within its own pair, because that is an ordinary word-order change. This is the one check no
 confidence score and no judge verdict can outvote, and it runs before any of them. It reports; it never fixes.
 
@@ -421,6 +426,17 @@ confidence score and no judge verdict can outvote, and it runs before any of the
 #### Scenario: A line break moved within its pair passes the gate
 
 - **WHEN** that same segment is given the target `x⟦g0⟧один два⟦g1⟧⟦g2⟧y`
+- **THEN** the comparison passes and restoring proceeds
+
+#### Scenario: A pair stretched over the whole target fails the gate
+
+- **WHEN** a segment whose masked form is `⟦g0⟧“A⟦g1⟧bove all,” he said.`, where `⟦g0⟧` and `⟦g1⟧` are one drop-cap
+  span, is given the target `⟦g0⟧«Понад усе», — сказав він.⟦g1⟧`
+- **THEN** the caller receives a failed result carrying `ErrorCode.validation`
+
+#### Scenario: A pair that wrapped the whole source may wrap the whole target
+
+- **WHEN** a segment whose masked form is `⟦g0⟧Whole line.⟦g1⟧` is given the target `⟦g0⟧Увесь рядок.⟦g1⟧`
 - **THEN** the comparison passes and restoring proceeds
 
 #### Scenario: A duplicated token fails the gate
@@ -1023,6 +1039,58 @@ are not Markdown content and are restored as plain text.
 - **THEN** the restored content is `рядок один рядок два`
 
 ## ADDED Requirements
+
+### Requirement: Repair a refused target's placeholder tokens without a model
+
+WHEN a caller asks the document port to repair a target the placeholder gate refused, the system SHALL return a
+repaired target that passes that gate, or `ErrorCode.validation` when none does, without calling a model and without
+changing any word of the target. Two modes SHALL exist:
+
+- **restore missing** keeps every token the target placed, drops each token the masked form does not hold or holds
+  fewer times, and puts each missing token back at the position of the target most like the one it held in the masked
+  form — the same kind of boundary (a word's start, a word's end, after a closing quote) nearest the source position
+  scaled to the target's length, and inside a word only where the source's token sat inside a word, at the same letter;
+- **re-place all** strips every token and places all of them again, in the masked form's order, by the same rule.
+
+The gate itself SHALL stay a check that reports and never repairs; this is a separate operation the caller chooses to
+call.
+
+**Source:** FR-DOC-05, FR-QA-01 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`, `#fr-qa`), EC-INLINE-2
+(`01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`), ADR-0040
+(`docs/adr/ADR-0040-placeholder-pairs-keep-their-order.md`).
+In plain words: a small model that translated every word but dropped one token of a pair should not lose its
+translation. The two real paragraphs that reached an export broken — a drop cap and an italic phrase before a closing
+quote — each lost exactly one token; putting it back where the source had it is a deterministic step any person
+could take by hand. The repaired target still has to pass the whole gate, so the repair can never let through what
+the gate refuses, and the caller records that the markup was put back so a person can check it.
+
+#### Scenario: A drop cap's lost closing token goes back after the first letter
+
+- **WHEN** the segment `⟦g0⟧“A⟦g1⟧bove all,” said his master.` is repaired in restore-missing mode with the target
+  `⟦g0⟧«Понад усе», — сказав господар.`
+- **THEN** the repaired target is `⟦g0⟧«П⟦g1⟧онад усе», — сказав господар.`
+
+#### Scenario: An italic phrase's lost closing token goes back after its closing quote
+
+- **WHEN** the segment `“Remember ⟦g0⟧this,”⟦g1⟧ he said in a soft voice.` is repaired in restore-missing mode with the
+  target `«Пам'ятай ⟦g0⟧це», — сказав він тихим голосом.`
+- **THEN** the repaired target is `«Пам'ятай ⟦g0⟧це»,⟦g1⟧ — сказав він тихим голосом.`
+
+#### Scenario: An invented token is dropped
+
+- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in restore-missing mode with the target `⟦g0⟧старі⟦g1⟧ ⟦g7⟧ двері`
+- **THEN** the repaired target is `⟦g0⟧старі⟦g1⟧ двері`
+
+#### Scenario: A swapped pair is placed again
+
+- **WHEN** the segment `See ⟦g0⟧this⟦g1⟧ now.` is repaired in re-place-all mode with the target
+  `Дивись ⟦g1⟧це⟦g0⟧ зараз.`
+- **THEN** the repaired target is `Дивись ⟦g0⟧це⟦g1⟧ зараз.`
+
+#### Scenario: Nothing to wrap is not repaired
+
+- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in re-place-all mode with an empty target
+- **THEN** the caller receives a failed result carrying `ErrorCode.validation`
 
 ### Requirement: Show the book's structure as a titled tree
 

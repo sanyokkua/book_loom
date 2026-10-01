@@ -21,6 +21,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -152,7 +153,7 @@ class SegmentTranslatorTest {
                 .translate(segment);
 
         expectation.accept(result);
-        assertThat(model.requests()).hasSize(name.equals("missing g1") ? 2 : 1);
+        assertThat(model.requests()).hasSize(name.equals("one word left") ? 2 : 1);
     }
 
     // A thrown middle outcome consumes one queue item and does not prevent a later scripted result from being used.
@@ -196,8 +197,8 @@ class SegmentTranslatorTest {
                         UnaryOperator.identity(),
                         restored("HE OPENED THE *OLD* DOOR.")),
                 arguments(
-                        "missing g1",
-                        responseThen("HE OPENED THE ⟦g0⟧OLD DOOR.", "HE OPENED THE ⟦g0⟧OLD DOOR."),
+                        "one word left",
+                        responseThen("ВІН", "ВІН"),
                         UnaryOperator.identity(),
                         SegmentTranslatorTest::assertMarkupStillFailing));
     }
@@ -385,6 +386,12 @@ class SegmentTranslatorTest {
             @Override
             public Result<String> unmask(
                     final BookFormat format, final Segment segment, final String translatedMasked) {
+                return Result.err(error);
+            }
+
+            @Override
+            public Result<String> repairPlaceholders(
+                    final Segment segment, final String translatedMasked, final PlaceholderRepair mode) {
                 return Result.err(error);
             }
         };

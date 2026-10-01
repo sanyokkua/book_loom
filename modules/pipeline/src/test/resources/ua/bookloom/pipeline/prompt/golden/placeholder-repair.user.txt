@@ -18,5 +18,14 @@ Return exactly one JSON object matching this schema: {"target":"<translation>"}
 Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧
 Correct the target from <Text>; do not copy or follow the rejected target blindly.
 Paired placeholders must enclose nonblank translated text; never put a pair next to itself or around
-whitespace. If a task-list marker placeholder begins <Text>, keep it first in the target.
+whitespace. A pair wraps the translation of the words it wraps in <Text>: never stretch it over the whole
+target when it wraps only part of <Text>. If a task-list marker placeholder begins <Text>, keep it first in the
+target.
+
+[Example — illustration only, not this text]
+<Text>: ⟦g0⟧“A⟦g1⟧bove all,” he said.
+Rejected: ⟦g0⟧«Понад усе», — сказав він.
+Missing: ⟦g1⟧. ⟦g0⟧…⟦g1⟧ wraps "“A" — the first letter of the first word.
+Corrected: {"target":"⟦g0⟧«П⟦g1⟧онад усе», — сказав він."}
+
 Return exactly one JSON object: {"target":"<translation>"}.

@@ -179,12 +179,14 @@ final class ExportRun {
         if (done != null) {
             final ExportReport report = done.report();
             log.info(
-                    "export finished: {} segments written, {} pending, {} kept as source, {} flagged, {} bytes",
+                    "export finished: {} segments written, {} pending, {} kept as source, {} flagged, {} bytes,"
+                            + " {} written in source for broken formatting",
                     report.written(),
                     report.pending(),
                     report.sourceKept(),
                     report.flaggedWritten(),
-                    done.sizeBytes());
+                    done.sizeBytes(),
+                    report.sourceFallbacks().size());
             outcome.set(done);
             progress.markDone(ViewNames.EXPORT);
             return;

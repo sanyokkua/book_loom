@@ -13,5 +13,11 @@ public enum GateRule {
     EMPTIED_PAIR,
 
     /** A line-break token now sits in a different innermost pair than in the source. */
-    LINE_BREAK
+    LINE_BREAK,
+
+    /**
+     * The source holds text outside every pair, the target holds none: one pair now wraps all the words, so the
+     * written block re-opens with its formatting folded into the block — a drop cap's style spread over the paragraph.
+     */
+    TEXT_OUTSIDE_PAIRS
 }

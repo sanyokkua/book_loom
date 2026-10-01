@@ -63,5 +63,13 @@ public final class TestDocuments {
         public Result<String> unmask(final BookFormat format, final Segment segment, final String translatedMasked) {
             return delegate.unmask(format, segment, translatedMasked);
         }
+
+        @Override
+        public Result<String> repairPlaceholders(
+                final Segment segment,
+                final String translatedMasked,
+                final ua.bookloom.api.document.PlaceholderRepair mode) {
+            return delegate.repairPlaceholders(segment, translatedMasked, mode);
+        }
     }
 }

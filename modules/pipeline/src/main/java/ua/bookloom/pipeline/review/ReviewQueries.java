@@ -166,7 +166,8 @@ public final class ReviewQueries {
                     record.context(),
                     Proposals.waitingOn(open, record.segmentId())
                             .map(Deferral::proposal)
-                            .orElse(null));
+                            .orElse(null),
+                    record.rejectedTarget());
         }
 
         private boolean holdsForeignText(final SegmentRecord record) {

@@ -33,6 +33,8 @@ import ua.bookloom.api.document.Unit;
  * @param repairRounds how many repair rounds this segment has gone through
  * @param reviewed true once a person accepted, saved, reverted, applied a proposal or retried this segment successfully
  * @param context the context snapshot a retry replays, or null when none was recorded
+ * @param rejectedTarget the model's last refused reply in masked form, kept only while no machine target exists, so
+ *     review shows the model's words labelled as unusable instead of the source; null otherwise
  */
 public record SegmentRecord(
         String projectId,
@@ -51,7 +53,8 @@ public record SegmentRecord(
         SegmentPath path,
         int repairRounds,
         boolean reviewed,
-        @Nullable ContextSnapshot context) {
+        @Nullable ContextSnapshot context,
+        @Nullable String rejectedTarget) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies {@code findings} into an
@@ -66,6 +69,74 @@ public record SegmentRecord(
         Objects.requireNonNull(findings, "findings");
         Objects.requireNonNull(path, "path");
         findings = List.copyOf(findings);
+    }
+
+    /** A record with no rejected reply kept — every record a person's action or a passing draft produces. */
+    public SegmentRecord(
+            final String projectId,
+            final String segmentId,
+            final String unitId,
+            final int ord,
+            final SegmentKind kind,
+            final SegmentStatus status,
+            @Nullable final String machineTarget,
+            @Nullable final String maskedMachineTarget,
+            @Nullable final String userTarget,
+            @Nullable final String maskedUserTarget,
+            final double confidence,
+            @Nullable final Double judgeScore,
+            final List<QaFinding> findings,
+            final SegmentPath path,
+            final int repairRounds,
+            final boolean reviewed,
+            @Nullable final ContextSnapshot context) {
+        this(
+                projectId,
+                segmentId,
+                unitId,
+                ord,
+                kind,
+                status,
+                machineTarget,
+                maskedMachineTarget,
+                userTarget,
+                maskedUserTarget,
+                confidence,
+                judgeScore,
+                findings,
+                path,
+                repairRounds,
+                reviewed,
+                context,
+                null);
+    }
+
+    /**
+     * Returns a record with a replacement rejected reply, preserving every other field.
+     *
+     * @param rejectedTarget the refused reply in masked form, or null to clear it
+     * @return a new record with the supplied rejected reply
+     */
+    public SegmentRecord withRejectedTarget(@Nullable final String rejectedTarget) {
+        return new SegmentRecord(
+                projectId,
+                segmentId,
+                unitId,
+                ord,
+                kind,
+                status,
+                machineTarget,
+                maskedMachineTarget,
+                userTarget,
+                maskedUserTarget,
+                confidence,
+                judgeScore,
+                findings,
+                path,
+                repairRounds,
+                reviewed,
+                context,
+                rejectedTarget);
     }
 
     /**
@@ -114,7 +185,8 @@ public record SegmentRecord(
                 path,
                 repairRounds,
                 reviewed,
-                context);
+                context,
+                rejectedTarget);
     }
 
     /**
@@ -127,6 +199,7 @@ public record SegmentRecord(
      */
     public SegmentRecord withMachineTarget(
             @Nullable final String machineTarget, @Nullable final String maskedMachineTarget) {
+        @Nullable final String keptRejected = machineTarget == null ? rejectedTarget : null;
         return new SegmentRecord(
                 projectId,
                 segmentId,
@@ -144,7 +217,8 @@ public record SegmentRecord(
                 path,
                 repairRounds,
                 reviewed,
-                context);
+                context,
+                keptRejected);
     }
 
     /**
@@ -173,7 +247,8 @@ public record SegmentRecord(
                 path,
                 repairRounds,
                 reviewed,
-                context);
+                context,
+                rejectedTarget);
     }
 
     /**
@@ -201,7 +276,8 @@ public record SegmentRecord(
                 path,
                 repairRounds,
                 reviewed,
-                context);
+                context,
+                rejectedTarget);
     }
 
     /**
@@ -229,7 +305,8 @@ public record SegmentRecord(
                 path,
                 repairRounds,
                 reviewed,
-                context);
+                context,
+                rejectedTarget);
     }
 
     /**
@@ -256,6 +333,7 @@ public record SegmentRecord(
                 path,
                 repairRounds,
                 reviewed,
-                context);
+                context,
+                rejectedTarget);
     }
 }

@@ -32,6 +32,23 @@ class UnmaskPairOrderTest {
     }
 
     private static Stream<Arguments> cases() {
+        return Stream.concat(orderCases(), wrapCases());
+    }
+
+    // A pair stretched over every word of a target whose source left text outside its pairs fails; a pair that
+    // already wrapped the whole source may wrap the whole target.
+    private static Stream<Arguments> wrapCases() {
+        return Stream.of(
+                Arguments.of(
+                        "⟦g0⟧“A⟦g1⟧bove all,” he said.",
+                        "⟦g0⟧«Понад усе», — сказав він.⟦g1⟧",
+                        List.of(pair(0, 1)),
+                        List.of(),
+                        GateRule.TEXT_OUTSIDE_PAIRS),
+                Arguments.of("⟦g0⟧Whole line.⟦g1⟧", "⟦g0⟧Увесь рядок.⟦g1⟧", List.of(pair(0, 1)), List.of(), null));
+    }
+
+    private static Stream<Arguments> orderCases() {
         return Stream.of(
                 Arguments.of("⟦g0⟧old⟦g1⟧", "⟦g1⟧OLD⟦g0⟧", List.of(pair(0, 1)), List.of(), GateRule.PAIR_ORDER),
                 Arguments.of(

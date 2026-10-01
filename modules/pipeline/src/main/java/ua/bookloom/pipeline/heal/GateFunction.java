@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.heal;
 import java.util.Objects;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 
 /**
@@ -28,6 +29,20 @@ public interface GateFunction {
      *     candidate, {@link GateResult.StepError} when the gate itself failed
      */
     GateResult restore(Segment segment, String maskedReply);
+
+    /**
+     * Restores {@code maskedReply}, and when the placeholder gate refuses it, repairs its placeholder tokens without a
+     * model as {@code mode} allows and restores the repair. A gate that cannot repair answers as {@link #restore}.
+     *
+     * @param segment the segment being restored
+     * @param maskedReply the candidate target, already restored into the segment's own whitespace
+     * @param mode how much of the candidate's own token placement is kept
+     * @return {@link GateResult.Restored} carrying an auto-repair finding when a repair was needed, else as
+     *     {@link #restore}
+     */
+    default GateResult restoreRepairing(final Segment segment, final String maskedReply, final PlaceholderRepair mode) {
+        return restore(segment, maskedReply);
+    }
 
     /**
      * Builds the gate over {@code :document}'s real placeholder validation.

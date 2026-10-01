@@ -30,6 +30,8 @@ import ua.bookloom.api.project.SegmentPath;
  *     successfully
  * @param context the context snapshot a retry replays, or null when none was recorded
  * @param proposal a pending backward-revision proposal for this segment's edit, or null when none is pending
+ * @param rejectedTarget the model's last refused reply in masked form, kept only while no machine target exists, or
+ *     null — review shows it labelled as no usable translation rather than the source
  */
 public record SegmentView(
         String segmentId,
@@ -46,7 +48,8 @@ public record SegmentView(
         SegmentPath path,
         boolean reviewed,
         @Nullable ContextSnapshot context,
-        @Nullable String proposal) {
+        @Nullable String proposal,
+        @Nullable String rejectedTarget) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies {@code findings}.
@@ -61,5 +64,41 @@ public record SegmentView(
         Objects.requireNonNull(findings, "findings");
         Objects.requireNonNull(path, "path");
         findings = List.copyOf(findings);
+    }
+
+    /** A segment view with no refused reply kept. */
+    public SegmentView(
+            final String segmentId,
+            final String locator,
+            final SegmentKind kind,
+            final SegmentStatus status,
+            final String maskedSource,
+            final String displaySource,
+            @Nullable final String maskedMachineTarget,
+            @Nullable final String userTarget,
+            @Nullable final String maskedUserTarget,
+            final List<QaFinding> findings,
+            @Nullable final Double judgeScore,
+            final SegmentPath path,
+            final boolean reviewed,
+            @Nullable final ContextSnapshot context,
+            @Nullable final String proposal) {
+        this(
+                segmentId,
+                locator,
+                kind,
+                status,
+                maskedSource,
+                displaySource,
+                maskedMachineTarget,
+                userTarget,
+                maskedUserTarget,
+                findings,
+                judgeScore,
+                path,
+                reviewed,
+                context,
+                proposal,
+                null);
     }
 }

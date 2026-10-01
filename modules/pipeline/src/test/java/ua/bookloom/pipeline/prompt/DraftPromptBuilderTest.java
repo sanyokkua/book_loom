@@ -331,7 +331,7 @@ class DraftPromptBuilderTest {
 
         assertThat(user).contains("""
                 Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧
-                [Rule the rejected target broke]
+                [What is wrong with the rejected target]
                 a pair of placeholders no longer wraps the same text
                 Correct the target from <Text>""");
     }

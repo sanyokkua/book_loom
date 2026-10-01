@@ -63,26 +63,23 @@ class SegmentTranslatorFormattingRepairTest {
         assertThat(model.requests()).hasSize(2);
         assertThat(model.requests().get(1).messages().get(1).content())
                 .contains("<RejectedTarget>\nДругий ⟦g0⟧⟦g1⟧ позначений абзац.\n</RejectedTarget>")
-                .contains("Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧\n[Rule the rejected target broke]\n")
+                .contains(
+                        "Copy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧\n[What is wrong with the rejected target]\n")
                 .contains("emptied the formatting around its words");
     }
 
-    // IF a task marker is dropped, THEN the one formatting repair restores its original checked state.
+    // IF a task marker is dropped, THEN it is put back first without a model call, keeping its checked state.
     @Test
-    void translate_droppedTaskMarker_repairsAndAcceptsCorrectedTarget() {
+    void translate_droppedTaskMarker_putsItBackFirstWithoutACall() {
         final Segment segment = segmentOf("- [ ] Gravity is identical everywhere.");
-        final ScriptedChatModel model =
-                TranslationJobTestSupport.replies("Гравітація всюди однакова.", "⟦g0⟧Гравітація всюди однакова.");
+        final ScriptedChatModel model = TranslationJobTestSupport.replies("Гравітація всюди однакова.");
 
         final Result<DraftOutcome> result = DraftStepFixtures.segmentTranslator(
                         documents, model, BookFormat.MARKDOWN, "uk", "en")
                 .translate(segment);
 
-        assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isNotNull();
         assertThat(DraftStepFixtures.drafted(result).restoredTarget()).isEqualTo("[ ] Гравітація всюди однакова.");
-        assertThat(model.requests()).hasSize(2);
-        assertThat(model.requests().get(1).messages().get(1).content())
-                .contains("task-list marker placeholder begins <Text>, keep it first");
+        assertThat(model.requests()).hasSize(1);
     }
 
     private Segment segmentOf(String content) {

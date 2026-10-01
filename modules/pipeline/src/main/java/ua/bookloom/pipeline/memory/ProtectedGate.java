@@ -7,9 +7,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.SafeDetails;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.Tokens;
@@ -34,12 +36,23 @@ final class ProtectedGate implements GateFunction {
 
     @Override
     public GateResult restore(final Segment segment, final String maskedReply) {
+        return restoreWith(segment, maskedReply, null);
+    }
+
+    @Override
+    public GateResult restoreRepairing(final Segment segment, final String maskedReply, final PlaceholderRepair mode) {
+        Objects.requireNonNull(mode, "mode");
+        return restoreWith(segment, maskedReply, mode);
+    }
+
+    private GateResult restoreWith(
+            final Segment segment, final String maskedReply, @Nullable final PlaceholderRepair mode) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(maskedReply, "maskedReply");
         final ProtectedMask mask = masksBySegmentId.get(segment.id());
-        if (mask == null || mask.spans().isEmpty()) {
+        if (mask == null || (mask.spans().isEmpty() && mask.folded().isEmpty())) {
             log.debug("Protected-span gate segment={} outcome=no-spans", segment.id());
-            return inner.restore(segment, maskedReply);
+            return passOn(segment, maskedReply, mode);
         }
         final List<String> replyTokens = Tokens.inOrder(maskedReply);
         for (final ProtectedSpan span : mask.spans()) {
@@ -49,10 +62,34 @@ final class ProtectedGate implements GateFunction {
             }
         }
         log.debug(
-                "Protected-span gate segment={} outcome=Restored spans={}",
+                "Protected-span gate segment={} outcome=Restored spans={} folded={}",
                 segment.id(),
-                mask.spans().size());
-        return inner.restore(segment, substitute(maskedReply, mask));
+                mask.spans().size(),
+                mask.folded().size());
+        final String restored = substitute(maskedReply, mask);
+        return mask.folded().isEmpty() ? passOn(segment, restored, mode) : unfold(segment, restored, mask, mode);
+    }
+
+    private GateResult passOn(final Segment segment, final String text, @Nullable final PlaceholderRepair mode) {
+        return mode == null ? inner.restore(segment, text) : inner.restoreRepairing(segment, text, mode);
+    }
+
+    // A drop cap folded out of the shown text comes back by position; a reply missing only those tokens needs no
+    // finding, because putting them back is the plan, not a repair of the model's work.
+    private GateResult unfold(
+            final Segment segment,
+            final String text,
+            final ProtectedMask mask,
+            @Nullable final PlaceholderRepair mode) {
+        final boolean onlyFolded = DropCaps.onlyFoldedMissing(segment.masked(), text, mask.folded());
+        final GateResult result =
+                inner.restoreRepairing(segment, text, mode == null ? PlaceholderRepair.RESTORE_MISSING : mode);
+        log.debug(
+                "Drop caps put back segment={} onlyFoldedMissing={} restored={}",
+                segment.id(),
+                onlyFolded,
+                result instanceof GateResult.Restored);
+        return onlyFolded && result instanceof GateResult.Restored restored ? restored.withoutAutoRepair() : result;
     }
 
     private static GateResult failed(

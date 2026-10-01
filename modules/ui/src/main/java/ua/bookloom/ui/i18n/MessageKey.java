@@ -1020,6 +1020,11 @@ public enum MessageKey {
     EXPORT_PARTIAL_KEPT("export.partial.kept"),
     /** Counted line: segments kept as they are because they had nothing to translate. */
     EXPORT_PARTIAL_VERBATIM("export.partial.verbatim"),
+    /**
+     * Counted line: segments written in the source language because their translation broke the formatting; argument
+     * 0 is the count, argument 1 the segments' locators joined by commas.
+     */
+    EXPORT_SOURCE_FALLBACKS("export.sourceFallbacks"),
     /** Size of a written book under a kilobyte; argument 0 is the byte count. */
     EXPORT_SIZE_BYTES("export.size.bytes"),
     /** Size of a written book in kilobytes; argument 0 is the count. */
@@ -1188,6 +1193,22 @@ public enum MessageKey {
     REVIEW_BUSY("review.busy"),
     /** Hint shown while the editor holds unsaved changes and Accept is off. */
     REVIEW_EDITING_HINT("review.editingHint"),
+    /** Note beside the review actions while a run translates and the segment can only be read. */
+    REVIEW_LOCKED_RUNNING("review.locked.running"),
+    /** Note beside the review actions while a retry of a segment is in flight. */
+    REVIEW_LOCKED_RETRY("review.locked.retry"),
+    /** Note above the target of a segment that kept no translation but the model's refused reply, which it shows. */
+    REVIEW_TARGET_REJECTED("review.target.rejected"),
+    /** Note above the target of a segment that kept no translation at all, so its source is shown. */
+    REVIEW_TARGET_SOURCE("review.target.source"),
+    /** Banner text after a refused save naming the formatting tokens the edit lacks. */
+    REVIEW_TOKENS_NEEDED("review.tokens.needed"),
+    /** Banner text after a refused save naming formatting tokens the edit holds too often or that the source lacks. */
+    REVIEW_TOKENS_EXTRA("review.tokens.extra"),
+    /** Accessible name of a token chip; argument 0 is the token it inserts at the cursor. */
+    REVIEW_TOKEN_INSERT("review.token.insert"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_TOKEN_INSERT}; argument 0 is the token. */
+    REVIEW_TOKEN_INSERT_TIP("review.token.insert.tip"),
     /** Mark on a row of the All segments list whose record was kept as source by choice. */
     REVIEW_KEPT_AS_SOURCE("review.keptAsSource"),
     /** Badge of a flagged segment whose main finding concerns a name. */

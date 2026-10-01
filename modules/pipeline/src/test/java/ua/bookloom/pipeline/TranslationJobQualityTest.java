@@ -56,7 +56,8 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 /** The reply precedence of design D3 and the acceptance rule of D8, seen through a whole run. */
 class TranslationJobQualityTest {
 
-    private static final String MISSING_TOKEN = "HE OPENED THE ⟦g0⟧OLD DOOR.";
+    // Both tokens missing and one word left: the pair cannot hold it and leave text outside, so no repair passes.
+    private static final String MISSING_TOKEN = "ВІДЧИНИВ";
     private static final String TOKENS = "⟦g0⟧ ⟦g1⟧";
 
     @TempDir
@@ -76,11 +77,13 @@ class TranslationJobQualityTest {
         assertThat(userMessage(model.requests().get(2))).contains(TOKENS);
         assertThat(userMessage(model.requests().get(3))).contains(shown("She left."));
         assertFlaggedWithMarkup(stored(project, "Book.md:0"));
+        assertThat(stored(project, "Book.md:0").rejectedTarget()).isEqualTo(MISSING_TOKEN);
     }
 
     @Test
     void run_placeholderFailureBalanced_goesToSelfHeal() {
-        final String reply = "Він відчинив ⟦g0⟧старі двері.";
+        // one word cannot hold the pair and keep text outside it, so no deterministic repair passes either
+        final String reply = "Відчинив";
         final ScriptedChatModel model = replies(reply, reply, reply, reply);
         final TestProject project = project(
                 TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door."),

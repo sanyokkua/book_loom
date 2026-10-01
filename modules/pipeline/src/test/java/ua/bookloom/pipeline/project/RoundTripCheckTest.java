@@ -287,6 +287,14 @@ class RoundTripCheckTest {
             return delegate.unmask(format, segment, translatedMasked);
         }
 
+        @Override
+        public Result<String> repairPlaceholders(
+                final ua.bookloom.api.document.Segment segment,
+                final String translatedMasked,
+                final ua.bookloom.api.document.PlaceholderRepair mode) {
+            return delegate.repairPlaceholders(segment, translatedMasked, mode);
+        }
+
         private static String readChapter(final Path epub) {
             try (ZipFile zip = new ZipFile(epub.toFile())) {
                 return new String(zip.getInputStream(zip.getEntry(CHAPTER)).readAllBytes(), StandardCharsets.UTF_8);

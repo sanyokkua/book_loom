@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import javafx.scene.control.Button;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.ReviewFixtures;
@@ -203,6 +207,41 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
 
         assertThat(List.of("review-accept", "review-save", "review-revert", "review-skip"))
                 .allSatisfy(id -> assertThat(button(id).isDisabled()).as(id).isTrue());
+    }
+
+    // IF typing were allowed while Save stays off, THEN the person would type into a box that cannot keep it.
+    @Test
+    void target_runIsRunning_isReadOnlyAndSaysWhenReviewIsAvailable() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+
+        publish(RunState.RUNNING);
+
+        assertThat(((TextArea) required("review-target")).isEditable()).isFalse();
+        assertThat(isShown("review-locked")).isTrue();
+        assertThat(labelText("review-locked")).startsWith("Review is available when the run pauses.");
+    }
+
+    // A refused save names the missing tokens as chips; a chip puts its token back at the cursor.
+    @Test
+    void saveEdit_refusedForATokenAndChipPressed_insertsTheTokenAtTheCursor() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+        final TextArea target = (TextArea) required("review-target");
+        onFx(() -> target.setText("Без токенів."));
+        desk.willAnswer(Result.err(AppError.of(ErrorCode.validation, "Edit refused", "Placeholders differ.")));
+
+        onFx(() -> button("review-save").fire());
+        awaitFx(() -> isShown("review-token-banner"));
+        final Button chip = (Button) ((javafx.scene.layout.FlowPane) required("review-token-chips"))
+                .getChildren()
+                .getFirst();
+        onFx(() -> {
+            target.positionCaret(0);
+            chip.fire();
+        });
+
+        assertThat(target.getText()).isEqualTo(chip.getText() + "Без токенів.");
     }
 
     @Test

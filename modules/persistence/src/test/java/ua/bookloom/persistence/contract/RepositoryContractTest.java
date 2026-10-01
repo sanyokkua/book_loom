@@ -97,6 +97,24 @@ public abstract class RepositoryContractTest {
         assertThat(firstPendingId(repository, keptFrontmatter)).contains("ch2:0");
     }
 
+    // A flagged segment no target passed for keeps the model's refused reply, and a machine target clears it.
+    @Test
+    void update_rejectedTargetKeptThenMachineTargetSet_isStoredThenCleared() {
+        final SegmentRepository repository = segmentRepository();
+        seedFiveSegments(repository);
+
+        repository.update(
+                "p1", "ch1:0", r -> r.withStatus(SegmentStatus.FLAGGED).withRejectedTarget("⟦g0⟧Понад"));
+        assertThat(repository.find("p1", "ch1:0").data())
+                .hasValueSatisfying(
+                        record -> assertThat(record.rejectedTarget()).isEqualTo("⟦g0⟧Понад"));
+
+        repository.update("p1", "ch1:0", r -> r.withMachineTarget("Понад", "Понад"));
+        assertThat(repository.find("p1", "ch1:0").data())
+                .hasValueSatisfying(
+                        record -> assertThat(record.rejectedTarget()).isNull());
+    }
+
     @Test
     void firstPending_auxiliarySegments_respectKeptAuxiliaryKinds() {
         final SegmentRepository repository = segmentRepository();

@@ -52,8 +52,7 @@ class DiagnosticsSegmentTranslatorTest {
         final long offset = testLogSize();
 
         translator(response("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.")).translate(segment);
-        translator(responseThen("HE OPENED THE ⟦g0⟧OLD DOOR.", "HE OPENED THE ⟦g0⟧OLD DOOR."))
-                .translate(segment);
+        translator(responseThen("ВІН", "ВІН")).translate(segment);
         translator(new ScriptedChatModel().throwFailure(new IllegalStateException("diagnostic model explosion")))
                 .translate(segment);
 
@@ -72,8 +71,8 @@ class DiagnosticsSegmentTranslatorTest {
                 .contains("Draft outcome id=" + segment.id() + " outcome=DRAFTED restored=true")
                 .contains("Draft outcome id=" + segment.id() + " outcome=DRAFTED restored=false")
                 .contains("Collected expected tokens segmentId=" + segment.id() + " placeholderCount=2")
-                .contains("Collected observed tokens textLength=27 tokenCount=1")
-                .contains("expectedTokens=⟦g0⟧ ⟦g1⟧ observedTokens=[⟦g0⟧]")
+                .contains("Collected observed tokens textLength=3 tokenCount=0")
+                .contains("expectedTokens=⟦g0⟧ ⟦g1⟧ observedTokens=[]")
                 .contains("IllegalStateException: diagnostic model explosion");
         assertOneLinePerStep(log);
         assertThat(count(log, "Unexpected model failure segment=" + segment.id() + " code=internal"))

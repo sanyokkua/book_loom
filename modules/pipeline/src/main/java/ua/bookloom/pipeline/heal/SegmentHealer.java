@@ -67,6 +67,20 @@ final class SegmentHealer {
             final DraftOutcome.Drafted outcome, final QaResult initialQa, @Nullable final JudgeVerdict chunkVerdict) {
         Objects.requireNonNull(outcome, "outcome");
         Objects.requireNonNull(initialQa, "initialQa");
+        return decideKept(outcome, initialQa, chunkVerdict).map(decided -> keepRejected(decided, outcome));
+    }
+
+    // A segment no target passed for keeps the model's refused reply, so review shows its words instead of the source.
+    private static SegmentOutcome keepRejected(final SegmentOutcome decided, final DraftOutcome.Drafted outcome) {
+        final SegmentOutcome kept = decided.keepingRejected(outcome.rejectedForm());
+        if (kept.rejectedTarget() != null) {
+            log.debug("Rejected reply kept for review segment={} status={}", decided.segmentId(), decided.status());
+        }
+        return kept;
+    }
+
+    private Result<SegmentOutcome> decideKept(
+            final DraftOutcome.Drafted outcome, final QaResult initialQa, @Nullable final JudgeVerdict chunkVerdict) {
         final String segmentId = outcome.segment().id();
         final double tau = settings.reviewMode().threshold();
         final Resumption resumption = resumptions.remove(segmentId);
@@ -113,12 +127,21 @@ final class SegmentHealer {
         log.debug("Giving up on segment={} midRound={} code={}", segmentId, resumption != null, reason.code());
         if (resumption == null) {
             final JudgeVerdict verdict0 = initialQa.hardGatesPass() ? chunkVerdict : null;
-            return SegmentOutcomes.flagged(
-                    segmentId, machineTargetFrom(outcome, initialQa), initialQa, verdict0, 0, reason);
+            return keepRejected(
+                    SegmentOutcomes.flagged(
+                            segmentId, machineTargetFrom(outcome, initialQa), initialQa, verdict0, 0, reason),
+                    outcome);
         }
         final RoundState state = resumption.state();
-        return SegmentOutcomes.flagged(
-                segmentId, state.machine(), state.qa(), state.recordedVerdict(), resumption.round() - 1, reason);
+        return keepRejected(
+                SegmentOutcomes.flagged(
+                        segmentId,
+                        state.machine(),
+                        state.qa(),
+                        state.recordedVerdict(),
+                        resumption.round() - 1,
+                        reason),
+                outcome);
     }
 
     private static MachineTarget machineTargetFrom(final DraftOutcome.Drafted outcome, final QaResult qa) {

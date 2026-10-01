@@ -19,6 +19,8 @@ import java.util.Objects;
  * @param consistency what the final consistency pass did; {@link ConsistencySummary#NOT_RUN} when it was off
  * @param keptVerbatim segments written as they are because nothing in them needed translating (numbers, symbols,
  *     Roman numerals, a single character); counted in {@code written}, never in {@code sourceKept}
+ * @param sourceFallbacks segments written in their source although they had a translation, because it broke their
+ *     formatting, in book order; counted in {@code pending}, never in {@code written}
  */
 public record ExportReport(
         Path destination,
@@ -31,13 +33,15 @@ public record ExportReport(
         List<Path> sideFiles,
         int verifiedSegments,
         ConsistencySummary consistency,
-        int keptVerbatim) {
+        int keptVerbatim,
+        List<SourceFallback> sourceFallbacks) {
 
     /** Rejects a report without its destination, a negative count, or defensively copies {@code sideFiles}. */
     public ExportReport {
         Objects.requireNonNull(destination, "destination");
         Objects.requireNonNull(sideFiles, "sideFiles");
         Objects.requireNonNull(consistency, "consistency");
+        Objects.requireNonNull(sourceFallbacks, "sourceFallbacks");
         if (written < 0
                 || pending < 0
                 || sourceKept < 0
@@ -51,5 +55,34 @@ public record ExportReport(
                     + verifiedSegments + ", " + keptVerbatim);
         }
         sideFiles = List.copyOf(sideFiles);
+        sourceFallbacks = List.copyOf(sourceFallbacks);
+    }
+
+    /** A report with no segment written in its source for a broken translation. */
+    public ExportReport(
+            final Path destination,
+            final int written,
+            final int pending,
+            final int sourceKept,
+            final int flaggedWritten,
+            final int autoAccepted,
+            final int reviewed,
+            final List<Path> sideFiles,
+            final int verifiedSegments,
+            final ConsistencySummary consistency,
+            final int keptVerbatim) {
+        this(
+                destination,
+                written,
+                pending,
+                sourceKept,
+                flaggedWritten,
+                autoAccepted,
+                reviewed,
+                sideFiles,
+                verifiedSegments,
+                consistency,
+                keptVerbatim,
+                List.of());
     }
 }

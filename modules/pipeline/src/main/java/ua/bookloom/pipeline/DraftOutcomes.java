@@ -8,6 +8,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -31,7 +33,10 @@ final class DraftOutcomes {
                 segment.id(),
                 restored.restored().length());
         logTraceUnmask(restored.maskedForm(), restored.restored());
-        log.debug("Draft outcome id={} outcome=DRAFTED restored=true", segment.id());
+        log.debug(
+                "Draft outcome id={} outcome=DRAFTED restored=true autoRepaired={}",
+                segment.id(),
+                restored.autoRepair() != null);
         return Result.ok(new DraftOutcome.Drafted(
                 segment,
                 attempt.shownText(),
@@ -40,7 +45,9 @@ final class DraftOutcomes {
                 restored.maskedForm(),
                 restored.restored(),
                 null,
-                attempt.pieceRedraft()));
+                attempt.pieceRedraft(),
+                restored.autoRepair(),
+                null));
     }
 
     // Design D3 rule 5: a reply whose markup still does not restore after its repair is not flagged here; its markup
@@ -62,7 +69,9 @@ final class DraftOutcomes {
                 null,
                 null,
                 failed.finding(),
-                attempt.pieceRedraft()));
+                attempt.pieceRedraft(),
+                null,
+                failed.candidate()));
     }
 
     // Design D3 rules 2-4: a reply with nothing self-heal could work on flags its segment at once.
@@ -112,6 +121,35 @@ final class DraftOutcomes {
         log.debug("Creating segment error code={} reason=non-stop-finish", ErrorCode.validation);
         return AppError.of(
                 ErrorCode.validation, "Incomplete model response", "The model response did not finish normally.");
+    }
+
+    // Design D3 rules 2-3: a blank reply, or one that did not finish normally, is flagged at once.
+    static Result<DraftOutcome> unfinished(final DraftAttempt attempt, final ChatResponse response) {
+        final boolean empty = response.content().isBlank() || response.finishReason() == FinishReason.STOP;
+        return flaggedAtOnce(
+                attempt,
+                empty ? emptyCompletion() : invalidFinish(),
+                response.finishReason().name(),
+                observedTokens(response.content()));
+    }
+
+    // Design D3 rule 4: a reply that is still not the JSON object after its structural repair is flagged at once.
+    static Result<DraftOutcome> invalidStructuredReply(final DraftAttempt attempt, final ChatResponse response) {
+        traceReply(response.content(), "");
+        return flaggedAtOnce(
+                attempt,
+                AppError.of(
+                        ErrorCode.validation,
+                        "Invalid structured model response",
+                        "The model did not return the required translation JSON object."),
+                response.finishReason().name(),
+                observedTokens(response.content()));
+    }
+
+    static void traceReply(final String raw, final String trimmed) {
+        if (log.isTraceEnabled()) {
+            log.trace("Segment reply raw={} trimmed={}", raw, trimmed);
+        }
     }
 
     private static void logTraceUnmask(final String input, final String output) {

@@ -11,6 +11,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
@@ -81,18 +82,26 @@ final class ReviewComparePane extends VBox {
         panes = new ComparePanes(sourceName, targetName, messages);
         Tips.install(messages, panes.target(), MessageKey.REVIEW_EDITABLE_TIP);
         panes.target().textProperty().bindBidirectional(viewModel.editorText());
-        getChildren()
-                .addAll(
-                        header(),
-                        contextRow(),
-                        panes,
-                        proposalBox(),
-                        note("review-hint", viewModel.hint().map(this::wording)),
-                        note("review-problem", viewModel.problem()),
-                        findingsBox(),
-                        actions());
+        // Read-only while the actions are not offered, so typing never meets a Save that silently stays off.
+        panes.target().editableProperty().bind(viewModel.actionsAvailable());
+        getChildren().addAll(children());
         viewModel.selected().addListener(new WeakChangeListener<>(onSelected));
         show(viewModel.selected().get());
+    }
+
+    private List<Node> children() {
+        return List.of(
+                header(),
+                contextRow(),
+                banner("review-target-note", "banner-info", viewModel.editor().targetNote()),
+                panes,
+                proposalBox(),
+                note("review-hint", viewModel.hint().map(this::wording)),
+                note("review-problem", viewModel.problem()),
+                findingsBox(),
+                banner("review-locked", "banner-info", viewModel.lockReason()),
+                new ReviewTokenBanner(viewModel.editor(), panes.target(), messages),
+                actions());
     }
 
     private String wording(final @Nullable MessageKey key) {
@@ -131,6 +140,13 @@ final class ReviewComparePane extends VBox {
         label.visibleProperty()
                 .bind(Bindings.createBooleanBinding(() -> !label.getText().isEmpty(), label.textProperty()));
         label.managedProperty().bind(label.visibleProperty());
+        return label;
+    }
+
+    private Label banner(final String id, final String role, final ObservableValue<@Nullable MessageKey> key) {
+        final Label label = note(id, key.map(this::wording).orElse(""));
+        label.getStyleClass().setAll("banner", role, "banner-text");
+        label.setMaxWidth(Double.MAX_VALUE);
         return label;
     }
 
@@ -200,7 +216,8 @@ final class ReviewComparePane extends VBox {
                         MessageKey.REVIEW_SAVE_TIP,
                         "btn-secondary",
                         viewModel::saveEdit,
-                        Bindings.and(viewModel.actionsAvailable(), viewModel.dirty())),
+                        Bindings.and(
+                                viewModel.actionsAvailable(), viewModel.editor().savable())),
                 available(
                         "review-revert",
                         MessageKey.REVIEW_REVERT,

@@ -87,15 +87,12 @@ class TranslationJobDecisionGapsTest {
         assertThat(model.requests()).hasSize(firstSegmentCalls + 1);
     }
 
-    // A missing token is flagged only after the draft, its placeholder repair and the one directed fix of Fast; the
+    // A reply missing its tokens that no deterministic repair can place (one word cannot hold the pair and keep text
+    // outside it) is flagged only after the draft, its placeholder repair and the one directed fix of Fast; the
     // other replies flag the segment at once, after its one call.
     private static Stream<Arguments> flaggingReplies() {
         return Stream.of(
-                Arguments.of(
-                        "missing token",
-                        reply("HE OPENED THE ⟦g0⟧OLD DOOR.", FinishReason.STOP),
-                        3,
-                        ErrorCode.validation),
+                Arguments.of("missing token", reply("ВІДЧИНИВ", FinishReason.STOP), 3, ErrorCode.validation),
                 Arguments.of(
                         "whitespace with a normal finish",
                         reply("  \n", FinishReason.STOP),

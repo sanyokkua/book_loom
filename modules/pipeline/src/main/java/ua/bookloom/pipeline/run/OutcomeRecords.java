@@ -68,7 +68,8 @@ public final class OutcomeRecords {
                 outcome.path(),
                 outcome.repairRounds(),
                 stored.reviewed(),
-                context);
+                context,
+                outcome.rejectedTarget());
     }
 
     /**

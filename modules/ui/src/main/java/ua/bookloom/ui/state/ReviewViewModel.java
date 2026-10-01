@@ -95,7 +95,8 @@ public final class ReviewViewModel {
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, Objects.requireNonNull(reviewMode, "reviewMode"));
         this.toasts = Objects.requireNonNull(toasts, "toasts");
-        this.refusals = new ReviewRefusals(toasts, Objects.requireNonNull(errors, "errors"), problem::set);
+        this.refusals =
+                new ReviewRefusals(toasts, Objects.requireNonNull(errors, "errors"), problem::set, editor::saveRefused);
         this.retry = Objects.requireNonNull(retry, "retry");
         this.executor = Objects.requireNonNull(executor, "executor");
         mirror.runState().addListener((observed, was, now) -> refreshAvailability());
@@ -105,20 +106,12 @@ public final class ReviewViewModel {
         log.debug("review view model ready");
     }
 
-    /**
-     * The rows of the current list, in document order.
-     *
-     * @return an unmodifiable list; FX thread only
-     */
+    /** The rows of the current list, in document order; unmodifiable. FX thread only. */
     public ObservableList<ReviewRow> rows() {
         return readOnlyRows;
     }
 
-    /**
-     * The chip that is chosen.
-     *
-     * @return a read-only property, {@link ReviewFilter#ALL_FLAGGED} at first; FX thread only
-     */
+    /** The chip that is chosen, {@link ReviewFilter#ALL_FLAGGED} at first. FX thread only. */
     public ReadOnlyObjectProperty<ReviewFilter> filter() {
         return filter.getReadOnlyProperty();
     }
@@ -132,20 +125,12 @@ public final class ReviewViewModel {
         return availability.allSegments();
     }
 
-    /**
-     * How many segments the desk says are flagged.
-     *
-     * @return a read-only property, zero until read; FX thread only
-     */
+    /** How many segments the desk says are flagged, zero until read. FX thread only. */
     public ReadOnlyIntegerProperty flaggedCount() {
         return flaggedCount.getReadOnlyProperty();
     }
 
-    /**
-     * The segment being reviewed, as the desk last described it.
-     *
-     * @return a read-only property holding {@code null} until one is selected; FX thread only
-     */
+    /** The segment being reviewed as the desk last described it, {@code null} until one is selected. FX only. */
     public ReadOnlyObjectProperty<@Nullable SegmentView> selected() {
         return selected.getReadOnlyProperty();
     }
@@ -159,11 +144,7 @@ public final class ReviewViewModel {
         return editor.text();
     }
 
-    /**
-     * Whether the editor differs from the text the segment was opened with.
-     *
-     * @return a read-only property; FX thread only
-     */
+    /** Whether the editor differs from the text the segment was opened with. FX thread only. */
     public ReadOnlyBooleanProperty dirty() {
         return editor.dirty();
     }
@@ -175,6 +156,16 @@ public final class ReviewViewModel {
      */
     public ReadOnlyObjectProperty<@Nullable MessageKey> hint() {
         return editor.hint();
+    }
+
+    /** The editor's save state, its no-translation note and a refused save's tokens. FX thread only. */
+    public ReviewEditor editor() {
+        return editor;
+    }
+
+    /** Why the selected segment can only be read, or {@code null} while its actions are offered. FX thread only. */
+    public ReadOnlyObjectProperty<@Nullable MessageKey> lockReason() {
+        return availability.lockReason();
     }
 
     /**
@@ -276,7 +267,7 @@ public final class ReviewViewModel {
     /** Saves the editor's text as the person's edit, if there is one to save and actions are offered. FX thread only. */
     public void saveEdit() {
         final String text = editor.text().get();
-        if (editor.dirty().get()) {
+        if (editor.savable().get()) {
             act("saveEdit", (projectId, segmentId) -> desk.saveEdit(projectId, segmentId, text));
         } else {
             log.debug("saveEdit not offered: the editor holds no change");
@@ -367,10 +358,18 @@ public final class ReviewViewModel {
         });
     }
 
+    // Re-reading the segment the person is typing into keeps the typing: a list refresh must not undo an edit.
     private void readSegment(final String projectId, final String segmentId) {
         final SegmentView view = queries.segment(projectId, segmentId);
         if (view != null) {
-            Platform.runLater(() -> show(view));
+            Platform.runLater(() -> {
+                if (editor.holdsTypingFor(view)) {
+                    log.debug("segment {} re-read while edited; the typing is kept", segmentId);
+                    selected.set(view);
+                } else {
+                    show(view);
+                }
+            });
         }
     }
 

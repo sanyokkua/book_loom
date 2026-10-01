@@ -47,6 +47,10 @@ public sealed interface DraftOutcome {
      * @param gateFinding the high {@code markup} finding raised by {@code placeholder} when {@code restoredTarget}
      *     is {@code null}; {@code null} when the gate passed
      * @param pieceRedraft how to draft the segment's pieces again, or {@code null} when it was drafted whole
+     * @param autoRepair the low {@code markup} finding saying the reply's placeholders were put back without a model,
+     *     or {@code null} when the reply restored as written or did not restore
+     * @param rejectedForm the refused reply with its protected spans put back, kept so review can show the model's
+     *     words when no target passed; {@code null} when the gate passed or no such form exists
      */
     record Drafted(
             Segment segment,
@@ -56,8 +60,33 @@ public sealed interface DraftOutcome {
             @Nullable String maskedForm,
             @Nullable String restoredTarget,
             @Nullable QaFinding gateFinding,
-            @Nullable PieceRedraft pieceRedraft)
+            @Nullable PieceRedraft pieceRedraft,
+            @Nullable QaFinding autoRepair,
+            @Nullable String rejectedForm)
             implements DraftOutcome {
+
+        /** A segment drafted in pieces or whole, restored as the model wrote it or refused with no form kept. */
+        public Drafted(
+                final Segment segment,
+                final String maskedSource,
+                final List<LockedRendering> lockedRenderings,
+                final String maskedReply,
+                @Nullable final String maskedForm,
+                @Nullable final String restoredTarget,
+                @Nullable final QaFinding gateFinding,
+                @Nullable final PieceRedraft pieceRedraft) {
+            this(
+                    segment,
+                    maskedSource,
+                    lockedRenderings,
+                    maskedReply,
+                    maskedForm,
+                    restoredTarget,
+                    gateFinding,
+                    pieceRedraft,
+                    null,
+                    null);
+        }
 
         /** A segment drafted whole. */
         public Drafted(

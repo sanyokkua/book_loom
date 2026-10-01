@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.export;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,18 +35,21 @@ final class SegmentVerification {
     private static final Pattern XML_ALT = Pattern.compile("(\\salt\\s*=\\s*)(\"[^\"]*\"|'[^']*')");
     private static final Pattern MARKDOWN_ALT = Pattern.compile("!\\[.*?]\\(", Pattern.DOTALL);
     private static final String EMPTY_MARKDOWN_ALT = "![](";
+    private static final int SHORT_MARKUP = 3;
+    private static final Pattern TAG = Pattern.compile("<(/?)([A-Za-z][\\w:.-]*)[^>]*>(?s:.*)");
 
     /**
-     * Checks a re-opened book against the one written.
+     * Checks a re-opened book against the one written, naming every segment whose markup came back different.
      *
      * @param written the non-null book as it was handed to the writer, each segment's source placeholders intact
      * @param reopened the non-null book the written file opened as
-     * @param maskedTargets each segment written with a target mapped to its masked form; a segment absent from it was
-     *     written in its source
-     * @return the number of body segments verified, or {@code validation} naming the count mismatch or the first
-     *     segment whose placeholders differ by its locator
+     * @param maskedTargets each segment written with a target mapped to its masked form; a segment absent from it is
+     *     expected to hold its source's markup, and one written with a target but no masked form cannot be checked and
+     *     is named
+     * @return the ids of the body segments whose placeholders differ, in book order and empty when none does, or
+     *     {@code validation} when the body segment count differs
      */
-    static Result<Integer> verify(
+    static Result<List<String>> verify(
             final Document written, final Document reopened, final Map<String, String> maskedTargets) {
         Objects.requireNonNull(written, "written");
         Objects.requireNonNull(reopened, "reopened");
@@ -61,16 +65,50 @@ final class SegmentVerification {
                     ErrorCode.validation);
             return Result.err(countMismatchError());
         }
-        final Map<String, SegmentLocator> locators = SegmentLocators.of(written);
+        final List<String> mismatched = new ArrayList<>();
         for (int index = 0; index < expected.size(); index++) {
             final Segment segment = expected.get(index);
-            final String masked = maskedTargets.getOrDefault(segment.id(), segment.masked());
-            if (!samePlaceholders(segment, masked, observed.get(index))) {
-                return Result.err(placeholderMismatch(segment, locators.get(segment.id())));
+            final @Nullable String masked = expectedMasked(segment, maskedTargets);
+            if (masked == null || !samePlaceholders(segment, masked, observed.get(index))) {
+                mismatched.add(segment.id());
             }
         }
-        log.debug("Verified body segments count={}", expected.size());
-        return Result.ok(expected.size());
+        log.debug("Verified body segments count={} mismatched={}", expected.size(), mismatched);
+        return Result.ok(List.copyOf(mismatched));
+    }
+
+    /**
+     * The failure naming the first segment whose markup still differs after its source was written in its place.
+     *
+     * @param written the non-null book as it was handed to the writer
+     * @param segmentId the non-null id of the segment
+     * @return the {@code validation} error naming the segment by its locator
+     */
+    static AppError placeholderMismatch(final Document written, final String segmentId) {
+        final @Nullable SegmentLocator locator = SegmentLocators.of(written).get(segmentId);
+        final String named = locator == null ? segmentId : locator.text();
+        log.warn(
+                "Export verification failed check=placeholders segment={} locator={} code={}",
+                segmentId,
+                named,
+                ErrorCode.validation);
+        return AppError.of(
+                ErrorCode.validation,
+                "The exported book failed validation",
+                "The written book changed the formatting of " + named + ", so it was not saved.");
+    }
+
+    // A target written with no masked form recorded cannot be compared, so it is named rather than passed unchecked.
+    private static @Nullable String expectedMasked(final Segment written, final Map<String, String> maskedTargets) {
+        final String masked = maskedTargets.get(written.id());
+        if (masked != null) {
+            return masked;
+        }
+        if (written.targetInner() == null) {
+            return written.masked();
+        }
+        log.debug("segment={} written with a target but no masked form; it cannot be verified", written.id());
+        return null;
     }
 
     /**
@@ -97,10 +135,12 @@ final class SegmentVerification {
         log.trace("segment={} placeholders written={} reopened={}", written.id(), expected, observed);
         if (expected.size() != observed.size()) {
             log.debug(
-                    "segment={} placeholder count written={} reopened={}",
+                    "segment={} placeholder count written={} reopened={} writtenTags={} reopenedTags={}",
                     written.id(),
                     expected.size(),
-                    observed.size());
+                    observed.size(),
+                    tagsOf(expected),
+                    tagsOf(observed));
             return false;
         }
         for (int index = 0; index < expected.size(); index++) {
@@ -113,24 +153,27 @@ final class SegmentVerification {
         return true;
     }
 
+    /** Each fragment's tag alone — {@code <span>}, {@code </i>} — markup a log may name without any of the book's text. */
+    private static List<String> tagsOf(final List<? extends @Nullable String> fragments) {
+        return fragments.stream().map(SegmentVerification::tagOf).toList();
+    }
+
+    private static String tagOf(@Nullable final String fragment) {
+        if (fragment == null) {
+            return "?";
+        }
+        final Matcher tag = TAG.matcher(fragment);
+        if (tag.matches()) {
+            return "<" + tag.group(1) + tag.group(2) + ">";
+        }
+        return fragment.length() <= SHORT_MARKUP ? fragment : "#" + fragment.length();
+    }
+
     private static List<Segment> bodySegments(final Document document) {
         return document.units().stream()
                 .filter(unit -> !unit.isAuxiliary())
                 .flatMap(unit -> unit.segments().stream())
                 .toList();
-    }
-
-    private static AppError placeholderMismatch(final Segment segment, @Nullable final SegmentLocator locator) {
-        final String named = locator == null ? segment.id() : locator.text();
-        log.warn(
-                "Export verification failed check=placeholders segment={} locator={} code={}",
-                segment.id(),
-                named,
-                ErrorCode.validation);
-        return AppError.of(
-                ErrorCode.validation,
-                "The exported book failed validation",
-                "The written book changed the formatting of " + named + ", so it was not saved.");
     }
 
     private static AppError countMismatchError() {

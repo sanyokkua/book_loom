@@ -48,9 +48,10 @@ class SegmentTranslatorCallKindTest {
         assertThat(calls).containsExactly("DRAFT Book.md:0", "STRUCTURAL_REPAIR Book.md:0");
     }
 
+    // A swapped pair cannot be put right by restoring a missing token, so the model is asked to repair it.
     @Test
-    void translate_missingPlaceholder_callsDraftThenPlaceholderRepairForTheSegment() {
-        final ScriptedChatModel model = TranslationJobTestSupport.replies("HE OPENED THE ⟦g0⟧OLD DOOR.", ACCEPTED);
+    void translate_swappedPair_callsDraftThenPlaceholderRepairForTheSegment() {
+        final ScriptedChatModel model = TranslationJobTestSupport.replies("HE OPENED THE ⟦g1⟧OLD⟦g0⟧ DOOR.", ACCEPTED);
 
         translator(model).translate(segment());
 

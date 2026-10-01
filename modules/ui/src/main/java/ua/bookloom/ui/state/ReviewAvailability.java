@@ -3,11 +3,14 @@ package ua.bookloom.ui.state;
 import java.util.Objects;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * Which review actions are offered: a segment is selected, no run is translating and no retry is in flight; and
@@ -22,6 +25,7 @@ final class ReviewAvailability {
     private final ReadOnlyBooleanWrapper actions = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper accept = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper allSegments = new ReadOnlyBooleanWrapper();
+    private final ReadOnlyObjectWrapper<@Nullable MessageKey> lockReason = new ReadOnlyObjectWrapper<>();
 
     ReviewAvailability(final StateMirror mirror, final ReviewMode reviewMode) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -40,6 +44,11 @@ final class ReviewAvailability {
         return allSegments.getReadOnlyProperty();
     }
 
+    /** Why a selected segment can only be read, shown beside its actions; {@code null} when they are offered. */
+    ReadOnlyObjectProperty<@Nullable MessageKey> lockReason() {
+        return lockReason.getReadOnlyProperty();
+    }
+
     /** Whether the run is translating, in which case review is unavailable and a retry is answered busy. */
     boolean isTranslating() {
         final RunState state = mirror.runState().get();
@@ -51,13 +60,19 @@ final class ReviewAvailability {
                 && !isTranslating()
                 && !mirror.review().retryInFlight().get();
         actions.set(offered);
+        lockReason.set(segment == null || offered ? null : reasonLocked());
         accept.set(offered && !dirty && segment != null && isDecidable(segment.status()));
         allSegments.set(reviewMode == ReviewMode.UNATTENDED && mirror.runState().get() == RunState.COMPLETED);
         log.debug(
-                "review availability: actions {}, accept {}, all segments {}",
+                "review availability: actions {}, accept {}, all segments {}, locked by {}",
                 offered,
                 accept.get(),
-                allSegments.get());
+                allSegments.get(),
+                lockReason.get());
+    }
+
+    private MessageKey reasonLocked() {
+        return isTranslating() ? MessageKey.REVIEW_LOCKED_RUNNING : MessageKey.REVIEW_LOCKED_RETRY;
     }
 
     private static boolean isDecidable(final SegmentStatus status) {

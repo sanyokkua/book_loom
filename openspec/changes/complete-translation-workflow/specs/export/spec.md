@@ -437,6 +437,16 @@ order, and each placeholder's markup the same once any image's alt text in it is
 existing destination only when replace-if-exists is on. The check SHALL cover the book's body segments only, and SHALL
 NOT count or compare its auxiliary text.
 
+Before writing, the system SHALL check each stored target against its segment's placeholder gate (the requirement
+"Compare the placeholder multiset as a hard gate before restoring anything" in document-round-trip), and SHALL write a
+segment whose stored target fails it in its source. A segment written with a target but no recorded masked form SHALL
+count as differing, never as passing unchecked.
+
+WHEN the re-opened book differs from the written one only in the placeholders of some body segments, the system SHALL
+name every such segment, write the book once more with each of them in its source, and check that book the same way;
+it SHALL then publish it. Every segment written in its source for either reason is a **source fallback**: the export
+SHALL report it, by locator, and SHALL count it as pending, not written.
+
 IF any of the following happens, THEN the system SHALL leave the destination unchanged, write no side file, remove the
 temporary file, and report the error:
 
@@ -444,21 +454,26 @@ temporary file, and report the error:
 - writing fails;
 - the written file does not open;
 - the written file's body segment count differs from the source's;
-- a re-opened body segment's placeholders differ from those written into it, in which case the report SHALL name the
-  first such segment by its locator.
+- after the second writing, a re-opened body segment's placeholders still differ from those written into it, in which
+  case the report SHALL name the first such segment by its locator.
 
 **Source:** FR-EXPORT-03 (`01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`),
 `02_Architecture/09_ERROR_HANDLING.md#partial-results`, `docs/next_features.md#14-for-the-translation-screen`, ADR-0041.
-In plain words: a half-written file, or a book that silently lost paragraphs, never takes the place of a good one.
-Counting segments catches lost content; comparing each segment's placeholders catches a paragraph whose formatting a
-translation damaged while the count stayed right, and naming the first one tells the person where to look. An image's
-alt text is translated on its own, as auxiliary text, yet it sits inside the markup of the paragraph that holds the
-image, so the markup is compared with the alt text set aside — in XML and XHTML the `alt` attribute's value, in
-Markdown the text between `![` and `](` — or every translated alt text would fail the check, even in a paragraph left
-in the source. The auxiliary text is not re-counted because its segments can legitimately change on re-opening: an NCX
-label translated to the same words as its navigation label becomes one segment with it, and a frontmatter value
-written as `"1984"` holds no letter and is no longer text; its write-back is proven by document-round-trip's "Write
-auxiliary translations back into their own slots".
+In plain words: a half-written file, or a book that silently lost paragraphs, never takes the place of a good one —
+and one paragraph whose translation broke its formatting no longer costs the whole book. Counting segments catches lost
+content; comparing each segment's placeholders catches a paragraph whose formatting a translation damaged while the
+count stayed right. The first real book that met this check failed on one drop cap: a reply wrapped the drop cap's
+`<span>` around the whole paragraph, and the re-opened book read that paragraph as a segment of the span, with no
+markup left. Refusing the export for that one paragraph wasted every other accepted segment, so the paragraph is now
+written in its source, named, and counted as not translated; a book that still differs after that — a lost paragraph,
+or a writer that damages the source itself — is still refused. An image's alt text is translated on its own, as
+auxiliary text, yet it sits inside the markup of the paragraph that holds the image, so the markup is compared with the
+alt text set aside — in XML and XHTML the `alt` attribute's value, in Markdown the text between `![` and `](` — or every
+translated alt text would fail the check, even in a paragraph left in the source. The auxiliary text is not re-counted
+because its segments can legitimately change on re-opening: an NCX label translated to the same words as its
+navigation label becomes one segment with it, and a frontmatter value written as `"1984"` holds no letter and is no
+longer text; its write-back is proven by document-round-trip's "Write auxiliary translations back into their own
+slots".
 
 #### Scenario: A segment-count mismatch leaves the destination alone
 
@@ -467,12 +482,31 @@ auxiliary translations back into their own slots".
 - **THEN** the export reports `ErrorCode.validation`
 - **AND** `Book.uk.md` is unchanged and no temporary file remains in its folder
 
-#### Scenario: A placeholder mismatch names the segment
+#### Scenario: A placeholder mismatch writes that segment in its source and names it
 
-- **WHEN** the segment `ch5 · p12` was written carrying `⟦g1⟧⟦g2⟧⟦g3⟧` and re-opens carrying `⟦g1⟧⟦g2⟧`, while the
-  segment count matches
+- **WHEN** the segment `ch5 · p12` was written carrying `⟦g0⟧⟦g1⟧⟦g2⟧⟦g3⟧` and re-opens carrying `⟦g0⟧⟦g1⟧⟦g2⟧`, while
+  the segment count matches
+- **THEN** the book is written again with `ch5 · p12` in its source, `<b>He</b> saw …`, and published
+- **AND** the report's source fallbacks are exactly `ch5 · p12` and no temporary file remains in its folder
+
+#### Scenario: A segment that differs even in its source still refuses the export
+
+- **WHEN** the segment `ch5 · p12` re-opens with one placeholder fewer both as translated and as written in its source
 - **THEN** the export reports `ErrorCode.validation` naming `ch5 · p12`
 - **AND** the destination is unchanged and no temporary file remains in its folder
+
+#### Scenario: A stored target with broken placeholders is written in its source
+
+- **WHEN** `Book.md:0`, whose masked source is `He opened the ⟦g0⟧old⟦g1⟧ door.`, is ACCEPTED with the masked target
+  `Зламано ⟦g0⟧тут` and `Book.md:1` is ACCEPTED as `Вона пішла.`
+- **THEN** the written file reads `He opened the *old* door.` and `Вона пішла.`
+- **AND** the report lists the source fallback `Book.md:0` and counts 1 segment written
+
+#### Scenario: Two broken targets are both listed
+
+- **WHEN** `Book.md:0` and `Book.md:1` both hold stored targets whose placeholders do not match their segments
+- **THEN** the written file is `He opened the *old* door.` followed by `She *left*.`, exactly the source
+- **AND** the report lists the source fallbacks `Book.md:0` then `Book.md:1` and counts 0 segments written
 
 #### Scenario: A translated alt text inside a translated paragraph passes the check
 
@@ -546,7 +580,10 @@ associates with its type.
 
 WHEN an export succeeds, the screen's checks and the dialog SHALL also name each side file written, one per line, and,
 when the consistency pass was on, what it did: the number of segments it adjusted, that it ran and changed nothing, or
-that its gender step was skipped because no model was available.
+that its gender step was skipped because no model was available. WHEN any segment was a source fallback (the
+requirement "Check the written book before it replaces the destination"), the screen and the dialog SHALL say how many,
+and name each by its locator, in a warning line: "2 segments were written in the source language because their
+translation broke the formatting: ch12 · p02, ch12 · p06", worded with the language's plural forms.
 
 WHEN the destination, Replace, the chosen side files or the consistency switch changes after a success, the export
 screen SHALL forget that result, so its tiles, checks, Open folder and Open book never describe a file the next press
@@ -573,6 +610,12 @@ the machine translated on its own, what the person reviewed, what is still in th
 reached, and what is in it because the person chose so — and they are what the tiles, the report side file and the
 command line's report line show. One success notice is enough: the dialog already names the file, so a transient
 message on top of it would only repeat it.
+
+#### Scenario: A source fallback is named after the export
+
+- **WHEN** an export of an EPUB succeeds with the one source fallback `ch12 · p02`
+- **THEN** the export screen and the export-complete dialog read "1 segment was written in the source language
+  because its translation broke the formatting: ch12 · p02"
 
 #### Scenario: A completed run reports its file
 

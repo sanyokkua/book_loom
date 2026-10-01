@@ -15,6 +15,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -144,6 +145,11 @@ class StructuredReplySegmentTranslatorTest {
             public Result<String> unmask(BookFormat format, Segment segment, String translatedMasked) {
                 called.set(true);
                 return delegate.unmask(format, segment, translatedMasked);
+            }
+
+            @Override
+            public Result<String> repairPlaceholders(Segment segment, String translatedMasked, PlaceholderRepair mode) {
+                return delegate.repairPlaceholders(segment, translatedMasked, mode);
             }
         };
     }

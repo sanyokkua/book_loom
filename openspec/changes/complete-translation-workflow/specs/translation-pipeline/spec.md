@@ -685,10 +685,11 @@ pauses the run instead.
 #### Scenario: A missing token flags the segment and the job goes on
 
 - **WHEN** a Fast run (one repair round) translates a Markdown book with the paragraphs `He opened the *old* door.` and
-  `She left.`, and the model replies `{"target":"HE OPENED THE ⟦g0⟧OLD DOOR."}` to the first paragraph's draft, to its
-  placeholder repair and to its one directed fix
+  `She left.`, and the model replies `{"target":"ВІДЧИНИВ"}` — no token, and one word that cannot hold the pair — to the
+  first paragraph's draft, to its placeholder repair and to its one directed fix
 - **THEN** the first segment is FLAGGED with a high `markup` finding after exactly 3 model calls — the draft, the
   placeholder repair naming `⟦g0⟧ ⟦g1⟧`, and a directed fix stating `⟦g0⟧ ⟦g1⟧` — and keeps no machine translation
+- **AND** it keeps `ВІДЧИНИВ` as its rejected target
 - **AND** the second segment is still sent to the model
 
 #### Scenario: A flagged reply stores its reason as a finding
@@ -1729,12 +1730,29 @@ for only the exact JSON object. IF it is again invalid, THEN the segment SHALL b
 `ErrorCode.validation`, with no self-heal round, and no wrapper text reaches the document unmasker.
 
 IF a strictly valid `target` fails placeholder validation — a `⟦gN⟧` token of the document or of a protected span
-missing, repeated or out of order, or the restored markup refused — THEN the system SHALL issue exactly one separate
-repair containing the original source, rejected target, exact required ordered token sequence and, when the document
-gate refused the restore, the gate's reason (for example an emptied pair `⟦g0⟧⟦g1⟧`). That repair SHALL
-again pass strict parsing and the unchanged placeholder hard gate. IF it fails the placeholder hard gate again, THEN the
-segment SHALL NOT be flagged at once: it SHALL go to self-heal with a `markup` finding, whose directed fix states the
-expected token sequence, and SHALL be FLAGGED only after the dial's repair rounds fail (the `quality-gates` capability).
+missing, repeated or out of order, or the restored markup refused — THEN the system SHALL try, in this order, stopping
+at the first that passes the unchanged placeholder hard gate:
+
+1. the document port's deterministic repair in restore-missing mode (document-round-trip, "Repair a refused target's
+   placeholder tokens without a model"), with no model call;
+2. exactly one model repair containing the original source, the rejected target, the exact required ordered token
+   sequence, and a note naming what is wrong — the gate's reason, each missing token, each extra token, each pair out of
+   order, and the text each affected pair wraps in the source (for example `In <Text>, ⟦g0⟧…⟦g1⟧ wraps "“A"`) — with
+   one worked example in the prompt;
+3. on that repair's reply, the deterministic repair in restore-missing mode, then in re-place-all mode; and when that
+   repair's reply is unusable (empty, cut off, not the JSON object), the re-place-all repair of the draft's reply.
+
+A target that passes only through a deterministic repair SHALL carry a low `markup` finding raised by `placeholder`
+("Markup auto-restored"), which neither blocks acceptance nor lowers confidence and is shown in review. IF every step
+fails, THEN the segment SHALL NOT be flagged at once: it SHALL go to self-heal with a `markup` finding, whose directed
+fix states the expected token sequence and whose reply gets the restore-missing repair, and SHALL be FLAGGED only after
+the dial's repair rounds fail (the `quality-gates` capability). Such a segment keeps no machine translation, but SHALL
+keep the last refused reply, its protected spans put back, as its rejected target, so review shows the model's words
+labelled as no usable translation instead of the source; export writes its source.
+
+A drop cap — a pair wrapping one or two visible characters at the start of a word, glued to its rest, such as
+`⟦g0⟧“A⟦g1⟧bove` — SHALL be folded out of the text the model is shown (`“Above`), with its tokens left out of the
+required token sequence, and SHALL be put back by the restore-missing repair, with no auto-restored finding.
 
 Each draft SHALL get at most one structural repair and one placeholder repair, the reply of either repair being read by
 the same rules, and neither repair SHALL count toward the dial's repair rounds. A self-heal call SHALL get neither
@@ -1746,9 +1764,13 @@ FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITH
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#repair-and-gate`, ADR-0013.
 In plain words: a reply in the wrong shape is usually a formatting slip, so it gets one plain request for the right
 shape; a second slip means the model cannot produce the shape for this segment, and asking again would only burn time.
-A reply that lost or moved a token is a different problem: it gets one repair that names the exact tokens, and if that
-still fails, the dial's repair rounds try a directed fix before the segment is flagged. The two format repairs are free,
-so a slip never eats the rounds meant for the translation itself.
+A reply that lost or moved a token is a different problem: a small model that dropped one token of a pair usually got
+every word right, so the token is first put back where the source had it, with no call; only a reply that cannot be
+fixed that way gets one model repair told exactly which tokens are wrong and what they wrapped, and if that still fails,
+the dial's repair rounds try a directed fix before the segment is flagged. A drop cap cuts a word in two when it is
+shown with its tokens — `⟦g0⟧“A⟦g1⟧bove` — and a small model then drops a token or wraps the whole paragraph, so it is
+shown as the whole word and wrapped again on its first letter afterwards. The two format repairs are free, so a slip
+never eats the rounds meant for the translation itself.
 
 #### Scenario: A structural repair receives diagnostic data
 
@@ -1766,11 +1788,36 @@ so a slip never eats the rounds meant for the translation itself.
 - **WHEN** the draft reply is `{"target":""}` and its structural repair reply is `{"target":"  "}`
 - **THEN** the segment is FLAGGED with `ErrorCode.validation` after exactly 2 model calls
 
+#### Scenario: A dropped closing token is put back without a call
+
+- **WHEN** the masked source is `“Remember ⟦g0⟧this,”⟦g1⟧ he said in a soft voice.` and the draft answers
+  `{"target":"«Пам'ятай ⟦g0⟧це», — сказав він тихим голосом."}`
+- **THEN** the draft restores as `«Пам'ятай <i class="calibre3">це»,</i> — сказав він тихим голосом.` after exactly
+  1 model call
+- **AND** it carries a low `markup` finding raised by `placeholder`
+
 #### Scenario: A placeholder repair names the required sequence
 
-- **WHEN** `{"target":"Привіт ⟦g0⟧"}` is valid JSON but a segment requires `⟦g0⟧ ⟦g1⟧`
+- **WHEN** `{"target":"⟦g1⟧Привіт⟦g0⟧"}` is valid JSON but a segment requires `⟦g0⟧ ⟦g1⟧` in that order, so no
+  restore-missing repair can fix it
 - **THEN** the one repair contains the original source, rejected target, and `⟦g0⟧ ⟦g1⟧`; no unmask succeeds until a
-  strict repaired target has that sequence
+  target with that sequence passes the gate
+
+#### Scenario: A placeholder repair names what is wrong
+
+- **WHEN** the masked source is `“Remember ⟦g0⟧this,”⟦g1⟧ he said in a soft voice.`, the draft answers with the pair
+  swapped, `«Пам'ятай ⟦g1⟧це»,⟦g0⟧ — сказав він тихим голосом.`, and the repair answers
+  `«Пам'ятай ⟦g0⟧це», — сказав він тихим голосом.`
+- **THEN** the one repair contains `⟦g0⟧ ⟦g1⟧`, `Out of order: ⟦g1⟧ comes before ⟦g0⟧.` and
+  `In <Text>, ⟦g0⟧…⟦g1⟧ wraps "this,”"`
+- **AND** the repair's reply restores with `⟦g1⟧` put back after `це»,`, after exactly 2 model calls
+
+#### Scenario: A drop cap is shown as a whole word
+
+- **WHEN** the masked source is `⟦g0⟧“A⟦g1⟧bove all,” said his master.`, a `<span>` drop cap, and the draft answers
+  `{"target":"«Понад усе», — сказав його господар."}`
+- **THEN** the draft was shown `“Above all,” said his master.` with no required token
+- **AND** it restores as `<span class="calibre8">«П</span>онад усе», — сказав його господар.` with no finding
 
 #### Scenario: The placeholder repair names the rule the reply broke
 
@@ -1782,8 +1829,8 @@ so a slip never eats the rounds meant for the translation itself.
 #### Scenario: A placeholder failure after its repair goes to self-heal
 
 - **WHEN** a Balanced run (two repair rounds) drafts `Book.md:0`, whose masked source is
-  `He opened the ⟦g0⟧old⟦g1⟧ door.`, and the model replies `{"target":"Він відчинив ⟦g0⟧старі двері."}` to the draft,
-  to its placeholder repair and to every directed fix
+  `He opened the ⟦g0⟧old⟦g1⟧ door.`, and the model replies `{"target":"Відчинив"}` — one word, which cannot hold the
+  pair and keep text outside it — to the draft, to its placeholder repair and to every directed fix
 - **THEN** the segment is not flagged after the placeholder repair; two directed fixes follow, each stating
   `⟦g0⟧ ⟦g1⟧`
 - **AND** the segment is FLAGGED with a high `markup` finding after exactly 4 model calls for it, and no judge call shows

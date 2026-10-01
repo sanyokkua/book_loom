@@ -8,6 +8,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
@@ -28,18 +29,53 @@ final class DocumentGate implements GateFunction {
         final Result<String> unmasked = documents.unmask(format, segment, maskedReply);
         final GateResult result = unmasked.isOk()
                 ? new GateResult.Restored(maskedReply, Objects.requireNonNull(unmasked.data()))
-                : failed(Objects.requireNonNull(unmasked.error()));
+                : failed(Objects.requireNonNull(unmasked.error()), maskedReply);
         logOutcome(segment.id(), result);
         return result;
     }
 
-    private static GateResult failed(final AppError error) {
+    @Override
+    public GateResult restoreRepairing(final Segment segment, final String maskedReply, final PlaceholderRepair mode) {
+        Objects.requireNonNull(mode, "mode");
+        final GateResult first = restore(segment, maskedReply);
+        if (!(first instanceof GateResult.GateFailed)) {
+            return first;
+        }
+        final Result<String> repaired = documents.repairPlaceholders(segment, maskedReply, mode);
+        if (repaired.isErr()) {
+            log.debug("Placeholder repair segment={} mode={} outcome=none", segment.id(), mode);
+            return first;
+        }
+        final String text = Objects.requireNonNull(repaired.data());
+        log.info("Placeholders put back without a model segment={} mode={}", segment.id(), mode);
+        return switch (restore(segment, text)) {
+            case GateResult.Restored restored ->
+                new GateResult.Restored(restored.maskedForm(), restored.restored(), autoRepairFinding(mode));
+            case GateResult.GateFailed _ -> first;
+            case GateResult.StepError stepError -> stepError;
+        };
+    }
+
+    private static QaFinding autoRepairFinding(final PlaceholderRepair mode) {
+        final String note =
+                switch (mode) {
+                    case RESTORE_MISSING ->
+                        "Markup auto-restored: a formatting placeholder the model dropped or repeated was"
+                                + " put back without a model. Check that the formatting covers the right words.";
+                    case REWRAP_ALL ->
+                        "Markup auto-restored: every formatting placeholder was placed again by position"
+                                + " without a model. Check that the formatting covers the right words.";
+                };
+        return new QaFinding(CheckName.PLACEHOLDER.findingKind(), Severity.LOW, note, CheckName.PLACEHOLDER.raisedBy());
+    }
+
+    private static GateResult failed(final AppError error, final String candidate) {
         if (error.code() != ErrorCode.validation) {
             return new GateResult.StepError(error);
         }
         final QaFinding finding = new QaFinding(
                 CheckName.PLACEHOLDER.findingKind(), Severity.HIGH, error.message(), CheckName.PLACEHOLDER.raisedBy());
-        return new GateResult.GateFailed(finding, error);
+        return new GateResult.GateFailed(finding, error, candidate);
     }
 
     private static void logOutcome(final String segmentId, final GateResult result) {

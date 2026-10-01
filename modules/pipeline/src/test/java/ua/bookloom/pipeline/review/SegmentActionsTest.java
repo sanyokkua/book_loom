@@ -238,14 +238,27 @@ class SegmentActionsTest {
     }
 
     @Test
-    void saveEdit_tokensDropped_isValidationNamingThePlaceholderAndKeepsFlagged() {
-        // an edit that deletes a placeholder would break the book's markup, so it is refused in place
+    void saveEdit_tokensDropped_putsThemBackByPositionAndSaves() {
+        // an edit that only lost its placeholders keeps the person's words: each is put back where it stood
+        final Desk desk = ReviewFixtures.markdown(tempDir);
+        flag(desk, "Book.md:4", OLD_DOOR);
+
+        final SegmentRecord record =
+                ok(desk.actions().saveEdit(desk.projectId(), "Book.md:4", "Він відчинив старі двері."));
+
+        assertThat(record.status()).isEqualTo(SegmentStatus.REVISED);
+        assertThat(record.maskedUserTarget()).isEqualTo("Він відчинив ⟦g0⟧старі⟦g1⟧ двері.");
+        assertThat(record.userTarget()).isEqualTo("Він відчинив *старі* двері.");
+    }
+
+    @Test
+    void saveEdit_tokensDroppedFromOneWord_isValidationNamingThePlaceholderAndKeepsFlagged() {
+        // one word cannot hold the pair and keep text outside it, so no repair passes and the edit is refused in place
         final Desk desk = ReviewFixtures.markdown(tempDir);
         flag(desk, "Book.md:4", OLD_DOOR);
         final SegmentRecord before = stored(desk, "Book.md:4");
 
-        final Result<SegmentRecord> result =
-                desk.actions().saveEdit(desk.projectId(), "Book.md:4", "Він відчинив старі двері.");
+        final Result<SegmentRecord> result = desk.actions().saveEdit(desk.projectId(), "Book.md:4", "Двері");
 
         assertThat(error(result).code()).isEqualTo(ErrorCode.validation);
         assertThat(error(result).message()).contains("formatting placeholders do not match");

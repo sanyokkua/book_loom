@@ -3,10 +3,13 @@ package ua.bookloom.ui.state;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -59,5 +62,24 @@ public final class ExportReportLines {
                                 messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NO_MODEL))
                         : List.of(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NO_MODEL));
         };
+    }
+
+    /**
+     * The segments the export wrote in their source because their translation broke the formatting.
+     *
+     * @param messages the catalogue the line is worded from
+     * @param report the finished export's report
+     * @return the line naming their count and locators, or empty when there were none
+     */
+    public static Optional<String> sourceFallbacks(final Messages messages, final ExportReport report) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(report, "report");
+        if (report.sourceFallbacks().isEmpty()) {
+            return Optional.empty();
+        }
+        final String locators =
+                report.sourceFallbacks().stream().map(SourceFallback::locator).collect(Collectors.joining(", "));
+        return Optional.of(messages.get(
+                MessageKey.EXPORT_SOURCE_FALLBACKS, report.sourceFallbacks().size(), locators));
     }
 }

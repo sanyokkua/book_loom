@@ -5,6 +5,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.CheckResult;
@@ -33,9 +34,7 @@ public final class DraftEvaluation {
                 "Evaluating draft segmentId={} gatePassed={}",
                 outcome.segment().id(),
                 outcome.restoredTarget() != null);
-        final List<CheckResult> given = outcome.restoredTarget() == null
-                ? List.of(failedGateFrom(Objects.requireNonNull(outcome.gateFinding())))
-                : List.<CheckResult>of();
+        final List<CheckResult> given = givenGates(outcome);
         logTraceDraftTarget(outcome);
         return QaEvaluation.evaluate(
                 given,
@@ -45,6 +44,20 @@ public final class DraftEvaluation {
                 Objects.requireNonNullElse(outcome.maskedForm(), outcome.maskedReply()),
                 settings,
                 outcome.lockedRenderings());
+    }
+
+    private static List<CheckResult> givenGates(final DraftOutcome.Drafted outcome) {
+        if (outcome.restoredTarget() == null) {
+            return List.of(failedGateFrom(Objects.requireNonNull(outcome.gateFinding())));
+        }
+        @Nullable final QaFinding autoRepair = outcome.autoRepair();
+        if (autoRepair == null) {
+            return List.of();
+        }
+        log.debug(
+                "Draft markup was auto-restored segmentId={}; recorded as a low finding",
+                outcome.segment().id());
+        return List.of(CheckResult.passWithNotice(CheckName.PLACEHOLDER, autoRepair));
     }
 
     /** Rebuilds the draft's own hard-gate failure as a {@link CheckResult}, from the finding it already raised. */

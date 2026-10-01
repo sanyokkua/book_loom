@@ -3,6 +3,7 @@ package ua.bookloom.document;
 import com.google.inject.Inject;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -13,6 +14,7 @@ import ua.bookloom.api.SafeDetails;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.document.epub.EpubReader;
@@ -20,9 +22,9 @@ import ua.bookloom.document.epub.EpubWriter;
 import ua.bookloom.document.fb2.Fb2Reader;
 import ua.bookloom.document.fb2.Fb2Writer;
 import ua.bookloom.document.mask.GateOutcome;
-import ua.bookloom.document.mask.GateRule;
 import ua.bookloom.document.mask.PlaceholderGate;
 import ua.bookloom.document.mask.RestoredContent;
+import ua.bookloom.document.mask.TokenRepair;
 import ua.bookloom.document.mask.Unmasker;
 import ua.bookloom.document.md.MarkdownEscaper;
 import ua.bookloom.document.md.MarkdownReader;
@@ -205,7 +207,7 @@ public final class DocumentService implements DocumentPort {
             final GateOutcome outcome = PlaceholderGate.compare(
                     segment.masked(), translatedMasked, segment.pairs(), segment.lineBreakTokens());
             if (!outcome.matches()) {
-                final AppError error = gateError(outcome);
+                final AppError error = GateErrors.of(outcome);
                 log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
                 return Result.err(error);
             }
@@ -215,6 +217,25 @@ public final class DocumentService implements DocumentPort {
         } catch (Throwable t) {
             final AppError error = internalError(t);
             log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
+            return Result.err(error);
+        }
+    }
+
+    @Override
+    public Result<String> repairPlaceholders(Segment segment, String translatedMasked, PlaceholderRepair mode) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(translatedMasked, "translatedMasked");
+        Objects.requireNonNull(mode, "mode");
+        log.debug("Repairing placeholders segmentId={} mode={}", segment.id(), mode);
+        try {
+            final Optional<String> repaired = TokenRepair.repair(
+                    segment.masked(), translatedMasked, segment.pairs(), segment.lineBreakTokens(), mode);
+            log.debug(
+                    "Repaired placeholders segmentId={} mode={} repaired={}", segment.id(), mode, repaired.isPresent());
+            return repaired.map(Result::ok).orElseGet(() -> Result.err(GateErrors.unrepairable()));
+        } catch (Throwable t) {
+            final AppError error = internalError(t);
+            log.debug("Repaired placeholders segmentId={} mode={} outcome={}", segment.id(), mode, error.code());
             return Result.err(error);
         }
     }
@@ -312,25 +333,6 @@ public final class DocumentService implements DocumentPort {
                         + " emphasis or other structure the original did not have, or the loss of one it did.",
                 SafeDetails.empty().render(),
                 null);
-    }
-
-    /**
-     * Builds the rendered details once and logs <em>that</em>, rather than the raw token lists. The observed list
-     * is scanned out of a provider response, so its size and its tokens' lengths are the model's choice, not the
-     * system's; {@link SafeDetails#withPlaceholderMultiset} is where that side is bounded, and logging its output
-     * is what keeps the same bound on the log line.
-     */
-    private AppError gateError(GateOutcome outcome) {
-        final String details = SafeDetails.empty()
-                .withPlaceholderMultiset(outcome.expected(), outcome.observed())
-                .render();
-        log.warn("Refused a translated segment: placeholder rule {} broken: {}", outcome.failedRule(), details);
-        final String message = outcome.failedRule() == GateRule.MULTISET
-                ? "The translated text's formatting placeholders do not match the original segment's — one or more"
-                        + " were dropped, duplicated, or invented. Nothing was restored."
-                : "The translated text moved, swapped or emptied the formatting around its words — a pair of"
-                        + " placeholders no longer wraps the same text. Nothing was restored.";
-        return AppError.of(ErrorCode.validation, "This translation could not be restored", message, details, null);
     }
 
     private AppError drmError(DrmRefusedException e) {

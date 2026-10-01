@@ -195,13 +195,15 @@ final class ExportJobImpl implements ExportJob {
             return Result.err(errorOf(records));
         }
         final List<SegmentRecord> stored = Objects.requireNonNull(records.data(), "records");
-        final EffectiveTargets targets = EffectiveTargets.apply(opened, stored, kept);
-        final ExportCounts counts = ExportCounts.of(stored, kept, opened);
-        return glossaryEntries(project.id())
-                .map(glossary -> SideFiles.build(
-                        request.sideFiles(),
-                        new SideFiles.Sources(request.destination(), targets, stored, kept, counts, pass, glossary)))
-                .flatMap(sideFiles -> publish(project, targets, counts, sideFiles, summary(pass)));
+        final EffectiveTargets targets = EffectiveTargets.apply(
+                opened,
+                stored,
+                kept,
+                (segment, masked) -> parts.documents()
+                        .unmask(opened.format(), segment, masked)
+                        .isOk());
+        final Fallbacks fallbacks = new Fallbacks(opened, stored, ExportCounts.of(stored, kept, opened));
+        return glossaryEntries(project.id()).flatMap(glossary -> publish(project, targets, fallbacks, glossary, pass));
     }
 
     private ConsistencySummary summary(@Nullable final ConsistencyReport pass) {
@@ -224,12 +226,14 @@ final class ExportJobImpl implements ExportJob {
         return needed ? parts.glossary().all(projectId) : Result.ok(List.of());
     }
 
+    // The side files are built once the book is written, so the quality report counts the segments the check had to
+    // write in their source.
     private Result<ExportReport> publish(
             final Project project,
             final EffectiveTargets targets,
-            final ExportCounts counts,
-            final List<SideFiles.Content> sideFiles,
-            final ConsistencySummary consistency) {
+            final Fallbacks fallbacks,
+            final List<GlossaryEntry> glossary,
+            @Nullable final ConsistencyReport pass) {
         final ExportPlan plan = new ExportPlan(
                 project.source(),
                 request.destination(),
@@ -239,14 +243,20 @@ final class ExportJobImpl implements ExportJob {
         if (isCancelledBefore("write")) {
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
-        final Result<Path> written =
-                new BookExporter(parts.documents(), parts.moves()).export(plan, targets, cancelled::get);
+        final Result<BookExporter.Exported> written =
+                new BookExporter(parts.documents(), parts.moves()).exportReporting(plan, targets, cancelled::get);
         if (written.isErr()) {
             return Result.err(errorOf(written));
         }
-        final Path destination = Objects.requireNonNull(written.data(), "written path");
+        final BookExporter.Exported exported = Objects.requireNonNull(written.data(), "written book");
+        final Fallbacks.Fallen fallen = fallbacks.of(targets.sourceFallbacks(), exported.sourceFallbacks());
+        final Set<SegmentKind> kept = project.brief().alsoTranslate().keptKinds();
+        final List<SideFiles.Content> sideFiles = SideFiles.build(
+                request.sideFiles(),
+                new SideFiles.Sources(
+                        request.destination(), targets, fallbacks.stored(), kept, fallen.counts(), pass, glossary));
         return SideFiles.write(sideFiles, request.overwrite(), parts.moves(), () -> isCancelledBefore("side-file"))
-                .map(paths -> counts.report(destination, paths, consistency));
+                .map(paths -> fallen.counts().report(exported.path(), paths, summary(pass), fallen.listed()));
     }
 
     private Result<Project> findProject() {
@@ -278,7 +288,7 @@ final class ExportJobImpl implements ExportJob {
         log.info(
                 "export finished project={} destination={} written={} pending={} sourceKept={} keptVerbatim={}"
                         + " flaggedWritten={} autoAccepted={} reviewed={} verifiedSegments={} sideFiles={}"
-                        + " consistency={}",
+                        + " consistency={} sourceFallbacks={}",
                 request.projectId(),
                 report.destination(),
                 report.written(),
@@ -290,7 +300,8 @@ final class ExportJobImpl implements ExportJob {
                 report.reviewed(),
                 report.verifiedSegments(),
                 report.sideFiles(),
-                report.consistency());
+                report.consistency(),
+                report.sourceFallbacks());
     }
 
     private static AppError refused(final String check, final String title, final String message) {

@@ -15,6 +15,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
@@ -169,10 +170,15 @@ public final class SegmentActions {
     private Result<SegmentRecord> restored(
             final SegmentRecord record, final BookFormat format, final Segment segment, final String maskedText) {
         final String candidate = WhitespaceRestoration.restore(segment.masked(), maskedText.strip());
-        final GateResult gate = GateFunction.of(documents, format).restore(segment, candidate);
+        // An edit that only lost or repeated a token keeps the person's words: the token is put back by position.
+        final GateResult gate = GateFunction.of(documents, format)
+                .restoreRepairing(segment, candidate, PlaceholderRepair.RESTORE_MISSING);
         return switch (gate) {
             case GateResult.Restored restored -> {
-                log.debug("saveEdit: gate outcome=Restored segment={}", record.segmentId());
+                log.debug(
+                        "saveEdit: gate outcome=Restored segment={} tokensPutBack={}",
+                        record.segmentId(),
+                        restored.autoRepair() != null);
                 yield write(
                                 SAVE_EDIT,
                                 record,

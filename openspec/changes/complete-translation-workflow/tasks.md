@@ -1237,10 +1237,22 @@ check leaves evidence.
   on and that it holds book text and stays local, names the folder, and offers Open log folder, Copy log path and Save
   diagnostic bundle… (ZIP of the trace files + `session.json`, off the FX thread). Not done: the Settings switch (nothing
   is persisted yet) and the Appearance-tab copy of the folder actions (78d8c43)
-- [ ] 7. Placeholders, export, review: reproduce the drop-cap `reopened=0`, a deterministic placeholder repair, a
-  specific repair note, drop caps masked atomically, the retry order for gate failures, the best rejected reply kept on
-  a flagged segment, export no longer all-or-nothing (source fallbacks listed), the review panel read-only with an
-  explanation while running and a visible token banner
+- [x] 7. Placeholders, export, review. Root cause of `reopened=0`: the accepted reply wrapped the drop cap's `<span>`
+  around the whole paragraph (`⟦g0⟧«Понад усе…»⟦g1⟧`); the gate passed it, and a tree reader makes the outermost element
+  owning text the block, so the re-opened paragraph was a segment of the span with no markup — the gate now refuses a
+  target with no text outside its pairs when the source had some (`GateRule.TEXT_OUTSIDE_PAIRS`, `DropCapRoundTripTest`).
+  A deterministic repair behind `DocumentPort.repairPlaceholders` (`TokenRepair`: restore-missing / re-place-all) runs
+  before the one model repair, on its reply, and on directed-fix replies and saved edits, recording a low "markup
+  auto-restored" finding; the model repair gets a specific note (`GateNotes`: missing/extra/out-of-order tokens and what
+  each pair wraps) and a worked example; drop caps are folded out of the shown text and re-wrapped on the first letter
+  (`DropCaps`, `ProtectedGate`) instead of being masked atomically in `TreeMasker`; a flagged segment keeps its refused
+  reply as `rejectedTarget` (record, outcome, view, contract test); export checks each stored target against the gate,
+  verification names every mismatching segment, `BookExporter` writes those once more in their source and re-verifies,
+  and `ExportReport.sourceFallbacks` is counted as pending and shown on the Export screen and dialog (en/uk plurals);
+  review shows the target read-only with "Review is available when the run pauses" while a run translates, the refused
+  reply or a "showing the source" note, a token banner with insert chips after a refused save, and keeps typing through
+  a re-read. Not done: the piece-wise redraft step of the gate-failure order (the deterministic re-place-all repair
+  makes it unnecessary in every reproduced case)
 - [ ] 8. Layout, scrolling, concurrency: the shell content's minimum height so tall screens scroll, the activity log
   following its tail only when at the tail, a structured context panel, the wheel glide rewrite, and an
   `ActivityTracker` that keeps model actions from overlapping

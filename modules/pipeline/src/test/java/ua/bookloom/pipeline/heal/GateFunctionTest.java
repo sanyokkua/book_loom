@@ -11,6 +11,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.TestDocuments;
@@ -79,6 +80,12 @@ class GateFunctionTest {
             @Override
             public Result<String> unmask(
                     final BookFormat format, final Segment segment, final String translatedMasked) {
+                return Result.err(failure);
+            }
+
+            @Override
+            public Result<String> repairPlaceholders(
+                    final Segment segment, final String translatedMasked, final PlaceholderRepair mode) {
                 return Result.err(failure);
             }
         };

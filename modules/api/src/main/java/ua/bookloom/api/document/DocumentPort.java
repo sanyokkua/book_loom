@@ -83,4 +83,17 @@ public interface DocumentPort {
      *     multiset does not match — nothing is restored and {@code translatedMasked} is left unaltered
      */
     Result<String> unmask(BookFormat format, Segment segment, String translatedMasked);
+
+    /**
+     * Repairs {@code translatedMasked}'s placeholder tokens without a model, so a reply that only lost, repeated or
+     * invented a token keeps its words. The result passes the same placeholder gate {@link #unmask} applies; the
+     * caller still restores it through {@link #unmask}.
+     *
+     * @param segment the segment whose masked form, pairs and line-break tokens define the tokens to restore
+     * @param translatedMasked the reply the gate refused, with the segment's own tokens in place
+     * @param mode how much of the reply's own placement is kept
+     * @return the repaired masked text, or {@code ErrorCode.validation} when no placement passes the gate; an
+     *     unexpected failure is {@code ErrorCode.internal}
+     */
+    Result<String> repairPlaceholders(Segment segment, String translatedMasked, PlaceholderRepair mode);
 }

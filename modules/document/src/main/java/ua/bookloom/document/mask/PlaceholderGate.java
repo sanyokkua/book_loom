@@ -14,7 +14,8 @@ import ua.bookloom.api.document.PlaceholderPair;
  * segment's masked form; a missing, added, or duplicated token fails it.
  *
  * <p>Token order matters only for the paired tokens the segment records (a pair opens before it closes, pairs nest,
- * a pair that held text still holds text, a line break keeps its pair); every other token may move freely.
+ * a pair that held text still holds text, a line break keeps its pair, and a target keeps some text outside every
+ * pair when its source did); every other token may move freely.
  *
  * <p>This is the one check restoring performs before touching a placeholder — it reports, it never repairs. A
  * caller that sees {@link GateOutcome#matches()} {@code false} restores nothing and alters nothing.
@@ -80,6 +81,12 @@ public final class PlaceholderGate {
         }
         final var before = PairStructure.enclosingPairs(expectedMasked, pairs, lineBreakTokens);
         final var after = PairStructure.enclosingPairs(target, pairs, lineBreakTokens);
-        return before.equals(after) ? null : GateRule.LINE_BREAK;
+        if (!before.equals(after)) {
+            return GateRule.LINE_BREAK;
+        }
+        return PairStructure.holdsTextOutsidePairs(expectedMasked, pairs)
+                        && !PairStructure.holdsTextOutsidePairs(target, pairs)
+                ? GateRule.TEXT_OUTSIDE_PAIRS
+                : null;
     }
 }

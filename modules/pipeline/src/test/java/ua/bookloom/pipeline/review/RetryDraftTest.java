@@ -201,11 +201,12 @@ class RetryDraftTest {
 
     @Test
     void retry_flaggedDraftFailingTheGate_keepsThePreviousMachineTarget() {
-        // a retry whose reply never passes the placeholder gate has no target of its own, so the earlier one stays
+        // a retry whose reply never passes the gate — a control character no book can hold, which no placeholder
+        // repair touches — has no target of its own, so the earlier one stays
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(reply("Чудовисько ⟦g7⟧ зустріло мене опівночі."))
-                .answer(reply("Чудовисько ⟦g7⟧ зустріло мене опівночі."));
+                .answer(reply("Чудовисько\u0008 зустріло мене опівночі."))
+                .answer(reply("Чудовисько\u0008 зустріло мене опівночі."));
 
         final SegmentRecord record = ok(retry(desk, model));
 

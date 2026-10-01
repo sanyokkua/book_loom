@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatRequest;
@@ -26,6 +26,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
+import ua.bookloom.pipeline.prompt.GateNotes;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.run.PauseDecider;
@@ -118,7 +119,7 @@ public final class SegmentTranslator {
     private Result<DraftOutcome> send(
             final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
         final ChatRequest request = requestFor(attempt, step, rejected, diagnostic);
-        final Result<ChatResponse> reply = callModel(step, attempt.segment(), request, calls);
+        final Result<ChatResponse> reply = DraftCalls.call(step, attempt.segment(), request, calls);
         if (reply.isErr()) {
             return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }
@@ -255,30 +256,6 @@ public final class SegmentTranslator {
         };
     }
 
-    Result<ChatResponse> callModel(
-            final DraftStep step, final Segment segment, final ChatRequest request, final ModelCalls through) {
-        log.debug(
-                "Calling chat model segmentId={} messageCount={}",
-                segment.id(),
-                request.messages().size());
-        try {
-            final Result<ChatResponse> result =
-                    Objects.requireNonNull(through.call(step.callKind(), segment.id(), request), "model result");
-            log.debug("Chat model completed segmentId={} result={}", segment.id(), result.isOk() ? "success" : "error");
-            return result;
-        } catch (Throwable cause) {
-            final AppError error = AppError.of(
-                    ErrorCode.internal,
-                    "Translation failed",
-                    "The model could not translate this segment.",
-                    null,
-                    cause);
-            log.debug("Chat model completed segmentId={} result=thrown errorCode={}", segment.id(), error.code());
-            log.error("Unexpected model failure segment={} code={}", segment.id(), error.code(), cause);
-            return Result.err(error);
-        }
-    }
-
     // Design D3 rule 1: an error the routing table flags at once is the segment's, every other one is the run's.
     private Result<DraftOutcome> decideModelError(final DraftAttempt attempt, final AppError error) {
         final Segment segment = attempt.segment();
@@ -297,32 +274,27 @@ public final class SegmentTranslator {
             final boolean structuralRepairUsed,
             final boolean placeholderRepairUsed) {
         if (response.content().isBlank() || response.finishReason() != FinishReason.STOP) {
-            return unfinished(attempt, response);
+            return DraftOutcomes.unfinished(attempt, response);
         }
         final ParsedReply parsed = replyParser.parse(response.content());
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED) {
             return structuralRepairUsed
-                    ? invalidStructuredReply(attempt, response)
+                    ? DraftOutcomes.invalidStructuredReply(attempt, response)
                     : repairStructured(attempt, response.content(), parsed.diagnostic());
         }
         final String trimmed = parsed.translation().strip();
-        logTraceReply(response.content(), trimmed);
+        DraftOutcomes.traceReply(response.content(), trimmed);
         log.debug(
-                "Model reply segment={} kind={} finish={} empty={}",
+                "Model reply segment={} kind={} finish={} empty={} replyLength={} placeholderRepair={}",
                 attempt.segment().id(),
                 parsed.kind(),
                 response.finishReason(),
-                trimmed.isEmpty());
-        return trimmed.isEmpty() ? unfinished(attempt, response) : restore(attempt, trimmed, placeholderRepairUsed);
-    }
-
-    private static Result<DraftOutcome> unfinished(final DraftAttempt attempt, final ChatResponse response) {
-        final boolean empty = response.content().isBlank() || response.finishReason() == FinishReason.STOP;
-        return DraftOutcomes.flaggedAtOnce(
-                attempt,
-                empty ? DraftOutcomes.emptyCompletion() : DraftOutcomes.invalidFinish(),
-                response.finishReason().name(),
-                DraftOutcomes.observedTokens(response.content()));
+                trimmed.isEmpty(),
+                trimmed.length(),
+                placeholderRepairUsed);
+        return trimmed.isEmpty()
+                ? DraftOutcomes.unfinished(attempt, response)
+                : restore(attempt, trimmed, placeholderRepairUsed);
     }
 
     private Result<DraftOutcome> repairStructured(
@@ -330,18 +302,6 @@ public final class SegmentTranslator {
         final Segment segment = attempt.segment();
         log.warn("Repairing invalid structured model reply segmentId={}", segment.id());
         return send(attempt, DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
-    }
-
-    private Result<DraftOutcome> invalidStructuredReply(final DraftAttempt attempt, final ChatResponse response) {
-        logTraceReply(response.content(), "");
-        return DraftOutcomes.flaggedAtOnce(
-                attempt,
-                AppError.of(
-                        ErrorCode.validation,
-                        "Invalid structured model response",
-                        "The model did not return the required translation JSON object."),
-                response.finishReason().name(),
-                DraftOutcomes.observedTokens(response.content()));
     }
 
     private Result<DraftOutcome> restore(
@@ -352,16 +312,7 @@ public final class SegmentTranslator {
         logTraceRestoration(restoredWhitespace);
         return switch (gate.restore(segment, restoredWhitespace)) {
             case GateResult.Restored restored -> DraftOutcomes.drafted(attempt, restoredWhitespace, restored);
-            case GateResult.GateFailed failed -> {
-                log.debug(
-                        "Gate completed segmentId={} result=GateFailed code={}",
-                        segment.id(),
-                        failed.error().code());
-                yield placeholderRepairUsed
-                        ? DraftOutcomes.stillFailingTheGate(attempt, restoredWhitespace, failed)
-                        : repairPlaceholder(
-                                attempt, restoredWhitespace, failed.finding().note());
-            }
+            case GateResult.GateFailed failed -> recover(attempt, restoredWhitespace, failed, placeholderRepairUsed);
             case GateResult.StepError stepError -> {
                 log.debug(
                         "Gate completed segmentId={} result=StepError code={}",
@@ -372,17 +323,54 @@ public final class SegmentTranslator {
         };
     }
 
-    private Result<DraftOutcome> repairPlaceholder(
-            final DraftAttempt attempt, final String rejectedTarget, final String gateNote) {
+    // The order for a reply the placeholder gate refused: put back what it lost without a call; then one model repair
+    // told exactly which tokens are wrong; on that repair's reply, the same deterministic repair and then every token
+    // placed again by position; only then the quality loop's directed fix, and failing that the source is kept.
+    private Result<DraftOutcome> recover(
+            final DraftAttempt attempt,
+            final String rejected,
+            final GateResult.GateFailed failed,
+            final boolean placeholderRepairUsed) {
         final Segment segment = attempt.segment();
-        log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
-        return send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, gateNote);
+        log.debug(
+                "Gate completed segmentId={} result=GateFailed code={} placeholderRepairUsed={}",
+                segment.id(),
+                failed.error().code(),
+                placeholderRepairUsed);
+        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.RESTORE_MISSING)
+                instanceof GateResult.Restored restored) {
+            return DraftOutcomes.drafted(attempt, rejected, restored);
+        }
+        if (!placeholderRepairUsed) {
+            return repairPlaceholder(attempt, rejected, failed);
+        }
+        if (gate.restoreRepairing(segment, rejected, PlaceholderRepair.REWRAP_ALL)
+                instanceof GateResult.Restored restored) {
+            return DraftOutcomes.drafted(attempt, rejected, restored);
+        }
+        return DraftOutcomes.stillFailingTheGate(attempt, rejected, failed);
     }
 
-    private static void logTraceReply(final String raw, final String trimmed) {
-        if (log.isTraceEnabled()) {
-            log.trace("Segment reply raw={} trimmed={}", raw, trimmed);
+    // A repair whose own reply is unusable leaves the draft's reply, which the gate refused only for its markup: its
+    // words are kept and every token is placed again by position before the segment is given up.
+    private Result<DraftOutcome> repairPlaceholder(
+            final DraftAttempt attempt, final String rejectedTarget, final GateResult.GateFailed failed) {
+        final Segment segment = attempt.segment();
+        final String note = GateNotes.describe(
+                attempt.shownText(),
+                rejectedTarget,
+                segment.pairs(),
+                failed.finding().note());
+        log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
+        final Result<DraftOutcome> repaired = send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, note);
+        if (repaired.isOk()
+                && repaired.data() instanceof DraftOutcome.FlaggedAtOnce
+                && gate.restoreRepairing(segment, rejectedTarget, PlaceholderRepair.REWRAP_ALL)
+                        instanceof GateResult.Restored restored) {
+            log.info("Placeholder repair reply unusable; draft kept with re-placed tokens segmentId={}", segment.id());
+            return DraftOutcomes.drafted(attempt, rejectedTarget, restored);
         }
+        return repaired;
     }
 
     private static void logTraceRestoration(final String restored) {

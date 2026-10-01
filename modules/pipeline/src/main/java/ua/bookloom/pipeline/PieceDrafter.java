@@ -233,7 +233,7 @@ final class PieceDrafter {
             final String diagnostic) {
         final var request = owner.requestFor(
                 DraftAttempt.ofPiece(piece, context, extraInstruction, lowerTemperature), step, rejected, diagnostic);
-        return owner.callModel(step, piece, request, calls);
+        return DraftCalls.call(step, piece, request, calls);
     }
 
     private static Result<Piece> failed(final Segment piece, final ErrorCode code, final String message) {

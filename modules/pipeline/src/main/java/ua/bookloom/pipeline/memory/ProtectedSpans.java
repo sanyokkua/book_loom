@@ -59,7 +59,7 @@ public final class ProtectedSpans {
         final List<Found> all = new ArrayList<>(runs);
         all.addAll(terms);
         all.sort(Comparator.comparingInt(Found::start));
-        final ProtectedMask mask = build(text, all, terms);
+        final ProtectedMask mask = foldDropCaps(segment, build(text, all, terms));
         log.debug(
                 "Masked segment={} keptRuns={} lockedTerms={} tokens={}",
                 segment.id(),
@@ -104,6 +104,16 @@ public final class ProtectedSpans {
                 mask.spans().size(),
                 mask.spans().stream().map(ProtectedSpan::token).toList());
         return RestoredCheck.check(storedMaskedTarget, mask);
+    }
+
+    private static ProtectedMask foldDropCaps(final Segment segment, final ProtectedMask built) {
+        final List<String> folded = DropCaps.tokensOf(segment);
+        if (folded.isEmpty()) {
+            return built;
+        }
+        log.debug("Folding drop caps out of segment={} tokens={}", segment.id(), folded);
+        return new ProtectedMask(
+                DropCaps.without(built.maskedText(), folded), built.spans(), built.presentLocked(), folded);
     }
 
     private static ProtectedMask build(final String text, final List<Found> ordered, final List<Found> terms) {

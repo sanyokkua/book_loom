@@ -118,4 +118,18 @@ public record CheckResult(
                 true,
                 new QaFinding(check.findingKind(), Severity.HIGH, note, check.raisedBy()));
     }
+
+    /**
+     * Builds the outcome of a hard gate that passed only after its candidate was repaired without a model: it neither
+     * blocks nor lowers confidence, but its {@code low} finding stays on the segment so review sees the repair.
+     *
+     * @param check which hard gate passed
+     * @param notice the {@code low} finding naming the repair
+     * @return a passed, non-blocking result carrying {@code notice}
+     */
+    public static CheckResult passWithNotice(final CheckName check, final QaFinding notice) {
+        Objects.requireNonNull(check, "check");
+        Objects.requireNonNull(notice, "notice");
+        return new CheckResult(check, MAX_MARGIN, true, false, false, notice);
+    }
 }

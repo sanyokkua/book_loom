@@ -28,9 +28,11 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
 
@@ -67,14 +69,33 @@ class ExportJobVerificationTest {
         assertThat(hiddenFiles(tempDir)).isEmpty();
     }
 
-    // The count still matches, yet the paragraph lost an image: the check names it by its locator.
+    // The count still matches, yet the translated paragraph lost an image when written: it is written again in its
+    // source and the export succeeds, naming it by its locator.
     @Test
-    void run_writtenParagraphLosesAPlaceholder_returnsValidationNamingIt() {
+    void run_writtenParagraphLosesAPlaceholder_writesItInSourceAndNamesIt() {
         final String id = fiveChapterBook();
         fixture.accept(id, "ch05.xhtml:11", "⟦g0⟧Він⟦g1⟧ побачив ⟦g2⟧ і ⟦g3⟧.");
         final Path destination = tempDir.resolve("Book.uk.epub");
         final ExportServiceImpl service =
-                fixture.serviceOver(new FragmentDroppingPort(fixture.documents(), "ch05.xhtml:11", "g3"));
+                fixture.serviceOver(new FragmentDroppingPort(fixture.documents(), "ch05.xhtml:11", "g3", false));
+
+        final ExportReport report = ok(ExportJobFixture.export(service, request(id, destination, false)));
+
+        assertThat(report.sourceFallbacks()).containsExactly(new SourceFallback("ch05.xhtml:11", "ch5 · p12"));
+        assertThat(zipEntry(destination, "ch05.xhtml"))
+                .contains("<b>He</b> saw ")
+                .doesNotContain("Він");
+        assertThat(hiddenFiles(tempDir)).isEmpty();
+    }
+
+    // A paragraph whose markup changes even when written in its source still refuses the export, naming it.
+    @Test
+    void run_paragraphDamagedEvenInSource_returnsValidationNamingIt() {
+        final String id = fiveChapterBook();
+        fixture.accept(id, "ch05.xhtml:11", "⟦g0⟧Він⟦g1⟧ побачив ⟦g2⟧ і ⟦g3⟧.");
+        final Path destination = tempDir.resolve("Book.uk.epub");
+        final ExportServiceImpl service =
+                fixture.serviceOver(new FragmentDroppingPort(fixture.documents(), "ch05.xhtml:11", "g3", true));
 
         final Result<ExportReport> result = ExportJobFixture.export(service, request(id, destination, false));
 
@@ -83,6 +104,55 @@ class ExportJobVerificationTest {
         assertThat(failure.message()).contains("ch5 · p12");
         assertThat(destination).doesNotExist();
         assertThat(hiddenFiles(tempDir)).isEmpty();
+    }
+
+    // A stored target whose placeholders no longer match its segment is written in the source before writing, and the
+    // report counts it as pending rather than written.
+    @Test
+    void run_oneStoredTargetWithBrokenPlaceholders_writesItInSourceAndReportsIt() throws IOException {
+        final String id = fixture.importBook(
+                TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.\n\nShe left."), "en");
+        brokenTarget(id, "Book.md:0");
+        fixture.accept(id, "Book.md:1", "Вона пішла.");
+        final Path destination = tempDir.resolve("Book.uk.md");
+
+        final ExportReport report = ok(fixture.export(request(id, destination, false)));
+
+        assertThat(report.sourceFallbacks())
+                .extracting(SourceFallback::segmentId)
+                .containsExactly("Book.md:0");
+        assertThat(report.written()).isEqualTo(1);
+        assertThat(Files.readString(destination))
+                .contains("He opened the *old* door.")
+                .contains("Вона пішла.");
+    }
+
+    // Two broken targets are both written in the source and both listed, in book order.
+    @Test
+    void run_twoStoredTargetsWithBrokenPlaceholders_listsBoth() throws IOException {
+        final String id = fixture.importBook(
+                TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the *old* door.\n\nShe *left*."), "en");
+        brokenTarget(id, "Book.md:0");
+        brokenTarget(id, "Book.md:1");
+        final Path destination = tempDir.resolve("Book.uk.md");
+
+        final ExportReport report = ok(fixture.export(request(id, destination, false)));
+
+        assertThat(report.sourceFallbacks())
+                .extracting(SourceFallback::segmentId)
+                .containsExactly("Book.md:0", "Book.md:1");
+        assertThat(report.written()).isZero();
+        assertThat(Files.readString(destination)).isEqualTo("He opened the *old* door.\n\nShe *left*.");
+    }
+
+    // An accepted record whose masked target lost its closing token — as a stored machine target can be after a
+    // gate change — is not written as it stands.
+    private void brokenTarget(final String projectId, final String segmentId) {
+        fixture.decide(
+                projectId,
+                segmentId,
+                record ->
+                        record.withStatus(SegmentStatus.ACCEPTED).withMachineTarget("Зламано *тут", "Зламано ⟦g0⟧тут"));
     }
 
     // A translated alt text sits inside the translated paragraph's image markup, which the check sets aside.
@@ -235,11 +305,17 @@ class ExportJobVerificationTest {
 
         private final String segmentId;
         private final String placeholder;
+        private final boolean evenInSource;
 
-        FragmentDroppingPort(final DocumentPort delegate, final String segmentId, final String placeholder) {
+        FragmentDroppingPort(
+                final DocumentPort delegate,
+                final String segmentId,
+                final String placeholder,
+                final boolean evenInSource) {
             super(delegate);
             this.segmentId = segmentId;
             this.placeholder = placeholder;
+            this.evenInSource = evenInSource;
         }
 
         @Override
@@ -255,6 +331,9 @@ class ExportJobVerificationTest {
             final Segment target = segment(document, segmentId);
             final String fragment = Objects.requireNonNull(target.placeholders().get(placeholder), "fragment");
             final String inner = Objects.requireNonNull(target.targetInner(), "target");
+            if (inner.equals(target.sourceInner()) && !evenInSource) {
+                return document;
+            }
             final List<Unit> units = document.units().stream()
                     .map(unit -> unit.withSegments(unit.segments().stream()
                             .map(candidate -> candidate.id().equals(segmentId)

@@ -1,0 +1,123 @@
+package ua.bookloom.pipeline.prompt;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.document.PlaceholderPair;
+import ua.bookloom.pipeline.Tokens;
+
+/**
+ * The note a placeholder repair call is given: which tokens the rejected target lost, added or put out of order, and
+ * what each affected pair wraps in the text, so a small model is told exactly what to fix instead of a general rule.
+ */
+@Slf4j
+@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class GateNotes {
+
+    /** The longest stretch of a pair's source text quoted in the note. */
+    private static final int MAX_QUOTED = 60;
+
+    /** The most pairs described, so a heavily formatted paragraph does not crowd out the text itself. */
+    private static final int MAX_PAIRS = 3;
+
+    /**
+     * Describes what is wrong with {@code rejected}.
+     *
+     * @param expected the non-null text the model was shown, every token it must return in place
+     * @param rejected the non-null reply the gate refused
+     * @param pairs the non-null segment's pairs
+     * @param ruleMessage the non-null message of the gate that refused the reply, stated first
+     * @return the note, one statement per line; never blank
+     */
+    public static String describe(
+            final String expected, final String rejected, final List<PlaceholderPair> pairs, final String ruleMessage) {
+        Objects.requireNonNull(expected, "expected");
+        Objects.requireNonNull(rejected, "rejected");
+        Objects.requireNonNull(pairs, "pairs");
+        Objects.requireNonNull(ruleMessage, "ruleMessage");
+        final Map<String, Integer> difference = difference(expected, rejected);
+        final List<String> missing = tokensWith(difference, true);
+        final List<String> extra = tokensWith(difference, false);
+        final List<PlaceholderPair> reversed = reversed(rejected, pairs);
+        final boolean ruleOnly = missing.isEmpty() && extra.isEmpty() && reversed.isEmpty();
+        final List<String> lines = new ArrayList<>(List.of(ruleMessage));
+        addListed(lines, "Missing (put each back once): ", missing);
+        addListed(lines, "Extra (remove): ", extra);
+        reversed.forEach(pair -> lines.add("Out of order: " + pair.close() + " comes before " + pair.open() + "."));
+        affected(pairs, missing, reversed, ruleOnly).forEach(pair -> lines.add(wraps(expected, pair)));
+        log.debug(
+                "Gate note missing={} extra={} outOfOrder={} lines={}", missing, extra, reversed.size(), lines.size());
+        final String note = String.join("\n", lines);
+        if (log.isTraceEnabled()) {
+            log.trace("Gate note text={}", note);
+        }
+        return note;
+    }
+
+    /** Each token's count in {@code expected} minus its count in {@code rejected}; zero counts left out. */
+    private static Map<String, Integer> difference(final String expected, final String rejected) {
+        final Map<String, Integer> counts = new LinkedHashMap<>();
+        Tokens.inOrder(expected).forEach(token -> counts.merge(token, 1, Integer::sum));
+        Tokens.inOrder(rejected).forEach(token -> counts.merge(token, -1, Integer::sum));
+        counts.values().removeIf(count -> count == 0);
+        return counts;
+    }
+
+    private static List<String> tokensWith(final Map<String, Integer> difference, final boolean missing) {
+        return difference.entrySet().stream()
+                .filter(entry -> missing ? entry.getValue() > 0 : entry.getValue() < 0)
+                .map(entry -> Math.abs(entry.getValue()) == 1
+                        ? entry.getKey()
+                        : entry.getKey() + " ×" + Math.abs(entry.getValue()))
+                .toList();
+    }
+
+    private static void addListed(final List<String> lines, final String label, final List<String> tokens) {
+        if (!tokens.isEmpty()) {
+            lines.add(label + String.join(" ", tokens) + ".");
+        }
+    }
+
+    private static List<PlaceholderPair> reversed(final String rejected, final List<PlaceholderPair> pairs) {
+        return pairs.stream()
+                .filter(pair -> rejected.contains(pair.open()) && rejected.contains(pair.close()))
+                .filter(pair -> rejected.indexOf(pair.close()) < rejected.indexOf(pair.open()))
+                .toList();
+    }
+
+    // The pairs a missing token or a reversal belongs to; every pair when the gate refused something else, such as a
+    // pair emptied of its words or wrapped around the whole text.
+    private static List<PlaceholderPair> affected(
+            final List<PlaceholderPair> pairs,
+            final List<String> missing,
+            final List<PlaceholderPair> reversed,
+            final boolean ruleOnly) {
+        return pairs.stream()
+                .filter(pair -> ruleOnly
+                        || reversed.contains(pair)
+                        || missing.contains(pair.open())
+                        || missing.contains(pair.close()))
+                .limit(MAX_PAIRS)
+                .toList();
+    }
+
+    private static String wraps(final String expected, final PlaceholderPair pair) {
+        final int open = expected.indexOf(pair.open());
+        final int close = expected.indexOf(pair.close());
+        if (open < 0 || close < open) {
+            return "Keep " + pair.open() + " before " + pair.close() + ".";
+        }
+        final String inner = Tokens.replace(
+                        expected.substring(open + pair.open().length(), close), "")
+                .strip();
+        final String quoted = inner.length() > MAX_QUOTED ? inner.substring(0, MAX_QUOTED) + "…" : inner;
+        return "In <Text>, " + pair.open() + "…" + pair.close() + " wraps \"" + quoted
+                + "\" — wrap the translation of exactly that text.";
+    }
+}

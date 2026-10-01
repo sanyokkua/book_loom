@@ -5,6 +5,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -58,6 +59,37 @@ final class PairStructure {
         }
         final String between = text.substring(from + pair.open().length(), to);
         return !between.replaceAll("⟦g\\d+⟧", "").isBlank();
+    }
+
+    /**
+     * Whether {@code text} holds a non-whitespace character outside every pair — text its block owns directly. A
+     * tree reader makes the outermost element owning text of its own the segment's block, so a target whose words all
+     * sit inside one pair re-opens as a segment of that inline element instead, its pair folded away.
+     *
+     * @param text a masked form or a target whose pairs are properly nested
+     * @param pairs the segment's pairs
+     * @return {@code true} if some text stands outside every pair
+     */
+    static boolean holdsTextOutsidePairs(String text, List<PlaceholderPair> pairs) {
+        final Map<String, PlaceholderPair> byOpen = new HashMap<>();
+        final Map<String, PlaceholderPair> byClose = new HashMap<>();
+        index(pairs, byOpen, byClose);
+        final Matcher matcher = Placeholders.matcher(text);
+        int depth = 0;
+        int cursor = 0;
+        final StringBuilder outside = new StringBuilder();
+        while (matcher.find()) {
+            if (depth == 0) {
+                outside.append(text, cursor, matcher.start());
+            }
+            depth += byOpen.containsKey(matcher.group()) ? 1 : 0;
+            depth -= byClose.containsKey(matcher.group()) ? 1 : 0;
+            cursor = matcher.end();
+        }
+        if (depth == 0) {
+            outside.append(text, cursor, text.length());
+        }
+        return !outside.toString().isBlank();
     }
 
     /**

@@ -61,7 +61,11 @@ public final class BookExporterTestSupport {
 
     /** The decisions of {@code decided}, each target checked in its source placeholders' order. */
     static EffectiveTargets sourceOrder(final Document decided) {
-        return new EffectiveTargets(decided, Map.of());
+        final Map<String, String> masked = decided.units().stream()
+                .flatMap(unit -> unit.segments().stream())
+                .filter(segment -> segment.targetInner() != null)
+                .collect(java.util.stream.Collectors.toMap(Segment::id, Segment::masked));
+        return new EffectiveTargets(decided, masked, List.of());
     }
 
     static int segmentCount(final Document document) {

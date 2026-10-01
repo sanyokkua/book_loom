@@ -20,11 +20,17 @@ final class ReviewRefusals {
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final Consumer<String> inPlace;
+    private final Runnable onSaveRefused;
 
-    ReviewRefusals(final Toasts toasts, final ErrorPresenter errors, final Consumer<String> inPlace) {
+    ReviewRefusals(
+            final Toasts toasts,
+            final ErrorPresenter errors,
+            final Consumer<String> inPlace,
+            final Runnable onSaveRefused) {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.inPlace = Objects.requireNonNull(inPlace, "inPlace");
+        this.onSaveRefused = Objects.requireNonNull(onSaveRefused, "onSaveRefused");
     }
 
     /** Refuses an action before any call, because a run is translating: the same one warning a desk answer gives. */
@@ -41,6 +47,9 @@ final class ReviewRefusals {
             case IN_PLACE -> {
                 log.warn("review {} of segment {} refused: {}", action, segmentId, error.code());
                 inPlace.accept(error.message());
+                if ("saveEdit".equals(action)) {
+                    onSaveRefused.run();
+                }
             }
             case DIALOG, PROVIDER_ERROR, FLAGGED_SEGMENT -> errors.present(error);
             case STOPPED, SETTINGS_ONLY -> log.debug("review {} answered {}: nothing to show", action, error.code());

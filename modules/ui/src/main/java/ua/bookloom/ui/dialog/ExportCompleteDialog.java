@@ -117,6 +117,13 @@ public final class ExportCompleteDialog {
             row.getStyleClass().add("kv");
             body.getChildren().add(row);
         }
+        ExportReportLines.sourceFallbacks(messages, report).ifPresent(line -> {
+            final Label text = new Label(line);
+            text.setId("export-complete-source-fallbacks");
+            text.setWrapText(true);
+            text.getStyleClass().addAll("dialog-text", "status-warn");
+            body.getChildren().add(text);
+        });
         for (final String line : ExportReportLines.consistency(messages, report.consistency())) {
             final Label text = new Label(line);
             text.setWrapText(true);

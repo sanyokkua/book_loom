@@ -147,8 +147,15 @@ After the model returns `targetInner`:
    group (`⟦gN⟧…⟦gM⟧`) must keep its recorded order and nesting relative to every other pair, and two further rules
    checked from the pairing recorded at mask time each fail as a hard gate: a pair whose source content held text (a
    non-whitespace character outside any token) must hold text in the target too, and a line-break token's innermost
-   enclosing pair must be the same pair in source and target. A violation of any of these — like the multiset itself —
-   cannot be accepted and is routed to self-heal.
+   enclosing pair must be the same pair in source and target. A target whose words all sit inside pairs while the
+   source left text outside them fails too: a tree reader makes the outermost element owning text its block, so the
+   written paragraph would re-open as a segment of that inline element, its markup gone (a drop cap's `<span>` wrapped
+   round a whole paragraph). A violation of any of these — like the multiset itself — cannot be accepted and is routed
+   to self-heal.
+5. **A separate deterministic repair, never inside the gate.** The gate only reports. A caller may ask the port to
+   repair a refused target without a model — drop an invented or repeated token, put a missing one back at the
+   boundary of the same kind nearest its scaled source position, or re-place every token by that rule — and must still
+   pass the repaired text through the gate; the pipeline records the repair as a low `markup` finding.
 4. **Atomic tokens may move.** Placeholder ordering is not otherwise required to match source order (translation may
    reorder), but every placeholder must appear exactly as many times as in the source, and an atomic protected-span
    token (inline code, math, a locked term, a kept foreign run) carries no internal structure for the model to disturb

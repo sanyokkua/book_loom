@@ -107,8 +107,10 @@ count, and only All segments shows it.
 ### Requirement: Compare source and target side by side with the segment's findings and context
 
 WHEN a segment is selected in the review panel, the application SHALL show its source read-only and its target —
-the person's saved edit when there is one, else the machine target, else, when it has neither, its source — editable
-and marked EDITABLE, side by side with no
+the person's saved edit when there is one, else the machine target, else the model's refused reply (its rejected
+target) under the note "No usable translation: the model's last reply is shown below, but it broke the formatting.",
+else its source under the note "No translation kept — showing the source." — editable and marked EDITABLE, side by side
+with no
 inline diff, with each `⟦gN⟧` placeholder of the book's markup shown where it stands and each locked name shown as its
 rendering; and it SHALL show the segment's findings, a badge with its chunk's judge score when a judge ran, and a context
 line naming what the segment was translated with.
@@ -119,7 +121,16 @@ line naming what the segment was translated with.
 In plain words: two plain texts side by side are what a translator reads fastest; the findings say why the segment
 is here, and the context line says what the model knew when it translated it. The placeholders stay visible so the
 person keeps the bold, italics and links in place when they edit; a locked name reads as the name, because it is not
-markup the person has to protect.
+markup the person has to protect. A segment whose every reply broke the formatting used to open on its English source
+in the pane labelled with the target language, which read as an untranslated segment although the model had
+translated it; showing the refused reply, labelled, lets the person fix the one token instead of retyping the
+paragraph.
+
+#### Scenario: A segment with only a refused reply shows it, labelled
+
+- **WHEN** `ch12 · p02` is FLAGGED with no machine target and the rejected target `Він відчинив ⟦g0⟧старі двері.`
+- **THEN** the target pane shows `Він відчинив ⟦g0⟧старі двері.` under "No usable translation: …"
+- **AND** Save edit is offered before any change, because saving repairs the reply if it can
 
 #### Scenario: A flagged segment in the compare
 
@@ -205,8 +216,15 @@ WHEN the person presses Accept on a FLAGGED or ACCEPTED segment, the application
 the segment ACCEPTED; WHEN they press Save edit, it SHALL store their text, placeholders included, as the target and
 mark the segment REVISED while keeping the machine target, so the edit opens again exactly as it was saved; WHEN they
 press Revert to machine target, it SHALL clear the edit and mark the segment ACCEPTED; WHILE the target pane holds
-unsaved changes, Accept SHALL be disabled with the hint `Editing disables Accept until you Save or Revert.`; IF a
-saved edit's placeholders do not restore, THEN it SHALL refuse the edit in place with the reason; and IF Accept is
+unsaved changes, Accept SHALL be disabled with the hint `Editing disables Accept until you Save or Revert.`; WHEN a
+saved edit only lost or repeated placeholder tokens, the system SHALL put them back by the restore-missing repair
+(document-round-trip, "Repair a refused target's placeholder tokens without a model") and save the repaired text; IF a
+saved edit's placeholders still do not restore, THEN it SHALL refuse the edit in place with the reason, keep the typed
+text, and show beside the actions a banner naming the tokens the edit lacks, as chips that insert their token at the
+cursor, and those it holds too often; WHILE a run is translating or a retry is in flight, the target pane SHALL be
+read-only and a note beside the actions SHALL say why — "Review is available when the run pauses." — instead of
+leaving Save edit silently unavailable; re-reading the list or the segment SHALL NOT replace text the person has typed
+and not saved; and IF Accept is
 requested for a segment that holds no machine target, THEN it SHALL refuse it with `ErrorCode.validation` and the
 message `There is no machine translation to accept — edit it or retry.` and SHALL change nothing. Accept, Save edit,
 Revert, a passing retry and an accepted proposal SHALL mark the segment reviewed; Skip and a failing retry SHALL NOT.
@@ -243,13 +261,26 @@ it says what to do instead; the editor opens on the source so the person can wri
 - **WHEN** the person has typed into the target pane without saving
 - **THEN** Accept is disabled and the hint `Editing disables Accept until you Save or Revert.` is shown
 
-#### Scenario: An edit that drops a placeholder is refused
+#### Scenario: An edit that drops its placeholders gets them back
 
-- **WHEN** the machine target is `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and the person saves
+- **WHEN** in a Markdown book the machine target is `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and the person saves
   `Він відчинив старі двері.` with both tokens deleted
-- **THEN** the edit is refused in place with `ErrorCode.validation` and a reason saying the formatting could not be
-  restored
-- **AND** the segment keeps its FLAGGED status and its machine target
+- **THEN** the segment is REVISED as `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.`, reading `Він відчинив *старі* двері.`
+
+#### Scenario: An edit no repair can fix is refused with a token banner
+
+- **WHEN** the machine target is `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and the person saves `Двері`, one word that cannot
+  hold the pair and keep text outside it
+- **THEN** the edit is refused in place with `ErrorCode.validation`, the typed `Двері` stays in the pane, and the
+  segment keeps its FLAGGED status and its machine target
+- **AND** a banner beside the actions offers the chips `⟦g0⟧` and `⟦g1⟧`, and pressing `⟦g0⟧` with the cursor at the
+  start makes the text `⟦g0⟧Двері`
+
+#### Scenario: The target is read-only while a run translates
+
+- **WHEN** a segment is selected and the run moves from PAUSED to RUNNING
+- **THEN** the target pane is read-only, Save edit is unavailable, and the note "Review is available when the run
+  pauses. …" is shown beside the actions
 
 #### Scenario: Accept on a revised segment is refused
 

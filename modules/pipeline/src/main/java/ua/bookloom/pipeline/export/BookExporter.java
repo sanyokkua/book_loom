@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -20,12 +18,24 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.document.Unit;
 
 @Slf4j
 public final class BookExporter {
+
+    /**
+     * A published export.
+     *
+     * @param path the published book
+     * @param sourceFallbacks the segments written in their source because their markup changed on re-opening
+     */
+    record Exported(Path path, List<String> sourceFallbacks) {
+
+        /** Copies the list. */
+        Exported {
+            Objects.requireNonNull(path, "path");
+            sourceFallbacks = List.copyOf(sourceFallbacks);
+        }
+    }
 
     private static final String CANCELLED_TITLE = "Export cancelled";
 
@@ -54,6 +64,20 @@ public final class BookExporter {
      */
     Result<Path> export(
             final ExportPlan plan, final EffectiveTargets decided, final BooleanSupplier cancellationRequested) {
+        return exportReporting(plan, decided, cancellationRequested).map(Exported::path);
+    }
+
+    /**
+     * The same export, also naming the segments it had to write in their source because the written book re-opened
+     * with their markup changed.
+     *
+     * @param plan where to read the source, where to publish and in which languages
+     * @param decided the book whose segments carry the decisions to write, with each written target's masked form
+     * @param cancellationRequested read once, after the check and before the publication move
+     * @return the published path and the segments written in their source, or a typed failure
+     */
+    Result<Exported> exportReporting(
+            final ExportPlan plan, final EffectiveTargets decided, final BooleanSupplier cancellationRequested) {
         Objects.requireNonNull(plan, "plan");
         Objects.requireNonNull(decided, "decided");
         Objects.requireNonNull(cancellationRequested, "cancellationRequested");
@@ -71,7 +95,7 @@ public final class BookExporter {
         }
     }
 
-    private Result<Path> beginExport(
+    private Result<Exported> beginExport(
             final ExportPlan plan, final EffectiveTargets decided, final BooleanSupplier cancellationRequested) {
         final Path temporary = temporaryPath(plan.destination());
         log.debug("Export temporary path is {}", temporary);
@@ -121,6 +145,8 @@ public final class BookExporter {
         private final BooleanSupplier cancellationRequested;
         private final Path temporary;
         private final List<Document> opened = new ArrayList<>();
+        private final Map<String, String> maskedTargets;
+        private final List<String> fallbacks = new ArrayList<>();
 
         Attempt(
                 final ExportPlan plan,
@@ -131,9 +157,10 @@ public final class BookExporter {
             this.decided = decided;
             this.cancellationRequested = cancellationRequested;
             this.temporary = temporary;
+            this.maskedTargets = new LinkedHashMap<>(decided.maskedTargets());
         }
 
-        Result<Path> run() {
+        Result<Exported> run() {
             try {
                 return reopenAndWrite();
             } catch (Throwable cause) {
@@ -141,7 +168,7 @@ public final class BookExporter {
             }
         }
 
-        private Result<Path> reopenAndWrite() {
+        private Result<Exported> reopenAndWrite() {
             log.debug("Opening export source {}", plan.source());
             final Result<Document> reopened = documents.open(plan.source());
             if (reopened.isErr()) {
@@ -156,7 +183,7 @@ public final class BookExporter {
             return validateSourceAndWrite(fresh);
         }
 
-        private Result<Path> validateSourceAndWrite(final Document fresh) {
+        private Result<Exported> validateSourceAndWrite(final Document fresh) {
             final boolean matches =
                     fresh.contentHash().equals(decided.document().contentHash());
             log.debug("Export source hash match for document {} is {}", fresh.id(), matches);
@@ -164,8 +191,7 @@ public final class BookExporter {
                 log.warn("Export source {} changed after translation began", plan.source());
                 return fail(sourceChangedError());
             }
-            final Document applied = applyDecisions(fresh, decided.document());
-            logDecisionCounts(applied);
+            final Document applied = ExportDecisions.apply(fresh, decided.document());
             log.debug(
                     "Writing translated document {} to {} sourceLanguage={} targetLanguage={}",
                     fresh.id(),
@@ -178,7 +204,7 @@ public final class BookExporter {
             return written.isErr() ? fail(errorOf(written)) : reopenTemporary(applied);
         }
 
-        private Result<Path> reopenTemporary(final Document applied) {
+        private Result<Exported> reopenTemporary(final Document applied) {
             log.debug("Opening written temporary book {}", temporary);
             final Result<Document> reopened = documents.open(temporary);
             if (reopened.isErr()) {
@@ -192,10 +218,16 @@ public final class BookExporter {
             return verifyAndPublish(applied, verified);
         }
 
-        private Result<Path> verifyAndPublish(final Document applied, final Document verified) {
-            final Result<Integer> checked = SegmentVerification.verify(applied, verified, decided.maskedTargets());
+        private Result<Exported> verifyAndPublish(final Document applied, final Document verified) {
+            final Result<List<String>> checked = SegmentVerification.verify(applied, verified, maskedTargets);
             if (checked.isErr()) {
                 return fail(errorOf(checked));
+            }
+            final List<String> mismatched = Objects.requireNonNull(checked.data(), "mismatched");
+            if (!mismatched.isEmpty()) {
+                return fallbacks.isEmpty()
+                        ? rewriteInSource(applied, verified, mismatched)
+                        : fail(SegmentVerification.placeholderMismatch(applied, mismatched.getFirst()));
             }
             final Result<Boolean> closed = closeAll();
             if (closed.isErr()) {
@@ -208,24 +240,46 @@ public final class BookExporter {
             return publish();
         }
 
-        private Result<Path> publish() {
+        private Result<Exported> publish() {
             log.debug("Publishing {} to {} with overwrite {}", temporary, plan.destination(), plan.overwrite());
             try {
                 Publication.move(moves, temporary, plan.destination(), plan.overwrite());
                 log.debug("Published validated export at {}", plan.destination());
                 log.debug("Temporary export {} removed by publication move", temporary);
-                return Result.ok(plan.destination());
+                return Result.ok(new Exported(plan.destination(), fallbacks));
             } catch (UncheckedIOException failure) {
                 return failAfterClose(moveError(Objects.requireNonNull(failure.getCause(), "move failure cause")));
             }
         }
 
-        private Result<Path> fail(final AppError primary) {
+        // Written once more with each named segment in its source: a translation whose markup does not survive the
+        // writer must not cost the whole book. A second mismatch, a changed count or an unopenable book still fails.
+        private Result<Exported> rewriteInSource(
+                final Document applied, final Document verified, final List<String> mismatched) {
+            log.warn(
+                    "Export verification found {} segments whose formatting changed; writing them in their source: {}",
+                    mismatched.size(),
+                    mismatched);
+            opened.remove(verified);
+            final Result<Boolean> closed = closeOne(verified);
+            if (closed.isErr()) {
+                return fail(errorOf(closed));
+            }
+            fallbacks.addAll(mismatched);
+            final Document inSource = ExportDecisions.inSource(applied, mismatched);
+            ExportDecisions.sourceMasks(inSource, mismatched).forEach(maskedTargets::put);
+            final Result<Path> written =
+                    documents.write(inSource, temporary, plan.sourceLanguage(), plan.targetLanguage());
+            log.debug("Temporary export rewrite result is {}", outcomeOf(written));
+            return written.isErr() ? fail(errorOf(written)) : reopenTemporary(inSource);
+        }
+
+        private Result<Exported> fail(final AppError primary) {
             closeAll();
             return failAfterClose(primary);
         }
 
-        private Result<Path> failAfterClose(final AppError primary) {
+        private Result<Exported> failAfterClose(final AppError primary) {
             deleteTemporary(primary);
             return Result.err(primary);
         }
@@ -269,36 +323,6 @@ public final class BookExporter {
                         cause);
             }
         }
-    }
-
-    private static Document applyDecisions(final Document fresh, final Document decided) {
-        final Map<String, Segment> decisions = decided.units().stream()
-                .flatMap(unit -> unit.segments().stream())
-                .collect(Collectors.toMap(
-                        Segment::id, Function.identity(), (first, ignored) -> first, LinkedHashMap::new));
-        final List<Unit> units = fresh.units().stream()
-                .map(unit -> unit.withSegments(unit.segments().stream()
-                        .map(segment -> copyDecision(segment, decisions.get(segment.id())))
-                        .toList()))
-                .toList();
-        return fresh.withUnits(units);
-    }
-
-    private static Segment copyDecision(final Segment fresh, @Nullable final Segment decision) {
-        return decision == null ? fresh : fresh.withDecision(decision.status(), decision.targetInner());
-    }
-
-    private static void logDecisionCounts(final Document document) {
-        final long accepted = countStatus(document, SegmentStatus.ACCEPTED);
-        final long flagged = countStatus(document, SegmentStatus.FLAGGED);
-        log.debug("Applied export decisions: accepted {}, flagged {}", accepted, flagged);
-    }
-
-    private static long countStatus(final Document document, final SegmentStatus status) {
-        return document.units().stream()
-                .flatMap(unit -> unit.segments().stream())
-                .filter(segment -> segment.status() == status)
-                .count();
     }
 
     private static String outcomeOf(final Result<?> result) {

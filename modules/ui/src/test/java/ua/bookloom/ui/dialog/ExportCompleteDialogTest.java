@@ -6,9 +6,11 @@ import java.nio.file.Path;
 import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.RecordingFileRevealer;
 import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.TooltipProbe;
@@ -83,6 +85,32 @@ class ExportCompleteDialogTest extends ShellTestBase {
 
         assertThat(textsUnder(required(ExportCompleteDialog.CARD_ID)))
                 .noneMatch(text -> text.startsWith("Also written") || text.startsWith("Consistency pass"));
+    }
+
+    // Segments written in the source for a broken translation are named, so a partial book is never a surprise.
+    @Test
+    void show_twoSourceFallbacks_namesTheirCountAndLocators() {
+        final ExportReport report = new ExportReport(
+                BOOK,
+                8,
+                2,
+                0,
+                0,
+                8,
+                0,
+                List.of(),
+                10,
+                ConsistencySummary.NOT_RUN,
+                0,
+                List.of(
+                        new SourceFallback("part0009.html:1", "ch12 · p02"),
+                        new SourceFallback("part0009.html:5", "ch12 · p06")));
+        onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
+
+        final Label line = (Label) scene.getRoot().lookup("#export-complete-source-fallbacks");
+        assertThat(line.getText())
+                .isEqualTo("2 segments were written in the source language because their translation broke the"
+                        + " formatting: ch12 · p02, ch12 · p06");
     }
 
     @Test

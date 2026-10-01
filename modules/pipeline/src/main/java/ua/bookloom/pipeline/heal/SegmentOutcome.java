@@ -28,6 +28,8 @@ import ua.bookloom.api.project.SegmentPath;
  * @param repairRounds how many self-heal rounds this segment used
  * @param flagReason the error a {@code FlagNow} self-heal reply or a {@code FlaggedAtOnce} draft outcome flagged
  *     this segment with; {@code null} for every other FLAGGED or ACCEPTED segment
+ * @param rejectedTarget the model's last refused reply in masked form, kept only when no target passed every hard
+ *     gate, so review shows the model's words instead of the source; {@code null} otherwise
  */
 public record SegmentOutcome(
         String segmentId,
@@ -39,7 +41,8 @@ public record SegmentOutcome(
         List<QaFinding> findings,
         SegmentPath path,
         int repairRounds,
-        @Nullable AppError flagReason) {
+        @Nullable AppError flagReason,
+        @Nullable String rejectedTarget) {
 
     /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
     public SegmentOutcome {
@@ -48,5 +51,55 @@ public record SegmentOutcome(
         Objects.requireNonNull(findings, "findings");
         Objects.requireNonNull(path, "path");
         findings = List.copyOf(findings);
+    }
+
+    /** A decision with no rejected reply kept. */
+    public SegmentOutcome(
+            final String segmentId,
+            final SegmentStatus status,
+            @Nullable final String machineTarget,
+            @Nullable final String maskedMachineTarget,
+            final double confidence,
+            @Nullable final Double judgeScore,
+            final List<QaFinding> findings,
+            final SegmentPath path,
+            final int repairRounds,
+            @Nullable final AppError flagReason) {
+        this(
+                segmentId,
+                status,
+                machineTarget,
+                maskedMachineTarget,
+                confidence,
+                judgeScore,
+                findings,
+                path,
+                repairRounds,
+                flagReason,
+                null);
+    }
+
+    /**
+     * Keeps {@code rejected} as this decision's rejected reply when no target passed every hard gate.
+     *
+     * @param rejected the refused reply in masked form, or {@code null} when none was kept
+     * @return this decision unchanged when it holds a machine target or {@code rejected} is null, else one carrying it
+     */
+    public SegmentOutcome keepingRejected(@Nullable final String rejected) {
+        if (machineTarget != null || rejected == null) {
+            return this;
+        }
+        return new SegmentOutcome(
+                segmentId,
+                status,
+                null,
+                null,
+                confidence,
+                judgeScore,
+                findings,
+                path,
+                repairRounds,
+                flagReason,
+                rejected);
     }
 }

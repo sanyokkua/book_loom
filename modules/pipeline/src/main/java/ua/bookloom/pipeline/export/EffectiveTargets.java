@@ -1,11 +1,13 @@
 package ua.bookloom.pipeline.export;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -23,16 +25,18 @@ import ua.bookloom.api.project.SegmentRecord;
  *
  * @param document the opened book with each written target set on its segment
  * @param maskedTargets each segment written with a target mapped to that target's masked form — the order its
- *     placeholders were written in, which the re-open check compares; a segment written in its source, or whose
- *     record holds no masked form, is absent
+ *     placeholders were written in, which the re-open check compares; a segment written in its source is absent
+ * @param sourceFallbacks the segments written in their source although their record holds a target, because that
+ *     target's placeholders no longer match the segment's, in book order
  */
 @Slf4j
-record EffectiveTargets(Document document, Map<String, String> maskedTargets) {
+record EffectiveTargets(Document document, Map<String, String> maskedTargets, List<String> sourceFallbacks) {
 
-    /** Copies the map so the targets cannot change after construction. */
+    /** Copies the map and the list so the targets cannot change after construction. */
     EffectiveTargets {
         Objects.requireNonNull(document, "document");
         maskedTargets = Collections.unmodifiableMap(new LinkedHashMap<>(maskedTargets));
+        sourceFallbacks = List.copyOf(sourceFallbacks);
     }
 
     /**
@@ -41,13 +45,18 @@ record EffectiveTargets(Document document, Map<String, String> maskedTargets) {
      * @param opened the non-null book as the project holds it open
      * @param records the non-null stored records of the project
      * @param keptKinds the auxiliary kinds the brief keeps as source when the export starts; never null
-     * @return the book to write and the masked form of every target written
+     * @param placeholdersMatch whether a stored masked target still passes the segment's placeholder gate; never null
+     * @return the book to write, the masked form of every target written, and the targets written as source instead
      */
     static EffectiveTargets apply(
-            final Document opened, final List<SegmentRecord> records, final Set<SegmentKind> keptKinds) {
+            final Document opened,
+            final List<SegmentRecord> records,
+            final Set<SegmentKind> keptKinds,
+            final BiPredicate<Segment, String> placeholdersMatch) {
         Objects.requireNonNull(opened, "opened");
         Objects.requireNonNull(records, "records");
         Objects.requireNonNull(keptKinds, "keptKinds");
+        Objects.requireNonNull(placeholdersMatch, "placeholdersMatch");
         final Map<String, SegmentRecord> byId =
                 records.stream().collect(Collectors.toMap(SegmentRecord::segmentId, Function.identity(), (a, b) -> a));
         log.debug(
@@ -56,21 +65,31 @@ record EffectiveTargets(Document document, Map<String, String> maskedTargets) {
                 opened.id(),
                 keptKinds);
         final Map<String, String> masked = new LinkedHashMap<>();
+        final List<String> fallbacks = new ArrayList<>();
+        final Decision decision = new Decision(keptKinds, placeholdersMatch, masked, fallbacks);
         final List<Unit> units = opened.units().stream()
                 .map(unit -> unit.withSegments(unit.segments().stream()
-                        .map(segment -> decide(segment, byId.get(segment.id()), keptKinds, masked))
+                        .map(segment -> decide(segment, byId.get(segment.id()), decision))
                         .toList()))
                 .toList();
-        log.debug("Effective targets applied document={} writtenWithTarget={}", opened.id(), masked.size());
-        return new EffectiveTargets(opened.withUnits(units), masked);
+        log.debug(
+                "Effective targets applied document={} writtenWithTarget={} sourceFallbacks={}",
+                opened.id(),
+                masked.size(),
+                fallbacks);
+        return new EffectiveTargets(opened.withUnits(units), masked, fallbacks);
     }
 
+    /** What deciding one segment reads and fills. */
+    private record Decision(
+            Set<SegmentKind> keptKinds,
+            BiPredicate<Segment, String> placeholdersMatch,
+            Map<String, String> masked,
+            List<String> fallbacks) {}
+
     private static Segment decide(
-            final Segment segment,
-            @Nullable final SegmentRecord record,
-            final Set<SegmentKind> keptKinds,
-            final Map<String, String> masked) {
-        if (record == null || record.isKeptAsSource(keptKinds)) {
+            final Segment segment, @Nullable final SegmentRecord record, final Decision decision) {
+        if (record == null || record.isKeptAsSource(decision.keptKinds())) {
             log.trace("segment={} written as source: {}", segment.id(), record == null ? "no record" : "kept");
             return segment;
         }
@@ -85,9 +104,15 @@ record EffectiveTargets(Document document, Map<String, String> maskedTargets) {
         }
         final String maskedTarget =
                 record.userTarget() != null ? record.maskedUserTarget() : record.maskedMachineTarget();
-        if (maskedTarget != null) {
-            masked.put(segment.id(), maskedTarget);
+        if (maskedTarget == null || !decision.placeholdersMatch().test(segment, maskedTarget)) {
+            log.warn(
+                    "segment={} status={} written as source: its target's placeholders do not match the segment's",
+                    segment.id(),
+                    record.status());
+            decision.fallbacks().add(segment.id());
+            return segment;
         }
+        decision.masked().put(segment.id(), maskedTarget);
         return segment.withDecision(record.status(), target);
     }
 }

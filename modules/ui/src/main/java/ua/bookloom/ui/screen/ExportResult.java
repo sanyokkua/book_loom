@@ -136,6 +136,8 @@ final class ExportResult {
                             "export-check-side-file-" + index,
                             messages.get(MessageKey.EXPORT_CHECK_SIDE_FILE, names.get(index))));
         }
+        ExportReportLines.sourceFallbacks(messages, report)
+                .ifPresent(line -> checks.getChildren().add(warning("export-check-source-fallbacks", line)));
         final List<String> passLines = ExportReportLines.consistency(messages, report.consistency());
         for (int index = 0; index < passLines.size(); index++) {
             checks.getChildren()
@@ -186,6 +188,14 @@ final class ExportResult {
         line.setId(id);
         line.setWrapText(true);
         line.getStyleClass().add("status-ok");
+        return line;
+    }
+
+    private static Label warning(final String id, final String text) {
+        final Label line = new Label(text);
+        line.setId(id);
+        line.setWrapText(true);
+        line.getStyleClass().add("status-warn");
         return line;
     }
 

@@ -93,6 +93,27 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
                 null);
     }
 
+    /** A flagged segment with no target at all, only the model's refused reply. */
+    protected static SegmentView withRejected(final SegmentView base, final String rejected) {
+        return new SegmentView(
+                base.segmentId(),
+                base.locator(),
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                null,
+                null,
+                null,
+                base.findings(),
+                base.judgeScore(),
+                base.path(),
+                base.reviewed(),
+                null,
+                null,
+                rejected);
+    }
+
     protected static ReviewCounts flaggedCount(final int flagged) {
         return new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0, 0);
     }
