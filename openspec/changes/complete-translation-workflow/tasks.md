@@ -1195,7 +1195,15 @@ times, paused, and on every resume paid the same rounds again. Each step is its 
   the time-left average; a translation call's cap never below 128 tokens; a short echo of glossary names only is not
   held against the target; an identical auxiliary text takes the chunk's undecided draft or the run's accepted target
   instead of a call (2dc1bfc)
-- [ ] 4. Glossary: one key normaliser, a better frequency scan, the "Review with model" pass, sorting and search
+- [x] 4. Glossary: one key (`GlossaryKeys` in `:util`: NFC, edge punctuation and a trailing possessive dropped, case
+  folded) for the repository, the scans, Add term and the CSV import; the frequency scan drops a word written in lower
+  case 20% of the time or more, reads a bundled stop-word list per source language (English fallback), keeps
+  apostrophe and hyphen words whole, treats a dash or a quotation mark as a sentence start, counts a sentence-initial
+  word seen mid-sentence twice, and leaves out a word mostly seen inside a longer name; "Review with model"
+  (`REVIEW_TERMS`, 40 terms a call with counts and examples) removes what it judges not a name and fills an unset type
+  or gender, changing nothing unless every call answered; both model actions go through `JobModelCalls` with a waiting
+  line and Stop; the glossary table sorts by Term, Type, Gender and Locked (ties by term) and has a search field
+  (5b2c5fa)
 - [ ] 5. Scrolling smoothness: smooth wheel scrolling, cheaper glossary cells, fixed cell sizes
 - [ ] 6. UI polish from the hand-test screenshots
 
