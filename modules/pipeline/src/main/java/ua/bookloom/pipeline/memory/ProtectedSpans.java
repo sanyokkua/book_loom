@@ -17,6 +17,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.memory.SpanFinder.Found;
+import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.qa.LockedRendering;
 
 /**
@@ -44,6 +45,30 @@ public final class ProtectedSpans {
             @Nullable final String sourceLanguage,
             final ForeignPassagePolicy policy,
             final List<GlossaryEntry> glossary) {
+        return mask(segment, sourceLanguage, null, policy, glossary);
+    }
+
+    /**
+     * Masks one segment for a run's call frame, which also names the book's own language: under Keep as-is a block
+     * declaring another language than both the source and the book is hidden whole, so it reaches no model and is kept
+     * as it is.
+     *
+     * @param segment the segment whose masked text is protected; never null
+     * @param frame the run's call frame: source language, book language and foreign-passage policy; never null
+     * @param glossary every glossary entry; only locked ones with a non-blank target are hidden
+     * @return the text to show the model, the spans to restore and the locked terms present
+     */
+    public static ProtectedMask mask(final Segment segment, final CallFrame frame, final List<GlossaryEntry> glossary) {
+        Objects.requireNonNull(frame, "frame");
+        return mask(segment, frame.sourceLanguage(), frame.bookLanguage(), frame.foreignPassagePolicy(), glossary);
+    }
+
+    private static ProtectedMask mask(
+            final Segment segment,
+            @Nullable final String sourceLanguage,
+            @Nullable final String bookLanguage,
+            final ForeignPassagePolicy policy,
+            final List<GlossaryEntry> glossary) {
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(glossary, "glossary");
@@ -54,12 +79,12 @@ public final class ProtectedSpans {
                 sourceLanguage,
                 policy,
                 glossary.size());
-        final List<Found> runs = SpanFinder.keptRuns(segment, sourceLanguage, policy);
+        final List<Found> runs = SpanFinder.keptRuns(segment, sourceLanguage, bookLanguage, policy);
         final List<Found> terms = SpanFinder.lockedTerms(text, runs, glossary);
         final List<Found> all = new ArrayList<>(runs);
         all.addAll(terms);
         all.sort(Comparator.comparingInt(Found::start));
-        final ProtectedMask mask = foldDropCaps(segment, build(text, all, terms));
+        final ProtectedMask mask = foldDropCaps(segment, build(text, all, terms), runs);
         log.debug(
                 "Masked segment={} keptRuns={} lockedTerms={} tokens={}",
                 segment.id(),
@@ -106,8 +131,13 @@ public final class ProtectedSpans {
         return RestoredCheck.check(storedMaskedTarget, mask);
     }
 
-    private static ProtectedMask foldDropCaps(final Segment segment, final ProtectedMask built) {
-        final List<String> folded = DropCaps.tokensOf(segment);
+    // A block kept whole has its drop cap inside the one kept token, so there is nothing left to fold.
+    private static ProtectedMask foldDropCaps(
+            final Segment segment, final ProtectedMask built, final List<Found> keptRuns) {
+        final boolean wholeBlock = keptRuns.size() == 1
+                && keptRuns.getFirst().end() - keptRuns.getFirst().start()
+                        == segment.masked().length();
+        final List<String> folded = wholeBlock ? List.of() : DropCaps.tokensOf(segment);
         if (folded.isEmpty()) {
             return built;
         }

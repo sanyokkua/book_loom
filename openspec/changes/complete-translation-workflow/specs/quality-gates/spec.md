@@ -92,7 +92,13 @@ WHILE the Book Brief's foreign-passage policy is `Keep as-is`, the application S
 `lang` or `xml:lang` differs from the brief's source language — compared after normalizing both tags — together with
 its text behind one placeholder before the segment reaches the model, SHALL restore that element and its text
 verbatim, and SHALL decide which runs are foreign from those declarations alone, never from the text. This SHALL hold for any
-language the application recognizes, not only a listed one.
+language the application recognizes, not only a listed one. WHILE the policy is `Keep as-is`, a whole block whose
+declared language — its own, or an ancestor's below the document root — differs from both the brief's source language
+and the language the book's metadata declares, after normalizing all three, SHALL be hidden whole behind one
+placeholder, SHALL reach no model call, and SHALL be kept as it is (counted as kept as is, path verbatim); a block
+declaring the book's own language is never foreign, even when the brief names another source. Under `Translate` and
+`Translate with a note` such a block SHALL be drafted like any other, the second telling the model to add the original
+wording in parentheses after the translation.
 
 **Source:** EC-FOREIGN-3 (`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#drm-and-language-detection`), DD-26
 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-26-foreign-passage-policy`), FR-QA-03
@@ -100,7 +106,12 @@ language the application recognizes, not only a listed one.
 In plain words: a French farewell inside an English sentence must stay French when the person chose to keep foreign
 passages, and the surest way is to never show it to the model. Only a run the book itself marks with another language
 is kept: the application does not detect languages from text (ADR-0037), and a region variant of the source language
-is not foreign. Under the other two policies the run is translated like the rest of the sentence.
+is not foreign. Under the other two policies the run is translated like the rest of the sentence. The same holds for a
+whole paragraph the book marks: the fixture book's `<p xml:lang="la">Gravitas omnia trahit, sed nemo videt.</p>` was
+sent to the model under Keep as-is, translated and judged 0.95, because only inline runs were hidden and the prompt's
+"keep it verbatim" line was not enough for a small model. A marked block is now never sent at all. Comparing with the
+book's own declared language too keeps a brief whose source was set to another language from leaving every paragraph
+under a `<body xml:lang="en">` untranslated.
 
 #### Scenario: A marked French run reaches the model as one placeholder
 
@@ -120,6 +131,35 @@ is not foreign. Under the other two policies the run is translated like the rest
 - **WHEN** the policy is `Keep as-is`, the source language is `en`, and the paragraph is
   `He read <i xml:lang="la">memento mori</i> aloud.`, whose `<i>` pair is `⟦g0⟧`/`⟦g1⟧`
 - **THEN** the model receives `He read ⟦g2⟧ aloud.`, one placeholder for the Latin run
+
+#### Scenario: A marked Latin paragraph is kept without a model call
+
+- **WHEN** the policy is `Keep as-is`, the source language and the book's declared language are `en`, and the block is
+  `<p xml:lang="la">Gravitas omnia trahit, sed nemo videt.</p>`
+- **THEN** no draft call is sent for it and its record is accepted on the verbatim path with the target
+  `Gravitas omnia trahit, sed nemo videt.`
+
+#### Scenario: A marked French run inside a paragraph is still one placeholder
+
+- **WHEN** the policy is `Keep as-is` and the paragraph is `C'était <span lang="fr">très bien</span>, he said.` in an
+  English book
+- **THEN** the model receives the paragraph with one placeholder for the French run and translates the prose around it
+
+#### Scenario: Translate drafts a marked paragraph
+
+- **WHEN** the policy is `Translate` and the block is `<p xml:lang="la">Gravitas omnia trahit, sed nemo videt.</p>`
+- **THEN** the block is drafted like any other paragraph
+
+#### Scenario: Translate with a note asks for the original in parentheses
+
+- **WHEN** the policy is `Translate with a note` and the same block is drafted
+- **THEN** the draft's system message tells the model to add the original wording in parentheses right after the
+  translation
+
+#### Scenario: A block declaring the book's own language is not foreign
+
+- **WHEN** the policy is `Keep as-is`, the brief's source is `de`, the book declares `en`, and a block declares `en`
+- **THEN** the block is shown to the model as it is
 
 #### Scenario: The Translate policy translates a marked run
 

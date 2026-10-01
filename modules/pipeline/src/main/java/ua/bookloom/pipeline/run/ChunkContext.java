@@ -144,8 +144,7 @@ final class ChunkContext {
 
     private static ProtectedMask maskOf(
             final Segment segment, final RunSettings settings, final List<GlossaryEntry> entries) {
-        final ProtectedMask mask = ProtectedSpans.mask(
-                segment, settings.frame().sourceLanguage(), settings.frame().foreignPassagePolicy(), entries);
+        final ProtectedMask mask = ProtectedSpans.mask(segment, settings.frame(), entries);
         log.debug(
                 "Protected mask segmentId={} keptRunTokens={} lockedTermTokens={}",
                 segment.id(),

@@ -121,12 +121,7 @@ final class RevisionCall {
                 inputs.frame(),
                 inputs.namePolicy(),
                 inputs.glossary().stream().map(GlossaryEntry::term).toList(),
-                ProtectedSpans.mask(
-                                segment,
-                                inputs.frame().sourceLanguage(),
-                                inputs.frame().foreignPassagePolicy(),
-                                inputs.glossary())
-                        .presentLocked());
+                ProtectedSpans.mask(segment, inputs.frame(), inputs.glossary()).presentLocked());
         final boolean passes = qa.hardGatesPass() && !qa.failedOutright();
         log.debug(
                 "Revision checked segmentId={} hardGatesPass={} failedOutright={} findings={} kept={}",

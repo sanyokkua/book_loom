@@ -181,7 +181,11 @@ public final class RetryDraft {
         }
         final ContextSnapshot snapshot = Objects.requireNonNull(record.context(), "checked snapshot");
         final CallFrame frame = new CallFrame(
-                brief.sourceLanguage(), target, StyleSheet.ofText(snapshot.styleSheet()), brief.foreignPassages());
+                brief.sourceLanguage(),
+                target,
+                StyleSheet.ofText(snapshot.styleSheet()),
+                brief.foreignPassages(),
+                CallFrame.bookLanguageOf(document));
         return Result.ok(new RetryPlan(record, snapshot, brief, frame, document, segment.get()));
     }
 
@@ -190,8 +194,7 @@ public final class RetryDraft {
         final Segment segment = plan.segment();
         final ContextSnapshot snapshot = plan.snapshot();
         final List<GlossaryEntry> terms = termsOf(snapshot, plan.record().projectId());
-        final ProtectedMask mask = ProtectedSpans.mask(
-                segment, plan.frame().sourceLanguage(), plan.frame().foreignPassagePolicy(), terms);
+        final ProtectedMask mask = ProtectedSpans.mask(segment, plan.frame(), terms);
         final DraftContext context = ContextPackageAssembler.replay(snapshot, mask);
         logReplayed(segment.id(), snapshot);
         final GateFunction gate = ProtectedSpans.gate(

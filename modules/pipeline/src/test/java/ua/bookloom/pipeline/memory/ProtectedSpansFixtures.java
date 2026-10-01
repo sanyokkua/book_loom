@@ -29,6 +29,11 @@ final class ProtectedSpansFixtures {
     }
 
     static Segment segment(final String masked, final List<PlaceholderPair> pairs) {
+        return declaring(masked, pairs, null);
+    }
+
+    /** A segment whose block declares {@code language}, as {@code <p xml:lang="la">} does. */
+    static Segment declaring(final String masked, final List<PlaceholderPair> pairs, @Nullable final String language) {
         return new Segment(
                 "u1:0",
                 "u1",
@@ -44,7 +49,7 @@ final class ProtectedSpansFixtures {
                 null,
                 SegmentStatus.PENDING,
                 0.0,
-                null,
+                language,
                 pairs,
                 List.of());
     }

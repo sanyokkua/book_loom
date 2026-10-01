@@ -38,12 +38,19 @@ final class SpanFinder {
     }
 
     /**
-     * The inline elements to keep verbatim: under Keep as-is only, each pair whose own declared language normalizes
-     * to a tag other than the source's, both being recognized languages. A pair inside another kept pair is part of
+     * The runs to keep verbatim, under Keep as-is only: the whole segment when its block declares a language that
+     * normalizes to a tag other than both the source's and the book's own; otherwise each inline pair whose own declared
+     * language differs from the source's, both being recognized languages. A pair inside another kept pair is part of
      * that one.
+     *
+     * @param bookLanguage the language the book declares of itself, or null when unknown: a block declaring it is the
+     *     book's own text even when the brief names another source
      */
     static List<Found> keptRuns(
-            final Segment segment, @Nullable final String sourceLanguage, final ForeignPassagePolicy policy) {
+            final Segment segment,
+            @Nullable final String sourceLanguage,
+            @Nullable final String bookLanguage,
+            final ForeignPassagePolicy policy) {
         final Optional<String> source = LanguageTags.normalize(sourceLanguage);
         if (policy != ForeignPassagePolicy.KEEP || source.isEmpty()) {
             log.debug(
@@ -52,6 +59,9 @@ final class SpanFinder {
                     policy,
                     source.isPresent());
             return List.of();
+        }
+        if (isForeignBlock(segment, source.get(), bookLanguage)) {
+            return List.of(new Found(0, segment.masked().length(), segment.masked(), CheckName.KEPT_RUN, null));
         }
         final List<Found> found = new ArrayList<>();
         for (final PlaceholderPair pair : segment.pairs()) {
@@ -62,6 +72,29 @@ final class SpanFinder {
         found.sort(Comparator.comparingInt(Found::start)
                 .thenComparing(Comparator.comparingInt(Found::end).reversed()));
         return withoutNested(found);
+    }
+
+    /**
+     * Whether the segment's block declares a foreign language: a Latin paragraph {@code <p xml:lang="la">} in an English
+     * book. A block that only inherits the book's own declaration from {@code <body>} is never foreign, so a brief whose
+     * source names another language than the book does not keep the whole book untranslated.
+     */
+    static boolean isForeignBlock(
+            final Segment segment, final String normalizedSource, @Nullable final String bookLanguage) {
+        final Optional<String> declared = LanguageTags.normalize(segment.declaredLanguage());
+        final Optional<String> book = LanguageTags.normalize(bookLanguage);
+        final boolean foreign = declared.isPresent()
+                && !declared.get().equals(normalizedSource)
+                && !declared.equals(book)
+                && !segment.masked().isBlank();
+        log.debug(
+                "Foreign block check segment={} declared={} source={} book={} foreign={}",
+                segment.id(),
+                declared.orElse(null),
+                normalizedSource,
+                book.orElse(null),
+                foreign);
+        return foreign;
     }
 
     private static boolean isForeign(@Nullable final String declared, final String normalizedSource) {
