@@ -52,6 +52,12 @@ final class GateErrors {
             case MULTISET ->
                 "The translated text's formatting placeholders do not match the original segment's — one or more"
                         + " were dropped, duplicated, or invented. Nothing was restored.";
+            case STRAY_BRACKET ->
+                "The translated text holds a broken formatting placeholder — a bracket left over from a moved, split"
+                        + " or misspelt placeholder would reach the book as text. Nothing was restored.";
+            case PAIR_SPAN ->
+                "The translated text moved a piece of formatting onto other words — it now wraps a much smaller or"
+                        + " larger part of the passage than in the original. Nothing was restored.";
             case TEXT_OUTSIDE_PAIRS ->
                 "The translated text put all of its words inside one piece of formatting that wrapped only part of"
                         + " the original — the formatting would spread over the whole passage. Nothing was restored.";

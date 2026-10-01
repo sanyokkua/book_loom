@@ -21,6 +21,15 @@ import ua.bookloom.api.document.PlaceholderPair;
 final class PairStructure {
 
     /**
+     * The fewest visible characters a pair must wrap in the source before its share is checked: a drop cap or one
+     * emphasised word may change its share freely when translated.
+     */
+    private static final int MIN_SPAN_CHARACTERS = 12;
+
+    /** How many times smaller or larger a pair's share of the visible text may become. */
+    private static final double MAX_SPAN_FACTOR = 3.0;
+
+    /**
      * Whether the pairs' tokens in {@code text} form a properly nested sequence: each closing token meets its own
      * pair as the innermost open one. Atomic tokens are ignored.
      *
@@ -59,6 +68,40 @@ final class PairStructure {
         }
         final String between = text.substring(from + pair.open().length(), to);
         return !between.replaceAll("⟦g\\d+⟧", "").isBlank();
+    }
+
+    /**
+     * Whether {@code pair} wraps a comparable share of {@code target}'s visible characters to the share it wraps in
+     * {@code expectedMasked}. Only a pair wrapping at least {@value #MIN_SPAN_CHARACTERS} visible characters of a
+     * source that also holds text outside it is checked. A pair whose tokens {@code target} lacks counts as wrapping
+     * nothing, so a caller passes only pairs the target holds whole.
+     *
+     * @param expectedMasked the segment's masked form
+     * @param target the target, its pairs properly nested
+     * @param pair the pair to compare
+     * @return {@code true} if the share is within {@value #MAX_SPAN_FACTOR} times of the source's
+     */
+    static boolean keepsSpan(String expectedMasked, String target, PlaceholderPair pair) {
+        final int sourceInside = visibleInside(expectedMasked, pair);
+        final int sourceTotal = visible(expectedMasked);
+        if (sourceInside < MIN_SPAN_CHARACTERS || sourceInside >= sourceTotal) {
+            return true;
+        }
+        final double sourceShare = (double) sourceInside / sourceTotal;
+        final double targetShare = (double) visibleInside(target, pair) / Math.max(1, visible(target));
+        return targetShare * MAX_SPAN_FACTOR >= sourceShare && targetShare <= sourceShare * MAX_SPAN_FACTOR;
+    }
+
+    private static int visibleInside(String text, PlaceholderPair pair) {
+        final int from = text.indexOf(pair.open());
+        final int to = text.indexOf(pair.close());
+        return from < 0 || to < from
+                ? 0
+                : visible(text.substring(from + pair.open().length(), to));
+    }
+
+    private static int visible(String text) {
+        return Placeholders.matcher(text).replaceAll("").replaceAll("\\s+", "").length();
     }
 
     /**

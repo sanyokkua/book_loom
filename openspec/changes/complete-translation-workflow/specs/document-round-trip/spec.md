@@ -333,12 +333,18 @@ against the pairs and the line-break tokens recorded when the segment was masked
   token — still holds such a character between its two tokens in the target;
 - every line-break token has the same innermost enclosing pair in the target as in the masked form, or no enclosing
   pair in both;
-- when the masked form holds text outside every pair, the target does too.
+- when the masked form holds text outside every pair, the target does too;
+- no `⟦` or `⟧` glyph stands outside a whole `⟦gN⟧` token — a token split by whitespace (`⟦g1 ⟧`), misspelt
+  (`⟦G1⟧`), or a lone bracket left over from a moved token is checked first and fails as a stray bracket;
+- a pair that wraps at least 12 visible characters of a masked form which also holds text outside it wraps, in the
+  target, a share of the visible characters no less than a third and no more than three times its share in the masked
+  form.
 
-IF the two multisets differ in any way — a token missing, a token added that the source did not contain, or a token
+IF the target holds a stray bracket glyph, or IF the two multisets differ in any way — a token missing, a token added that the source did not contain, or a token
 occurring a different number of times — or IF a pair's closing token precedes its opening token, two pairs overlap
 without one enclosing the other, a pair that held text holds none, a line-break token has changed its innermost
-enclosing pair, or every word of the target sits inside a pair although the masked form left text outside them, THEN the system SHALL return a failed result carrying `ErrorCode.validation`, SHALL NOT restore any
+enclosing pair, every word of the target sits inside a pair although the masked form left text outside them, or a
+long pair's share of the text shrank or grew more than threefold, THEN the system SHALL return a failed result carrying `ErrorCode.validation`, SHALL NOT restore any
 placeholder, SHALL NOT alter the target text, and SHALL NOT attempt a repair or a reconciliation of any kind.
 
 Apart from those rules, the position of an **atomic** token — an image, a code span, a line break — SHALL NOT affect
@@ -365,6 +371,31 @@ re-opened as a segment of that `<span>` with no markup left, and its drop-cap st
 target must therefore keep text outside its pairs when the source did. An image may still move freely, and
 a line break may move within its own pair, because that is an ordinary word-order change. This is the one check no
 confidence score and no judge verdict can outvote, and it runs before any of them. It reports; it never fixes.
+A small model on the fixture book returned `⟦g0⟧Інститут ⟦g1⟧Мерідіанського Зондування⟧ відправив…` for
+`The ⟦g0⟧Meridian Survey Institute⟦g1⟧ sent…`: count, order, text in the pair and text outside all held, so the reply
+was accepted, the stray `⟧` reached the written book as text and the bold moved onto one word; only the export's
+re-open caught it. Any bracket glyph outside a whole token is therefore refused, and a pair that wrapped a phrase must
+still wrap a comparable share of the sentence. The deterministic repair a caller may ask for afterwards first rejoins a
+split or misspelt token and drops the remaining stray glyphs, then places tokens, and its result passes this gate.
+
+#### Scenario: A stray bracket glyph fails the gate
+
+- **WHEN** a segment whose masked form is `The ⟦g0⟧Meridian Survey Institute⟦g1⟧ sent its first gravity team…` is
+  given the target `⟦g0⟧Інститут ⟦g1⟧Мерідіанського Зондування⟧ відправив свою першу гравітаційну команду…`
+- **THEN** the caller receives a failed result carrying `ErrorCode.validation` naming a broken placeholder, and nothing
+  is restored
+
+#### Scenario: A split or misspelt token fails the gate
+
+- **WHEN** the target spells a token `⟦g1 ⟧` or `⟦G1⟧`, or holds a lone `⟦`
+- **THEN** the gate fails as a stray bracket before the multiset is compared
+
+#### Scenario: A long pair moved onto one word fails the gate
+
+- **WHEN** the same masked form is given `⟦g0⟧Інститут ⟦g1⟧Мерідіанського Зондування відправив…` (the bold now wraps
+  one word of the sentence instead of the three-word name)
+- **THEN** the gate fails; a drop cap `⟦g0⟧G⟦g1⟧ravity…` translated as `⟦g0⟧Г⟦g1⟧равітація…` still passes, because a
+  pair under 12 visible characters may change its share freely
 
 #### Scenario: A dropped token fails the gate
 

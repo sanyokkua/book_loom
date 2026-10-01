@@ -150,11 +150,15 @@ After the model returns `targetInner`:
    enclosing pair must be the same pair in source and target. A target whose words all sit inside pairs while the
    source left text outside them fails too: a tree reader makes the outermost element owning text its block, so the
    written paragraph would re-open as a segment of that inline element, its markup gone (a drop cap's `<span>` wrapped
-   round a whole paragraph). A violation of any of these — like the multiset itself — cannot be accepted and is routed
+   round a whole paragraph). A `⟦` or `⟧` glyph outside every whole token (a split `⟦g1 ⟧`, a misspelt `⟦G1⟧`, a
+   bracket left over from a moved token) fails first, and a pair wrapping at least 12 visible characters of a source
+   with text outside it must wrap between a third and three times its source share of the target's visible text (the
+   bold of a three-word name moved onto one word of a long sentence fails). A violation of any of these — like the multiset itself — cannot be accepted and is routed
    to self-heal.
 5. **A separate deterministic repair, never inside the gate.** The gate only reports. A caller may ask the port to
    repair a refused target without a model — drop an invented or repeated token, put a missing one back at the
-   boundary of the same kind nearest its scaled source position, or re-place every token by that rule — and must still
+   boundary of the same kind nearest its scaled source position, or re-place every token by that rule, after rejoining
+   a split or misspelt token and dropping any remaining stray bracket glyph — and must still
    pass the repaired text through the gate; the pipeline records the repair as a low `markup` finding.
 4. **Atomic tokens may move.** Placeholder ordering is not otherwise required to match source order (translation may
    reorder), but every placeholder must appear exactly as many times as in the source, and an atomic protected-span

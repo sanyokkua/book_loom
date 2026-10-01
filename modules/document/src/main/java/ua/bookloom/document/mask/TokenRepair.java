@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,15 @@ public final class TokenRepair {
      * anyway, and a bound keeps a long paragraph with many refused tokens from costing seconds on the run's thread.
      */
     private static final int MAX_CANDIDATES = 48;
+
+    /** A token spelt with spaces inside its brackets or a capital {@code G}: {@code ⟦ g1 ⟧}, {@code ⟦G1⟧}. */
+    private static final Pattern SPLIT_TOKEN = Pattern.compile("⟦\\s*[gG]\\s*(\\d+)\\s*⟧");
+
+    /** A whole token, or one bracket glyph outside a token. */
+    private static final Pattern STRAY_GLYPH_RUN = Pattern.compile("⟦g\\d+⟧|[⟦⟧]");
+
+    /** Two spaces a dropped glyph stood between. */
+    private static final Pattern DOUBLE_SPACE = Pattern.compile("(?<=\\S) {2}(?=\\S)");
 
     /** What sits on one side of a position in plain text. */
     private enum Side {
@@ -87,13 +97,31 @@ public final class TokenRepair {
                 Placeholders.tokensOf(expectedMasked),
                 Placeholders.tokensOf(target),
                 target.length());
+        final String cleaned = withoutStrayBrackets(target);
         final String kept =
                 switch (mode) {
-                    case RESTORE_MISSING -> dropTokens(target, Placeholders.multisetOf(expectedMasked));
-                    case REWRAP_ALL -> dropTokens(target, Map.of());
+                    case RESTORE_MISSING -> dropTokens(cleaned, Placeholders.multisetOf(expectedMasked));
+                    case REWRAP_ALL -> dropTokens(cleaned, Map.of());
                 };
         final @Nullable String placed = placeMissing(expectedMasked, kept, pairs);
         return verdict(expectedMasked, placed, pairs, lineBreakTokens);
+    }
+
+    /**
+     * Rejoins a token the model split with spaces or spelt with a capital letter, then drops every bracket glyph still
+     * outside a whole token, joining the spaces it stood between — the gate then judges what is left.
+     */
+    static String withoutStrayBrackets(String target) {
+        if (!Placeholders.hasStrayBracket(target)) {
+            return target;
+        }
+        final String rejoined = SPLIT_TOKEN.matcher(target).replaceAll("⟦g$1⟧");
+        final String stripped = STRAY_GLYPH_RUN
+                .matcher(rejoined)
+                .replaceAll(match -> match.group().length() == 1 ? "" : Matcher.quoteReplacement(match.group()));
+        final String joined = DOUBLE_SPACE.matcher(stripped).replaceAll(" ");
+        log.debug("Placeholder repair stripped stray brackets stillStray={}", Placeholders.hasStrayBracket(joined));
+        return joined;
     }
 
     private static Optional<String> verdict(
@@ -244,7 +272,8 @@ public final class TokenRepair {
             return false;
         }
         for (final PlaceholderPair pair : complete) {
-            if (PairStructure.holdsText(expectedMasked, pair) && !PairStructure.holdsText(candidate, pair)) {
+            if ((PairStructure.holdsText(expectedMasked, pair) && !PairStructure.holdsText(candidate, pair))
+                    || !PairStructure.keepsSpan(expectedMasked, candidate, pair)) {
                 return false;
             }
         }
