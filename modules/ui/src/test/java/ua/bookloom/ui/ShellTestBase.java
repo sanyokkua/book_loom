@@ -16,7 +16,6 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import org.testfx.framework.junit5.ApplicationTest;
 import ua.bookloom.ui.theme.ThemeController;
 import ua.bookloom.ui.theme.ThemeMode;
 
@@ -25,11 +24,11 @@ import ua.bookloom.ui.theme.ThemeMode;
  * theme attached the way the composition root attaches it, light block in force and nothing navigated to yet.
  *
  * <p>Shared by the shell, About and conformance tests so that "the shell as the application builds it" has one
- * definition. Every field is assigned on the FX Application Thread in {@link #start(Stage)}, which ApplicationTest
+ * definition. Every field is assigned on the FX Application Thread in {@link #start(Stage)}, which {@link FxTestBase}
  * runs before each test, so no test shares a shell with another.
  */
 @SuppressWarnings("NullAway.Init")
-public abstract class ShellTestBase extends ApplicationTest {
+public abstract class ShellTestBase extends FxTestBase {
 
     /**
      * The smallest content area the outer {@code AppShellView.MIN_WIDTH} by {@code MIN_HEIGHT} window minimum leaves a

@@ -63,7 +63,7 @@ public final class ThemeTestSupport {
      * A scene whose root is an empty {@link StackPane} with {@code theme.css} attached at Scene level, light block
      * in force.
      *
-     * @return a new scene; the caller shows it in a stage (for example from {@code ApplicationTest#start})
+     * @return a new scene; the caller shows it in a stage (for example from {@link FxTestBase#start})
      */
     public static Scene themedScene() {
         final Scene scene = new Scene(new StackPane(), SCENE_SIZE, SCENE_SIZE);

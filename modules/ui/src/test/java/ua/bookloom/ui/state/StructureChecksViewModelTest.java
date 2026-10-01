@@ -13,17 +13,17 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedProjectService;
 
 /** The background checks of the structure screen: what they ask, on which thread, and what they publish. */
-class StructureChecksViewModelTest extends ApplicationTest {
+class StructureChecksViewModelTest extends FxTestBase {
 
     private static final long WAIT_SECONDS = 10;
     private static final RoundTripReport PRESERVED = new RoundTripReport(true, true, List.of(), 1240, 1240);

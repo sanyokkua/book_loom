@@ -14,7 +14,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -39,6 +38,7 @@ import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.http.HttpClients;
 import ua.bookloom.llm.http.HttpExchange;
@@ -370,9 +370,7 @@ class OllamaClientTest {
                 arguments(400, "private invalid body", ErrorCode.validation));
     }
 
-    private static URI closedEndpoint() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return URI.create("http://127.0.0.1:" + socket.getLocalPort());
-        }
+    private static URI closedEndpoint() {
+        return ClosedPorts.endpoint("");
     }
 }

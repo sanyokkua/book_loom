@@ -7,11 +7,11 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedChatModelFactory;
@@ -30,7 +30,7 @@ import ua.bookloom.ui.i18n.Messages;
  * executor and its answer is published with {@code Platform.runLater}, so every driver waits for the FX queue to
  * drain. The toolkit runs so that the open's answer is published to the FX thread as it is in the application.
  */
-abstract class ExportViewModelTestBase extends ApplicationTest {
+abstract class ExportViewModelTestBase extends FxTestBase {
 
     ScriptedProjectService projects;
     CurrentProject current;

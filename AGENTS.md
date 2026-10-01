@@ -63,8 +63,12 @@ Projects screen. Next: group 16 (the gate) of `openspec/changes/complete-transla
 ## Commands
 
 ```bash
+scripts/test-focused.sh                           # THE INNER LOOP — format + the tests the diff points at + fastTest of dependents
+scripts/test-focused.sh --full-module             # the changed module's full check — once before each commit
 ./gradlew build                                   # compile + lint + test
-./gradlew clean build check spotlessCheck         # THE GATE — exactly what pre-push and CI run (≈9 min; ~7 is :ui TestFX)
+./gradlew clean build check spotlessCheck         # THE GATE — exactly what pre-push and CI run (≈4 min; ~2 is :ui TestFX)
+./gradlew :ui:fastTest                            # a module's tests minus the `slow`-tagged end-to-end classes
+python3 scripts/slowest-tests.py                  # where the last run's test time went
 ./gradlew :document:test --tests 'ua.bookloom.document.golden.*'   # one class or package
 ./gradlew :app:run                                # launch the app
 ./gradlew spotlessApply                           # fix formatting
@@ -75,7 +79,9 @@ BOOKLOOM_CORPUS_DIR=/path ./gradlew :document:corpus   # the owner's corpus swee
 ## Definition of Done
 
 Gate green **and** the change exercised in the running app (or by the one test that reproduces the user-visible
-behaviour). Paste the gate's tail as evidence — "it passed" is not a result. A red check anywhere is fixed before the
+behaviour). Paste the gate's tail as evidence — "it passed" is not a result. The cadence: while coding run
+`scripts/test-focused.sh`; run the changed module's full `check` once before a commit (`--full-module`); run the whole
+gate at the end of a feature or step group (pre-push and CI still run it on every push). A red check anywhere is fixed before the
 work is called done, never carried forward. A run materially longer than the last baseline is hung: kill it and
 diagnose; never run two gates at once.
 

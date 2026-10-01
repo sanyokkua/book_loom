@@ -11,7 +11,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -20,13 +19,14 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedGlossaryService;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
 /** What the names and style screen's state does with the glossary service: scans, edits, removals, imports, adds. */
-class NamesStyleViewModelTest extends ApplicationTest {
+class NamesStyleViewModelTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
     private static final String NEEDS_TARGET = "A locked term needs a target.";

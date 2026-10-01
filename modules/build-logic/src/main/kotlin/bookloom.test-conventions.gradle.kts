@@ -32,6 +32,21 @@ fun bundle(alias: String) = catalog.findBundle(alias).orElseThrow()
 // what makes the mechanism inspectable — `./gradlew tasks` shows the whole partition.
 val localOnlyTags = listOf("liveLocal", "promptEval", "visual", "corpus")
 
+// `slow` marks the heavy end-to-end classes (a whole book through the engine, the three-mode workspace run). It is
+// NOT local-only: `test` — and so `check`, pre-push and CI — still runs it. Only `fastTest`, the inner development
+// loop, leaves it out.
+val slowTag = "slow"
+
+// The JVMs one module's `test`/`fastTest` spreads its classes over. Half the cores, capped at four: a TestFX fork
+// renders in software and is CPU-bound, and past four the round-robin split of classes over forks leaves the longest
+// class as the floor anyway. `-Pbookloom.forks=N` overrides it (1 = the old serial run).
+val testForks =
+    providers
+        .gradleProperty("bookloom.forks")
+        .map { it.toInt() }
+        .orElse((Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4))
+        .get()
+
 // `corpus` alone reads its target from an environment variable Gradle does not treat as a task input, so a
 // second consecutive run would otherwise be reported `UP-TO-DATE` while printing `BUILD SUCCESSFUL` and doing
 // nothing (design.md D6, trap 1). The other three tagged tasks keep Gradle's normal up-to-date checking.
@@ -112,6 +127,31 @@ tasks.withType<Test>().configureEach {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showStackTraces = true
     }
+}
+
+// --- `fastTest`: the inner loop ------------------------------------------------------------------------------------
+//
+// Everything `test` runs except the `slow` classes. Not wired into `check`: the gate keeps running all of it. The
+// local-only exclusions reach this task through the `withType<Test>` block above (its name is not a local-only tag),
+// and adding a further exclusion only narrows the set — exclusion never fights exclusion.
+tasks.register<Test>("fastTest") {
+    description = "Runs every test except the `slow`-tagged end-to-end classes. The inner loop; not part of `check`."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+
+    val testSourceSet = sourceSets["test"]
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+
+    useJUnitPlatform {
+        excludeTags(slowTag)
+    }
+}
+
+// The default task and its fast subset fork in parallel. Every fork is its own JVM with its own headless glass
+// platform, so a test may not share a file, a port or a log with another class outside its own `@TempDir`. The
+// local-only tasks and `:app`'s `archTest` keep one JVM: they are short, or talk to one real local server.
+tasks.withType<Test>().matching { it.name == "test" || it.name == "fastTest" }.configureEach {
+    maxParallelForks = testForks
 }
 
 // --- The four local-only tasks (design D5) -----------------------------------------------------------------------

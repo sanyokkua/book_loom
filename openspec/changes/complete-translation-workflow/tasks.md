@@ -1256,6 +1256,11 @@ check leaves evidence.
 - [ ] 8. Layout, scrolling, concurrency: the shell content's minimum height so tall screens scroll, the activity log
   following its tail only when at the tail, a structured context panel, the wheel glide rewrite, and an
   `ActivityTracker` that keeps model actions from overlapping
+- [x] T. Test speed: parallel test forks per module (`min(4, cores/2)`, `-Pbookloom.forks=N`); `FxTestBase` in place
+  of TestFX's `ApplicationTest` (its fixed `waitForFxEvents` sleeps were most of `:ui`'s time; it waits for the FX
+  thread and two real pulses instead); the conformance suites reuse a shown screen across consecutive cases; one test
+  log per fork; the `slow` tag with a `fastTest` task; `scripts/test-focused.sh` and `scripts/slowest-tests.py`.
+  `:ui:test` 13m 36s → 1m 55s, the gate 8m 39s → 4m 13s
 - [ ] 9. Prompts: the audit's rewrites (placeholder pairs, data-not-instructions, literal replies, judge anchors,
   `<Source>`/`<Translation>`), bundled examples, `PromptShapeTest`, golden files for judge and directed fix, the
   `promptEval` harness

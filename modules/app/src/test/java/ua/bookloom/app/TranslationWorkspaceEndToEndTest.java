@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.Result;
@@ -35,6 +36,8 @@ import ua.bookloom.ui.state.StateMirror;
  *
  * <p>Infrastructure: it proves an integration, not a product requirement.
  */
+// `slow`: a whole run end to end; `test` and the gate run it, the `fastTest` inner loop leaves it out.
+@Tag("slow")
 class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
 
     // Each paragraph is at least 20 code points, so its capitals fail the echo and script checks outright and it is

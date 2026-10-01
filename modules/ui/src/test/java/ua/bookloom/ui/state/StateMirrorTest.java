@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -27,13 +26,14 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ProgressFixtures;
 
 /**
  * The one bridge from engine threads to the scene graph: every publisher may be called from any thread and lands on
  * the FX Application Thread, and the exposed state is read-only from outside.
  */
-class StateMirrorTest extends ApplicationTest {
+class StateMirrorTest extends FxTestBase {
 
     private static final int FIVE_HUNDRED = 500;
 

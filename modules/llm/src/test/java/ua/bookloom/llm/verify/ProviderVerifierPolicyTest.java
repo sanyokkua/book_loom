@@ -15,7 +15,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -41,6 +40,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
+import ua.bookloom.llm.ClosedPorts;
 import ua.bookloom.llm.InMemoryProviderConfigs;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.llm.gate.InferenceGate;
@@ -206,10 +206,8 @@ class ProviderVerifierPolicyTest {
         assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.validation);
     }
 
-    private static URI closedEndpoint() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return URI.create("http://127.0.0.1:" + socket.getLocalPort());
-        }
+    private static URI closedEndpoint() {
+        return ClosedPorts.endpoint("");
     }
 
     private void registerProvider(String id, ProviderKind kind, String pathSuffix) {

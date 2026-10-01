@@ -15,7 +15,6 @@ import java.util.stream.IntStream;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -28,6 +27,7 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ScriptedReviewDesk;
 
@@ -35,7 +35,7 @@ import ua.bookloom.ui.ScriptedReviewDesk;
  * Shared fixtures for the {@link TranslationRunner} tests: a real mirror, a recording job, a cadence the test fires by
  * hand, and a listener recording every run-state change and every progress-figure change the mirror publishes.
  */
-abstract class RunnerTestBase extends ApplicationTest {
+abstract class RunnerTestBase extends FxTestBase {
 
     static final long WAIT_SECONDS = 10;
     static final int BURST = 5000;

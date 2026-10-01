@@ -17,7 +17,6 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * The published token catalogue is carried whole, by its published names, with a light and a dark value each.
@@ -27,7 +26,7 @@ import org.testfx.framework.junit5.ApplicationTest;
  * {@code theme.css}, so a wrong value or a missing role fails instead of agreeing with itself. The colour values
  * are asserted on what a real node resolves, not on the text of the stylesheet.
  */
-class ThemeTokenCatalogueTest extends ApplicationTest {
+class ThemeTokenCatalogueTest extends FxTestBase {
 
     /** Set by {@code modules/ui/build.gradle.kts}, which also declares the mockup as an input of the test task. */
     private static final Path MOCKUP = Path.of(Objects.requireNonNull(
@@ -92,7 +91,7 @@ class ThemeTokenCatalogueTest extends ApplicationTest {
     private static final Set<String> BRAND_ANCHORS =
             Set.of("brand-charcoal", "brand-slate", "brand-sand", "brand-cognac");
 
-    // Assigned in start(), which ApplicationTest runs before every test.
+    // Assigned in start(), which FxTestBase runs before every test.
     @SuppressWarnings("NullAway.Init")
     private Scene scene;
 

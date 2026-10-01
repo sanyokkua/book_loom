@@ -12,11 +12,11 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testfx.framework.junit5.ApplicationTest;
+import ua.bookloom.ui.FxTestBase;
 
 /** The searchable choice box narrows by name ignoring case and accents and settles typed text per its mode. */
 @SuppressWarnings("NullAway.Init")
-class SearchableComboTest extends ApplicationTest {
+class SearchableComboTest extends FxTestBase {
 
     private static final List<String> LANGUAGES = List.of(
             "Belarusian",

@@ -24,7 +24,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 
 /**
@@ -33,7 +33,7 @@ import ua.bookloom.ui.ThemeTestSupport;
  * ones a real wheel sends: {@code LINES} units, three lines and forty pixels a notch, no fingers.
  */
 @SuppressWarnings("NullAway.Init")
-class SmoothScrollTest extends ApplicationTest {
+class SmoothScrollTest extends FxTestBase {
 
     private static final double VIEW_HEIGHT = 200;
     private static final double CONTENT_HEIGHT = 1000;
@@ -155,7 +155,7 @@ class SmoothScrollTest extends ApplicationTest {
     // A hand spins about one notch every 40 ms; firing all ten in one go would also prove the run-ahead cap.
     private void fireNotches(final Node target, final double sign) {
         IntStream.range(0, NOTCHES).forEach(i -> {
-            interact(() -> Event.fireEvent(target, wheel(sign)));
+            interactAtTestFxPace(() -> Event.fireEvent(target, wheel(sign)));
             sleep(SPIN_MS);
         });
     }

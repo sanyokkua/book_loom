@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
@@ -45,6 +46,8 @@ import ua.bookloom.llm.LlmModule;
 import ua.bookloom.persistence.PersistenceModule;
 
 /** Proves the public engine translates every supported generated book through the real document module. */
+// `slow`: a whole run end to end; `test` and the gate run it, the `fastTest` inner loop leaves it out.
+@Tag("slow")
 class TranslationEngineEndToEndTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

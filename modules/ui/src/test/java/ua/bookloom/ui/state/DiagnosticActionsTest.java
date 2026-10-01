@@ -13,9 +13,9 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.DiagnosticLog;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.RecordingDestinationChooser;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingFileRevealer;
@@ -28,7 +28,7 @@ import ua.bookloom.ui.i18n.MessageKey;
  * The About dialog's diagnostic actions: the log folder opened in the file manager, its path copied, and a bundle
  * written where the person chose — off the FX thread, its outcome reported back on it. Everything stays local.
  */
-class DiagnosticActionsTest extends ApplicationTest {
+class DiagnosticActionsTest extends FxTestBase {
 
     @TempDir
     private Path tempDir;

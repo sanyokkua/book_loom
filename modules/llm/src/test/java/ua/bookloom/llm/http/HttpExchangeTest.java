@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.io.IOException;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -20,6 +19,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
+import ua.bookloom.llm.ClosedPorts;
 
 /** Exercises the real JDK HTTP exchange at a WireMock server boundary. */
 class HttpExchangeTest {
@@ -138,10 +138,7 @@ class HttpExchangeTest {
                 "test-provider", ProviderKind.OPENAI_COMPATIBLE, baseUrl, Duration.ofSeconds(2), requestTimeout);
     }
 
-    private static URI closedEndpoint() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            final int port = socket.getLocalPort();
-            return URI.create("http://127.0.0.1:" + port);
-        }
+    private static URI closedEndpoint() {
+        return ClosedPorts.endpoint("");
     }
 }

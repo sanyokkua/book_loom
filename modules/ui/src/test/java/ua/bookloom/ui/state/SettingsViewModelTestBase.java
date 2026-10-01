@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.StageOutcome;
@@ -19,6 +18,7 @@ import ua.bookloom.api.llm.StageStatus;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.llm.VerificationStage;
 import ua.bookloom.ui.FakeProviderConfigs;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedModelCatalog;
@@ -29,7 +29,7 @@ import ua.bookloom.ui.ScriptedProviderVerifier;
  * error presenter, and the helpers that drive a check. The FX toolkit runs so that publishing back to the FX thread is
  * the real thing.
  */
-abstract class SettingsViewModelTestBase extends ApplicationTest {
+abstract class SettingsViewModelTestBase extends FxTestBase {
 
     static final long WAIT_SECONDS = 10;
     static final String MODEL = "gemma3:12b";

@@ -5,11 +5,11 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import java.nio.file.Path;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedProjectService;
@@ -19,7 +19,7 @@ import ua.bookloom.ui.ScriptedProjectService;
  * scripted project service, and a brief view model whose saves wait in a queue until the test runs them, so that a
  * test can see both what was saved and on which thread.
  */
-abstract class BookBriefViewModelTestBase extends ApplicationTest {
+abstract class BookBriefViewModelTestBase extends FxTestBase {
 
     static final Path BOOK = Path.of("/books/Frankenstein.epub");
 

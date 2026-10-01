@@ -7,13 +7,13 @@ import java.util.List;
 import javafx.scene.control.Button;
 import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 
 /** The footer's placement, its ids and its unavailable forward action. */
 @SuppressWarnings("NullAway.Init")
-class StepFooterTest extends ApplicationTest {
+class StepFooterTest extends FxTestBase {
 
     private static StepFooter.Action action(final String id, final String styleClass, final List<String> fired) {
         return new StepFooter.Action(id, "label " + id, "tip " + id, styleClass, () -> fired.add(id));

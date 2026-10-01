@@ -11,7 +11,7 @@ import javafx.util.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testfx.framework.junit5.ApplicationTest;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -19,7 +19,7 @@ import ua.bookloom.ui.i18n.Messages;
 
 /** The shared hover explanation: its timing and shape, its text from the catalogue, and its reach to column headers. */
 @SuppressWarnings("NullAway.Init")
-class TipsTest extends ApplicationTest {
+class TipsTest extends FxTestBase {
 
     private static Messages messages(final String language) {
         return new Messages(() -> Locale.forLanguageTag(language));

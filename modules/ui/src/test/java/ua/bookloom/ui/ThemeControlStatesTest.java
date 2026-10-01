@@ -19,11 +19,10 @@ import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /** A control's state reads the same in both themes: an unchosen box shows no tick, an unavailable tab looks it. */
 @SuppressWarnings("NullAway.Init")
-class ThemeControlStatesTest extends ApplicationTest {
+class ThemeControlStatesTest extends FxTestBase {
 
     private Scene scene;
     private CheckBox unchosen;

@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.CallKind;
@@ -25,13 +24,14 @@ import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedGlossaryService;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
 /** The glossary's model actions on the names and style state: the review, the waiting line and the stop. */
-class NamesStyleModelActionsTest extends ApplicationTest {
+class NamesStyleModelActionsTest extends FxTestBase {
 
     private static final String PROJECT = "p1";
 

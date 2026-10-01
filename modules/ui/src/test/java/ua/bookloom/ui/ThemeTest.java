@@ -7,7 +7,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Labeled;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * The theming mechanism every later screen depends on.
@@ -23,7 +22,7 @@ import org.testfx.framework.junit5.ApplicationTest;
  * <p>Runs under JavaFX 26's built-in headless platform (ADR-0019), selected by {@code bookloom.test-conventions};
  * no display server and no Monocle artifact are involved.
  */
-class ThemeTest extends ApplicationTest {
+class ThemeTest extends FxTestBase {
 
     /** The published light value of the {@code muted} role (09_THEMING.md#token-catalog). */
     private static final String EXPECTED_MUTED = "#6f7c82";
@@ -31,7 +30,7 @@ class ThemeTest extends ApplicationTest {
     /** The published light value of the {@code title-fg} role. */
     private static final String EXPECTED_TITLE_FG = "#dfe4e6";
 
-    // Assigned in start(), which ApplicationTest runs before every test.
+    // Assigned in start(), which FxTestBase runs before every test.
     @SuppressWarnings("NullAway.Init")
     private Scene scene;
 

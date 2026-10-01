@@ -15,13 +15,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /**
  * The navigator swaps the content region by enum constant and refuses an inert one. It is built by the real
  * {@link UiModule} graph and loads the real placeholder FXML on the headless toolkit.
  */
-class NavigatorTest extends ApplicationTest {
+class NavigatorTest extends FxTestBase {
 
     private Navigator navigator;
 

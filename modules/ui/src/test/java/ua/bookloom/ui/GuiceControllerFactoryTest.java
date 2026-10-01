@@ -10,14 +10,13 @@ import javafx.scene.Parent;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
  * Controllers are constructed by the injector, so a controller's constructor dependencies are the application's real
  * singletons. A test-only FXML and controller stand in for the screens that do not exist yet.
  */
-class GuiceControllerFactoryTest extends ApplicationTest {
+class GuiceControllerFactoryTest extends FxTestBase {
 
     private static final String FIXTURE = "/ua/bookloom/ui/fixture/guice-controller.fxml";
 

@@ -8,12 +8,11 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.testfx.framework.junit5.ApplicationTest;
 
 /** The hover bubble paints with the title bar's published pair under each value block, so it reads on both themes. */
-class TooltipStyleTest extends ApplicationTest {
+class TooltipStyleTest extends FxTestBase {
 
-    // Assigned in start(), which ApplicationTest runs before every test.
+    // Assigned in start(), which FxTestBase runs before every test.
     @SuppressWarnings("NullAway.Init")
     private Scene scene;
 

@@ -12,7 +12,7 @@ import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import org.testfx.framework.junit5.ApplicationTest;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.Theme;
 import ua.bookloom.ui.ThemeTestSupport;
 
@@ -21,7 +21,7 @@ import ua.bookloom.ui.ThemeTestSupport;
  * operating system only through {@link ColorSchemeProvider}. Expected colours are the published catalogue values,
  * written out by hand.
  */
-class ThemeControllerTest extends ApplicationTest {
+class ThemeControllerTest extends FxTestBase {
 
     private static final String LIGHT_BG = "#f4f1ea";
     private static final String DARK_BG = "#283237";
@@ -70,7 +70,7 @@ class ThemeControllerTest extends ApplicationTest {
             "info-bg",
             "info-bd");
 
-    // Assigned in start(), which ApplicationTest runs before every test.
+    // Assigned in start(), which FxTestBase runs before every test.
     @SuppressWarnings("NullAway.Init")
     private Scene scene;
 

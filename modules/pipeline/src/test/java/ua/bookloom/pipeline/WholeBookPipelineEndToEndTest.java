@@ -20,6 +20,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -56,6 +57,8 @@ import ua.bookloom.pipeline.WholeBookRun.BookRun;
  * 0.81–1.69 of its source, so only the stubbed echo fails a deterministic check (the ratios are listed in
  * {@link WholeBookRun}).
  */
+// `slow`: a whole run end to end; `test` and the gate run it, the `fastTest` inner loop leaves it out.
+@Tag("slow")
 class WholeBookPipelineEndToEndTest {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);

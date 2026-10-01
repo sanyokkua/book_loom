@@ -33,7 +33,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 /** Verifies diagnostics from the per-segment decision boundary. */
 class DiagnosticsSegmentTranslatorTest {
 
-    private static final Path TEST_LOG = Path.of("build/test-logs/test.log");
+    // This JVM's own file (logback-test.xml): parallel forks each write one, so only this fork's lines are read back.
+    private static final Path TEST_LOG =
+            Path.of("build/test-logs/test-" + System.getProperty("org.gradle.test.worker", "0") + ".log");
 
     @TempDir
     private Path tempDir;

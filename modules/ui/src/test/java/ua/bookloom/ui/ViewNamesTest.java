@@ -9,14 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.testfx.framework.junit5.ApplicationTest;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * The one registry of screens: which have a view resource, which are inert, how they are grouped and numbered. Runs
  * on the headless toolkit because "its resource loads" is only true once an FXML file has actually been parsed.
  */
-class ViewNamesTest extends ApplicationTest {
+class ViewNamesTest extends FxTestBase {
 
     @Override
     public void start(final Stage stage) {

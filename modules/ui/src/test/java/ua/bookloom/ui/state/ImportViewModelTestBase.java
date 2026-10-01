@@ -11,8 +11,8 @@ import javafx.stage.Stage;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.testfx.framework.junit5.ApplicationTest;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.RecordingErrorPresenter;
 import ua.bookloom.ui.RecordingToasts;
 import ua.bookloom.ui.ScriptedProjectService;
@@ -23,7 +23,7 @@ import ua.bookloom.ui.ScriptedProjectService;
  * drive an open and read the view model on the FX thread. The FX toolkit runs so that publishing back to the FX thread
  * is the real thing.
  */
-abstract class ImportViewModelTestBase extends ApplicationTest {
+abstract class ImportViewModelTestBase extends FxTestBase {
 
     static final long WAIT_SECONDS = 10;
 
