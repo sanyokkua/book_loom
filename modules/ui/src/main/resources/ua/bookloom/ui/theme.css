@@ -1221,6 +1221,16 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
 }
 
+/* A glossary row's switch draws no shadow until it has focus: an effect on every row is repainted on every scroll
+   frame, and the table's switches sit in a row of text where position and colour already tell the state. */
+.root .glossary-table .toggle-switch .thumb {
+    -fx-effect: null;
+}
+
+.root .glossary-table .toggle-switch:focused .thumb {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
+}
+
 .toggle-switch:focused .thumb-area {
     -fx-border-color: -color-focus;
     -fx-border-width: 1px;
@@ -1497,6 +1507,9 @@
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 240px;
+    /* One fixed row height lets the list skip measuring every row as it scrolls: 6px + 6px padding, 1px divider and
+       the 13px monospaced line with its repeat count (31px measured), rounded up so no font clips it. */
+    -fx-fixed-cell-size: 32px;
 }
 
 .activity-log .list-cell {
@@ -1688,6 +1701,9 @@
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 140px;
+    /* A fixed row height spares measuring rows while scrolling: 7px + 7px padding, 1px divider and a title with its
+       count pill (33px measured), rounded up so no font clips it. */
+    -fx-fixed-cell-size: 34px;
 }
 
 .structure-tree .tree-cell {
@@ -1799,6 +1815,26 @@
     -fx-background-color: transparent;
 }
 
+/* A row's type and gender read as text until used; a frame on hover and focus says they can be changed, and the
+   combo box takes the label's place only then, so a scrolling table repaints labels rather than combo boxes. */
+.glossary-choice {
+    -fx-text-fill: -color-text;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-padding: 4px 8px 4px 8px;
+    -fx-cursor: hand;
+}
+
+.glossary-choice:hover {
+    -fx-border-color: -color-border;
+}
+
+.glossary-choice:focused {
+    -fx-border-color: -color-focus;
+}
+
 .field-label {
     -fx-text-fill: -color-muted;
     -fx-font-size: 12px;
@@ -1843,6 +1879,9 @@
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 140px;
+    /* A fixed row height spares measuring rows while scrolling: 6px + 6px padding, 1px divider and a locator with its
+       badge chip (33px measured), rounded up so no font clips it. */
+    -fx-fixed-cell-size: 34px;
 }
 
 .review-list .list-cell {

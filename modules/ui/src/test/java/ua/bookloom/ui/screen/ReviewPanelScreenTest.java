@@ -122,6 +122,15 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
         assertThat(rowTexts()).containsExactly("ch5 · p12 low score", "ch7 · p40 name", "ch9 · p03 wrong lang?");
     }
 
+    // IF the list measured every row as it scrolled, THEN a long review list would stutter; its rows share one height.
+    @Test
+    void list_oneFlagged_rowsShareOneFixedHeight() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.lowScore());
+        awaitFx(() -> rowList().getItems().size() == 1);
+
+        assertThat(rowList().getFixedCellSize()).isEqualTo(34.0);
+    }
+
     // IF All segments did not open a decided segment, THEN an Unattended run could never be spot-checked.
     @Test
     void allSegments_afterAnUnattendedRun_opensAnAcceptedSegmentInTheCompare() throws Exception {

@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.controlsfx.control.SegmentedButton;
 import org.controlsfx.control.ToggleSwitch;
+import ua.bookloom.ui.control.Tips;
 
 /**
  * Reads the hover explanation a node carries without looking at how it was attached, and walks a scene for every
@@ -40,9 +41,12 @@ public final class TooltipProbe {
         return Optional.ofNullable(node.getProperties().get(INSTALLED)).map(Tooltip.class::cast);
     }
 
-    /** The text of the tooltip the node carries, or an empty string when it has none. */
+    /**
+     * The text of the tooltip the node carries, or an empty string when it has none. A row control's tooltip waits for
+     * the pointer's first visit ({@link Tips#installOnHover}), and its waiting text counts.
+     */
     public static String tipText(final Node node) {
-        return tipOf(node).map(Tooltip::getText).orElse("");
+        return Tips.explanationOf(node).orElse("");
     }
 
     /** The text of the tooltip a column's header carries, or an empty string when it has none. */

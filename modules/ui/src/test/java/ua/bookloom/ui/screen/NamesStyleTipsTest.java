@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import javafx.scene.Node;
-import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import org.controlsfx.control.ToggleSwitch;
@@ -96,13 +96,13 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         showWithOneTerm();
         final Node root = required("names-style-table");
 
-        final List<Node> combos = List.copyOf(root.lookupAll(".combo-box"));
+        final List<Node> choices = List.copyOf(root.lookupAll(".glossary-choice"));
         assertThat(TooltipProbe.tipText(root.lookup(".glossary-remove"))).isEqualTo(expected("NAMES_STYLE_REMOVE_TIP"));
         assertThat(TooltipProbe.tipText(root.lookup(".text-field")))
                 .isEqualTo(expected("NAMES_STYLE_COLUMN_TARGET_TIP"));
-        assertThat(combos).hasSize(2).allMatch(node -> node instanceof ComboBox<?>);
-        assertThat(TooltipProbe.tipText(combos.get(0))).isEqualTo(expected("NAMES_STYLE_COLUMN_TYPE_TIP"));
-        assertThat(TooltipProbe.tipText(combos.get(1))).isEqualTo(expected("NAMES_STYLE_COLUMN_GENDER_TIP"));
+        assertThat(choices).hasSize(2).allMatch(node -> node instanceof Label);
+        assertThat(TooltipProbe.tipText(choices.get(0))).isEqualTo(expected("NAMES_STYLE_COLUMN_TYPE_TIP"));
+        assertThat(TooltipProbe.tipText(choices.get(1))).isEqualTo(expected("NAMES_STYLE_COLUMN_GENDER_TIP"));
         assertThat(root.lookup(".toggle-switch")).isInstanceOf(ToggleSwitch.class);
         assertThat(TooltipProbe.tipText(root.lookup(".toggle-switch")))
                 .isEqualTo(expected("NAMES_STYLE_COLUMN_LOCKED_TIP"));

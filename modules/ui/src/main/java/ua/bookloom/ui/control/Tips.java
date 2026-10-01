@@ -1,11 +1,14 @@
 package ua.bookloom.ui.control;
 
 import java.util.Objects;
+import java.util.Optional;
+import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -29,6 +32,7 @@ public final class Tips {
     private static final Duration SHOW_DELAY = Duration.millis(400);
     private static final Duration SHOW_DURATION = Duration.seconds(30);
     private static final double MAX_WIDTH = 320;
+    private static final String PENDING_KEY = "bookloom.tips.pending";
 
     /**
      * Attaches the explanation {@code tip} names to {@code node}.
@@ -67,6 +71,54 @@ public final class Tips {
             Tooltip.install(node, tooltip);
         }
         return node;
+    }
+
+    /**
+     * Attaches the explanation the first time the pointer enters {@code node}, for a node that exists many times over
+     * — a control in every row of a table — where a tooltip each (a popup window with its own scene) is paid for by
+     * every row the table builds, and most are never hovered. The accessible help is set at once, so a screen reader
+     * hears the same text from the start.
+     *
+     * @param messages the catalogue the text is drawn from
+     * @param node the control the pointer hovers
+     * @param tip the catalogue entry holding the explanation
+     * @param <N> the node's type, returned unchanged
+     * @return {@code node}
+     */
+    public static <N extends Node> N installOnHover(final Messages messages, final N node, final MessageKey tip) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(node, "node");
+        final String text = messages.get(tip);
+        node.getProperties().put(PENDING_KEY, text);
+        if (node instanceof Control control) {
+            control.setAccessibleHelp(text);
+        }
+        node.addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<>() {
+            @Override
+            public void handle(final MouseEvent event) {
+                node.removeEventHandler(MouseEvent.MOUSE_ENTERED, this);
+                node.getProperties().remove(PENDING_KEY);
+                install(node, text);
+            }
+        });
+        return node;
+    }
+
+    /**
+     * The explanation a node shows on hover, attached already or waiting for the pointer's first visit.
+     *
+     * @param node the node asked about
+     * @return the text if the node has an explanation, or empty if it has none
+     */
+    public static Optional<String> explanationOf(final Node node) {
+        Objects.requireNonNull(node, "node");
+        if (node.getProperties().get(PENDING_KEY) instanceof String pending) {
+            return Optional.of(pending);
+        }
+        final Object installed = node instanceof Control control && control.getTooltip() != null
+                ? control.getTooltip()
+                : node.getProperties().get(Tooltip.class.getName());
+        return installed instanceof Tooltip tooltip ? Optional.of(tooltip.getText()) : Optional.empty();
     }
 
     /**

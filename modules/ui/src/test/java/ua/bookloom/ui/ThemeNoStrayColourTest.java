@@ -29,7 +29,8 @@ class ThemeNoStrayColourTest {
             ".root.theme-dark .elevation-sm",
             ".root.theme-dark .elevation",
             ".root.theme-dark .elevation-lg",
-            ".root .toggle-switch .thumb");
+            ".root .toggle-switch .thumb",
+            ".root .glossary-table .toggle-switch:focused .thumb");
 
     private static final Pattern SEMICOLON = Pattern.compile(";");
     private static final Pattern HEX = Pattern.compile("#[0-9a-fA-F]{3,8}\\b");
@@ -41,7 +42,7 @@ class ThemeNoStrayColourTest {
      * The selectors of every rule that writes a colour anywhere the catalogue does not allow one.
      *
      * <p>Allowed, and nothing else: the two value blocks {@code .root} and {@code .root.theme-dark}, and the six
-     * elevation rules, where a literal may appear only inside {@code -fx-effect}. Matching the selector text whole
+     * elevation rules and the two switch-thumb shadows, where a literal may appear only inside {@code -fx-effect}. Matching the selector text whole
      * (not by prefix) means {@code .root .card}, {@code .rooted} and {@code .root, .app-shell} get no exemption.
      *
      * @param css the stylesheet text

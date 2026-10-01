@@ -25,6 +25,7 @@ import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.FindingBadge;
 import ua.bookloom.ui.state.ReviewRow;
 import ua.bookloom.ui.state.ReviewViewModel;
 
@@ -172,8 +173,21 @@ final class ReviewListPane extends VBox {
                 .ifPresent(list.getSelectionModel()::select);
     }
 
-    /** A row: its locator, then the badge of its main finding and the mark of a record kept as source. */
+    /**
+     * A row: its locator, then the badge of its main finding and the mark of a record kept as source. Its nodes are made
+     * once per cell and only refilled as the cell is reused for another row while the list scrolls.
+     */
     private final class RowCell extends ListCell<ReviewRow> {
+
+        private final Label locator = new Label();
+        private final Label badge = chip("chip-warn");
+        private final Label kept = chip("chip-neutral");
+        private final HBox line = new HBox(CHIP_GAP, locator, badge, kept);
+        private final String keptText = messages.get(MessageKey.REVIEW_KEPT_AS_SOURCE);
+
+        RowCell() {
+            locator.getStyleClass().add("review-locator");
+        }
 
         @Override
         protected void updateItem(final @Nullable ReviewRow row, final boolean empty) {
@@ -183,22 +197,24 @@ final class ReviewListPane extends VBox {
                 setGraphic(null);
                 return;
             }
-            final Label locator = new Label(row.locator());
-            locator.getStyleClass().add("review-locator");
-            final HBox line = new HBox(CHIP_GAP, locator);
-            if (row.badge() != null) {
-                line.getChildren().add(chip(messages.get(row.badge().label()), "chip-warn"));
-            }
-            if (row.keptAsSource()) {
-                line.getChildren().add(chip(messages.get(MessageKey.REVIEW_KEPT_AS_SOURCE), "chip-neutral"));
-            }
+            locator.setText(row.locator());
+            final FindingBadge finding = row.badge();
+            badge.setText(finding == null ? "" : messages.get(finding.label()));
+            shown(badge, finding != null);
+            kept.setText(row.keptAsSource() ? keptText : "");
+            shown(kept, row.keptAsSource());
             setGraphic(line);
         }
 
-        private static Label chip(final String text, final String role) {
-            final Label label = new Label(text);
+        private static Label chip(final String role) {
+            final Label label = new Label();
             label.getStyleClass().addAll("chip", role);
             return label;
+        }
+
+        private static void shown(final Label label, final boolean visible) {
+            label.setVisible(visible);
+            label.setManaged(visible);
         }
     }
 }

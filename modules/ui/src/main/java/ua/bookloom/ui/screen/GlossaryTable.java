@@ -157,7 +157,7 @@ final class GlossaryTable {
     }
 
     private static GlossaryCells.EntryCell<?> typeCell(final Messages messages, final NamesStyleViewModel model) {
-        return new GlossaryCells.ChoiceCell<>(
+        return new GlossaryChoiceCell<>(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_TYPE_TIP,
                 TermType.values(),
@@ -167,7 +167,7 @@ final class GlossaryTable {
     }
 
     private static GlossaryCells.EntryCell<?> genderCell(final Messages messages, final NamesStyleViewModel model) {
-        return new GlossaryCells.ChoiceCell<>(
+        return new GlossaryChoiceCell<>(
                 messages,
                 MessageKey.NAMES_STYLE_COLUMN_GENDER_TIP,
                 Gender.values(),

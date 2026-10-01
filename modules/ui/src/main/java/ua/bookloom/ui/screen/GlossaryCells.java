@@ -1,19 +1,14 @@
 package ua.bookloom.ui.screen;
 
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.util.StringConverter;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.controlsfx.control.ToggleSwitch;
@@ -30,7 +25,7 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
  * <p>A cell is reused for other rows as the table scrolls, so each control is filled from the row it now shows while a
  * flag holds back its own change handler, and a typed target is remembered with the row it was typed for: a focus loss
  * that arrives after the cell moved on must not write the old text into the new row. Cells log nothing, since they are
- * refreshed on every scroll.
+ * refreshed on every scroll. A row's tooltips wait for the pointer's first visit, since most rows are never hovered.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -88,7 +83,7 @@ final class GlossaryCells {
             term.getStyleClass().add("glossary-term");
             final Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
-            final Button remove = Tips.install(messages, new Button("✕"), MessageKey.NAMES_STYLE_REMOVE_TIP);
+            final Button remove = Tips.installOnHover(messages, new Button("✕"), MessageKey.NAMES_STYLE_REMOVE_TIP);
             remove.getStyleClass().addAll("btn-ghost", "glossary-remove");
             remove.setAccessibleText(messages.get(MessageKey.NAMES_STYLE_REMOVE));
             remove.setOnAction(event -> {
@@ -115,7 +110,7 @@ final class GlossaryCells {
         private String syncedText = "";
 
         TargetCell(final Messages messages, final NamesStyleViewModel model) {
-            super(Tips.install(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP));
+            super(Tips.installOnHover(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP));
             this.model = model;
             control().setOnAction(event -> commit());
             control().focusedProperty().addListener((observed, was, now) -> {
@@ -143,50 +138,11 @@ final class GlossaryCells {
         }
     }
 
-    /** A choice among the values of an enum, written as soon as it is made. */
-    static final class ChoiceCell<T> extends EntryCell<ComboBox<T>> {
-
-        private final Function<GlossaryEntry, T> read;
-
-        ChoiceCell(
-                final Messages messages,
-                final MessageKey tip,
-                final T[] values,
-                final Function<T, String> label,
-                final Function<GlossaryEntry, T> read,
-                final BiConsumer<String, T> write) {
-            super(Tips.install(messages, new ComboBox<>(FXCollections.observableArrayList(values)), tip));
-            this.read = read;
-            control().setConverter(new StringConverter<>() {
-                @Override
-                public String toString(final @Nullable T value) {
-                    return value == null ? "" : label.apply(value);
-                }
-
-                @Override
-                public T fromString(final String text) {
-                    return values[0];
-                }
-            });
-            control().valueProperty().addListener((observed, was, now) -> {
-                final GlossaryEntry shown = getItem();
-                if (!isSyncing() && now != null && shown != null) {
-                    write.accept(shown.id(), now);
-                }
-            });
-        }
-
-        @Override
-        void show(final ComboBox<T> shown, final GlossaryEntry entry) {
-            shown.setValue(read.apply(entry));
-        }
-    }
-
     /** The lock as a switch, written as soon as it is turned. */
     static final class LockCell extends EntryCell<ToggleSwitch> {
 
         LockCell(final Messages messages, final NamesStyleViewModel model) {
-            super(Tips.install(messages, new ToggleSwitch(), MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP));
+            super(Tips.installOnHover(messages, new ToggleSwitch(), MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP));
             control().selectedProperty().addListener((observed, was, now) -> {
                 final GlossaryEntry shown = getItem();
                 if (!isSyncing() && shown != null) {

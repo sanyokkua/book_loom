@@ -254,6 +254,20 @@ exits with. Through Gradle they collapse: the `translate` task fails on any non-
 1 for both 1 and 2, and a script that must tell them apart reads the printed line (`Invalid command arguments: …`
 starts a usage error).
 
+**Measuring scroll smoothness.** The build sets no JavaFX rendering flags, and none should be added without numbers.
+To measure, hand the flags to the launched JVM through `JAVA_TOOL_OPTIONS` (the `run` task forwards no `-D` of its
+own) and scroll the long views — the Names & style glossary with a few hundred rows, and the Translating screen's log
+and review list during a run:
+
+```bash
+JAVA_TOOL_OPTIONS="-Djavafx.pulseLogger=true -Dprism.verbose=true" ./gradlew :app:run
+```
+
+`prism.verbose` prints once which pipeline renders (`es2`/`mtl`/`d3d`, or `sw` — software, which is slow everywhere) and
+whether vsync is on. The pulse logger prints every pulse slower than one frame (17 ms by default; change it with
+`-Djavafx.pulseLogger.threshold=<ms>`) with where the time went — CSS, layout, rendering. Compare before and after a
+change on the same book and window size; a run of long pulses while scrolling a list points at its cells.
+
 ---
 
 ## 6. IDE (IntelliJ IDEA) {#ide}

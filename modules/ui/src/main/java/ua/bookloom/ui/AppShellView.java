@@ -23,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.RunStatusBar;
+import ua.bookloom.ui.control.SmoothScroll;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -178,6 +179,8 @@ public final class AppShellView {
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
         final StackPane shell = new StackPane(frame, modalHost.view(), toasts.view());
+        // Once at the top: a wheel notch glides whichever pane, list, table or tree is under the pointer.
+        SmoothScroll.install(shell);
         navigator.currentView().addListener((observed, old, current) -> showCurrent(current));
         navigator.content().addListener((observed, old, content) -> showContent(content));
         themeController.activeBlockProperty().addListener((observed, old, block) -> syncThemeToggle(block));

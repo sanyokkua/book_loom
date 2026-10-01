@@ -188,6 +188,14 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         assertThat(((Label) cell.lookup(".log-repeats")).getText()).isEqualTo("×4");
     }
 
+    // IF the log measured every line as it scrolled, THEN a long run's log would stutter; its lines share one height.
+    @Test
+    void log_shown_linesShareOneFixedHeight() {
+        showTranslating();
+
+        assertThat(logList().getFixedCellSize()).isEqualTo(32.0);
+    }
+
     // IF the chip did not say how the server answers, THEN a dead server would look like a slow book.
     @Test
     void connectionChip_unsteady_countsTheFailuresAndOpensTheSettings() {

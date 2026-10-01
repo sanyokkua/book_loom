@@ -66,6 +66,15 @@ class StructureScreenTest extends StructureScreenTestBase {
         assertThat(renderedRows()).containsExactlyElementsOf(ELEVEN_ROWS);
     }
 
+    // IF the tree measured every row as it scrolled, THEN a book of thousands of units would stutter; its rows share
+    // one fixed height.
+    @Test
+    void tree_elevenUnitBook_rowsShareOneFixedHeight() throws TimeoutException {
+        openBookThenShowStructure(dir.resolve("book.epub"), elevenUnitBook());
+
+        assertThat(tree().getFixedCellSize()).isEqualTo(34.0);
+    }
+
     // IF a unit were nested under another, THEN the screen would state a hierarchy the parsed model does not have.
     @Test
     void tree_elevenUnitBook_holdsElevenChildlessItemsUnderAnInvisibleRoot() throws TimeoutException {
