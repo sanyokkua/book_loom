@@ -5,6 +5,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -62,7 +63,8 @@ public final class PrepStage {
             log.debug("Preparing run project={} dial={}", projectId, brief.dial());
             final StyleSheet styleSheet = StyleSheet.from(brief);
             final Result<Prepared> prepared = glossary.all(projectId)
-                    .flatMap(held -> scanIfEmpty(glossary, projectId, document, held, styleSheet));
+                    .flatMap(held -> scanIfEmpty(
+                            glossary, projectId, document, sourceLanguageOf(brief, document), held, styleSheet));
             if (prepared.isOk()) {
                 logPrepared(projectId, Objects.requireNonNull(prepared.data(), "prepared"));
             }
@@ -82,6 +84,7 @@ public final class PrepStage {
             final GlossaryRepository glossary,
             final String projectId,
             final Document document,
+            @Nullable final String sourceLanguage,
             final List<GlossaryEntry> held,
             final StyleSheet styleSheet) {
         if (!held.isEmpty()) {
@@ -89,9 +92,13 @@ public final class PrepStage {
             return Result.ok(new Prepared(styleSheet, false, 0));
         }
         log.debug("Name scan runs project={}: the glossary is empty", projectId);
-        return FrequencyScan.newTerms(projectId, bodySegments(document), glossary)
+        return FrequencyScan.newTerms(projectId, bodySegments(document), sourceLanguage, glossary)
                 .flatMap(proposals -> addAll(glossary, proposals))
                 .map(added -> new Prepared(styleSheet, true, added));
+    }
+
+    private static @Nullable String sourceLanguageOf(final BookBrief brief, final Document document) {
+        return brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage();
     }
 
     private static Result<Integer> addAll(final GlossaryRepository glossary, final List<GlossaryEntry> proposals) {

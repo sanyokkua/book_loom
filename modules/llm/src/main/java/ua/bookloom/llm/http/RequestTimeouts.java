@@ -31,7 +31,7 @@ public final class RequestTimeouts {
      *
      * @param config the provider config a chat call is about to be sent with
      * @param request the call; its kind and expected output choose the timeout
-     * @return a copy whose timeout is 90 s for a judge call, 120 s for a prescan or summary call, and otherwise
+     * @return a copy whose timeout is 90 s for a judge call, 120 s for a prescan, glossary review or summary call, and otherwise
      *     {@code max(config.requestTimeout(), min(600s, expectedOutputTokens * 500ms))}; {@code config} unchanged when
      *     the call has neither one of those kinds nor an expected output
      */
@@ -70,7 +70,7 @@ public final class RequestTimeouts {
         }
         return switch (request.callKind()) {
             case JUDGE -> JUDGE_TIMEOUT;
-            case PRESCAN, SUMMARY -> HELPER_TIMEOUT;
+            case PRESCAN, REVIEW_TERMS, SUMMARY -> HELPER_TIMEOUT;
             case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REFLECT, IMPROVE, POLISH, REVISION -> null;
         };
     }

@@ -1,6 +1,7 @@
 package ua.bookloom.llm.pseudo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -36,6 +37,9 @@ public final class PseudoChatModel implements ChatModel {
     private static final String FORMAT_REFLECT = "reflect";
     private static final String FORMAT_PRESCAN = "prescan";
     private static final String FORMAT_SUMMARY = "summary";
+    private static final String FORMAT_REVIEW_TERMS = "review-terms";
+    // One listed term of a glossary review: "- <term> — <count>× — ...".
+    private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
 
     private static final String JUDGE_REPLY = "{\"score\":1.0,\"verdict\":\"accept\",\"findings\":[],\"deferrals\":[]}";
     private static final String REFLECT_REPLY = "{\"issues\":[]}";
@@ -103,6 +107,7 @@ public final class PseudoChatModel implements ChatModel {
             case FORMAT_REFLECT -> REFLECT_REPLY;
             case FORMAT_PRESCAN -> prescanReply(source);
             case FORMAT_SUMMARY -> SUMMARY_REPLY;
+            case FORMAT_REVIEW_TERMS -> reviewReply(source);
             default -> targetReply(translation);
         };
     }
@@ -116,6 +121,21 @@ public final class PseudoChatModel implements ChatModel {
                 .map(PseudoChatModel::termEntry)
                 .toList();
         return writeValue(Map.of("terms", terms));
+    }
+
+    private String reviewReply(String source) {
+        final Matcher matcher = REVIEW_LINE.matcher(source);
+        final List<Map<String, String>> verdicts = new ArrayList<>();
+        while (matcher.find()) {
+            final Map<String, String> verdict = new LinkedHashMap<>();
+            verdict.put("term", matcher.group(1));
+            verdict.put("verdict", "name");
+            verdict.put("type", "other");
+            verdict.put("gender", "unknown");
+            verdicts.add(verdict);
+        }
+        log.debug("Pseudo glossary review judged {} terms names", verdicts.size());
+        return writeValue(Map.of("verdicts", verdicts));
     }
 
     private static Map<String, String> termEntry(String term) {

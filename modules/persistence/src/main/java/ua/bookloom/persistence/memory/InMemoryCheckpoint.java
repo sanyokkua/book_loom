@@ -1,7 +1,6 @@
 package ua.bookloom.persistence.memory;
 
 import com.google.inject.Inject;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.locks.Lock;
@@ -18,6 +17,7 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.persistence.memory.InMemoryStore.ProjectGlossary;
+import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * Applies one chunk's decided segments, TM entries, deferrals and glossary additions all together, under the
@@ -102,10 +102,9 @@ public final class InMemoryCheckpoint implements CheckpointPort {
         final ProjectGlossary glossary = store.glossary(commit.projectId());
         int applied = 0;
         for (final GlossaryEntry entry : commit.glossaryAdditions()) {
-            final String lowerTerm = entry.term().toLowerCase(Locale.ROOT);
-            if (glossary.findByLowerTerm(lowerTerm).isPresent()
-                    || glossary.removedLowerTerms().contains(lowerTerm)) {
-                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), lowerTerm);
+            final String key = GlossaryKeys.of(entry.term());
+            if (glossary.findByKey(key).isPresent() || glossary.removedKeys().contains(key)) {
+                log.trace("Glossary addition skipped projectId={} term={}", commit.projectId(), key);
                 continue;
             }
             glossary.put(entry);

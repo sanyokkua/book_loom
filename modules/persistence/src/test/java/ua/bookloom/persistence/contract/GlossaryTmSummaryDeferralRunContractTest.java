@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
@@ -50,6 +52,27 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
         assertThat(duplicate.isErr()).isTrue();
         assertThat(duplicate.error().code()).isEqualTo(ua.bookloom.api.ErrorCode.validation);
         assertThat(repository.all("p1").data()).hasSize(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Hale's", "Hale’s", " HALE ", "\"Hale,\""})
+    void add_possessiveOrPunctuatedSpelling_answersValidationAsDuplicate(final String spelling) {
+        final GlossaryRepository repository = glossaryRepository();
+        repository.add(glossaryEntry("e1", "Hale"));
+
+        final Result<GlossaryEntry> duplicate = repository.add(glossaryEntry("e2", spelling));
+
+        assertThat(duplicate.isErr()).isTrue();
+        assertThat(repository.findByTerm("p1", spelling).data()).isPresent();
+    }
+
+    @Test
+    void wasRemoved_possessiveSpellingOfRemovedTerm_isTrue() {
+        final GlossaryRepository repository = glossaryRepository();
+        repository.add(glossaryEntry("e1", "Hale"));
+        repository.remove("p1", "e1");
+
+        assertThat(repository.wasRemoved("p1", "Hale’s").data()).isTrue();
     }
 
     @Test

@@ -18,7 +18,8 @@ public interface GlossaryRepository {
      * <p>Adding a term this session's removal memory holds clears that memory, so the new entry sticks.
      *
      * @param entry the non-null entry to add
-     * @return the added entry, or {@code validation} when the term already exists, ignoring case
+     * @return the added entry, or {@code validation} when the term already exists, ignoring case, composition, a trailing
+     *     possessive and edge punctuation
      */
     Result<GlossaryEntry> add(GlossaryEntry entry);
 
@@ -48,19 +49,19 @@ public interface GlossaryRepository {
     Result<List<GlossaryEntry>> all(String projectId);
 
     /**
-     * Finds a glossary entry by term, case-insensitively.
+     * Finds a glossary entry by term, compared as {@link #add} compares terms.
      *
      * @param projectId the non-null project id
-     * @param term the non-null term to match, case-insensitively
+     * @param term the non-null term to match
      * @return the matching entry if found, or empty when none matches
      */
     Result<Optional<GlossaryEntry>> findByTerm(String projectId, String term);
 
     /**
-     * Reports whether a term was removed this session, case-insensitively.
+     * Reports whether a term was removed this session, compared as {@link #add} compares terms.
      *
      * @param projectId the non-null project id
-     * @param term the non-null term to check, case-insensitively
+     * @param term the non-null term to check
      * @return {@code true} when the term was removed this session and not re-added since
      */
     Result<Boolean> wasRemoved(String projectId, String term);

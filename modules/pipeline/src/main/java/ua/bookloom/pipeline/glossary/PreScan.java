@@ -76,7 +76,7 @@ public final class PreScan {
 
     private Result<List<GlossaryEntry>> run(
             final String projectId, final List<Segment> segments, final CallFrame frame, final ModelCalls calls) {
-        final List<NameCandidate> candidates = FrequencyScan.candidates(segments, 1);
+        final List<NameCandidate> candidates = FrequencyScan.candidates(segments, 1, frame.sourceLanguage());
         log.info(
                 "Model pre-scan started project={} candidates={} batches={}",
                 projectId,

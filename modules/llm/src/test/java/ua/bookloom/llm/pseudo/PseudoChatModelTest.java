@@ -82,6 +82,18 @@ class PseudoChatModelTest {
                         + "{\"term\":\"Milton\",\"type\":\"other\",\"gender\":\"unknown\"}]}");
     }
 
+    // The glossary review keeps every listed term as a name and guesses nothing, so a pseudo review changes nothing.
+    @Test
+    void chat_reviewTermsFormat_judgesEveryListedTermANameWithNoGuess() {
+        final ChatResponse response =
+                send("[Terms]\n- Hale — 4× — \"Hale left.\"\n- Well — 9× — \"Well, no.\"\n", "review-terms");
+
+        assertThat(response.content())
+                .isEqualTo("{\"verdicts\":["
+                        + "{\"term\":\"Hale\",\"verdict\":\"name\",\"type\":\"other\",\"gender\":\"unknown\"},"
+                        + "{\"term\":\"Well\",\"verdict\":\"name\",\"type\":\"other\",\"gender\":\"unknown\"}]}");
+    }
+
     // Summary is always empty and reports no facts.
     @Test
     void chat_summaryFormat_repliesWithEmptyBilingualSummary() {

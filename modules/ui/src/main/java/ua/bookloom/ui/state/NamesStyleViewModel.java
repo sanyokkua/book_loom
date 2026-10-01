@@ -3,7 +3,6 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,7 +11,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -25,7 +23,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
@@ -49,15 +46,13 @@ import ua.bookloom.ui.i18n.Messages;
 public final class NamesStyleViewModel {
 
     private final GlossaryService glossary;
-    private final ChatModelFactory models;
-    private final SettingsViewModel settings;
     private final GlossaryCalls calls;
+    private final GlossaryModelRuns modelRuns;
     private final Messages messages;
     private final ImportSummary summary;
     private final Supplier<String> ids;
     private final ObservableList<GlossaryEntry> rows = FXCollections.observableArrayList();
     private final ReadOnlyObjectWrapper<@Nullable GlossaryNotice> notice = new ReadOnlyObjectWrapper<>();
-    private final ReadOnlyBooleanWrapper busy = new ReadOnlyBooleanWrapper();
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
     private String projectId = "";
     private long generation;
@@ -96,10 +91,11 @@ public final class NamesStyleViewModel {
             final Messages messages,
             final Supplier<String> ids) {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
-        this.models = Objects.requireNonNull(models, "models");
-        this.settings = Objects.requireNonNull(settings, "settings");
         this.calls = new GlossaryCalls(executor);
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.modelRuns = new GlossaryModelRuns(
+                new GlossaryModelRuns.Screen(glossary, models, settings, messages, rows, notice, () -> projectId),
+                calls);
         this.summary = new ImportSummary(messages);
         this.ids = Objects.requireNonNull(ids, "ids");
     }
@@ -123,12 +119,12 @@ public final class NamesStyleViewModel {
     }
 
     /**
-     * Whether a model scan is under way.
+     * Whether a model scan or review is under way.
      *
-     * @return a read-only property; the scan button is not offered while it is {@code true}
+     * @return a read-only property; the model buttons are not offered while it is {@code true}, the stop button is
      */
     public ReadOnlyBooleanProperty busy() {
-        return busy.getReadOnlyProperty();
+        return modelRuns.busy();
     }
 
     /**
@@ -152,7 +148,6 @@ public final class NamesStyleViewModel {
         log.debug("showing the glossary of project {} (opening {})", project, ticket);
         rows.clear();
         notice.set(null);
-        busy.set(false);
         calls.run(
                 "load",
                 () -> GlossaryLoad.loadOrScan(glossary, project),
@@ -270,32 +265,17 @@ public final class NamesStyleViewModel {
 
     /** Runs the model name scan with the chosen model; the rows are kept and the proposals join them. */
     public void modelScan() {
-        final Optional<ModelSelection> selection = settings.selection();
-        if (selection.isEmpty()) {
-            log.debug("model scan not started: no model is chosen");
-            error(messages.get(MessageKey.NAMES_STYLE_NO_MODEL));
-            return;
-        }
-        final String project = projectId;
-        final long ticket = generation;
-        log.info(
-                "model scan of project {} started with {}",
-                project,
-                selection.get().providerId());
-        busy.set(true);
-        notice.set(null);
-        calls.run(
-                "model scan",
-                () -> models.create(selection.get()).flatMap(model -> glossary.prescan(project, model)),
-                answer -> ifCurrent(ticket, () -> settle("model scan", answer, this::scanned)));
+        modelRuns.scan();
     }
 
-    private void scanned(final List<GlossaryEntry> proposed) {
-        busy.set(false);
-        log.info("model scan proposed {} entries", proposed.size());
-        proposed.stream()
-                .filter(entry -> GlossaryEdits.indexOf(rows, entry.id()) < 0)
-                .forEach(rows::add);
+    /** Asks the chosen model to review the unlocked rows with no target, then shows the glossary as it left it. */
+    public void review() {
+        modelRuns.review();
+    }
+
+    /** Stops the model scan or review under way; the glossary keeps what it had. */
+    public void stopModel() {
+        modelRuns.stop();
     }
 
     /**
@@ -393,7 +373,6 @@ public final class NamesStyleViewModel {
 
     private void fail(final String what, final AppError failure) {
         log.warn("the glossary {} failed with {}", what, failure.code());
-        busy.set(false);
         error(failure.message());
     }
 }

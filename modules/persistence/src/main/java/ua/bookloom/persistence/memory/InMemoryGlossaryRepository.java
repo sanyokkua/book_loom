@@ -2,7 +2,6 @@ package ua.bookloom.persistence.memory;
 
 import com.google.inject.Inject;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -13,9 +12,10 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.persistence.memory.InMemoryStore.ProjectGlossary;
+import ua.bookloom.util.text.GlossaryKeys;
 
 /**
- * Stores a project's glossary over the shared {@link InMemoryStore}, terms matched case-insensitively and a
+ * Stores a project's glossary over the shared {@link InMemoryStore}, terms matched by their {@link GlossaryKeys} key and a
  * person's removal remembered so a re-proposed name is not silently re-added.
  */
 @Slf4j
@@ -29,8 +29,8 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(entry, "entry");
         try {
             final ProjectGlossary glossary = store.glossary(entry.projectId());
-            final String lowerTerm = entry.term().toLowerCase(Locale.ROOT);
-            if (glossary.findByLowerTerm(lowerTerm).isPresent()) {
+            final String key = GlossaryKeys.of(entry.term());
+            if (glossary.findByKey(key).isPresent()) {
                 log.debug(
                         "Glossary add refused as duplicate projectId={} termLength={}",
                         entry.projectId(),
@@ -41,7 +41,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
                         "That term already exists in this project's glossary, ignoring case."));
             }
             glossary.put(entry);
-            glossary.removedLowerTerms().remove(lowerTerm);
+            glossary.removedKeys().remove(key);
             log.debug(
                     "Glossary term added projectId={} entryId={} termLength={}",
                     entry.projectId(),
@@ -77,8 +77,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         try {
             final ProjectGlossary glossary = store.glossary(projectId);
             final Optional<GlossaryEntry> removed = glossary.removeById(entryId);
-            removed.ifPresent(
-                    entry -> glossary.removedLowerTerms().add(entry.term().toLowerCase(Locale.ROOT)));
+            removed.ifPresent(entry -> glossary.removedKeys().add(GlossaryKeys.of(entry.term())));
             log.debug("Glossary remove projectId={} entryId={} removed={}", projectId, entryId, removed.isPresent());
             return Result.ok(removed.isPresent());
         } catch (Throwable cause) {
@@ -101,7 +100,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(term, "term");
         try {
-            return Result.ok(store.glossary(projectId).findByLowerTerm(term.toLowerCase(Locale.ROOT)));
+            return Result.ok(store.glossary(projectId).findByKey(GlossaryKeys.of(term)));
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }
@@ -112,7 +111,7 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(term, "term");
         try {
-            return Result.ok(store.glossary(projectId).removedLowerTerms().contains(term.toLowerCase(Locale.ROOT)));
+            return Result.ok(store.glossary(projectId).removedKeys().contains(GlossaryKeys.of(term)));
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

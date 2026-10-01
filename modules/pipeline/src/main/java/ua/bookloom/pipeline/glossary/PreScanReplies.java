@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -12,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.prompt.JsonReplies;
+import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * Reads one pre-scan reply into proposals. A small model echoes words it was never asked about, so only a term that
@@ -25,9 +25,9 @@ final class PreScanReplies {
     /** A candidate the model chose to propose, with the type and gender it guessed. */
     record Proposal(NameCandidate candidate, TermType type, Gender gender) {}
 
-    /** The key two spellings of one term share, so a merge compares them ignoring case. */
+    /** The key two spellings of one term share, so a merge compares them as the glossary does. */
     static String key(final String term) {
-        return term.strip().toLowerCase(Locale.ROOT);
+        return GlossaryKeys.of(term);
     }
 
     /**

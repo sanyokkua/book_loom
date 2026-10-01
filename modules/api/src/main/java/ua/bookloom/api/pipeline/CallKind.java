@@ -32,6 +32,9 @@ public enum CallKind {
     /** A glossary prescan call. */
     PRESCAN,
 
+    /** A glossary review call: the model judges held terms as a name, a term or not a name. */
+    REVIEW_TERMS,
+
     /** A rolling-summary update call. */
     SUMMARY,
 

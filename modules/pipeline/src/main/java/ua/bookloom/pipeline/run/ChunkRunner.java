@@ -80,7 +80,8 @@ public final class ChunkRunner {
         this.preceding = new PrecedingTargets(stores.segments(), settings.projectId(), sinks.pending());
         this.memory = new MemoryReuse(new TranslationMemory(stores.tm(), settings.projectId()), locators);
         this.calls = new RoutedCalls(sinks.boundaries());
-        this.followUp = new DecisionFollowUp(settings.projectId(), steps.summary(), stores, sinks, calls);
+        this.followUp = new DecisionFollowUp(
+                settings.projectId(), settings.frame().sourceLanguage(), steps.summary(), stores, sinks, calls);
         this.events = new SegmentEvents(sinks.emit(), locators);
         this.shortcuts = new DraftShortcuts(settings.frame().styleSheet().text());
     }

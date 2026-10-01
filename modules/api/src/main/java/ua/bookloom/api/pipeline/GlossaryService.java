@@ -2,6 +2,7 @@ package ua.bookloom.api.pipeline;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -33,9 +34,23 @@ public interface GlossaryService {
      *
      * @param projectId the non-null project id
      * @param model the non-null model to call
-     * @return the entries the pre-scan added
+     * @param progress the non-null receiver of each model call's start and finish, on the calling thread
+     * @return the entries the pre-scan added; nothing is added unless every call answered
      */
-    Result<List<GlossaryEntry>> prescan(String projectId, ChatModel model);
+    Result<List<GlossaryEntry>> prescan(String projectId, ChatModel model, Consumer<JobEvent> progress);
+
+    /**
+     * Asks the model whether each unlocked term with no target is a name, a term or not a name: a term judged not a
+     * name is removed (and remembered as removed) when its type and gender were never set, and a type or gender still
+     * at {@code OTHER}/{@code UNKNOWN} takes the model's guess. A locked term or one with a target is never touched.
+     *
+     * @param projectId the non-null project id
+     * @param model the non-null model to call
+     * @param progress the non-null receiver of each model call's start and finish, on the calling thread
+     * @return what was removed and updated and the glossary as it now stands; nothing changes unless every call
+     *     answered
+     */
+    Result<GlossaryReviewReport> review(String projectId, ChatModel model, Consumer<JobEvent> progress);
 
     /**
      * Adds a glossary entry.

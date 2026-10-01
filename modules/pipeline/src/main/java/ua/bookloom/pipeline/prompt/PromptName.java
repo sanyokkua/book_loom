@@ -129,6 +129,20 @@ public enum PromptName {
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
             new Slots(Set.of("candidates"), Set.of("existingTerms"))),
 
+    /**
+     * The glossary review the person asks for: a batch of held terms, each with how often the book uses it and where,
+     * judged a name, a term or not a name, with a type and a gender guess.
+     */
+    REVIEW_TERMS(
+            "review-terms",
+            CallKind.REVIEW_TERMS,
+            "review-terms",
+            ReviewTermsSchema.SCHEMA,
+            0.1,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("terms"), Set.of())),
+
     /** The chapter-end summary the Max dial asks the model for; the reply's target text is what later prompts carry. */
     SUMMARY(
             "summary",

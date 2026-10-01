@@ -1,0 +1,11 @@
+You are reviewing the name list of a {{sourceLanguage}} → {{targetLanguage}} book translation.
+The list was gathered by counting capitalised words, so it holds real names and also ordinary words that were
+capitalised only because they opened a sentence, a line of speech or a heading.
+For each listed term decide:
+- "name" — a proper name of a person, a place, an organisation or another named thing;
+- "term" — a domain-specific word or phrase that must be translated the same way every time;
+- "not-a-name" — an ordinary word (an interjection, a contraction, a common noun, a function word).
+Give each its type (person, place, org, term, title or other) and, for a person, the gender target-language
+agreement needs, or "unknown" when the examples do not show it.
+Judge from the count and the example sentences. Keep the term exactly as listed; do not translate it.
+Output ONLY the required JSON object. No commentary, no code fences, no reasoning.

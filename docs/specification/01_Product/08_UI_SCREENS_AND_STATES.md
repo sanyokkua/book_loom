@@ -205,8 +205,11 @@ Purpose: review and edit the glossary before or during a run.
 
 | Control              | JavaFX control                       | Behaviour                                                                                          |
 |------------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
-| Glossary table         | `TableView`                             | Columns: Source term, Type, Target, Gender, Locked                                                |
+| Glossary table         | `TableView`                             | Columns: Source term, Type, Target, Gender, Locked; Source term, Type, Gender and Locked sort by header, ties by term |
+| Search field           | `TextField`                             | Shows only rows whose term or target contains the text; Escape clears it                           |
 | Model-scan button      | `Button`                                | Runs a model-assisted name scan in addition to the deterministic scan                             |
+| Review with model      | `Button`                                | Asks the model which open rows are names; removes the rest and fills an unset type or gender       |
+| Stop                   | `Button`, shown while a model action runs | Interrupts the model scan or review; nothing is written; a waiting line names the request and attempt |
 | Add term               | `Button` → add-glossary-term dialog     | FR-GLOSS-04; refuses locking a term that has no target                                             |
 | CSV import / export    | `Button`s + `FileChooser`               | Import refuses locking a row that has no target; export writes the current table                  |
 | `Start translation`    | `Button`                                | Starts a new run at the first pending segment when Start is offered (`#start-and-resume`)          |

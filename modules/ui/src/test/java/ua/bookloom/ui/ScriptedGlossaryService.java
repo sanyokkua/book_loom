@@ -5,12 +5,15 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
+import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.GlossaryEntry;
 
 /**
@@ -23,6 +26,7 @@ public final class ScriptedGlossaryService implements GlossaryService {
     private final List<GlossaryEntry> added = new CopyOnWriteArrayList<>();
     private final List<GlossaryEntry> updated = new CopyOnWriteArrayList<>();
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
+    private final Queue<JobEvent> events = new ConcurrentLinkedQueue<>();
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
     public void willAnswer(final Result<?> answer) {
@@ -54,9 +58,31 @@ public final class ScriptedGlossaryService implements GlossaryService {
         return answer("scan(" + projectId + ")");
     }
 
+    /** Queues an event the next model scan or review reports to its progress receiver before it answers. */
+    public void willReport(final JobEvent event) {
+        events.add(event);
+    }
+
     @Override
-    public Result<List<GlossaryEntry>> prescan(final String projectId, final ChatModel model) {
+    public Result<List<GlossaryEntry>> prescan(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        report(progress);
         return answer("prescan(" + projectId + ")");
+    }
+
+    @Override
+    public Result<GlossaryReviewReport> review(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        report(progress);
+        return answer("review(" + projectId + ")");
+    }
+
+    private void report(final Consumer<JobEvent> progress) {
+        JobEvent event = events.poll();
+        while (event != null) {
+            progress.accept(event);
+            event = events.poll();
+        }
     }
 
     @Override

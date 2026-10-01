@@ -31,6 +31,7 @@ class PromptNameTest {
         "POLISH,polish,POLISH,polish,0.2",
         "REVISION,revision,REVISION,revision,0.2",
         "PRESCAN,prescan,PRESCAN,prescan,0.2",
+        "REVIEW_TERMS,review-terms,REVIEW_TERMS,review-terms,0.1",
         "SUMMARY,summary,SUMMARY,summary,0.2"
     })
     void constants_declared_carryListedValues(
@@ -61,6 +62,7 @@ class PromptNameTest {
         "POLISH",
         "REVISION",
         "PRESCAN",
+        "REVIEW_TERMS",
         "SUMMARY"
     })
     void temperature_lowerNotDefined_throws(final PromptName name) {

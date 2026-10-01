@@ -13,8 +13,21 @@ character keeps one spelling from the first chapter to the last.
 WHEN the Names & style screen opens for a book whose glossary is empty, or a run prepares a book whose glossary is
 empty, the application SHALL propose, without any network call, every capitalised word and every run of two or three
 capitalised words that occurs at least 3 times not at the start of a sentence, ordered by how often it occurs and then
-by where it first occurs, each as an entry of type other, gender unknown, unlocked and with no target. A word that follows `Mr.`, `Mrs.`, `Ms.`,
-`Dr.`, `St.` or `Prof.` SHALL NOT count as the start of a sentence, and the title itself SHALL NOT be proposed.
+by where it first occurs, each as an entry of type other, gender unknown, unlocked and with no target, under these
+rules:
+
+- a sentence starts after `.`, `!`, `?` or `…`, and also after a dash (`—`) or a quotation mark; a word that follows
+  `Mr.`, `Mrs.`, `Ms.`, `Dr.`, `St.` or `Prof.` SHALL NOT count as the start of a sentence, and the title itself SHALL
+  NOT be proposed;
+- a capitalised word at the start of a sentence SHALL count, and SHALL start a run, WHEN the book writes it with a
+  capital mid-sentence at least 2 times;
+- an apostrophe or a hyphen between letters keeps one word (`Don’t`, `O'Brien`, `Al-Arish`), and a trailing possessive
+  `’s` or `'s` is not part of the word;
+- a word on the bundled stop-word list of the book's source language (English when the language has no list or is not
+  known) SHALL NOT be proposed and SHALL NOT start or join a run;
+- a single word that the book writes in lower case at least 20% of the times it occurs SHALL NOT be proposed;
+- a single word that occurs on its own less than 40% of the times it occurs alone or inside a proposed longer run SHALL
+  NOT be proposed, since it is part of that longer name.
 
 **Source:** FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan` (offline fallback),
@@ -23,7 +36,32 @@ In plain words: a name that recurs mid-sentence is almost certainly a proper nou
 a book's names instantly and offline; words at the start of a sentence are ignored because every sentence starts
 with a capital, and the full stop after an abbreviated title does not end a sentence, so `Hale` in `Mr. Hale` still
 counts. Proposals stay unlocked because a locked term cannot inflect. A term the person removed is never
-proposed again (see "Keep the person's entries and removals when names are proposed").
+proposed again (see "Keep the person's entries and removals when names are proposed"). A real book (Jonathan Stroud's
+"The Amulet of Samarkand") showed what a bare count gets wrong: `—Well,` and `"Don’t` open speech without a full stop,
+`Words`, `Seal` and `Shield` are common nouns given a capital, `Al-Arish` was cut into `Al` and `Arish`, and `Simon` was
+proposed beside `Simon Lovelace`. Every real name measured there is written in lower case less than 20% of the time,
+and every one of those common words at least 25% of the time, which is a test that works in any language with
+capitals; the stop-word list catches the function words and interjections a book rarely writes in lower case.
+
+#### Scenario: Common words, contractions and parts of longer names are not proposed
+
+- **WHEN** the glossary is empty and the book has `He paused—Well, perhaps not.` 3 times and `well` 3 times in lower
+  case, `"Don’t go."` 3 times and `don’t` 4 times, `the Words` 3 times and `words` twice, `the Seal` 3 times and `seal`
+  twice, `a Shield` 3 times and `shield` once, `the road to Al-Arish` 3 times, `Simon Lovelace` 6 times mid-sentence,
+  `Lovelace` alone 6 times and `Simon` alone 3 times
+- **THEN** `Al-Arish`, `Simon Lovelace` and `Lovelace` are proposed
+- **AND** `Well`, `Don’t`, `Words`, `Seal`, `Shield`, `Al`, `Arish` and `Simon` are not
+
+#### Scenario: A name that opens sentences is counted there too
+
+- **WHEN** the book has `They visited Sholto Pinn at his shop.` 4 times and `Sholto Pinn bowed low.` 3 times
+- **THEN** `Sholto Pinn` is proposed with a count of 7, and neither `Sholto` nor `Pinn` is proposed on its own
+
+#### Scenario: The stop words are the book's language's
+
+- **WHEN** the book's source language is `uk` and it has `Він сказав Так тихо.` 3 times
+- **THEN** `Так` is not proposed
+- **AND** with the source language `en` the same text proposes `Так`
 
 #### Scenario: Recurring mid-sentence names are proposed
 
@@ -58,10 +96,12 @@ WHEN the person presses the model scan button on Names & style, the application 
 word and every run of two or three capitalised words that occurs at least once not at the start of a sentence, each
 with the first sentence that holds it, 40 candidates per call; SHALL read each proposed type as person → character,
 place → place, org → other, term → term and anything else → other, and each gender other than female, male or neuter
-as unknown; and SHALL merge the proposals into the glossary only after every call has answered, matching terms
-case-insensitively, keeping any existing entry unchanged and adding each new term unlocked with no target. IF any call
-fails, THEN it SHALL write nothing, keep the existing entries and show the provider's error in place. The application
-SHALL NOT run the model scan on its own, when a run starts included.
+as unknown; and SHALL merge the proposals into the glossary only after every call has answered, matching terms by their glossary
+key (see "Compare glossary terms by one key"), keeping any existing entry unchanged and adding each new term unlocked
+with no target. IF any call fails, THEN it SHALL write nothing, keep the existing entries and show the provider's error
+in place. Each call SHALL be announced, timed and attempt-counted as a run's model calls are, the screen SHALL show
+which request it is waiting on, and WHEN the person presses Stop the request in flight SHALL be interrupted and
+nothing written. The application SHALL NOT run the model scan on its own, when a run starts included.
 
 **Source:** FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan`, DD-46
@@ -160,6 +200,88 @@ its name so the screen does not change under the person's hand.
 - **THEN** the translating screen shows the paused run offering Resume, and no new run begins
 - **AND** the button on Names & style still reads `Start translation`
 
+### Requirement: Review the glossary with the model when the person asks
+
+WHEN the person presses Review with model on Names & style, the application SHALL send the chosen model every
+unlocked entry with no target, 40 per call, each with how many times the book uses it in any case and up to two
+sentences that hold it, and SHALL ask for each a verdict — name, term or not a name — with a type (person, place, org,
+term, title or other) and a gender (male, female, neuter or unknown) under a strict schema. Only after every call has
+answered, and against each entry as it then stands, the application SHALL remove through the glossary (so the removal is
+remembered) each entry judged not a name whose type is still other and gender still unknown, and SHALL set the type of
+an entry still of type other and the gender of an entry still of gender unknown to the model's guess; it SHALL NOT
+change a locked entry or one with a target, and SHALL then show the glossary as it stands and the line
+`Model review done: N rows removed, M rows updated.` IF any call fails or the person presses Stop, THEN it SHALL
+change nothing. The calls SHALL be announced, timed, attempt-counted and stoppable as the model scan's are, and SHALL
+NOT be sent unless the person presses the button.
+
+**Source:** FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-review`, DD-46
+(`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`).
+In plain words: a frequency count cannot tell a sentence-opening interjection from a name in every case, and it never
+knows a type or a gender, so the model is asked to clean and classify the list. It sees how often the book uses each
+word in lower case too, which is the clearest sign of a common word. A set type means someone — the person or an earlier
+model scan — already judged the entry a name, so only an untouched row is removed; and a row the person locked or gave
+a target is theirs and is never sent.
+
+#### Scenario: The review removes a common word and classifies a name
+
+- **WHEN** the glossary holds `Well` and `Hale` (other, unknown), `Moreau` (character, unknown), `Milton` → `Мілтон`
+  locked and `Baker Street` → `Бейкер-стріт`, and the model answers `Well` not a name, `Hale` a name (person, male),
+  `Moreau` a name (place, female), and `Milton` and `Baker Street` not a name
+- **THEN** `Well` is removed and remembered as removed, `Hale` reads character, male, `Moreau` reads character, female,
+  and `Milton` and `Baker Street` are unchanged
+- **AND** only `Well`, `Hale` and `Moreau` were sent, and the line reads `Model review done: 1 row removed, 2 rows
+  updated.`
+
+#### Scenario: A term locked while the model thinks is left alone
+
+- **WHEN** the person locks `Well` with the target `Ну` while the review's call is out, and the model judges `Well`
+  not a name
+- **THEN** `Well` → `Ну` stays, locked
+
+#### Scenario: A failed or stopped review changes nothing
+
+- **WHEN** the glossary holds 41 open entries and the second call fails with `ErrorCode.unreachable`, or the person
+  presses Stop while a call is out
+- **THEN** the glossary holds the same 41 entries as before
+
+### Requirement: Compare glossary terms by one key
+
+The application SHALL compare glossary terms — for a duplicate in the repository, the Add term dialog and a CSV import,
+for a held or removed term in every scan, and for an entry's id — by one key: the term in Unicode NFC, with leading and
+trailing punctuation and a trailing possessive `’s` or `'s` removed, inner spaces collapsed to one, and the case folded.
+
+**Source:** FR-GLOSS-02, FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`).
+In plain words: before, each way in compared differently, so `Lovelace’s` could be held beside `Lovelace` and a removed
+name could come back in another spelling.
+
+#### Scenario: Spellings of one term share a key
+
+- **WHEN** the glossary holds `Hale` and `Hale's`, `Hale’s`, ` HALE ` or `"Hale,"` is added
+- **THEN** the addition is refused as a duplicate, and a removed `Hale` is still removed when `Hale’s` is proposed
+
+### Requirement: Sort and search the glossary table
+
+The Names & style table SHALL sort by Source term, Type, Gender or Locked when the person chooses that column's header,
+breaking every tie by the source term, so that storing a change to any other column — a typed target above all — never
+moves its row; and it SHALL offer a search field that shows only the rows whose source term or target contains the
+typed text, ignoring case, and that the Escape key clears.
+
+**Source:** FR-GLOSS-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-names-and-style`.
+In plain words: a real book yields a hundred rows or more, in the order the scan found them; a person settling them
+needs to find one name and group the rows by kind. The glossary keeps no count of mentions, so there is no count column.
+
+#### Scenario: Sorting by type keeps one type's rows in term order
+
+- **WHEN** the table holds `Zeta` (place), `Alpha` (character), `Mid` and `Beta` (other) and the person sorts by Type
+- **THEN** the rows read `Alpha`, `Zeta`, `Beta`, `Mid`, and storing a target for `Beta` leaves that order
+
+#### Scenario: Searching by a target
+
+- **WHEN** `Mid` has the target `Мід` and the person types `мід` into the search field
+- **THEN** only `Mid` is shown, and pressing Escape clears the field and shows every row again
+
 ### Requirement: Lock only an entry that has a target
 
 IF a change would leave a glossary entry locked with an empty target — turning the Locked switch on in the table,
@@ -196,8 +318,8 @@ them letting it through.
 ### Requirement: Add a term through a dialog that refuses duplicates
 
 WHEN the person confirms the Add term dialog with a source term, a target, a type, a gender and the lock switch, the
-application SHALL add that entry, and IF the source term matches an existing entry ignoring case, THEN it SHALL refuse
-the addition and say so in the dialog.
+application SHALL add that entry, and IF the source term has the glossary key of an existing entry (see "Compare
+glossary terms by one key"), THEN it SHALL refuse the addition and say so in the dialog.
 
 **Source:** FR-GLOSS-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-add-glossary-term`.
@@ -214,6 +336,11 @@ has a target").
 
 - **WHEN** `Justine` exists and the person adds `justine` → `Юстина`
 - **THEN** the dialog stays open with a message that `justine` is already in the glossary and nothing is added
+
+#### Scenario: A possessive of a held term is refused
+
+- **WHEN** `Justine` exists and the person adds `Justine’s`
+- **THEN** the dialog says `Justine’s` is already in the glossary and nothing is added
 
 ### Requirement: Import and export the glossary as CSV
 
@@ -246,7 +373,7 @@ like a malformed one (see "Lock only an entry that has a target").
 ### Requirement: Keep the person's entries and removals when names are proposed
 
 WHEN a scan — the deterministic scan on preparing a run, on opening Names & style or at the end of a chapter, or the
-model scan — finds a term the glossary already holds, ignoring case, the application SHALL keep the existing entry
+model scan — finds a term the glossary already holds by its glossary key, the application SHALL keep the existing entry
 unchanged; and the application SHALL NOT let any scan, deterministic or model, propose a term the person removed in this
 session, until the person adds that term again through Add term or a CSV import.
 

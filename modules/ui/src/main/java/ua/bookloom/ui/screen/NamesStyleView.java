@@ -2,13 +2,16 @@ package ua.bookloom.ui.screen;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -99,7 +102,8 @@ final class NamesStyleView {
     }
 
     private Node card() {
-        final TableView<GlossaryEntry> table = GlossaryTable.build(messages, glossary);
+        final TextField search = GlossaryTable.search(messages);
+        final TableView<GlossaryEntry> table = GlossaryTable.build(messages, glossary, search.textProperty());
         final ChangeListener<Number> onRestore = (observed, was, now) -> table.refresh();
         table.getProperties().put(LISTENER_KEY, onRestore);
         glossary.restorations().addListener(new WeakChangeListener<>(onRestore));
@@ -107,7 +111,8 @@ final class NamesStyleView {
         title.getStyleClass().add("card-title");
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox header = new HBox(ACTION_SPACING, title, spacer, actions());
+        final HBox header = new HBox(ACTION_SPACING, title, spacer, search, actions());
+        header.setAlignment(Pos.CENTER_LEFT);
         final VBox card = new VBox(CARD_SPACING, header, table);
         card.setId("names-style-card");
         card.getStyleClass().add("card");
@@ -116,30 +121,51 @@ final class NamesStyleView {
     }
 
     private Node actions() {
-        final Button scan = action(
-                "names-style-model-scan",
-                MessageKey.NAMES_STYLE_MODEL_SCAN,
-                MessageKey.NAMES_STYLE_MODEL_SCAN_TIP,
-                glossary::modelScan);
-        scan.disableProperty().bind(glossary.busy());
-        return new HBox(
+        final HBox actions = new HBox(
                 ACTION_SPACING,
                 action(
                         "names-style-add",
                         MessageKey.NAMES_STYLE_ADD,
                         MessageKey.NAMES_STYLE_ADD_TIP,
-                        this::openAddTerm),
-                scan,
-                action(
-                        "names-style-import",
-                        MessageKey.NAMES_STYLE_IMPORT,
-                        MessageKey.NAMES_STYLE_IMPORT_TIP,
-                        this::chooseImport),
-                action(
-                        "names-style-export",
-                        MessageKey.NAMES_STYLE_EXPORT,
-                        MessageKey.NAMES_STYLE_EXPORT_TIP,
-                        this::chooseExport));
+                        this::openAddTerm));
+        actions.getChildren().addAll(modelActions());
+        actions.getChildren()
+                .addAll(
+                        action(
+                                "names-style-import",
+                                MessageKey.NAMES_STYLE_IMPORT,
+                                MessageKey.NAMES_STYLE_IMPORT_TIP,
+                                this::chooseImport),
+                        action(
+                                "names-style-export",
+                                MessageKey.NAMES_STYLE_EXPORT,
+                                MessageKey.NAMES_STYLE_EXPORT_TIP,
+                                this::chooseExport));
+        return actions;
+    }
+
+    // The two model actions are not offered while one runs; Stop is shown only then.
+    private List<Button> modelActions() {
+        final Button scan = action(
+                "names-style-model-scan",
+                MessageKey.NAMES_STYLE_MODEL_SCAN,
+                MessageKey.NAMES_STYLE_MODEL_SCAN_TIP,
+                glossary::modelScan);
+        final Button review = action(
+                "names-style-review",
+                MessageKey.NAMES_STYLE_REVIEW,
+                MessageKey.NAMES_STYLE_REVIEW_TIP,
+                glossary::review);
+        final Button stop = action(
+                "names-style-model-stop",
+                MessageKey.NAMES_STYLE_MODEL_STOP,
+                MessageKey.NAMES_STYLE_MODEL_STOP_TIP,
+                glossary::stopModel);
+        scan.disableProperty().bind(glossary.busy());
+        review.disableProperty().bind(glossary.busy());
+        stop.visibleProperty().bind(glossary.busy());
+        stop.managedProperty().bind(glossary.busy());
+        return List.of(scan, review, stop);
     }
 
     private Button action(final String id, final MessageKey caption, final MessageKey tip, final Runnable onPress) {

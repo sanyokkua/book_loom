@@ -523,9 +523,13 @@ Quality-dial mapping loses its τ row; τ_judge defaults to τ; acceptance is pe
 
 **Decision:** The glossary is seeded by a **deterministic frequency-and-capitalization scan** — run when a run prepares
 over an empty glossary, when Names & style opens on an empty glossary, and again at the end of each body unit as the
-run meets new names — proposing each candidate unlocked, with no target and gender unknown. An **LLM pre-scan**, which
-proposes type and provisional gender too, exists only as a button on Names & style: it never runs automatically and
-never at a run's start (owner decision D-7, reversing this decision's earlier automatic-pre-scan shape). **Why:**
+run meets new names — proposing each candidate unlocked, with no target and gender unknown. The scan is language-agnostic at its core — a
+word the book writes in lower case at least 20% of the time is a common word, not a name — and adds a small bundled
+stop-word list per source language, apostrophe- and hyphen-aware words, dash and quotation marks as sentence starts, and
+an alias rule that does not propose a word mostly seen inside a longer name. An **LLM pre-scan**, which proposes type
+and provisional gender too, and an **LLM review**, which judges each open proposal a name, a term or not a name, exist
+only as buttons on Names & style: they never run automatically and never at a run's start (owner decision D-7,
+reversing this decision's earlier automatic-pre-scan shape). **Why:**
 Type/gender are not deterministically derivable from source text without an LLM, and the app forbids NER
 libraries/embeddings (DD-18), but an automatic model call at every run's start costs time and network the automatic-
 first pipeline should not spend without the person asking. **Consequences:** No model call in Phase B by default; the

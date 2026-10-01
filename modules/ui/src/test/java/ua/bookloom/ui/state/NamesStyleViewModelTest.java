@@ -232,6 +232,19 @@ class NamesStyleViewModelTest extends ApplicationTest {
         assertThat(glossary.added()).isEmpty();
     }
 
+    // IF a possessive spelling of a held name were added, THEN the glossary would hold one name twice.
+    @Test
+    void add_possessiveOfAHeldTerm_refusesWithoutAskingTheService() {
+        showWith(new GlossaryEntry("e3", PROJECT, "Justine", "Жустіна", TermType.CHARACTER, Gender.FEMALE, true));
+        final List<String> refused = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        run(() ->
+                vm.add(new NewTerm("Justine’s", "", TermType.CHARACTER, Gender.FEMALE, false), () -> {}, refused::add));
+
+        assertThat(refused).containsExactly("Justine’s is already in the glossary");
+        assertThat(glossary.added()).isEmpty();
+    }
+
     // IF a lock with no target were accepted from the dialog, THEN the same refusal as the table's would be missing.
     @Test
     void add_lockedWithNoTarget_refusesWithoutAskingTheService() {

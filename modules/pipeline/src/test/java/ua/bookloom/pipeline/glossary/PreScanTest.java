@@ -88,8 +88,8 @@ class PreScanTest {
         assertThat(requests)
                 .extracting(request -> candidateLines(request).size())
                 .containsExactly(40, 40, 15);
-        assertThat(candidateLines(requests.getFirst())).first().isEqualTo("Aa — We met Aa today.");
-        assertThat(candidateLines(requests.get(2))).last().isEqualTo("Dq — We met Dq today.");
+        assertThat(candidateLines(requests.getFirst())).first().isEqualTo("Xaa — We met Xaa today.");
+        assertThat(candidateLines(requests.get(2))).last().isEqualTo("Xdq — We met Xdq today.");
         assertThat(requests).extracting(ChatRequest::temperature).containsOnly(0.2);
         assertThat(requests).extracting(ChatRequest::expectedOutputTokens).containsOnlyNulls();
         assertThat(requests.getFirst().responseFormat()).isNotNull();
@@ -102,7 +102,7 @@ class PreScanTest {
         glossary.add(held);
         final AppError failure = AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.");
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(reply("{\"terms\":[{\"term\":\"Aa\",\"type\":\"person\"}]}"))
+                .answer(reply("{\"terms\":[{\"term\":\"Xaa\",\"type\":\"person\"}]}"))
                 .answer(Result.err(failure));
 
         final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, ninetyFiveNames(), FRAME, calls(model));
@@ -188,7 +188,7 @@ class PreScanTest {
     @Test
     void scan_candidateOfAnotherBatch_isDroppedFromThisBatchReply() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(reply("{\"terms\":[{\"term\":\"Dq\"}]}"))
+                .answer(reply("{\"terms\":[{\"term\":\"Xdq\"}]}"))
                 .answer(reply("{\"terms\":[]}"))
                 .answer(reply("{\"terms\":[]}"));
 
@@ -279,7 +279,7 @@ class PreScanTest {
 
     private static List<Segment> ninetyFiveNames() {
         return GlossaryTestSegments.of(IntStream.range(0, 95)
-                .mapToObj(index -> "We met " + (char) ('A' + index / 26) + (char) ('a' + index % 26) + " today.")
+                .mapToObj(index -> "We met X" + (char) ('a' + index / 26) + (char) ('a' + index % 26) + " today.")
                 .toList());
     }
 

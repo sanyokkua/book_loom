@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /** The deterministic name scan: which capitalised words and runs it proposes, and in what order. */
@@ -52,11 +53,54 @@ class FrequencyScanTest {
                 Arguments.of("after an ellipsis", copies("Wait… Hale ran.", 3), List.of()));
     }
 
+    static Stream<Arguments> wordBooks() {
+        return Stream.of(
+                Arguments.of("a hyphenated place is one word", copies("We rode to Al-Arish.", 3), List.of("Al-Arish")),
+                Arguments.of(
+                        "a possessive is not part of the name", copies("We saw Hale’s house.", 3), List.of("Hale")),
+                Arguments.of("an apostrophe inside a name", copies("We met O'Brien there.", 3), List.of("O'Brien")),
+                Arguments.of("after an em dash", copies("He paused—Hale ran.", 3), List.of()),
+                Arguments.of("after an opening quote", copies("He said, “Hale ran.”", 3), List.of()),
+                Arguments.of(
+                        "a word written in lower case a fifth of the time",
+                        withLine(copies("We crossed the Bridge.", 4), "The bridge fell."),
+                        List.of()),
+                Arguments.of(
+                        "a sentence start counts once the word is seen mid-sentence twice",
+                        withLine(copies("Hale ran.", 3), "We saw Hale.", "We saw Hale."),
+                        List.of("Hale")),
+                Arguments.of(
+                        "a sentence start seen mid-sentence once",
+                        withLine(copies("Hale ran.", 3), "We saw Hale."),
+                        List.of()));
+    }
+
     @ParameterizedTest(name = "{0}")
-    @MethodSource({"books", "sentenceBreakBooks"})
+    @CsvSource({
+        "uk, Він сказав Так тихо., ''",
+        "en, Він сказав Так тихо., Так",
+        "en, They said Yes loudly., ''",
+        "xx, They said Yes loudly., ''",
+        "de, Sie sah Herr Brandt dort., Brandt",
+        "fr, Il vit Monsieur Hale ici., Hale",
+        "es, Vio a Don Diego allí., Diego",
+        "pl, Widział Pan Kowalski tam., Kowalski"
+    })
+    void candidates_stopWordOfTheLanguage_isNeverAName(
+            final String language, final String line, final String expected) {
+        final List<String> terms =
+                FrequencyScan.candidates(GlossaryTestSegments.of(copies(line, 3)), THRESHOLD, language).stream()
+                        .map(NameCandidate::term)
+                        .toList();
+
+        assertThat(String.join(",", terms)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource({"books", "sentenceBreakBooks", "wordBooks"})
     void candidates_bookText_proposesExactlyTheTerms(
             final String description, final List<String> lines, final List<String> expectedTerms) {
-        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD).stream()
+        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
                 .map(NameCandidate::term)
                 .toList();
 
@@ -67,7 +111,7 @@ class FrequencyScanTest {
     void candidates_minimumOne_returnsCountAndFirstSentenceOfTheFirstMention() {
         final List<String> lines = List.of("She met Moreau in the hall. He left.", "Then Moreau left.");
 
-        final List<NameCandidate> candidates = FrequencyScan.candidates(GlossaryTestSegments.of(lines), 1);
+        final List<NameCandidate> candidates = FrequencyScan.candidates(GlossaryTestSegments.of(lines), 1, "en");
 
         assertThat(candidates).containsExactly(new NameCandidate("Moreau", 2, "She met Moreau in the hall."));
     }
@@ -83,6 +127,12 @@ class FrequencyScanTest {
         return Collections.nCopies(times, List.of(first, second)).stream()
                 .flatMap(List::stream)
                 .toList();
+    }
+
+    private static List<String> withLine(final List<String> lines, final String... more) {
+        final List<String> all = new ArrayList<>(lines);
+        all.addAll(List.of(more));
+        return all;
     }
 
     private static List<String> copies(final String line, final int times) {

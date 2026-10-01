@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,15 +25,15 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.GlossaryImportReport;
+import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.OpenProjects;
-import ua.bookloom.pipeline.prompt.CallFrame;
-import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
 /**
@@ -51,7 +52,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
     private final DeferralRepository deferrals;
     private final ProjectRepository projects;
     private final OpenProjects openProjects;
-    private final PreScan preScan;
+    private final GlossaryModelScans modelScans;
 
     @Override
     public Result<List<GlossaryEntry>> entries(final String projectId) {
@@ -66,10 +67,21 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     @Override
-    public Result<List<GlossaryEntry>> prescan(final String projectId, final ChatModel model) {
+    public Result<List<GlossaryEntry>> prescan(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
-        return guarded("prescan", projectId, () -> runPrescan(projectId, model));
+        Objects.requireNonNull(progress, "progress");
+        return guarded("prescan", projectId, () -> modelScans.prescan(projectId, model, progress));
+    }
+
+    @Override
+    public Result<GlossaryReviewReport> review(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
+        return guarded("review", projectId, () -> modelScans.review(projectId, model, progress));
     }
 
     @Override
@@ -123,33 +135,18 @@ public final class GlossaryServiceImpl implements GlossaryService {
             log.debug("Glossary scan project={} skipped: the glossary holds {} entries", projectId, held.size());
             return Result.ok(List.of());
         }
-        return FrequencyScan.newTerms(projectId, bodySegments(document), glossary)
+        return FrequencyScan.newTerms(projectId, bodySegments(document), sourceLanguage(projectId, document), glossary)
                 .flatMap(this::addAll);
     }
 
-    private Result<List<GlossaryEntry>> runPrescan(final String projectId, final ChatModel model) {
-        final Result<Optional<Project>> found = projects.find(projectId);
-        if (found.isErr()) {
-            return Result.err(Objects.requireNonNull(found.error(), "error"));
-        }
-        final Optional<Project> project = Objects.requireNonNull(found.data(), "found");
-        final BookBrief brief = project.map(Project::brief).orElse(null);
-        if (brief == null
-                || brief.targetLanguage() == null
-                || brief.targetLanguage().isBlank()) {
-            log.warn("Glossary pre-scan project={} refused: no target language chosen", projectId);
-            return Result.err(AppError.of(
-                    ErrorCode.validation, "Choose a target language", "Choose a target language before the scan."));
-        }
-        final Document document = openProjects.get(projectId);
-        if (document == null) {
-            return Result.err(notOpen(projectId));
-        }
-        final String source = brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage();
-        final CallFrame frame =
-                new CallFrame(source, brief.targetLanguage(), StyleSheet.from(brief), brief.foreignPassages());
-        log.debug("Glossary pre-scan project={} source={} target={}", projectId, source, brief.targetLanguage());
-        return preScan.scan(projectId, bodySegments(document), frame, (kind, id, request) -> model.chat(request));
+    private @Nullable String sourceLanguage(final String projectId, final Document document) {
+        final String chosen = Optional.ofNullable(projects.find(projectId).data())
+                .flatMap(project -> project.map(Project::brief))
+                .map(BookBrief::sourceLanguage)
+                .orElse(null);
+        log.debug(
+                "Glossary scan project={} language chosen={} declared={}", projectId, chosen, document.declaredLang());
+        return chosen == null ? document.declaredLang() : chosen;
     }
 
     private Result<GlossaryEntry> addEntry(final GlossaryEntry entry) {
@@ -327,7 +324,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         return Result.ok(destination);
     }
 
-    private static List<Segment> bodySegments(final Document document) {
+    static List<Segment> bodySegments(final Document document) {
         return document.units().stream()
                 .filter(unit -> !unit.isAuxiliary())
                 .flatMap(unit -> unit.segments().stream())

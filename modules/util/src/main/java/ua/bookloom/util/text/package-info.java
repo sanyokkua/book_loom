@@ -1,6 +1,6 @@
 /**
- * Text predicates every module agrees on — today, whether a run of text holds anything a reader would see — so the
- * document walk and the pipeline never disagree about what counts as text.
+ * Text rules every module agrees on — whether a run of text holds anything a reader would see, and the one key a
+ * glossary term is compared by — so the document walk, the repository and the pipeline never disagree.
  */
 @NullMarked
 package ua.bookloom.util.text;

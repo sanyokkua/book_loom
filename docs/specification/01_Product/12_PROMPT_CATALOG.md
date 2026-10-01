@@ -595,10 +595,67 @@ Return JSON exactly as:
 
 Tolerant read: `note`/`confidence` may be absent; `gender` defaults to `unknown`; unknown fields ignored.
 **Offline/disabled fallback (deterministic):** when the provider is unavailable or the pre-scan is disabled, candidates
-are derived by **frequency + casing** — repeated capitalized tokens/phrases not at sentence start, ranked by frequency —
-with `type = other` and **`gender = unknown`** (a person's gender is filled later by the user or by backward revision).
+are derived by **frequency + casing** — repeated capitalized tokens/phrases not at sentence start (a dash or a quotation
+mark also starts one; a sentence-initial word counts once it is seen capitalised mid-sentence twice), ranked by
+frequency, leaving out a word written in lower case at least 20% of the time, a word on the source language's bundled
+stop-word list and a word mostly seen inside a longer candidate — with `type = other` and **`gender = unknown`** (a person's gender is filled later by the user or by backward revision).
 The **unknown-gender heuristic**: any candidate person whose gender stays `unknown`, and any segment referencing such a
 person, is a **deferred-resolution** signal (`02_Architecture/05_PIPELINE_ENGINE.md#deferred-resolution`).
+
+## glossary-review {#glossary-review}
+
+A call the person asks for with **Review with model** on Names & style (`FR-GLOSS-01`, DD-46, call kind
+`REVIEW_TERMS`): every unlocked glossary entry with no target is sent, 40 per call, with how many times the book uses it
+in any case and up to two sentences that hold it, and the model judges each a name, a term or not a name. The entries
+are only written once every call has answered: an entry judged not a name is removed (and remembered as removed) only
+while its type is still `other` and its gender `unknown`; an unset type or gender takes the model's guess; a locked
+entry or one with a target is never sent or changed.
+
+**SYSTEM**
+
+```
+You are reviewing the name list of a {{sourceLanguage}} → {{targetLanguage}} book translation.
+The list was gathered by counting capitalised words, so it holds real names and also ordinary words that were
+capitalised only because they opened a sentence, a line of speech or a heading.
+For each listed term decide:
+- "name" — a proper name of a person, a place, an organisation or another named thing;
+- "term" — a domain-specific word or phrase that must be translated the same way every time;
+- "not-a-name" — an ordinary word (an interjection, a contraction, a common noun, a function word).
+Give each its type (person, place, org, term, title or other) and, for a person, the gender target-language
+agreement needs, or "unknown" when the examples do not show it.
+Judge from the count and the example sentences. Keep the term exactly as listed; do not translate it.
+Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
+```
+
+**USER**
+
+```
+[Terms — each with how many times the book uses it, in any case, and up to two sentences that hold it]
+{{terms}}
+
+Return JSON exactly as:
+{"verdicts":[{"term":"<term as listed>","verdict":"name|term|not-a-name","type":"person|place|org|term|title|other",
+ "gender":"male|female|neuter|unknown"}]}
+```
+
+| Variable                                   | Required? | Source / notes                                                                                     |
+|--------------------------------------------|-----------|----------------------------------------------------------------------------------------------------|
+| `{{sourceLanguage}}`, `{{targetLanguage}}` | Required  | System message; the project's languages (`FR-BRIEF-01`).                                           |
+| `{{terms}}`                                | Required  | One `- term — N× — "example" / "example"` line per open entry of the batch (at most 40).           |
+
+**Parameters:** temperature 0.1; output format = strict JSON schema (every field required, closed value lists,
+`maxItems` 40); output capped at 2048 tokens, expected 32 per term; reasoning off; the helper-call timeout (120 s).
+**Expected output**
+
+```json
+{ "verdicts": [
+  { "term": "Well", "verdict": "not-a-name", "type": "other", "gender": "unknown" },
+  { "term": "Hale", "verdict": "name", "type": "person", "gender": "male" } ] }
+```
+
+Tolerant read: a verdict on a term outside the batch is dropped; an unlisted verdict, type or gender reads as no
+opinion; an unreadable reply is no verdicts, so it changes nothing. The pseudo model judges every listed term a name
+with no type or gender, so a review with it changes nothing.
 
 ## rolling-summary-update {#rolling-summary-update}
 

@@ -627,6 +627,18 @@ public enum MessageKey {
     NAMES_STYLE_MODEL_SCAN("namesStyle.modelScan"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_MODEL_SCAN}. */
     NAMES_STYLE_MODEL_SCAN_TIP("namesStyle.modelScan.tip"),
+    /** Button that runs the model review of the glossary. */
+    NAMES_STYLE_REVIEW("namesStyle.review"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_REVIEW}. */
+    NAMES_STYLE_REVIEW_TIP("namesStyle.review.tip"),
+    /** Button that stops the model scan or review under way. */
+    NAMES_STYLE_MODEL_STOP("namesStyle.modelStop"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_MODEL_STOP}. */
+    NAMES_STYLE_MODEL_STOP_TIP("namesStyle.modelStop.tip"),
+    /** Prompt of the field that filters the glossary rows. */
+    NAMES_STYLE_SEARCH("namesStyle.search"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_SEARCH}. */
+    NAMES_STYLE_SEARCH_TIP("namesStyle.search.tip"),
     /** Button that imports a glossary CSV file. */
     NAMES_STYLE_IMPORT("namesStyle.import"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_IMPORT}. */
@@ -665,6 +677,17 @@ public enum MessageKey {
     NAMES_STYLE_DUPLICATE("namesStyle.duplicate"),
     /** Why the model scan did not start. */
     NAMES_STYLE_NO_MODEL("namesStyle.noModel"),
+    /** Why the model review did not start. */
+    NAMES_STYLE_NO_MODEL_REVIEW("namesStyle.noModelReview"),
+    /**
+     * The line shown while a model scan or review waits; argument 0 is the request number, 1 the attempt and 2 the
+     * attempts allowed, each passed as an Integer.
+     */
+    NAMES_STYLE_MODEL_PROGRESS("namesStyle.modelProgress"),
+    /** The line shown once a model scan or review was stopped. */
+    NAMES_STYLE_MODEL_STOPPED("namesStyle.modelStopped"),
+    /** Result of a model review; argument 0 is the removed count, 1 the updated count, each passed as an Integer. */
+    NAMES_STYLE_REVIEWED("namesStyle.reviewed"),
     /** Result of an import; argument 0 is the row count, passed as an Integer. */
     NAMES_STYLE_IMPORT_DONE("namesStyle.import.done"),
     /** Lines an import could not read; argument 0 is the joined line numbers, argument 1 their count. */

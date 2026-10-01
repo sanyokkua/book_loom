@@ -1,0 +1,6 @@
+[Terms — each with how many times the book uses it, in any case, and up to two sentences that hold it]
+{{terms}}
+
+Return JSON exactly as:
+{"verdicts":[{"term":"<term as listed>","verdict":"name|term|not-a-name","type":"person|place|org|term|title|other",
+ "gender":"male|female|neuter|unknown"}]}

@@ -90,7 +90,7 @@ class NewTermsTest {
         final AppError failure = AppError.of(ErrorCode.internal, "Read failed", "The glossary could not be read.");
 
         final Result<List<GlossaryEntry>> result =
-                FrequencyScan.newTerms(PROJECT, namesBook(), new FailingGlossary(failure, null));
+                FrequencyScan.newTerms(PROJECT, namesBook(), "en", new FailingGlossary(failure, null));
 
         assertThat(result.error()).isEqualTo(failure);
     }
@@ -100,7 +100,7 @@ class NewTermsTest {
         final AppError failure = AppError.of(ErrorCode.internal, "Read failed", "The removals could not be read.");
 
         final Result<List<GlossaryEntry>> result =
-                FrequencyScan.newTerms(PROJECT, namesBook(), new FailingGlossary(null, failure));
+                FrequencyScan.newTerms(PROJECT, namesBook(), "en", new FailingGlossary(null, failure));
 
         assertThat(result.error()).isEqualTo(failure);
     }
@@ -112,7 +112,7 @@ class NewTermsTest {
     }
 
     private List<GlossaryEntry> newTermsOf(final List<Segment> segments) {
-        final Result<List<GlossaryEntry>> result = FrequencyScan.newTerms(PROJECT, segments, glossary);
+        final Result<List<GlossaryEntry>> result = FrequencyScan.newTerms(PROJECT, segments, "en", glossary);
         assertThat(result.isOk()).isTrue();
         return Objects.requireNonNull(result.data());
     }

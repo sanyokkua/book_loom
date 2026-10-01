@@ -3,7 +3,6 @@ package ua.bookloom.persistence.memory;
 import com.google.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -20,6 +19,7 @@ import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
+import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * The shared, per-injector state every in-memory adapter reads and writes — one project map and one segment table
@@ -112,26 +112,26 @@ final class InMemoryStore {
     }
 
     /**
-     * One project's glossary: entries by id, a lower-cased-term index for the case-insensitive duplicate/lookup
-     * rule, and the set of lower-cased terms removed this session so a re-proposed name is not silently re-added.
+     * One project's glossary: entries by id, a lookup by {@link GlossaryKeys} for the duplicate rule,
+     * and the set of term keys removed this session so a re-proposed name is not silently re-added.
      */
     static final class ProjectGlossary {
 
         private final Map<String, GlossaryEntry> byId = new ConcurrentHashMap<>();
         private final CopyOnWriteArrayList<String> insertionOrder = new CopyOnWriteArrayList<>();
-        private final Set<String> removedLowerTerms = ConcurrentHashMap.newKeySet();
+        private final Set<String> removedKeys = ConcurrentHashMap.newKeySet();
 
         Map<String, GlossaryEntry> byId() {
             return byId;
         }
 
-        Set<String> removedLowerTerms() {
-            return removedLowerTerms;
+        Set<String> removedKeys() {
+            return removedKeys;
         }
 
-        Optional<GlossaryEntry> findByLowerTerm(final String lowerTerm) {
+        Optional<GlossaryEntry> findByKey(final String key) {
             return byId.values().stream()
-                    .filter(entry -> entry.term().toLowerCase(Locale.ROOT).equals(lowerTerm))
+                    .filter(entry -> GlossaryKeys.of(entry.term()).equals(key))
                     .findFirst();
         }
 

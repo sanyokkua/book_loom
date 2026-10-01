@@ -8,6 +8,7 @@ import com.google.inject.Guice;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,10 @@ class GlossaryCsvTest {
 
     @BeforeEach
     void setUp() {
-        service = Guice.createInjector(new DocumentModule(), new PersistenceModule())
+        service = Guice.createInjector(
+                        new DocumentModule(),
+                        new PersistenceModule(),
+                        binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()))
                 .getInstance(GlossaryServiceImpl.class);
     }
 
