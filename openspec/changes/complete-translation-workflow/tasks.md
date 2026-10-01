@@ -1179,9 +1179,14 @@ times, paused, and on every resume paid the same rounds again. Each step is its 
   segments (`judge-unavailable`) instead of pausing; a step that pauses twice is flagged and the run goes on, and a
   paused run can skip the failing segment (`TranslationJob.skipSegment`); rounds that make no progress stop early; a
   resume continues at the call that failed (380db02, fa83b1c)
-- [ ] 2. Make the run observable: per-attempt model-call events, the waiting and provider-error banners with the
-  segment, call kind and attempt, a connection chip, a richer activity log, the round tracker, the context panel, and
-  the Skip segment button on the paused banner
+- [x] 2. Make the run observable: per-attempt model-call events (`CallAttemptListener` in `:api`, reported by the gated
+  model, announced by `JobModelCalls` with timeout and request size; a failed attempt finishes with its code; the
+  chunk's judge names its segments), `ContextAssembled` and `RoundStarted`; the waiting banner naming the call, segment
+  and attempt with its own clock against the timeout and the call's total, turning into a warning with Skip segment /
+  Retry now / Pause after a minute; the provider-error banner naming the failed call, the pauses spent and what Retry
+  now does, with Skip segment, and no "no work was lost" claim; a connection chip in the title bar; a timed activity
+  log with call lines, repeats counted and an errors-only view; the round tracker and the collapsed context section in
+  the live row; the run controls under the banner; no empty live boxes and a worded blank source in review (c227759)
 - [ ] 3. Segments: one shared blank test, verbatim segments with no model call, short words with neighbours,
   de-duplicated auxiliary text
 - [ ] 4. Glossary: one key normaliser, a better frequency scan, the "Review with model" pass, sorting and search
