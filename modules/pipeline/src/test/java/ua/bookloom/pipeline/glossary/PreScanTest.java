@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.tuple;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
@@ -39,6 +42,8 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 class PreScanTest {
 
     private static final String PROJECT = "p1";
+    private static final Pattern SLASH = Pattern.compile("/");
+    private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
     private static final CallFrame FRAME =
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
     private static final List<String> NAMES_BOOK =
@@ -51,7 +56,11 @@ class PreScanTest {
     void setUp() {
         glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
                 .getInstance(GlossaryRepository.class);
-        preScan = new PreScan(new PromptTemplates(), new ObjectMapper(), glossary);
+        preScan = new PreScan(
+                new PromptTemplates(),
+                new ObjectMapper(),
+                glossary,
+                new TermReview(new PromptTemplates(), new ObjectMapper(), glossary));
     }
 
     @Test
@@ -265,6 +274,45 @@ class PreScanTest {
         assertThat(model.requests()).isEmpty();
     }
 
+    // The proposal stage keeps what the model proposes; the verdict step then writes only what it calls a name or a
+    // term — a proposal judged not a name, or left without a verdict, is not written.
+    @Test
+    void scan_verdictCallsAProposalNotAName_writesOnlyTheConfirmedOnes() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"terms\":[{\"term\":\"Moreau\"},{\"term\":\"Acme\"},{\"term\":\"Justine\"}]}"));
+
+        final Result<List<GlossaryEntry>> result = preScan.scan(
+                PROJECT, book(NAMES_BOOK), FRAME, calls(model, Map.of("Acme", "not-a-name", "Justine", "none")));
+
+        assertThat(result.data()).extracting(GlossaryEntry::term).containsExactly("Moreau");
+        assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Moreau");
+    }
+
+    @Test
+    void scan_verdictGivesTheTypeAProposalLacked_writesTheVerdictsType() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"terms\":[{\"term\":\"Acme\"}]}"));
+
+        preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, calls(model, Map.of("Acme", "name/place")));
+
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::type)
+                .containsExactly(tuple("Acme", TermType.PLACE));
+    }
+
+    @Test
+    void scan_verdictCallFails_returnsThatErrorAndWritesNothing() {
+        final AppError failure = AppError.of(ErrorCode.unreachable, "Offline", "The provider is unreachable.");
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"terms\":[{\"term\":\"Moreau\"}]}"))
+                .answer(Result.err(failure));
+
+        final Result<List<GlossaryEntry>> result =
+                preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, (kind, segmentId, request) -> model.chat(request));
+
+        assertThat(result.error()).isEqualTo(failure);
+        assertThat(glossary.all(PROJECT).data()).isEmpty();
+    }
+
     private static List<String> candidateLines(final ChatRequest request) {
         return userMessage(request)
                 .lines()
@@ -291,8 +339,37 @@ class PreScanTest {
         return GlossaryTestSegments.of(lines);
     }
 
+    // The verdict step's call answers "name" for every term it lists, as the pseudo model does, so a test of the
+    // proposal stage reads what the proposals alone would write.
     private static ModelCalls calls(final ScriptedChatModel model) {
-        return (kind, segmentId, request) -> model.chat(request);
+        return (kind, segmentId, request) ->
+                kind == CallKind.REVIEW_TERMS ? reply(verdicts(request, Map.of())) : model.chat(request);
+    }
+
+    private static ModelCalls calls(final ScriptedChatModel model, final Map<String, String> verdictByTerm) {
+        return (kind, segmentId, request) ->
+                kind == CallKind.REVIEW_TERMS ? reply(verdicts(request, verdictByTerm)) : model.chat(request);
+    }
+
+    /**
+     * A verdict reply for every term the review lists: {@code verdict/type} from the map, else {@code name/other}; a
+     * term mapped to {@code none} gets no verdict.
+     */
+    private static String verdicts(final ChatRequest request, final Map<String, String> verdictByTerm) {
+        final String items = REVIEW_LINE
+                .matcher(userMessage(request))
+                .results()
+                .map(match -> match.group(1))
+                .filter(term -> !"none".equals(verdictByTerm.get(term)))
+                .map(term -> verdictItem(term, verdictByTerm.getOrDefault(term, "name/other")))
+                .reduce((left, right) -> left + "," + right)
+                .orElse("");
+        return "{\"verdicts\":[" + items + "]}";
+    }
+
+    private static String verdictItem(final String term, final String verdictAndType) {
+        final String[] parts = SLASH.split(verdictAndType + "/other", -1);
+        return "{\"term\":\"" + term + "\",\"verdict\":\"" + parts[0] + "\",\"type\":\"" + parts[1] + "\"}";
     }
 
     private static Result<ChatResponse> reply(final String content) {

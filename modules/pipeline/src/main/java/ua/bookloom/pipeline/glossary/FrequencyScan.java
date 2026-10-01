@@ -24,7 +24,7 @@ import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * The deterministic name scan: every capitalised word, and every run of two or three, that occurs often enough away
- * from a sentence start. It takes whichever segments the caller passes, so one scan serves the whole book before a run
+ * from a sentence start in the book's running text ({@link ScanText}) — never in a heading or a title line. It takes whichever segments the caller passes, so one scan serves the whole book before a run
  * and "the segments decided so far" at the end of each chapter.
  *
  * <p>A word the book also writes in lower case often enough ({@link #LOWER_SHARE_LIMIT}) is a common word, not a
@@ -63,15 +63,16 @@ public final class FrequencyScan {
         Objects.requireNonNull(segments, "segments");
         log.debug(
                 "Name scan over {} segments, minimum count {}, language {}", segments.size(), minCount, sourceLanguage);
-        final List<Occurrences.Read> read = segments.stream()
-                .map(segment -> Occurrences.read(segment.masked()))
+        final List<Occurrences.Read> read = ScanText.of(segments, sourceLanguage).stream()
+                .map(Occurrences::read)
                 .toList();
         final WordCounts counts = WordCounts.of(read);
         final Set<String> stopWords = StopWords.of(sourceLanguage);
+        final Set<String> neverAlone = StopWords.neverAlone(sourceLanguage);
         final Map<String, NameCandidate> tallies = tally(read, word -> isNameLike(word, counts, stopWords));
         final List<NameCandidate> candidates = tallies.values().stream()
                 .filter(tally -> tally.count() >= minCount)
-                .filter(tally -> isNotCommonWord(tally, counts))
+                .filter(tally -> isNotCommonWord(tally, counts, neverAlone))
                 .filter(tally -> isNotPartOfLongerName(tally, tallies.values(), minCount))
                 .sorted((left, right) -> Integer.compare(right.count(), left.count()))
                 .toList();
@@ -103,9 +104,14 @@ public final class FrequencyScan {
         return tallies;
     }
 
-    private static boolean isNotCommonWord(final NameCandidate tally, final WordCounts counts) {
+    private static boolean isNotCommonWord(
+            final NameCandidate tally, final WordCounts counts, final Set<String> neverAlone) {
         if (tally.term().indexOf(' ') >= 0) {
             return true;
+        }
+        if (neverAlone.contains(Occurrences.keyOf(tally.term()))) {
+            log.debug("Name candidate {} dropped: a number or a language name is never a name alone", tally.term());
+            return false;
         }
         final double share = counts.lowerShare(Occurrences.keyOf(tally.term()));
         if (share >= LOWER_SHARE_LIMIT) {

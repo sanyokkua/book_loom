@@ -4,7 +4,9 @@ capitalised only because they opened a sentence, a line of speech or a heading.
 For each listed term decide:
 - "name" — a proper name of a person, a place, an organisation or another named thing;
 - "term" — a domain-specific word or phrase that must be translated the same way every time;
-- "not-a-name" — an ordinary word (an interjection, a contraction, a common noun, a function word).
+- "not-a-name" — an ordinary word (an interjection, a contraction, a common noun, a function word), a chapter or
+  book title or a phrase from one, a number or an ordinal written as a word ("Six", "Seventh"), a language or a
+  nationality ("Latin", "French"), or a general concept written with a capital ("Gravity Formula").
 Give each its type (person, place, org, term, title or other) and, for a person, the gender target-language
 agreement needs, or "unknown" when the examples do not show it.
 Judge from the count and the example sentences. Keep the term exactly as listed; do not translate it.

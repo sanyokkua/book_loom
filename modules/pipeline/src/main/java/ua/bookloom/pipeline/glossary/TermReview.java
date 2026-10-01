@@ -113,6 +113,31 @@ public final class TermReview {
         return ReviewCommit.apply(glossary, projectId, Objects.requireNonNull(verdicts.data(), "verdicts"));
     }
 
+    /**
+     * The model's verdict on entries the glossary does not hold yet — the model scan's proposals — with the same
+     * prompt, evidence and batching as a review of held entries, and nothing written.
+     *
+     * @param entries the entries to judge; never null
+     * @param segments the book's body segments, where the evidence is read; never null
+     * @param frame the run's language pair and style; never null
+     * @param calls the seam every model call goes through; never null
+     * @return the verdicts the replies hold, which may leave an entry without one; or the first failed call's error
+     */
+    Result<List<Verdict>> judge(
+            final List<GlossaryEntry> entries,
+            final List<Segment> segments,
+            final CallFrame frame,
+            final ModelCalls calls) {
+        Objects.requireNonNull(entries, "entries");
+        log.debug("Judging {} proposed entries", entries.size());
+        if (entries.isEmpty()) {
+            return Result.ok(List.of());
+        }
+        final Map<String, Evidence> evidence = TermEvidence.of(
+                segments, entries.stream().map(GlossaryEntry::term).toList());
+        return ask(entries, evidence, frame, calls);
+    }
+
     private Result<List<Verdict>> ask(
             final List<GlossaryEntry> open,
             final Map<String, Evidence> evidence,

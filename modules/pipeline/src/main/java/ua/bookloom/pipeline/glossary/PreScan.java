@@ -9,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +22,12 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
+import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
+import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -34,7 +37,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
  * The model's name scan, run only when the person asks for it: it finds names a frequency count misses and guesses
- * their type and gender, but it costs time and a provider call. Nothing is written until every batch has answered, so
+ * their type and gender, but it costs time and a provider call. It runs in two stages within one action: the model
+ * proposes from the candidates, then the review's verdict step ({@link TermReview}) judges each proposal against every
+ * use the book makes of it, and only a name or a term is written. Nothing is written until every call has answered, so
  * a failed call never wipes what the person already has.
  */
 @Slf4j
@@ -47,6 +52,7 @@ public final class PreScan {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final GlossaryRepository glossary;
+    private final TermReview verdicts;
 
     /**
      * Asks the model about the book's candidate names and adds what it proposes to the glossary.
@@ -97,10 +103,61 @@ public final class PreScan {
             log.info("Model pre-scan finished project={} ok=false code={}", projectId, failed.code());
             return Result.err(failed);
         }
-        final Result<List<GlossaryEntry>> merged =
-                merge(projectId, Objects.requireNonNull(proposals.data(), "proposals"));
+        final Result<List<GlossaryEntry>> merged = fresh(
+                        projectId, Objects.requireNonNull(proposals.data(), "proposals"))
+                .flatMap(fresh -> confirmed(fresh, segments, frame, calls))
+                .flatMap(this::addAll);
         log.info("Model pre-scan finished project={} ok={} entriesAdded={}", projectId, merged.isOk(), added(merged));
         return merged;
+    }
+
+    /**
+     * The proposals the review's verdict step calls a name or a term, as entries: the scan proposes from a capitalised
+     * word and its first sentence only, and on the fixture book kept chapter-title words, numbers and language names;
+     * the verdict sees every use the book makes of a term. An entry the verdict calls not a name, or leaves without a
+     * verdict, is not written.
+     */
+    private Result<List<GlossaryEntry>> confirmed(
+            final List<GlossaryEntry> fresh,
+            final List<Segment> segments,
+            final CallFrame frame,
+            final ModelCalls calls) {
+        return verdicts.judge(fresh, segments, frame, calls).map(answered -> {
+            final List<GlossaryEntry> kept = answered.stream()
+                    .filter(verdict -> verdict.kind() == Kind.NAME || verdict.kind() == Kind.TERM)
+                    .map(PreScan::withVerdict)
+                    .toList();
+            log.debug(
+                    "Pre-scan verdicts: {} proposed, {} answered, {} confirmed",
+                    fresh.size(),
+                    answered.size(),
+                    kept.size());
+            return kept;
+        });
+    }
+
+    private static GlossaryEntry withVerdict(final Verdict verdict) {
+        final GlossaryEntry entry = verdict.entry();
+        return new GlossaryEntry(
+                entry.id(),
+                entry.projectId(),
+                entry.term(),
+                null,
+                entry.type() == TermType.OTHER ? verdict.type() : entry.type(),
+                entry.gender() == Gender.UNKNOWN ? verdict.gender() : entry.gender(),
+                false);
+    }
+
+    private Result<List<GlossaryEntry>> addAll(final List<GlossaryEntry> entries) {
+        final List<GlossaryEntry> added = new ArrayList<>();
+        for (final GlossaryEntry entry : entries) {
+            final Result<GlossaryEntry> stored = glossary.add(entry);
+            if (stored.isErr()) {
+                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+            }
+            added.add(Objects.requireNonNull(stored.data(), "stored"));
+        }
+        return Result.ok(added);
     }
 
     private Result<Collection<Proposal>> ask(
@@ -163,49 +220,31 @@ public final class PreScan {
         return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
     }
 
-    private Result<List<GlossaryEntry>> merge(final String projectId, final Collection<Proposal> proposals) {
+    /** The proposals as entries, leaving out a term the glossary holds or the person removed. */
+    private Result<List<GlossaryEntry>> fresh(final String projectId, final Collection<Proposal> proposals) {
         final Result<List<GlossaryEntry>> held = glossary.all(projectId);
         if (held.isErr()) {
             return held;
         }
         final Set<String> heldKeys = new HashSet<>();
         Objects.requireNonNull(held.data(), "held").forEach(entry -> heldKeys.add(PreScanReplies.key(entry.term())));
-        final List<Proposal> fresh = proposals.stream()
-                .filter(proposal -> !heldKeys.contains(
-                        PreScanReplies.key(proposal.candidate().term())))
-                .toList();
-        final List<GlossaryEntry> added = new ArrayList<>();
-        for (final Proposal proposal : fresh) {
-            final Result<Optional<GlossaryEntry>> stored = addUnlessRemoved(projectId, proposal);
-            if (stored.isErr()) {
-                return Result.err(Objects.requireNonNull(stored.error(), "error"));
+        final List<GlossaryEntry> fresh = new ArrayList<>();
+        for (final Proposal proposal : proposals) {
+            final String term = proposal.candidate().term();
+            final Result<Boolean> removed = glossary.wasRemoved(projectId, term);
+            if (removed.isErr()) {
+                return Result.err(Objects.requireNonNull(removed.error(), "error"));
             }
-            Objects.requireNonNull(stored.data(), "stored").ifPresent(added::add);
+            if (!heldKeys.contains(PreScanReplies.key(term)) && !Boolean.TRUE.equals(removed.data())) {
+                fresh.add(entryOf(projectId, proposal));
+            }
         }
         log.debug(
-                "Pre-scan merge project={}: {} proposed, {} held, {} removed, {} added",
+                "Pre-scan merge project={}: {} proposed, {} neither held nor removed",
                 projectId,
                 proposals.size(),
-                proposals.size() - fresh.size(),
-                fresh.size() - added.size(),
-                added.size());
-        return Result.ok(added);
-    }
-
-    private Result<Optional<GlossaryEntry>> addUnlessRemoved(final String projectId, final Proposal proposal) {
-        final Result<Boolean> removed =
-                glossary.wasRemoved(projectId, proposal.candidate().term());
-        if (removed.isErr()) {
-            return Result.err(Objects.requireNonNull(removed.error(), "error"));
-        }
-        if (Boolean.TRUE.equals(removed.data())) {
-            log.trace(
-                    "Pre-scan proposal {} skipped: the person removed it",
-                    proposal.candidate().term());
-            return Result.ok(Optional.empty());
-        }
-        final Result<GlossaryEntry> stored = glossary.add(entryOf(projectId, proposal));
-        return stored.map(Optional::of);
+                fresh.size());
+        return Result.ok(fresh);
     }
 
     private static GlossaryEntry entryOf(final String projectId, final Proposal proposal) {

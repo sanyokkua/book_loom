@@ -529,7 +529,10 @@ stop-word list per source language, apostrophe- and hyphen-aware words, dash and
 an alias rule that does not propose a word mostly seen inside a longer name. An **LLM pre-scan**, which proposes type
 and provisional gender too, and an **LLM review**, which judges each open proposal a name, a term or not a name, exist
 only as buttons on Names & style: they never run automatically and never at a run's start (owner decision D-7,
-reversing this decision's earlier automatic-pre-scan shape). **Why:**
+reversing this decision's earlier automatic-pre-scan shape). The scan reads running text only — never a heading or a
+title line, nor a block or run marked as another language — and never proposes a number word or a language name alone;
+the pre-scan's proposals pass through the review's verdict step in the same action before anything is written, since a
+small model asked once kept chapter-title words, numbers and language names as names (fixture run, 2026-10-02). **Why:**
 Type/gender are not deterministically derivable from source text without an LLM, and the app forbids NER
 libraries/embeddings (DD-18), but an automatic model call at every run's start costs time and network the automatic-
 first pipeline should not spend without the person asking. **Consequences:** No model call in Phase B by default; the

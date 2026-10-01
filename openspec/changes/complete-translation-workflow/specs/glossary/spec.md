@@ -27,7 +27,15 @@ rules:
   known) SHALL NOT be proposed and SHALL NOT start or join a run;
 - a single word that the book writes in lower case at least 20% of the times it occurs SHALL NOT be proposed;
 - a single word that occurs on its own less than 40% of the times it occurs alone or inside a proposed longer run SHALL
-  NOT be proposed, since it is part of that longer name.
+  NOT be proposed, since it is part of that longer name;
+- only running text SHALL be read — a paragraph, a verse line, a list item, a table cell, a footnote or a caption —
+  never a heading, a title, metadata or alt text; within it, a line of at most 10 words whose every word holding a
+  letter starts with a capital, apart from `a`, `an`, `and`, `as`, `at`, `by`, `for`, `from`, `in`, `of`, `on`, `or`,
+  `the`, `to` and `with`, is a title line and SHALL NOT be read; neither SHALL a block or an inline run that declares
+  a language other than the source language;
+- a single word that is a spelled-out number or ordinal (the bundled list of the source language, English when it has
+  none) or a language's name as the JDK writes it in the source language (`Latin`, `French`) SHALL NOT be proposed on
+  its own, though it may open a longer run.
 
 **Source:** FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#name-term-pre-scan` (offline fallback),
@@ -93,10 +101,15 @@ capitals; the stop-word list catches the function words and interjections a book
 ### Requirement: Run the model scan only when the person asks for it
 
 WHEN the person presses the model scan button on Names & style, the application SHALL send the model every capitalised
-word and every run of two or three capitalised words that occurs at least once not at the start of a sentence, each
-with the first sentence that holds it, 40 candidates per call; SHALL read each proposed type as person → character,
-place → place, org → other, term → term and anything else → other, and each gender other than female, male or neuter
-as unknown; and SHALL merge the proposals into the glossary only after every call has answered, matching terms by their glossary
+word and every run of two or three capitalised words that occurs at least once not at the start of a sentence, read and
+filtered by the deterministic scan's rules (running text only, no title line, no foreign block or run, no stop word, no
+number or language name alone, no word mostly written in lower case), each with the first sentence that holds it, 40
+candidates per call; SHALL read each proposed type as person → character, place → place, org → other, term → term and
+anything else → other, and each gender other than female, male or neuter as unknown; SHALL then, in the same action,
+send every proposal the glossary does not hold and the person has not removed to the verdict step of "Review the
+glossary with the model when the person asks" — the same prompt, evidence and batches — and keep only a proposal it
+calls a name or a term, taking the verdict's type and gender where the proposal's were other and unknown; and SHALL
+write the kept proposals into the glossary only after every call has answered, matching terms by their glossary
 key (see "Compare glossary terms by one key"), keeping any existing entry unchanged and adding each new term unlocked
 with no target. IF any call fails, THEN it SHALL write nothing, keep the existing entries and show the provider's error
 in place. Each call SHALL be announced, timed and attempt-counted as a run's model calls are, the screen SHALL show
@@ -111,7 +124,24 @@ In plain words: the model finds names a frequency count misses, and it can guess
 and uses the network, so it only runs on request — the reference's automatic scan at run start is not built. Each name
 travels with one sentence of context, so a small model can tell a person from a place, and in batches small enough for
 a local model's context. The model's vocabulary is mapped onto the table's; a failure half-way must not leave half a
-merge or wipe what the person already has.
+merge or wipe what the person already has. On the fixture book a small model kept 17 of 28 candidates, among them
+chapter-title words (`Gravity Formula`, `Long Night`), spelled-out numbers (`Six`, `Seven`) and language names
+(`Latin`, `French`), and every one became a row: candidates now come from running text only, and every proposal goes
+through the same verdict the review gives, which sees all the book's uses of a term rather than one sentence, before
+anything is written.
+
+#### Scenario: The verdict step drops what the proposal stage kept wrongly
+
+- **WHEN** the model scan runs on the fixture book `earth-gravity.md`, the model proposes every candidate, and the
+  verdict step calls only the names a name
+- **THEN** the glossary gains exactly `Eleanor Vance`, `Vance`, `Nell`, `Tomas`, `Reyes`, `Harrow Vale`,
+  `Meridian Survey Institute` and `Amulet`
+
+#### Scenario: Title words, numbers and languages are never candidates
+
+- **WHEN** the fixture book is scanned in any of its four formats
+- **THEN** no candidate is `Gravity Formula`, `Harrow Vale Expedition`, `Six`, `Seven`, `Long Night`, `Songs`,
+  `Falling Things`, `Earth Gravity`, `Practical Introduction`, `Latin`, `French` or `Plumb Line`
 
 #### Scenario: Model proposals merge without overwriting
 

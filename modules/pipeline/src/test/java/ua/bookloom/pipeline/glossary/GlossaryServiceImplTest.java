@@ -265,13 +265,16 @@ class GlossaryServiceImplTest {
     }
 
     @Test
-    void prescan_briefWithTargetLanguage_addsWhatTheModelProposes() {
+    void prescan_briefWithTargetLanguage_addsWhatTheModelProposesAndConfirms() {
         final BookBrief brief = withTarget(BookBrief.defaults("en"), "uk");
         injector.getInstance(ProjectRepository.class).save(project(brief));
         openProjects.put(PROJECT, book(List.of("We met Moreau today."), "Title"));
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse(
                         "{\"terms\":[{\"term\":\"Moreau\",\"type\":\"person\",\"gender\":\"male\"}]}",
+                        FinishReason.STOP)))
+                .answer(Result.ok(new ChatResponse(
+                        "{\"verdicts\":[{\"term\":\"Moreau\",\"verdict\":\"name\",\"type\":\"person\"}]}",
                         FinishReason.STOP)));
 
         final Result<List<GlossaryEntry>> added = service.prescan(PROJECT, model, events::add);
@@ -279,11 +282,11 @@ class GlossaryServiceImplTest {
         assertThat(added.data())
                 .containsExactly(new GlossaryEntry(
                         "p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.MALE, false));
-        assertThat(model.requests()).hasSize(1);
+        assertThat(model.requests()).hasSize(2);
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).kind())
-                .containsExactly(CallKind.PRESCAN);
+                .containsExactly(CallKind.PRESCAN, CallKind.REVIEW_TERMS);
     }
 
     @Test

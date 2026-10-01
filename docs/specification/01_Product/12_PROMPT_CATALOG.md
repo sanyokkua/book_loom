@@ -555,10 +555,14 @@ the candidate lists are merged/deduplicated deterministically before display.
 
 ```
 You are extracting a name and terminology list for a {{sourceLanguage}} → {{targetLanguage}} book translation.
-You receive candidates taken from the book, one per line: a capitalised word or run of words, then the first
-sentence that holds it. Choose the recurring proper names (people, places, organizations) and domain-specific
-terms that must be translated consistently, and give each one its type and — for a person — your best guess of
-the gender that target-language agreement needs, with a confidence.
+You receive candidates taken from the book's running text, one per line: a capitalised word or run of words, then the
+first sentence that holds it.
+A name is the proper name of one particular person, place, organisation or named object that the text refers to.
+Choose those names and the domain-specific terms that must be translated consistently, and give each one its type
+and — for a person — your best guess of the gender that target-language agreement needs, with a confidence.
+Never propose: a chapter, section or book title or a phrase from one; a number or an ordinal written as a word
+("Six", "Seventh"); a language or a nationality ("Latin", "French"); a general concept or a common noun written with
+a capital ("Gravity Formula", "Long Night"); a word capitalised only because it opens a sentence or a line of speech.
 Do not translate the terms; propose the source form exactly as listed.
 Propose only terms from the candidate list; do not invent entries.
 If gender is not inferable, use "unknown".
@@ -622,7 +626,9 @@ capitalised only because they opened a sentence, a line of speech or a heading.
 For each listed term decide:
 - "name" — a proper name of a person, a place, an organisation or another named thing;
 - "term" — a domain-specific word or phrase that must be translated the same way every time;
-- "not-a-name" — an ordinary word (an interjection, a contraction, a common noun, a function word).
+- "not-a-name" — an ordinary word (an interjection, a contraction, a common noun, a function word), a chapter or
+  book title or a phrase from one, a number or an ordinal written as a word ("Six", "Seventh"), a language or a
+  nationality ("Latin", "French"), or a general concept written with a capital ("Gravity Formula").
 Give each its type (person, place, org, term, title or other) and, for a person, the gender target-language
 agreement needs, or "unknown" when the examples do not show it.
 Judge from the count and the example sentences. Keep the term exactly as listed; do not translate it.
