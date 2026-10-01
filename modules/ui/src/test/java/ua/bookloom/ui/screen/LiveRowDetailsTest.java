@@ -4,8 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import javafx.scene.control.TextArea;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
+import javafx.scene.input.Clipboard;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
@@ -14,6 +17,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.state.LiveRow;
 import ua.bookloom.ui.state.LiveRows;
@@ -67,14 +71,38 @@ class LiveRowDetailsTest extends TranslatingScreenTestBase {
         assertThat(TooltipProbe.tipText(section)).isNotBlank();
     }
 
-    // IF the body were not the context's texts, THEN the person could not check what the model was told.
+    // IF the body were not the context's texts, THEN the person could not check what the model was told: the earlier
+    // translations as quote blocks, the summary, and the names beside their renderings with a lock on the locked one.
     @Test
     void context_body_quotesThePrecedingTranslationsAndListsSummaryAndNames() throws TimeoutException {
         show(null, current("Text.", null, CONTEXT));
 
-        final TextArea body = (TextArea) required("live-current-context-body");
-        assertThat(body.isEditable()).isFalse();
-        assertThat(body.getText()).isEqualTo("""
+        final Node body = required("live-current-context-body");
+        assertThat(body.lookupAll(".context-quote").stream()
+                        .map(node -> ((Label) node).getText())
+                        .toList())
+                .containsExactly("Коли я приземлився на верхівку ліхтаря.", "Дощ лив стіною.");
+        assertThat(textsUnder(body))
+                .contains(
+                        "Running summary",
+                        "A djinni is summoned to steal an amulet.",
+                        "Lovelace",
+                        "Лавлейс",
+                        "Pinn",
+                        "(no rendering yet)");
+        assertThat(body.lookupAll(".context-lock")).hasSize(1);
+    }
+
+    // IF Copy put anything else on the clipboard, THEN a person pasting the context into a note would get a different
+    // account of what the model was told.
+    @Test
+    void context_copy_putsThePlainTextOnTheClipboard() throws TimeoutException {
+        show(null, current("Text.", null, CONTEXT));
+
+        onFx(() -> ((Button) required("live-current-context-copy")).fire());
+
+        assertThat(ThemeTestSupport.onFx(() -> Clipboard.getSystemClipboard().getString()))
+                .isEqualTo("""
                         Preceding translations
                             “Коли я приземлився на верхівку ліхтаря.”
                             “Дощ лив стіною.”
@@ -127,8 +155,8 @@ class LiveRowDetailsTest extends TranslatingScreenTestBase {
     void context_nothingSent_saysSo() throws TimeoutException {
         show(null, current("Text.", null, new ContextSnapshot(List.of(), List.of(), List.of(), null, "")));
 
-        assertThat(((TextArea) required("live-current-context-body")).getText())
-                .isEqualTo("Nothing besides the segment and the style sheet.");
+        assertThat(textsUnder(required("live-current-context-body")).stream().distinct())
+                .containsExactly("Nothing besides the segment and the style sheet.");
         assertThat(((TitledPane) required("live-current-context")).getText())
                 .isEqualTo("Context sent to the model · no previous");
     }
@@ -148,7 +176,7 @@ class LiveRowDetailsTest extends TranslatingScreenTestBase {
                                 null,
                                 "")));
 
-        assertThat(((TextArea) required("live-current-context-body")).getText())
-                .isEqualTo("Translation memory\n    Yes. → Так.");
+        assertThat(textsUnder(required("live-current-context-body")).stream().distinct())
+                .containsExactly("Translation memory", "Yes. → Так.");
     }
 }

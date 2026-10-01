@@ -833,6 +833,14 @@ public enum MessageKey {
     LIVE_CONTEXT_HIT("live.context.hit"),
     /** Context-section body when the draft was sent nothing besides its source and the style sheet. */
     LIVE_CONTEXT_EMPTY("live.context.empty"),
+    /** Button in the context section that copies what the model was given. */
+    LIVE_CONTEXT_COPY("live.context.copy"),
+    /** Hover explanation of the control labelled by {@link #LIVE_CONTEXT_COPY}. */
+    LIVE_CONTEXT_COPY_TIP("live.context.copy.tip"),
+    /** The target column of a glossary name the model was given with no rendering. */
+    LIVE_CONTEXT_NO_RENDERING("live.context.noRendering"),
+    /** Hover explanation and spoken name of the lock mark beside a locked glossary name in the context section. */
+    LIVE_CONTEXT_LOCKED("live.context.locked"),
     /** Badge on a draft the judge has not decided yet. */
     LIVE_AWAITING_JUDGE("live.awaitingJudge"),
     /** Badge with the judge's score; argument 0 is the formatted score. */
@@ -950,6 +958,10 @@ public enum MessageKey {
     TRANSLATING_LOG_ERRORS_ONLY("translating.log.errorsOnly"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_LOG_ERRORS_ONLY}. */
     TRANSLATING_LOG_ERRORS_ONLY_TIP("translating.log.errorsOnly.tip"),
+    /** Chip over the activity log offered once the person scrolled up, which stops the log following its newest line. */
+    TRANSLATING_LOG_JUMP("translating.log.jump"),
+    /** Hover explanation of the control labelled by {@link #TRANSLATING_LOG_JUMP}. */
+    TRANSLATING_LOG_JUMP_TIP("translating.log.jump.tip"),
     /** Hover explanation of a collapsed activity-log line; argument 0 is how many times it happened in a row. */
     TRANSLATING_LOG_REPEATS("translating.log.repeats"),
     /** Heading of the connection chip's hover explanation. */

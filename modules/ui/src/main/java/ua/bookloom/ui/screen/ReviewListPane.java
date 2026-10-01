@@ -14,6 +14,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -34,14 +35,21 @@ import ua.bookloom.ui.state.ReviewViewModel;
  * segments with a badge for each one's main finding.
  *
  * <p>The list and the chips only follow the view model: picking a row selects that segment, and a segment the view
- * model selects (after a Skip, say) is picked in the list. The view model outlives this node, so what it is observed
- * with is held weakly and kept alive by the fields below. The list's cells log nothing.
+ * model selects (after a Skip, say) is picked in the list and scrolled into view, however it was picked. The list is
+ * tall enough for at least {@value #MIN_ROWS} rows. The view model outlives this node, so what it is observed with is
+ * held weakly and kept alive by the fields below. The list's cells log nothing.
  */
 @Slf4j
 final class ReviewListPane extends VBox {
 
     private static final double SPACING = 8;
     private static final double CHIP_GAP = 6;
+    /** The rows' fixed height in the stylesheet ({@code .review-list}), plus the list's two border pixels. */
+    private static final double ROW_HEIGHT = 34;
+
+    private static final double FRAME = 2;
+    static final int MIN_ROWS = 10;
+    private static final int PREFERRED_ROWS = 12;
 
     private record Chip(String id, ReviewFilter filter, MessageKey label, MessageKey tip) {}
 
@@ -93,6 +101,9 @@ final class ReviewListPane extends VBox {
         list.getStyleClass().add("review-list");
         list.setItems(viewModel.rows());
         list.setCellFactory(view -> new RowCell());
+        list.setMinHeight(MIN_ROWS * ROW_HEIGHT + FRAME);
+        list.setPrefHeight(PREFERRED_ROWS * ROW_HEIGHT + FRAME);
+        list.getSelectionModel().selectedIndexProperty().addListener((observed, was, now) -> reveal(now.intValue()));
         VBox.setVgrow(list, Priority.ALWAYS);
         getChildren().addAll(chipRow, list);
         showChip(viewModel.filter().get());
@@ -171,6 +182,14 @@ final class ReviewListPane extends VBox {
                 .filter(row -> row.segmentId().equals(selected.segmentId()))
                 .findFirst()
                 .ifPresent(list.getSelectionModel()::select);
+    }
+
+    // The list's own keys scroll as they move; a selection made in code (a refreshed list, a pick by the view model)
+    // does not, so every selection is brought fully into view here. Not logged: it follows each arrow key.
+    private void reveal(final int index) {
+        if (index >= 0 && list.lookup(".virtual-flow") instanceof VirtualFlow<?> flow) {
+            flow.scrollTo(index);
+        }
     }
 
     /**

@@ -23,6 +23,7 @@ import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.RunStatusBar;
+import ua.bookloom.ui.control.ScrollAnchor;
 import ua.bookloom.ui.control.SmoothScroll;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -79,6 +80,8 @@ public final class AppShellView {
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
     private final StackPane contentHost = new StackPane();
+    private final ScrollPane contentScroll = new ScrollPane(contentHost);
+    private final ScrollAnchor contentAnchor = ScrollAnchor.install(contentScroll);
     private final ToggleButton themeToggle = new ToggleButton();
     private @Nullable StackPane root;
 
@@ -227,20 +230,20 @@ public final class AppShellView {
         final HBox toolbar = new HBox(breadcrumb, spacer, actions);
         toolbar.getStyleClass().add("shell-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
-        final ScrollPane scroll = contentScroll();
+        final ScrollPane scroll = configuredContentScroll();
         VBox.setVgrow(scroll, Priority.ALWAYS);
         return new VBox(toolbar, scroll);
     }
 
-    private ScrollPane contentScroll() {
+    private ScrollPane configuredContentScroll() {
         contentHost.setId("shell-content");
         contentHost.getStyleClass().add("shell-content");
         contentHost.setAlignment(Pos.TOP_LEFT);
-        final ScrollPane scroll = new ScrollPane(contentHost);
+        final ScrollPane scroll = contentScroll;
         scroll.setId("shell-content-scroll");
         scroll.getStyleClass().add("content-scroll");
-        // Both dimensions fit, so a screen whose list grows still fills the viewport; it only scrolls once its own
-        // minimum is taller or wider than the window.
+        // Both dimensions fit, so a screen whose list grows still fills the viewport; it scrolls once the screen's
+        // minimum, which showContent makes its preferred height, is taller than the window.
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -259,12 +262,20 @@ public final class AppShellView {
         breadcrumb.setText(current == null ? "" : crumb(current));
     }
 
+    // A screen that is not its own scroll pane is never squeezed below its preferred height: fitting the height clamps
+    // the content only to its minimum, which would otherwise crush lists and text areas into the window instead of
+    // letting the shell scroll. A screen that scrolls itself (import, brief) keeps fitting the window.
     private void showContent(final @Nullable Node content) {
         if (content == null) {
             contentHost.getChildren().clear();
         } else {
+            if (content instanceof Region region && !(content instanceof ScrollPane)) {
+                log.debug("screen {} keeps its preferred height; the shell scrolls it", content.getId());
+                region.setMinHeight(Region.USE_PREF_SIZE);
+            }
             contentHost.getChildren().setAll(content);
         }
+        contentAnchor.reset();
     }
 
     private String crumb(final ViewNames view) {

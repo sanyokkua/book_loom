@@ -1705,6 +1705,46 @@
     -fx-border-radius: 6px;
 }
 
+.context-body > .viewport {
+    -fx-background-color: transparent;
+}
+
+.context-sections {
+    -fx-padding: 8px 10px 8px 10px;
+}
+
+.context-heading {
+    -fx-text-fill: -color-muted;
+    -fx-font-size: 11.5px;
+    -fx-font-weight: bold;
+}
+
+.context-quote {
+    -fx-text-fill: -color-text;
+    -fx-border-color: transparent transparent transparent -color-border;
+    -fx-border-width: 0 0 0 3px;
+    -fx-padding: 0 0 0 8px;
+}
+
+.context-text,
+.context-term {
+    -fx-text-fill: -color-text;
+}
+
+.context-term {
+    -fx-font-weight: bold;
+}
+
+.context-none {
+    -fx-text-fill: -color-muted;
+    -fx-font-style: italic;
+}
+
+.context-lock {
+    -fx-icon-color: -color-muted;
+    -fx-icon-size: 12px;
+}
+
 /* The connection chip in the title bar: its dot and words in the role of how the server has been answering. */
 .connection-chip.conn-steady {
     -fx-text-fill: -color-ok;

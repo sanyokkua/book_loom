@@ -165,7 +165,7 @@ final class TranslatingView {
                 StateVisibility.shownIn(watch(logList, mirror, sourceName, targetName, messages), state, WATCHED),
                 review,
                 footer(mirror, messages, exits.navigator()));
-        return new TranslatingDashboard(screen, banner, logList, messages, mirror);
+        return new TranslatingDashboard(screen, banner, messages, mirror);
     }
 
     // The run controls sit under the banner, so they stay in view above the live panel during a long stall.
@@ -223,7 +223,7 @@ final class TranslatingView {
         });
         final Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        final HBox header = new HBox(CARD_SPACING, heading, spacer, errorsOnly);
+        final HBox header = new HBox(CARD_SPACING, heading, spacer, jumpToLatest(logList, messages), errorsOnly);
         header.setAlignment(Pos.CENTER_LEFT);
         logList.setId("translating-log");
         logList.setPrefHeight(LOG_HEIGHT);
@@ -232,6 +232,20 @@ final class TranslatingView {
         card.setId("translating-log-card");
         card.getStyleClass().add("card");
         return card;
+    }
+
+    // Offered only while the person has scrolled the log up, which stops it following its newest line.
+    private static Button jumpToLatest(final TaggedLog logList, final Messages messages) {
+        final Button jump = Tips.install(
+                messages,
+                new Button(messages.get(MessageKey.TRANSLATING_LOG_JUMP)),
+                MessageKey.TRANSLATING_LOG_JUMP_TIP);
+        jump.setId("translating-log-jump");
+        jump.getStyleClass().add("review-chip");
+        jump.visibleProperty().bind(logList.followingProperty().not());
+        jump.managedProperty().bind(jump.visibleProperty());
+        jump.setOnAction(event -> logList.jumpToLatest());
+        return jump;
     }
 
     private static Node watch(

@@ -4,8 +4,6 @@ import com.google.inject.Inject;
 import java.util.Objects;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
-import javafx.collections.ListChangeListener;
-import javafx.collections.WeakListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.layout.Pane;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +14,6 @@ import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
-import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.PauseNotice;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
@@ -33,8 +30,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  * <p>The dashboard is built with no book open as well: the words for what a start is missing are shown on this same
  * screen, so the controls must exist to be pressed. The mirror, the view model's notice and the log outlive this
  * controller, so all three are observed through weak listeners held by the fields below, and the host keeps a reference to the controller in its
- * properties, which is what lets the listeners live exactly as long as the screen does. No line is logged when the log grows: that
- * listener runs for every batch of a whole book's decisions.
+ * properties, which is what lets the listeners live exactly as long as the screen does. The log follows its newest
+ * line by itself ({@link ua.bookloom.ui.control.TaggedLog}).
  */
 @Slf4j
 public final class TranslatingController {
@@ -54,7 +51,6 @@ public final class TranslatingController {
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
     private final ChangeListener<Number> onChunk = (observed, was, now) -> renderChunk();
     private final ChangeListener<@Nullable PauseNotice> onPauseNotice = (observed, was, now) -> renderChunk();
-    private final ListChangeListener<LogEntry> onLog = change -> scrollLog();
 
     @FXML
     private Pane host;
@@ -122,15 +118,10 @@ public final class TranslatingController {
         mirror.chunk().addListener(new WeakChangeListener<>(onChunk));
         mirror.chunks().addListener(new WeakChangeListener<>(onChunk));
         mirror.review().pauseNotice().addListener(new WeakChangeListener<>(onPauseNotice));
-        mirror.activityLog().addListener(new WeakListChangeListener<>(onLog));
         dashboard.render(
                 mirror.runState().get(),
                 viewModel.notice().get(),
                 mirror.waitingSeconds().get());
-    }
-
-    private void scrollLog() {
-        dashboard.scrollToNewest();
     }
 
     private void renderState(final RunState state) {

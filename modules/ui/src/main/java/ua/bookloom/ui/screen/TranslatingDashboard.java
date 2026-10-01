@@ -1,23 +1,20 @@
 package ua.bookloom.ui.screen;
 
 import java.util.Objects;
-import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.i18n.Messages;
-import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 
 /**
- * The built translating screen, and the two things about it that change with events rather than with a bound
- * property: the banner that says where the run is, and the log's scroll position.
+ * The built translating screen, and the one thing about it that changes with events rather than with a bound
+ * property: the banner that says where the run is.
  *
  * <p>The banner is one node whose words and role class are replaced, not one node per state, so that a state change
  * moves nothing on screen. Its role is never the only carrier of meaning: each state also has its own glyph and title.
@@ -40,25 +37,17 @@ final class TranslatingDashboard {
 
     private final Node root;
     private final LiveBanner banner;
-    private final ListView<LogEntry> logList;
     private final StateMirror mirror;
     private final BannerLooks looks;
-    private boolean scrollQueued;
     private RunState shownState = RunState.IDLE;
     private @Nullable RunNotice shownNotice;
     private int shownWait = StateMirror.NOT_WAITING;
     private BannerLooks.@Nullable Offer shownOffer;
     private @Nullable AppError stayedPausedOn;
 
-    TranslatingDashboard(
-            final Node root,
-            final LiveBanner banner,
-            final ListView<LogEntry> log,
-            final Messages messages,
-            final StateMirror mirror) {
+    TranslatingDashboard(final Node root, final LiveBanner banner, final Messages messages, final StateMirror mirror) {
         this.root = Objects.requireNonNull(root, "root");
         this.banner = Objects.requireNonNull(banner, "banner");
-        this.logList = Objects.requireNonNull(log, "log");
         banner.stay().setOnAction(event -> stayPaused());
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.looks = new BannerLooks(Objects.requireNonNull(messages, "messages"), mirror);
@@ -122,24 +111,5 @@ final class TranslatingDashboard {
     @SuppressWarnings("ReferenceEquality")
     private boolean isStayedPausedOn(final @Nullable RunNotice notice) {
         return notice instanceof RunNotice.ProviderError provider && provider.error() == stayedPausedOn;
-    }
-
-    /**
-     * Brings the newest entry into view once the list has caught up with the change that announced it. The list's own
-     * skin listens to the same items after this class's owner did, so scrolling at once would aim at the old size; the
-     * scroll is therefore queued, and one queued scroll serves every change that arrives before it runs.
-     */
-    void scrollToNewest() {
-        if (scrollQueued) {
-            return;
-        }
-        scrollQueued = true;
-        Platform.runLater(() -> {
-            scrollQueued = false;
-            final int last = logList.getItems().size() - 1;
-            if (last >= 0) {
-                logList.scrollTo(last);
-            }
-        });
     }
 }
