@@ -1269,6 +1269,17 @@ check leaves evidence.
   thread and two real pulses instead); the conformance suites reuse a shown screen across consecutive cases; one test
   log per fork; the `slow` tag with a `fastTest` task; `scripts/test-focused.sh` and `scripts/slowest-tests.py`.
   `:ui:test` 13m 36s → 1m 55s, the gate 8m 39s → 4m 13s
+- [x] 8g. Correctness fixes from the gemma4:e4b-mlx run on the earth-gravity fixture: the placeholder gate refuses a
+  bracket glyph outside a whole token (a stray `⟧` once reached the written book) and a long pair moved off its words,
+  and the deterministic repair rejoins split tokens and drops stray glyphs first (b576064); every call kind carries an
+  output cap — reflect 600, summary 1024, pre-scan 64 + 48 per candidate — and the Ollama client cuts a stream past
+  twice its cap plus 64 lines as a length finish instead of waiting for the timeout (a1fdd7a); only a model-written
+  rolling summary is shown to drafts and the context panel, which says "No summary yet" otherwise — the deterministic
+  glossary-and-headings text is no longer presented as one (1ab3f7f); under Keep as-is a block declaring a language
+  other than the source and the book's own is kept whole with no model call (d02133a); scans read running text only
+  (no headings, title lines or marked foreign text), never propose a number word or language name alone, and the model
+  scan's proposals pass the review's verdict step before anything is written (e04be8b); the validator's names check
+  skips untranslated blocks and wants a target-script rendering (25c871e)
 - [ ] 9. Prompts: the audit's rewrites (placeholder pairs, data-not-instructions, literal replies, judge anchors,
   `<Source>`/`<Translation>`), bundled examples, `PromptShapeTest`, golden files for judge and directed fix, the
   `promptEval` harness
