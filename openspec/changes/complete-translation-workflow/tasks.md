@@ -1178,7 +1178,7 @@ times, paused, and on every resume paid the same rounds again. Each step is its 
   resends; the Ollama reply read as a stream with a 60 s idle gap; a judge that times out or cannot be reached flags its
   segments (`judge-unavailable`) instead of pausing; a step that pauses twice is flagged and the run goes on, and a
   paused run can skip the failing segment (`TranslationJob.skipSegment`); rounds that make no progress stop early; a
-  resume continues at the call that failed (COMMIT_ID)
+  resume continues at the call that failed (380db02, fa83b1c)
 - [ ] 2. Make the run observable: per-attempt model-call events, the waiting and provider-error banners with the
   segment, call kind and attempt, a connection chip, a richer activity log, the round tracker, the context panel, and
   the Skip segment button on the paused banner
