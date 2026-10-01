@@ -119,7 +119,11 @@ final class JobBoundaries implements RunBoundaries {
             return Optional.of(new RunEnd(JobState.CANCELLED, null));
         }
         final PauseReason reason = decision.pauseReason();
-        return reason == null ? Optional.empty() : pause(new Paused(reason, null, progress));
+        if (reason == null) {
+            return Optional.empty();
+        }
+        JobPauseLogger.boundaryPause(reason, progress);
+        return pause(new Paused(reason, null, progress));
     }
 
     // A pause on an error names its segment for the person only; nothing about it was decided, so nothing is re-read.
@@ -133,8 +137,10 @@ final class JobBoundaries implements RunBoundaries {
         recorder.paused();
         emit.accept(paused);
         if (control.awaitPause() == PauseWait.CANCELLED) {
+            log.info("Translation job stopped after pause reason={}", paused.reason());
             return Optional.of(new RunEnd(JobState.CANCELLED, null));
         }
+        log.info("Translation job resumed after pause reason={}", paused.reason());
         recorder.resumed();
         emit.accept(new Resumed(progress));
         return segmentId == null ? Optional.empty() : reread(segmentId);

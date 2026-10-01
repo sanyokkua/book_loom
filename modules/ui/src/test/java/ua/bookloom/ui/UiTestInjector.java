@@ -4,6 +4,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,6 +43,9 @@ public final class UiTestInjector {
 
     /** The version a build that carries no injected release version reports. */
     public static final String DEV_VERSION = "dev";
+
+    /** The log folder a graph names unless a test sets one; nothing is written there by the window itself. */
+    public static final Path TEST_LOG_DIR = Path.of(System.getProperty("java.io.tmpdir"), "bookloom-ui-test-logs");
 
     // Two, so that a held provider check and a held model listing never block each other.
     private static final int BACKGROUND_THREADS = 2;
@@ -86,6 +90,7 @@ public final class UiTestInjector {
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
         private @Nullable ReplaceRunPrompt prompt;
+        private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
 
         private Builder(final Locale locale) {
             this.locale = locale;
@@ -151,6 +156,12 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** Where the graph says its logs are, and whether the detailed log is on. */
+        public Builder diagnosticLog(final DiagnosticLog value) {
+            diagnosticLog = Objects.requireNonNull(value, "diagnosticLog");
+            return this;
+        }
+
         /** Replaces the real replace-run card with this question, so the test can read what was asked. */
         public Builder prompt(final ReplaceRunPrompt value) {
             prompt = Objects.requireNonNull(value, "prompt");
@@ -171,6 +182,7 @@ public final class UiTestInjector {
                             bind(LocaleProvider.class).toInstance(() -> locale);
                             bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
                             bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
+                            bind(DiagnosticLog.class).toInstance(diagnosticLog);
                             bind(ExecutorService.class)
                                     .annotatedWith(BackgroundExecutor.class)
                                     .toInstance(daemonExecutor());

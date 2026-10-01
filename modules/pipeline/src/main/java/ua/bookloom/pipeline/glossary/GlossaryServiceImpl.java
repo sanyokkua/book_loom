@@ -135,8 +135,16 @@ public final class GlossaryServiceImpl implements GlossaryService {
             log.debug("Glossary scan project={} skipped: the glossary holds {} entries", projectId, held.size());
             return Result.ok(List.of());
         }
-        return FrequencyScan.newTerms(projectId, bodySegments(document), sourceLanguage(projectId, document), glossary)
+        log.info("Glossary scan started project={}", projectId);
+        final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(
+                        projectId, bodySegments(document), sourceLanguage(projectId, document), glossary)
                 .flatMap(this::addAll);
+        log.info(
+                "Glossary scan finished project={} ok={} entriesAdded={}",
+                projectId,
+                added.isOk(),
+                added.isOk() ? Objects.requireNonNull(added.data(), "added").size() : 0);
+        return added;
     }
 
     private @Nullable String sourceLanguage(final String projectId, final Document document) {

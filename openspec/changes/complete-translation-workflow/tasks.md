@@ -1219,6 +1219,38 @@ times, paused, and on every resume paid the same rounds again. Each step is its 
   as muted. Not done: a Structure note on segments kept as they are — the structure counts come from the inspection,
   before any run decides what is verbatim, so it cannot be derived from data the screen holds (eec2c45)
 
+## 15c. Second real-run round — after group 15b
+
+A second Bartimaeus run found more problems (plan: export refused as a whole, placeholders lost on drop caps, the
+review panel not taking edits while running, scrolling and the squeezed context panel, overlapping model actions, the
+prompts, names without suggested targets). Each step is its own commit, tests first; step 0 comes first so every later
+check leaves evidence.
+
+- [x] 0. Shareable full-trace diagnostic log: `bookloom-trace.log` beside `bookloom.log` (TRACE for `ua.bookloom`, one
+  line per event, MDC job/segment, 20 MB × 5 gzip), on by default in a development run and with
+  `BOOKLOOM_TRACE_FILE=1` / `-Dbookloom.trace.file=true` installed, the ordinary log's level unchanged; a `#` session
+  header at the top of each file and after every rotation (version, OS, JVM, JavaFX, locale, levels, and the
+  `SessionInfo` facts the window records — provider, kind, endpoint host, model, dial, review mode, brief, book file
+  name, format and size — each change an INFO `session update` line); INFO pause/resume/stop requests, boundary pauses
+  and how each pause ended, glossary scan start/end and pre-scan failure; a `RunSummaryLogger` line at most once a
+  minute and at the end; a redaction guard over both provider clients at TRACE; About says whether the detailed log is
+  on and that it holds book text and stays local, names the folder, and offers Open log folder, Copy log path and Save
+  diagnostic bundle… (ZIP of the trace files + `session.json`, off the FX thread). Not done: the Settings switch (nothing
+  is persisted yet) and the Appearance-tab copy of the folder actions
+- [ ] 7. Placeholders, export, review: reproduce the drop-cap `reopened=0`, a deterministic placeholder repair, a
+  specific repair note, drop caps masked atomically, the retry order for gate failures, the best rejected reply kept on
+  a flagged segment, export no longer all-or-nothing (source fallbacks listed), the review panel read-only with an
+  explanation while running and a visible token banner
+- [ ] 8. Layout, scrolling, concurrency: the shell content's minimum height so tall screens scroll, the activity log
+  following its tail only when at the tail, a structured context panel, the wheel glide rewrite, and an
+  `ActivityTracker` that keeps model actions from overlapping
+- [ ] 9. Prompts: the audit's rewrites (placeholder pairs, data-not-instructions, literal replies, judge anchors,
+  `<Source>`/`<Translation>`), bundled examples, `PromptShapeTest`, golden files for judge and directed fix, the
+  `promptEval` harness
+- [ ] 10. Suggested targets for names: `GlossaryEntry` origin (`PERSON`/`SUGGESTED`), a `SUGGEST_TARGETS` call per name
+  policy, suggestions written only into unlocked rows without a person's target, softer injection wording, and the
+  table's suggestion badge with accept actions
+
 ## 16. The gate — after every group above
 
 - [ ] 16.1 Bring the whole project green with no pre-existing-failure exemption, and paste the gate's tail as evidence. Each group ended on `./gradlew build :app:archTest`; only the whole-project clean gate — `clean`, `check` with its coverage gate, and `spotlessCheck` — proves the groups agree with each other, and a red check anywhere means the change is not done. → all modules, build

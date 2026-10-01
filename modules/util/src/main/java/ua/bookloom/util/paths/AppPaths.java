@@ -31,6 +31,16 @@ public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFi
     public static final String DATABASE_FILE_NAME = "bookloom.db";
 
     /**
+     * The detailed diagnostic log's fixed name inside the log directory. Its rotated files share the stem, so a
+     * reader of the folder (the diagnostic bundle) finds all of them by this prefix without knowing the rotation
+     * pattern.
+     */
+    public static final String TRACE_LOG_FILE_NAME = "bookloom-trace.log";
+
+    /** The name every file of the detailed diagnostic log starts with: the active file and its rotated archives. */
+    public static final String TRACE_LOG_PREFIX = "bookloom-trace";
+
+    /**
      * Validates that the two roots are absolute and that the two files sit inside the data directory.
      *
      * <p>A relative data directory would resolve against the working directory, which for a double-clicked

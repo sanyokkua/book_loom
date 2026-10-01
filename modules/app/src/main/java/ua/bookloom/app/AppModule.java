@@ -11,7 +11,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BackgroundExecutor;
 import ua.bookloom.ui.BuildVersion;
+import ua.bookloom.ui.DiagnosticLog;
 import ua.bookloom.ui.IoExecutor;
+import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -53,6 +55,10 @@ public final class AppModule extends AbstractModule {
         // The one read of the build version: the launcher's startup line and the About dialog must report the same
         // string, and `:ui` cannot see this module's reader, so the value crosses the edge as a binding.
         bind(String.class).annotatedWith(BuildVersion.class).toInstance(AppVersion.current());
+        // The same session instance the detailed log's header reads, so what the window records is what a rotated
+        // file names; and the log settings the launcher resolved before logging existed, for the About dialog.
+        bind(SessionInfo.class).toInstance(startup.session());
+        bind(DiagnosticLog.class).toInstance(new DiagnosticLog(startup.paths().logDir(), startup.detailedLog()));
     }
 
     /**

@@ -1,7 +1,10 @@
 package ua.bookloom.app.bootstrap;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Application;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.AppError;
@@ -10,6 +13,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.app.AppVersion;
 import ua.bookloom.app.BookLoomApplication;
 import ua.bookloom.app.StartupContext;
+import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 import ua.bookloom.util.paths.AppPathsResolver;
@@ -78,23 +82,40 @@ public final class Launcher {
         final SingleInstanceLock lock = Objects.requireNonNull(acquired.data());
         try (lock) {
             // Step 5. Nothing above this line may take a logger; everything below it may.
-            final AppEnvironment environment = AppEnvironment.resolve(System::getenv, System::getProperty);
-            final ResolvedLogLevel logLevel =
-                    LoggingLevelResolver.resolve(System::getenv, System::getProperty, environment);
-            LoggingBootstrap.configure(paths.logDir(), environment.isDev(), logLevel);
-
-            final ResolvedReviewMode reviewMode = ReviewModeResolver.resolve(System::getenv, System::getProperty);
-            warnIfOnNetworkFilesystem(paths);
-            logStartup(paths, environment);
-            logReviewMode(reviewMode);
-
-            StartupContext.publish(new StartupContext(paths, environment, reviewMode));
+            StartupContext.publish(configureLogging(paths));
             Application.launch(BookLoomApplication.class, args);
 
             // Reached when the last window closes. The lock is released by the try-with-resources immediately
             // after, so the line is emitted while it is still held — which is the order a reader would expect.
             LoggerFactory.getLogger(Launcher.class).info("app stopped, releasing the single-instance lock");
         }
+    }
+
+    /** Step 5 and what follows it at once: logging configured, the startup lines written, the context built. */
+    private static StartupContext configureLogging(AppPaths paths) {
+        final AppEnvironment environment = AppEnvironment.resolve(System::getenv, System::getProperty);
+        final ResolvedLogLevel logLevel =
+                LoggingLevelResolver.resolve(System::getenv, System::getProperty, environment);
+        final ResolvedTraceFile trace = TraceFileResolver.resolve(System::getenv, System::getProperty, environment);
+        // The session's class takes a logger, so it is created only once logging is configured; the header the
+        // detailed log writes while configuring reads an empty session through the reference until then.
+        final AtomicReference<@Nullable SessionInfo> session = new AtomicReference<>();
+        final SessionHeader header = new SessionHeader(
+                AppVersion.current(), environment, logLevel, trace, System::getProperty, () -> factsOf(session));
+        LoggingBootstrap.configure(paths.logDir(), environment.isDev(), logLevel, trace, header::render);
+        final SessionInfo created = new SessionInfo();
+        session.set(created);
+
+        final ResolvedReviewMode reviewMode = ReviewModeResolver.resolve(System::getenv, System::getProperty);
+        warnIfOnNetworkFilesystem(paths);
+        logStartup(paths, environment);
+        logReviewMode(reviewMode);
+        return new StartupContext(paths, environment, reviewMode, trace.enabled(), created);
+    }
+
+    private static Map<String, String> factsOf(AtomicReference<@Nullable SessionInfo> session) {
+        final SessionInfo info = session.get();
+        return info == null ? Map.of() : info.snapshot();
     }
 
     /**

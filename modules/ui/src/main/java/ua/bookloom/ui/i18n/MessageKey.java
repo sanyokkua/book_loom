@@ -67,6 +67,32 @@ public enum MessageKey {
     ABOUT_SUBTITLE("about.subtitle"),
     /** About dialog description of the product. */
     ABOUT_DESCRIPTION("about.description"),
+    /** Heading of the About dialog's diagnostic-log section. */
+    ABOUT_LOG_HEADING("about.log.heading"),
+    /** The detailed diagnostic log is being written in this launch. */
+    ABOUT_LOG_ON("about.log.on"),
+    /** The detailed diagnostic log is not written in this launch, and how to switch it on. */
+    ABOUT_LOG_OFF("about.log.off"),
+    /** What the detailed log holds and that it stays on this computer. */
+    ABOUT_LOG_PRIVACY("about.log.privacy"),
+    /** The log folder; argument 0 is its absolute path. */
+    ABOUT_LOG_FOLDER("about.log.folder"),
+    /** About dialog action that opens the log folder in the file manager. */
+    ABOUT_OPEN_LOG_FOLDER("about.log.openFolder"),
+    /** Hover explanation of the control labelled by {@link #ABOUT_OPEN_LOG_FOLDER}. */
+    ABOUT_OPEN_LOG_FOLDER_TIP("about.log.openFolder.tip"),
+    /** About dialog action that copies the log folder's path. */
+    ABOUT_COPY_LOG_PATH("about.log.copyPath"),
+    /** Hover explanation of the control labelled by {@link #ABOUT_COPY_LOG_PATH}. */
+    ABOUT_COPY_LOG_PATH_TIP("about.log.copyPath.tip"),
+    /** About dialog action that saves the diagnostic bundle. */
+    ABOUT_SAVE_BUNDLE("about.log.saveBundle"),
+    /** Hover explanation of the control labelled by {@link #ABOUT_SAVE_BUNDLE}. */
+    ABOUT_SAVE_BUNDLE_TIP("about.log.saveBundle.tip"),
+    /** Toast after the log folder's path was copied. */
+    ABOUT_LOG_PATH_COPIED("about.log.pathCopied"),
+    /** Toast after the diagnostic bundle was written; argument 0 is the bundle's file name. */
+    ABOUT_BUNDLE_SAVED("about.log.bundleSaved"),
     /** Tagline under the product name in the navigation column's brand block. */
     SHELL_TAGLINE("shell.tagline"),
     /** Tail of a workflow breadcrumb; argument 0 is the step number and argument 1 the number of workflow steps. */

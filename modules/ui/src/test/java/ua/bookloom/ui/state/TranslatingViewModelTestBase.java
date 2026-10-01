@@ -22,6 +22,7 @@ import ua.bookloom.ui.ScriptedModelCatalog;
 import ua.bookloom.ui.ScriptedProjectService;
 import ua.bookloom.ui.ScriptedProviderVerifier;
 import ua.bookloom.ui.ScriptedTranslationEngine;
+import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.i18n.MessageKey;
 
 /**
@@ -88,7 +89,14 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
     protected void buildViewModel() {
-        final RunStarter starter = new RunStarter(current, models, engine, reviewMode, runner, prepExecutor);
+        final RunStarter starter = new RunStarter(
+                current,
+                models,
+                engine,
+                reviewMode,
+                runner,
+                new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
+                prepExecutor);
         viewModel = onFx(() -> new TranslatingViewModel(
                 mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();

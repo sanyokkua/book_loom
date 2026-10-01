@@ -3,6 +3,7 @@ package ua.bookloom.app;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import ua.bookloom.app.bootstrap.ResolvedReviewMode;
+import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.util.paths.AppEnvironment;
 import ua.bookloom.util.paths.AppPaths;
 
@@ -23,8 +24,15 @@ import ua.bookloom.util.paths.AppPaths;
  * @param paths the resolved, created data and log directories
  * @param environment whether this is a development or a packaged production run
  * @param reviewMode how much of a run a person confirms, chosen by the launch flag
+ * @param detailedLog whether the detailed diagnostic log ({@code bookloom-trace.log}) is being written
+ * @param session the session facts the detailed log's header reads; the same instance the window updates
  */
-public record StartupContext(AppPaths paths, AppEnvironment environment, ResolvedReviewMode reviewMode) {
+public record StartupContext(
+        AppPaths paths,
+        AppEnvironment environment,
+        ResolvedReviewMode reviewMode,
+        boolean detailedLog,
+        SessionInfo session) {
 
     private static final AtomicReference<StartupContext> PENDING = new AtomicReference<>();
 
@@ -33,6 +41,18 @@ public record StartupContext(AppPaths paths, AppEnvironment environment, Resolve
         Objects.requireNonNull(paths, "paths");
         Objects.requireNonNull(environment, "environment");
         Objects.requireNonNull(reviewMode, "reviewMode");
+        Objects.requireNonNull(session, "session");
+    }
+
+    /**
+     * Builds a context without the detailed log, with a fresh session, as the command line and the tests use it.
+     *
+     * @param paths the resolved, created data and log directories
+     * @param environment whether this is a development or a packaged production run
+     * @param reviewMode how much of a run a person confirms
+     */
+    public StartupContext(AppPaths paths, AppEnvironment environment, ResolvedReviewMode reviewMode) {
+        this(paths, environment, reviewMode, false, new SessionInfo());
     }
 
     /**

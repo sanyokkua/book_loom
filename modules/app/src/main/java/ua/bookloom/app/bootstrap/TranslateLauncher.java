@@ -5,6 +5,7 @@ import com.google.inject.Injector;
 import java.io.PrintStream;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import lombok.AccessLevel;
@@ -16,6 +17,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.app.AppLifecycle;
+import ua.bookloom.app.AppVersion;
 import ua.bookloom.app.CoreModules;
 import ua.bookloom.app.StartupContext;
 import ua.bookloom.app.cli.ShutdownCancellation;
@@ -92,8 +94,7 @@ public final class TranslateLauncher {
             PrintStream out,
             AppPaths paths,
             AppEnvironment environment) {
-        final ResolvedLogLevel level = LoggingLevelResolver.resolve(getEnv, getProperty, environment);
-        LoggingBootstrap.configure(paths.logDir(), false, level);
+        final ResolvedLogLevel level = configureLogging(getEnv, getProperty, paths, environment);
         final Logger log = LoggerFactory.getLogger(TranslateLauncher.class);
         log.info(
                 "translate launcher started arguments={} dataDir={} logDir={} level={} levelSource={}",
@@ -119,6 +120,21 @@ public final class TranslateLauncher {
             log.info("translate launcher exitCode={}", exit);
             return exit;
         }
+    }
+
+    /** Configures logging as the desktop launch does, with the detailed log when it is switched on. */
+    private static ResolvedLogLevel configureLogging(
+            Function<String, @Nullable String> getEnv,
+            Function<String, @Nullable String> getProperty,
+            AppPaths paths,
+            AppEnvironment environment) {
+        final ResolvedLogLevel level = LoggingLevelResolver.resolve(getEnv, getProperty, environment);
+        final ResolvedTraceFile trace = TraceFileResolver.resolve(getEnv, getProperty, environment);
+        // The command line opens no window, so its session facts stay empty; the header still names the build.
+        final SessionHeader header =
+                new SessionHeader(AppVersion.current(), environment, level, trace, getProperty, Map::of);
+        LoggingBootstrap.configure(paths.logDir(), false, level, trace, header::render);
+        return level;
     }
 
     /** A run here has no window to pause in, so a configured mode changes nothing; say so once instead of silently. */

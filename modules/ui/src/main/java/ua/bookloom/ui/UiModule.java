@@ -26,6 +26,7 @@ import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.state.ImportGuard;
@@ -35,6 +36,7 @@ import ua.bookloom.ui.state.PlatformFileRevealer;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.RunInterventions;
 import ua.bookloom.ui.state.RunStarter;
+import ua.bookloom.ui.state.SessionReporter;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.SystemDestinationChooser;
@@ -55,7 +57,7 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  * {@link ImportGuard} that asks before an import replaces a run, the {@link RunStarter} that builds a run on it and the {@link TranslatingViewModel} that starts, controls and announces a run are bound so far, as is the
  * {@link FileRevealer} that shows a written book in the file manager.
  * The singletons are bound explicitly rather than left to JIT so the composition root's graph lists everything the
- * window depends on. The {@link BuildVersion} value, the {@link BackgroundExecutor} pool, the ports ({@link
+ * window depends on. The {@link DiagnosticLog} value, the {@link BuildVersion} value, the {@link BackgroundExecutor} pool, the ports ({@link
  * ProviderConfigs}, {@link ProviderVerifier}, {@link ModelCatalog}, {@link ChatModelFactory},
  * {@link TranslationEngine}, {@link ProjectService}, {@link GlossaryService}, {@link ReviewDesk} and
  * {@link ExportService}) and the {@link ReviewMode} are deliberately absent: the composition root owns the value, the
@@ -90,6 +92,9 @@ public final class UiModule extends AbstractModule {
         bind(RunStarter.class);
         bind(TranslatingViewModel.class);
         bind(ReviewPauseFollower.class);
+        bind(DiagnosticActions.class);
+        // Eager, so the first book opened is told to the detailed log before any screen asks for the reporter.
+        bind(SessionReporter.class).asEagerSingleton();
     }
 
     private void bindShell() {
@@ -117,6 +122,7 @@ public final class UiModule extends AbstractModule {
         requireBinding(ModelCatalog.class);
         requireBinding(ChatModelFactory.class);
         requireBinding(Key.get(String.class, BuildVersion.class));
+        requireBinding(DiagnosticLog.class);
         requireBinding(Key.get(ExecutorService.class, BackgroundExecutor.class));
         requirePipelineBindings();
     }

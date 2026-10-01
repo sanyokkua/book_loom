@@ -1052,6 +1052,63 @@ mockup's dialog promised "Your progress is saved"; nothing is saved to disk yet,
   first model call is for the 413th segment
 
 
+### Requirement: Keep a detailed diagnostic log that one file explains
+
+The system SHALL write, beside its ordinary log file and in the same local folder, a detailed diagnostic log
+`bookloom-trace.log` holding every BookLoom line down to TRACE, one line per event with the job and segment ids, rotated
+at 20 MB into at most four compressed archives. The system SHALL write it by default in a development run, and in an
+installed application only WHEN `BOOKLOOM_TRACE_FILE=1` or `-Dbookloom.trace.file=true` is set; writing it SHALL NOT
+change the level of the ordinary log or the console. The system SHALL begin each file of the detailed log, and each
+file a rotation opens, with a session header naming the version, the operating system, the Java and JavaFX versions,
+the locale, the log levels, and the session facts known at that moment: the provider, its kind and endpoint host, the
+model, the quality dial, the review mode, the brief's choices, and the book's file name, format and size; each change
+of those facts SHALL also be one INFO line. WHILE a job runs, the system SHALL write at most one INFO run-summary line a
+minute, and one when the job ends, with the segments accepted, flagged, kept verbatim and pending, the model calls with
+their average and 95th-percentile duration, tokens per second, timeouts and the segment being translated. Pause,
+resume and stop requests, each pause with its reason and how it ended, and the start and end of each glossary scan
+and review SHALL be INFO lines. The detailed log SHALL never contain a credential, SHALL hold book text only on TRACE
+lines, and SHALL never leave the machine unless the person shares it.
+
+**Source:** DD-23 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-23-slf4j-logback`), NFR-PRIV-04
+(`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`), NFR-PRIV-06 and NFR-PRIV-07
+(`#secrets-never-stored`), `.claude/rules/logging.md`.
+In plain words: until now the log a person could send was the terminal of a development run, cut where the terminal
+buffer ended. The detailed log is a bounded file that explains itself: its header says which build, machine, provider,
+model and book it is about, even in a file cut by rotation, and the run summary shows the pace of a run without reading
+every line.
+
+#### Scenario: A development run writes the detailed log with its header
+
+- **WHEN** a development run is started with no switch set and opens `Kobzar.fb2`
+- **THEN** `bookloom-trace.log` begins with a header naming the version, the operating system and `detailedLog=on`
+- **AND** it holds an INFO line `session update book=Kobzar.fb2 format=FB2 …`
+- **AND** `bookloom.log` holds no TRACE line
+
+#### Scenario: An installed app writes it only when asked
+
+- **WHEN** an installed application starts without `BOOKLOOM_TRACE_FILE`
+- **THEN** no `bookloom-trace.log` is written
+- **AND WHEN** it starts with `BOOKLOOM_TRACE_FILE=1`
+- **THEN** `bookloom-trace.log` is written
+
+#### Scenario: A rotated file names its session again
+
+- **WHEN** the detailed log reaches 20 MB during a run with the model `gemma4:e4b`
+- **THEN** the full file becomes `bookloom-trace.1.log.gz` and the new `bookloom-trace.log` begins with a header naming
+  `model=gemma4:e4b`
+
+#### Scenario: A run summary each minute
+
+- **WHEN** a job has been running for two minutes, deciding segments all the time
+- **THEN** the detailed log holds two `run summary periodic` lines, not one per segment
+
+#### Scenario: No credential and book text only at TRACE
+
+- **WHEN** `Book.md` with `He opened the *old* door.` is translated through the Ollama-native or the
+  OpenAI-compatible client while the provider answers with `Authorization` and `X-Api-Key` headers
+- **THEN** every line of `bookloom-trace.log` holding `He opened the` is a TRACE line
+- **AND** no line holds the credential value
+
 ## MODIFIED Requirements
 
 ### Requirement: Send each pending segment to the model in document order

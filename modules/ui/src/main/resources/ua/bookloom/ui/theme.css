@@ -675,6 +675,17 @@
     -fx-text-fill: -color-text;
 }
 
+/* The About card's diagnostic-log section: set apart from the description, its actions wrapping on a narrow card. */
+.about-diagnostics {
+    -fx-spacing: 8px;
+    -fx-padding: 14px 0 0 0;
+}
+
+.about-actions {
+    -fx-hgap: 8px;
+    -fx-vgap: 8px;
+}
+
 .btn-primary {
     -fx-background-color: -color-primary;
     -fx-background-insets: 0;

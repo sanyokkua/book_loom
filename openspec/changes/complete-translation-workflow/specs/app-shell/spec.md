@@ -222,6 +222,33 @@ gets in the way.
 - **WHEN** the run over `Frankenstein.epub` is completed and `Kobzar.fb2` is chosen for import
 - **THEN** no dialog is shown, `Kobzar.fb2` is opened and the title bar shows no run
 
+### Requirement: Let the person find and share the diagnostic log from About
+
+The About dialog SHALL say whether the detailed diagnostic log is written in this launch and, WHEN it is not, how to
+switch it on in an installed application; SHALL say that the detailed log contains text from the book and stays on this
+computer unless the person shares it; SHALL name the log folder; and SHALL offer `Open log folder`, which opens that
+folder in the file manager, `Copy log path`, which puts its path on the clipboard, and `Save diagnostic bundle…`, which
+asks where to save and writes there, off the interface thread, one ZIP of the detailed log's files (the ordinary log
+when there is no detailed log) and a `session.json` naming the build, the machine and the session facts. The bundle
+SHALL be written only to the file the person picks and SHALL NOT be sent anywhere.
+
+**Source:** NFR-PRIV-04 (`docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#no-telemetry`),
+`docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialogs`.
+In plain words: a person asked for "the log" should not need to know where an operating system keeps logs. About is
+the one place that says what the log holds, and it hands the log over as one file the person attaches themselves.
+
+#### Scenario: About in an installed app without the detailed log
+
+- **WHEN** About is opened in an installed application started without `BOOKLOOM_TRACE_FILE`
+- **THEN** it reads `Detailed log: off.` and names `BOOKLOOM_TRACE_FILE=1`
+- **AND** it names the log folder and says the detailed log contains text from the book
+
+#### Scenario: Saving a diagnostic bundle
+
+- **WHEN** the person presses `Save diagnostic bundle…` and picks `report.zip`
+- **THEN** `report.zip` holds `bookloom-trace.log`, its archives and `session.json`
+- **AND** the message `Diagnostic bundle saved: report.zip` is shown
+
 ## MODIFIED Requirements
 
 ### Requirement: Keep every part of the window reachable at its smallest size

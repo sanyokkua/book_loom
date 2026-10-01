@@ -18,11 +18,11 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.PausePoint;
-import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
 
 /**
@@ -43,6 +43,7 @@ public final class RunStarter {
     private final TranslationEngine engine;
     private final ReviewMode reviewMode;
     private final TranslationRunner runner;
+    private final SessionReporter reporter;
     private final ExecutorService executor;
 
     /**
@@ -53,6 +54,7 @@ public final class RunStarter {
      * @param engine the port a job is created through
      * @param reviewMode how the run's pauses for review are chosen, resolved once at launch
      * @param runner the runner that owns the one active run
+     * @param reporter what tells the detailed log which provider, model and brief the run uses
      * @param executor the daemon executor a run is prepared on, never the FX thread
      */
     @Inject
@@ -62,12 +64,14 @@ public final class RunStarter {
             final TranslationEngine engine,
             final ReviewMode reviewMode,
             final TranslationRunner runner,
+            final SessionReporter reporter,
             @BackgroundExecutor final ExecutorService executor) {
         this.current = Objects.requireNonNull(current, "current");
         this.models = Objects.requireNonNull(models, "models");
         this.engine = Objects.requireNonNull(engine, "engine");
         this.reviewMode = Objects.requireNonNull(reviewMode, "reviewMode");
         this.runner = Objects.requireNonNull(runner, "runner");
+        this.reporter = Objects.requireNonNull(reporter, "reporter");
         this.executor = Objects.requireNonNull(executor, "executor");
     }
 
@@ -130,7 +134,10 @@ public final class RunStarter {
         }
         final TranslationJob job = Objects.requireNonNull(created.data(), "job");
         job.pauseAt(pausePoints());
-        final RunContext context = new RunContext(book.projectId(), fileNameOf(book), reviewMode, dialOf(), selection);
+        final BookBrief brief = briefOf();
+        final RunContext context =
+                new RunContext(book.projectId(), fileNameOf(book), reviewMode, brief.dial(), selection);
+        reporter.runStarting(context, brief);
         final boolean began = runner.start(job, context);
         log.debug("the runner accepted the run: {}", began);
         return null;
@@ -144,9 +151,8 @@ public final class RunStarter {
     }
 
     // The brief as the person has left it, not the one the project was created with; it exists whenever a book does.
-    private QualityDial dialOf() {
-        return Objects.requireNonNull(current.brief().get(), "the open book's brief")
-                .dial();
+    private BookBrief briefOf() {
+        return Objects.requireNonNull(current.brief().get(), "the open book's brief");
     }
 
     private static String fileNameOf(final OpenedBook book) {

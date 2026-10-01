@@ -72,6 +72,8 @@ final class TranslationJobImpl implements TranslationJob {
     private final Clock clock;
     private final JobControl control;
     private final JobSubscribers subscribers = new JobSubscribers();
+    // Used from the job thread only, like every event it is handed.
+    private final RunSummaryLogger runSummary;
     private final AtomicBoolean skipRequested = new AtomicBoolean();
     private final String jobId = UUID.randomUUID().toString();
     private final RunRecorder recorder;
@@ -102,6 +104,7 @@ final class TranslationJobImpl implements TranslationJob {
         this.revision = Objects.requireNonNull(revision, "revision");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.control = new JobControl(request.mode().pausePoints());
+        this.runSummary = new RunSummaryLogger(clock);
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock);
         this.pending = new PendingCommit(stores.checkpoint(), request.projectId());
         this.startedAt = clock.instant();
@@ -127,13 +130,13 @@ final class TranslationJobImpl implements TranslationJob {
 
     @Override
     public void pause() {
-        log.debug("Pause requested for translation job project={}", request.projectId());
+        log.info("Pause requested for translation job project={}", request.projectId());
         control.pause();
     }
 
     @Override
     public void resume() {
-        log.debug("Resume requested for translation job project={}", request.projectId());
+        log.info("Resume requested for translation job project={}", request.projectId());
         control.resume();
     }
 
@@ -149,7 +152,7 @@ final class TranslationJobImpl implements TranslationJob {
 
     @Override
     public void cancel() {
-        log.debug("Cancellation requested for translation job project={}", request.projectId());
+        log.info("Stop requested for translation job project={}", request.projectId());
         control.cancel();
     }
 
@@ -278,6 +281,7 @@ final class TranslationJobImpl implements TranslationJob {
 
     private void emit(final JobEvent event) {
         log.debug("Sending translation job event type={}", event.getClass().getSimpleName());
+        runSummary.onEvent(event);
         subscribers.deliver(event);
     }
 

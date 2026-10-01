@@ -10,6 +10,7 @@ import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -22,6 +23,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import ua.bookloom.ui.state.DestinationChooser;
+import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.theme.ThemeMode;
 
 /**
@@ -234,5 +237,51 @@ class AboutDialogTest extends ShellTestBase {
 
         ThemeTestSupport.assertSameColour(fill, surface, "about card background under " + mode);
         ThemeTestSupport.assertSameColour(stroke, border, "about card border under " + mode);
+    }
+    // IF the card did not say whether the detailed log is written, THEN a person asked for "the log" could not tell
+    // whether there is one, nor how to switch it on in an installed app.
+    @Test
+    void about_detailedLogOff_saysSoAndHowToSwitchItOn() {
+        openAbout();
+
+        assertThat(((Label) required("about-log-state")).getText())
+                .startsWith("Detailed log: off.")
+                .contains("BOOKLOOM_TRACE_FILE=1");
+    }
+
+    // IF the card hid what the detailed log holds, THEN a person could share book text without knowing it.
+    @Test
+    void about_card_saysTheLogHoldsBookTextStaysLocalAndNamesTheFolder() {
+        openAbout();
+
+        assertThat(textsUnder(required("about-card")))
+                .contains("The detailed log contains text from your book. It stays on this computer unless you share"
+                        + " it yourself.")
+                .contains("Log folder: " + UiTestInjector.TEST_LOG_DIR);
+    }
+
+    // IF Open log folder did not reach the file manager seam, THEN the person would have to hunt for the folder.
+    @Test
+    void about_openLogFolder_asksTheFileManagerToOpenTheLogFolder() {
+        openAbout();
+
+        onFx(() -> ((Button) required("about-open-log-folder")).fire());
+
+        assertThat(((RecordingFileRevealer) injector.getInstance(FileRevealer.class)).opened())
+                .containsExactly(UiTestInjector.TEST_LOG_DIR);
+    }
+
+    // IF Save diagnostic bundle did not ask where to save, THEN the bundle would land somewhere the person did not
+    // pick.
+    @Test
+    void about_saveBundle_asksWhereToSaveADatedZip() {
+        openAbout();
+
+        onFx(() -> ((Button) required("about-save-bundle")).fire());
+
+        assertThat(((RecordingDestinationChooser) injector.getInstance(DestinationChooser.class)).initials())
+                .singleElement()
+                .satisfies(initial -> assertThat(initial.getFileName().toString())
+                        .matches("bookloom-diagnostics-\\d{8}-\\d{6}\\.zip"));
     }
 }

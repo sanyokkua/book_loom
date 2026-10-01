@@ -92,7 +92,9 @@ public final class PreScan {
         final String existing = existingTerms(Objects.requireNonNull(held.data(), "held"));
         final Result<Collection<Proposal>> proposals = ask(candidates, existing, frame, calls);
         if (proposals.isErr()) {
-            return Result.err(Objects.requireNonNull(proposals.error(), "error"));
+            final AppError failed = Objects.requireNonNull(proposals.error(), "error");
+            log.info("Model pre-scan finished project={} ok=false code={}", projectId, failed.code());
+            return Result.err(failed);
         }
         final Result<List<GlossaryEntry>> merged =
                 merge(projectId, Objects.requireNonNull(proposals.data(), "proposals"));

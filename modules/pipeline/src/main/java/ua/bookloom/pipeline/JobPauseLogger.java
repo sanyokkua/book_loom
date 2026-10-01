@@ -7,7 +7,11 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.PauseReason;
 
-/** Records recoverable pauses without re-logging their original throwable, and pauses for review. */
+/**
+ * Records every pause of a job at INFO or WARN — recoverable error pauses without re-logging their original throwable,
+ * pauses for review, pauses at a requested boundary — one line per pause, so a shared log tells the run's story without
+ * DEBUG.
+ */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor,
 // so suppress only its source-level utility-constructor false positive.
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -21,6 +25,15 @@ final class JobPauseLogger {
                 progress.stage(),
                 reason,
                 error.code(),
+                progress.accepted(),
+                progress.flagged(),
+                progress.pending());
+    }
+
+    static void boundaryPause(final PauseReason reason, final JobProgress progress) {
+        log.info(
+                "Pausing translation job reason={} accepted={} flagged={} pending={}",
+                reason,
                 progress.accepted(),
                 progress.flagged(),
                 progress.pending());

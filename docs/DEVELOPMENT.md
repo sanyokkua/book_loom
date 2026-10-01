@@ -215,6 +215,25 @@ third-party library never drowns BookLoom's own lines. Book text, prompts and mo
 50 MB of log at `TRACE`), so translate a large book with `BOOKLOOM_LOG_LEVEL=INFO` unless you are actually following
 one segment through its log.
 
+**The detailed diagnostic log — the one to share.** Beside `bookloom.log`, a run can write `bookloom-trace.log` in
+the same folder (on macOS `~/Library/Logs/BookLoom-Dev/bookloom-trace.log` for a dev run,
+`~/Library/Logs/BookLoom/bookloom-trace.log` installed): every BookLoom line down to `TRACE` — prompts, replies and
+book text included — one line per event (a line break inside a message is written as ` ⏎ `), with the `job`/`segment`
+MDC on each line, rolled at 20 MB into `bookloom-trace.1.log.gz` … `.4.log.gz` (about 100 MB at most). It is **on by
+default in a development run** and off in an installed app, where `BOOKLOOM_TRACE_FILE=1` (or
+`-Dbookloom.trace.file=true`; `0`/`false` switches a dev run off) turns it on for that launch — nothing is saved yet,
+so the environment variable is the durable way. `bookloom.log`, the console and their level are unchanged; third-party
+loggers stay at `WARN` in both files. Each file (and each rotated-in file) starts with a `#` session header: version,
+OS, JVM, JavaFX, locale, log level, detailed-log state, and the session facts known so far — provider, kind, endpoint
+host (never a URL's user part, path or query), model, dial, review mode, the brief's choices, the book's file name,
+format and size; each change of those facts is also an INFO `session update …` line. A running job writes an INFO
+`run summary periodic …` line at most once a minute (accepted/flagged/verbatim/pending, model calls, average and p95
+call time, tokens per second, timeouts, current segment) and a `run summary final …` line at its end. **To share it**,
+open **About** (title bar): it says whether the detailed log is on, names the folder, and offers *Open log folder*,
+*Copy log path* and *Save diagnostic bundle…* — a ZIP of the `bookloom-trace*` files (or `bookloom.log` when the
+detailed log is off) plus `session.json`, written where you choose and sent nowhere. The detailed log contains book
+text: it stays on the machine unless the person shares it.
+
 **Command line.** `./gradlew :app:translate` runs `ua.bookloom.app.bootstrap.TranslateLauncher`, which repeats
 `Launcher`'s pre-injector steps — paths, single-instance lock, logging — without starting JavaFX, then runs
 `ua.bookloom.app.cli.TranslateCommand`:

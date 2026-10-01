@@ -3,6 +3,7 @@ package ua.bookloom.app;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javafx.application.Application;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.AppShellView;
 import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.UiModule;
 import ua.bookloom.ui.ViewNames;
 
@@ -33,6 +35,7 @@ public final class BookLoomApplication extends Application {
     private static final String TITLE = "BookLoom";
     private static final double INITIAL_WIDTH = 1024;
     private static final double INITIAL_HEIGHT = 700;
+    private static final String JAVAFX_VERSION_PROPERTY = "javafx.runtime.version";
 
     private final AppLifecycle lifecycle = new AppLifecycle();
 
@@ -52,6 +55,9 @@ public final class BookLoomApplication extends Application {
         lifecycle.phaseOne(injector);
         lifecycle.phaseTwo(injector);
         log.info("injector built and two-phase init complete");
+        // The toolkit is up by init(), so its version is known now and not when the launcher configured logging.
+        injector.getInstance(SessionInfo.class)
+                .update(Map.of("javafx", System.getProperty(JAVAFX_VERSION_PROPERTY, "unknown")));
     }
 
     @Override
