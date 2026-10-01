@@ -1204,8 +1204,20 @@ times, paused, and on every resume paid the same rounds again. Each step is its 
   or gender, changing nothing unless every call answered; both model actions go through `JobModelCalls` with a waiting
   line and Stop; the glossary table sorts by Term, Type, Gender and Locked (ties by term) and has a search field
   (5b2c5fa)
-- [ ] 5. Scrolling smoothness: smooth wheel scrolling, cheaper glossary cells, fixed cell sizes
-- [ ] 6. UI polish from the hand-test screenshots
+- [x] 5. Scrolling smoothness: a wheel notch glides over 150 ms (`SmoothScroll`, installed once on the shell root,
+  moves the innermost pane, list, table or tree under the pointer that still has room, adds up fast notches, answers a
+  reversal at once, stops on a mouse press; trackpad, momentum and touch events are left to JavaFX); the glossary's
+  Type and Gender are text that becomes a combo box on click, focus or Enter, its row tooltips arrive on the first
+  hover, and its switches draw no thumb shadow until focused; the activity log, the review list and the structure tree
+  have a fixed row height, and a review row reuses its nodes; `docs/DEVELOPMENT.md` says how to measure with the pulse
+  logger, and no JVM flag was added (8a3d801)
+- [x] 6. UI polish from the hand-test screenshots: the file just exported is named beside Save to in a neutral line,
+  not the red refusal, and Export book still waits for Replace; the export-complete dialog shows the whole folder and
+  file path on hover; an unchosen check box paints no tick (the light tick showed on the dark theme's box); the time
+  left is the average of the last 20 timed segments, still hidden before 5; the import card writes `EPUB 2.0` once; an
+  empty target language says it is required; an available Settings tab reads as ordinary text and an unavailable one
+  as muted. Not done: a Structure note on segments kept as they are — the structure counts come from the inspection,
+  before any run decides what is verbatim, so it cannot be derived from data the screen holds (eec2c45)
 
 ## 16. The gate — after every group above
 

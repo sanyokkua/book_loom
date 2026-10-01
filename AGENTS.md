@@ -35,15 +35,30 @@ deferrals are kept as the run goes, and it pauses for review as the review mode 
 model call as events. The review desk acts on segments (accept, edit, revert, skip, apply a proposal, retry with the
 context the first draft saw), Max revises backwards after the last segment, export is checked per segment and writes
 the chosen side files, the command line refuses an existing destination before any model call and cancels cleanly, the
-review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam. The window opens a book on the stored project (one current project, the import states chosen from the
-inspection's verdict, a replace-run prompt, start and resume without importing again), shows the run in its title bar,
-numbers six workflow steps with a provider footer, and its Book Brief, Structure, Names & style, Translating and Export screens are live (the glossary table with scans and CSV,
-the seven run states with the live panel, tagged log and provider-error state, the review panel with retry and
-proposals, and review pauses that open their segment; one end-to-end test runs each review mode). Not built:
-saving (nothing survives a restart, no remembered settings). The Export screen writes the book (Save to, side files, consistency
-pass, result tiles and checks, the export-complete dialog); a finished run writes nothing. The Settings Providers tab
-tests a provider three ways (connection, models, inference) with measured values, connection working before a model is
-chosen. Next: group 16 (the gate) of `openspec/changes/complete-translation-workflow`.
+review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam.
+
+Real-book hardening (group 15b, after a 3,700-segment Ollama run): every model call is bounded — the judge capped by its
+pairs, per-kind timeouts, a timed-out call retried once with a new seed and a lower cap, the Ollama reply read as a
+stream with an idle gap — and a judge that cannot answer flags its segments (`judge-unavailable`) instead of pausing; a
+step that pauses twice is flagged and the run goes on, a paused run can skip the failing segment, rounds that make no
+progress stop early, and a resume continues at the call that failed. Invisible text is no segment, and a segment with no
+letter, a Roman numeral, one character or only a locked name is kept verbatim with no call. The glossary scan drops
+common words (lower-case share, stop-word lists, aliases), "Review with model" removes non-names and fills types, and the
+table sorts and searches.
+
+The window opens a book on the stored project (one current project, the import states chosen from the inspection's
+verdict, a replace-run prompt, start and resume without importing again), shows the run and a connection chip in its
+title bar, numbers six workflow steps with a provider footer, and its Book Brief, Structure, Names & style, Translating
+and Export screens are live: the glossary table with scans, model review and CSV; the seven run states with a live
+panel showing each model call (kind, segment, attempt, its clock against the timeout), the round tracker and the
+context sent to the model, a timed activity log with an errors-only view, the provider-error and stuck-call banners with
+Skip segment and Retry now, and the review panel with retry and proposals; the Export screen writes the book (Save to,
+side files, consistency pass, result tiles and checks, a neutral line for the file just written, the export-complete
+dialog), and the Settings Providers tab tests a provider three ways with measured values. The theme is token-only in
+both light and dark, every operable control explains itself on hover, wheel scrolling glides, the long lists have fixed
+row heights, and the time left is the average of the last 20 timed segments. Not built: saving (nothing survives a
+restart, no remembered settings, no SQLite), the other Settings tabs (Models, Generation, Automation, Storage) and the
+Projects screen. Next: group 16 (the gate) of `openspec/changes/complete-translation-workflow`.
 
 ## Commands
 
