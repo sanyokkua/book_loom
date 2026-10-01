@@ -13,12 +13,14 @@ import ua.bookloom.api.pipeline.JobProgress;
  * @param repaired segments accepted after at least one repair round
  * @param flagged segments flagged so far
  * @param remaining segments not decided yet
- * @param total auto-accepted plus repaired plus flagged plus remaining
+ * @param total auto-accepted plus repaired plus kept as is plus flagged plus remaining
  * @param fraction decided segments over the total, zero when the total is zero
  * @param section the 1-based body unit being translated, zero before the first
  * @param sections how many body units the book has
  * @param chunk the 1-based chunk within the section
  * @param chunks how many chunks the section has
+ * @param keptVerbatim segments kept as they are with no model call (numbers, symbols); decided, so counted in
+ *     {@code total} and {@code fraction}, but in neither {@code autoAccepted} nor {@code repaired}
  */
 public record RunFigures(
         int autoAccepted,
@@ -30,10 +32,11 @@ public record RunFigures(
         int section,
         int sections,
         int chunk,
-        int chunks) {
+        int chunks,
+        int keptVerbatim) {
 
     /** The figures of a run that has not counted anything. */
-    public static final RunFigures EMPTY = new RunFigures(0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0);
+    public static final RunFigures EMPTY = new RunFigures(0, 0, 0, 0, 0, 0.0, 0, 0, 0, 0, 0);
 
     /**
      * Derives the figures from a snapshot.
@@ -43,7 +46,8 @@ public record RunFigures(
      */
     public static RunFigures from(final JobProgress progress) {
         Objects.requireNonNull(progress, "progress");
-        final int decided = progress.autoAccepted() + progress.repairedAccepted() + progress.flagged();
+        final int decided =
+                progress.autoAccepted() + progress.repairedAccepted() + progress.keptVerbatim() + progress.flagged();
         final int total = decided + progress.pending();
         final double fraction = total == 0 ? 0.0 : (double) decided / total;
         return new RunFigures(
@@ -56,15 +60,16 @@ public record RunFigures(
                 progress.section(),
                 progress.sections(),
                 progress.chunk(),
-                progress.chunks());
+                progress.chunks(),
+                progress.keptVerbatim());
     }
 
     /**
-     * Segments accepted, with or without repair.
+     * Segments accepted, with or without repair, and those kept as they are.
      *
-     * @return auto-accepted plus repaired
+     * @return auto-accepted plus repaired plus kept as is
      */
     public int accepted() {
-        return autoAccepted + repaired;
+        return autoAccepted + repaired + keptVerbatim;
     }
 }

@@ -35,14 +35,14 @@ class ReviewCountingTest {
         final ReviewCounts counts =
                 ReviewCounting.count(records, AlsoTranslate.defaults().keptKinds());
 
-        assertThat(counts).isEqualTo(new ReviewCounts(13, 6, 1, 2, 1, 1, 2, 1));
+        assertThat(counts).isEqualTo(new ReviewCounts(13, 6, 1, 2, 1, 1, 2, 1, 0));
     }
 
     @Test
     void count_noRecords_isAllZero() {
         // an empty project has nothing in any tile
         assertThat(ReviewCounting.count(List.of(), AlsoTranslate.defaults().keptKinds()))
-                .isEqualTo(new ReviewCounts(0, 0, 0, 0, 0, 0, 0, 0));
+                .isEqualTo(new ReviewCounts(0, 0, 0, 0, 0, 0, 0, 0, 0));
     }
 
     @Test
@@ -53,7 +53,19 @@ class ReviewCountingTest {
                 body("v", SegmentStatus.REVISED, SegmentPath.USER).withReviewed(true));
 
         assertThat(ReviewCounting.count(records, AlsoTranslate.defaults().keptKinds()))
-                .isEqualTo(new ReviewCounts(2, 1, 0, 0, 1, 0, 0, 0));
+                .isEqualTo(new ReviewCounts(2, 1, 0, 0, 1, 0, 0, 0, 0));
+    }
+
+    @Test
+    void count_verbatimRecords_areCountedApartFromAutoAcceptedAndKeptByChoice() {
+        // a chapter number kept as it is is neither an auto-accepted translation nor kept as source by choice
+        final List<SegmentRecord> records = List.of(
+                body("n", SegmentStatus.ACCEPTED, SegmentPath.VERBATIM),
+                body("s", SegmentStatus.ACCEPTED, SegmentPath.VERBATIM),
+                body("a", SegmentStatus.ACCEPTED, SegmentPath.DRAFT));
+
+        assertThat(ReviewCounting.count(records, AlsoTranslate.defaults().keptKinds()))
+                .isEqualTo(new ReviewCounts(3, 1, 0, 0, 0, 0, 0, 0, 2));
     }
 
     @Test
@@ -63,7 +75,7 @@ class ReviewCountingTest {
                 frontmatter("k").withStatus(SegmentStatus.ACCEPTED).withReviewed(true);
 
         assertThat(ReviewCounting.count(List.of(kept), AlsoTranslate.defaults().keptKinds()))
-                .isEqualTo(new ReviewCounts(1, 0, 0, 0, 0, 0, 1, 0));
+                .isEqualTo(new ReviewCounts(1, 0, 0, 0, 0, 0, 1, 0, 0));
     }
 
     private static SegmentRecord body(final String id, final SegmentStatus status, final SegmentPath path) {

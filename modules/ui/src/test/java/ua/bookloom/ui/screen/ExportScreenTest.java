@@ -90,7 +90,8 @@ class ExportScreenTest extends TranslatingScreenTestBase {
                 reviewed,
                 List.of(),
                 written,
-                ConsistencySummary.NOT_RUN);
+                ConsistencySummary.NOT_RUN,
+                0);
     }
 
     // IF the tiles were not filled from the report, THEN a person would not see what the written book contains.
@@ -109,7 +110,7 @@ class ExportScreenTest extends TranslatingScreenTestBase {
     }
 
     private static ExportReport reportWith(final List<Path> sideFiles, final ConsistencySummary consistency) {
-        return new ExportReport(Path.of("Frankenstein.uk.epub"), 10, 0, 0, 0, 10, 0, sideFiles, 10, consistency);
+        return new ExportReport(Path.of("Frankenstein.uk.epub"), 10, 0, 0, 0, 10, 0, sideFiles, 10, consistency, 0);
     }
 
     // IF the written side files were not listed, THEN a person ticking three could not tell what was written.

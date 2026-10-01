@@ -34,7 +34,7 @@ class ReviewPauseTest extends TranslatingScreenTestBase {
         readyToStart();
         desk.willAnswerQueue(reason == PauseReason.ON_FLAGGED ? List.of(paused) : List.of());
         desk.willAnswerSegment(paused);
-        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, 1, 0, 0, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, 1, 0, 0, 0, 0, 0));
         showTranslating();
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
@@ -131,7 +131,7 @@ class ReviewPauseTest extends TranslatingScreenTestBase {
     @Test
     void unattendedRun_fourFlagged_neverOpensThePanelAndTheControlCountsThem() throws Exception {
         readyToStart();
-        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, 4, 0, 0, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, 4, 0, 0, 0, 0, 0));
         showTranslating();
         publish(RunState.COMPLETED);
         mirror().live()

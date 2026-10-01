@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Document;
@@ -99,6 +101,17 @@ class TxtRoundTripTest {
 
         assertThat(segmentsOf(document)).extracting(Segment::sourceInner).containsExactly("One.", "Two.", "Three.");
         assertThat(segmentsOf(document)).extracting(Segment::kind).containsOnly(SegmentKind.PARAGRAPH);
+    }
+
+    // A paragraph of only invisible characters is no segment, and writing the book back keeps its bytes.
+    @ParameterizedTest
+    @ValueSource(strings = {"\u00A0", "\u200B", "\uFEFF\u00AD", "\u00A0 \u200B"})
+    void read_paragraphOfInvisibleCharactersOnly_yieldsNoSegmentAndKeepsItsBytes(String invisible) {
+        final String text = "One.\n\n" + invisible + "\n\nTwo.\n";
+        final Document document = open(text, StandardCharsets.UTF_8, "notes.txt");
+
+        assertThat(segmentsOf(document)).extracting(Segment::sourceInner).containsExactly("One.", "Two.");
+        assertThat(bytesOf(writeOut(document, "en"))).isEqualTo(text.getBytes(StandardCharsets.UTF_8));
     }
 
     // a run of several blank lines yields no extra segment.

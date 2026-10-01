@@ -151,7 +151,7 @@ final class ConformancePreparations {
         final ScriptedReviewDesk desk = (ScriptedReviewDesk) injector.getInstance(ReviewDesk.class);
         desk.willAnswerQueue(List.of(ReviewFixtures.lowScoreWithFinding()));
         desk.willAnswerSegment(ReviewFixtures.lowScoreWithFinding());
-        desk.willAnswerCounts(new ReviewCounts(100, 99, 0, 1, 0, 0, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(100, 99, 0, 1, 0, 0, 0, 0, 0));
         openABook();
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunState(RunState.PAUSED);

@@ -264,7 +264,7 @@ final class RunSession implements JobListener {
             feed.decided(decided).ifPresent(this::queue);
             liveChunks.decided(decided);
             liveRowsChanged = true;
-            if (decided.status() == SegmentStatus.ACCEPTED || decided.status() == SegmentStatus.FLAGGED) {
+            if (RunClock.isTimed(decided)) {
                 runClock.decided(clock.instant());
             }
         });

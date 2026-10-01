@@ -19,6 +19,7 @@ import ua.bookloom.document.model.JsoupTreeNode;
 import ua.bookloom.document.model.RawEntry;
 import ua.bookloom.document.model.TreeDialect;
 import ua.bookloom.document.model.TreeNode;
+import ua.bookloom.util.text.VisibleText;
 
 /**
  * Reads the navigation document's link texts and the NCX's labels as auxiliary slots, reusing task 4.4's
@@ -90,7 +91,7 @@ final class EpubNavigationAuxiliary {
         final TreeNode root = Jdom2TreeNode.of(tree.getRootElement());
         final Set<String> written = new HashSet<>();
         for (final NavEntry entry : flatten(NavigationParser.parseNcx(tree, ncxEntry.name()))) {
-            if (!entry.label().isBlank() && !entry.anchorPath().isEmpty()) {
+            if (!VisibleText.isBlank(entry.label()) && !entry.anchorPath().isEmpty()) {
                 addNcxLabel(builder, ncxEntry.name(), root, entry, navSegmentByLabel, written);
             }
         }

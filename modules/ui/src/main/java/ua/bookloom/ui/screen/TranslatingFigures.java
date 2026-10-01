@@ -141,7 +141,13 @@ final class TranslatingFigures {
                     "translating-outcome-flagged",
                     RunFigures::flagged,
                     MessageKey.TRANSLATING_COUNT_FLAGGED,
-                    true));
+                    true),
+            new Tile(
+                    "translating-outcome-tile-verbatim",
+                    "translating-outcome-verbatim",
+                    RunFigures::keptVerbatim,
+                    MessageKey.TRANSLATING_COUNT_VERBATIM,
+                    false));
 
     static Node runningTiles(final StateMirror mirror, final Messages messages) {
         final HBox row = new HBox(TILE_SPACING);
@@ -177,7 +183,7 @@ final class TranslatingFigures {
 
     static String progressLine(final StateMirror mirror, final Messages messages) {
         final RunFigures figures = mirror.figures().get();
-        final int decided = figures.autoAccepted() + figures.repaired() + figures.flagged();
+        final int decided = figures.total() - figures.remaining();
         final int percent = figures.total() == 0 ? 0 : (int) ((long) decided * PERCENT / figures.total());
         final List<String> parts = new ArrayList<>();
         parts.add(messages.get(MessageKey.TRANSLATING_LINE_PERCENT, percent));

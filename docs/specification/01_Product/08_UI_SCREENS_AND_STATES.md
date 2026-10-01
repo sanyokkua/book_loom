@@ -249,7 +249,7 @@ States (`#runState`):
 | paused            | Banner `Paused. Progress is kept until the application closes. Resume any time — it continues at chunk 41/66.`                                                             | Resume, Stop, `Review flagged (n)`                                    |
 | stopped           | Banner `Run stopped. Progress is kept until the application closes. Resume any time — it re-enters at the first pending segment; flagged segments wait in the review panel.` | Resume, `Review flagged (n)`                                          |
 | provider error    | Auto-paused, naming the failure's error code                                                                                                                                | `Retry now` (= Resume), `Open provider settings`, `Stay paused`       |
-| completed         | Auto-accepted, repaired-and-accepted, flagged, and kept-as-source counts                                                                                                     | Continue to Export, `Review flagged (n)`; Start only while pending segments remain (e.g. after an "Also translate" switch is turned on once the run has completed) |
+| completed         | Auto-accepted, repaired-and-accepted, flagged, kept-as-is (numbers, symbols) and kept-as-source counts                                                                      | Continue to Export, `Review flagged (n)`; Start only while pending segments remain (e.g. after an "Also translate" switch is turned on once the run has completed) |
 | failed            | A blocking dialog: `Decided segments are kept until the application closes.`, then the outcome so far                                                                      | Start (begins a new run at the first pending segment)                 |
 
 The **review panel** lives inside this screen (`#screen-review`) rather than on a separate screen or nav entry.
@@ -301,8 +301,9 @@ Purpose: choose the destination and export the translated book.
 | `Export book`                | `Button`                          | Writes the book; **unavailable while a run of this project is translating**                                                              |
 | Open folder                  | `Button`                          | Shows the written file in the system file manager: `open -R` on macOS, `explorer.exe /select,` on Windows (an exit code of 1 still counts as success), `xdg-open` on its folder on Linux |
 
-The partial-export statement names **pending segments** (not yet decided) and **segments kept as source by choice**
-apart, so a partial export never describes every remaining segment as the same kind of gap. The
+The partial-export statement names **pending segments** (not yet decided), **segments kept as source by choice** and
+**segments kept as is** (a chapter number, a scene break — nothing to translate, decided with no model call) apart, so a
+partial export never describes every remaining segment as the same kind of gap. The
 **export-complete dialog** (`#dialog-export-complete`) is the export's **only** success notice — no `ok` toast
 duplicates it.
 

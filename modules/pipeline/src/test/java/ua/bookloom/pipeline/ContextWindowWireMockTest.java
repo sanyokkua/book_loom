@@ -34,19 +34,19 @@ class ContextWindowWireMockTest {
                 .doesNotContain("num_ctx", "n_ctx", "context_length", "\"options\"");
     }
 
-    // A two-placeholder short source hits the 64-token floor of the cap.
+    // A two-placeholder short source hits the 128-token short-source floor of the cap.
     @Test
     void translate_draftToOllama_postsNumPredictInsideOptions() {
         assertThat(draftBody(ProviderKind.OLLAMA))
                 .contains("\"options\":{")
-                .contains("\"num_predict\":64")
+                .contains("\"num_predict\":128")
                 .doesNotContain("max_tokens");
     }
 
     @Test
     void translate_draftToOpenAiCompatible_postsMaxTokens() {
         assertThat(draftBody(ProviderKind.OPENAI_COMPATIBLE))
-                .contains("\"max_tokens\":64")
+                .contains("\"max_tokens\":128")
                 .doesNotContain("num_predict", "\"options\"");
     }
 

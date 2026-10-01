@@ -107,23 +107,25 @@ public final class MarkdownInspection implements FormatInspection {
         final String text = new String(parsed.originalBytes(), parsed.charset());
         final Frontmatter.Split split = Frontmatter.split(text);
         final Node root = MarkdownReader.parser().parse(split.body());
-        final List<Integer> headingLevels = headingLevelsOf(root);
+        final List<Integer> headingLevels = headingLevelsOf(root, split.body());
         final List<Segment> segments = document.units().get(0).segments();
         return MarkdownStructure.build(segments, headingLevels);
     }
 
-    private static List<Integer> headingLevelsOf(Node root) {
+    // Only a heading the walk made a segment of has a level here: the levels are matched to heading segments by
+    // position, so an empty or invisible heading would hand its level to the next one.
+    private static List<Integer> headingLevelsOf(Node root, String body) {
         final List<Integer> levels = new ArrayList<>();
-        collectHeadingLevels(root, levels);
+        collectHeadingLevels(root, body, levels);
         return levels;
     }
 
-    private static void collectHeadingLevels(Node node, List<Integer> levels) {
+    private static void collectHeadingLevels(Node node, String body, List<Integer> levels) {
         for (Node child = node.getFirstChild(); child != null; child = child.getNext()) {
-            if (child instanceof Heading heading) {
+            if (child instanceof Heading heading && MarkdownWalker.yieldsSegment(heading, body)) {
                 levels.add(heading.getLevel());
             }
-            collectHeadingLevels(child, levels);
+            collectHeadingLevels(child, body, levels);
         }
     }
 

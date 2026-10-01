@@ -92,7 +92,7 @@ class EchoCheckTest {
             ForeignPassagePolicy.TRANSLATE,
             null,
             List.of());
-    private static final SoftCheckInput NAMES_ONLY_NOT_BLOCKING = SoftCheckFixtures.scriptEcho(
+    private static final SoftCheckInput NAMES_ONLY_SKIPS = SoftCheckFixtures.scriptEcho(
             "Margaret Hale, Milton Northern.",
             "Margaret Hale, Milton Northern.",
             "en",
@@ -101,7 +101,7 @@ class EchoCheckTest {
             ForeignPassagePolicy.TRANSLATE,
             null,
             List.of("Margaret Hale", "Milton Northern"));
-    private static final SoftCheckInput CYRILLIC_NAMES_ONLY_NOT_BLOCKING = SoftCheckFixtures.scriptEcho(
+    private static final SoftCheckInput CYRILLIC_NAMES_ONLY_SKIPS = SoftCheckFixtures.scriptEcho(
             "Тарас Бульба, Остап Бульба.",
             "Тарас Бульба, Остап Бульба.",
             "uk",
@@ -110,6 +110,24 @@ class EchoCheckTest {
             ForeignPassagePolicy.TRANSLATE,
             null,
             List.of("Тарас Бульба", "Остап Бульба"));
+    private static final SoftCheckInput GLOSSARY_NAME_ECHO_SKIPS = SoftCheckFixtures.scriptEcho(
+            "Bartimaeus!",
+            "Bartimaeus!",
+            "en",
+            "uk",
+            NamePolicy.TRANSLITERATE,
+            ForeignPassagePolicy.TRANSLATE,
+            null,
+            List.of("Bartimaeus"));
+    private static final SoftCheckInput GLOSSARY_NAME_WITH_WORDS_NOT_BLOCKING = SoftCheckFixtures.scriptEcho(
+            "Bartimaeus said.",
+            "Bartimaeus said.",
+            "en",
+            "uk",
+            NamePolicy.TRANSLITERATE,
+            ForeignPassagePolicy.TRANSLATE,
+            null,
+            List.of("Bartimaeus"));
     private static final SoftCheckInput TRANSLATE_POLICY_MARKED_BLOCK_FAILS = SoftCheckFixtures.scriptEcho(
             "Je ne regrette rien.",
             "Je ne regrette rien.",
@@ -156,7 +174,10 @@ class EchoCheckTest {
                 Arguments.of("a real translation passes", REAL_TRANSLATION_PASSES, false),
                 Arguments.of("an empty source display text skips the check", EMPTY_SOURCE_SKIPS, true),
                 Arguments.of("a marked French block is kept without failing", MARKED_FRENCH_SKIPS, true),
-                Arguments.of("a Greek-script segment in an English book is kept", MARKED_GREEK_SKIPS, true));
+                Arguments.of("a Greek-script segment in an English book is kept", MARKED_GREEK_SKIPS, true),
+                Arguments.of("a short line of a glossary name only is explained", GLOSSARY_NAME_ECHO_SKIPS, true),
+                Arguments.of("a names-only line kept by policy", NAMES_ONLY_SKIPS, true),
+                Arguments.of("Cyrillic names kept by policy", CYRILLIC_NAMES_ONLY_SKIPS, true));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -185,8 +206,11 @@ class EchoCheckTest {
                 Arguments.of("exactly twenty code points still blocks", EXACTLY_TWENTY_BLOCKS, true, Severity.MEDIUM),
                 Arguments.of(
                         "below the echo floor only lowers confidence", BELOW_FLOOR_NOT_BLOCKING, false, Severity.LOW),
-                Arguments.of("a names-only line kept by policy", NAMES_ONLY_NOT_BLOCKING, false, Severity.LOW),
-                Arguments.of("Cyrillic names kept by policy", CYRILLIC_NAMES_ONLY_NOT_BLOCKING, false, Severity.LOW),
+                Arguments.of(
+                        "a short line with words beside a name still counts",
+                        GLOSSARY_NAME_WITH_WORDS_NOT_BLOCKING,
+                        false,
+                        Severity.LOW),
                 Arguments.of(
                         "Translate checks a marked block", TRANSLATE_POLICY_MARKED_BLOCK_FAILS, true, Severity.MEDIUM),
                 Arguments.of("an unmarked echo fails under Keep as-is", UNMARKED_KEEP_FAILS, true, Severity.MEDIUM),

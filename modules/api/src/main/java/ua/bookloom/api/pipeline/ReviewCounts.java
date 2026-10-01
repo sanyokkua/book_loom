@@ -12,6 +12,8 @@ package ua.bookloom.api.pipeline;
  * @param sourceKept auxiliary segments kept as source by choice
  * @param flaggedWithoutTarget the flagged segments that hold no machine target, still counted in {@code flagged} —
  *     an export writes them in the source language
+ * @param keptVerbatim accepted segments kept as they are with no model call (numbers, symbols, Roman numerals, a single
+ *     character) and not yet reviewed; never in {@code autoAccepted}, and never "kept as source by choice"
  */
 public record ReviewCounts(
         int total,
@@ -21,7 +23,8 @@ public record ReviewCounts(
         int reviewed,
         int pending,
         int sourceKept,
-        int flaggedWithoutTarget) {
+        int flaggedWithoutTarget,
+        int keptVerbatim) {
 
     /** Rejects a negative count, and a {@code flaggedWithoutTarget} above {@code flagged}. */
     public ReviewCounts {
@@ -32,10 +35,11 @@ public record ReviewCounts(
                 || reviewed < 0
                 || pending < 0
                 || sourceKept < 0
-                || flaggedWithoutTarget < 0) {
+                || flaggedWithoutTarget < 0
+                || keptVerbatim < 0) {
             throw new IllegalArgumentException("no count may be negative: " + total + ", " + autoAccepted + ", "
                     + repairedAccepted + ", " + flagged + ", " + reviewed + ", " + pending + ", " + sourceKept + ", "
-                    + flaggedWithoutTarget);
+                    + flaggedWithoutTarget + ", " + keptVerbatim);
         }
         if (flaggedWithoutTarget > flagged) {
             throw new IllegalArgumentException(

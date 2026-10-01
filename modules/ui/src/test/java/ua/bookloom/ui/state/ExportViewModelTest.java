@@ -96,12 +96,14 @@ class ExportViewModelTest extends ExportViewModelTestBase {
 
     @ParameterizedTest
     @CsvSource({
-        "1240, 900, 25, 3, 0, 312, 0, 0, '312 segments will be written in the source language|3 flagged segments will be written with their machine translation'",
-        "12, 8, 0, 3, 0, 1, 0, 1, '2 segments will be written in the source language|2 flagged segments will be written with their machine translation'",
-        "12, 8, 0, 1, 0, 3, 0, 1, '4 segments will be written in the source language'",
-        "1260, 913, 25, 3, 0, 312, 7, 0, '312 segments will be written in the source language|3 flagged segments will be written with their machine translation|7 segments are kept as source by choice'",
-        "1247, 1215, 25, 0, 0, 0, 7, 0, '7 segments are kept as source by choice'",
-        "10, 9, 0, 1, 0, 0, 1, 0, '1 flagged segment will be written with its machine translation|1 segment is kept as source by choice'"
+        "1240, 900, 25, 3, 0, 312, 0, 0, 0, '312 segments will be written in the source language|3 flagged segments will be written with their machine translation'",
+        "12, 8, 0, 3, 0, 1, 0, 1, 0, '2 segments will be written in the source language|2 flagged segments will be written with their machine translation'",
+        "12, 8, 0, 1, 0, 3, 0, 1, 0, '4 segments will be written in the source language'",
+        "1260, 913, 25, 3, 0, 312, 7, 0, 0, '312 segments will be written in the source language|3 flagged segments will be written with their machine translation|7 segments are kept as source by choice'",
+        "1247, 1215, 25, 0, 0, 0, 7, 0, 0, '7 segments are kept as source by choice'",
+        "10, 9, 0, 1, 0, 0, 1, 0, 0, '1 flagged segment will be written with its machine translation|1 segment is kept as source by choice'",
+        "40, 37, 0, 0, 0, 0, 1, 0, 2, '1 segment is kept as source by choice|2 segments are kept as is: they have nothing to translate (numbers, symbols)'",
+        "40, 39, 0, 0, 0, 0, 0, 0, 1, '1 segment is kept as is: it has nothing to translate (numbers, symbols)'"
     })
     void statement_countsFromTheDesk_statesEachNonZeroLine(
             final int total,
@@ -112,8 +114,10 @@ class ExportViewModelTest extends ExportViewModelTestBase {
             final int pending,
             final int kept,
             final int noTarget,
+            final int verbatim,
             final String expected) {
-        desk.willAnswerCounts(new ReviewCounts(total, auto, repaired, flagged, reviewed, pending, kept, noTarget));
+        desk.willAnswerCounts(
+                new ReviewCounts(total, auto, repaired, flagged, reviewed, pending, kept, noTarget, verbatim));
 
         onFx(() -> {
             exports.refreshStatement();

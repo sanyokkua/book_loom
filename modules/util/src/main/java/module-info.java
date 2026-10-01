@@ -16,4 +16,5 @@ module ua.bookloom.util {
     exports ua.bookloom.util.paths;
     exports ua.bookloom.util.hash;
     exports ua.bookloom.util.lang;
+    exports ua.bookloom.util.text;
 }

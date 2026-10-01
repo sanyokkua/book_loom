@@ -98,8 +98,8 @@ final class SegmentEvents {
     /**
      * Announces a draft whose markup restored, with the confidence its first evaluation gives it.
      *
-     * @param outcome the draft step's outcome; one flagged at once, one that failed the gate, or a memory reuse is
-     *     not a draft to show and announces nothing
+     * @param outcome the draft step's outcome; one flagged at once, one that failed the gate, a memory reuse or a
+     *     segment kept as it is is not a draft to show and announces nothing
      * @param settings the chunk's loop settings the draft is evaluated with
      */
     void drafted(final DraftOutcome outcome, final LoopSettings settings) {
@@ -113,6 +113,11 @@ final class SegmentEvents {
                 log.debug(
                         "No SegmentDrafted segmentId={}: reused from memory",
                         reused.segment().id());
+            case DraftOutcome.Verbatim verbatim ->
+                log.debug(
+                        "No SegmentDrafted segmentId={}: kept as it is rule={}",
+                        verbatim.segment().id(),
+                        verbatim.rule());
         }
     }
 

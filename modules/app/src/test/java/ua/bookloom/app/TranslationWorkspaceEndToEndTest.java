@@ -135,7 +135,7 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
         final Result<ReviewCounts> counts = desk.counts(projectId);
         assertThat(counts.data())
                 .isEqualTo(new ReviewCounts(
-                        SEGMENT_COUNT, 0, 0, reviewed ? 0 : SEGMENT_COUNT, reviewed ? SEGMENT_COUNT : 0, 0, 0, 0));
+                        SEGMENT_COUNT, 0, 0, reviewed ? 0 : SEGMENT_COUNT, reviewed ? SEGMENT_COUNT : 0, 0, 0, 0, 0));
         assertMirror();
     }
 

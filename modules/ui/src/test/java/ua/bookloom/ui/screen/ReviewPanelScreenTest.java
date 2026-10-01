@@ -27,7 +27,7 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
         for (final SegmentView view : views) {
             desk.willAnswerSegment(view);
         }
-        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0, 0));
     }
 
     private void publishFlagged(final int count) {

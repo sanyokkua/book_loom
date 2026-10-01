@@ -253,7 +253,7 @@ class ReviewDeskImplTest {
         final ReviewCounts counts = Objects.requireNonNull(
                 desk.reviewDesk(ReviewMode.ASSISTED).counts(desk.projectId()).data(), "counts");
 
-        assertThat(counts).isEqualTo(new ReviewCounts(4, 3, 0, 1, 0, 0, 0, 0));
+        assertThat(counts).isEqualTo(new ReviewCounts(4, 3, 0, 1, 0, 0, 0, 0, 0));
     }
 
     @Test

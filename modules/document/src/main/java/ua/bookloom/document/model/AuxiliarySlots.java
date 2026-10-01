@@ -21,6 +21,7 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.document.mask.PlainTextMasker;
 import ua.bookloom.util.hash.HashUtil;
+import ua.bookloom.util.text.VisibleText;
 
 /**
  * The auxiliary slot table of one open book: which text an auxiliary segment id stands for, and where in the parsed
@@ -306,7 +307,7 @@ public final class AuxiliarySlots {
             Objects.requireNonNull(kind, "kind");
             final List<TreeNode> children =
                     SkeletonAnchors.nodeAt(slot.root(), slot.path()).childNodes();
-            if (TreeMasker.translatableText(children, dialect).isBlank()) {
+            if (VisibleText.isBlank(TreeMasker.translatableText(children, dialect))) {
                 log.debug("auxiliary slot {} has no text; not produced", segmentId);
                 return this;
             }

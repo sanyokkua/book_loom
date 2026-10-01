@@ -56,6 +56,7 @@ public final class ChunkRunner {
     private final RoutedCalls calls;
     private final DecisionFollowUp followUp;
     private final SegmentEvents events;
+    private final DraftShortcuts shortcuts;
 
     /**
      * Creates the runner of one run.
@@ -81,6 +82,7 @@ public final class ChunkRunner {
         this.calls = new RoutedCalls(sinks.boundaries());
         this.followUp = new DecisionFollowUp(settings.projectId(), steps.summary(), stores, sinks, calls);
         this.events = new SegmentEvents(sinks.emit(), locators);
+        this.shortcuts = new DraftShortcuts(settings.frame().styleSheet().text());
     }
 
     /**
@@ -232,11 +234,19 @@ public final class ChunkRunner {
 
     /**
      * Drafts one segment behind its protected spans and with its context package, keeping the draft in the chunk —
-     * unless a context-matched memory target passes its checks, which stands in for the draft.
+     * unless a shortcut decides it without a call (nothing to translate, or an identical auxiliary text), or a
+     * context-matched memory target passes its checks, which stands in for the draft.
      */
     private Step<DraftOutcome> draft(final Current current, final WorkItem item) {
         final Segment segment = item.segment();
         events.started(segment, current.work().position(item));
+        final ProtectedMask mask = current.context().mask(segment);
+        final DraftOutcome shortcut =
+                shortcuts.take(segment, mask, current.context().gate(), current.loop(), current.drafts());
+        if (shortcut != null) {
+            events.drafted(shortcut, current.loop());
+            return new Step.Done<>(shortcut);
+        }
         final List<Segment> unitSegments = current.work().unitSegments(item);
         final Result<List<String>> earlierMaskedTargets = preceding.earlierMaskedTargets(
                 unitSegments, segment, settings.dial().precedingTargets(), current.drafts());
@@ -244,7 +254,6 @@ public final class ChunkRunner {
             return new Step.Stopped<>(
                     RoutedCalls.failedBy(Objects.requireNonNull(earlierMaskedTargets.error(), "error")));
         }
-        final ProtectedMask mask = current.context().mask(segment);
         final MemoryReuse.Offer offer =
                 memory.offer(segment, unitSegments, mask, current.context().gate(), current.loop());
         final ContextPackage context =
@@ -320,6 +329,7 @@ public final class ChunkRunner {
                         record,
                         memory.entryFor(record, item.segment(), current.work().unitSegments(item)));
         current.drafts().decided(record.segmentId());
+        shortcuts.decided(item.segment(), record);
         sinks.recorder().decided(record.status());
         final JobProgress progress = current.work().apply(item, record.status(), record.path());
         final ErrorCode reason = record.status() == SegmentStatus.FLAGGED ? OutcomeRecords.reportCode(record) : null;

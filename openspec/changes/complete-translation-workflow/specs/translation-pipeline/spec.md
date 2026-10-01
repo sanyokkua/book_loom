@@ -285,7 +285,8 @@ kind as kept as source by choice, judged by the brief at the time and whatever t
 no model call for it, SHALL keep its source text, SHALL count it neither as pending nor as accepted or flagged, and SHALL
 leave it out of the progress, the time left and the place a new run starts. The navigation switch SHALL also govern the
 page titles of an EPUB's content documents, and the metadata switch the book's descriptions. A body segment SHALL never
-be kept as source by choice.
+be kept as source by choice; a segment with nothing to translate is kept as it is by rule, not by choice, and is counted
+apart ("Keep a segment with nothing to translate as it is").
 
 **Source:** FR-BRIEF-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), FR-DOC-11 (`#fr-doc`),
 DD-47 (`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041.
@@ -316,6 +317,70 @@ turning it on again makes the untranslated ones pending once more.
   `ToC / navigation labels` off
 - **THEN** that label counts as kept as source, not as accepted, and the pending count does not include it
 - **AND** a new run makes no model call for it
+
+### Requirement: Keep a segment with nothing to translate as it is
+
+WHEN a run reaches a PENDING segment whose visible text — its masked text with every `⟦gN⟧` token removed, normalized to
+NFC, with every Unicode separator, control and format character dropped — is empty, holds no letter (only digits,
+punctuation and symbols), is an upper-case Roman numeral with at most punctuation around it, or is a single character,
+the system SHALL decide it ACCEPTED with its own text as the target, through the chunk's gate, with the path `verbatim`
+and no model call, no judge, no quality check and no finding. A segment whose only visible letters belong to a locked
+glossary name SHALL be decided the same way, written with the name's locked rendering. The system SHALL still announce
+the segment as started and as decided, SHALL count it among the decided segments in the progress, but in neither the
+auto-accepted nor the repaired count and never as kept as source by choice, SHALL write no translation-memory entry for
+it, and SHALL leave it out of the time-left average. A segment holding a word — any run of two or more letters that is
+not a Roman numeral — SHALL still be sent to the model.
+
+**Source:** `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunking`.
+In plain words: a chapter number, a scene break or a lone locked name reads the same in every language. The Bartimaeus
+run sent the chapter number `2` to the model with a 740-token prompt, then held the echo against it; 69 segments of two
+characters or less were each a full call. Keeping them as they are costs nothing and cannot go wrong, and they are
+counted on their own line so nobody reads them as translations or as text someone chose to leave untranslated.
+
+#### Scenario: A chapter number is kept with no call
+
+- **WHEN** a run reaches `ch02.xhtml:0`, whose text is `2`
+- **THEN** no model call is made for it, and it is ACCEPTED with the target `2` and the path `verbatim`
+- **AND** its record holds no finding and no translation-memory entry is written for it
+
+#### Scenario: A scene break and a Roman numeral are kept
+
+- **WHEN** a run reaches a segment `***` and a segment `XIV`
+- **THEN** each is ACCEPTED as it is with the path `verbatim` and no model call
+
+#### Scenario: A lone locked name takes its rendering
+
+- **WHEN** the glossary locks `Bartimaeus` → `Бартімеус` and a paragraph is only `Bartimaeus`
+- **THEN** no model call is made for it, and it is ACCEPTED with the target `Бартімеус` and the path `verbatim`
+
+#### Scenario: A word is still translated
+
+- **WHEN** a paragraph is `Well` or `Chapter 2`
+- **THEN** it is sent to the model as any other segment
+
+#### Scenario: The progress counts it apart
+
+- **WHEN** a run decides `2`, then `He left.` with no repair, then `***`
+- **THEN** the last progress snapshot counts 3 accepted, of which 1 auto-accepted and 2 kept as is, and 0 pending
+
+### Requirement: Send identical auxiliary text once
+
+WHEN a run reaches a PENDING auxiliary segment whose masked source equals that of an auxiliary segment already drafted in
+the same chunk or already ACCEPTED earlier in the run, the system SHALL make no model call for it: it SHALL take the
+undecided draft, which is then judged and decided on its own, or the accepted target, which SHALL pass the same checks a
+translation-memory reuse passes ("Reuse the translation memory only where its context matches") before it is accepted
+with the path `tm-reuse`. A segment whose taken answer fails those checks SHALL be drafted as usual. Each segment SHALL
+keep its own record and decision.
+
+**Source:** `.temporary_context/log.log` (the Bartimaeus run, 2026-10-01), DD-47
+(`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-47-metadata-nav-alt-translation`), ADR-0041.
+In plain words: one book's alt texts read `image` 58 times and its page titles `The Bartimaeus Trilogy` 80 times, and
+each was a separate call. A text that is identical gets an identical answer, so it is asked for once.
+
+#### Scenario: A repeated alt text is sent once
+
+- **WHEN** image alt text is switched on and two images of an EPUB have the alt text `image`
+- **THEN** one model call translates `image`, and both alt texts are ACCEPTED with the same target
 
 ### Requirement: Announce each segment's text as it starts, is drafted and is decided
 
@@ -374,7 +439,8 @@ slow model look fast.
 
 WHILE a run translates, the system SHALL estimate the time left as a moving average of wall-clock seconds per decided
 segment, weighting the newest segment by `0.2`, times the pending segments remaining — a segment kept as source by
-choice is not pending — and SHALL report no estimate until 5 segments of the run have been decided. The elapsed time
+choice is not pending — and SHALL report no estimate until 5 segments of the run have been decided. A segment kept as it
+is with no model call SHALL not enter the average. The elapsed time
 SHALL count only the time the run was not paused.
 
 **Source:** `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`.
@@ -427,7 +493,8 @@ expected output sets: a call that writes a long paragraph may wait longer than o
 ### Requirement: Cap the output of every call that states an expected output
 
 The system SHALL give every call that states an expected output — draft, directed fix, improve, polish and revision —
-also an output cap of `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, where the allowance is the expected
+also an output cap of `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, and a draft, directed fix, improve,
+polish and revision call never less than `128`, where the allowance is the expected
 output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A judge
 call SHALL carry the cap `min(1024, 128 + 192 × pairs)` and state half of it as its expected output, and the judge's
 response schema SHALL bound its lists and its text fields (at most 12 findings, 8 deferrals, a 240-character note or
@@ -439,7 +506,8 @@ THEN the system SHALL treat it as any other cut-off reply ("Flag a segment whose
 In plain words: a small model sometimes loops on one sentence and would otherwise write until the three-minute timeout,
 three attempts in a row, for one paragraph. The cap is a generous multiple of the length the segment should need —
 half as much again, a fixed margin for the `{"target":…}` wrapper, and room for every placeholder token — so a normal
-reply never reaches it and a runaway one is cut off, flagged and left behind. The judge was once left unbounded and a
+reply never reaches it and a runaway one is cut off, flagged and left behind. A one-word source under a 64-token cap came
+back as an empty target in the Bartimaeus run, so a translation call's cap never drops below 128. The judge was once left unbounded and a
 looping re-judge then held a whole run for three minutes per attempt; its reply is a score and a few short findings per
 pair, so its cap grows with the pairs and stops at 1,024 tokens. How each server receives the cap is the
 `llm-provider` capability's rule.
@@ -448,7 +516,7 @@ pair, so its cap grows with the pairs and stops at 1,024 tokens. How each server
 
 - **WHEN** a Balanced run drafts `Book.md:0`, whose source display text `He opened the old door.` states 16 expected
   output tokens and holds no placeholder token
-- **THEN** the draft request carries an output cap of `64`
+- **THEN** the draft request carries an output cap of `128`
 - **AND** the judge call for its one-pair chunk carries an output cap of `320`
 
 #### Scenario: A long paragraph with tokens gets a proportional cap
@@ -984,7 +1052,9 @@ mockup's dialog promised "Your progress is saved"; nothing is saved to disk yet,
 ### Requirement: Send each pending segment to the model in document order
 
 WHEN a job runs, the system SHALL start at the project's first PENDING segment — a segment kept as source by choice is
-never one — and send the PENDING segments to the chat model in document order, grouped into chunks and decided as
+never one — and send the PENDING segments to the chat model in document order — except a segment kept as it is because
+it has nothing to translate ("Keep a segment with nothing to translate as it is") and an auxiliary segment identical to
+one already drafted or accepted in the run ("Send identical auxiliary text once"), which are decided with no call — grouped into chunks and decided as
 "Decide a chunk's segments in document order" says. A chunk SHALL hold consecutive PENDING segments of one unit — one
 EPUB spine document, one FB2 body, or a whole Markdown or TXT file — up to the chunk token budget and at most 8 segments
 on Fast, 4 on Balanced and 2 on Max, and exactly 1 in the Manual review mode; a unit boundary SHALL always close a

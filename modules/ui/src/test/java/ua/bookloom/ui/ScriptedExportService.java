@@ -91,7 +91,8 @@ public final class ScriptedExportService implements ExportService {
                 return Result.ok(scripted);
             }
             final Path destination = request.destination();
-            return Result.ok(new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0, ConsistencySummary.NOT_RUN));
+            return Result.ok(
+                    new ExportReport(destination, 1, 0, 0, 0, 0, 0, List.of(), 0, ConsistencySummary.NOT_RUN, 0));
         }
 
         private void writeDestination() {

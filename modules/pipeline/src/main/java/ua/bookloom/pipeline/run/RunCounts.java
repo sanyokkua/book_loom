@@ -14,7 +14,7 @@ import ua.bookloom.api.project.SegmentRecord;
 
 /**
  * The figures every progress snapshot carries: the decided and pending counts, how many of the accepted needed a
- * repair, and the chunk the run is in. They are read from the store at each read of the work list, so a run that
+ * repair and how many were kept as they are with no call, and the chunk the run is in. They are read from the store at each read of the work list, so a run that
  * resumes a stopped one starts from the project's own counts, and they move per decision in between. A record kept as
  * source by choice is in none of them.
  *
@@ -28,6 +28,7 @@ final class RunCounts {
     private int pending;
     private int autoAccepted;
     private int repairedAccepted;
+    private int keptVerbatim;
     private int chunk;
     private int chunks;
 
@@ -42,11 +43,9 @@ final class RunCounts {
         accepted = counts.accepted() + counts.revised();
         flagged = counts.flagged();
         pending = counts.pending();
-        repairedAccepted = (int) records.stream()
-                .filter(record -> isAccepted(record.status()) && !record.isKeptAsSource(kept))
-                .filter(record -> record.path() == SegmentPath.REPAIRED)
-                .count();
-        autoAccepted = accepted - repairedAccepted;
+        repairedAccepted = countAccepted(records, kept, SegmentPath.REPAIRED);
+        keptVerbatim = countAccepted(records, kept, SegmentPath.VERBATIM);
+        autoAccepted = accepted - repairedAccepted - keptVerbatim;
         chunk = 0;
         chunks = 0;
     }
@@ -55,7 +54,7 @@ final class RunCounts {
      * Moves one segment from pending to its decision.
      *
      * @param status {@code ACCEPTED} or {@code FLAGGED}
-     * @param path how it got there; a repaired acceptance is counted apart from the rest
+     * @param path how it got there; a repaired acceptance and one kept as it is are each counted apart from the rest
      */
     void decided(final SegmentStatus status, final SegmentPath path) {
         pending--;
@@ -64,12 +63,17 @@ final class RunCounts {
             return;
         }
         accepted++;
-        if (path == SegmentPath.REPAIRED) {
-            repairedAccepted++;
-        } else {
-            autoAccepted++;
+        switch (path) {
+            case REPAIRED -> repairedAccepted++;
+            case VERBATIM -> keptVerbatim++;
+            default -> autoAccepted++;
         }
-        log.debug("Counted acceptance path={} auto={} repaired={}", path, autoAccepted, repairedAccepted);
+        log.debug(
+                "Counted acceptance path={} auto={} repaired={} verbatim={}",
+                path,
+                autoAccepted,
+                repairedAccepted,
+                keptVerbatim);
     }
 
     /**
@@ -90,8 +94,8 @@ final class RunCounts {
 
     JobProgress progress(final JobStage stage, final int section, final int sections) {
         log.debug(
-                "Built progress stage={} section={}/{} chunk={}/{} accepted={} auto={} repaired={} flagged={}"
-                        + " pending={}",
+                "Built progress stage={} section={}/{} chunk={}/{} accepted={} auto={} repaired={} verbatim={}"
+                        + " flagged={} pending={}",
                 stage,
                 section,
                 sections,
@@ -100,10 +104,21 @@ final class RunCounts {
                 accepted,
                 autoAccepted,
                 repairedAccepted,
+                keptVerbatim,
                 flagged,
                 pending);
         return new JobProgress(
-                stage, section, sections, accepted, flagged, pending, chunk, chunks, autoAccepted, repairedAccepted);
+                stage,
+                section,
+                sections,
+                accepted,
+                flagged,
+                pending,
+                chunk,
+                chunks,
+                autoAccepted,
+                repairedAccepted,
+                keptVerbatim);
     }
 
     int accepted() {
@@ -116,6 +131,14 @@ final class RunCounts {
 
     int pending() {
         return pending;
+    }
+
+    private static int countAccepted(
+            final List<SegmentRecord> records, final Set<SegmentKind> kept, final SegmentPath path) {
+        return (int) records.stream()
+                .filter(record -> isAccepted(record.status()) && !record.isKeptAsSource(kept))
+                .filter(record -> record.path() == path)
+                .count();
     }
 
     private static boolean isAccepted(final SegmentStatus status) {

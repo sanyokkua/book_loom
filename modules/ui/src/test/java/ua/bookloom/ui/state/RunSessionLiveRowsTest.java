@@ -143,7 +143,7 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
     // IF a finished run did not publish the kept-as-source count, THEN the completed card would show no such count.
     @Test
     void finish_completedRun_publishesTheKeptAsSourceCount() {
-        desk.willAnswerCounts(new ReviewCounts(1240, 1180, 45, 3, 0, 0, 12, 0));
+        desk.willAnswerCounts(new ReviewCounts(1240, 1180, 45, 3, 0, 0, 12, 0, 0));
         final RunSession session = session();
 
         session.finish(Result.ok(completedReport(1240)), () -> {});
@@ -157,7 +157,7 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
     @Test
     void publishRunStarted_afterARun_clearsEveryLiveField() {
         desk.willAnswerQueue(List.of(flaggedView("s-11", "ch5 · p12")));
-        desk.willAnswerCounts(new ReviewCounts(10, 5, 0, 1, 0, 0, 4, 0));
+        desk.willAnswerCounts(new ReviewCounts(10, 5, 0, 1, 0, 0, 4, 0, 0));
         final RunSession session = session();
         session.onEvent(started("s-11", "ch5 · p12", SOURCE));
         session.onEvent(decidedWith("s-11", SegmentStatus.FLAGGED, detail(0.2, SegmentPath.REPAIRED)));

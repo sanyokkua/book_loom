@@ -549,8 +549,10 @@ segment kind governed by the metadata title/author switch, and each XHTML conten
 `TITLE` segment governed by the navigation switch. **Why:** An untranslated ToC/metadata over a translated book is a
 visible defect, and a page title or a description reads like the kind of short text the switch it rides beside already
 governs. **Consequences:** New segment kinds + toggle group + nav/NCX handling; a switched-off kind's segments still
-exist and are counted apart from pending, never silently dropped. **ADR:** ADR-0004, ADR-0041 **Requirements:**
-FR-DOC-07, FR-BRIEF-04, FR-BRIEF-09.
+exist and are counted apart from pending, never silently dropped. Auxiliary text repeats (one book's alt texts read
+`image` 58 times and its page titles the series name 80 times), so a run asks for each distinct auxiliary source once
+and gives an identical one the same answer, each slot keeping its own record. **ADR:** ADR-0004, ADR-0041
+**Requirements:** FR-DOC-07, FR-BRIEF-04, FR-BRIEF-09.
 
 ## dd-48-icu-i18n-messages {#dd-48-icu-i18n-messages}
 

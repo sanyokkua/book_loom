@@ -161,6 +161,10 @@ ones that have no machine translation — and how many flagged segments will be 
 
 The pending count SHALL leave out every segment kept as source by choice, and WHERE the book has such segments the
 export screen SHALL state their number apart, as `<n> segments are kept as source by choice`.
+WHERE the book has segments kept as they are because they have nothing to translate (`translation-pipeline` "Keep a
+segment with nothing to translate as it is"), the export screen SHALL state their number on a line of its own, as
+`<n> segments are kept as is: they have nothing to translate (numbers, symbols)`, and SHALL never count them as kept
+as source by choice.
 
 **Source:** FR-REVIEW-X2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#export-any-time`), FR-BRIEF-09
 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-brief`), ADR-0035; "kept as source by choice" is
@@ -193,6 +197,13 @@ it is named on its own line instead, so nothing written in the source language g
   segments are still pending and `3` are flagged
 - **THEN** the screen states `312 segments will be written in the source language`,
   `3 flagged segments will be written with their machine translation` and `7 segments are kept as source by choice`
+
+#### Scenario: Segments kept as is are not kept by choice
+
+- **WHEN** every segment of the book is accepted, `2` of them — the chapter number `2` and the scene break `***` — kept
+  as they are with no model call, and `1` image description is switched off
+- **THEN** the screen states `1 segment is kept as source by choice` and
+  `2 segments are kept as is: they have nothing to translate (numbers, symbols)`
 
 #### Scenario: A finished book with switched-off text states only the kept count
 
@@ -515,7 +526,8 @@ written file passed its verification ("file validates").
 
 WHEN an export succeeds, the system SHALL report with the written file: the number of segments written with a
 translation; the number of pending segments written in the source language, a flagged segment that has no machine
-translation counted among them; the number of segments kept as source by choice; the number of flagged segments
+translation counted among them; the number of segments kept as source by choice; the number of segments kept as they
+are because they have nothing to translate, also counted among those written; the number of flagged segments
 written with their machine translation; the number of segments accepted without review; and the number of segments
 the person reviewed.
 

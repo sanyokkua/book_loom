@@ -276,13 +276,15 @@ final class ExportJobImpl implements ExportJob {
         }
         final ExportReport report = Objects.requireNonNull(result.data(), "report");
         log.info(
-                "export finished project={} destination={} written={} pending={} sourceKept={} flaggedWritten={}"
-                        + " autoAccepted={} reviewed={} verifiedSegments={} sideFiles={} consistency={}",
+                "export finished project={} destination={} written={} pending={} sourceKept={} keptVerbatim={}"
+                        + " flaggedWritten={} autoAccepted={} reviewed={} verifiedSegments={} sideFiles={}"
+                        + " consistency={}",
                 request.projectId(),
                 report.destination(),
                 report.written(),
                 report.pending(),
                 report.sourceKept(),
+                report.keptVerbatim(),
                 report.flaggedWritten(),
                 report.autoAccepted(),
                 report.reviewed(),

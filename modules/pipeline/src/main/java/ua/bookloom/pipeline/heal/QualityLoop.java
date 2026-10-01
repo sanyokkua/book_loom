@@ -143,6 +143,8 @@ public final class QualityLoop {
             case DraftOutcome.FlaggedAtOnce ignored -> {}
             // Already accepted once between the same neighbours; the judge never sees a reuse.
             case DraftOutcome.Reused ignored -> {}
+            // Nothing was translated, so there is nothing to judge.
+            case DraftOutcome.Verbatim ignored -> {}
         }
     }
 
@@ -168,6 +170,8 @@ public final class QualityLoop {
             excluded.add(flaggedAtOnce.segment().id() + ":flagged-at-once");
         } else if (outcome instanceof DraftOutcome.Reused reused) {
             excluded.add(reused.segment().id() + ":reused");
+        } else if (outcome instanceof DraftOutcome.Verbatim verbatim) {
+            excluded.add(verbatim.segment().id() + ":verbatim");
         } else if (qa != null && !qa.hardGatesPass()) {
             excluded.add(outcome.segment().id() + ":hard-gate-failed");
         }

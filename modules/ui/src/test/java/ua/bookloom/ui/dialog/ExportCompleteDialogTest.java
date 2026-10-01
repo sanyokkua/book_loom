@@ -25,7 +25,7 @@ class ExportCompleteDialogTest extends ShellTestBase {
     }
 
     private void show(final List<Path> sideFiles, final ConsistencySummary consistency) {
-        final ExportReport report = new ExportReport(BOOK, 10, 0, 0, 0, 8, 2, sideFiles, 10, consistency);
+        final ExportReport report = new ExportReport(BOOK, 10, 0, 0, 0, 8, 2, sideFiles, 10, consistency, 0);
         onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
     }
 

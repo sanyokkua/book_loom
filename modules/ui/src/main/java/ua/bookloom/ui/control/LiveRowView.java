@@ -206,6 +206,7 @@ final class LiveRowView extends VBox {
             case TM_REUSE -> MessageKey.LIVE_PATH_TM_REUSE;
             case USER -> MessageKey.LIVE_PATH_USER;
             case SOURCE_KEPT -> MessageKey.LIVE_PATH_SOURCE_KEPT;
+            case VERBATIM -> MessageKey.LIVE_PATH_VERBATIM;
         };
     }
 

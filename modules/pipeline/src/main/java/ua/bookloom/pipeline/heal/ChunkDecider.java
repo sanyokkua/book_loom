@@ -17,13 +17,16 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * Decides a chunk's segments one at a time, in document order — a {@link DraftOutcome.FlaggedAtOnce} outcome
- * becomes FLAGGED immediately, a {@link DraftOutcome.Reused} one ACCEPTED from memory, a {@link DraftOutcome.Drafted}
+ * becomes FLAGGED immediately, a {@link DraftOutcome.Reused} one ACCEPTED from memory, a {@link DraftOutcome.Verbatim}
+ * one ACCEPTED as it is, a {@link DraftOutcome.Drafted}
  * one goes through {@link SegmentHealer}
  * ({@code specs/translation-pipeline/spec.md} "Decide a chunk's segments in document order"). Built only by
  * {@link QualityLoop#start}.
  */
 @Slf4j
 public final class ChunkDecider {
+
+    private static final double FULL_CONFIDENCE = 1.0;
 
     private final List<DraftOutcome> outcomes;
     private final Map<Integer, QaResult> initialQa;
@@ -70,6 +73,7 @@ public final class ChunkDecider {
                 switch (outcomes.get(index)) {
                     case DraftOutcome.FlaggedAtOnce flaggedAtOnce -> Result.ok(flaggedOutcome(flaggedAtOnce));
                     case DraftOutcome.Reused reused -> Result.ok(reusedOutcome(reused));
+                    case DraftOutcome.Verbatim verbatim -> Result.ok(verbatimOutcome(verbatim));
                     case DraftOutcome.Drafted drafted ->
                         healer.decide(drafted, Objects.requireNonNull(initialQa.get(index)), chunkVerdict);
                 };
@@ -96,6 +100,7 @@ public final class ChunkDecider {
                 switch (outcomes.get(index)) {
                     case DraftOutcome.FlaggedAtOnce flaggedAtOnce -> flaggedOutcome(flaggedAtOnce);
                     case DraftOutcome.Reused reused -> reusedOutcome(reused);
+                    case DraftOutcome.Verbatim verbatim -> verbatimOutcome(verbatim);
                     case DraftOutcome.Drafted drafted ->
                         healer.giveUp(drafted, Objects.requireNonNull(initialQa.get(index)), chunkVerdict, reason);
                 };
@@ -131,6 +136,22 @@ public final class ChunkDecider {
                 null,
                 reused.qa().findings(),
                 SegmentPath.TM_REUSE,
+                0,
+                null);
+    }
+
+    // Nothing in it was translated, so no check has anything to say and its confidence is full.
+    private static SegmentOutcome verbatimOutcome(final DraftOutcome.Verbatim verbatim) {
+        log.debug("Segment {} accepted as it is rule={}", verbatim.segment().id(), verbatim.rule());
+        return new SegmentOutcome(
+                verbatim.segment().id(),
+                SegmentStatus.ACCEPTED,
+                verbatim.restoredTarget(),
+                verbatim.maskedTarget(),
+                FULL_CONFIDENCE,
+                null,
+                List.of(),
+                SegmentPath.VERBATIM,
                 0,
                 null);
     }

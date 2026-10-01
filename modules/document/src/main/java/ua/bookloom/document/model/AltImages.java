@@ -17,6 +17,7 @@ import ua.bookloom.api.document.AttributeAnchor;
 import ua.bookloom.api.document.NodeAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.util.text.VisibleText;
 
 /**
  * Finds the images whose {@code alt} value is auxiliary text, and writes a translated value back (design.md D12,
@@ -109,7 +110,7 @@ public final class AltImages {
             path.add(elementIndex);
             elementIndex++;
             final String alt = child.attribute(ALT_ATTRIBUTE);
-            if (IMAGE_TAG.equals(child.tagName()) && alt != null && !alt.isBlank()) {
+            if (IMAGE_TAG.equals(child.tagName()) && alt != null && !VisibleText.isBlank(alt)) {
                 found.add(new Found(List.copyOf(path), alt, child.markup()));
             }
             collect(child, path, found);

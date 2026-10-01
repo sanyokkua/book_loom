@@ -12,6 +12,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.MemoryKind;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.project.SegmentLocator;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -93,13 +94,20 @@ final class MemoryReuse {
      * @param record the decided record
      * @param segment its segment
      * @param unitSegments every segment of its unit, in document order
-     * @return the entry of an accepted record — a reuse's replaces the identical one — or {@code null} for any other
+     * @return the entry of an accepted record — a reuse's replaces the identical one — or {@code null} for any other,
+     *     and for one kept as it is, which no model translated
      */
     @Nullable
     TmEntry entryFor(final SegmentRecord record, final Segment segment, final List<Segment> unitSegments) {
         final String maskedTarget = record.maskedMachineTarget();
-        if (record.status() != SegmentStatus.ACCEPTED || maskedTarget == null) {
-            log.debug("No memory entry segmentId={} status={}", record.segmentId(), record.status());
+        if (record.status() != SegmentStatus.ACCEPTED
+                || maskedTarget == null
+                || record.path() == SegmentPath.VERBATIM) {
+            log.debug(
+                    "No memory entry segmentId={} status={} path={}",
+                    record.segmentId(),
+                    record.status(),
+                    record.path());
             return null;
         }
         return memory.entryFor(segment, unitSegments, maskedTarget);

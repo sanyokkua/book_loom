@@ -17,6 +17,8 @@ import java.util.Objects;
  * @param sideFiles the side files written beside the book
  * @param verifiedSegments the body segments the consistency check verified
  * @param consistency what the final consistency pass did; {@link ConsistencySummary#NOT_RUN} when it was off
+ * @param keptVerbatim segments written as they are because nothing in them needed translating (numbers, symbols,
+ *     Roman numerals, a single character); counted in {@code written}, never in {@code sourceKept}
  */
 public record ExportReport(
         Path destination,
@@ -28,7 +30,8 @@ public record ExportReport(
         int reviewed,
         List<Path> sideFiles,
         int verifiedSegments,
-        ConsistencySummary consistency) {
+        ConsistencySummary consistency,
+        int keptVerbatim) {
 
     /** Rejects a report without its destination, a negative count, or defensively copies {@code sideFiles}. */
     public ExportReport {
@@ -41,10 +44,11 @@ public record ExportReport(
                 || flaggedWritten < 0
                 || autoAccepted < 0
                 || reviewed < 0
-                || verifiedSegments < 0) {
+                || verifiedSegments < 0
+                || keptVerbatim < 0) {
             throw new IllegalArgumentException("no count may be negative: " + written + ", " + pending + ", "
                     + sourceKept + ", " + flaggedWritten + ", " + autoAccepted + ", " + reviewed + ", "
-                    + verifiedSegments);
+                    + verifiedSegments + ", " + keptVerbatim);
         }
         sideFiles = List.copyOf(sideFiles);
     }

@@ -797,6 +797,8 @@ public enum MessageKey {
     LIVE_PATH_USER("live.path.user"),
     /** Badge of a segment kept as source. */
     LIVE_PATH_SOURCE_KEPT("live.path.sourceKept"),
+    /** Badge of a segment kept as it is because it had nothing to translate (a number, symbols). */
+    LIVE_PATH_VERBATIM("live.path.verbatim"),
     /** Heading of the source pane when no source language is set. */
     LIVE_SOURCE_FALLBACK("live.source.fallback"),
     /** Heading of the target pane when no target language is set. */
@@ -809,6 +811,8 @@ public enum MessageKey {
     TRANSLATING_COUNT_REPAIRED("translating.count.repaired"),
     /** Caption of the outcome tile counting auxiliary segments kept as source by choice. */
     TRANSLATING_COUNT_KEPT("translating.count.kept"),
+    /** Caption of the outcome tile counting segments kept as they are: numbers, symbols, nothing to translate. */
+    TRANSLATING_COUNT_VERBATIM("translating.count.verbatim"),
     /** Title of the ready card shown before a run exists. */
     TRANSLATING_READY_TITLE("translating.ready.title"),
     /** Label of the ready card's book row. */
@@ -964,6 +968,8 @@ public enum MessageKey {
     EXPORT_PARTIAL_FLAGGED("export.partial.flagged"),
     /** Counted line: segments kept as source by choice. */
     EXPORT_PARTIAL_KEPT("export.partial.kept"),
+    /** Counted line: segments kept as they are because they had nothing to translate. */
+    EXPORT_PARTIAL_VERBATIM("export.partial.verbatim"),
     /** Size of a written book under a kilobyte; argument 0 is the byte count. */
     EXPORT_SIZE_BYTES("export.size.bytes"),
     /** Size of a written book in kilobytes; argument 0 is the count. */

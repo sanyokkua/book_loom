@@ -16,6 +16,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.util.hash.HashUtil;
+import ua.bookloom.util.text.VisibleText;
 
 /**
  * Walks a parsed unit in document order and emits one {@link Segment} per line-break-delimited run of every
@@ -169,7 +170,12 @@ public final class BlockSegmentWalker {
         return colon < 0 ? tagName : tagName.substring(colon + 1);
     }
 
-    /** Whether {@code element} carries non-whitespace character data as its own child, not a descendant's. */
+    /**
+     * Whether {@code element} carries non-whitespace character data as its own child, not a descendant's. Kept on
+     * {@link String#isBlank()} rather than {@link VisibleText} on purpose: a no-break space beside an inline element
+     * must keep the paragraph as the block, not push the segment down into the inline element; the run test in
+     * {@link #emitRuns} is what keeps an invisible-only run from becoming a segment.
+     */
     private static boolean ownsDirectText(TreeNode element) {
         for (final TreeNode child : element.childNodes()) {
             if (!child.ownText().isBlank()) {
@@ -181,7 +187,8 @@ public final class BlockSegmentWalker {
 
     /**
      * Emits one draft per run of {@code block} that carries translatable text. A run holding only markup — the
-     * empty range between two adjacent {@code <br/>}, or an image-only stretch — yields nothing, while still
+     * empty range between two adjacent {@code <br/>}, or an image-only stretch — or only characters a reader cannot
+     * see ({@link VisibleText}: a lone no-break space, zero-width space or soft hyphen) yields nothing, while still
      * consuming its run index so that a later run's recorded index is the one reassembly will resolve.
      *
      * <p>"Translatable" is {@link TreeMasker#translatableText}, not all the character data under the run: a
@@ -201,7 +208,8 @@ public final class BlockSegmentWalker {
         final List<TreeNode> children = block.childNodes();
         for (final BlockRuns.Run run : BlockRuns.split(block)) {
             final List<TreeNode> runNodes = children.subList(run.fromInclusive(), run.toExclusive());
-            if (TreeMasker.translatableText(runNodes, dialect).isBlank()) {
+            if (VisibleText.isBlank(TreeMasker.translatableText(runNodes, dialect))) {
+                log.debug("run {} of block {} holds no visible text; no segment", run.index(), path);
                 continue;
             }
             drafts.add(new Draft(

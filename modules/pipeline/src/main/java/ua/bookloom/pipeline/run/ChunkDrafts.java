@@ -57,8 +57,25 @@ final class ChunkDrafts {
         return switch (outcome) {
             case DraftOutcome.Drafted drafted -> drafted.maskedForm();
             case DraftOutcome.Reused reused -> reused.maskedTarget();
+            case DraftOutcome.Verbatim verbatim -> verbatim.maskedTarget();
             case DraftOutcome.FlaggedAtOnce ignored -> null;
         };
+    }
+
+    /**
+     * An undecided draft of the same masked source whose markup restored, which an identical auxiliary text can take
+     * instead of a call of its own; null when there is none.
+     */
+    DraftOutcome.@Nullable Drafted undecidedDraftOf(final String maskedSource) {
+        for (final DraftOutcome outcome : undecided.values()) {
+            if (outcome instanceof DraftOutcome.Drafted drafted
+                    && drafted.segment().masked().equals(maskedSource)
+                    && drafted.restoredTarget() != null
+                    && !drafted.inPieces()) {
+                return drafted;
+            }
+        }
+        return null;
     }
 
     List<String> undecidedIds() {

@@ -15,13 +15,13 @@ class ReviewCountsTest {
 
     @Test
     void constructor_negativeCount_isRejected() {
-        assertThatIllegalArgumentException().isThrownBy(() -> new ReviewCounts(5, 1, 1, -1, 0, 0, 0, 0));
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReviewCounts(5, 1, 1, -1, 0, 0, 0, 0, 0));
     }
 
     @Test
     void constructor_flaggedWithoutTargetWithinFlagged_isAccepted() {
         // 3 of the 3 flagged records without a machine target is the most the invariant allows
-        assertThat(new ReviewCounts(3, 0, 0, 3, 0, 0, 0, 3).flaggedWithoutTarget())
+        assertThat(new ReviewCounts(3, 0, 0, 3, 0, 0, 0, 3, 0).flaggedWithoutTarget())
                 .isEqualTo(3);
     }
 
@@ -29,6 +29,6 @@ class ReviewCountsTest {
     @ValueSource(ints = {4, -1})
     void constructor_flaggedWithoutTargetAboveFlaggedOrNegative_isRejected(final int flaggedWithoutTarget) {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ReviewCounts(3, 0, 0, 3, 0, 0, 0, flaggedWithoutTarget));
+                .isThrownBy(() -> new ReviewCounts(3, 0, 0, 3, 0, 0, 0, flaggedWithoutTarget, 0));
     }
 }

@@ -38,6 +38,22 @@ final class NameRemoval {
         return withoutNames(input.targetDisplayText(), input);
     }
 
+    /**
+     * Whether the source display text is only glossary terms, whatever the name policy: with every whole-word term
+     * occurrence removed, no letter is left.
+     *
+     * @param input the check input
+     * @return {@code true} if at least one term occurs and nothing but punctuation, digits and spaces remain,
+     *     {@code false} otherwise
+     */
+    static boolean isOnlyGlossaryTerms(final SoftCheckInput input) {
+        String rest = input.sourceDisplayText();
+        for (final String term : input.glossaryTerms()) {
+            rest = removeWholeWord(rest, term);
+        }
+        return !rest.equals(input.sourceDisplayText()) && rest.codePoints().noneMatch(Character::isLetter);
+    }
+
     private static String withoutNames(final String text, final SoftCheckInput input) {
         if (input.namePolicy() != NamePolicy.KEEP_ORIGINAL
                 || input.glossaryTerms().isEmpty()) {

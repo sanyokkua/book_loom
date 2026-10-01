@@ -145,6 +145,9 @@ is translated, not refused; a phrase must end where a word ends, so `Як ШІ` 
 line begins `Translation:` keeps its translated `Переклад:`.
 A reply that holds only its placeholders would silently delete the paragraph's words. A reply with no text at all, or
 a blank `target`, is not this gate's case: the translation-pipeline capability flags or repairs it before any check.
+A segment with nothing to translate — no letter, a Roman numeral or a single character — never reaches this gate: it is
+kept as it is with no model call (`translation-pipeline` "Keep a segment with nothing to translate as it is"), so an
+empty reply to the chapter number `2` can no longer flag it.
 
 #### Scenario: An English refusal fails
 
@@ -251,14 +254,18 @@ The application SHALL measure a target's similarity to its source as 1 minus the
 longer text's length, over both display texts after Unicode normalization and lower-casing, SHALL fail the
 untranslated-echo check when the similarity is 0.90 or more, and SHALL otherwise pass it with a margin of
 (0.90 − similarity) / 0.10, at most 1.0. Under the `Keep original` name policy, every whole-word occurrence of a
-glossary term SHALL be removed from both texts before they are compared.
+glossary term SHALL be removed from both texts before they are compared. IF the source's display text has fewer than 20
+code points and, with every whole-word occurrence of a glossary term removed under any name policy, holds no letter,
+THEN the application SHALL skip the check: the glossary explains the echo.
 
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`.
 In plain words: a model that copies the source back has translated nothing; comparing lower-cased text stops a copy in
 capitals from slipping past. A line made only of names the person chose to keep is meant to read like its source, so
-the names are taken out before the comparison. Whether a failed echo blocks the segment depends on the source's
-length (see "Block acceptance when a soft check fails outright").
+the names are taken out before the comparison. A short line that is only glossary names, such as `Bartimaeus!`, is
+explained by the glossary whatever the policy — how a name is rendered is the glossary check's question, not the echo's.
+Whether a failed echo blocks the segment depends on the source's length (see "Block acceptance when a soft check fails
+outright").
 
 #### Scenario: A verbatim copy fails
 
@@ -279,8 +286,18 @@ length (see "Block acceptance when a soft check fails outright").
 
 - **WHEN** English → Ukrainian, the name policy is `Keep original`, the glossary holds `Margaret Hale` and
   `Milton Northern`, and `Margaret Hale, Milton Northern.` comes back unchanged
-- **THEN** what remains after removing the names has fewer than 20 code points, so the failed echo does not block
-- **AND** with the judge off the segment is accepted in Assisted with confidence 0.85
+- **THEN** what remains after removing the names holds no letter, so the untranslated-echo check is skipped
+- **AND** with the judge off the segment is accepted in Assisted with confidence 1.0
+
+#### Scenario: A short glossary name is explained by the glossary
+
+- **WHEN** the name policy is `Transliterate`, the glossary holds `Bartimaeus`, and `Bartimaeus!` comes back unchanged
+- **THEN** the untranslated-echo check is skipped and counts 1.0
+
+#### Scenario: A short line with words beside a name still counts
+
+- **WHEN** the glossary holds `Bartimaeus` and `Bartimaeus said.` (16 code points) comes back unchanged
+- **THEN** the untranslated-echo check fails and records a low `language` finding, without blocking
 
 ### Requirement: Fail a target caught in a repetition loop
 

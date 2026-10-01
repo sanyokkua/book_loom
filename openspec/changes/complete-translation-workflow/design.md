@@ -982,7 +982,7 @@ starting points, each in one place.
 | temperature: retried draft | 0.2, or 0.1 when asked | chosen here | `prompt.PromptName` |
 | chat timeout | `max(configured, min(600 s, expectedOutputTokens × 0.5 s))`; configured default 3 min | chosen here; default from `ProviderConfig.DEFAULT_REQUEST_TIMEOUT` | `:llm` request timeout rule |
 | output allowance | `ceil(chars(source) × band hi / K(target) × 1.15)` | chosen here | `chunk.TokenEstimator` |
-| output cap | `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`; none where no expected output is stated | chosen here (owner decision, 2026-09-29) | `chunk.TokenEstimator` |
+| output cap | `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, never below 128 for a translation call (group 15b step 3: a one-word source under 64 came back empty); none where no expected output is stated | chosen here (owner decision, 2026-09-29) | `chunk.TokenEstimator`, `prompt.OutputLimit` |
 | sentence-start exceptions of the name scan | `Mr.`, `Mrs.`, `Ms.`, `Dr.`, `St.`, `Prof.` | chosen here | `glossary.FrequencyScan` |
 | time left | EWMA α 0.2; shown after 5 decisions | chosen here | `ui.state.RunClock` |
 | tokens per second | last 20 `DRAFT` calls | chosen here | `ui.state.ThroughputMeter` |

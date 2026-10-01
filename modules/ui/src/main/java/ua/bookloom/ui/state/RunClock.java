@@ -6,6 +6,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.SegmentDetail;
+import ua.bookloom.api.project.SegmentPath;
 
 /**
  * How long a run has been running and how long it has left.
@@ -69,6 +73,19 @@ final class RunClock {
         if (decided == MIN_DECIDED) {
             log.debug("time left: {} segments decided, the estimate is now shown", decided);
         }
+    }
+
+    /**
+     * Whether a decision counts toward the time-left average: an accepted or flagged segment does, one kept as it is
+     * does not — it took no model call, so its near-zero time would drag the average down.
+     */
+    static boolean isTimed(final SegmentDecided decided) {
+        final SegmentDetail detail = decided.detail();
+        if (detail != null && detail.path() == SegmentPath.VERBATIM) {
+            log.debug("time left: segment {} kept as it is, not timed", decided.segmentId());
+            return false;
+        }
+        return decided.status() == SegmentStatus.ACCEPTED || decided.status() == SegmentStatus.FLAGGED;
     }
 
     Duration elapsed(final Instant now) {

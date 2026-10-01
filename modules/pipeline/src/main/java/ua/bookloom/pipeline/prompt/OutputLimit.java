@@ -20,6 +20,9 @@ public record OutputLimit(int expectedTokens, int capTokens) {
     private static final int JUDGE_TOKENS_PER_PAIR = 192;
     private static final int JUDGE_MAX_CAP_TOKENS = 1024;
     private static final int EXPECTED_SHARE_DIVISOR = 2;
+    // A one-word source under the estimator's 64-token floor came back as an empty target ("Model returned no
+    // translated text"): the JSON envelope and any reasoning preamble share the cap with the word itself.
+    private static final int SHORT_SOURCE_CAP_FLOOR = 128;
 
     /**
      * The limit for one judge call.
@@ -42,7 +45,8 @@ public record OutputLimit(int expectedTokens, int capTokens) {
      * @param maskedSource the text shown to the model, placeholder tokens included; never null
      * @param sourceTag the source language tag, or null when unknown
      * @param targetTag the target language tag; never null
-     * @return the limit, or null when the source has no display text and so no expected output
+     * @return the limit, whose cap is never below 128 tokens, or null when the source has no display text and so no
+     *     expected output
      */
     public static @Nullable OutputLimit forSource(
             final String maskedSource, @Nullable final String sourceTag, final String targetTag) {
@@ -52,6 +56,9 @@ public record OutputLimit(int expectedTokens, int capTokens) {
         }
         return new OutputLimit(
                 allowance,
-                TokenEstimator.outputCap(allowance, Tokens.inOrder(maskedSource).size()));
+                Math.max(
+                        SHORT_SOURCE_CAP_FLOOR,
+                        TokenEstimator.outputCap(
+                                allowance, Tokens.inOrder(maskedSource).size())));
     }
 }

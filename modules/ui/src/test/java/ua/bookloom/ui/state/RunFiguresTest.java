@@ -68,4 +68,17 @@ class RunFiguresTest {
         assertThat(figures.total()).isEqualTo(10);
         assertThat(figures.fraction()).isEqualTo(1.0);
     }
+
+    // IF a chapter number kept as it is were left out of the decided count, THEN the bar would never reach the end.
+    @Test
+    void from_twoKeptAsIs_areDecidedButNeitherAutoAcceptedNorRepaired() {
+        final RunFigures figures = RunFigures.from(new JobProgress(JobStage.TRANSLATE, 1, 1, 9, 1, 0, 1, 1, 5, 2, 2));
+
+        assertThat(figures.autoAccepted()).isEqualTo(5);
+        assertThat(figures.repaired()).isEqualTo(2);
+        assertThat(figures.keptVerbatim()).isEqualTo(2);
+        assertThat(figures.accepted()).isEqualTo(9);
+        assertThat(figures.total()).isEqualTo(10);
+        assertThat(figures.fraction()).isEqualTo(1.0);
+    }
 }

@@ -22,7 +22,7 @@ class TranslatingViewModelPendingTest extends TranslatingViewModelTestBase {
     @Test
     void refreshPending_deskAnswers3_publishesTheCountAndPendingRemains() {
         openBookAndChooseModel();
-        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 0, 0, 3, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 0, 0, 3, 0, 0, 0));
         buildViewModel();
 
         refresh();

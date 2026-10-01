@@ -11,6 +11,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.pipeline.JobProgress;
+import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.ui.ProgressFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -33,7 +35,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
             injector.getInstance(SettingsViewModel.class).model().set("gemma4:26b");
             return null;
         });
-        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 0, 0, pending, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 0, 0, pending, 0, 0, 0));
     }
 
     private void publishRunning(final int auto, final int repaired, final int flagged, final int pending) {
@@ -160,7 +162,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
     @Test
     void reviewFlagged_threeFlaggedInTheQueue_readsWithTheCountWhileRunning() throws Exception {
         bookReadyWithPending(0);
-        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0, 0));
         showTranslating();
         publishRunning(700, 68, 3, 469);
 
@@ -174,7 +176,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
     @Test
     void completed_noPending_showsTheOutcomeAndContinueToExportAndNoStartPauseOrResume() throws Exception {
         bookReadyWithPending(0);
-        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0));
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0, 0));
         showTranslating();
 
         completeWith(1180, 45, 3, 12);
@@ -186,6 +188,23 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         assertThat(button("translating-review-flagged").getText()).isEqualTo("Review flagged (3)");
         assertThat(enabledControls()).isEmpty();
         assertThat(isShown("translating-continue")).isTrue();
+    }
+
+    // IF chapter numbers kept as they are were counted as kept by choice, THEN the outcome would misreport the book.
+    @Test
+    void completed_twoKeptAsIs_showsThemApartFromKeptAsSource() throws Exception {
+        bookReadyWithPending(0);
+        desk.willAnswerCounts(new ReviewCounts(40, 0, 0, 0, 0, 0, 0, 0, 2));
+        showTranslating();
+        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishProgress(new JobProgress(JobStage.TRANSLATE, 1, 1, 40, 0, 0, 1, 1, 38, 0, 2));
+        mirror().live().publishSourceKept(1);
+        mirror().publishOutcome(RunState.COMPLETED, completedReport(), null);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(labelText("translating-outcome-accepted")).isEqualTo("38");
+        assertThat(labelText("translating-outcome-verbatim")).isEqualTo("2");
+        assertThat(labelText("translating-outcome-kept")).isEqualTo("1");
     }
 
     // IF Continue to Export did not lead to the export step, THEN the finished book could not be found.

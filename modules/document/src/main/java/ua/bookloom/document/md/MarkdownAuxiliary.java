@@ -19,6 +19,7 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.document.mask.PlainTextMasker;
 import ua.bookloom.util.hash.HashUtil;
+import ua.bookloom.util.text.VisibleText;
 
 /**
  * Finds a Markdown file's auxiliary text (design.md D12): each frontmatter value that is text and each image's
@@ -120,7 +121,7 @@ final class MarkdownAuxiliary {
             final int end = MarkdownSpans.lastSpanEnd(image);
             final int altEnd = altEnd(body, start + IMAGE_OPENER_LENGTH, end);
             final String source = decodeEscapes(body.substring(start + IMAGE_OPENER_LENGTH, Math.max(altEnd, 0)));
-            if (altEnd < 0 || source.isBlank()) {
+            if (altEnd < 0 || VisibleText.isBlank(source)) {
                 log.debug("image {} has no description; not produced", k);
                 continue;
             }

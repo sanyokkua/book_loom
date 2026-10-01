@@ -36,6 +36,25 @@ class BlockSegmentWalkerTest {
                 .containsExactly(SegmentKind.HEADING, SegmentKind.PARAGRAPH, SegmentKind.LIST_ITEM);
     }
 
+    // A paragraph a reader sees as empty — a lone no-break space, zero-width space, byte-order mark or soft hyphen —
+    // is no segment, and the next paragraph takes the first id.
+    @ParameterizedTest
+    @CsvSource({"&nbsp;", "&#8203;", "&#65279;", "&shy;", "&nbsp;&#8203; &shy;"})
+    void walk_paragraphOfInvisibleCharactersOnly_yieldsNoSegment(String invisible) {
+        final List<Segment> segments = walk("<p>" + invisible + "</p><p>Prose.</p>");
+
+        assertThat(segments).extracting(Segment::id).containsExactly("unit.xhtml:0");
+        assertThat(segments).extracting(Segment::sourceInner).containsExactly("Prose.");
+    }
+
+    // An invisible character beside markup does not move the block: the paragraph is still the segment.
+    @Test
+    void walk_noBreakSpaceBesideEmphasis_keepsTheParagraphAsTheBlock() {
+        final List<Segment> segments = walk("<p>&nbsp;<em>Hi</em></p>");
+
+        assertThat(segments).extracting(Segment::sourceInner).containsExactly("&nbsp;<em>Hi</em>");
+    }
+
     // a chapter with three paragraphs yields three ordered segments with matching ids.
     @Test
     void walk_threeParagraphs_yieldsOrderedSegmentsWithIdShape() {

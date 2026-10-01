@@ -12,8 +12,9 @@ import ua.bookloom.pipeline.qa.QaResult;
 /**
  * One chunk segment's outcome from the draft phase: a reply the quality loop can evaluate, content design D3's rules
  * 2-4 (or a model {@code emptyCompletion}/{@code contextWindow} reply) already flagged without a self-heal round
- * ({@code specs/translation-pipeline/spec.md} "Flag a segment whose reply cannot be used, and continue"), or a
- * context-matched memory reuse that already passed its checks and is neither drafted nor judged.
+ * ({@code specs/translation-pipeline/spec.md} "Flag a segment whose reply cannot be used, and continue"), a
+ * context-matched memory reuse that already passed its checks and is neither drafted nor judged, or a segment with
+ * nothing to translate, kept as it is with no call ({@link VerbatimRule}).
  */
 public sealed interface DraftOutcome {
 
@@ -150,6 +151,39 @@ public sealed interface DraftOutcome {
             Objects.requireNonNull(maskedTarget, "maskedTarget");
             Objects.requireNonNull(restoredTarget, "restoredTarget");
             Objects.requireNonNull(qa, "qa");
+            lockedRenderings = List.copyOf(lockedRenderings);
+        }
+    }
+
+    /**
+     * A segment with nothing to translate, kept as its own source with no model call and no judge
+     * ({@code specs/translation-pipeline/spec.md} "Keep a segment with nothing to translate as it is").
+     *
+     * @param segment the segment this outcome is about
+     * @param maskedSource the text a draft would have been shown, protected spans behind tokens
+     * @param lockedRenderings the locked glossary terms present in this segment
+     * @param maskedTarget the shown text with its protected spans restored — a locked name as its rendering — and the
+     *     document's own tokens in place
+     * @param restoredTarget {@code maskedTarget} restored into the segment's markup
+     * @param rule why the segment is kept as it is
+     */
+    record Verbatim(
+            Segment segment,
+            String maskedSource,
+            List<LockedRendering> lockedRenderings,
+            String maskedTarget,
+            String restoredTarget,
+            VerbatimRule rule)
+            implements DraftOutcome {
+
+        /** Rejects a missing component and copies the list. */
+        public Verbatim {
+            Objects.requireNonNull(segment, "segment");
+            Objects.requireNonNull(maskedSource, "maskedSource");
+            Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+            Objects.requireNonNull(maskedTarget, "maskedTarget");
+            Objects.requireNonNull(restoredTarget, "restoredTarget");
+            Objects.requireNonNull(rule, "rule");
             lockedRenderings = List.copyOf(lockedRenderings);
         }
     }

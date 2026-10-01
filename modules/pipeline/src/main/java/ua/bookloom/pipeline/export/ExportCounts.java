@@ -26,6 +26,8 @@ import ua.bookloom.pipeline.review.ReviewCounting;
  * @param autoAccepted records accepted on their draft or reuse without review
  * @param reviewed records a person acted on
  * @param bodySegments the book's body segments, each re-opened and verified before the book is published
+ * @param keptVerbatim records written as they are because nothing in them needed translating; counted in
+ *     {@code written}, never in {@code sourceKept}
  */
 @Slf4j
 record ExportCounts(
@@ -35,7 +37,8 @@ record ExportCounts(
         int flaggedWritten,
         int autoAccepted,
         int reviewed,
-        int bodySegments) {
+        int bodySegments,
+        int keptVerbatim) {
 
     /**
      * Counts a project's records against the book they describe.
@@ -64,7 +67,8 @@ record ExportCounts(
                 flaggedWritten,
                 counts.autoAccepted(),
                 counts.reviewed(),
-                bodySegments);
+                bodySegments,
+                counts.keptVerbatim());
         log.debug(
                 "Export counts {} from records={} flaggedWithoutTarget={}",
                 result,
@@ -92,6 +96,7 @@ record ExportCounts(
                 reviewed,
                 sideFiles,
                 bodySegments,
-                consistency);
+                consistency,
+                keptVerbatim);
     }
 }

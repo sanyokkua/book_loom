@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.commonmark.ext.gfm.tables.TableCell;
 import org.commonmark.node.FencedCodeBlock;
 import org.commonmark.node.Heading;
@@ -21,6 +22,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.document.mask.MaskedContent;
 import ua.bookloom.util.hash.HashUtil;
+import ua.bookloom.util.text.VisibleText;
 
 /**
  * Walks a parsed CommonMark tree and emits one segment per translatable <strong>leaf</strong> block.
@@ -40,6 +42,7 @@ import ua.bookloom.util.hash.HashUtil;
 // so it cannot see the private constructor @NoArgsConstructor generates below; suppressed per the escape
 // hatch checkstyle.xml documents for exactly this case (java-coding-style.md, ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class MarkdownWalker {
 
@@ -78,15 +81,35 @@ final class MarkdownWalker {
     }
 
     private static void addDraft(Node block, String text, SegmentKind kind, List<Draft> drafts) {
+        final int[] trimmed = visibleRange(block, text);
+        if (trimmed != null) {
+            drafts.add(new Draft(kind, block, trimmed[0], trimmed[1], text.substring(trimmed[0], trimmed[1])));
+        }
+    }
+
+    /**
+     * Whether {@code block} becomes a segment: it has positioned content and a reader would see some of it. The
+     * structure tree asks the same question of each heading, so a heading that is no segment is never matched to the
+     * next heading's level.
+     *
+     * @param block a leaf block of the body
+     * @param text the body text the spans index
+     * @return {@code true} if the walk emits a segment for it, {@code false} otherwise
+     */
+    static boolean yieldsSegment(Node block, String text) {
+        return visibleRange(block, text) != null;
+    }
+
+    private static int @Nullable [] visibleRange(Node block, String text) {
         final int[] range = MarkdownSpans.contentCharRange(block);
-        if (range == null) {
-            return;
+        final int[] trimmed = range == null ? null : MarkdownSpans.trimmed(text, range);
+        if (trimmed == null || VisibleText.isBlank(text.substring(trimmed[0], trimmed[1]))) {
+            log.debug(
+                    "block {} holds no visible text; no segment",
+                    block.getClass().getSimpleName());
+            return null;
         }
-        final int[] trimmed = MarkdownSpans.trimmed(text, range);
-        if (trimmed == null) {
-            return;
-        }
-        drafts.add(new Draft(kind, block, trimmed[0], trimmed[1], text.substring(trimmed[0], trimmed[1])));
+        return trimmed;
     }
 
     private static boolean isExcluded(Node node) {

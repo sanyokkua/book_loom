@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.Document;
@@ -61,6 +63,15 @@ class MarkdownRoundTripTest {
     }
 
     // headings, paragraphs and list items are distinguished by kind.
+    // A paragraph of only invisible characters is no segment; the visible paragraphs keep their order.
+    @ParameterizedTest
+    @ValueSource(strings = {"\u00A0", "\u200B", "\uFEFF", "\u00AD", "\u00A0\u200B"})
+    void read_paragraphOfInvisibleCharactersOnly_yieldsNoSegment(String invisible) {
+        final Document document = open("One.\n\n" + invisible + "\n\nTwo.\n", "invisible.md");
+
+        assertThat(innersOf(document)).containsExactly("One.", "Two.");
+    }
+
     @Test
     void read_headingsParagraphsAndListItems_areDistinguishedByKind() {
         final List<Segment> segments = segmentsOf(openPrimary());

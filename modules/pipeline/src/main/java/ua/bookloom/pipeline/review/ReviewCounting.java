@@ -15,7 +15,8 @@ import ua.bookloom.api.project.SegmentRecord;
 /**
  * The one counts rule the review desk and the export report share, so the tiles a person reads before exporting and
  * the report written after it never disagree. A record kept as source by choice is counted only as such, so it is
- * never pending, flagged or reviewed.
+ * never pending, flagged or reviewed; one kept as it is because nothing in it needed translating is counted apart from
+ * the auto-accepted ones, never as kept by choice.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -45,7 +46,8 @@ public final class ReviewCounting {
                 records.size() - translated.size(),
                 countIf(
                         translated,
-                        record -> record.status() == SegmentStatus.FLAGGED && record.machineTarget() == null));
+                        record -> record.status() == SegmentStatus.FLAGGED && record.machineTarget() == null),
+                countIf(translated, record -> isUnreviewedAccept(record, SegmentPath.VERBATIM)));
     }
 
     private static boolean isUnreviewedAccept(final SegmentRecord record, final SegmentPath... paths) {

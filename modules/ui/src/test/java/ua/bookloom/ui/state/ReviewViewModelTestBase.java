@@ -94,7 +94,7 @@ abstract class ReviewViewModelTestBase extends TranslatingViewModelTestBase {
     }
 
     protected static ReviewCounts flaggedCount(final int flagged) {
-        return new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0);
+        return new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0, 0);
     }
 
     /** Opens the book, scripts three flagged segments and builds the view model; call once. */

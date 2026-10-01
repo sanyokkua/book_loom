@@ -5,11 +5,15 @@ import static ua.bookloom.pipeline.qa.CheckName.ECHO;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * The untranslated-echo check: whether the target merely copies its source back, with the echo floor (owner
- * decision) that keeps a short line — a name, a numeral, "OK" — from blocking acceptance on a failed echo alone.
+ * decision) that keeps a short line — a name, a numeral, "OK" — from blocking acceptance on a failed echo alone. A
+ * short line that is only glossary names (with punctuation) is explained by the glossary and not held against the
+ * target at all: the glossary check, not the echo, judges how a name is rendered.
  */
+@Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class EchoCheck {
@@ -34,11 +38,15 @@ final class EchoCheck {
             return CheckResult.pass(
                     ECHO, Margins.clamp((SIMILARITY_FAIL_THRESHOLD - similarity) / SIMILARITY_MARGIN_WINDOW));
         }
-        return failed(sourceCodePoints, similarity);
+        return failed(input, sourceCodePoints, similarity);
     }
 
-    private static CheckResult failed(final int sourceCodePoints, final double similarity) {
+    private static CheckResult failed(final SoftCheckInput input, final int sourceCodePoints, final double similarity) {
         final String note = "echo similarity " + similarity + " at or above " + SIMILARITY_FAIL_THRESHOLD;
+        if (sourceCodePoints < ECHO_FLOOR_CODE_POINTS && NameRemoval.isOnlyGlossaryTerms(input)) {
+            log.debug("Echo explained by the glossary: {} code points of names only", sourceCodePoints);
+            return CheckResult.skip(ECHO);
+        }
         if (sourceCodePoints < ECHO_FLOOR_CODE_POINTS) {
             return CheckResult.failNonBlocking(ECHO, note);
         }

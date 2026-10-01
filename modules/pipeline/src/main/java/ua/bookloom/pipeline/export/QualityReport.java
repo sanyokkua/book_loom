@@ -64,6 +64,7 @@ final class QualityReport {
                 + "- Written with a translation: " + counts.written() + "\n"
                 + "- Pending, written in the source language: " + counts.pending() + "\n"
                 + "- Kept as source by choice: " + counts.sourceKept() + "\n"
+                + "- Kept as is, nothing to translate (numbers, symbols): " + counts.keptVerbatim() + "\n"
                 + "- Flagged, written with the machine translation: " + counts.flaggedWritten() + "\n"
                 + "- Accepted without review: " + counts.autoAccepted() + "\n"
                 + "- Reviewed by you: " + counts.reviewed() + "\n"

@@ -8,10 +8,16 @@ import org.junit.jupiter.api.Test;
 class OutputLimitTest {
 
     @Test
-    void forSource_shortSourceWithTwoTokens_expectsSixteenAndCapsAtTheFloor() {
+    void forSource_shortSourceWithTwoTokens_expectsSixteenAndCapsAtTheShortSourceFloor() {
         final OutputLimit limit = OutputLimit.forSource("He opened the ⟦g0⟧old⟦g1⟧ door.", "en", "uk");
 
-        assertThat(limit).isEqualTo(new OutputLimit(16, 64));
+        assertThat(limit).isEqualTo(new OutputLimit(16, 128));
+    }
+
+    // A one-word source under a 64-token cap came back as an empty target; the floor leaves the reply room.
+    @Test
+    void forSource_oneWord_capsAtTheShortSourceFloor() {
+        assertThat(OutputLimit.forSource("Well", "en", "uk")).isEqualTo(new OutputLimit(3, 128));
     }
 
     @Test

@@ -68,7 +68,7 @@ class JudgeTemperatureWireMockTest {
                     .contains("\"temperature\":0.1", "\"score\"")
                     .doesNotContain("\"target\"");
             assertReasoningOff(kind, bodies);
-            assertThat(bodies.get(0)).contains(capField(kind) + ":64");
+            assertThat(bodies.get(0)).contains(capField(kind) + ":128");
             assertThat(bodies.get(1)).contains(capField(kind) + ":320");
         }
     }

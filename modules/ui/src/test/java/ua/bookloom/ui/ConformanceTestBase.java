@@ -62,6 +62,6 @@ abstract class ConformanceTestBase extends ShellTestBase {
     private static ExportOutcome finishedExport() {
         final Path book = Path.of("/books/Frankenstein.uk.epub");
         return new ExportOutcome(
-                new ExportReport(book, 10, 0, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN), 958_464);
+                new ExportReport(book, 10, 0, 0, 0, 8, 2, List.of(), 10, ConsistencySummary.NOT_RUN, 0), 958_464);
     }
 }

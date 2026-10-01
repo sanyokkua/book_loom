@@ -139,7 +139,7 @@ class WholeBookPipelineEndToEndTest {
     void run_draftAndJudge_capTheDraftAtTheFloorAndTheJudgeByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
-        assertThat(run.bodies().get(0)).contains(capField(kind) + ":64");
+        assertThat(run.bodies().get(0)).contains(capField(kind) + ":128");
         assertThat(run.bodies().get(4)).contains(capField(kind) + ":896");
     }
 

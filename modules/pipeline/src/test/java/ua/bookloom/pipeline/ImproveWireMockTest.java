@@ -52,11 +52,11 @@ class ImproveWireMockTest {
             case OLLAMA ->
                 assertThat(body)
                         .contains(
-                                "\"options\":{\"temperature\":0.35,\"num_ctx\":8192,\"num_predict\":64}",
+                                "\"options\":{\"temperature\":0.35,\"num_ctx\":8192,\"num_predict\":128}",
                                 "\"think\":false");
             case OPENAI_COMPATIBLE ->
                 assertThat(body)
-                        .contains("\"temperature\":0.35", "\"max_tokens\":64")
+                        .contains("\"temperature\":0.35", "\"max_tokens\":128")
                         .doesNotContain("\"num_ctx\"", "\"think\"", "\"reasoning\"");
         }
     }

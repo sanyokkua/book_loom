@@ -7,7 +7,11 @@
 The system SHALL parse an opened book into one immutable skeleton per content unit plus an ordered list of
 translatable segments, where each segment is the translatable inner content of one **line-break-delimited run**
 within a single block-level element — a block containing no line break having exactly one such run — and carries a
-stable identity, its position in document order, and its kind.
+stable identity, its position in document order, and its kind. A run, a Markdown leaf block, a plain-text paragraph or an
+auxiliary value whose text holds nothing a reader sees — only Unicode separators (`\p{Z}`, the no-break space among
+them), control characters (`\p{Cc}`) and format characters (`\p{Cf}`: the zero-width space, the byte-order mark, the
+soft hyphen) — SHALL NOT be a segment; its bytes stay in the skeleton untouched. Which element is the block SHALL not
+change because of such characters: a no-break space beside inline markup still makes its element the block.
 
 The system SHALL additionally give every opened book exactly one auxiliary unit, placed after every body unit, holding
 the segments of its auxiliary text — metadata, navigation labels, page titles, image alternative text and frontmatter
@@ -26,6 +30,8 @@ majority of blocks — every one containing no line break — the run and the bl
 unit is kept apart so that the reading order, the structure tree and the coverage measurement still describe the
 chapters alone, while the title, the table of contents and the image descriptions can still be translated. It comes
 last, so every body unit keeps the position it had before auxiliary text was read.
+A paragraph of a lone no-break space looks empty on the page, yet a plain whitespace test took it for text and a model
+was asked to translate it; anything a reader cannot see is now no segment in any of the four formats.
 
 #### Scenario: A chapter with three paragraphs yields three ordered segments
 
@@ -33,6 +39,13 @@ last, so every body unit keeps the position it had before auxiliary text was rea
 - **THEN** the unit for that document carries exactly three segments
 - **AND** their ids are `OEBPS/chapter01.xhtml:0`, `OEBPS/chapter01.xhtml:1` and `OEBPS/chapter01.xhtml:2`
 - **AND** their `order` values are `0`, `1` and `2`, matching the order the paragraphs appear in the document
+
+#### Scenario: An invisible paragraph is no segment
+
+- **WHEN** a spine document holds `<p>&nbsp;</p>` followed by `<p>Prose.</p>`, or a plain-text file holds a paragraph of
+  only U+200B between `One.` and `Two.`
+- **THEN** the invisible paragraph yields no segment, and the next paragraph takes the id that ends in `:0` in the EPUB
+- **AND** writing the plain-text file back with no translation reproduces its bytes exactly
 
 #### Scenario: Block kinds are distinguished
 
