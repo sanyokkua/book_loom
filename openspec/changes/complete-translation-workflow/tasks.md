@@ -1252,7 +1252,7 @@ check leaves evidence.
   review shows the target read-only with "Review is available when the run pauses" while a run translates, the refused
   reply or a "showing the source" note, a token banner with insert chips after a refused save, and keeps typing through
   a re-read. Not done: the piece-wise redraft step of the gate-failure order (the deterministic re-place-all repair
-  makes it unnecessary in every reproduced case)
+  makes it unnecessary in every reproduced case) (1c39cb5)
 - [ ] 8. Layout, scrolling, concurrency: the shell content's minimum height so tall screens scroll, the activity log
   following its tail only when at the tail, a structured context panel, the wheel glide rewrite, and an
   `ActivityTracker` that keeps model actions from overlapping
