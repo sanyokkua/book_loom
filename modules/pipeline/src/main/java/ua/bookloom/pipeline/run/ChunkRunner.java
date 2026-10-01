@@ -37,8 +37,10 @@ import ua.bookloom.pipeline.memory.TranslationMemory;
  * rolling summary and a unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
- * aborted — a draft, the judge, or a segment's rounds from the first. A stop drops the undecided drafts: those segments
- * stay PENDING with no target, and the next run drafts them from the first pending one.
+ * aborted — a draft, the judge, or the call inside a segment's rounds that failed. A step that pauses the run twice
+ * for a provider error, or that the person skips from the pause, is flagged and the run goes on. A stop drops the
+ * undecided drafts: those segments stay PENDING with no target, and the next run drafts them from the first pending
+ * one.
  *
  * <p>Used from the job thread only.
  */
@@ -213,11 +215,15 @@ public final class ChunkRunner {
             @Nullable final String segmentId,
             final List<WorkItem> items,
             final List<DraftOutcome> outcomes) {
-        final Step<ChunkDecider> decider = calls.untilAnswered(
+        final Step<ChunkDecider> decider = calls.untilAnsweredOrFlagged(
                 current.work(),
                 segmentId,
+                "judge:" + items.getFirst().segment().id(),
                 () -> steps.loop()
-                        .start(outcomes, current.loop(), current.context().gate(), steps.calls()));
+                        .start(outcomes, current.loop(), current.context().gate(), steps.calls()),
+                error -> steps.loop()
+                        .startWithoutJudge(
+                                outcomes, current.loop(), current.context().gate(), steps.calls(), error));
         return switch (decider) {
             case Step.Stopped<ChunkDecider>(final RunEnd end) -> Optional.of(end);
             case Step.Done<ChunkDecider>(final ChunkDecider started) -> decideEach(current, items, started);
@@ -253,11 +259,13 @@ public final class ChunkRunner {
 
     private Step<DraftOutcome> drafted(
             final Current current, final Segment segment, final ContextPackage context, final ProtectedMask mask) {
-        final Step<DraftOutcome> drafted = calls.untilAnswered(
+        final Step<DraftOutcome> drafted = calls.untilAnsweredOrFlagged(
                 current.work(),
                 segment.id(),
+                "draft:" + segment.id(),
                 () -> current.translator()
-                        .translateSplit(segment, context.draftContext(), mask, steps.splitter(), current.budget()));
+                        .translateSplit(segment, context.draftContext(), mask, steps.splitter(), current.budget()),
+                error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
         if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
             current.drafts().drafted(outcome, context.snapshot());
             events.drafted(outcome, current.loop());
@@ -290,7 +298,9 @@ public final class ChunkRunner {
     }
 
     private Optional<RunEnd> decideOne(final Current current, final WorkItem item, final ChunkDecider decider) {
-        return switch (calls.untilAnswered(current.work(), item.segment().id(), decider::nextDecision)) {
+        final String segmentId = item.segment().id();
+        return switch (calls.untilAnsweredOrFlagged(
+                current.work(), segmentId, "decide:" + segmentId, decider::nextDecision, decider::flagCurrent)) {
             case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
             case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome, decider);
         };

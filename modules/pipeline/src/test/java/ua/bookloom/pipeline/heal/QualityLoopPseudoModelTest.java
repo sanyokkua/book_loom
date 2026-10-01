@@ -61,15 +61,15 @@ class QualityLoopPseudoModelTest {
         final SegmentOutcome accepted =
                 Objects.requireNonNull(decider.nextDecision().data());
 
-        // One judge call (shared by both segments) plus exactly two directed fixes for the echo; no re-judge
-        // because its confidence never reaches τ, and the pseudo model's echo never stops failing outright.
-        assertThat(requests).hasSize(3);
-        assertThat(responseFormatNames(requests)).containsExactly("judge", "directed-fix", "directed-fix");
+        // One judge call (shared by both segments) plus one directed fix for the echo; no re-judge because its
+        // confidence never reaches τ, and no second fix because the pseudo model's fix returns the echo unchanged.
+        assertThat(requests).hasSize(2);
+        assertThat(responseFormatNames(requests)).containsExactly("judge", "directed-fix");
 
         assertThat(flagged.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(flagged.machineTarget()).isEqualTo("HE OPENED THE *OLD* DOOR.");
         assertThat(flagged.maskedMachineTarget()).isEqualTo("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
-        // B2: neither repair round was ever re-judged, so the chunk verdict the pseudo model always answers
+        // B2: the repair round was never re-judged, so the chunk verdict the pseudo model always answers
         // perfectly is still the verdict that last decided this segment.
         assertThat(flagged.judgeScore()).isEqualTo(1.0);
         assertThat(accepted.status()).isEqualTo(SegmentStatus.ACCEPTED);

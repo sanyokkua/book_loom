@@ -251,10 +251,11 @@ class TranslationJobChunkTest {
                 .containsExactly(SegmentStatus.REVISED, EDIT);
     }
 
-    // The rounds restart at the first, the chunk's verdict is kept, and the repaired target is re-judged on its own.
+    // The first round is kept: the second round's fix is sent again, and the repaired target is re-judged on its own.
+    // The first fix answers the English source, a rewrite that still fails, so the second round is needed.
     @Test
-    void run_pauseDuringSecondFixRound_redoesRoundsFromOne() {
-        final ScriptedChatModel model = replies(DOOR_ECHO, DOOR_ECHO, DOOR_ECHO, DOOR_TARGET)
+    void run_pauseDuringSecondFixRound_continuesAtTheSecondRound() {
+        final ScriptedChatModel model = replies(DOOR_ECHO, ChunkRunFixtures.DOOR, DOOR_TARGET)
                 .answerTo(JUDGE, judged())
                 .answerTo(JUDGE, judged())
                 .blockNthRequest(4);
@@ -270,14 +271,13 @@ class TranslationJobChunkTest {
         assertThat(formats(model)).containsExactly(DRAFT, JUDGE, FIX, FIX);
         translation.resume();
         report(await(run));
-        assertRoundsRedoneOnce(project, model);
+        assertSecondRoundContinued(project, model);
     }
 
     @Test
-    void run_unreachableDuringSecondFixRound_pausesAndRedoesRoundsFromOne() {
-        final ScriptedChatModel model = replies(DOOR_ECHO, DOOR_ECHO)
+    void run_unreachableDuringSecondFixRound_pausesAndContinuesAtTheSecondRound() {
+        final ScriptedChatModel model = replies(DOOR_ECHO, ChunkRunFixtures.DOOR)
                 .answer(Result.err(UNREACHABLE))
-                .answer(target(DOOR_ECHO))
                 .answer(target(DOOR_TARGET))
                 .answerTo(JUDGE, judged())
                 .answerTo(JUDGE, judged());
@@ -294,13 +294,15 @@ class TranslationJobChunkTest {
         assertThat(model.requests()).hasSize(4);
         translation.resume();
         report(await(run));
-        assertRoundsRedoneOnce(project, model);
+        assertSecondRoundContinued(project, model);
     }
 
+    // A judge that times out or cannot be reached no longer pauses (it flags its segments); a refused key still does.
     @Test
-    void run_judgeUnreachable_pausesAndRedoesJudgeOnly() {
-        final ScriptedChatModel model =
-                replies(T0, T1, T2).answerTo(JUDGE, Result.err(UNREACHABLE)).answerTo(JUDGE, judged());
+    void run_judgeUnauthorized_pausesAndRedoesJudgeOnly() {
+        final ScriptedChatModel model = replies(T0, T1, T2)
+                .answerTo(JUDGE, Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")))
+                .answerTo(JUDGE, judged());
         final TestProject project = balanced(ChunkRunFixtures.threeParagraphs(tempDir));
         final TranslationJobImpl translation = job(project, model);
         translation.pauseAt(Set.of(PausePoint.ON_ERROR));
@@ -309,17 +311,17 @@ class TranslationJobChunkTest {
         final Future<Result<JobReport>> run = executor().submit(translation::run);
         final Paused pause = awaitPaused(pauses);
 
-        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.unreachable);
+        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.auth);
         assertThat(model.requests()).hasSize(4);
         translation.resume();
         assertThat(report(await(run)).accepted()).isEqualTo(3);
         assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, JUDGE, JUDGE);
     }
 
-    // Seven requests, not the six the scenario counts: the second round's target reaches τ with the judge on, so it is
-    // judged again alone, one pair labelled s1 (design D8) — which is not a second judge call for the chunk.
-    private static void assertRoundsRedoneOnce(final TestProject project, final ScriptedChatModel model) {
-        assertThat(formats(model)).containsExactly(DRAFT, JUDGE, FIX, FIX, FIX, FIX, JUDGE);
+    // The second round's target reaches τ with the judge on, so it is judged again alone, one pair labelled s1
+    // (design D8) — which is not a second judge call for the chunk.
+    private static void assertSecondRoundContinued(final TestProject project, final ScriptedChatModel model) {
+        assertThat(formats(model)).containsExactly(DRAFT, JUDGE, FIX, FIX, FIX, JUDGE);
         assertThat(userMessage(model.requests().getLast()))
                 .contains("[s1]\nSource: " + ChunkRunFixtures.DOOR + "\nCandidate: " + DOOR_TARGET)
                 .doesNotContain("[s2]");

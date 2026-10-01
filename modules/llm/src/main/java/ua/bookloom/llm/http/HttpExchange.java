@@ -100,7 +100,7 @@ public final class HttpExchange {
                     return HttpResponse.BodySubscribers.fromLineSubscriber(lines);
                 });
         // The stage only forwards a failure to the reader; the reader, not this stage, reports the outcome.
-        final var _ = exchange.whenComplete((_, failure) -> {
+        var _ = exchange.whenComplete((_, failure) -> {
             if (failure != null) {
                 lines.exchangeFailed(failure);
             }

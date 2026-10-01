@@ -72,7 +72,8 @@ class QualityLoopFlaggingAndOrderTest {
         assertThat(shortTarget).hasSize(41);
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment, source, List.of(), shortTarget, shortTarget, shortTarget, null);
-        final ScriptedChatModel model = stillFailingLengthTwiceModel(shortTarget);
+        // Each fix rewrites the draft but stays as short, so the second round still runs and still fails length.
+        final ScriptedChatModel model = stillFailingLengthTwiceModel("Він покинув дах на світанку і жодного раз");
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
                 new DialParameters(2, 2, true, false, false, 4),
@@ -94,14 +95,14 @@ class QualityLoopFlaggingAndOrderTest {
         assertSoleFindingOf(result, "judge", "omission", Severity.HIGH);
     }
 
-    private static ScriptedChatModel stillFailingLengthTwiceModel(final String shortTarget) {
+    private static ScriptedChatModel stillFailingLengthTwiceModel(final String shortFix) {
         return new ScriptedChatModel()
                 .answer(
                         readable(
                                 "{\"score\":0.58,\"verdict\":\"revise\",\"findings\":"
                                         + "[{\"segmentId\":\"s1\",\"type\":\"omission\",\"severity\":\"high\",\"note\":\"drops most of the sentence\"}]}"))
-                .answer(readable(targetReply(shortTarget)))
-                .answer(readable(targetReply(shortTarget)));
+                .answer(readable(targetReply(shortFix)))
+                .answer(readable(targetReply(shortFix)));
     }
 
     private static void assertSoleFindingOf(

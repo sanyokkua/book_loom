@@ -583,6 +583,60 @@ context-matched memory reuse without the judge"), so neither is shown to it. Fas
 - **WHEN** the judge replies `{"score":0.91,"verdict":"accept"}`
 - **THEN** it is read as a score of 0.91 with no findings and no deferrals
 
+### Requirement: Flag a segment the judge could not judge
+
+IF a judge call — a chunk's, or a repaired segment's re-judge — ends with `ErrorCode.timeout` or
+`ErrorCode.unreachable` after the provider's own retries, THEN the system SHALL NOT pause the run for it: it SHALL
+decide every segment the call was for by its quality checks alone, keep the segment's latest target that passed every
+hard gate (the draft, or the last repair), add the finding `judge-unavailable` (severity medium, raised by `judge`), and
+flag the segment with that error, never accept it; it SHALL make no further repair round for it, and the run SHALL go
+on with the next segment. A judge call answered with any other provider error still pauses or fails the run as the
+`resume` capability says.
+
+**Source:** FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
+`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b.
+In plain words: on the Bartimaeus hand test a re-judge after a directed fix hung seven times for the full timeout, and
+each time the run paused, was resumed, and paid the same calls again. A judge that does not answer says nothing about
+the translation, so the translation is kept and handed to the person for review instead of holding the whole book.
+
+#### Scenario: A re-judge times out after a directed fix
+
+- **WHEN** a Balanced run's chunk judge finds a medium `meaning` finding on `Book.md:0`, the directed fix answers
+  `Старий чоловік повільно пішов до гавані.`, and the re-judge ends with `ErrorCode.timeout`, with pause on error
+  enabled
+- **THEN** the run does not pause, `Book.md:0` is FLAGGED with that fixed target and a `judge-unavailable` finding, and
+  the run report lists it with `ErrorCode.timeout`
+- **AND** `Book.md:1` is decided by the chunk's verdict and the run ends Completed
+
+#### Scenario: A chunk's judge cannot be reached
+
+- **WHEN** a Balanced chunk of two drafted segments is judged and the judge call ends with `ErrorCode.unreachable`
+- **THEN** both segments are FLAGGED with their drafts as targets and no further call is made for them
+
+### Requirement: Stop repairing a segment that does not change
+
+WHEN a self-heal round's rewrite is identical to the text it was asked to repair, or its re-judge repeats the
+previous verdict's score and the same medium or high finding kinds for the segment, and the segment is not accepted,
+THEN the system SHALL flag the segment at once with that round counted, and SHALL NOT spend the rest of the repair
+budget on it.
+
+**Source:** `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`; tasks 15b.
+In plain words: on the hand test a directed fix returned the same 289-token rewrite three times and the judge repeated
+the same `meaning` finding at 0.85 each time. A round that changes nothing will not be changed by the next one, so the
+budget is not spent on it.
+
+#### Scenario: Two fixes return the same text
+
+- **WHEN** an echoed draft gets a first directed fix answering `HE OPENED THE OLD DOOR!`, a second answering the same,
+  with three rounds allowed and the judge off
+- **THEN** the segment is FLAGGED after 2 rounds and no third fix is sent
+
+#### Scenario: The re-judge repeats the same finding at the same score
+
+- **WHEN** the chunk judge scores 0.85 with a medium `meaning` finding, the directed fix answers a new target, and the
+  re-judge again scores 0.85 with a medium `meaning` finding, with three rounds allowed
+- **THEN** the segment is FLAGGED after 1 round with that fixed target, after 3 requests
+
 ### Requirement: Accept a segment only by the acceptance rule
 
 The application SHALL accept a drafted segment only when its hard gates pass, no soft check failed outright (see

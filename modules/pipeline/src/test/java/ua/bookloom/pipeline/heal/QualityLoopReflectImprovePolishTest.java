@@ -83,8 +83,9 @@ class QualityLoopReflectImprovePolishTest {
     @Test
     void nextDecision_acceptedInItsSecondRound_isRepairedWithTwoRoundsUsed() {
         final String echo = DRAFT_SOURCE.toUpperCase(Locale.ROOT);
+        // The first fix changes the echo but still answers in English, so a second round is needed.
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(targetReply(echo)))
+                .answer(readable(targetReply(DRAFT_SOURCE)))
                 .answer(readable(targetReply(GOOD_DRAFT_TARGET)));
         final DialParameters dial = new DialParameters(2, 2, false, false, false, 4);
         final LoopSettings settings = new LoopSettings(
@@ -210,7 +211,7 @@ class QualityLoopReflectImprovePolishTest {
                 new DraftOutcome.Drafted(segment(), DRAFT_SOURCE, List.of(), echo, echo, echo, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"score\":0.5,\"verdict\":\"revise\"}"))
-                .answer(readable(targetReply(echo)))
+                .answer(readable(targetReply(DRAFT_SOURCE)))
                 .answer(readable(targetReply(GOOD_DRAFT_TARGET)))
                 .answer(readable("{\"score\":0.95,\"verdict\":\"accept\"}"));
         final LoopSettings settings = QualityLoopFixtures.settings(ReviewMode.UNATTENDED, QualityDial.MAX);

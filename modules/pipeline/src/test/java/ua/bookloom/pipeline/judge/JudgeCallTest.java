@@ -153,15 +153,42 @@ class JudgeCallTest {
         assertThat(Objects.requireNonNull(result.data()).readable()).isFalse();
     }
 
+    // A judge that cannot be reached after the provider's own retries must not hold the run: its verdict says so.
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"timeout", "unreachable"})
+    void judge_modelAnswersTimeoutOrUnreachable_readsAsUnavailableWithThatError(final ErrorCode code) {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(Result.err(AppError.of(code, "Model failure", "no answer")));
+
+        final Result<JudgeVerdict> result = CALL.judge(THREE_PAIRS, FRAME, List.of(), calls(model));
+
+        final JudgeVerdict verdict = Objects.requireNonNull(result.data());
+        assertThat(verdict.readable()).isFalse();
+        assertThat(verdict.isUnavailable()).isTrue();
+        assertThat(Objects.requireNonNull(verdict.unavailableBecause()).code()).isEqualTo(code);
+    }
+
     @Test
-    void judge_modelAnswersUnreachable_returnsThatError() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")));
+    void judge_unreadableReply_isNotUnavailable() {
+        assertThat(verdictOf(new ScriptedChatModel().answer(readable(UNPARSABLE_REPLY)))
+                        .isUnavailable())
+                .isFalse();
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"auth", "upstream", "cancelled"})
+    void judge_modelAnswersAnotherError_returnsThatError(final ErrorCode code) {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(Result.err(AppError.of(code, "Model failure", "no answer")));
 
         final Result<JudgeVerdict> result = CALL.judge(THREE_PAIRS, FRAME, List.of(), calls(model));
 
         assertThat(result.isErr()).isTrue();
-        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(ErrorCode.unreachable);
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(code);
     }
 
     private static JudgeVerdict verdictOf(final ScriptedChatModel model) {

@@ -184,39 +184,47 @@ until the application closes, and the banners say exactly that.
 - **THEN** the screen shows `Run stopped. Progress is kept until the application closes. Resume any time — it re-enters
   at the first pending segment; flagged segments wait in the review panel.` and offers Resume
 
-### Requirement: Restart a segment's repair rounds after a pause or an error inside them
+### Requirement: Continue a segment's repair rounds at the call that failed
 
-WHEN a self-heal call is aborted by a pause, or is answered with an error that pauses the run, the system SHALL, on
-resume, restart that segment's repair rounds from round 1, and SHALL keep the chunk's judge verdict, making no second
-judge call for the chunk. WHEN a run is stopped, the system SHALL drop the chunk's undecided drafts, as "Decide a
-chunk's segments in document order" says.
+WHEN a self-heal call is aborted by a pause, or is answered with an error that pauses the run, the system SHALL keep the
+segment's rounds as they stood in memory and, on resume, SHALL continue at the call that failed: the round whose repair
+call failed is sent again from that call, and a round whose re-judge failed sends only the re-judge again, with the
+rewrite it already has. It SHALL keep the chunk's judge verdict, making no second judge call for the chunk. WHEN a run
+is stopped, the system SHALL drop the chunk's undecided drafts, as "Decide a chunk's segments in document order" says.
 
 **Source:** FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`,
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`,
-`openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
-In plain words: a repair round that was interrupted has no answer to build on, and the rounds before it are not kept,
-so the segment starts its repair again from the first round instead of resuming half-way. What the run already paid for
-at the chunk level — the judge's verdict — is kept, so a pause never costs a second judge call for the chunk (a repaired segment is still judged once on its own, as the
+`openspec/changes/complete-translation-workflow/proposal.md#what-changes`; tasks 15b.
+In plain words: the rounds were once restarted from the first, which on the Bartimaeus hand test paid for the same
+directed fix again after every resume. The rounds already answered are kept while the application runs, so a resume
+costs only the call that failed. What the run already paid for at the chunk level — the judge's verdict — is kept too,
+so a pause never costs a second judge call for the chunk (a repaired segment is still judged once on its own, as the
 quality gates say).
 
 #### Scenario: A pause during the second repair round
 
 - **WHEN** a Balanced run drafts `He opened the old door.` and gets the echo `HE OPENED THE OLD DOOR.`, the chunk's judge
-  call is made, the first directed fix is answered with the echo again, and a pause is requested while the second
-  directed fix is in flight, and after resume the first directed fix is answered with the echo and the second with
+  call is made, the first directed fix is answered with `He opened the old door.`, a pause is requested while the
+  second directed fix is in flight, and after resume the second directed fix is answered with
   `Він відчинив старі двері.`
 - **THEN** the provider has received 4 requests before the pause — draft, judge, first fix, second fix
-- **AND** it has received 7 in total — the chunk's judge call is not repeated, and the one further judge call is the
-  repaired segment's own re-judge — and the segment ends ACCEPTED
+- **AND** it has received 6 in total — the second fix again and the repaired segment's own re-judge — and the segment
+  ends ACCEPTED after 2 rounds
 
 #### Scenario: An unreachable provider during the second repair round
 
 - **WHEN** the same run's second directed fix is answered with `ErrorCode.unreachable` with pause on error enabled, and
-  after resume the first directed fix is answered with the echo and the second with `Він відчинив старі двері.`
+  after resume it is answered with `Він відчинив старі двері.`
 - **THEN** the run pauses with `ErrorCode.unreachable` after 4 requests
-- **AND** it has received 7 in total — the chunk's judge call is not repeated, and the one further judge call is the
-  repaired segment's own re-judge
+- **AND** it has received 6 in total
+
+#### Scenario: A failed re-judge is the only call sent again
+
+- **WHEN** a directed fix was answered and the re-judge of its rewrite is answered with `ErrorCode.upstream` with pause
+  on error enabled, and after resume the re-judge accepts it
+- **THEN** the requests are draft, draft, judge, fix, judge and judge — the fix is not sent again — and the segment ends
+  ACCEPTED with the fixed target
 
 ## MODIFIED Requirements
 
@@ -379,7 +387,15 @@ WHERE pause on error is enabled, IF a model call fails with a provider error tha
 `ErrorCode.unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable` or
 `missingCredential` — or the model call itself answers `ErrorCode.validation` (a provider refusing the request, such as
 LM Studio's `Model unloaded`), THEN the system SHALL pause with that error, keep every count as it stood, and on resume
-make the interrupted call again from its first request.
+make the interrupted call again from its first request — except a judge call answered `timeout` or `unreachable`,
+which does not pause the run: its segments are flagged as the `quality-gates` capability's "Flag a segment the judge
+could not judge" says.
+
+The system SHALL pause at most twice for the same step — a segment's draft, a segment's decision, or a chunk's judge
+call — and SHALL, on the third failure of that step, flag its segment (for a chunk's judge call, decide the chunk as if
+the judge were unavailable) with the error and go on with the run. WHILE the run is paused on such an error, the job
+SHALL offer to skip the step: the run resumes, the step's segment is flagged with the error without its call being sent
+again, and the run goes on (`TranslationJob.skipSegment`).
 
 The system SHALL NOT pause on `ErrorCode.internal`, which ends the run Failed, nor on `ErrorCode.contextWindow` or
 `ErrorCode.emptyCompletion`, which flag the one segment and let the run go on.
@@ -435,6 +451,20 @@ prompt too long for the model belongs to one segment, so only that segment is fl
   segments
 - **THEN** the job ends Failed with `ErrorCode.internal`, with 1 accepted and 2 pending, and does not pause
 
+
+#### Scenario: A segment that keeps failing is flagged after two pauses
+
+- **WHEN** the draft of `Book.txt:1` is answered with `ErrorCode.unreachable` three times in a row, and the person
+  resumes after each of the first two pauses
+- **THEN** the run pauses twice, then flags `Book.txt:1` with `ErrorCode.unreachable` and drafts `Book.txt:2`
+- **AND** the run ends Completed with two segments accepted and one flagged
+
+#### Scenario: Skipping the failing segment from the pause
+
+- **WHEN** the run is paused because the draft of `Book.txt:1` was answered with `ErrorCode.upstream`, and the person
+  skips the segment
+- **THEN** `Book.txt:1` is flagged with `ErrorCode.upstream`, its draft is not sent again, and `Book.txt:2` is drafted
+  next
 ### Requirement: Cancel a job
 
 WHEN cancellation is requested, the system SHALL end the job Cancelled without waiting for the segment in progress or

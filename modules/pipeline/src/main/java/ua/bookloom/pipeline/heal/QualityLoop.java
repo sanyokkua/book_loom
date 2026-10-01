@@ -65,6 +65,32 @@ public final class QualityLoop {
         return Result.ok(new ChunkDecider(outcomes, initialQa, judgeOutcome.verdict(), healer));
     }
 
+    /**
+     * Starts the chunk's quality loop after its judge call kept failing and the run gave up on it: every judged pair
+     * is decided as if the judge were unavailable — by the quality checks alone, and flagged.
+     *
+     * @param outcomes the chunk's draft outcomes, in document order
+     * @param settings the chunk's review mode, dial, call frame, name policy and glossary terms
+     * @param gate the placeholder-gate function every self-heal round's candidate goes through
+     * @param calls the seam every model call of this loop is sent through
+     * @param reason the error the chunk's judge call last answered
+     * @return a decider over the chunk, with no judge call made
+     */
+    public ChunkDecider startWithoutJudge(
+            final List<DraftOutcome> outcomes,
+            final LoopSettings settings,
+            final GateFunction gate,
+            final ModelCalls calls,
+            final AppError reason) {
+        Objects.requireNonNull(outcomes, "outcomes");
+        Objects.requireNonNull(settings, "settings");
+        Objects.requireNonNull(reason, "reason");
+        log.warn("Deciding a chunk without its judge chunkSize={} code={}", outcomes.size(), reason.code());
+        final SegmentHealer healer = new SegmentHealer(
+                judgeCall, directedFix, reflectImprove, polish, settings, Objects.requireNonNull(gate, "gate"), calls);
+        return new ChunkDecider(outcomes, evaluateDrafts(outcomes, settings), JudgeVerdict.unavailable(reason), healer);
+    }
+
     private Map<Integer, QaResult> evaluateDrafts(final List<DraftOutcome> outcomes, final LoopSettings settings) {
         final Map<Integer, QaResult> results = new LinkedHashMap<>();
         for (int index = 0; index < outcomes.size(); index++) {

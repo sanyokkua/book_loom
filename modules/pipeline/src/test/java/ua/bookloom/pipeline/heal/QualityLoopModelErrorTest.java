@@ -67,16 +67,16 @@ class QualityLoopModelErrorTest {
         assertThat(decider.hasNext()).isFalse();
     }
 
-    // I3: a re-judge answering unreachable ends the step.
+    // I3: a re-judge answering an error other than timeout/unreachable (which degrade the judge) ends the step.
     @Test
-    void nextDecision_rejudgeAnswersUnreachable_endsTheStepWithThatError() {
+    void nextDecision_rejudgeAnswersAuth_endsTheStepWithThatError() {
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, GOOD_TARGET, null);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"score\":0.60,\"verdict\":\"revise\",\"findings\":[],\"deferrals\":[]}"))
                 .answer(readable("{\"issues\":[]}"))
                 .answer(readable(targetReply(GOOD_TARGET)))
-                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")));
+                .answer(Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
                 new DialParameters(2, 1, true, false, false, 4),
@@ -90,7 +90,7 @@ class QualityLoopModelErrorTest {
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
         assertThat(decision.isErr()).isTrue();
-        assertThat(Objects.requireNonNull(decision.error()).code()).isEqualTo(ErrorCode.unreachable);
+        assertThat(Objects.requireNonNull(decision.error()).code()).isEqualTo(ErrorCode.auth);
     }
 
     // I3: a gate failure that is not `validation` ends the step rather than wasting the round.

@@ -161,9 +161,9 @@ class TranslationJobReviewPauseTest {
     // next chunk and the paused chunk's last segment is decided from the draft it already had.
     @Test
     void run_assistedBalancedFlagged_pausesAfterTheJudgeAndFeedsTheEditToTheNextChunk() {
-        final ScriptedChatModel model = replies(T0, T1, ECHO2, T3, ECHO2, ECHO2, T4)
-                .answerTo(JUDGE, judged())
-                .answerTo(JUDGE, judged());
+        // The fix returns the echo unchanged, so its segment is flagged after one round.
+        final ScriptedChatModel model =
+                replies(T0, T1, ECHO2, T3, ECHO2, T4).answerTo(JUDGE, judged()).answerTo(JUDGE, judged());
         final TestProject project = project(fiveParagraphs(), brief("en", "uk", QualityDial.BALANCED));
         final TranslationJobImpl translation = job(project, model, ReviewMode.ASSISTED);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -179,12 +179,12 @@ class TranslationJobReviewPauseTest {
         assertThat(pause)
                 .extracting(Paused::reason, Paused::segmentId)
                 .containsExactly(PauseReason.ON_FLAGGED, "Book.md:2");
-        assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, JUDGE, FIX, FIX);
+        assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, JUDGE, FIX);
         assertThat(storedAtPause)
                 .containsExactly(
                         SegmentStatus.ACCEPTED, SegmentStatus.ACCEPTED, SegmentStatus.FLAGGED, SegmentStatus.PENDING);
-        assertThat(formats(model)).hasSize(9).endsWith(DRAFT, JUDGE);
-        assertThat(userMessage(model.requests().get(7))).contains(shown(S4), preceding(EDIT, T3));
+        assertThat(formats(model)).hasSize(8).endsWith(DRAFT, JUDGE);
+        assertThat(userMessage(model.requests().get(6))).contains(shown(S4), preceding(EDIT, T3));
         assertThat(stored(project, "Book.md:3"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, T3);

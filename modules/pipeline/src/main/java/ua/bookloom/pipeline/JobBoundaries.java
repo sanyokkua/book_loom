@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -35,25 +36,41 @@ final class JobBoundaries implements RunBoundaries {
     private final Consumer<JobEvent> emit;
     private final SegmentRepository segments;
     private final String projectId;
+    private final AtomicBoolean skipRequested;
 
+    /**
+     * Creates the boundaries of one run.
+     *
+     * @param skipRequested set by the job's skip action while paused, cleared as each pause begins and taken once
+     */
     JobBoundaries(
             final JobControl control,
             final PendingCommit pending,
             final RunRecorder recorder,
             final Consumer<JobEvent> emit,
             final SegmentRepository segments,
-            final String projectId) {
+            final String projectId,
+            final AtomicBoolean skipRequested) {
         this.control = Objects.requireNonNull(control, "control");
         this.pending = Objects.requireNonNull(pending, "pending");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
         this.emit = Objects.requireNonNull(emit, "emit");
         this.segments = Objects.requireNonNull(segments, "segments");
         this.projectId = Objects.requireNonNull(projectId, "projectId");
+        this.skipRequested = Objects.requireNonNull(skipRequested, "skipRequested");
+    }
+
+    @Override
+    public boolean takeSkipRequest() {
+        final boolean taken = skipRequested.getAndSet(false);
+        log.debug("Took the skip request taken={}", taken);
+        return taken;
     }
 
     @Override
     public Optional<RunEnd> afterDecision(final Decision decision, final JobProgress progress) {
         Objects.requireNonNull(decision, "decision");
+        forgetSkip();
         final BoundaryDecision answer =
                 control.boundary(decision.flagged(), decision.endsSection(), decision.endsRun());
         final PauseReason reason = answer.pauseReason();
@@ -66,12 +83,14 @@ final class JobBoundaries implements RunBoundaries {
 
     @Override
     public Optional<RunEnd> afterAbortedCall(final JobProgress progress) {
+        forgetSkip();
         return honor(control.abortedCallBoundary(), progress);
     }
 
     @Override
     public Optional<RunEnd> afterRoutedError(final AppError error, final JobProgress progress) {
         Objects.requireNonNull(error, "error");
+        forgetSkip();
         final BoundaryDecision decision = control.failureBoundary(error);
         if (decision.cancelled()) {
             return Optional.of(new RunEnd(JobState.CANCELLED, null));
@@ -83,6 +102,11 @@ final class JobBoundaries implements RunBoundaries {
         }
         JobPauseLogger.recoveryPause(error, reason, progress);
         return pause(reason, error, null, progress);
+    }
+
+    // Cleared before a boundary can pause, so only a skip asked during the pause that follows may skip anything.
+    private void forgetSkip() {
+        skipRequested.set(false);
     }
 
     private Optional<RunEnd> honor(final BoundaryDecision decision, final JobProgress progress) {

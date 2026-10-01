@@ -21,6 +21,13 @@ public interface TranslationJob {
     /** Resumes a paused job. */
     void resume();
 
+    /**
+     * Resumes a job paused on a provider error without sending the failing call again: the segment it was for is
+     * flagged with that error and the run goes on with the next one. Ignored unless the job is paused; after a pause
+     * that names no failing segment it resumes like {@link #resume()}.
+     */
+    void skipSegment();
+
     /** Requests cancellation at the next safe point. */
     void cancel();
 

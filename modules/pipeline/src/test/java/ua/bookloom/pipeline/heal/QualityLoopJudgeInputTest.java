@@ -114,12 +114,12 @@ class QualityLoopJudgeInputTest {
     }
 
     @Test
-    void start_judgeAnswersUnreachable_endsTheStepWithThatErrorAndNoDecider() {
+    void start_judgeAnswersAuth_endsTheStepWithThatErrorAndNoDecider() {
         final Segment segment = QualityLoopFixtures.markdownSegment(tempDir.resolve("u.md"), "She left quickly.");
         final List<DraftOutcome> outcomes =
                 List.of(QualityLoopFixtures.drafted(segment, documents, "Вона швидко пішла."));
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")));
+                .answer(Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")));
 
         final Result<ChunkDecider> started = loop.start(
                 outcomes,
@@ -128,7 +128,7 @@ class QualityLoopJudgeInputTest {
                 calls(model));
 
         assertThat(started.isErr()).isTrue();
-        assertThat(Objects.requireNonNull(started.error()).code()).isEqualTo(ErrorCode.unreachable);
+        assertThat(Objects.requireNonNull(started.error()).code()).isEqualTo(ErrorCode.auth);
     }
 
     @Test

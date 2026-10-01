@@ -46,7 +46,8 @@ public final class JudgeCall {
      * @param glossaryTerms the glossary terms occurring in the chunk, or empty when none apply
      * @param calls the seam the call is sent through
      * @return the chunk's verdict — {@link Result#ok} even for an unreadable reply or a call answered
-     *     {@link ErrorCode#emptyCompletion}/{@link ErrorCode#contextWindow}; {@link Result#err} for any other call
+     *     {@link ErrorCode#emptyCompletion}/{@link ErrorCode#contextWindow}, and an unavailable verdict for a call
+     *     answered {@link ErrorCode#timeout}/{@link ErrorCode#unreachable}; {@link Result#err} for any other call
      *     failure
      */
     public Result<JudgeVerdict> judge(
@@ -102,6 +103,15 @@ public final class JudgeCall {
         if (error.code() == ErrorCode.emptyCompletion || error.code() == ErrorCode.contextWindow) {
             log.warn("Unreadable judge reply segmentIds={} code={}", segmentIds, error.code());
             return Result.ok(JudgeVerdict.unreadable());
+        }
+        // The provider already retried the call; pausing the run on it again would only wait for the same stall.
+        if (error.code() == ErrorCode.timeout || error.code() == ErrorCode.unreachable) {
+            log.warn(
+                    "Judge unavailable; its segments are decided by the quality checks alone and flagged"
+                            + " segmentIds={} code={}",
+                    segmentIds,
+                    error.code());
+            return Result.ok(JudgeVerdict.unavailable(error));
         }
         log.debug("Judge call failed segmentIds={} code={}", segmentIds, error.code());
         return Result.err(error);

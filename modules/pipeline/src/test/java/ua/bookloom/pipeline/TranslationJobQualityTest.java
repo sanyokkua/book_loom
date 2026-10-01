@@ -148,10 +148,11 @@ class TranslationJobQualityTest {
 
         report(translation.run());
 
-        assertThat(model.formats()).containsExactly(DRAFT, JUDGE, FIX, FIX);
+        // The pseudo model's fix returns the echo unchanged, so the second round is not tried.
+        assertThat(model.formats()).containsExactly(DRAFT, JUDGE, FIX);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::repairRounds)
-                .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO, 2);
+                .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO, 1);
     }
 
     @Test

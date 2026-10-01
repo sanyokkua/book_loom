@@ -54,4 +54,12 @@ public interface RunBoundaries {
      * @return empty to make the call again, or how the run ends
      */
     Optional<RunEnd> afterRoutedError(AppError error, JobProgress progress);
+
+    /**
+     * Takes the person's request, made while the run was paused on a provider error, to flag the failing segment and go
+     * on instead of sending its call again. Asked only after such a pause ended in a resume.
+     *
+     * @return {@code true} once for each skip asked during the pause just ended
+     */
+    boolean takeSkipRequest();
 }

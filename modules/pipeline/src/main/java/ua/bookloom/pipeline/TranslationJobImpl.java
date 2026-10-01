@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.MDC;
@@ -71,6 +72,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final Clock clock;
     private final JobControl control;
     private final JobSubscribers subscribers = new JobSubscribers();
+    private final AtomicBoolean skipRequested = new AtomicBoolean();
     private final String jobId = UUID.randomUUID().toString();
     private final RunRecorder recorder;
     // Used from the job thread only.
@@ -133,6 +135,16 @@ final class TranslationJobImpl implements TranslationJob {
     public void resume() {
         log.debug("Resume requested for translation job project={}", request.projectId());
         control.resume();
+    }
+
+    @Override
+    public void skipSegment() {
+        final boolean paused = control.state() == JobState.PAUSED;
+        log.info("Skip requested for translation job project={} paused={}", request.projectId(), paused);
+        if (paused) {
+            skipRequested.set(true);
+            control.resume();
+        }
     }
 
     @Override
@@ -235,7 +247,8 @@ final class TranslationJobImpl implements TranslationJob {
     }
 
     private JobBoundaries boundaries() {
-        return new JobBoundaries(control, pending, recorder, this::emit, stores.segments(), request.projectId());
+        return new JobBoundaries(
+                control, pending, recorder, this::emit, stores.segments(), request.projectId(), skipRequested);
     }
 
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {

@@ -298,10 +298,13 @@ Pause, stop and resume:
   drafts already made in the chunk are kept, not redrafted. Glossary edits made during the pause apply from the next
   chunk, which re-reads the glossary.
 - A model call interrupted by a pause — a draft, a repair or the judge — is redone on resume. For a segment in its
-  self-heal rounds this means the segment's rounds **restart from round 1**: `heal.ChunkDecider.nextDecision` re-runs
-  that segment's decision with the chunk's judge verdict kept, so the rounds already made are sent again (owner
-  decision, 2026-09-29; it costs at most a few calls per interrupted segment and keeps `SegmentHealer` stateless).
-  The same holds when a self-heal call answers an error that pauses the run (D3).
+  self-heal rounds the rounds already answered are kept in memory (`heal.Resumption`, held by `SegmentHealer` per
+  segment), so the resume continues at the call that failed — the round's repair call, or only its re-judge when the
+  repair had answered. This replaces the earlier "restart from round 1" (owner decision of 2026-09-29), which on the
+  Bartimaeus hand test paid for the same directed fix after every resume (tasks 15b). The same holds when a self-heal
+  call answers an error that pauses the run (D3). A step that pauses the run twice is flagged on its third failure
+  (`run.RoutedCalls.PAUSES_BEFORE_FLAGGING`), and a paused run can skip the failing step
+  (`TranslationJob.skipSegment`), so no step can hold a run in a pause loop.
 - A stop commits the decided prefix and drops the undecided drafts; those segments stay PENDING and the next run drafts
   them again from `firstPending`.
 - Consequences the specs state: with the judge on (Balanced, Max), a review pause on `s2` of a four-segment chunk comes

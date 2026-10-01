@@ -82,7 +82,8 @@ planned and applied in a session that remembers nothing about the others. These 
     name works everywhere (`design.md` D11).
   - **D-11** — one translation per app run: importing while a run can continue asks first (`design.md` D15).
   - **D-12** — a pause or model error inside a segment's repair rounds redoes that segment's rounds from round 1; the
-    chunk's judge verdict is kept (`design.md` D4a).
+    chunk's judge verdict is kept (`design.md` D4a). Superseded by group 15b, step 1: the rounds already answered are
+    kept and the resume continues at the call that failed.
 
   The visual reference is `docs/specification/mockups/ui-mockup.html`; the crossed-out parts of
   `.temporary_context/screens_of_mockup/Mockup/*.png` (the "Design reference" group and the "Preview state" /
@@ -1166,6 +1167,26 @@ planned and applied in a session that remembers nothing about the others. These 
 - [x] C. Hover explanations on every control; clearer Names & style instructions (24e6bfa)
 - [x] D. Export screen clarity: the consistency note and tip worded truthfully, the consistency result and the written side files shown on the screen and in the complete dialog, a missing model no longer fails the export, a finished result forgotten when its choices change, and the just-exported file named in the refusal (d5dfaf0)
 - [ ] E. Responsiveness: smaller minimum widths for the Structure and Export side columns (optional)
+
+## 15b. Real-book hardening — after the hand test
+
+The Bartimaeus run (≈3,700 segments, Ollama `gemma4:26b-mlx`) stalled on a re-judge that hung for the full timeout seven
+times, paused, and on every resume paid the same rounds again. Each step is its own commit, tests first.
+
+- [x] 1. Stop the stall: the judge call capped by its pairs and its schema bounded; per-kind timeouts (judge 90 s,
+  prescan and summary 120 s); a timed-out call retried once with a seed and a lower cap, never three identical
+  resends; the Ollama reply read as a stream with a 60 s idle gap; a judge that times out or cannot be reached flags its
+  segments (`judge-unavailable`) instead of pausing; a step that pauses twice is flagged and the run goes on, and a
+  paused run can skip the failing segment (`TranslationJob.skipSegment`); rounds that make no progress stop early; a
+  resume continues at the call that failed (COMMIT_ID)
+- [ ] 2. Make the run observable: per-attempt model-call events, the waiting and provider-error banners with the
+  segment, call kind and attempt, a connection chip, a richer activity log, the round tracker, the context panel, and
+  the Skip segment button on the paused banner
+- [ ] 3. Segments: one shared blank test, verbatim segments with no model call, short words with neighbours,
+  de-duplicated auxiliary text
+- [ ] 4. Glossary: one key normaliser, a better frequency scan, the "Review with model" pass, sorting and search
+- [ ] 5. Scrolling smoothness: smooth wheel scrolling, cheaper glossary cells, fixed cell sizes
+- [ ] 6. UI polish from the hand-test screenshots
 
 ## 16. The gate — after every group above
 

@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.SegmentPath;
@@ -76,6 +77,30 @@ public final class ChunkDecider {
             index++;
         }
         return decision;
+    }
+
+    /**
+     * Flags the current segment because the run gave up on its calls, and moves past it: the segment keeps the latest
+     * target that passed every hard gate, and its record names {@code reason}.
+     *
+     * @param reason the error the segment's last attempt answered; never null
+     * @return the flagged decision
+     * @throws NoSuchElementException when {@link #hasNext()} is {@code false}
+     */
+    public SegmentOutcome flagCurrent(final AppError reason) {
+        Objects.requireNonNull(reason, "reason");
+        if (!hasNext()) {
+            throw new NoSuchElementException("every segment of this chunk is already decided");
+        }
+        final SegmentOutcome flagged =
+                switch (outcomes.get(index)) {
+                    case DraftOutcome.FlaggedAtOnce flaggedAtOnce -> flaggedOutcome(flaggedAtOnce);
+                    case DraftOutcome.Reused reused -> reusedOutcome(reused);
+                    case DraftOutcome.Drafted drafted ->
+                        healer.giveUp(drafted, Objects.requireNonNull(initialQa.get(index)), chunkVerdict, reason);
+                };
+        index++;
+        return flagged;
     }
 
     /**

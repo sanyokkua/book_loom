@@ -151,6 +151,11 @@ public final class RecordingJob implements TranslationJob {
     }
 
     @Override
+    public void skipSegment() {
+        calls.add("skipSegment");
+    }
+
+    @Override
     public void cancel() {
         calls.add("cancel");
         onControl.run();
