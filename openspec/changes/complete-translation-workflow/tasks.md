@@ -1236,7 +1236,7 @@ check leaves evidence.
   minute and at the end; a redaction guard over both provider clients at TRACE; About says whether the detailed log is
   on and that it holds book text and stays local, names the folder, and offers Open log folder, Copy log path and Save
   diagnostic bundle… (ZIP of the trace files + `session.json`, off the FX thread). Not done: the Settings switch (nothing
-  is persisted yet) and the Appearance-tab copy of the folder actions
+  is persisted yet) and the Appearance-tab copy of the folder actions (78d8c43)
 - [ ] 7. Placeholders, export, review: reproduce the drop-cap `reopened=0`, a deterministic placeholder repair, a
   specific repair note, drop caps masked atomically, the retry order for gate failures, the best rejected reply kept on
   a flagged segment, export no longer all-or-nothing (source fallbacks listed), the review panel read-only with an
