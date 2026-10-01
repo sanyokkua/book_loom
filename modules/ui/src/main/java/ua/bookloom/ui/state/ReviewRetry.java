@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -22,7 +23,8 @@ import ua.bookloom.ui.i18n.Messages;
  *
  * <p>The model is built with the provider settings' selection, read on the FX thread, and created off it, because
  * creating one can load it. The hold is published before the call is queued and withdrawn when the call returns,
- * whatever it returns.
+ * whatever it returns. A retry is refused in place while other model work runs (a glossary scan, an export, a provider
+ * inference test), and is registered with the {@link ActivityTracker} while it runs.
  */
 @Slf4j
 public final class ReviewRetry {
@@ -32,6 +34,7 @@ public final class ReviewRetry {
     private final StateMirror mirror;
     private final SettingsViewModel settings;
     private final Messages messages;
+    private final ActivityTracker activities;
 
     /**
      * Creates the helper.
@@ -41,6 +44,7 @@ public final class ReviewRetry {
      * @param mirror the run's state, whose review section carries the hold
      * @param settings the provider settings that say which model a retry uses
      * @param messages the catalogue the in-place message is worded from
+     * @param activities the model work under way, which a retry must not overlap
      */
     @Inject
     public ReviewRetry(
@@ -48,12 +52,14 @@ public final class ReviewRetry {
             final ChatModelFactory models,
             final StateMirror mirror,
             final SettingsViewModel settings,
-            final Messages messages) {
+            final Messages messages,
+            final ActivityTracker activities) {
         this.desk = Objects.requireNonNull(desk, "desk");
         this.models = Objects.requireNonNull(models, "models");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.activities = Objects.requireNonNull(activities, "activities");
     }
 
     /**
@@ -78,6 +84,13 @@ public final class ReviewRetry {
             inPlace.accept(messages.get(MessageKey.REVIEW_RETRY_NO_MODEL));
             return null;
         }
+        final Optional<ActivityKind> conflict = activities.conflictFor(ActivityKind.REVIEW_RETRY);
+        if (conflict.isPresent()) {
+            log.debug("retry of segment {} refused: {} is running", segmentId, conflict.get());
+            inPlace.accept(messages.get(
+                    MessageKey.ACTIVITY_BLOCKED, messages.get(conflict.get().label())));
+            return null;
+        }
         log.info(
                 "retrying segment {} with lower temperature {}, note given {}",
                 segmentId,
@@ -85,7 +98,14 @@ public final class ReviewRetry {
                 note != null);
         log.trace("retry note of segment {}: {}", segmentId, note);
         mirror.review().publishRetryInFlight(true);
-        return (projectId, id) -> call(projectId, id, chosen.get(), note, lowerTemperature);
+        final ActivityTracker.Handle handle = activities.begin(ActivityKind.REVIEW_RETRY, null);
+        return (projectId, id) -> {
+            try {
+                return call(projectId, id, chosen.get(), note, lowerTemperature);
+            } finally {
+                Platform.runLater(handle::end);
+            }
+        };
     }
 
     private Result<SegmentRecord> call(

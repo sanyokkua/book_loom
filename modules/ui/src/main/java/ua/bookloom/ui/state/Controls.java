@@ -64,12 +64,13 @@ public record Controls(ControlState start, ControlState pause, ControlState resu
     }
 
     /**
-     * The same table while a segment retry is in flight: whatever would begin or continue a run, start and resume,
-     * is unavailable, so the run and the retry never race for the model. A control that is not offered stays hidden.
+     * The same table while other model work runs (a segment retry, a glossary scan, an export, a provider inference
+     * test): whatever would begin or continue a run, start and resume, is unavailable, so the run and that work never
+     * race for the model. A control that is not offered stays hidden.
      *
      * @return the held controls; never null
      */
-    public Controls heldForRetry() {
+    public Controls heldByOtherWork() {
         return new Controls(held(start), pause, held(resume), stop);
     }
 

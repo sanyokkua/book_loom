@@ -38,6 +38,7 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
     BookBriefViewModel brief;
     ExportViewModel exports;
     StateMirror mirror;
+    ActivityTracker activities;
     ScriptedReviewDesk desk;
     Messages messages;
     ScriptedExportService exportService;
@@ -58,6 +59,7 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
         mirror = onFx(StateMirror::new);
+        activities = onFx(() -> new ActivityTracker(mirror));
         desk = new ScriptedReviewDesk();
         messages = new Messages((LocaleProvider) () -> Locale.ENGLISH);
         exportService = new ScriptedExportService();
@@ -69,10 +71,12 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
                         ScriptedModelCatalog.idle(),
                         new RecordingToasts(),
                         new RecordingErrorPresenter(),
-                        new DirectExecutor()),
+                        new DirectExecutor(),
+                        activities),
                 new RecordingToasts(),
                 new RecordingErrorPresenter(),
-                new DirectExecutor()));
+                new DirectExecutor(),
+                activities));
         progress = onFx(() -> new WorkflowProgress(current, mirror));
         exports = onFx(() -> newExports(new DirectExecutor()));
         WaitForAsyncUtils.waitForFxEvents();
@@ -81,7 +85,7 @@ abstract class ExportViewModelTestBase extends ApplicationTest {
     /** Builds an export view model over this test's collaborators and the given executor. */
     ExportViewModel newExports(final ExecutorService executor) {
         return new ExportViewModel(
-                current, mirror, desk, messages, exportService, models, settings, progress, executor);
+                current, desk, messages, exportService, models, settings, progress, executor, activities);
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */

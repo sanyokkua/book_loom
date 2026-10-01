@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BooleanSupplier;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyIntegerProperty;
@@ -17,9 +19,7 @@ import javafx.beans.value.ChangeListener;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.ModelSelection;
-import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
@@ -62,6 +62,7 @@ public final class TranslatingViewModel {
     private final PendingCount pending;
     private final ReadOnlyObjectWrapper<Controls> controls = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable RunNotice> notice = new ReadOnlyObjectWrapper<>();
+    private final ObjectBinding<@Nullable ActivityKind> otherWork;
     private final ChangeListener<RunState> onRunState = (observed, was, now) -> onRunStateChanged(now);
     private final ChangeListener<String> onModelText = (observed, was, now) -> onModelTextChanged();
     private final ChangeListener<@Nullable OpenedBook> onOpenedBook = (observed, was, now) -> onBookChanged(now);
@@ -80,6 +81,7 @@ public final class TranslatingViewModel {
      * @param errors where a failure whose code is assigned the blocking dialog is shown
      * @param desk where the count of undecided segments is read
      * @param executor the daemon executor that read runs on, never the FX thread
+     * @param activities the model work under way, which holds start and resume while it runs
      */
     @Inject
     public TranslatingViewModel(
@@ -91,7 +93,8 @@ public final class TranslatingViewModel {
             final Toasts toasts,
             final ErrorPresenter errors,
             final ReviewDesk desk,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final ActivityTracker activities) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.runner = Objects.requireNonNull(runner, "runner");
         this.current = Objects.requireNonNull(current, "current");
@@ -100,10 +103,15 @@ public final class TranslatingViewModel {
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.pending = new PendingCount(desk, executor);
+        // The run's own registration is not other work: while it translates, start and resume are not offered anyway.
+        final ObjectBinding<@Nullable ActivityKind> blocker = activities.blocker(ActivityKind.TRANSLATION);
+        this.otherWork = Bindings.createObjectBinding(
+                () -> blocker.get() == ActivityKind.TRANSLATION ? null : blocker.get(), blocker);
         refreshControls();
         preparing.addListener((observed, was, now) -> refreshControls());
         pending.remains().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener((observed, was, now) -> refreshControls());
+        otherWork.addListener((observed, was, now) -> refreshControls());
         mirror.review().retryInFlight().addListener((observed, was, now) -> refreshControls());
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
@@ -120,6 +128,15 @@ public final class TranslatingViewModel {
      */
     public ReadOnlyObjectProperty<Controls> controls() {
         return controls.getReadOnlyProperty();
+    }
+
+    /**
+     * The other model work that holds start and resume while it runs.
+     *
+     * @return a binding holding {@code null} while nothing but the run itself is under way; FX thread only
+     */
+    public ObjectBinding<@Nullable ActivityKind> otherWork() {
+        return otherWork;
     }
 
     /**
@@ -330,12 +347,15 @@ public final class TranslatingViewModel {
         final RunState state = mirror.runState().get();
         final Controls table =
                 Controls.of(state, preparing.get(), pending.remains().get());
-        final Controls next = mirror.review().retryInFlight().get() ? table.heldForRetry() : table;
+        final boolean held =
+                otherWork.get() != null || mirror.review().retryInFlight().get();
+        final Controls next = held ? table.heldByOtherWork() : table;
         log.debug(
-                "controls for state {} preparing {} pending remain {}: {}",
+                "controls for state {} preparing {} pending remain {} other work {}: {}",
                 state,
                 preparing.get(),
                 pending.remains().get(),
+                otherWork.get(),
                 next);
         controls.set(next);
     }
@@ -353,39 +373,14 @@ public final class TranslatingViewModel {
         }
         switch (now) {
             case RUNNING -> notice.set(null);
-            case FAILED -> routeRunFailure();
-            case COMPLETED -> announceCompletion();
+            case FAILED -> {
+                final RunNotice.Refused refused = RunEnding.routeFailure(mirror, errors);
+                if (refused != null) {
+                    notice.set(refused);
+                }
+            }
+            case COMPLETED -> RunEnding.announce(mirror, toasts);
             default -> log.debug("run state is now {}; nothing to route or announce", now);
-        }
-    }
-
-    // A run's own outcome is routed by its state: a refused start (validation) is shown in place, any other failure
-    // opens the blocking dialog. A cancellation never gets here, because it ends the run stopped.
-    private void routeRunFailure() {
-        final AppError failure = mirror.failure().get();
-        if (failure == null) {
-            log.warn("the run failed but no failure was published to route");
-            return;
-        }
-        if (failure.code() == ErrorCode.validation) {
-            log.debug("the run was refused with {}: shown in place", failure.code());
-            notice.set(new RunNotice.Refused(failure));
-        } else {
-            log.debug("the run failed with {}: opening the error dialog", failure.code());
-            errors.presentRunFailure(failure);
-        }
-    }
-
-    private void announceCompletion() {
-        final JobReport report = mirror.report().get();
-        final int accepted =
-                report != null ? report.accepted() : mirror.accepted().get();
-        final int flagged = report != null ? report.flagged() : mirror.flagged().get();
-        log.debug("run completed: {} accepted, {} flagged", accepted, flagged);
-        if (flagged > 0) {
-            toasts.warning(MessageKey.TOAST_RUN_FINISHED_FLAGGED, accepted, flagged);
-        } else {
-            toasts.success(MessageKey.TOAST_RUN_FINISHED, accepted);
         }
     }
 }

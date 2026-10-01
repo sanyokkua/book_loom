@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+import ua.bookloom.ui.control.ActivityChip;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.control.ScrollAnchor;
 import ua.bookloom.ui.control.SmoothScroll;
@@ -76,6 +77,7 @@ public final class AppShellView {
     private final ModalHost modalHost;
     private final ToastStack toasts;
     private final RunStatusBar runStatus;
+    private final ActivityChip activityChip;
     private final DiagnosticActions diagnostics;
     private final NavColumn navColumn;
     private final Label breadcrumb = new Label();
@@ -94,6 +96,7 @@ public final class AppShellView {
      * @param modalHost the overlay the About dialog is shown in; shared so other dialogs use the same one
      * @param toasts the transient-message surface whose host the shell places above everything else
      * @param runStatus the run's status and control, placed between the product name and the theme control
+     * @param activityChip the other model work under way, with its Stop, placed before the run's status
      * @param progress the completed steps the navigation marks
      * @param settings the chosen provider and model the navigation footer names
      * @param diagnostics the log settings and actions the About dialog offers
@@ -107,6 +110,7 @@ public final class AppShellView {
             final ModalHost modalHost,
             final ToastStack toasts,
             final RunStatusBar runStatus,
+            final ActivityChip activityChip,
             final WorkflowProgress progress,
             final SettingsViewModel settings,
             final DiagnosticActions diagnostics,
@@ -117,6 +121,7 @@ public final class AppShellView {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.runStatus = Objects.requireNonNull(runStatus, "runStatus");
+        this.activityChip = Objects.requireNonNull(activityChip, "activityChip");
         this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
         this.version = Objects.requireNonNull(version, "version");
         this.navColumn = new NavColumn(messages, this::activate, progress, settings);
@@ -211,7 +216,7 @@ public final class AppShellView {
         Tips.install(messages, about, MessageKey.SHELL_ABOUT_TIP);
         about.getStyleClass().add("shell-title-button");
         about.setOnAction(event -> openAbout());
-        final HBox bar = new HBox(product, spacer, runStatus.view(), themeToggle, about);
+        final HBox bar = new HBox(product, spacer, activityChip.view(), runStatus.view(), themeToggle, about);
         bar.setId("shell-title-bar");
         bar.getStyleClass().add("shell-title-bar");
         bar.setAlignment(Pos.CENTER_LEFT);

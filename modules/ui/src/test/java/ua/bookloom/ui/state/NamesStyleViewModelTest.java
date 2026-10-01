@@ -50,7 +50,13 @@ class NamesStyleViewModelTest extends ApplicationTest {
         final Messages messages = injector.getInstance(Messages.class);
         final AtomicInteger next = new AtomicInteger();
         vm = onFx(() -> new NamesStyleViewModel(
-                glossary, models, settings, new DirectExecutor(), messages, () -> "new-" + next.incrementAndGet()));
+                glossary,
+                models,
+                settings,
+                new DirectExecutor(),
+                messages,
+                injector.getInstance(ActivityTracker.class),
+                () -> "new-" + next.incrementAndGet()));
     }
 
     private static GlossaryEntry hale() {

@@ -71,4 +71,20 @@ final class ExportRefusals {
         }
         return new Verdict(messages.get(MessageKey.EXPORT_REFUSAL_OCCUPIED, occupied.toString()), "");
     }
+
+    /**
+     * Words what an export waits for: a translating run asks for a pause, any other model work only for patience.
+     *
+     * @param messages the catalogue the text comes from
+     * @param blocker the running work that rules out an export, or null when none does
+     * @return the note, empty when nothing is waited for; the export's own work is not a wait
+     */
+    static String waitNote(final Messages messages, final @Nullable ActivityKind blocker) {
+        if (blocker == null || blocker == ActivityKind.EXPORT) {
+            return "";
+        }
+        return blocker == ActivityKind.TRANSLATION
+                ? messages.get(MessageKey.EXPORT_NOTE_PAUSE)
+                : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
+    }
 }

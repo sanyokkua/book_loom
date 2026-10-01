@@ -70,10 +70,10 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
-        settings = onFx(TranslatingViewModelTestBase::newSettings);
+        settings = onFx(() -> newSettings(activities));
     }
 
-    private static SettingsViewModel newSettings() {
+    private static SettingsViewModel newSettings(final ActivityTracker activities) {
         return new SettingsViewModel(
                 new FakeProviderConfigs(),
                 ScriptedProviderVerifier.idle(),
@@ -81,10 +81,12 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                         ScriptedModelCatalog.idle(),
                         new RecordingToasts(),
                         new RecordingErrorPresenter(),
-                        new DirectExecutor()),
+                        new DirectExecutor(),
+                        activities),
                 new RecordingToasts(),
                 new RecordingErrorPresenter(),
-                new DirectExecutor());
+                new DirectExecutor(),
+                activities);
     }
 
     /** Builds the view model over the fakes as they are now; call once, after scripting. */
@@ -98,7 +100,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
                 prepExecutor);
         viewModel = onFx(() -> new TranslatingViewModel(
-                mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor()));
+                mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor(), activities));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

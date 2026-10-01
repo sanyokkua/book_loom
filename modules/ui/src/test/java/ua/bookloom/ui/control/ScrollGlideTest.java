@@ -75,10 +75,11 @@ class ScrollGlideTest {
         assertThat(ScrollGlide.retarget(pending, added, limit)).isEqualTo(expected);
     }
 
-    // IF a frame could step past the target, THEN the view would overshoot and come back; a frame covers part of what
-    // is left (an exponential follow), and the last half pixel all at once.
+    // IF a frame could step past the target, THEN the view would overshoot and come back; IF steps were fractional,
+    // THEN they would add up to a hair less than the jump. A frame covers a whole-pixel share of what is left (an
+    // exponential follow), at least one pixel, and the last pixel or less all at once.
     @ParameterizedTest
-    @CsvSource({"100,0.06,63.212055882855765", "-100,0.06,-63.212055882855765", "0.4,0.016,0.4", "-0.3,0.016,-0.3"})
+    @CsvSource({"100,0.06,63", "-100,0.06,-63", "5,0.001,1", "-5,0.001,-1", "0.4,0.016,0.4", "-1,0.016,-1"})
     void followStep_remainingAndFrameTime_coversAShareAndLandsOnTheTarget(
             final double remaining, final double seconds, final double expected) {
         assertThat(ScrollGlide.followStep(remaining, seconds)).isCloseTo(expected, within(EXACT));

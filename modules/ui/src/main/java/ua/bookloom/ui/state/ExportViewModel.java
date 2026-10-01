@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -29,7 +30,6 @@ import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.util.paths.DestinationPath;
 
@@ -53,13 +53,13 @@ import ua.bookloom.util.paths.DestinationPath;
 public final class ExportViewModel {
 
     private final CurrentProject project;
-    private final StateMirror mirror;
     private final Messages messages;
     private final ObservableSet<SideFile> sideFiles = FXCollections.observableSet(EnumSet.of(SideFile.GLOSSARY_CSV));
     private final ReadOnlyBooleanWrapper consistencyPass = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper refusal = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper currentNote = new ReadOnlyStringWrapper("");
     private final ReadOnlyStringWrapper runNote = new ReadOnlyStringWrapper("");
+    private final ObjectBinding<@Nullable ActivityKind> blocker;
     private final ReadOnlyBooleanWrapper exportAvailable = new ReadOnlyBooleanWrapper(false);
     private final ExportStatement statement;
     private final ExportOccupancy occupancy;
@@ -79,7 +79,6 @@ public final class ExportViewModel {
      * Follows the open book and its brief, and proposes a destination for a book that is already open.
      *
      * @param project the holder of the open book, which outlives this view model
-     * @param mirror the run's state, which decides whether a book can be written now
      * @param desk the review desk whose counts the partial-export statement states
      * @param messages the catalogue the refusals and the statement are worded from
      * @param exports the port an export is asked of
@@ -87,24 +86,26 @@ public final class ExportViewModel {
      * @param settings the provider settings, whose selection names that model
      * @param progress the workflow marks, where a written book marks the export step
      * @param executor the daemon executor the existence check and the export run on, never the FX thread
+     * @param activities the model work under way; an export waits for any that would compete with it for the model
      */
     @Inject
     public ExportViewModel(
             final CurrentProject project,
-            final StateMirror mirror,
             final ReviewDesk desk,
             final Messages messages,
             final ExportService exports,
             final ChatModelFactory models,
             final SettingsViewModel settings,
             final WorkflowProgress progress,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final ActivityTracker activities) {
         this.project = Objects.requireNonNull(project, "project");
-        this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.statement = new ExportStatement(desk, messages, executor);
         this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
-        this.run = new ExportRun(exports, models, settings, progress, executor);
+        this.run = new ExportRun(exports, models, settings, progress, executor, activities);
+        this.blocker = activities.blocker(ActivityKind.EXPORT);
+        blocker.addListener(observed -> refreshRunNote());
         run.running().addListener((observed, was, now) -> recompute());
         run.outcome().addListener((observed, was, now) -> onOutcomeChanged());
         destination.addListener((observed, was, now) -> run.forgetStale("the destination"));
@@ -113,14 +114,13 @@ public final class ExportViewModel {
         sideFiles.addListener((SetChangeListener<SideFile>) change -> run.forgetStale("the side files"));
         project.book().addListener((observed, was, now) -> onBookChanged(now));
         project.brief().addListener((observed, was, now) -> onBriefChanged(now));
-        mirror.runState().addListener((observed, was, now) -> onRunStateChanged(now));
         followDial(project.brief().get());
         log.debug(
                 "export view model created, a book is already open: {}",
                 project.book().get() != null);
         propose();
         refreshExists();
-        onRunStateChanged(mirror.runState().get());
+        refreshRunNote();
     }
 
     /**
@@ -371,11 +371,10 @@ public final class ExportViewModel {
         }
     }
 
-    private void onRunStateChanged(final RunState state) {
-        final boolean translating =
-                state == RunState.RUNNING || state == RunState.PAUSING || state == RunState.STOPPING;
-        runNote.set(translating ? messages.get(MessageKey.EXPORT_NOTE_PAUSE) : "");
-        log.debug("run state is now {}; export waits for the run: {}", state, translating);
+    private void refreshRunNote() {
+        final ActivityKind kind = blocker.get();
+        log.debug("export waits for {}", kind);
+        runNote.set(ExportRefusals.waitNote(messages, kind));
         recompute();
     }
 
@@ -390,10 +389,7 @@ public final class ExportViewModel {
                 && runNote.get().isEmpty()
                 && !run.running().get();
         if (available != exportAvailable.get()) {
-            log.debug(
-                    "export available is now {} with the run {}",
-                    available,
-                    mirror.runState().get());
+            log.debug("export available is now {} while waiting for {}", available, blocker.get());
         }
         exportAvailable.set(available);
     }

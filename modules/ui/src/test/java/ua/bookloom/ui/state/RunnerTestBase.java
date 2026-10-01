@@ -47,6 +47,7 @@ abstract class RunnerTestBase extends ApplicationTest {
     static final ModelSelection SELECTION = new ModelSelection("pseudo", "pseudo-1");
 
     protected StateMirror mirror;
+    protected ActivityTracker activities;
     protected ManualTicks ticks;
     protected ExecutorService executor;
     protected TranslationRunner runner;
@@ -65,6 +66,7 @@ abstract class RunnerTestBase extends ApplicationTest {
     @BeforeEach
     void setUpRunner() {
         mirror = new StateMirror();
+        activities = new ActivityTracker(mirror);
         ticks = new ManualTicks();
         executor = Executors.newFixedThreadPool(2, task -> {
             final Thread thread = new Thread(task, "runner-test-job");

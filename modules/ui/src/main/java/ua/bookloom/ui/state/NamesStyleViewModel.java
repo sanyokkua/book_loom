@@ -15,6 +15,7 @@ import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
@@ -65,6 +66,7 @@ public final class NamesStyleViewModel {
      * @param settings where the chosen provider and model are read
      * @param executor the daemon executor every call runs on, never the FX thread
      * @param messages the catalogue the refusals are worded from
+     * @param activities the model work under way, which the model scan and review must not overlap
      */
     @Inject
     public NamesStyleViewModel(
@@ -72,13 +74,15 @@ public final class NamesStyleViewModel {
             final ChatModelFactory models,
             final SettingsViewModel settings,
             final @BackgroundExecutor ExecutorService executor,
-            final Messages messages) {
+            final Messages messages,
+            final ActivityTracker activities) {
         this(
                 glossary,
                 models,
                 settings,
                 executor,
                 messages,
+                activities,
                 () -> UUID.randomUUID().toString());
     }
 
@@ -89,12 +93,21 @@ public final class NamesStyleViewModel {
             final SettingsViewModel settings,
             final ExecutorService executor,
             final Messages messages,
+            final ActivityTracker activities,
             final Supplier<String> ids) {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.calls = new GlossaryCalls(executor);
         this.messages = Objects.requireNonNull(messages, "messages");
         this.modelRuns = new GlossaryModelRuns(
-                new GlossaryModelRuns.Screen(glossary, models, settings, messages, rows, notice, () -> projectId),
+                new GlossaryModelRuns.Screen(
+                        glossary,
+                        models,
+                        settings,
+                        messages,
+                        rows,
+                        notice,
+                        () -> projectId,
+                        Objects.requireNonNull(activities, "activities")),
                 calls);
         this.summary = new ImportSummary(messages);
         this.ids = Objects.requireNonNull(ids, "ids");
@@ -125,6 +138,15 @@ public final class NamesStyleViewModel {
      */
     public ReadOnlyBooleanProperty busy() {
         return modelRuns.busy();
+    }
+
+    /**
+     * Why the model scan and review are not offered while other model work runs.
+     *
+     * @return a read-only property, empty while they are offered or one of them runs itself
+     */
+    public ReadOnlyStringProperty modelBlockedReason() {
+        return modelRuns.blockedReason();
     }
 
     /**

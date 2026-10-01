@@ -27,8 +27,8 @@ final class ScrollGlide {
     /** The furthest a glide runs ahead of the view, in viewports, so a long spin never sails on after the hand stops. */
     static final double AHEAD_VIEWPORTS = 3;
 
-    /** Below this distance the follower lands on the target instead of creeping towards it. */
-    static final double LANDING_PIXELS = 0.5;
+    /** Within this distance the follower lands on the target instead of creeping towards it. */
+    static final double LANDING_PIXELS = 1;
 
     /**
      * Whether a scroll event is a mouse-wheel notch rather than a trackpad, a touch screen or a gesture's momentum.
@@ -97,13 +97,21 @@ final class ScrollGlide {
     /**
      * The part of the remaining distance one frame covers: an exponential follow, which never overshoots.
      *
+     * <p>The steps are whole pixels until the last, which takes what is left, so the steps add up to exactly the
+     * distance asked for: subtracting whole numbers from it loses no bits, where fractional steps would leave the view a
+     * hair short of where JavaFX's own jump lands.
+     *
      * @param remaining the distance still to travel
      * @param seconds the time since the previous frame, positive
-     * @return a step of the same sign and at most {@code remaining}; all of it once the rest is under half a pixel
+     * @return a step of the same sign and at most {@code remaining}: a share of it rounded to whole pixels, at least one,
+     *     and all of it once at most a pixel is left
      */
     static double followStep(final double remaining, final double seconds) {
-        final double step = remaining * (1 - Math.exp(-seconds / TAU_SECONDS));
-        return Math.abs(remaining - step) < LANDING_PIXELS ? remaining : step;
+        if (Math.abs(remaining) <= LANDING_PIXELS) {
+            return remaining;
+        }
+        final double step = Math.rint(remaining * (1 - Math.exp(-seconds / TAU_SECONDS)));
+        return step == 0 ? Math.signum(remaining) : step;
     }
 
     /**

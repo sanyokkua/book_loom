@@ -44,6 +44,8 @@ final class ExportRun {
     private final SettingsViewModel settings;
     private final WorkflowProgress progress;
     private final ExecutorService executor;
+    private final ActivityTracker activities;
+    private ActivityTracker.@Nullable Handle handle;
     private final ReadOnlyBooleanWrapper running = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyObjectWrapper<@Nullable ExportOutcome> outcome = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyStringWrapper failure = new ReadOnlyStringWrapper("");
@@ -53,12 +55,14 @@ final class ExportRun {
             final ChatModelFactory models,
             final SettingsViewModel settings,
             final WorkflowProgress progress,
-            final ExecutorService executor) {
+            final ExecutorService executor,
+            final ActivityTracker activities) {
         this.service = Objects.requireNonNull(service, "service");
         this.models = Objects.requireNonNull(models, "models");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.activities = Objects.requireNonNull(activities, "activities");
     }
 
     ReadOnlyBooleanProperty running() {
@@ -89,6 +93,7 @@ final class ExportRun {
                 request.consistencyPass(),
                 selection.isPresent());
         running.set(true);
+        handle = activities.begin(ActivityKind.EXPORT, null);
         outcome.set(null);
         failure.set("");
         try {
@@ -176,6 +181,11 @@ final class ExportRun {
 
     private void finish(final @Nullable ExportOutcome done, final @Nullable AppError error) {
         running.set(false);
+        final ActivityTracker.Handle registered = handle;
+        handle = null;
+        if (registered != null) {
+            registered.end();
+        }
         if (done != null) {
             final ExportReport report = done.report();
             log.info(

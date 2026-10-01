@@ -38,6 +38,7 @@ class NamesStyleModelActionsTest extends ApplicationTest {
     private ScriptedGlossaryService glossary;
     private SettingsViewModel settings;
     private Messages messages;
+    private ActivityTracker activities;
     private final List<String> lines = new CopyOnWriteArrayList<>();
 
     @Override
@@ -51,11 +52,12 @@ class NamesStyleModelActionsTest extends ApplicationTest {
         final Injector injector = UiTestInjector.create(Locale.ENGLISH);
         settings = injector.getInstance(SettingsViewModel.class);
         messages = injector.getInstance(Messages.class);
+        activities = injector.getInstance(ActivityTracker.class);
     }
 
     private NamesStyleViewModel viewModel(final ExecutorService executor) {
         final NamesStyleViewModel vm = onFx(() -> new NamesStyleViewModel(
-                glossary, ScriptedChatModelFactory.ok(), settings, executor, messages, () -> "new"));
+                glossary, ScriptedChatModelFactory.ok(), settings, executor, messages, activities, () -> "new"));
         interact(() -> vm.notice().addListener((observed, was, now) -> {
             if (now != null) {
                 lines.add(now.text());

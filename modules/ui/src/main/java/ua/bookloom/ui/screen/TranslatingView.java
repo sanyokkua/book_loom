@@ -32,6 +32,7 @@ import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ControlState;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CurrentProject;
@@ -312,7 +313,27 @@ final class TranslatingView {
                 control(STOP, viewModel::stop, controls, messages),
                 reviewFlagged(mirror, review, panel, messages));
         row.setAlignment(Pos.CENTER_LEFT);
-        return row;
+        return new VBox(CARD_SPACING, row, heldNote(viewModel, messages));
+    }
+
+    // Says why start or resume is off while other model work (a scan, an export, a provider test, a retry) runs.
+    private static Label heldNote(final TranslatingViewModel viewModel, final Messages messages) {
+        final Label note = new Label();
+        note.setId("translating-held");
+        note.getStyleClass().add("muted");
+        note.setWrapText(true);
+        note.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> {
+                            final ActivityKind kind = viewModel.otherWork().get();
+                            return kind == null
+                                    ? ""
+                                    : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(kind.label()));
+                        },
+                        viewModel.otherWork()));
+        note.visibleProperty().bind(note.textProperty().isNotEmpty());
+        note.managedProperty().bind(note.visibleProperty());
+        return note;
     }
 
     private static Button reviewFlagged(

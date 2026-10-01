@@ -50,6 +50,8 @@ public final class SettingsViewModel {
      * @param toasts where a passed check is announced
      * @param errors where a refusal of the whole check is shown
      * @param executor the daemon executor the verifier runs on, never the FX thread
+     * @param activities the work under way, which a provider test registers with and the inference test must not
+     *     overlap
      */
     @Inject
     public SettingsViewModel(
@@ -58,7 +60,8 @@ public final class SettingsViewModel {
             final ModelListing modelListing,
             final Toasts toasts,
             final ErrorPresenter errors,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final ActivityTracker activities) {
         Objects.requireNonNull(configs, "configs");
         this.modelListing = Objects.requireNonNull(modelListing, "modelListing");
         this.tests = new ProviderTestRunner(
@@ -67,7 +70,8 @@ public final class SettingsViewModel {
                 Objects.requireNonNull(errors, "errors"),
                 Objects.requireNonNull(executor, "executor"),
                 selectedProviderId.getReadOnlyProperty(),
-                model);
+                model,
+                Objects.requireNonNull(activities, "activities"));
         this.providers = FXCollections.unmodifiableObservableList(FXCollections.observableArrayList(rowsOf(configs)));
         providers.stream().findFirst().ifPresent(first -> selectedProviderId.set(first.id()));
         log.info("settings ready: {} provider(s), selected '{}'", providers.size(), selectedProviderId.get());

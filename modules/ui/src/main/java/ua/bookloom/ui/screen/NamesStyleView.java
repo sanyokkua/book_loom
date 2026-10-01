@@ -113,7 +113,7 @@ final class NamesStyleView {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         final HBox header = new HBox(ACTION_SPACING, title, spacer, search, actions());
         header.setAlignment(Pos.CENTER_LEFT);
-        final VBox card = new VBox(CARD_SPACING, header, table);
+        final VBox card = new VBox(CARD_SPACING, header, blockedNote(), table);
         card.setId("names-style-card");
         card.getStyleClass().add("card");
         VBox.setVgrow(card, Priority.ALWAYS);
@@ -144,7 +144,20 @@ final class NamesStyleView {
         return actions;
     }
 
-    // The two model actions are not offered while one runs; Stop is shown only then.
+    // Says why the model actions are off while other model work (a run, an export, a provider test) is under way.
+    private Label blockedNote() {
+        final Label note = new Label();
+        note.setId("names-style-model-blocked");
+        note.getStyleClass().add("muted");
+        note.setWrapText(true);
+        note.setMinHeight(Region.USE_PREF_SIZE);
+        note.textProperty().bind(glossary.modelBlockedReason());
+        note.visibleProperty().bind(glossary.modelBlockedReason().isNotEmpty());
+        note.managedProperty().bind(note.visibleProperty());
+        return note;
+    }
+
+    // The two model actions are not offered while one runs or other model work does; Stop is shown only while one runs.
     private List<Button> modelActions() {
         final Button scan = action(
                 "names-style-model-scan",
@@ -161,8 +174,10 @@ final class NamesStyleView {
                 MessageKey.NAMES_STYLE_MODEL_STOP,
                 MessageKey.NAMES_STYLE_MODEL_STOP_TIP,
                 glossary::stopModel);
-        scan.disableProperty().bind(glossary.busy());
-        review.disableProperty().bind(glossary.busy());
+        scan.disableProperty()
+                .bind(glossary.busy().or(glossary.modelBlockedReason().isNotEmpty()));
+        review.disableProperty()
+                .bind(glossary.busy().or(glossary.modelBlockedReason().isNotEmpty()));
         stop.visibleProperty().bind(glossary.busy());
         stop.managedProperty().bind(glossary.busy());
         return List.of(scan, review, stop);

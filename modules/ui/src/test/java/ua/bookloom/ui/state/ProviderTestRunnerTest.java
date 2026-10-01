@@ -32,7 +32,7 @@ class ProviderTestRunnerTest extends SettingsViewModelTestBase {
     private final StringProperty model = new SimpleStringProperty("");
 
     private ProviderTestRunner runner(final ScriptedProviderVerifier verifier) {
-        return onFx(() -> new ProviderTestRunner(verifier, toasts, errors, executor, provider, model));
+        return onFx(() -> new ProviderTestRunner(verifier, toasts, errors, executor, provider, model, activities));
     }
 
     private void setModel(final String text) {

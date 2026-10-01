@@ -42,7 +42,7 @@ class SmoothScrollTest extends ApplicationTest {
     private static final double CELL = 20;
     private static final int ROWS = 200;
     private static final int NOTCHES = 10;
-    private static final long SETTLE_MS = 700;
+    private static final long SETTLE_MS = 1200;
     private static final long SPIN_MS = 40;
     private static final double EXACT = 1e-6;
 

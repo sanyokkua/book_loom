@@ -65,12 +65,13 @@ class ControlsTest {
         "COMPLETED, DISABLED, HIDDEN,   HIDDEN,   HIDDEN",
         "RUNNING,   HIDDEN,   ENABLED,  HIDDEN,   ENABLED",
     })
-    void heldForRetry_state_disablesOnlyTheControlsThatWouldBeginARun(
+    void heldByOtherWork_state_disablesOnlyTheControlsThatWouldBeginARun(
             final RunState state,
             final ControlState start,
             final ControlState pause,
             final ControlState resume,
             final ControlState stop) {
-        assertThat(Controls.of(state, false, true).heldForRetry()).isEqualTo(new Controls(start, pause, resume, stop));
+        assertThat(Controls.of(state, false, true).heldByOtherWork())
+                .isEqualTo(new Controls(start, pause, resume, stop));
     }
 }

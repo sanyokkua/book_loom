@@ -63,6 +63,32 @@ public enum MessageKey {
     SHELL_ABOUT("shell.about"),
     /** Hover explanation of the control labelled by {@link #SHELL_ABOUT}. */
     SHELL_ABOUT_TIP("shell.about.tip"),
+    /** Name of a translation run as model work that rules out other model work. */
+    ACTIVITY_TRANSLATION("activity.translation"),
+    /** Name of the glossary's model scan as running model work. */
+    ACTIVITY_GLOSSARY_SCAN("activity.glossaryScan"),
+    /** Name of the glossary's model review as running model work. */
+    ACTIVITY_GLOSSARY_REVIEW("activity.glossaryReview"),
+    /** Name of a review-panel segment retry as running model work. */
+    ACTIVITY_REVIEW_RETRY("activity.reviewRetry"),
+    /** Name of the provider's inference test as running model work. */
+    ACTIVITY_PROVIDER_INFERENCE_TEST("activity.providerInferenceTest"),
+    /** Name of the provider's connection or model-list test as running work. */
+    ACTIVITY_PROVIDER_CHECK("activity.providerCheck"),
+    /** Name of reading the provider's model list as running work. */
+    ACTIVITY_MODEL_LISTING("activity.modelListing"),
+    /** Name of writing the translated book as running work. */
+    ACTIVITY_EXPORT("activity.export"),
+    /** The title-bar chip naming running model work; arguments: 0 its name, 1 requests sent so far, 2 how many other works also run. */
+    ACTIVITY_CHIP("activity.chip"),
+    /** Hover explanation of the title-bar chip named by {@link #ACTIVITY_CHIP}. */
+    ACTIVITY_CHIP_TIP("activity.chip.tip"),
+    /** Title-bar control that stops the model work the chip names. */
+    ACTIVITY_STOP("activity.stop"),
+    /** Hover explanation of the control labelled by {@link #ACTIVITY_STOP}. */
+    ACTIVITY_STOP_TIP("activity.stop.tip"),
+    /** Why a control that would ask the model is unavailable; argument 0 is the name of the work running. */
+    ACTIVITY_BLOCKED("activity.blocked"),
     /** About dialog subtitle; argument 0 is the build version. */
     ABOUT_SUBTITLE("about.subtitle"),
     /** About dialog description of the product. */
@@ -1199,6 +1225,18 @@ public enum MessageKey {
     DIALOG_REPLACE_RUN_CONFIRM_TIP("dialog.replaceRun.confirm.tip"),
     /** Line shown while the discarded run is being stopped. */
     DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping"),
+    /** Title of the question asked before leaving a screen whose model work is still running. */
+    DIALOG_LEAVE_TITLE("dialog.leave.title"),
+    /** Body of the leave question; argument 0 is the name of the running work. */
+    DIALOG_LEAVE_TEXT("dialog.leave.text"),
+    /** Leave-question button that stops the running work and leaves. */
+    DIALOG_LEAVE_STOP("dialog.leave.stop"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_LEAVE_STOP}. */
+    DIALOG_LEAVE_STOP_TIP("dialog.leave.stop.tip"),
+    /** Leave-question button that leaves and lets the work run on. */
+    DIALOG_LEAVE_KEEP("dialog.leave.keep"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_LEAVE_KEEP}. */
+    DIALOG_LEAVE_KEEP_TIP("dialog.leave.keep.tip"),
     /** Success toast after an accept; argument 0 is the segment's locator, argument 1 how many flagged segments remain. */
     REVIEW_ACCEPTED("review.accepted"),
     /** Warning toast when a review action is refused because a run is translating. */

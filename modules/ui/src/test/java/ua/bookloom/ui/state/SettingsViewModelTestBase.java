@@ -38,6 +38,7 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
     RecordingToasts toasts;
     RecordingErrorPresenter errors;
     ExecutorService executor;
+    final ActivityTracker activities = new ActivityTracker(new StateMirror());
 
     @Override
     public final void start(final Stage stage) {
@@ -98,12 +99,12 @@ abstract class SettingsViewModelTestBase extends ApplicationTest {
 
     SettingsViewModel viewModel(final ScriptedProviderVerifier verifier) {
         return onFx(() -> new SettingsViewModel(
-                new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor));
+                new FakeProviderConfigs(), verifier, newModelListing(), toasts, errors, executor, activities));
     }
 
     /** A listing over whatever {@link #catalog} the test scripted before calling this. */
     ModelListing newModelListing() {
-        return onFx(() -> new ModelListing(catalog, toasts, errors, executor));
+        return onFx(() -> new ModelListing(catalog, toasts, errors, executor, activities));
     }
 
     /** A view model over the idle verifier and whatever {@link #catalog} the test scripted before calling this. */

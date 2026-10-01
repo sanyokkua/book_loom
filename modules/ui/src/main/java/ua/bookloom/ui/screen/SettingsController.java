@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ModelListing;
 import ua.bookloom.ui.state.ProviderRow;
 import ua.bookloom.ui.state.ProviderTest;
@@ -286,13 +287,26 @@ public final class SettingsController {
                 .bind(Bindings.createBooleanBinding(
                         () -> viewModel.model().get().isBlank(), viewModel.model()));
         checkHint.managedProperty().bind(checkHint.visibleProperty());
-        checkRefusal.textProperty().bind(viewModel.tests().checkRefusal());
+        // The same line says why the inference test is off while other model work (a run, a scan) is under way.
+        checkRefusal
+                .textProperty()
+                .bind(Bindings.createStringBinding(
+                        this::checkLine,
+                        viewModel.tests().checkRefusal(),
+                        viewModel.tests().blockedBy()));
         checkRefusal
                 .visibleProperty()
                 .bind(Bindings.createBooleanBinding(
-                        () -> !viewModel.tests().checkRefusal().get().isEmpty(),
-                        viewModel.tests().checkRefusal()));
+                        () -> !checkRefusal.getText().isEmpty(), checkRefusal.textProperty()));
         checkRefusal.managedProperty().bind(checkRefusal.visibleProperty());
+    }
+
+    private String checkLine() {
+        final String refusal = viewModel.tests().checkRefusal().get();
+        final ActivityKind blocker = viewModel.tests().blockedBy().get();
+        return !refusal.isEmpty() || blocker == null
+                ? refusal
+                : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(blocker.label()));
     }
 
     private void bindTest(final Button button, final ProviderTest test) {

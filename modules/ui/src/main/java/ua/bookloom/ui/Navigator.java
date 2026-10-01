@@ -21,7 +21,8 @@ import ua.bookloom.ui.i18n.Messages;
  * <p>{@link #navigate} must be called on the JavaFX Application Thread, because it builds nodes. Each view is loaded
  * with the active message catalogue and the {@link GuiceControllerFactory}, and a failed load leaves the previous
  * view in place: a screen that cannot be built must not blank the window. Both properties change only here, so the
- * shell can observe them without being able to fake a navigation.
+ * shell can observe them without being able to fake a navigation. Leaving a screen whose model work would be left
+ * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer.
  */
 @Slf4j
 @Singleton
@@ -30,6 +31,7 @@ public final class Navigator {
 
     private final GuiceControllerFactory controllerFactory;
     private final Messages messages;
+    private final LeaveGuard leaveGuard;
     private final ReadOnlyObjectWrapper<ViewNames> currentView = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<Parent> content = new ReadOnlyObjectWrapper<>();
 
@@ -56,8 +58,9 @@ public final class Navigator {
      * Shows a screen in place of the current one.
      *
      * @param target the screen to show
-     * @return {@code true} if the screen is now current; {@code false} if the entry is inert, is already current, or
-     *     its view failed to load, in each of which nothing changes
+     * @return {@code true} if the screen is now current; {@code false} if the entry is inert, is already current, its
+     *     view failed to load, or leaving the current screen first asks the person, in each of which nothing changes
+     *     now
      */
     public boolean navigate(final ViewNames target) {
         Objects.requireNonNull(target, "target");
@@ -71,6 +74,14 @@ public final class Navigator {
             log.debug("refused {}: it is already current", target);
             return false;
         }
+        if (!leaveGuard.admits(source, () -> show(source, target))) {
+            log.debug("navigation {} -> {} waits for the person's answer", source, target);
+            return false;
+        }
+        return show(source, target);
+    }
+
+    private boolean show(final ViewNames source, final ViewNames target) {
         final Optional<Parent> loaded = load(target);
         loaded.ifPresent(root -> {
             content.set(root);

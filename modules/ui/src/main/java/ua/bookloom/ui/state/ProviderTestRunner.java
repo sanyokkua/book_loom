@@ -7,11 +7,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -38,6 +42,10 @@ import ua.bookloom.ui.notify.Toasts;
  * <p>A test is a plain submission to the background executor, not a JavaFX {@code Task}: the verifier reports failure
  * by <em>returning</em> it, so {@code Task.setOnFailed} would never fire (D12 of the workspace design). Everything that
  * touches a property runs on the FX Application Thread; the verifier alone runs elsewhere.
+ *
+ * <p>A test is registered with the {@link ActivityTracker} while it runs — the inference test as model work that no
+ * other model work may overlap, the two light tests as provider checks that may run during a run — and is cancelled,
+ * its request interrupted, when the provider or the model changes or the title bar's Stop is pressed.
  */
 @Slf4j
 public final class ProviderTestRunner {
@@ -53,6 +61,11 @@ public final class ProviderTestRunner {
     private final Map<ProviderTest, BooleanBinding> availability = new EnumMap<>(ProviderTest.class);
     private final ObservableList<StageChip> stages = FXCollections.observableArrayList();
     private final ObservableList<StageChip> stagesView = FXCollections.unmodifiableObservableList(stages);
+    private final ActivityTracker activities;
+    private final ObjectBinding<@Nullable ActivityKind> inferenceBlocker;
+    private final ReadOnlyObjectWrapper<@Nullable ActivityKind> blockedBy = new ReadOnlyObjectWrapper<>();
+    private @Nullable Future<?> inFlight;
+    private ActivityTracker.@Nullable Handle handle;
 
     /**
      * Counts every event that makes a report in flight meaningless: a test starting, another provider, another model.
@@ -69,6 +82,7 @@ public final class ProviderTestRunner {
      * @param executor the daemon executor the verifier runs on, never the FX thread
      * @param providerId the selected provider's id; read when a test is asked for, observed for changes
      * @param model the chosen model text, blank while none is chosen; observed for changes
+     * @param activities the work under way, which decides whether the inference test may start
      */
     public ProviderTestRunner(
             final ProviderVerifier verifier,
@@ -76,17 +90,24 @@ public final class ProviderTestRunner {
             final ErrorPresenter errors,
             final ExecutorService executor,
             final ReadOnlyStringProperty providerId,
-            final ReadOnlyStringProperty model) {
+            final ReadOnlyStringProperty model,
+            final ActivityTracker activities) {
         this.verifier = Objects.requireNonNull(verifier, "verifier");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.providerId = Objects.requireNonNull(providerId, "providerId");
         this.model = Objects.requireNonNull(model, "model");
+        this.activities = Objects.requireNonNull(activities, "activities");
+        this.inferenceBlocker = activities.blocker(ActivityKind.PROVIDER_INFERENCE_TEST);
         for (final ProviderTest test : ProviderTest.values()) {
             availability.put(
-                    test, Bindings.createBooleanBinding(() -> canStart(test), this.providerId, this.model, checking));
+                    test,
+                    Bindings.createBooleanBinding(
+                            () -> canStart(test), this.providerId, this.model, checking, inferenceBlocker));
         }
+        inferenceBlocker.addListener(observed -> refreshBlocked());
+        checking.addListener(observed -> refreshBlocked());
         this.providerId.addListener((observed, was, now) -> invalidate("the provider changed"));
         this.model.addListener((observed, was, now) -> invalidate("the model changed"));
     }
@@ -123,6 +144,15 @@ public final class ProviderTestRunner {
     }
 
     /**
+     * The other model work that keeps the inference test from being offered.
+     *
+     * @return a read-only property holding {@code null} while it is offered or a test of this runner is itself running
+     */
+    public ReadOnlyObjectProperty<@Nullable ActivityKind> blockedBy() {
+        return blockedBy.getReadOnlyProperty();
+    }
+
+    /**
      * The findings of the last test: the stages it covers, in stage order, once there is a report.
      *
      * @return a read-only list, empty before any report, after a provider or model change and while a test runs
@@ -155,13 +185,24 @@ public final class ProviderTestRunner {
         checkRefusal.set("");
         checkEpoch++;
         checking.set(true);
+        handle = activities.begin(kindOf(test), () -> invalidate("stopped by the person"));
         submit(test, providerId.get(), chosenModel, checkEpoch);
     }
 
     private boolean canStart(final ProviderTest test) {
         return !checking.get()
                 && !providerId.get().isEmpty()
-                && (!test.needsModel() || !model.get().isBlank());
+                && (!test.needsModel() || !model.get().isBlank())
+                && activities.conflictFor(kindOf(test)).isEmpty();
+    }
+
+    private static ActivityKind kindOf(final ProviderTest test) {
+        return test == ProviderTest.INFERENCE ? ActivityKind.PROVIDER_INFERENCE_TEST : ActivityKind.PROVIDER_CHECK;
+    }
+
+    private void refreshBlocked() {
+        final ActivityKind kind = inferenceBlocker.get();
+        blockedBy.set(checking.get() ? null : kind);
     }
 
     /**
@@ -171,6 +212,12 @@ public final class ProviderTestRunner {
     private void invalidate(final String reason) {
         final boolean somethingShown = checking.get() || !checkRefusal.get().isEmpty() || !stages.isEmpty();
         checkEpoch++;
+        final Future<?> running = inFlight;
+        if (running != null) {
+            log.debug("cancelling the provider test in flight: {}", reason);
+            running.cancel(true);
+        }
+        settle();
         checking.set(false);
         checkRefusal.set("");
         stages.clear();
@@ -183,7 +230,7 @@ public final class ProviderTestRunner {
 
     private void submit(final ProviderTest test, final String provider, final String chosenModel, final long epoch) {
         try {
-            executor.execute(() -> verifyOffThread(test, provider, chosenModel, epoch));
+            inFlight = executor.submit(() -> verifyOffThread(test, provider, chosenModel, epoch));
         } catch (RuntimeException rejected) {
             log.error("the provider test could not be submitted", rejected);
             publish(test, epoch, Result.err(internalError(rejected)));
@@ -235,7 +282,18 @@ public final class ProviderTestRunner {
                 show(test, Objects.requireNonNull(result.data()));
             }
         } finally {
+            settle();
             checking.set(false);
+        }
+    }
+
+    // The test in flight is over, answered or dropped: its future and its registration go.
+    private void settle() {
+        inFlight = null;
+        final ActivityTracker.Handle registered = handle;
+        handle = null;
+        if (registered != null) {
+            registered.end();
         }
     }
 
