@@ -1263,7 +1263,7 @@ check leaves evidence.
   log line not counted by the connection chip, and the Export screen's wrapping bilingual label, the labelled
   consistency switch, "Your book so far" while segments are pending and a separate flagged-without-translation line
   (en/uk plurals); and the "Context sent to the model" sections (live rows and the review panel) grow their row,
-  card and page to the full context at its natural height up to 320 px, measured by layout tests (COMMIT_ID)
+  card and page to the full context at its natural height up to 320 px, measured by layout tests (3976a5b)
 - [x] T. Test speed: parallel test forks per module (`min(4, cores/2)`, `-Pbookloom.forks=N`); `FxTestBase` in place
   of TestFX's `ApplicationTest` (its fixed `waitForFxEvents` sleeps were most of `:ui`'s time; it waits for the FX
   thread and two real pulses instead); the conformance suites reuse a shown screen across consecutive cases; one test
