@@ -1187,8 +1187,14 @@ times, paused, and on every resume paid the same rounds again. Each step is its 
   now does, with Skip segment, and no "no work was lost" claim; a connection chip in the title bar; a timed activity
   log with call lines, repeats counted and an errors-only view; the round tracker and the collapsed context section in
   the live row; the run controls under the banner; no empty live boxes and a worded blank source in review (c227759)
-- [ ] 3. Segments: one shared blank test, verbatim segments with no model call, short words with neighbours,
-  de-duplicated auxiliary text
+- [x] 3. Segments: one shared visible-text test (`VisibleText` in `:util`: separators, controls and format characters
+  are invisible) so a no-break-space, zero-width or soft-hyphen-only run, paragraph or alt text is no segment in any
+  format; a segment with no letter, an upper-case Roman numeral, a single character or only a locked name is ACCEPTED
+  as it is with the path `VERBATIM` and no call, judge, finding or memory entry, counted apart (`keptVerbatim` on the
+  progress, the review counts and the export report; its own export-statement line and outcome tile) and left out of
+  the time-left average; a translation call's cap never below 128 tokens; a short echo of glossary names only is not
+  held against the target; an identical auxiliary text takes the chunk's undecided draft or the run's accepted target
+  instead of a call (2dc1bfc)
 - [ ] 4. Glossary: one key normaliser, a better frequency scan, the "Review with model" pass, sorting and search
 - [ ] 5. Scrolling smoothness: smooth wheel scrolling, cheaper glossary cells, fixed cell sizes
 - [ ] 6. UI polish from the hand-test screenshots
