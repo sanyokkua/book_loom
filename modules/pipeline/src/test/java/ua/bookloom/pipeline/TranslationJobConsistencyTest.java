@@ -296,12 +296,9 @@ class TranslationJobConsistencyTest {
         assertThat(report(await(run)).end()).isEqualTo(JobState.COMPLETED);
     }
 
-    /** The one reuse, announced between the summaries refreshed at the end of each chapter. */
+    /** The one reuse; a Balanced run's deterministic summary refreshes are not announced. */
     private static List<MemoryUpdated> reuseBetweenSummaries() {
-        return List.of(
-                new MemoryUpdated(MemoryKind.SUMMARY, "1"),
-                new MemoryUpdated(MemoryKind.TM, "ch2 · p03"),
-                new MemoryUpdated(MemoryKind.SUMMARY, "2"));
+        return List.of(new MemoryUpdated(MemoryKind.TM, "ch2 · p03"));
     }
 
     private static List<MemoryUpdated> memoryEvents(final TranslationJobImpl translation) {

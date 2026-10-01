@@ -30,6 +30,8 @@ import ua.bookloom.ui.state.RoundTrack;
 class LiveRowDetailsTest extends TranslatingScreenTestBase {
 
     private static final String LOCATOR = "ch9 · p02";
+    private static final String NO_SUMMARY =
+            "No summary yet — on Max quality the model writes one at the end of each chapter.";
     private static final ContextSnapshot CONTEXT = new ContextSnapshot(
             List.of("Коли я приземлився на верхівку ліхтаря.", "Дощ лив стіною."),
             List.of(
@@ -177,6 +179,25 @@ class LiveRowDetailsTest extends TranslatingScreenTestBase {
                                 "")));
 
         assertThat(textsUnder(required("live-current-context-body")).stream().distinct())
-                .containsExactly("Translation memory", "Yes. → Так.");
+                .containsExactly("Running summary", NO_SUMMARY, "Translation memory", "Yes. → Так.");
+    }
+
+    // IF the summary section were left out while the model has written none, THEN the person could not tell a missing
+    // summary from a hidden one — and a list of names was once shown there as if it were the story so far.
+    @Test
+    void context_noSummaryYet_saysSo() throws TimeoutException {
+        show(null, current("Text.", null, new ContextSnapshot(List.of("Так."), List.of(), List.of(), null, "")));
+
+        assertThat(textsUnder(required("live-current-context-body")).stream().distinct())
+                .containsExactly("Preceding translations", "Так.", "Running summary", NO_SUMMARY);
+    }
+
+    @Test
+    void context_modelSummary_isShownUnderItsHeading() throws TimeoutException {
+        show(null, current("Text.", null, CONTEXT));
+
+        assertThat(textsUnder(required("live-current-context-body")))
+                .containsSubsequence("Running summary", "A djinni is summoned to steal an amulet.")
+                .doesNotContain(NO_SUMMARY);
     }
 }

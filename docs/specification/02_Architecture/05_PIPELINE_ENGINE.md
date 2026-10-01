@@ -272,7 +272,9 @@ dropped/re-summarized first while character, place, and terminology facts are re
 slice.
 
 **Default is a deterministic summary** (accumulated key facts truncated to budget); the **LLM-generated** variant
-(`12_PROMPT_CATALOG.md#rolling-summary-update`) is **opt-in**. **No-chapter case** (TXT / single-chapter documents): the
+(`12_PROMPT_CATALOG.md#rolling-summary-update`) is **opt-in**. Only the LLM-generated text is shown to drafts and in the
+context panel as the running summary; the deterministic text (glossary lines and heading titles) is stored but never
+presented as a summary, so a run without the model summary has none and says so. **No-chapter case** (TXT / single-chapter documents): the
 whole document is treated as one chapter, the every-`K`-blocks trigger is the only periodic trigger, and
 **end-of-document** acts as the chapter-end trigger.
 

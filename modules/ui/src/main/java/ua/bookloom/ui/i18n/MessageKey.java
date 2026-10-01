@@ -851,6 +851,8 @@ public enum MessageKey {
     LIVE_CONTEXT_PRECEDING("live.context.preceding"),
     /** Context-section heading of the rolling summary. */
     LIVE_CONTEXT_SUMMARY("live.context.summary"),
+    /** Context-section line under {@link #LIVE_CONTEXT_SUMMARY} while the model has written no summary yet. */
+    LIVE_CONTEXT_NO_SUMMARY("live.context.noSummary"),
     /** Context-section heading of the glossary names. */
     LIVE_CONTEXT_NAMES("live.context.names"),
     /** Context-section heading of the translation-memory hits. */

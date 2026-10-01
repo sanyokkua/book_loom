@@ -49,7 +49,6 @@ class TranslationJobModelCallEventTest {
                         "ModelCallFinished",
                         "SegmentDrafted",
                         "SegmentDecided",
-                        "MemoryUpdated",
                         "Finished");
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)

@@ -84,7 +84,7 @@ final class DecisionFollowUp {
     }
 
     /**
-     * The summary text a draft is shown: the model's when it wrote one, else the deterministic one.
+     * The summary text a draft is shown: the model's, when it wrote one.
      *
      * @return the text, or {@code null} while there is no summary or it is empty
      */
@@ -201,7 +201,13 @@ final class DecisionFollowUp {
             return;
         }
         final RollingSummary version = refreshed.get();
-        hold(version);
+        if (!hold(version)) {
+            log.debug(
+                    "Summary refresh not announced trigger={} version={}: the text shown to drafts is unchanged",
+                    trigger,
+                    version.version());
+            return;
+        }
         log.debug("Summary refresh announced trigger={} version={}", trigger, version.version());
         if (log.isTraceEnabled()) {
             log.trace("Summary text now shown to drafts {}", summary);
@@ -209,8 +215,21 @@ final class DecisionFollowUp {
         sinks.emit().accept(MemoryEvents.summaryRefreshed(version));
     }
 
-    private void hold(final RollingSummary version) {
-        final String text = version.target().isBlank() ? version.source() : version.target();
-        summary = text.isBlank() ? null : text;
+    /**
+     * Holds the model-written summary of {@code version}. The deterministic text in its source side — the glossary
+     * lines and the heading titles — is not a summary of the story and is never shown as one: the chunk's names travel
+     * in their own glossary block, and a list of chapter titles told the model nothing (fixture run, 2026-10-02).
+     *
+     * @return {@code true} if the text shown to later drafts changed, {@code false} otherwise
+     */
+    private boolean hold(final RollingSummary version) {
+        final @Nullable String previous = summary;
+        summary = version.target().isBlank() ? null : version.target();
+        log.debug(
+                "Summary held version={} modelWritten={} changed={}",
+                version.version(),
+                summary != null,
+                !Objects.equals(previous, summary));
+        return !Objects.equals(previous, summary);
     }
 }

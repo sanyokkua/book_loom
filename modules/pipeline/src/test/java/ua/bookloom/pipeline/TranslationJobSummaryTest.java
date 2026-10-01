@@ -18,7 +18,6 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.stored;
 
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,13 +41,12 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.MemoryKind;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
- * A run refreshes the rolling summary after every twenty accepted segments and at each unit's end, announces each new
- * version, and shows the latest one to every later draft.
+ * A run refreshes the rolling summary after every twenty accepted segments and at each unit's end, and shows the latest
+ * model-written summary to every later draft, announcing it when it changes; the deterministic text is never shown.
  */
 class TranslationJobSummaryTest {
 
@@ -56,6 +54,7 @@ class TranslationJobSummaryTest {
     private static final String SUMMARY = "summary";
     private static final String MODEL_SUMMARY = "Старий чоловік іде до гавані, де стоїть маяк.";
     private static final String EARLIER_SUMMARY = "Раніше: старий чоловік живе біля моря.";
+    private static final String GLOSSARY_LINES = "Earth (place, neuter)\nChapter 1. Why Things Fall";
 
     @TempDir
     private Path tempDir;
@@ -65,8 +64,10 @@ class TranslationJobSummaryTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
+    // The deterministic refresh (glossary lines and heading titles) is stored but is not a summary of the story: no
+    // draft is shown it and nothing announces it (fixture run: "Earth (place, neuter)…" then chapter titles).
     @Test
-    void run_summary_refreshedAfterTwentyAndAtUnitEnd() {
+    void run_balancedDeterministicRefresh_showsNoSummaryAndAnnouncesNothing() {
         final TestProject project = project(lighthouseChapter(), brief("en", "uk"));
         final ScriptedChatModel model = replies(lighthouseReplies());
         final TranslationJobImpl translation = job(project, model);
@@ -74,23 +75,52 @@ class TranslationJobSummaryTest {
 
         report(translation.run());
 
-        assertThat(memoryEvents(events))
-                .containsExactly(
-                        new MemoryUpdated(MemoryKind.SUMMARY, "1"), new MemoryUpdated(MemoryKind.SUMMARY, "2"));
-        assertThat(decisionsAndMemory(events))
-                .containsExactlyElementsOf(Stream.of(
-                                Collections.nCopies(20, "decided"),
-                                List.of("memory"),
-                                List.of("decided"),
-                                List.of("memory"))
-                        .flatMap(List::stream)
-                        .toList());
+        assertThat(memoryEvents(events)).isEmpty();
         assertThat(formats(model)).hasSize(21).containsOnly(DRAFT);
-        assertThat(userMessage(model.requests().getFirst())).doesNotContain(SUMMARY_BLOCK);
-        assertThat(userMessage(model.requests().get(20))).contains(SUMMARY_BLOCK + "\nThe Lighthouse\n");
+        assertThat(userMessage(model.requests().get(20))).doesNotContain(SUMMARY_BLOCK);
         assertThat(Objects.requireNonNull(stored(project, "Book.md:20").context(), "snapshot")
                         .summary())
-                .isEqualTo("The Lighthouse");
+                .isNull();
+        assertThat(latestSummary(project)).hasValueSatisfying(summary -> {
+            assertThat(summary.version()).isEqualTo(2);
+            assertThat(summary.target()).isEmpty();
+        });
+    }
+
+    // A model-written summary stored by an earlier run is what the next run's drafts are shown, never the deterministic
+    // glossary-and-headings text stored beside it.
+    @Test
+    void run_storedModelSummary_isTheSummaryEveryDraftIsShown() {
+        final TestProject project =
+                project(TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo."), brief("en", "uk"));
+        project.stores()
+                .summaries()
+                .save(new RollingSummary(project.id(), null, GLOSSARY_LINES, MODEL_SUMMARY, 1, null, 0));
+        final ScriptedChatModel model = replies("Один.", "Два.");
+
+        report(job(project, model).run());
+
+        assertThat(userMessage(model.requests().getFirst()))
+                .contains(SUMMARY_BLOCK + "\n" + MODEL_SUMMARY)
+                .doesNotContain(GLOSSARY_LINES);
+        assertThat(Objects.requireNonNull(stored(project, "Book.txt:0").context(), "snapshot")
+                        .summary())
+                .isEqualTo(MODEL_SUMMARY);
+    }
+
+    @Test
+    void run_storedDeterministicSummaryOnly_showsNoSummary() {
+        final TestProject project =
+                project(TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo."), brief("en", "uk"));
+        project.stores().summaries().save(new RollingSummary(project.id(), null, GLOSSARY_LINES, "", 1, null, 0));
+        final ScriptedChatModel model = replies("Один.", "Два.");
+
+        report(job(project, model).run());
+
+        assertThat(userMessage(model.requests().getFirst())).doesNotContain(SUMMARY_BLOCK);
+        assertThat(Objects.requireNonNull(stored(project, "Book.txt:0").context(), "snapshot")
+                        .summary())
+                .isNull();
     }
 
     @Test
@@ -142,7 +172,7 @@ class TranslationJobSummaryTest {
     }
 
     @Test
-    void run_threeSegments_sendsOnlyTheSummaryUpdate() {
+    void run_threeSegmentsWithoutAModelSummary_announcesNoSummary() {
         final TestProject project =
                 project(TestBooks.txt(tempDir.resolve("Book.txt"), "One.\n\nTwo.\n\nThree."), brief("en", "uk"));
         final TranslationJobImpl translation = job(project, replies("Один.", "Два.", "Три."));
@@ -150,11 +180,10 @@ class TranslationJobSummaryTest {
 
         report(translation.run());
 
-        assertThat(memoryEvents(events)).containsExactly(new MemoryUpdated(MemoryKind.SUMMARY, "1"));
-        assertThat(events.subList(events.size() - 3, events.size()))
+        assertThat(memoryEvents(events)).isEmpty();
+        assertThat(events.subList(events.size() - 2, events.size()))
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("SegmentDecided", "MemoryUpdated", "Finished");
-        assertThat(events.getLast()).isInstanceOf(Finished.class);
+                .containsExactly("SegmentDecided", "Finished");
     }
 
     // IF a job resumed on a project with ten accepted segments counted its twenty from zero, THEN the version the
@@ -166,22 +195,13 @@ class TranslationJobSummaryTest {
         final ScriptedChatModel firstModel = replies(numberedReplies(10))
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.")));
         report(job(project, firstModel).run());
-        final TranslationJobImpl second = job(project, replies(numberedReplies(16)));
-        final List<JobEvent> events = recorded(second);
 
-        report(second.run());
+        report(job(project, replies(numberedReplies(16))).run());
 
-        assertThat(memoryEvents(events))
-                .containsExactly(
-                        new MemoryUpdated(MemoryKind.SUMMARY, "1"), new MemoryUpdated(MemoryKind.SUMMARY, "2"));
-        assertThat(decisionsAndMemory(events))
-                .containsExactlyElementsOf(Stream.of(
-                                Collections.nCopies(10, "decided"),
-                                List.of("memory"),
-                                Collections.nCopies(6, "decided"),
-                                List.of("memory"))
-                        .flatMap(List::stream)
-                        .toList());
+        assertThat(latestSummary(project)).hasValueSatisfying(summary -> {
+            assertThat(summary.version()).isEqualTo(2);
+            assertThat(summary.tokensSince()).isEqualTo(6);
+        });
     }
 
     private static String numberedLines(final int count) {
@@ -229,13 +249,6 @@ class TranslationJobSummaryTest {
         return events.stream()
                 .filter(MemoryUpdated.class::isInstance)
                 .map(MemoryUpdated.class::cast)
-                .toList();
-    }
-
-    private static List<String> decisionsAndMemory(final List<JobEvent> events) {
-        return events.stream()
-                .filter(event -> event instanceof SegmentDecided || event instanceof MemoryUpdated)
-                .map(event -> event instanceof SegmentDecided ? "decided" : "memory")
                 .toList();
     }
 

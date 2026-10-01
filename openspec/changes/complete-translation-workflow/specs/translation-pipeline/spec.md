@@ -183,7 +183,10 @@ later draft prompts. The summary SHALL be built deterministically from the gloss
 source decided so far and the latest heading texts, condensed to at most 300 estimated tokens. WHERE the dial is Max, the
 refresh at the end of each unit SHALL instead be one summary model call, and the refresh after every 20 accepted
 segments SHALL stay deterministic. A model summary whose target text is empty SHALL count as unreadable: the system SHALL
-keep the previous summary and write one WARN line.
+keep the previous summary and write one WARN line. Only a model-written summary text SHALL be carried into a draft
+prompt, stored in a draft's context snapshot and announced as a summary update; the deterministic text SHALL be stored
+with each version but SHALL NOT be shown to a draft or to the person as a summary, and a refresh that leaves the shown
+text unchanged SHALL NOT be announced.
 
 **Source:** FR-ALGO-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`), FR-ALGO-C10
 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`),
@@ -191,13 +194,22 @@ keep the previous summary and write one WARN line.
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#rolling-summary-update`.
 In plain words: the model forgets earlier chapters, so a short record of who is who travels with every prompt. A
 deterministic summary costs nothing; the model-written one costs a call per chapter, so only the slowest, most careful
-setting pays for it.
+setting pays for it. The deterministic text is the glossary lines and the heading titles: shown as "Running summary" on
+the fixture book it read `Earth (place, neuter)…` followed by chapter titles — not a summary, and the names already
+reach the draft in its glossary block — so it is never presented as one.
 
 #### Scenario: A long chapter refreshes the summary three times
 
 - **WHEN** a Balanced run accepts all 45 segments of `ch02.xhtml`
 - **THEN** the summary is refreshed after the 20th and the 40th accepted segment and at the end of `ch02.xhtml`
-- **AND** no summary model call is made
+- **AND** no summary model call is made, no draft is shown a summary and no summary update is announced
+
+#### Scenario: A stored model summary is what a draft is shown
+
+- **WHEN** the latest stored version holds the deterministic text `Earth (place, neuter)` and the model summary
+  `Старий чоловік іде до гавані.`
+- **THEN** the next draft's prompt and context snapshot carry `Старий чоловік іде до гавані.` and not the deterministic
+  text; with no model summary they carry none and the context panel reads "No summary yet"
 
 #### Scenario: Max asks the model at the end of a chapter
 
@@ -503,8 +515,12 @@ polish and revision call never less than `128`, where the allowance is the expec
 output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A judge
 call SHALL carry the cap `min(1024, 128 + 192 × pairs)` and state half of it as its expected output, and the judge's
 response schema SHALL bound its lists and its text fields (at most 12 findings, 8 deferrals, a 240-character note or
-reason). A reflect, pre-scan or summary call SHALL state no output cap. IF a capped reply ends with a finish of cut off by length,
-THEN the system SHALL treat it as any other cut-off reply ("Flag a segment whose reply cannot be used, and continue").
+reason). Every other call SHALL carry a cap too: a reflect call `600` (expecting `256`, its prompt asking for at most
+five issues), a summary call `1024` (expecting `600`, its prompt asking for at most 150 words per language and five
+facts), a pre-scan batch `64 + 48 × candidates` (expecting half), and a glossary review batch `2048` (expecting
+`32 × terms`); no call kind goes out without a cap. IF a capped reply ends with a finish of cut off by length,
+THEN the system SHALL treat it as any other cut-off reply ("Flag a segment whose reply cannot be used, and continue");
+a cut-off reflect reply yields the issues it holds, a cut-off summary keeps the previous summary.
 
 **Source:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#response-handling`,
 `openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
@@ -514,8 +530,10 @@ half as much again, a fixed margin for the `{"target":…}` wrapper, and room fo
 reply never reaches it and a runaway one is cut off, flagged and left behind. A one-word source under a 64-token cap came
 back as an empty target in the Bartimaeus run, so a translation call's cap never drops below 128. The judge was once left unbounded and a
 looping re-judge then held a whole run for three minutes per attempt; its reply is a score and a few short findings per
-pair, so its cap grows with the pairs and stops at 1,024 tokens. How each server receives the cap is the
-`llm-provider` capability's rule.
+pair, so its cap grows with the pairs and stops at 1,024 tokens. A reflect call was left unbounded until gemma4:e4b
+on the fixture book streamed 9,664 lines of critique into the three-minute timeout, and the run's ETA jumped from three to
+nineteen minutes; every call kind now has a cap. How each server receives the cap is the `llm-provider` capability's
+rule.
 
 #### Scenario: A short draft gets the floor
 
@@ -523,6 +541,11 @@ pair, so its cap grows with the pairs and stops at 1,024 tokens. How each server
   output tokens and holds no placeholder token
 - **THEN** the draft request carries an output cap of `128`
 - **AND** the judge call for its one-pair chunk carries an output cap of `320`
+
+#### Scenario: A reflect call is capped
+
+- **WHEN** the quality loop sends a reflect call for any segment
+- **THEN** the request carries an output cap of `600`
 
 #### Scenario: A long paragraph with tokens gets a proportional cap
 

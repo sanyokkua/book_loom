@@ -89,7 +89,7 @@ class TranslationJobEventsTest {
                         acceptedOnFirstCall("Book.txt:0", 2),
                         acceptedOnFirstCall("Book.txt:1", 1),
                         acceptedOnFirstCall("Book.txt:2", 0),
-                        List.of("MemoryUpdated SUMMARY", "Finished COMPLETED"))));
+                        List.of("Finished COMPLETED"))));
         assertThat(events)
                 .filteredOn(StageStarted.class::isInstance)
                 .extracting(
@@ -161,7 +161,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(10);
+        assertThat(healthy).hasSize(9);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -198,10 +198,8 @@ class TranslationJobEventsTest {
         assertThat(throwerCalls).hasValue(1);
         assertThat(healthy)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactlyElementsOf(concat(List.of(
-                        List.of("StageStarted", "StageStarted"),
-                        ACCEPTED_ON_FIRST_CALL,
-                        List.of("MemoryUpdated", "Finished"))));
+                .containsExactlyElementsOf(concat(
+                        List.of(List.of("StageStarted", "StageStarted"), ACCEPTED_ON_FIRST_CALL, List.of("Finished"))));
     }
 
     // Moving work across this pause boundary would insert another decision between Paused and Resumed.
@@ -227,7 +225,7 @@ class TranslationJobEventsTest {
                         ACCEPTED_ON_FIRST_CALL,
                         List.of("Paused", "Resumed"),
                         ACCEPTED_ON_FIRST_CALL,
-                        List.of("MemoryUpdated", "Finished"))));
+                        List.of("Finished"))));
         shutdown(workers);
     }
 

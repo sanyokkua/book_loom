@@ -288,6 +288,8 @@ a monolingual polish (`05_TRANSLATION_ALGORITHM.md#self-heal`, `FR-ALGO-C11`).
 You are a translation critic for {{sourceLang}} → {{targetLang}}.
 Do NOT rewrite. Identify what weakens the candidate translation — awkward phrasing, tone drift,
 terminology inconsistency, subtle meaning loss — and say concretely how to improve it.
+Raise at most five issues, the most important first, each in one short sentence; return an empty list when there is
+nothing to improve.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 
 [Style sheet]
@@ -320,7 +322,7 @@ Return JSON exactly as:
 | `{{candidateTarget}}` | Required  | The single `<Text>` block: the candidate translation under critique.    |
 | `{{sourceSegment}}`   | Required  | The masked source, shown under `[Source]` outside `<Text>` for reference. |
 
-**Parameters:** temperature 0.35; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.35; output format = JSON object / schema; reasoning low/off; output capped at 600 tokens, expected 256 (at most five issues). **Expected output**
 
 ```json
 { "issues": [ { "note": "…", "suggestion": "…" } ] }
@@ -585,7 +587,7 @@ Return JSON exactly as:
 | `{{candidates}}`                         | Required  | The batch's candidates, one `term — first sentence` line each (deterministic scan, at most 40). |
 | `{{existingTerms}}`                      | Optional  | Terms the glossary already holds, comma-separated; the whole block is dropped when there are none. |
 
-**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off; output capped at 64 + 48 per candidate, expected half. **Expected output**
 
 ```json
 { "terms": [
@@ -662,7 +664,10 @@ with no type or gender, so a review with it changes nothing.
 Refreshes the rolling **bilingual** summary carried into later prompts, on a **size-based trigger — every K accepted
 blocks OR at chapter end, whichever comes first** (`05_TRANSLATION_ALGORITHM.md#chunk-loop`, `FR-ALGO-07`;
 `02_Architecture/05_PIPELINE_ENGINE.md#rolling-summary`). The **default is a deterministic summary** (accumulated key
-facts, truncated/condensed to budget); this **LLM-generated** variant is **opt-in**. For a no-chapter document (TXT /
+facts, truncated/condensed to budget) — kept for counting and condensing, but **never shown to a draft or to the
+person as a summary**: it is the glossary lines and the heading titles, which already reach the draft through the
+glossary block or tell the model nothing about the story. Only this **LLM-generated** variant (the Max dial, opt-in) is
+the summary a draft and the context panel show; without it there is none, and the context panel says so. For a no-chapter document (TXT /
 single chapter) the every-K-blocks trigger drives updates and end-of-document acts as the chapter-end trigger.
 
 **SYSTEM**
@@ -671,7 +676,7 @@ single chapter) the every-K-blocks trigger drives updates and end-of-document ac
 You maintain a short rolling bilingual summary of a book being translated ({{sourceLanguage}} → {{targetLanguage}}).
 Update the running summary with what this chapter established: characters, relationships, places, and
 terminology decisions. Keep it compact and factual — it is context for translating later chapters, not a retelling.
-Provide the summary in both {{sourceLanguage}} and {{targetLanguage}}.
+Provide the summary in both {{sourceLanguage}} and {{targetLanguage}}, each at most 150 words, and at most five facts.
 Output ONLY the required JSON object. No commentary, no code fences, no reasoning.
 ```
 
@@ -700,7 +705,7 @@ Return JSON exactly as:
 | `{{chapterSource}}`, `{{chapterTarget}}` | Required  | The just-finished unit's accepted source and target display text, one segment per line.  |
 | `{{previousSummary}}`                    | Optional  | The latest summary (its target text, else its deterministic text); the whole block is dropped for the first unit. |
 
-**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off. **Expected output**
+**Parameters:** temperature 0.2; output format = JSON object / schema; reasoning low/off; output capped at 1024 tokens, expected 600 (at most 150 words per language and five facts). **Expected output**
 
 ```json
 { "summary": { "source": "…", "target": "…" },

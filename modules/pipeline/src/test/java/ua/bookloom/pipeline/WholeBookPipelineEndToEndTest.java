@@ -173,7 +173,7 @@ class WholeBookPipelineEndToEndTest {
                 .extracting(GlossaryEntry::term, GlossaryEntry::target, GlossaryEntry::locked)
                 .containsExactly("Hale", null, false);
         assertThat(memoryUpdates(run.events(), MemoryKind.GLOSSARY)).containsExactly("+1");
-        assertThat(memoryUpdates(run.events(), MemoryKind.SUMMARY)).hasSize(1);
+        assertThat(memoryUpdates(run.events(), MemoryKind.SUMMARY)).isEmpty();
         assertThat(run.calls()).noneMatch(call -> call.startsWith(CallKind.SUMMARY.name()));
     }
 

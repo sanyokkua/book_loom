@@ -160,14 +160,26 @@ public final class ContextSection extends TitledPane {
         add(
                 parts,
                 MessageKey.LIVE_CONTEXT_SUMMARY,
-                summary == null ? List.of() : List.of(text("context-text", summary)));
+                List.of(
+                        summary == null
+                                ? text("context-none", messages.get(MessageKey.LIVE_CONTEXT_NO_SUMMARY))
+                                : text("context-text", summary)));
         add(parts, MessageKey.LIVE_CONTEXT_NAMES, context.glossary().isEmpty() ? List.of() : List.of(names(context)));
         final List<Node> hits = context.tmHits().stream()
                 .<Node>map(hit ->
                         text("context-text", messages.get(MessageKey.LIVE_CONTEXT_HIT, hit.source(), hit.target())))
                 .toList();
         add(parts, MessageKey.LIVE_CONTEXT_MEMORY, hits);
-        return parts.isEmpty() ? List.of(text("context-text", messages.get(MessageKey.LIVE_CONTEXT_EMPTY))) : parts;
+        return isEmpty(context) ? List.of(text("context-text", messages.get(MessageKey.LIVE_CONTEXT_EMPTY))) : parts;
+    }
+
+    // The summary section stays with the other sections, saying when there is none yet; a draft sent nothing at all
+    // gets the one line that says so instead.
+    private static boolean isEmpty(final ContextSnapshot context) {
+        return context.precedingTargets().isEmpty()
+                && context.summary() == null
+                && context.glossary().isEmpty()
+                && context.tmHits().isEmpty();
     }
 
     private void add(final List<Node> parts, final MessageKey heading, final List<Node> nodes) {
