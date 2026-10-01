@@ -11,7 +11,8 @@ by id (EPUB, FB2 — the skeleton keeps every id) or by position (Markdown, TXT)
   structure  container validity, block inventory, inline markup per block (tags, links, images, footnote refs),
              code spans, verbatim and invisible blocks unchanged, images/fonts byte-identical, no leftover ⟦gN⟧
   language   target-script letters in every translatable block, no long untranslated runs, glossary names rendered
-             one way across the book, declared language updated
+             one way across the translated blocks (aligned by block id; a block left untranslated is the
+             target-script check's finding, not the name's), declared language updated
 
 Prints one line per check and a final PASS/FAIL; exits 0 on PASS, 1 on FAIL, 2 on a usage error.
 Standard library only.
@@ -629,7 +630,8 @@ class Validator:
                 hit_ids = [e["id"] for e, s, _ in candidates if pattern.search(self._judged_text(s))]
                 if not hit_ids:
                     continue
-                verdict = name_rendering(form, hit_ids, texts, self.lang)
+                verdict = name_rendering(form, hit_ids, texts, self._script_ok,
+                                         self.lang not in CYRILLIC_TARGETS | GREEK_TARGETS)
                 details.append(f"{form}→{'/'.join(verdict['surfaces'][:4]) or '?'}")
                 if verdict["missing"]:
                     failures.append(f"{form}: not rendered as '{verdict['stem']}…' in {ids_list(verdict['missing'], 6)}")
@@ -673,26 +675,41 @@ def stems_of(text: str) -> dict[str, list[str]]:
     return out
 
 
-def name_rendering(form: str, hit_ids: list[str], texts: dict[str, str], lang: str | None) -> dict:
+def is_latin_word(word: str) -> bool:
+    return all("LATIN" in unicodedata.name(ch, "") for ch in word)
+
+
+def name_rendering(form: str, hit_ids: list[str], texts: dict[str, str], script_ok, latin_target: bool) -> dict:
     """Finds the stem that renders `form`: the one most specific to the blocks the form occurs in (present there,
-    rare elsewhere), nudged toward stems starting with a plausible transliteration of the form's first letter."""
-    hits = set(hit_ids)
+    rare elsewhere), nudged toward stems starting with a plausible transliteration of the form's first letter.
+
+    Blocks are aligned by id with the manifest. A block with no target-script letters was not translated at all; that
+    is the target-script check's finding, so it is skipped here rather than blamed on the name (a run that stopped
+    half-way once made 'Tomas' fail as "not rendered as 'toma…'" in the one block that read 'Томас'). For a
+    non-Latin target only a target-script stem can be the rendering; a name kept as written in every translated block
+    is a consistent rendering too."""
+    hits = [bid for bid in hit_ids if script_ok(texts[bid])]
+    skipped = [bid for bid in hit_ids if bid not in hits]
+    kept = re.compile(rf"(?<![\w]){re.escape(form)}(?![\w])")
+    if not hits or all(kept.search(texts[bid]) for bid in hits):
+        return {"stem": form.lower()[:4] if hits else "", "surfaces": [form] if hits else [], "missing": [],
+                "skipped": skipped}
     stems = {bid: stems_of(t) for bid, t in texts.items()}
-    others = [bid for bid in texts if bid not in hits]
+    others = [bid for bid in texts if bid not in hit_ids]
     initials = LATIN_TO_CYRILLIC_INITIALS.get(form[0].lower(), "") + form[0].lower()
     best, best_score = "", -9.0
-    pool = {stem for bid in hit_ids for stem in stems.get(bid, {})}
+    pool = {stem for bid in hits for stem in stems.get(bid, {}) if latin_target or not is_latin_word(stem)}
     for stem in sorted(pool):
-        inside = sum(1 for bid in hit_ids if stem in stems.get(bid, {})) / len(hit_ids)
+        inside = sum(1 for bid in hits if stem in stems.get(bid, {})) / len(hits)
         outside = sum(1 for bid in others if stem in stems.get(bid, {})) / max(1, len(others))
         if outside > 0.25:
             continue
         score = inside - outside + (0.05 if stem[0] in initials else 0.0)
         if score > best_score:
             best, best_score = stem, score
-    surfaces = Counter(tok for bid in hit_ids for tok in stems.get(bid, {}).get(best, []))
-    missing = [bid for bid in hit_ids if best not in stems.get(bid, {})]
-    return {"stem": best, "surfaces": [s for s, _ in surfaces.most_common()], "missing": missing}
+    surfaces = Counter(tok for bid in hits for tok in stems.get(bid, {}).get(best, []))
+    missing = [bid for bid in hits if best not in stems.get(bid, {})]
+    return {"stem": best, "surfaces": [s for s, _ in surfaces.most_common()], "missing": missing, "skipped": skipped}
 
 
 # --------------------------------------------------------------------------------------------------------------
@@ -769,6 +786,7 @@ def self_test() -> int:
             expect.true(f"{fmt}: transliterated stand-in translation passes", overall(result) == "PASS", result)
         run_mutations(expect, gen, fixtures, fake_dir, tmp_path)
         expect_inflection_tolerated(expect, gen, fixtures, fake_dir, tmp_path)
+        expect_untranslated_block_not_blamed_on_names(expect, gen, fixtures, fake_dir, tmp_path)
         integrity = fixture_integrity(fixtures, gen.BASENAME)
         expect.true("fixtures are internally consistent (unique ids, every link/image/fragment resolves)",
                     not integrity, integrity[:8])
@@ -848,6 +866,27 @@ def expect_inflection_tolerated(expect: Expectations, gen, fixtures: Path, fake_
     target.write_text(declined, encoding="utf-8")
     results = validate("fb2", fixtures / f"{gen.BASENAME}.fb2", target, "uk", quiet=True)
     expect.true("fb2: names declined by case still count as one rendering", overall(results) == "PASS", results)
+
+
+def expect_untranslated_block_not_blamed_on_names(expect: Expectations, gen, fixtures: Path, fake_dir: Path,
+                                                  tmp: Path) -> None:
+    """A block left in the source language is the target-script check's finding, not a second rendering of a name;
+    a name kept in Latin inside a translated block while other blocks render it in Cyrillic still fails."""
+    source = (fixtures / f"{gen.BASENAME}.fb2").read_text(encoding="utf-8")
+    fake = (fake_dir / f"{gen.BASENAME}.fb2").read_text(encoding="utf-8")
+    block = re.compile(r'<p id="ch7-p9">.*?</p>', re.S)
+    untranslated = block.sub(lambda _: block.search(source).group(0), fake, count=1)
+    mixed = fake.replace(translit("Tomas"), "Tomas", 1)
+    for label, content, names_status, script_status in (
+            ("untranslated block", untranslated, "PASS", "FAIL"),
+            ("Latin name in one translated block, Cyrillic in another", mixed, "FAIL", "PASS")):
+        target = tmp / label.replace(" ", "-").replace(",", "") / f"{gen.BASENAME}.fb2"
+        target.parent.mkdir(parents=True)
+        target.write_text(content, encoding="utf-8")
+        results = validate("fb2", fixtures / f"{gen.BASENAME}.fb2", target, "uk", quiet=True)
+        status = {r.name: r.status for r in results}
+        expect.true(f"fb2: {label}: names {names_status}, target-script {script_status}",
+                    status.get("names") == names_status and status.get("target-script") == script_status, results)
 
 
 def fixture_integrity(fixtures: Path, base: str) -> list[str]:
