@@ -1,9 +1,11 @@
 package ua.bookloom.ui.screen;
 
 import java.text.NumberFormat;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
@@ -21,9 +23,12 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.ui.control.ComparePanes;
+import ua.bookloom.ui.control.ContextSection;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -47,6 +52,7 @@ final class ReviewComparePane extends VBox {
 
     private static final double SPACING = 10;
     private static final int SCORE_DIGITS = 2;
+    private static final String CONTEXT_SEPARATOR = " · ";
 
     private final ReviewViewModel viewModel;
     private final Messages messages;
@@ -56,13 +62,13 @@ final class ReviewComparePane extends VBox {
     private final ComparePanes panes;
     private final Label locator = new Label();
     private final Label judge = new Label();
-    private final Label context = new Label();
-    private final Label contextLine = new Label();
-    private final HBox contextRow = new HBox(SPACING);
+    private final ContextSection context;
     private final VBox findings = new VBox(SPACING / 2);
     private final VBox proposalBox = new VBox(SPACING / 2);
     private final Label proposal = new Label();
     private final ChangeListener<@Nullable SegmentView> onSelected = (observed, was, now) -> show(now);
+    // The segments already logged as flagged with no finding, so a re-read of one does not log it again.
+    private final Set<String> explainedEmpty = new HashSet<>();
 
     ReviewComparePane(
             final ReviewViewModel viewModel,
@@ -76,6 +82,7 @@ final class ReviewComparePane extends VBox {
         this.retryDialog = Objects.requireNonNull(retryDialog, "retryDialog");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.context = new ContextSection("review-context", messages);
         this.score = NumberFormat.getNumberInstance(messages.locale());
         score.setMinimumFractionDigits(SCORE_DIGITS);
         score.setMaximumFractionDigits(SCORE_DIGITS);
@@ -92,14 +99,15 @@ final class ReviewComparePane extends VBox {
     private List<Node> children() {
         return List.of(
                 header(),
-                contextRow(),
+                context,
                 banner("review-target-note", "banner-info", viewModel.editor().targetNote()),
                 panes,
                 proposalBox(),
-                note("review-hint", viewModel.hint().map(this::wording)),
+                note("review-hint", viewModel.editor().hint().map(this::wording)),
                 note("review-problem", viewModel.problem()),
                 findingsBox(),
                 banner("review-locked", "banner-info", viewModel.lockReason()),
+                banner("review-accept-note", "banner-info", viewModel.acceptNote()),
                 new ReviewTokenBanner(viewModel.editor(), panes.target(), messages),
                 actions());
     }
@@ -118,16 +126,6 @@ final class ReviewComparePane extends VBox {
         final HBox header = new HBox(SPACING, locator, spacer, judge);
         header.setAlignment(Pos.CENTER_LEFT);
         return header;
-    }
-
-    private HBox contextRow() {
-        context.setText(messages.get(MessageKey.REVIEW_CONTEXT));
-        context.getStyleClass().add("stat-caption");
-        contextLine.setId("review-context-line");
-        contextLine.getStyleClass().add("muted");
-        contextRow.setId("review-context");
-        contextRow.getChildren().addAll(context, contextLine);
-        return contextRow;
     }
 
     private static Label note(final String id, final ObservableValue<String> text) {
@@ -282,14 +280,20 @@ final class ReviewComparePane extends VBox {
                 view.judgeScore() == null ? "" : messages.get(MessageKey.LIVE_JUDGE, score.format(view.judgeScore())));
         judge.setVisible(view.judgeScore() != null);
         judge.setManaged(view.judgeScore() != null);
-        final String line = view.context() == null ? "" : ContextLine.of(view.context());
-        contextLine.setText(line);
+        showContext(view);
         findingsFor(view);
         proposal.setText(view.proposal() == null ? "" : view.proposal());
         proposalBox.setVisible(view.proposal() != null);
         proposalBox.setManaged(view.proposal() != null);
         showSource(view);
-        setRowShown(line);
+    }
+
+    // Opened, the section shows what the draft was given in full; a snapshot naming no part shows nothing.
+    private void showContext(final SegmentView view) {
+        final ContextSnapshot snapshot = view.context();
+        final String line = snapshot == null ? "" : ContextLine.of(snapshot);
+        context.show(
+                line.isEmpty() ? null : snapshot, messages.get(MessageKey.REVIEW_CONTEXT) + CONTEXT_SEPARATOR + line);
     }
 
     // A source with nothing visible in it still says so, rather than standing as an empty box.
@@ -302,13 +306,20 @@ final class ReviewComparePane extends VBox {
         panes.source().pseudoClassStateChanged(EMPTY_SOURCE, blank);
     }
 
-    private void setRowShown(final String line) {
-        final boolean shown = !line.isEmpty();
-        contextRow.setVisible(shown);
-        contextRow.setManaged(shown);
-    }
-
+    // A flagged segment whose record holds no finding still says why it is listed, rather than an empty heading.
     private void findingsFor(final SegmentView view) {
+        if (view.findings().isEmpty() && view.status() == SegmentStatus.FLAGGED) {
+            if (explainedEmpty.add(view.segmentId())) {
+                log.debug("segment {} is flagged with no finding recorded", view.segmentId());
+            }
+            final Label none = new Label(messages.get(MessageKey.REVIEW_FINDINGS_NONE));
+            none.setId("review-findings-none");
+            none.getStyleClass().add("finding-note");
+            none.setWrapText(true);
+            none.setMinHeight(Region.USE_PREF_SIZE);
+            findings.getChildren().setAll(none);
+            return;
+        }
         findings.getChildren()
                 .setAll(view.findings().stream().map(this::findingRow).toList());
     }

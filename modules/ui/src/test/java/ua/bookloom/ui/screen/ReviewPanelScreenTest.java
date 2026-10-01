@@ -5,9 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TitledPane;
+import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
@@ -173,7 +177,29 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
         selectFirstRow();
 
         assertThat(labelText("review-judge")).isEqualTo("judge 0.58");
-        assertThat(labelText("review-context-line")).isEqualTo("brief · glossary(2) · previous paragraph · summary");
+        assertThat(((TitledPane) required("review-context")).getText())
+                .isEqualTo("Context · brief · glossary(2) · previous paragraph · summary");
+    }
+
+    // IF the review's context stayed a one-line list of part names, THEN a reviewer could not read what the model was
+    // given; opened, it shows the earlier translation, the summary and the names at their full height.
+    @Test
+    void compare_contextOpened_showsWhatTheDraftWasGivenAtItsHeight() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.lowScore());
+        selectFirstRow();
+
+        onFx(() -> ((TitledPane) required("review-context")).setExpanded(true));
+        onFx(() -> {});
+
+        final ScrollPane body = (ScrollPane) required("review-context-body");
+        assertThat(body.lookupAll(".context-quote").stream().map(node -> ((Label) node).getText()))
+                .containsExactly("Раніше в тексті.");
+        assertThat(body.lookupAll(".context-lock")).hasSize(1);
+        final double natural = ThemeTestSupport.onFx(() -> {
+            final Region sections = (Region) body.getContent();
+            return sections.prefHeight(sections.getWidth());
+        });
+        assertThat(ThemeTestSupport.onFx(body::getHeight)).isGreaterThanOrEqualTo(natural - 1);
     }
 
     // IF a Fast-dial segment showed a judge badge, THEN it would claim a score nothing produced.

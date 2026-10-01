@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.function.Consumer;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -31,19 +32,18 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
- * The live row's collapsed "Context sent to the model" section: its header counts what the draft was given, and its
+ * A collapsed "Context sent to the model" section, under each live row and in the review panel: its header counts what
+ * the draft was given (the review panel names the parts instead), and its
  * body shows the preceding translations as quote blocks, the running summary, the glossary names as a two-column grid
  * with a lock on the locked ones, and the translation-memory hits; Copy puts the same as plain text on the clipboard.
  *
- * <p>The body has a height of its own (at least {@value #BODY_MIN} pixels, more as it fills, scrolling inside past
- * {@value #BODY_MAX}), so it is never crushed to a line. It stays collapsed or open as the person left it while the rows
+ * <p>Opened, the body takes the height of what it shows at the row's width, up to {@value #BODY_MAX} pixels, and scrolls
+ * inside past that, so the row, the live card and the page grow with it and nothing crushes it to a line. It stays collapsed or open as the person left it while the rows
  * it shows change. Showing logs nothing, as it is redrawn on every live-row change; only a press of Copy is logged.
  */
 @Slf4j
-final class ContextSection extends TitledPane {
+public final class ContextSection extends TitledPane {
 
-    static final double BODY_MIN = 160;
-    static final double BODY_PREF = 220;
     static final double BODY_MAX = 320;
 
     private static final double SPACING = 6;
@@ -57,7 +57,13 @@ final class ContextSection extends TitledPane {
     private final VBox sections = new VBox(SECTION_SPACING);
     private String plain = "";
 
-    ContextSection(final String id, final Messages messages) {
+    /**
+     * Builds a hidden, collapsed section; {@link #show(ContextSnapshot)} fills it.
+     *
+     * @param id the section's node id; the body is {@code <id>-body} and Copy is {@code <id>-copy}
+     * @param messages the catalogue the headings are worded from
+     */
+    public ContextSection(final String id, final Messages messages) {
         this(id, messages, ContextSection::toClipboard);
     }
 
@@ -105,7 +111,18 @@ final class ContextSection extends TitledPane {
      *
      * @param context the context, or {@code null} to hide the section
      */
-    void show(final @Nullable ContextSnapshot context) {
+    public void show(final @Nullable ContextSnapshot context) {
+        show(context, context == null ? "" : messages.get(MessageKey.LIVE_CONTEXT_TITLE) + " · " + counts(context));
+    }
+
+    /**
+     * Shows what a draft was sent with under a header of the caller's wording, or hides the section.
+     *
+     * @param context the context, or {@code null} to hide the section
+     * @param title the collapsed header; ignored when {@code context} is {@code null}
+     */
+    public void show(final @Nullable ContextSnapshot context, final String title) {
+        Objects.requireNonNull(title, "title");
         setVisible(context != null);
         setManaged(context != null);
         if (context == null) {
@@ -114,7 +131,7 @@ final class ContextSection extends TitledPane {
             sections.getChildren().clear();
             return;
         }
-        setText(messages.get(MessageKey.LIVE_CONTEXT_TITLE) + " · " + counts(context));
+        setText(title);
         plain = plainText(context);
         sections.getChildren().setAll(parts(context));
     }
@@ -250,24 +267,37 @@ final class ContextSection extends TitledPane {
     }
 
     /**
-     * The scrolling body: never shorter than {@value #BODY_MIN} pixels, at least {@value #BODY_PREF} when it can be,
-     * growing with what it holds up to {@value #BODY_MAX}, and scrolling inside beyond that.
+     * The scrolling body: as tall as what it holds at the width it is given, up to {@value #BODY_MAX} pixels, and
+     * scrolling inside beyond that.
+     *
+     * <p>A scroll pane measures its content at the content's own preferred width, which for wrapped text is one long
+     * line, so the body asked for a line's height and showed one clipped line. It reports a horizontal content bias
+     * instead, so the rows above pass it the width it is laid out at, and measures its content at that width; its
+     * minimum is that height, so no parent can squeeze it.
      */
     private static final class ContextBody extends ScrollPane {
 
-        ContextBody(final Node content) {
+        ContextBody(final Region content) {
             super(content);
             setFitToWidth(true);
             setHbarPolicy(ScrollBarPolicy.NEVER);
             setVbarPolicy(ScrollBarPolicy.AS_NEEDED);
-            setMinHeight(BODY_MIN);
-            setMaxHeight(BODY_MAX);
+            setMinHeight(Region.USE_PREF_SIZE);
+            setMaxHeight(Region.USE_PREF_SIZE);
             setFocusTraversable(false);
         }
 
         @Override
+        public Orientation getContentBias() {
+            return Orientation.HORIZONTAL;
+        }
+
+        @Override
         protected double computePrefHeight(final double width) {
-            return Math.clamp(super.computePrefHeight(width), BODY_PREF, BODY_MAX);
+            final double sides = snappedLeftInset() + snappedRightInset();
+            final double inner = width < 0 ? -1 : Math.max(0, width - sides);
+            final double content = getContent().prefHeight(inner);
+            return Math.min(content + snappedTopInset() + snappedBottomInset(), BODY_MAX);
         }
     }
 }

@@ -26,6 +26,7 @@ final class ReviewAvailability {
     private final ReadOnlyBooleanWrapper accept = new ReadOnlyBooleanWrapper();
     private final ReadOnlyBooleanWrapper allSegments = new ReadOnlyBooleanWrapper();
     private final ReadOnlyObjectWrapper<@Nullable MessageKey> lockReason = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable MessageKey> acceptNote = new ReadOnlyObjectWrapper<>();
 
     ReviewAvailability(final StateMirror mirror, final ReviewMode reviewMode) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -49,6 +50,11 @@ final class ReviewAvailability {
         return lockReason.getReadOnlyProperty();
     }
 
+    /** Why Accept is off for a segment that kept no translation; {@code null} otherwise. */
+    ReadOnlyObjectProperty<@Nullable MessageKey> acceptNote() {
+        return acceptNote.getReadOnlyProperty();
+    }
+
     /** Whether the run is translating, in which case review is unavailable and a retry is answered busy. */
     boolean isTranslating() {
         final RunState state = mirror.runState().get();
@@ -61,7 +67,11 @@ final class ReviewAvailability {
                 && !mirror.review().retryInFlight().get();
         actions.set(offered);
         lockReason.set(segment == null || offered ? null : reasonLocked());
-        accept.set(offered && !dirty && segment != null && isDecidable(segment.status()));
+        // A segment that kept no translation has nothing to accept: accepting it would count the source as reviewed.
+        final boolean decidable = segment != null && isDecidable(segment.status());
+        final boolean hasTarget = segment != null && hasTarget(segment);
+        accept.set(offered && !dirty && decidable && hasTarget);
+        acceptNote.set(offered && decidable && !hasTarget ? MessageKey.REVIEW_ACCEPT_NEEDS_TARGET : null);
         allSegments.set(reviewMode == ReviewMode.UNATTENDED && mirror.runState().get() == RunState.COMPLETED);
         log.debug(
                 "review availability: actions {}, accept {}, all segments {}, locked by {}",
@@ -73,6 +83,10 @@ final class ReviewAvailability {
 
     private MessageKey reasonLocked() {
         return isTranslating() ? MessageKey.REVIEW_LOCKED_RUNNING : MessageKey.REVIEW_LOCKED_RETRY;
+    }
+
+    private static boolean hasTarget(final SegmentView segment) {
+        return segment.maskedUserTarget() != null || segment.maskedMachineTarget() != null;
     }
 
     private static boolean isDecidable(final SegmentStatus status) {

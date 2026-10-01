@@ -11,8 +11,8 @@ import ua.bookloom.ui.notify.Toasts;
 
 /**
  * Shows a review action the desk refused on the surface its code is assigned: {@code busy} is one warning toast,
- * {@code validation} is the desk's own reason in place, and anything else that needs attention is the error dialog.
- * FX thread only.
+ * {@code validation} is the desk's own reason in place, and anything else that needs attention is the error dialog;
+ * and confirms a decision the desk took, since the panel moves on from it. FX thread only.
  */
 @Slf4j
 final class ReviewRefusals {
@@ -36,6 +36,15 @@ final class ReviewRefusals {
     /** Refuses an action before any call, because a run is translating: the same one warning a desk answer gives. */
     void refuseBusy(final String action, final String segmentId) {
         show(action, segmentId, AppError.of(ErrorCode.busy, "Busy", "A run is translating."));
+    }
+
+    /** Confirms an accepted or saved segment, which the panel has just moved on from; other actions stay silent. */
+    void confirm(final String action, final String locator, final int remaining) {
+        switch (action) {
+            case "accept" -> toasts.success(MessageKey.REVIEW_ACCEPTED, locator, remaining);
+            case "saveEdit" -> toasts.success(MessageKey.REVIEW_SAVED, locator);
+            default -> log.debug("review {} of {} needs no confirmation", action, locator);
+        }
     }
 
     void show(final String action, final String segmentId, final AppError error) {

@@ -44,6 +44,10 @@ final class ConnectionHealth {
             judging.finished(event);
             return;
         }
+        if (failure == ErrorCode.cancelled) {
+            log.debug("connection: a {} attempt was interrupted by the person; not counted as a failure", event.kind());
+            return;
+        }
         log.debug("connection: a {} attempt failed with {}", event.kind(), failure);
         failures.addLast(new Failure(at, failure == ErrorCode.timeout));
     }

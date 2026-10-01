@@ -15,6 +15,8 @@ public enum LogKind {
     MODEL_CALL(MessageKey.LOG_MODEL_CALL, StatusRole.INFO, "⇄", "call"),
     /** One attempt of a model call failed, timed out or was refused; its first argument names the call's kind. */
     CALL_FAILED(MessageKey.LOG_CALL_FAILED, StatusRole.WARNING, "⚠", "fail"),
+    /** One attempt of a model call the person's pause or stop interrupted: neutral, not a failure. */
+    CALL_PAUSED(MessageKey.LOG_CALL_PAUSED, StatusRole.INFO, "⏸", "pause"),
     /** A segment the checks did not accept entered a repair round. */
     ROUND(MessageKey.LOG_ROUND, StatusRole.INFO, "↺", "round"),
     /** The glossary grew from a name scan, or a segment was reused from the translation memory. */
@@ -70,8 +72,8 @@ public enum LogKind {
     /**
      * The short tag that starts this kind's entry in the log.
      *
-     * @return one of {@code ok}, {@code call}, {@code fail}, {@code round}, {@code mem}, {@code sum}, {@code retry},
-     *     {@code err} or {@code info}
+     * @return one of {@code ok}, {@code call}, {@code fail}, {@code pause}, {@code round}, {@code mem}, {@code sum},
+     *     {@code retry}, {@code err} or {@code info}
      */
     public String tag() {
         return tag;
@@ -83,7 +85,7 @@ public enum LogKind {
      * @return {@code true} for a model call's line, {@code false} otherwise
      */
     public boolean namesACall() {
-        return this == MODEL_CALL || this == CALL_FAILED;
+        return this == MODEL_CALL || this == CALL_FAILED || this == CALL_PAUSED;
     }
 
     /**

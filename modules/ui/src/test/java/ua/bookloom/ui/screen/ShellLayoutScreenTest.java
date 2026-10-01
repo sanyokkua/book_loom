@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TitledPane;
-import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -29,8 +27,9 @@ import ua.bookloom.ui.state.RunState;
 
 /**
  * The tall screens inside the shell at the smallest content area and at a roomy window: a screen is never squeezed
- * below its own height — the shell scrolls it instead — so the glossary table, the activity log, the review list and
- * an opened context keep a usable height; and the shell keeps its scroll position while a run refreshes the screen.
+ * below its own height — the shell scrolls it instead — so the glossary table, the activity log and the review list
+ * keep a usable height; and the shell keeps its scroll position while a run refreshes the screen. An opened context
+ * section is measured in {@link ContextSectionLayoutTest}.
  * The roomy size is 1000 by 900 because JavaFX's headless screen is 1000 pixels square: a wider window cannot be drawn.
  */
 class ShellLayoutScreenTest extends TranslatingScreenTestBase {
@@ -38,7 +37,6 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
     private static final double TABLE_MIN = 400;
     private static final double LOG_MIN = 260;
     private static final double REVIEW_ROWS_MIN = 10 * 34;
-    private static final double CONTEXT_MIN = 160;
     private static final String TEXT = "She had lost her mother, and the poor girl wept as she followed the coffin. ";
     private static final ContextSnapshot CONTEXT = new ContextSnapshot(
             List.of("Коли я приземлився на верхівку ліхтаря.", "Дощ лив стіною."),
@@ -138,20 +136,6 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
         sizeTo(width, height);
 
         assertThat(heightOf("review-list")).isGreaterThanOrEqualTo(REVIEW_ROWS_MIN);
-    }
-
-    // IF the context body could be crushed, THEN "Context sent to the model" would open to a single line; opened in
-    // the smallest content area it is at least 160 px tall.
-    @Test
-    void context_opened_atTheMinimum_isAtLeastItsMinimumHeight() {
-        running();
-        sizeTo(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
-
-        onFx(() -> ((TitledPane) required("live-current-context")).setExpanded(true));
-
-        assertThat(heightOf("live-current-context-body")).isGreaterThanOrEqualTo(CONTEXT_MIN);
-        assertThat(((Region) required("live-current-context-body")).getMinHeight())
-                .isEqualTo(CONTEXT_MIN);
     }
 
     // IF the shell lost its place whenever the screen briefly grew shorter (a live row hidden between two segments),

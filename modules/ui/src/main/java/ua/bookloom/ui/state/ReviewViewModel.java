@@ -53,7 +53,6 @@ public final class ReviewViewModel {
     private final ReviewQueries queries;
     private final StateMirror mirror;
     private final CurrentProject current;
-    private final Toasts toasts;
     private final ReviewRefusals refusals;
     private final ReviewRetry retry;
     private final ExecutorService executor;
@@ -74,7 +73,7 @@ public final class ReviewViewModel {
      * @param mirror the run's state, whose run state gates the actions and whose flagged queue prompts a recount
      * @param current the open book, whose project the desk is asked about
      * @param reviewMode the mode of this launch, which decides whether All segments is offered
-     * @param toasts where the accept and the busy refusal are announced
+     * @param toasts where an accept, a save and the busy refusal are announced
      * @param errors where a failure that is neither busy nor validation is shown
      * @param retry the model, the desk call and the hold on the run for a retry
      * @param executor the daemon executor desk calls run on, never the FX thread
@@ -94,9 +93,11 @@ public final class ReviewViewModel {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, Objects.requireNonNull(reviewMode, "reviewMode"));
-        this.toasts = Objects.requireNonNull(toasts, "toasts");
-        this.refusals =
-                new ReviewRefusals(toasts, Objects.requireNonNull(errors, "errors"), problem::set, editor::saveRefused);
+        this.refusals = new ReviewRefusals(
+                Objects.requireNonNull(toasts, "toasts"),
+                Objects.requireNonNull(errors, "errors"),
+                problem::set,
+                editor::saveRefused);
         this.retry = Objects.requireNonNull(retry, "retry");
         this.executor = Objects.requireNonNull(executor, "executor");
         mirror.runState().addListener((observed, was, now) -> refreshAvailability());
@@ -144,21 +145,7 @@ public final class ReviewViewModel {
         return editor.text();
     }
 
-    /** Whether the editor differs from the text the segment was opened with. FX thread only. */
-    public ReadOnlyBooleanProperty dirty() {
-        return editor.dirty();
-    }
-
-    /**
-     * The hint that editing has switched Accept off.
-     *
-     * @return a read-only property holding {@code null} while the editor is clean; FX thread only
-     */
-    public ReadOnlyObjectProperty<@Nullable MessageKey> hint() {
-        return editor.hint();
-    }
-
-    /** The editor's save state, its no-translation note and a refused save's tokens. FX thread only. */
+    /** The editor's changed state and hint, its save state, its no-translation note and a refused save's tokens. */
     public ReviewEditor editor() {
         return editor;
     }
@@ -186,8 +173,14 @@ public final class ReviewViewModel {
         return availability.actions();
     }
 
+    /** Why Accept is off for a segment that kept no translation, or {@code null}. FX thread only. */
+    public ReadOnlyObjectProperty<@Nullable MessageKey> acceptNote() {
+        return availability.acceptNote();
+    }
+
     /**
-     * Whether Accept is offered: the actions are, the editor is clean, and the segment is flagged or accepted.
+     * Whether Accept is offered: the actions are, the editor is clean, the segment is flagged or accepted, and it holds
+     * a translation.
      *
      * @return a read-only property; FX thread only
      */
@@ -322,11 +315,17 @@ public final class ReviewViewModel {
         }
         problem.set(null);
         final String projectId = book.projectId();
-        executor.execute(() -> perform(name, projectId, segment, call.apply(projectId, segment.segmentId())));
+        final List<String> order = rows.stream().map(ReviewRow::segmentId).toList();
+        executor.execute(() -> perform(name, projectId, segment, order, call.apply(projectId, segment.segmentId())));
     }
 
+    // After a decision the panel moves on (ReviewNext): it never keeps showing a segment that left the list.
     private void perform(
-            final String name, final String projectId, final SegmentView segment, final Result<SegmentRecord> result) {
+            final String name,
+            final String projectId,
+            final SegmentView segment,
+            final List<String> order,
+            final Result<SegmentRecord> result) {
         final SegmentRecord stored = result.data();
         if (stored == null) {
             final AppError error = Objects.requireNonNull(result.error(), "error");
@@ -335,17 +334,15 @@ public final class ReviewViewModel {
         }
         log.info("review {} of segment {} left it {}", name, segment.segmentId(), stored.status());
         final int remaining = queries.flagged(projectId, flaggedCount.get());
-        final String nextId = "skip".equals(name) ? stored.segmentId() : segment.segmentId();
-        final SegmentView next = queries.segment(projectId, nextId);
         final List<SegmentView> listed = Objects.requireNonNullElse(queries.list(projectId, filter.get()), List.of());
+        final String nextId = ReviewNext.after(name, segment.segmentId(), stored.segmentId(), order, listed);
+        final SegmentView next = nextId == null ? null : queries.segment(projectId, nextId);
         Platform.runLater(() -> {
             publishCount(remaining);
             publishRows(listed);
             show(next);
             mirror.review().publishDecided(name, segment.segmentId());
-            if ("accept".equals(name)) {
-                toasts.success(MessageKey.REVIEW_ACCEPTED, segment.locator(), remaining);
-            }
+            refusals.confirm(name, segment.locator(), remaining);
         });
     }
 
@@ -385,7 +382,9 @@ public final class ReviewViewModel {
 
     private void show(final @Nullable SegmentView view) {
         if (view == null) {
-            log.debug("no segment to show");
+            log.debug("no segment left to show: the panel shows its empty state");
+            selected.set(null);
+            refreshAvailability();
             return;
         }
         log.debug("showing segment {} with status {}", view.segmentId(), view.status());

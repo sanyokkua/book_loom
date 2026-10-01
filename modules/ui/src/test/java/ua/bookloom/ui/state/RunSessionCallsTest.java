@@ -101,6 +101,19 @@ class RunSessionCallsTest extends LiveSessionTestBase {
         assertThat(connection()).isEqualTo(new ConnectionStatus(Duration.ofSeconds(4), 1, 2, null, 30.0));
     }
 
+    // IF the person's own pause read as a failed call, THEN the log would say "failed: cancelled" and the chip would
+    // warn about an unsteady server that answered every request; the interrupted call is a neutral line, not counted.
+    @Test
+    void cancelledAttempt_isANeutralLineAndNoFailureForTheChip() {
+        final RunSession session = session();
+
+        session.onEvent(failed(1, ErrorCode.cancelled));
+        tick(session);
+
+        assertThat(shownLogEntries()).extracting(entry -> entry.kind()).containsExactly(LogKind.CALL_PAUSED);
+        assertThat(connection().failuresRecently()).isZero();
+    }
+
     // IF a failure ten minutes old still counted, THEN one bad moment would mark the server unsteady for the whole run.
     @Test
     void failureOlderThanTenMinutes_isForgotten() {

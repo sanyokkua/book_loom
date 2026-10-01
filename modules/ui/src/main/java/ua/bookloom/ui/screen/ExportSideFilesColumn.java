@@ -5,6 +5,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.ToggleSwitch;
@@ -39,6 +40,7 @@ final class ExportSideFilesColumn {
     Node build() {
         final VBox also = sideFilesCard();
         consistency.setId("export-aux-consistency");
+        consistency.setText(messages.get(MessageKey.EXPORT_CONSISTENCY_SWITCH));
         consistency.setAccessibleText(messages.get(MessageKey.EXPORT_CONSISTENCY_TITLE));
         consistency.setSelected(viewModel.consistencyPass().get());
         consistency.selectedProperty().addListener((observed, was, now) -> viewModel.setConsistencyPass(now));
@@ -83,6 +85,9 @@ final class ExportSideFilesColumn {
     private CheckBox sideFile(final String id, final MessageKey label, final MessageKey tip, final SideFile file) {
         final CheckBox box = Tips.install(messages, new CheckBox(messages.get(label)), tip);
         box.setId(id);
+        // The column is narrow; a long label (the bilingual copy's) wraps instead of ending in an ellipsis.
+        box.setWrapText(true);
+        box.setMinHeight(Region.USE_PREF_SIZE);
         box.setSelected(viewModel.sideFiles().contains(file));
         box.selectedProperty().addListener((observed, was, now) -> viewModel.setSideFile(file, now));
         box.disableProperty().bind(viewModel.runNote().isNotEmpty());

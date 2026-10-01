@@ -116,10 +116,12 @@ class TranslationWorkspaceEndToEndTest extends WorkspaceTestBase {
         final List<String> messages = pauseMessages();
         assertThat(messages).hasSize(mode == ReviewMode.UNATTENDED ? 0 : SEGMENT_COUNT);
         assertThat(messages).allSatisfy(message -> assertThat(message).contains("reason=ON_FLAGGED"));
+        // pausedSegment proves the panel opened on each pause; once the last paused segment is accepted nothing is
+        // left flagged, so the panel moves on to its empty state, and an unattended run never opened it at all.
         assertThat(onFx(() ->
                         injector.getInstance(ReviewViewModel.class).selected().get()))
-                .as("the panel opens only on a pause")
-                .matches(selected -> (selected != null) == (mode != ReviewMode.UNATTENDED));
+                .as("the panel opens only on a pause and moves on once its segment is decided")
+                .isNull();
     }
 
     private void assertRecords(final ReviewMode mode) {

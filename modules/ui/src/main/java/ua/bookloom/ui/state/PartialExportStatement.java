@@ -14,7 +14,8 @@ import ua.bookloom.ui.i18n.Messages;
  *
  * <p>Segments kept as source by choice are stated apart from untranslated ones: the desk's {@code pending} never
  * includes them, and lumping them in would make a finished book read as unfinished. A flagged segment with no machine
- * target is written in the source language, so it joins the untranslated line instead of the flagged one. Segments
+ * target is written in the source language too, but has a line of its own, so the person sees which untranslated
+ * segments the run tried and flagged rather than never reached. Segments
  * kept as they are because they had nothing to translate — a chapter number, a scene break — have a line of their own:
  * nobody chose to keep them, so they are never stated as kept by choice.
  */
@@ -29,21 +30,22 @@ final class PartialExportStatement {
      *
      * @param counts the review desk's counts for the project
      * @param messages the catalogue the lines come from
-     * @return one line per non-zero figure, source-language first, then flagged, then kept by choice, then kept as is;
-     *     empty when nothing needs stating
+     * @return one line per non-zero figure: not reached yet, flagged with no translation, flagged with a machine
+     *     translation, kept by choice, kept as is; empty when nothing needs stating
      */
     static List<String> lines(final ReviewCounts counts, final Messages messages) {
-        final int inSource = counts.pending() + counts.flaggedWithoutTarget();
         final int flaggedWithMachine = counts.flagged() - counts.flaggedWithoutTarget();
         log.debug(
-                "partial export: {} in the source language, {} flagged with a machine translation, {} kept as source,"
-                        + " {} kept as is",
-                inSource,
+                "partial export: {} not reached, {} flagged with no translation, {} flagged with a machine translation,"
+                        + " {} kept as source, {} kept as is",
+                counts.pending(),
+                counts.flaggedWithoutTarget(),
                 flaggedWithMachine,
                 counts.sourceKept(),
                 counts.keptVerbatim());
         final List<String> lines = new ArrayList<>();
-        add(lines, messages, MessageKey.EXPORT_PARTIAL_SOURCE, inSource);
+        add(lines, messages, MessageKey.EXPORT_PARTIAL_SOURCE, counts.pending());
+        add(lines, messages, MessageKey.EXPORT_PARTIAL_NO_TARGET, counts.flaggedWithoutTarget());
         add(lines, messages, MessageKey.EXPORT_PARTIAL_FLAGGED, flaggedWithMachine);
         add(lines, messages, MessageKey.EXPORT_PARTIAL_KEPT, counts.sourceKept());
         add(lines, messages, MessageKey.EXPORT_PARTIAL_VERBATIM, counts.keptVerbatim());

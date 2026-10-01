@@ -1253,9 +1253,17 @@ check leaves evidence.
   reply or a "showing the source" note, a token banner with insert chips after a refused save, and keeps typing through
   a re-read. Not done: the piece-wise redraft step of the gate-failure order (the deterministic re-place-all repair
   makes it unnecessary in every reproduced case) (1c39cb5)
-- [ ] 8. Layout, scrolling, concurrency: the shell content's minimum height so tall screens scroll, the activity log
-  following its tail only when at the tail, a structured context panel, the wheel glide rewrite, and an
-  `ActivityTracker` that keeps model actions from overlapping
+- [x] 8. Layout, scrolling, concurrency: the shell content's minimum height so tall screens scroll, the activity log
+  following its tail only when at the tail, a structured context panel, the wheel glide rewrite (e3aed60), and an
+  `ActivityTracker` that keeps model actions from overlapping (a7f4339); then the review and export polish from the
+  real-run check: the target's mark reads READ-ONLY while the box is locked, Accept is off with "Write or retry a
+  translation first" for a segment with no translation and saving the untouched source is not offered, activity-log
+  times in the local zone, "Flagged by the run — no detail recorded" for a flagged segment with no finding, the panel
+  moves on after Accept/Save/Skip (or to its empty state) with a "Saved" confirmation toast, a paused call is a neutral
+  log line not counted by the connection chip, and the Export screen's wrapping bilingual label, the labelled
+  consistency switch, "Your book so far" while segments are pending and a separate flagged-without-translation line
+  (en/uk plurals); and the "Context sent to the model" sections (live rows and the review panel) grow their row,
+  card and page to the full context at its natural height up to 320 px, measured by layout tests (COMMIT_ID)
 - [x] T. Test speed: parallel test forks per module (`min(4, cores/2)`, `-Pbookloom.forks=N`); `FxTestBase` in place
   of TestFX's `ApplicationTest` (its fixed `waitForFxEvents` sleeps were most of `:ui`'s time; it waits for the FX
   thread and two real pulses instead); the conformance suites reuse a shown screen across consecutive cases; one test

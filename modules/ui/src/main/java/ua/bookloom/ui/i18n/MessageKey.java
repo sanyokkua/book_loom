@@ -163,6 +163,8 @@ public enum MessageKey {
     LOG_MODEL_CALL("log.modelCall"),
     /** Activity-log entry for a failed model-call attempt; arguments as {@link #LOG_MODEL_CALL}, and 5 the error code; all Strings. */
     LOG_CALL_FAILED("log.callFailed"),
+    /** Activity-log line for a model call the person's pause or stop interrupted; arguments as {@link #LOG_CALL_FAILED} without the error code. */
+    LOG_CALL_PAUSED("log.callPaused"),
     /** Activity-log entry for a segment entering a repair round; arguments: 0 the locator, 1 the round, 2 the rounds allowed, 3 the finding it repairs or {@code none}; all Strings. */
     LOG_ROUND("log.round"),
     /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code judge} or {@code directed_fix}. */
@@ -1008,6 +1010,8 @@ public enum MessageKey {
     TRANSLATING_OPEN_SETTINGS_TIP("translating.openSettings.tip"),
     /** Heading of the export screen once a book was written. */
     EXPORT_TITLE("export.title"),
+    /** Export screen heading after writing a book that still has untranslated segments. */
+    EXPORT_TITLE_PARTIAL("export.title.partial"),
     /** Line under the export heading: the book is written when Export book is pressed, at any time. */
     EXPORT_SUBTITLE("export.subtitle"),
     /** Heading of the card that writes the book. */
@@ -1038,6 +1042,8 @@ public enum MessageKey {
     EXPORT_CONSISTENCY_TITLE("export.consistency.title"),
     /** Hover explanation of the control labelled by {@link #EXPORT_CONSISTENCY_TITLE}. */
     EXPORT_CONSISTENCY_TITLE_TIP("export.consistency.title.tip"),
+    /** Label beside the switch that turns the final consistency pass on. */
+    EXPORT_CONSISTENCY_SWITCH("export.consistency.switch"),
     /** Note under the consistency-pass switch saying what it does. */
     EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
     /** Refusal beside Save to when the occupied book is the file the last export wrote. */
@@ -1058,6 +1064,8 @@ public enum MessageKey {
     EXPORT_PARTIAL_KEPT("export.partial.kept"),
     /** Counted line: segments kept as they are because they had nothing to translate. */
     EXPORT_PARTIAL_VERBATIM("export.partial.verbatim"),
+    /** Partial-export line counting flagged segments that kept no translation; argument 0 is the count. */
+    EXPORT_PARTIAL_NO_TARGET("export.partial.noTarget"),
     /**
      * Counted line: segments written in the source language because their translation broke the formatting; argument
      * 0 is the count, argument 1 the segments' locators joined by commas.
@@ -1239,6 +1247,8 @@ public enum MessageKey {
     DIALOG_LEAVE_KEEP_TIP("dialog.leave.keep.tip"),
     /** Success toast after an accept; argument 0 is the segment's locator, argument 1 how many flagged segments remain. */
     REVIEW_ACCEPTED("review.accepted"),
+    /** Confirmation after the person's edit was saved; argument 0 is the segment's locator. */
+    REVIEW_SAVED("review.saved"),
     /** Warning toast when a review action is refused because a run is translating. */
     REVIEW_BUSY("review.busy"),
     /** Hint shown while the editor holds unsaved changes and Accept is off. */
@@ -1285,10 +1295,16 @@ public enum MessageKey {
     REVIEW_EDITABLE("review.editable"),
     /** Hover explanation of the control labelled by {@link #REVIEW_EDITABLE}. */
     REVIEW_EDITABLE_TIP("review.editable.tip"),
+    /** Mark beside the target pane's heading while the target cannot be edited (a run is translating or a retry is in flight). */
+    REVIEW_READ_ONLY("review.readOnly"),
+    /** Why Accept is off for a segment that kept no translation. */
+    REVIEW_ACCEPT_NEEDS_TARGET("review.accept.needsTarget"),
     /** Caption of the line that names what the model knew when it drafted the segment. */
     REVIEW_CONTEXT("review.context"),
     /** Caption of the list of a segment's findings. */
     REVIEW_FINDINGS("review.findings"),
+    /** Shown under the findings heading of a flagged segment whose record holds no finding. */
+    REVIEW_FINDINGS_NONE("review.findings.none"),
     /** Kind and severity of one finding; argument 0 is the kind, argument 1 the severity in lower case. */
     REVIEW_FINDING_KIND("review.finding.kind"),
     /** Muted label naming the check or the judge that raised a finding; argument 0 is its name. */

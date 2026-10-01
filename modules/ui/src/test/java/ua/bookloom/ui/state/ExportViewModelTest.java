@@ -97,8 +97,8 @@ class ExportViewModelTest extends ExportViewModelTestBase {
     @ParameterizedTest
     @CsvSource({
         "1240, 900, 25, 3, 0, 312, 0, 0, 0, '312 segments will be written in the source language|3 flagged segments will be written with their machine translation'",
-        "12, 8, 0, 3, 0, 1, 0, 1, 0, '2 segments will be written in the source language|2 flagged segments will be written with their machine translation'",
-        "12, 8, 0, 1, 0, 3, 0, 1, 0, '4 segments will be written in the source language'",
+        "12, 8, 0, 3, 0, 1, 0, 1, 0, '1 segment will be written in the source language|1 flagged segment has no translation yet and will be written in the source language|2 flagged segments will be written with their machine translation'",
+        "12, 8, 0, 1, 0, 3, 0, 1, 0, '3 segments will be written in the source language|1 flagged segment has no translation yet and will be written in the source language'",
         "1260, 913, 25, 3, 0, 312, 7, 0, 0, '312 segments will be written in the source language|3 flagged segments will be written with their machine translation|7 segments are kept as source by choice'",
         "1247, 1215, 25, 0, 0, 0, 7, 0, 0, '7 segments are kept as source by choice'",
         "10, 9, 0, 1, 0, 0, 1, 0, 0, '1 flagged segment will be written with its machine translation|1 segment is kept as source by choice'",

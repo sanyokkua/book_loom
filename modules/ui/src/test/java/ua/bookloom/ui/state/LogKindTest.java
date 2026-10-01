@@ -75,7 +75,7 @@ class LogKindTest {
         final List<String> marks =
                 Arrays.stream(LogKind.values()).map(LogKind::mark).collect(Collectors.toList());
 
-        assertThat(LogKind.values()).hasSize(9);
+        assertThat(LogKind.values()).hasSize(10);
         assertThat(marks).doesNotHaveDuplicates();
     }
 

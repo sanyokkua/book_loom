@@ -44,22 +44,37 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
         assertThat(editor()).isEqualTo("He opened the ⟦g0⟧old⟦g1⟧ door.");
     }
 
+    // IF a segment that kept no translation could be accepted, THEN its source would be counted as reviewed by the
+    // person; Accept is not offered, says why, and never reaches the desk.
     @Test
-    void accept_noMachineTarget_showsTheRefusalInPlaceAndTheRowStaysFlagged() {
+    void accept_noTranslationKept_isNotOfferedAndSaysWhy() {
         buildReview();
         desk.willAnswerSegment(withEditor(lowScore(), null, null));
         select("ch05.xhtml:11");
-        desk.willAnswer(Result.err(AppError.of(
-                ErrorCode.validation,
-                "Cannot accept",
-                "There is no machine translation to accept — edit it or retry.")));
 
         press(review::accept);
 
-        assertThat(onFx(() -> review.problem().get()))
-                .isEqualTo("There is no machine translation to accept — edit it or retry.");
+        assertThat(onFx(() -> review.acceptAvailable().get())).isFalse();
+        assertThat(onFx(() -> review.acceptNote().get())).isEqualTo(MessageKey.REVIEW_ACCEPT_NEEDS_TARGET);
+        assertThat(desk.calls()).noneMatch(call -> call.startsWith("accept("));
         assertThat(onFx(() -> review.selected().get().status())).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(errors.presented()).isEmpty();
+    }
+
+    // IF the source itself could be saved as the person's edit, THEN an untranslated segment would read as reviewed;
+    // typing it back to the source leaves nothing to save.
+    @Test
+    void saveEdit_noTranslationKeptAndTextIsTheSource_isNotOffered() {
+        buildReview();
+        desk.willAnswerSegment(withEditor(lowScore(), null, null));
+        select("ch05.xhtml:11");
+
+        onFx(() -> {
+            review.editorText().set("Моє");
+            review.editorText().set(lowScore().maskedSource());
+            return null;
+        });
+
+        assertThat(onFx(() -> review.editor().savable().get())).isFalse();
     }
 
     // IF an edited (REVISED) segment could be accepted, THEN the edit would be marked accepted unseen.
@@ -97,7 +112,7 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
         select("ch05.xhtml:11");
 
         assertThat(onFx(() -> review.acceptAvailable().get())).isTrue();
-        assertThat(onFx(() -> review.dirty().get())).isFalse();
+        assertThat(onFx(() -> review.editor().dirty().get())).isFalse();
     }
 
     // IF typing left Accept on, THEN the unsaved edit would be silently dropped by accepting the machine text.
@@ -111,9 +126,9 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
             return null;
         });
 
-        assertThat(onFx(() -> review.dirty().get())).isTrue();
+        assertThat(onFx(() -> review.editor().dirty().get())).isTrue();
         assertThat(onFx(() -> review.acceptAvailable().get())).isFalse();
-        assertThat(onFx(() -> review.hint().get())).isEqualTo(MessageKey.REVIEW_EDITING_HINT);
+        assertThat(onFx(() -> review.editor().hint().get())).isEqualTo(MessageKey.REVIEW_EDITING_HINT);
     }
 
     @Test
@@ -126,8 +141,8 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
             return null;
         });
 
-        assertThat(onFx(() -> review.dirty().get())).isFalse();
-        assertThat(onFx(() -> review.hint().get())).isNull();
+        assertThat(onFx(() -> review.editor().dirty().get())).isFalse();
+        assertThat(onFx(() -> review.editor().hint().get())).isNull();
     }
 
     @Test
@@ -161,7 +176,7 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
 
         assertThat(onFx(() -> review.problem().get())).isEqualTo("The edit lost the placeholders ⟦g0⟧ and ⟦g1⟧.");
         assertThat(onFx(() -> review.selected().get().status())).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(onFx(() -> review.dirty().get())).isTrue();
+        assertThat(onFx(() -> review.editor().dirty().get())).isTrue();
     }
 
     @Test
@@ -176,7 +191,7 @@ class ReviewViewModelEditorTest extends ReviewViewModelTestBase {
 
         assertThat(desk.calls()).contains("revert(" + projectId + ", ch05.xhtml:11)");
         assertThat(editor()).isEqualTo("Чудовисько зустріло мене опівночі.");
-        assertThat(onFx(() -> review.dirty().get())).isFalse();
+        assertThat(onFx(() -> review.editor().dirty().get())).isFalse();
     }
 
     // IF a segment were named by its locator, THEN two segments printed alike would be confused.

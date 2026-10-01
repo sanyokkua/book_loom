@@ -105,6 +105,14 @@ final class ActivityLogFeed {
         if (failure == null) {
             return new LogEntry(LogKind.MODEL_CALL, args);
         }
+        if (failure == ErrorCode.cancelled) {
+            log.debug(
+                    "a {} call for {} was interrupted by a pause or stop on attempt {}",
+                    event.kind(),
+                    locator,
+                    event.attempt());
+            return new LogEntry(LogKind.CALL_PAUSED, args);
+        }
         log.debug("a {} call for {} failed with {} on attempt {}", event.kind(), locator, failure, event.attempt());
         return new LogEntry(
                 LogKind.CALL_FAILED,

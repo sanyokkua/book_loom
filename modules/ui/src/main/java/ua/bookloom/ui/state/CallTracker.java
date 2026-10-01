@@ -5,6 +5,7 @@ import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
@@ -49,7 +50,7 @@ final class CallTracker {
     LogEntry finished(final ModelCallFinished finished) {
         wait.callFinished(finished);
         health.finished(finished, clock.instant());
-        if (!finished.isAnswered()) {
+        if (!finished.isAnswered() && finished.failure() != ErrorCode.cancelled) {
             lastFailed = finished.kind();
         }
         return feed.modelCall(finished);

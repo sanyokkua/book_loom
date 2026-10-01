@@ -38,6 +38,7 @@ public final class ReviewEditor {
     private String source = "";
     private @Nullable String loadedId;
     private boolean fromRejected;
+    private boolean noTarget;
 
     ReviewEditor(final Runnable onChange) {
         this.onChange = Objects.requireNonNull(onChange, "onChange");
@@ -48,11 +49,21 @@ public final class ReviewEditor {
         return text;
     }
 
-    ReadOnlyBooleanProperty dirty() {
+    /**
+     * Whether the editor differs from the text the segment was opened with.
+     *
+     * @return a read-only property; FX thread only
+     */
+    public ReadOnlyBooleanProperty dirty() {
         return dirty.getReadOnlyProperty();
     }
 
-    ReadOnlyObjectProperty<@Nullable MessageKey> hint() {
+    /**
+     * The hint that editing has switched Accept off.
+     *
+     * @return a read-only property holding {@code null} while the editor is clean; FX thread only
+     */
+    public ReadOnlyObjectProperty<@Nullable MessageKey> hint() {
         return hint.getReadOnlyProperty();
     }
 
@@ -96,7 +107,7 @@ public final class ReviewEditor {
     void load(final SegmentView view) {
         loadedId = view.segmentId();
         source = view.maskedSource();
-        final boolean noTarget = view.maskedUserTarget() == null && view.maskedMachineTarget() == null;
+        noTarget = view.maskedUserTarget() == null && view.maskedMachineTarget() == null;
         fromRejected = noTarget && view.rejectedTarget() != null;
         targetNote.set(
                 noTarget ? (fromRejected ? MessageKey.REVIEW_TARGET_REJECTED : MessageKey.REVIEW_TARGET_SOURCE) : null);
@@ -140,7 +151,8 @@ public final class ReviewEditor {
     // No line is logged here: it runs on every keystroke.
     private void refresh() {
         dirty.set(!text.get().equals(baseline));
-        savable.set(dirty.get() || fromRejected);
+        // A segment with no translation saved as its own source would read as reviewed by the person: never offered.
+        savable.set((dirty.get() || fromRejected) && !(noTarget && text.get().equals(source)));
         hint.set(dirty.get() ? MessageKey.REVIEW_EDITING_HINT : null);
         if (!neededTokens.isEmpty() || !extraTokens.get().isEmpty()) {
             neededTokens.setAll(ReviewTokens.missing(source, text.get()));

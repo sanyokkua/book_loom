@@ -43,9 +43,12 @@ public final class ComparePanes extends HBox {
         Objects.requireNonNull(sourceName, "sourceName");
         Objects.requireNonNull(targetName, "targetName");
         Objects.requireNonNull(messages, "messages");
-        final Label mark = new Label(messages.get(MessageKey.REVIEW_EDITABLE));
+        final Label mark = new Label();
         mark.setId("review-editable-mark");
-        mark.getStyleClass().addAll("chip", "chip-ok");
+        mark.getStyleClass().add("chip");
+        // The mark follows whether the target can be typed into, so it never promises an edit a run is locking out.
+        target.editableProperty().addListener((observed, was, now) -> showMark(mark, now, messages));
+        showMark(mark, target.isEditable(), messages);
         getChildren()
                 .addAll(
                         pane("review-source-head", sourceName, null, source),
@@ -68,6 +71,12 @@ public final class ComparePanes extends HBox {
      */
     public TextArea target() {
         return target;
+    }
+
+    private static void showMark(final Label mark, final boolean editable, final Messages messages) {
+        mark.setText(messages.get(editable ? MessageKey.REVIEW_EDITABLE : MessageKey.REVIEW_READ_ONLY));
+        mark.getStyleClass().removeAll("chip-ok", "chip-neutral");
+        mark.getStyleClass().add(editable ? "chip-ok" : "chip-neutral");
     }
 
     private static TextArea area(final String id, final boolean editable) {

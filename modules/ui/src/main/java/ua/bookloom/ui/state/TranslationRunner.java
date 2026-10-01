@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Clock;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
@@ -55,7 +56,8 @@ public final class TranslationRunner {
 
     TranslationRunner(
             final StateMirror mirror, final ExecutorService executor, final TickSource ticks, final ReviewDesk desk) {
-        this(mirror, executor, ticks, desk, Clock.systemUTC());
+        // The person's own zone, the one the file log is written in: the activity log's times must read the same.
+        this(mirror, executor, ticks, desk, Clock.system(ZoneId.systemDefault()));
     }
 
     TranslationRunner(
