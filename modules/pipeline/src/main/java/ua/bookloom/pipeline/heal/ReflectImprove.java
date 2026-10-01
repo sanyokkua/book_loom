@@ -23,6 +23,7 @@ import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
@@ -123,7 +124,7 @@ public final class ReflectImprove {
             final String maskedTarget,
             final ModelCalls calls) {
         final List<ChatMessage> messages = reflectMessages(frame, maskedSource, maskedTarget);
-        final ChatRequest request = ChatRequests.build(PromptName.REFLECT, messages, null, false);
+        final ChatRequest request = ChatRequests.build(PromptName.REFLECT, messages, OutputLimit.forReflect(), false);
         SelfHealCalls.logTraceMessages(log, REFLECT_LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.REFLECT, segmentId, request);
         final Result<List<String>> outcome = readIssues(reply);

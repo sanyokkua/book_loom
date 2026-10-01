@@ -116,7 +116,7 @@ class RollingSummaryKeeperMaxTest {
         assertThat(user).doesNotContain("[Running summary so far]");
         assertThat(request.temperature()).isEqualTo(0.2);
         assertThat(request.responseFormat()).isNotNull();
-        assertThat(request.expectedOutputTokens()).isNull();
+        assertThat(request.maxOutputTokens()).isEqualTo(1024);
     }
 
     @Test

@@ -29,6 +29,9 @@ import ua.bookloom.llm.response.ReplySanitizer;
 @Slf4j
 final class OllamaReplyReader {
 
+    /** The done reason a reply cut as a runaway is read with. */
+    private static final String CUT_REASON = "length";
+
     private final ProviderConfig config;
     private final ObjectMapper mapper;
     private final BiFunction<String, @Nullable Throwable, AppError> unreadable;
@@ -61,10 +64,11 @@ final class OllamaReplyReader {
         if (parts.stream().anyMatch(part -> part.error() != null)) {
             return stoppedWithError(requestedModel, parts.size());
         }
-        return chatResponse(requestedModel, reply, merged(parts));
+        return chatResponse(requestedModel, reply, merged(parts, reply.cut()));
     }
 
-    private static OllamaChatResponse merged(List<OllamaChatResponse> parts) {
+    /** A reply cut as a runaway ends without the provider's last part; it finished for length, as a cap would. */
+    private static OllamaChatResponse merged(List<OllamaChatResponse> parts, boolean cut) {
         final StringBuilder content = new StringBuilder();
         boolean anyContent = false;
         for (final OllamaChatResponse part : parts) {
@@ -78,7 +82,7 @@ final class OllamaReplyReader {
         return new OllamaChatResponse(
                 last.model(),
                 anyContent ? new OllamaChatResponse.Message(content.toString()) : null,
-                last.doneReason(),
+                cut ? CUT_REASON : last.doneReason(),
                 last.promptEvalCount(),
                 last.evalCount(),
                 last.evalDuration(),

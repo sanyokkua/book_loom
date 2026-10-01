@@ -18,6 +18,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
@@ -45,7 +46,7 @@ final class SummaryModelCall {
     Result<Optional<String>> summarize(
             final String previousSummary, final String chapterSource, final String chapterTarget) {
         final List<ChatMessage> messages = messagesFor(previousSummary, chapterSource, chapterTarget);
-        final ChatRequest request = ChatRequests.build(PromptName.SUMMARY, messages, null, false);
+        final ChatRequest request = ChatRequests.build(PromptName.SUMMARY, messages, OutputLimit.forSummary(), false);
         log.trace("Summary call messages {}", messages);
         final Result<ChatResponse> reply = calls.call(CallKind.SUMMARY, null, request);
         if (reply.isErr()) {

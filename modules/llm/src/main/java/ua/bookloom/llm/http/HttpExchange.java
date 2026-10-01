@@ -59,21 +59,26 @@ public final class HttpExchange {
      * @param path the endpoint path
      * @param body the request body
      * @param idle the longest the reply may send nothing, before its first line or between two lines
+     * @param maxLines the most lines read before the reply is cut as a runaway and returned marked
+     *     {@link HttpReply#cut()}, the connection closed so the provider stops generating; {@link Long#MAX_VALUE} for
+     *     no bound
      * @return the status, headers and every line of the body, each followed by a newline; or a {@code timeout} error
      *     for a reply that stalled or ran past its limit, {@code cancelled} for an interrupted caller, and the transport
      *     failure's own code otherwise
      */
-    public Result<HttpReply> postStreamed(ProviderConfig config, String path, String body, Duration idle) {
+    public Result<HttpReply> postStreamed(
+            ProviderConfig config, String path, String body, Duration idle, long maxLines) {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(body, "body");
         Objects.requireNonNull(idle, "idle");
         log.debug(
-                "HTTP streamed exchange request host={} path={} limit={} idle={} bodyLength={}",
+                "HTTP streamed exchange request host={} path={} limit={} idle={} maxLines={} bodyLength={}",
                 config.baseUrl().getHost(),
                 path,
                 config.requestTimeout(),
                 idle,
+                maxLines,
                 body.length());
         if (log.isTraceEnabled()) {
             log.trace(
@@ -84,13 +89,13 @@ public final class HttpExchange {
         }
         final URI endpoint = endpoint(config.baseUrl(), path);
         try {
-            return streamed(config, endpoint, body, idle);
+            return streamed(config, endpoint, body, idle, maxLines);
         } catch (RuntimeException failure) {
             return Result.err(HttpErrorMapper.map(failure, config, null, "POST", endpoint.getPath()));
         }
     }
 
-    private Result<HttpReply> streamed(ProviderConfig config, URI endpoint, String body, Duration idle) {
+    private Result<HttpReply> streamed(ProviderConfig config, URI endpoint, String body, Duration idle, long maxLines) {
         final StreamedLines lines = new StreamedLines();
         final AtomicReference<HttpResponse.@Nullable ResponseInfo> head = new AtomicReference<>();
         final long started = nanoTime.getAsLong();
@@ -105,13 +110,24 @@ public final class HttpExchange {
                 lines.exchangeFailed(failure);
             }
         });
-        return switch (lines.collect(idle, config.requestTimeout(), started, nanoTime)) {
-            case StreamedLines.Outcome.Collected collected -> {
-                final HttpResponse.ResponseInfo info = Objects.requireNonNull(head.get(), "response head");
-                final HttpReply reply =
-                        new HttpReply(info.statusCode(), info.headers().map(), collected.body());
-                logResponse("POST", endpoint.getHost(), endpoint, reply);
-                yield Result.ok(reply);
+        final StreamedLines.Outcome outcome = lines.collect(idle, config.requestTimeout(), started, nanoTime, maxLines);
+        return replyOf(outcome, config, endpoint, lines, exchange, head);
+    }
+
+    private static Result<HttpReply> replyOf(
+            StreamedLines.Outcome outcome,
+            ProviderConfig config,
+            URI endpoint,
+            StreamedLines lines,
+            CompletableFuture<HttpResponse<Void>> exchange,
+            AtomicReference<HttpResponse.@Nullable ResponseInfo> head) {
+        return switch (outcome) {
+            case StreamedLines.Outcome.Collected collected ->
+                Result.ok(received(head, endpoint, collected.body(), false));
+            case StreamedLines.Outcome.Cut cut -> {
+                lines.cancel();
+                exchange.cancel(true);
+                yield Result.ok(received(head, endpoint, cut.body(), true));
             }
             case StreamedLines.Outcome.Failed failed -> {
                 lines.cancel();
@@ -120,6 +136,14 @@ public final class HttpExchange {
                 yield Result.err(HttpErrorMapper.map(failed.failure(), broken, null, "POST", endpoint.getPath()));
             }
         };
+    }
+
+    private static HttpReply received(
+            AtomicReference<HttpResponse.@Nullable ResponseInfo> head, URI endpoint, String body, boolean cut) {
+        final HttpResponse.ResponseInfo info = Objects.requireNonNull(head.get(), "response head");
+        final HttpReply reply = new HttpReply(info.statusCode(), info.headers().map(), body, cut);
+        logResponse("POST", endpoint.getHost(), endpoint, reply);
+        return reply;
     }
 
     private Result<HttpReply> send(ProviderConfig config, String path, @Nullable String body) {

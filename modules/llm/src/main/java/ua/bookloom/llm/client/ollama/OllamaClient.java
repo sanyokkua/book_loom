@@ -40,6 +40,12 @@ public final class OllamaClient implements ProviderClient {
     private static final String TAGS_PATH = "/api/tags";
     private static final String CHAT_PATH = "/api/chat";
 
+    /** How many times its own cap a streamed reply may run before it is cut as a runaway. */
+    private static final int RUNAWAY_FACTOR = 2;
+
+    /** Lines a streamed reply may add past that, for the final part and the envelope around a short cap. */
+    private static final int RUNAWAY_MARGIN_LINES = 64;
+
     private final ProviderConfig config;
     private final HttpExchange exchange;
     private final ObjectMapper mapper;
@@ -195,10 +201,28 @@ public final class OllamaClient implements ProviderClient {
                 .requestTimeout();
     }
 
+    /**
+     * The most streamed lines read before a reply is cut as a runaway: Ollama sends about one token per line, so a
+     * reply far past twice its own cap (or, with no cap, twice the context) is a model looping that the server did not
+     * stop — a reflect call once streamed 9,664 lines until the three-minute timeout. Cut there, it is read as a
+     * reply that finished for length.
+     */
+    static long maxLines(ChatRequest request) {
+        final @Nullable Integer bound =
+                request.maxOutputTokens() != null ? request.maxOutputTokens() : request.contextWindow();
+        final long lines = bound == null ? Long.MAX_VALUE : (long) bound * RUNAWAY_FACTOR + RUNAWAY_MARGIN_LINES;
+        log.debug(
+                "Runaway guard maxOutputTokens={} contextWindow={} maxLines={}",
+                request.maxOutputTokens(),
+                request.contextWindow(),
+                lines);
+        return lines;
+    }
+
     private ProviderCallResult<HttpReply> postChat(String modelId, String body, ChatRequest request) {
         final ProviderConfig chatConfig = RequestTimeouts.forChat(config, request);
-        final Result<HttpReply> response =
-                exchange.postStreamed(chatConfig, CHAT_PATH, body, RequestTimeouts.streamIdle(config));
+        final Result<HttpReply> response = exchange.postStreamed(
+                chatConfig, CHAT_PATH, body, RequestTimeouts.streamIdle(config), maxLines(request));
         if (response.isErr()) {
             return ProviderCallResult.withoutRetryAfter(response);
         }

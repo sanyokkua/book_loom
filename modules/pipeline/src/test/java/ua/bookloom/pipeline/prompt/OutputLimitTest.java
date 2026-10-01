@@ -46,4 +46,19 @@ class OutputLimitTest {
     void forJudge_tenPairs_capsAtTenTwentyFour() {
         assertThat(OutputLimit.forJudge(10)).isEqualTo(new OutputLimit(512, 1024));
     }
+
+    @Test
+    void forReflect_anySource_capsAtSixHundred() {
+        assertThat(OutputLimit.forReflect()).isEqualTo(new OutputLimit(256, 600));
+    }
+
+    @Test
+    void forSummary_capsAtTenTwentyFour() {
+        assertThat(OutputLimit.forSummary()).isEqualTo(new OutputLimit(600, 1024));
+    }
+
+    @Test
+    void forPrescan_fortyCandidates_capsAtNineteenTwentyFour() {
+        assertThat(OutputLimit.forPrescan(40)).isEqualTo(new OutputLimit(992, 1984));
+    }
 }

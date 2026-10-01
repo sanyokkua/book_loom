@@ -7,5 +7,7 @@ Style guidance:
 
 Rules:
 - {{foreignPassageRule}}
+- Raise at most five issues, the most important first, each in one short sentence; return an empty list when
+  there is nothing to improve.
 - Say concretely how to improve each issue you raise.
 - Output ONLY the required JSON object. No commentary, no code fences, no reasoning.

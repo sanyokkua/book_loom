@@ -23,13 +23,18 @@ loaded, and a strict server may reject a field it does not know. Only Ollama is 
 
 WHEN a chat request carries an output cap, the system SHALL send it to an Ollama-native provider as `options.num_predict`
 and to an OpenAI-compatible provider as `max_tokens`. WHEN the request carries none, the system SHALL send neither field.
+WHILE an Ollama-native reply streams, IF it has sent more than `2 × cap + 64` lines (with no cap, `2 × context size +
+64`), THEN the system SHALL stop reading, close the connection, and return what arrived as a reply that finished for
+length, instead of waiting for the call's timeout.
 
 **Source:** FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`,
 `openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
 In plain words: a model that loops on one sentence would otherwise write until the server's own limit, and the run would
 wait for all of it. The request states where the server must stop, each dialect names that field its own way, and a call
-that states no cap (a summary) is left as unbounded as before. Which calls carry a cap, and how large it is, is
+that states no cap is left as unbounded as before. Ollama streams about one token per line, so a reply far past twice
+its cap is a model looping on a server that did not stop it; the client cuts it there rather than let one call hold the
+run for three minutes. Which calls carry a cap, and how large it is, is
 the `translation-pipeline` capability's rule.
 
 #### Scenario: LM Studio receives max_tokens
@@ -41,6 +46,13 @@ the `translation-pipeline` capability's rule.
 
 - **WHEN** a request with no output cap is sent to the provider `lmstudio`
 - **THEN** the posted body has no `max_tokens` key
+
+#### Scenario: A runaway stream is cut as length
+
+- **WHEN** a request with an output cap of `20` is sent to the provider `ollama` and the reply keeps streaming
+  one-token lines with no final part
+- **THEN** after 104 lines the client stops reading and answers a reply whose finish is cut off by length, well before
+  the call's timeout
 
 #### Scenario: Ollama receives num_predict beside num_ctx
 

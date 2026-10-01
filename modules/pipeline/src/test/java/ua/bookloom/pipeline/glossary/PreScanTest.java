@@ -91,7 +91,7 @@ class PreScanTest {
         assertThat(candidateLines(requests.getFirst())).first().isEqualTo("Xaa — We met Xaa today.");
         assertThat(candidateLines(requests.get(2))).last().isEqualTo("Xdq — We met Xdq today.");
         assertThat(requests).extracting(ChatRequest::temperature).containsOnly(0.2);
-        assertThat(requests).extracting(ChatRequest::expectedOutputTokens).containsOnlyNulls();
+        assertThat(requests).extracting(ChatRequest::maxOutputTokens).containsExactly(1984, 1984, 784);
         assertThat(requests.getFirst().responseFormat()).isNotNull();
     }
 

@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -53,6 +54,11 @@ class OllamaClientStreamingTest {
             {"model":"gemma4:e4b-mlx","message":{"role":"assistant","content":""},"done":true,\
             "done_reason":"stop","prompt_eval_count":12,"eval_count":2,"eval_duration":1000000}
             """;
+    private static final int RUNAWAY_CAP = 20;
+    private static final String RUNAWAY_STREAM = String.join(
+            "",
+            Collections.nCopies(
+                    2000, "{\"model\":\"gemma4:e4b-mlx\",\"message\":{\"content\":\"la \"},\"done\":false}\n"));
     // Two lines eight seconds apart: far longer than the one-second idle gap the tests allow.
     private static final int STALLED_STREAM_MS = 8000;
 
@@ -140,6 +146,34 @@ class OllamaClientStreamingTest {
         }
     }
 
+    // A model that loops past its cap on a server that ignores num_predict: 2,000 one-token lines over 40 s, never a
+    // final part. The guard cuts it at twice the cap plus the margin and reads it as a reply that finished for length.
+    @Test
+    void chat_streamRunningFarPastItsCap_isCutAsLengthWithoutWaitingForTheTimeout() {
+        stubStream(aResponse().withBody(RUNAWAY_STREAM).withChunkedDribbleDelay(400, 40_000));
+        final long started = System.nanoTime();
+
+        final Result<ChatResponse> result = client(Duration.ofSeconds(60))
+                .chat(MODEL_ID, capped(RUNAWAY_CAP))
+                .result();
+
+        assertThat(result.data()).extracting(ChatResponse::finishReason).isEqualTo(FinishReason.LENGTH);
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(15));
+        server.verify(postRequestedFor(urlEqualTo(CHAT_PATH))
+                .withRequestBody(matchingJsonPath("$.options.num_predict", equalTo(String.valueOf(RUNAWAY_CAP)))));
+    }
+
+    @Test
+    void maxLines_cappedRequest_isTwiceTheCapPlusTheMargin() {
+        assertThat(OllamaClient.maxLines(capped(RUNAWAY_CAP))).isEqualTo(104L);
+    }
+
+    @Test
+    void maxLines_noCapNoContext_isUnbounded() {
+        assertThat(OllamaClient.maxLines(new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")))))
+                .isEqualTo(Long.MAX_VALUE);
+    }
+
     @Test
     void chat_errorLineInsideTheStream_returnsUpstream() {
         stubStream(aResponse().withBody("""
@@ -178,6 +212,19 @@ class OllamaClientStreamingTest {
                 null,
                 null,
                 CallKind.DRAFT);
+    }
+
+    private static ChatRequest capped(int cap) {
+        return new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "hello")),
+                null,
+                null,
+                null,
+                null,
+                cap,
+                cap,
+                null,
+                CallKind.REFLECT);
     }
 
     private OllamaClient client(Duration requestTimeout) {

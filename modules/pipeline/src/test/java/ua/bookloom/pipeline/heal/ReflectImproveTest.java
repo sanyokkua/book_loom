@@ -15,6 +15,7 @@ import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.project.BookBrief;
@@ -107,12 +108,14 @@ class ReflectImproveTest {
     }
 
     @Test
-    void reflect_anyCall_statesNoExpectedOutput() {
+    void reflect_anyCall_statesItsShortIssueListLimit() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable("{\"issues\":[]}"));
 
         REFLECT_IMPROVE.reflect(segment(), FRAME, SOURCE, CANDIDATE, calls(model));
 
-        assertThat(model.requests().getFirst().expectedOutputTokens()).isNull();
+        assertThat(model.requests().getFirst())
+                .extracting(ChatRequest::expectedOutputTokens, ChatRequest::maxOutputTokens)
+                .containsExactly(256, 600);
     }
 
     @Test

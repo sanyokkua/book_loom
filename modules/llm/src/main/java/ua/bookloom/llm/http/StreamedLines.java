@@ -69,12 +69,14 @@ final class StreamedLines implements Flow.Subscriber<String> {
      * @param limit the longest the whole reply may take, counted from {@code startedNanos}
      * @param startedNanos when the request was sent, on {@code nanoTime}'s scale
      * @param nanoTime the clock the waits are measured with
-     * @return the lines joined by newlines, or the failure that ended the wait: an {@link HttpTimeoutException} for a
-     *     stall or an overrun, an {@link InterruptedException} for an interrupt, else the exchange's own failure
+     * @param maxLines the most lines read before the reply is cut as a runaway; {@link Long#MAX_VALUE} for no bound
+     * @return the lines joined by newlines; the lines read so far when {@code maxLines} was reached; or the failure
+     *     that ended the wait: an {@link HttpTimeoutException} for a stall or an overrun, an
+     *     {@link InterruptedException} for an interrupt, else the exchange's own failure
      */
-    Outcome collect(Duration idle, Duration limit, long startedNanos, LongSupplier nanoTime) {
+    Outcome collect(Duration idle, Duration limit, long startedNanos, LongSupplier nanoTime, long maxLines) {
         final StringBuilder body = new StringBuilder();
-        int lines = 0;
+        long lines = 0;
         while (true) {
             final long remaining = limit.toNanos() - (nanoTime.getAsLong() - startedNanos);
             final long wait = Math.min(idle.toNanos(), remaining);
@@ -83,6 +85,10 @@ final class StreamedLines implements Flow.Subscriber<String> {
                 case Signal.Line line -> {
                     body.append(line.text()).append('\n');
                     lines++;
+                    if (lines >= maxLines) {
+                        log.warn("Streamed reply cut as a runaway lines={} maxLines={}", lines, maxLines);
+                        return new Outcome.Cut(body.toString());
+                    }
                 }
                 case Signal.Done done -> {
                     log.debug("Streamed reply complete lines={} length={}", lines, body.length());
@@ -132,6 +138,13 @@ final class StreamedLines implements Flow.Subscriber<String> {
          * @param body the lines, each followed by a newline
          */
         record Collected(String body) implements Outcome {}
+
+        /**
+         * The reply ran past the most lines it may send and was cut there.
+         *
+         * @param body the lines read, each followed by a newline
+         */
+        record Cut(String body) implements Outcome {}
 
         /**
          * The wait ended without the whole reply.

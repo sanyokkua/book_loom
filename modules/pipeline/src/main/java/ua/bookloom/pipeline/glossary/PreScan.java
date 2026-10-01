@@ -28,6 +28,7 @@ import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
@@ -128,7 +129,8 @@ public final class PreScan {
             final CallFrame frame,
             final ModelCalls calls) {
         final List<ChatMessage> messages = messagesFor(batch, existing, frame);
-        final ChatRequest request = ChatRequests.build(PromptName.PRESCAN, messages, null, false);
+        final ChatRequest request =
+                ChatRequests.build(PromptName.PRESCAN, messages, OutputLimit.forPrescan(batch.size()), false);
         log.trace("Pre-scan batch {} messages {}", index, messages);
         final Result<ChatResponse> reply = calls.call(CallKind.PRESCAN, null, request);
         if (reply.isErr()) {
