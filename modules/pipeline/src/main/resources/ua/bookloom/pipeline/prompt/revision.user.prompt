@@ -3,11 +3,17 @@
 {{resolvedFacts}}
 {{/resolvedFacts}}
 
-[Source]
+<Source>
 {{source}}
+</Source>
 
-<Text>
+{{#tokens}}
+[Immutable tokens]
+Copy this exact ordered sequence unchanged: {{tokens}}
+{{/tokens}}
+
+<Translation>
 {{text}}
-</Text>
+</Translation>
 
-Return exactly one JSON object matching this schema: {"target":"<revised translation>"}
+Return one JSON object: {"target":"<the revised translation, or the same text if nothing changes>"}

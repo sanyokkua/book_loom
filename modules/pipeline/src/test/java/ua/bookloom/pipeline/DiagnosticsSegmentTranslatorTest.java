@@ -96,9 +96,7 @@ class DiagnosticsSegmentTranslatorTest {
         final String log = testLogSince(offset);
         assertThat(log)
                 .contains(
-                        "TRACE",
-                        "Draft prompt system=You are a professional literary translator",
-                        "<Text>\n" + source + "\n</Text>")
+                        "TRACE", "Draft prompt system=You are a literary translator", "<Text>\n" + source + "\n</Text>")
                 .contains("Segment reply raw={\"target\":\"" + reply + "\"}", "trimmed=" + reply)
                 .contains("Segment reply restored=  SENSITIVE MANUSCRIPT SENTENCE.  ")
                 .contains("Segment unmask input=  SENSITIVE MANUSCRIPT SENTENCE.  ");

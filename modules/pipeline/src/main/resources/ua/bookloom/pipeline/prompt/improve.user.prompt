@@ -1,13 +1,19 @@
-[Source]
+<Source>
 {{source}}
+</Source>
 
 {{#issues}}
 [Critique to apply]
 {{issues}}
 {{/issues}}
 
-<Text>
-{{text}}
-</Text>
+{{#tokens}}
+[Immutable tokens]
+Copy this exact ordered sequence unchanged: {{tokens}}
+{{/tokens}}
 
-Return exactly one JSON object matching this schema: {"target":"<improved translation>"}
+<Translation>
+{{text}}
+</Translation>
+
+Return one JSON object: {"target":"<the full improved translation>"}

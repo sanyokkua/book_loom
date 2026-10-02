@@ -62,8 +62,11 @@ class ConsistencyPassGenderTest {
 
         assertThat(book.model().requests()).hasSize(1);
         final String user = book.userMessage(0);
-        assertThat(user.split("<Text>", -1)).hasSize(2);
-        assertThat(user).contains("<Text>\n" + DOOR_MASKED + "\n</Text>", "[Source]\nSam opened the ⟦g0⟧old⟦g1⟧ door.");
+        assertThat(user.split("<Translation>", -1)).hasSize(2);
+        assertThat(user)
+                .contains(
+                        "<Translation>\n" + DOOR_MASKED + "\n</Translation>",
+                        "<Source>\nSam opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>");
         assertThat(user).contains("- Sam (Сем): female");
         assertThat(book.model().requests().getFirst().temperature()).isEqualTo(0.2);
         final SegmentRecord record = book.stored(SAM_DOOR);
@@ -204,7 +207,7 @@ class ConsistencyPassGenderTest {
 
         ok(book.run(true));
 
-        assertThat(book.userMessage(0)).contains("<Text>\nВона пішла.\n</Text>");
+        assertThat(book.userMessage(0)).contains("<Translation>\nВона пішла.\n</Translation>");
         assertThat(book.stored(SAM_LEFT).userTarget()).isEqualTo("Вона пішла.");
         assertThat(book.openDeferrals())
                 .extracting(Deferral::proposal, Deferral::maskedProposal)

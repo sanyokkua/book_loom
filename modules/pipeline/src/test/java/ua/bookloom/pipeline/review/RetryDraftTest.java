@@ -103,7 +103,8 @@ class RetryDraftTest {
                 .containsExactly(tuple("draft", 0.1), tuple("judge", 0.1));
         assertThat(userMessage(model.requests().getFirst())).contains("[Extra instruction]\n" + NOTE);
         assertThat(userMessage(model.requests().get(1)))
-                .contains("[s1]\nSource: The monster met me at midnight.\nCandidate: " + MONSTER_TARGET);
+                .contains("<Pair id=\"s1\">\n<Source>The monster met me at midnight.</Source>\n<Candidate>"
+                        + MONSTER_TARGET);
     }
 
     @Test

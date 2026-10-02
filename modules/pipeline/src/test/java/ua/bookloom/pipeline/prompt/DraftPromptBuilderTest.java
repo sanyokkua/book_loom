@@ -28,7 +28,8 @@ class DraftPromptBuilderTest {
                         [Book so far — context only; do NOT re-translate it]
                         Гейл шукає брата.
 
-                        [Glossary — apply these renderings exactly]
+                        [Glossary — apply these renderings exactly; a line "⟦gN⟧ → name" says which name a token stands for: write the
+                        token, never the name]
                         Hale → Гейл (character, male)
 
                         [Earlier decisions — keep consistent]
@@ -61,10 +62,10 @@ class DraftPromptBuilderTest {
         final var messages = builder.messagesFor(segment("He opened the ⟦g0⟧old⟦g1⟧ door."));
 
         assertThat(messages.getFirst().content())
-                .contains("translating from English (en) into Ukrainian (uk)")
-                .contains("⟦gN⟧ EXACTLY as written")
-                .contains("Paired placeholders must enclose nonblank translated text")
-                .contains("Output ONLY the required JSON object");
+                .contains("from English (en) into Ukrainian (uk)")
+                .contains("Copy every token exactly, each\n   once.")
+                .contains("A pair never wraps nothing.")
+                .contains("Output ONLY the JSON object {\"target\":\"...\"}");
         assertThat(messages.get(1).content()).contains("from English (en) to Ukrainian (uk)");
     }
 
@@ -118,9 +119,9 @@ class DraftPromptBuilderTest {
                 .doesNotContain("\"segments\"");
     }
 
-    // The system teaches placeholder placement structurally without biasing the requested target language.
+    // The system shows the pair's bundled examples as literal replies, so a small model sees real token placement.
     @Test
-    void messagesFor_anyLanguage_rendersLanguageNeutralPlaceholderShots() {
+    void messagesFor_englishToUkrainian_showsTheBundledExamplesAsLiteralReplies() {
         final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
 
         final String system = builder.messagesFor(segment("Hello."), DraftContext.empty())
@@ -128,11 +129,24 @@ class DraftPromptBuilderTest {
                 .content();
 
         assertThat(system)
-                .contains("A ⟦g0⟧B⟦g1⟧ C → X ⟦g0⟧Y⟦g1⟧ Z")
-                .contains("A ⟦g0⟧B⟦g1⟧ C ⟦g2⟧D⟦g3⟧ → X ⟦g0⟧Y⟦g1⟧ Z ⟦g2⟧W⟦g3⟧")
-                .contains("https://example.test/a")
-                .contains("{\"target\":\"X ⟦g0⟧Y⟦g1⟧ Z\"}")
-                .contains("structural only");
+                .contains("Examples (Source = the <Text>, Reply = your whole answer):\n")
+                .contains("Source: ⟦g0⟧T⟦g1⟧he night was cold.\nReply: {\"target\":\"⟦g0⟧Н⟦g1⟧іч була холодна.\"}")
+                .contains("Source: 1881\nReply: {\"target\":\"1881\"}")
+                .doesNotContain("# pairs:");
+    }
+
+    // A target with no examples file of its own falls back to the language-independent cases.
+    @Test
+    void messagesFor_targetWithoutExamples_showsTheNeutralExamples() {
+        final DraftPromptBuilder builder = builder("en", "ja", BookBrief.defaults("en"));
+
+        final String system = builder.messagesFor(segment("Hello."), DraftContext.empty())
+                .getFirst()
+                .content();
+
+        assertThat(system)
+                .contains("Source: * * *\nReply: {\"target\":\"* * *\"}")
+                .doesNotContain("Source: CHAPTER");
     }
 
     // Previous accepted targets are the only context rendered today and retain their document order.

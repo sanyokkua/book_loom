@@ -26,6 +26,6 @@ target.
 <Text>: ⟦g0⟧“A⟦g1⟧bove all,” he said.
 Rejected: ⟦g0⟧«Понад усе», — сказав він.
 Missing: ⟦g1⟧. ⟦g0⟧…⟦g1⟧ wraps "“A" — the first letter of the first word.
-Corrected: {"target":"⟦g0⟧«П⟦g1⟧онад усе», — сказав він."}
+Reply: {"target":"⟦g0⟧«П⟦g1⟧онад усе», — сказав він."}
 
-Return exactly one JSON object: {"target":"<translation>"}.
+Return exactly one JSON object: {"target":"<translation>"}. No code fences, no text before or after it.

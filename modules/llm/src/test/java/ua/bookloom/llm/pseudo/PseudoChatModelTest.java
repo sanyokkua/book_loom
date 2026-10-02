@@ -32,11 +32,11 @@ class PseudoChatModelTest {
         assertThat(response.usage()).isNull();
     }
 
-    // A directed fix reads the rejected target from its one <Text> block, ignoring the source outside it.
+    // A directed fix reads the rejected target from its one <Translation> block, ignoring the <Source> beside it.
     @Test
     void chat_directedFixFormat_repliesWithUppercasedRejectedTarget() {
-        final String message =
-                "[Source]\nHe opened the ⟦g0⟧old⟦g1⟧ door.\n" + "<Text>\nhe opened the ⟦g0⟧old⟦g1⟧ door.\n</Text>";
+        final String message = "<Source>\nHe opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>\n\n"
+                + "<Translation>\nhe opened the ⟦g0⟧old⟦g1⟧ door.\n</Translation>";
 
         final ChatResponse response = send(message, "directed-fix");
 

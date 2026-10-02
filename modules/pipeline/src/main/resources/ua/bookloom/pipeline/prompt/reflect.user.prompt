@@ -1,9 +1,9 @@
-[Source]
+<Source>
 {{source}}
+</Source>
 
-<Text>
+<Translation>
 {{text}}
-</Text>
+</Translation>
 
-Return JSON exactly as:
-{"issues":[{"note":"<what is wrong>","suggestion":"<how to fix>"}]}
+Return one JSON object: {"issues":[{"note":"<what is wrong>","suggestion":"<what to write instead>"}]}, or {"issues":[]}

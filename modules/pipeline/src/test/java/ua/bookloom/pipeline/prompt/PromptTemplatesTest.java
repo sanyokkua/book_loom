@@ -124,9 +124,9 @@ class PromptTemplatesTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    // The revision call holds one <Text> block with the masked target; the masked source sits outside it.
+    // The revision call holds one <Translation> block with the masked target; the masked source sits in <Source>.
     @Test
-    void renderUser_revisionWithoutFacts_holdsSourceAndOneTextBlock() {
+    void renderUser_revisionWithoutFacts_holdsSourceAndOneTranslationBlock() {
         final String user = new PromptTemplates()
                 .renderUser(
                         PromptName.REVISION,
@@ -137,9 +137,24 @@ class PromptTemplatesTest {
                                 "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері."));
 
         assertThat(user)
-                .isEqualTo("[Source]\nSam opened the ⟦g0⟧old⟦g1⟧ door.\n\n<Text>\nСем відчинив ⟦g0⟧старі⟦g1⟧ двері.\n"
-                        + "</Text>\n\nReturn exactly one JSON object matching this schema: "
-                        + "{\"target\":\"<revised translation>\"}\n");
+                .isEqualTo("<Source>\nSam opened the ⟦g0⟧old⟦g1⟧ door.\n</Source>\n\n<Translation>\n"
+                        + "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.\n</Translation>\n\nReturn one JSON object: "
+                        + "{\"target\":\"<the revised translation, or the same text if nothing changes>\"}\n");
+    }
+
+    // A source with tokens lists them for the rewrite, as the draft does.
+    @Test
+    void renderUser_revisionWithTokens_listsThemBeforeTheTranslation() {
+        final String user = new PromptTemplates()
+                .renderUser(
+                        PromptName.REVISION,
+                        Map.of(
+                                "source", "Sam opened the ⟦g0⟧old⟦g1⟧ door.",
+                                "text", "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.",
+                                "tokens", "⟦g0⟧ ⟦g1⟧"));
+
+        assertThat(user)
+                .contains("[Immutable tokens]\nCopy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧\n\n<Translation>");
     }
 
     @Test
@@ -151,7 +166,7 @@ class PromptTemplatesTest {
 
         assertThat(user)
                 .startsWith(
-                        "[Resolved facts revealed later in the book]\n- Sam (Сем): female\n\n[Source]\nSam left.\n");
+                        "[Resolved facts revealed later in the book]\n- Sam (Сем): female\n\n<Source>\nSam left.\n");
     }
 
     @Test
@@ -170,9 +185,8 @@ class PromptTemplatesTest {
                                 "Keep foreign passages."));
 
         assertThat(system)
-                .startsWith("You are performing a consistency revision on an already-translated book "
-                        + "(English (en) → Ukrainian (uk)).")
-                .contains("Style guidance:\nNeutral register.\n", "- Keep foreign passages.\n")
+                .startsWith("You revise one segment of a book already translated from English (en) into Ukrainian (uk)")
+                .contains("Style:\nNeutral register.\n", "5. Keep foreign passages.\n")
                 .doesNotContain("{{");
     }
 

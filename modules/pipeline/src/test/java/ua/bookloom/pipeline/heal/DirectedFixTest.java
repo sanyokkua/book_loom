@@ -90,7 +90,7 @@ class DirectedFixTest {
         final String user = userMessageOf(model);
         assertThat(TextBlockAssertions.textBlockCount(user)).isEqualTo(1);
         assertThat(TextBlockAssertions.textBlockOf(user)).isEqualTo(ECHO_REJECTED_TARGET);
-        assertThat(user).contains("[Source]").contains(ECHO_SOURCE);
+        assertThat(user).contains("<Source>\n" + ECHO_SOURCE);
     }
 
     @Test

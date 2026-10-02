@@ -1,14 +1,10 @@
 {{#glossaryTerms}}
-[Glossary that was required]
+[Glossary the translation had to use]
 {{glossaryTerms}}
 {{/glossaryTerms}}
 
-[Source and candidate pairs, labelled s1..sk]
 {{pairs}}
 
-Score 0.0-1.0 overall (1.0 = publishable, faithful, complete). List findings for concrete defects only, by label.
-If a labelled pair needs a fact revealed later in the book, note it under "deferrals".
-Return JSON exactly as:
-{"score":<0.0-1.0>,"verdict":"accept"|"revise",
- "findings":[{"segmentId":"<s1..sk label>","type":"meaning|omission|fluency|glossary|language|tag","severity":"low|medium|high","note":"<short>"}],
- "deferrals":[{"segmentId":"<s1..sk label>","reason":"<why it needs a later fact>"}]}
+Before you score: is every <Candidate> written in {{targetLanguage}}? A candidate that is not scores below 0.40.
+Return one JSON object in this schema:
+{"score":<0.00-1.00>,"verdict":"accept"|"revise","findings":[{"segmentId":"<pair id>","type":"meaning|omission|fluency|glossary|language|tag","severity":"low|medium|high","note":"<short>"}],"deferrals":[{"segmentId":"<pair id>","reason":"<why it needs a later fact>"}]}

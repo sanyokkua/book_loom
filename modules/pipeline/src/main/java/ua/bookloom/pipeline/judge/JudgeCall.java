@@ -120,12 +120,11 @@ public final class JudgeCall {
 
     private List<ChatMessage> messagesFor(
             final List<JudgedPair> pairs, final CallFrame frame, final List<String> glossaryTerms) {
-        final String system = templates
-                .renderSystem(PromptName.JUDGE, frame.systemSlotValues())
-                .strip();
+        final String system = templates.renderSystem(PromptName.JUDGE, frame).strip();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("pairs", renderPairs(pairs));
         userValues.put("glossaryTerms", String.join("\n", glossaryTerms));
+        userValues.put("targetLanguage", frame.systemSlotValues().get("targetLanguage"));
         final String user = templates.renderUser(PromptName.JUDGE, userValues).strip();
         return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
     }
@@ -134,8 +133,8 @@ public final class JudgeCall {
         final List<String> blocks = new ArrayList<>();
         for (int index = 0; index < pairs.size(); index++) {
             final JudgedPair pair = pairs.get(index);
-            blocks.add("[" + labelOf(index) + "]\nSource: " + pair.maskedSource() + "\nCandidate: "
-                    + pair.maskedCandidate());
+            blocks.add("<Pair id=\"" + labelOf(index) + "\">\n<Source>" + pair.maskedSource() + "</Source>\n<Candidate>"
+                    + pair.maskedCandidate() + "</Candidate>\n</Pair>");
         }
         return String.join("\n\n", blocks);
     }

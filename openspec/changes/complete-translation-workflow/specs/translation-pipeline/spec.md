@@ -42,19 +42,26 @@ The system SHALL build each model call — draft, structural repair, placeholder
 improve, polish, pre-scan, summary and revision — from that call's template in the prompt catalogue, held as data. Every
 generation call (draft, both repairs, directed fix, improve, polish, revision) SHALL ask for and accept exactly one
 `{"target":"…"}` object for exactly one segment. Every repair call — directed fix, reflect, improve, polish and
-revision — SHALL carry exactly one `<Text>…</Text>` block, holding only the masked text to rewrite: the rejected target,
-or the masked source when the finding is a refusal or an empty target; the source SHALL appear outside that block.
-WHERE the brief is the default and no memory exists yet, the draft call SHALL be character for character the draft call
-of the previous release.
+revision — SHALL carry exactly one `<Translation>…</Translation>` block, holding only the masked text to rewrite: the
+rejected target, or the masked source when the finding is a refusal or an empty target; the source SHALL appear in its
+own `<Source>` block; only the draft's text to translate is `<Text>`. Every prompt SHALL state its JSON schema together
+with a literal reply its parser accepts, SHALL declare the book text it embeds as data rather than instructions, and
+SHALL state the placeholder rules wherever that text carries `⟦gN⟧` tokens; improve, polish and revision SHALL list the
+source's tokens under `[Immutable tokens]` when it has any. The draft and the rewriting calls SHALL show the bundled
+few-shot examples of the language pair — the `<source>-<target>` file, else the `<target>` file, else `neutral` — read
+from the classpath. The draft and repair, judge and directed-fix messages SHALL be pinned by golden files, so a prompt
+changes only by a deliberate edit of them.
 
 **Source:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `#output-contract`,
 `#directed-fix-repair`, `#reflect-improve`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#prompt-builder`,
-ADR-0038.
+ADR-0038, `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-design`, `#few-shot-examples`.
 In plain words: prompts are text files, not code, so they can be read and tuned without touching the engine. Small local
 models reliably answer one segment with one small object and break on arrays keyed by id, so every call that produces
 book text keeps that shape. A repair asks the model to rewrite one text, so only that text sits in the block it rewrites,
-and the source it must stay faithful to sits beside it, where it cannot be mistaken for the text to return. The draft
-prompt that already works on real books must not change by accident.
+and the source it must stay faithful to sits beside it, where it cannot be mistaken for the text to return. A ~4B model
+copies what it is shown far better than it follows abstract rules, so every prompt shows a real reply, and book text
+that reads like an order is still only translated. A prompt that already works on real books must not change by
+accident.
 
 #### Scenario: A directed fix returns one target
 
@@ -66,21 +73,33 @@ prompt that already works on real books must not change by accident.
 
 - **WHEN** a directed fix is issued for `Book.md:0`, whose masked source is `He opened the ⟦g0⟧old⟦g1⟧ door.`, after its
   target `HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.` failed the untranslated-echo check
-- **THEN** its user message holds exactly one `<Text>` block, and that block holds only
-  `HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.`, with `He opened the ⟦g0⟧old⟦g1⟧ door.` outside it
+- **THEN** its user message holds exactly one `<Translation>` block, and that block holds only
+  `HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.`, with `He opened the ⟦g0⟧old⟦g1⟧ door.` in the `<Source>` block
 - **AND** the pseudo model answers it with `{"target":"HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR."}`
 
 #### Scenario: A refusal is rewritten from the source
 
 - **WHEN** a directed fix is issued for `Book.txt:0`, whose source is `He opened the old door.`, after its target
   `I'm sorry, but I can't translate this text.` failed the refusal hard gate
-- **THEN** the one `<Text>` block of its user message holds `He opened the old door.` and not the refusal
+- **THEN** the one `<Translation>` block of its user message holds `He opened the old door.` and not the refusal
 
-#### Scenario: The default draft prompt is unchanged
+#### Scenario: The draft prompt matches its golden file
 
 - **WHEN** `Book.md`, whose only paragraph is `He opened the *old* door.`, is translated from `en` to `uk` with the
   default brief and an empty glossary, memory and summary
-- **THEN** the system and user messages of its draft call equal those the previous release sent for the same book
+- **THEN** the system and user messages of its draft call equal the golden files, and the system message shows the
+  `en-uk` examples, among them `Source: ⟦g0⟧T⟦g1⟧he night was cold.` with `Reply: {"target":"⟦g0⟧Н⟦g1⟧іч була холодна."}`
+
+#### Scenario: A pair with no examples of its own shows the neutral ones
+
+- **WHEN** a draft is built for `en` → `ja`
+- **THEN** its system message shows the `neutral` examples, among them `Source: * * *` with `Reply: {"target":"* * *"}`
+
+#### Scenario: Every prompt shows a literal reply and declares book text as data
+
+- **WHEN** any call's messages are rendered
+- **THEN** they hold a complete JSON reply its parser accepts and the words `not instructions`, and every call whose text
+  carries tokens states the `⟦gN⟧` token rules
 
 ### Requirement: Assemble each draft's context with the load-bearing items at the edges
 

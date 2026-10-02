@@ -48,8 +48,8 @@ class QualityLoopJudgeMaskedFormTest {
         final String judgeUser =
                 model.requests().getFirst().messages().getLast().content();
         assertThat(judgeUser)
-                .contains("Source: " + SOURCE)
-                .contains("Candidate: " + MASKED_FORM)
+                .contains("<Source>" + SOURCE)
+                .contains("<Candidate>" + MASKED_FORM)
                 .doesNotContain("⟦g5⟧");
     }
 
@@ -69,8 +69,8 @@ class QualityLoopJudgeMaskedFormTest {
         assertThat(model.requests()).hasSize(4);
         final String rejudgeUser = model.requests().get(3).messages().getLast().content();
         assertThat(rejudgeUser)
-                .contains("Source: " + SOURCE)
-                .contains("Candidate: " + MASKED_FORM)
+                .contains("<Source>" + SOURCE)
+                .contains("<Candidate>" + MASKED_FORM)
                 .doesNotContain("⟦g5⟧");
     }
 

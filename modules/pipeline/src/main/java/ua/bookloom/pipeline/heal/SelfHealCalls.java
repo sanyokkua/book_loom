@@ -12,7 +12,9 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -29,7 +31,8 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 public final class SelfHealCalls {
 
     /**
-     * Renders {@code name}'s system and user messages from the catalogue.
+     * Renders {@code name}'s system and user messages from the catalogue; the system message shows the run's bundled
+     * examples when its template does.
      *
      * @param templates the catalogue's template renderer
      * @param name which call's templates to render
@@ -42,10 +45,22 @@ public final class SelfHealCalls {
             final PromptName name,
             final CallFrame frame,
             final Map<String, String> userValues) {
-        final String system =
-                templates.renderSystem(name, frame.systemSlotValues()).strip();
+        final String system = templates.renderSystem(name, frame).strip();
         final String user = templates.renderUser(name, userValues).strip();
         return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+    }
+
+    /**
+     * The immutable-token list a rewrite of {@code maskedSource} must keep.
+     *
+     * @param maskedSource the segment's non-null masked source
+     * @return the source's tokens in order, separated by spaces, or empty when it has none, which leaves the list out
+     */
+    public static String immutableTokens(final String maskedSource) {
+        return Tokens.inOrder(Objects.requireNonNull(maskedSource, "maskedSource"))
+                        .isEmpty()
+                ? ""
+                : DraftPromptBuilder.expectedTokenSequence(maskedSource);
     }
 
     /**

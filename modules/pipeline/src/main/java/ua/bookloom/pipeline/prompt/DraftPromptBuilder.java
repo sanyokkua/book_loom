@@ -176,16 +176,7 @@ public final class DraftPromptBuilder {
     }
 
     private String systemMessage() {
-        final Map<String, String> slots = frame.systemSlotValues();
-        return templates
-                .renderSystem(
-                        PromptName.DRAFT,
-                        Map.of(
-                                "source", slots.get("sourceLanguage"),
-                                "target", slots.get("targetLanguage"),
-                                "styleSheet", slots.get("styleSheet"),
-                                "foreignPassageRule", slots.get("foreignPassageRule")))
-                .strip();
+        return templates.renderSystem(PromptName.DRAFT, frame).strip();
     }
 
     private String userMessage(

@@ -145,11 +145,17 @@ priority:
 | Component                    | Role                                                       |
 |------------------------------|--------------------------------------------------------------|
 | System + brief (style sheet) | Instruction frame; placed at an edge.                      |
+| Few-shot examples            | Bundled source → literal-reply examples for the language pair, closing the system message (`12_PROMPT_CATALOG.md#few-shot-examples`). |
 | Rolling bilingual summary    | Book-so-far context for tone/terminology.                  |
 | Relevant glossary terms      | Only terms occurring in the chunk are injected.            |
 | Preceding-target window      | Up to ~3 prior TARGET blocks — the main consistency lever. |
 | TM hits                      | Context/exact/fuzzy matches per the reuse policy.          |
 | Masked source                | The chunk's segments to translate; placed at an edge.      |
+
+Every prompt is written so a small local model (~4B) follows it: one task, numbered rules, book text declared as data
+rather than instructions, the JSON schema together with a literal valid reply, and the placeholder rules wherever the
+text carries `⟦gN⟧` tokens (`12_PROMPT_CATALOG.md#prompt-design`). The local-only `promptEval` set measures that on a
+real model (`04_Build_and_Release/06_TESTING_STRATEGY.md#prompt-evals`).
 
 ### chunk-loop {#chunk-loop}
 

@@ -198,7 +198,7 @@ class QualityLoopReflectImprovePolishTest {
                         .name())
                 .isEqualTo("directed-fix");
         final String rejudgeUser = model.requests().get(2).messages().getLast().content();
-        assertThat(rejudgeUser).contains("[s1]").doesNotContain("[s2]");
+        assertThat(rejudgeUser).contains("<Pair id=\"s1\">").doesNotContain("<Pair id=\"s2\">");
     }
 
     // Max's real dial (repair budget 3, judge on): an echoing draft's first directed fix still echoes, the second

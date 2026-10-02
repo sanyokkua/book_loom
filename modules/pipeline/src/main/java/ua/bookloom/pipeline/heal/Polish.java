@@ -89,6 +89,7 @@ public final class Polish {
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("source", maskedSource);
         userValues.put("text", maskedTarget);
+        userValues.put("tokens", SelfHealCalls.immutableTokens(maskedSource));
         return SelfHealCalls.messagesFor(templates, PromptName.POLISH, frame, userValues);
     }
 }

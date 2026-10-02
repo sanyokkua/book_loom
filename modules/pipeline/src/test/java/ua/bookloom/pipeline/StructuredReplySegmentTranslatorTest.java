@@ -67,7 +67,7 @@ class StructuredReplySegmentTranslatorTest {
                 .contains("<RejectedReply>")
                 .contains("{\"segments\":")
                 .contains("was not valid JSON")
-                .contains("start with { followed immediately by \"target\"")
+                .contains("starts with {\"target\":\" and ends with \"}")
                 .contains("Never reproduce a rejected prefix");
     }
 

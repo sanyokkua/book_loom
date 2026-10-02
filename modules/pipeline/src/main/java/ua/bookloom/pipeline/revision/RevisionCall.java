@@ -83,6 +83,7 @@ final class RevisionCall {
         user.put("source", segment.masked());
         user.put("text", maskedTarget);
         user.put("resolvedFacts", facts);
+        user.put("tokens", SelfHealCalls.immutableTokens(segment.masked()));
         final List<ChatMessage> messages =
                 SelfHealCalls.messagesFor(templates, PromptName.REVISION, inputs.frame(), user);
         return ChatRequests.build(

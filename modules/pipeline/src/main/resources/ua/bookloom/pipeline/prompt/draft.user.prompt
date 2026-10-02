@@ -4,7 +4,8 @@
 {{/summary}}
 
 {{#glossaryTerms}}
-[Glossary — apply these renderings exactly]
+[Glossary — apply these renderings exactly; a line "⟦gN⟧ → name" says which name a token stands for: write the
+token, never the name]
 {{glossaryTerms}}
 {{/glossaryTerms}}
 

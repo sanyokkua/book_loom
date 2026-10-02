@@ -63,8 +63,8 @@ class QualityLoopJudgeInputTest {
         final String userMessage =
                 model.requests().getFirst().messages().getLast().content();
         assertThat(userMessage)
-                .contains("[s1]\nSource: She smiled softly.")
-                .contains("[s2]\nSource: The rain fell.")
+                .contains("<Pair id=\"s1\">\n<Source>She smiled softly.")
+                .contains("<Pair id=\"s2\">\n<Source>The rain fell.")
                 .doesNotContain("s3", "s4");
     }
 
@@ -153,8 +153,11 @@ class QualityLoopJudgeInputTest {
         assertThat(started.isOk()).isTrue();
         assertThat(model.requests()).hasSize(1);
         assertThat(model.requests().getFirst().messages().getLast().content())
-                .contains("[s1]\nSource: It was late.", "[s2]\nSource: He paused.", "[s3]\nSource: She smiled.")
-                .doesNotContain("Yes.", "Так.", "[s4]");
+                .contains(
+                        "<Pair id=\"s1\">\n<Source>It was late.",
+                        "<Pair id=\"s2\">\n<Source>He paused.",
+                        "<Pair id=\"s3\">\n<Source>She smiled.")
+                .doesNotContain("Yes.", "Так.", "<Pair id=\"s4\">");
     }
 
     @Test

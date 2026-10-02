@@ -22,7 +22,8 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.2,
             0.1,
-            new Slots(Set.of("source", "target", "styleSheet", "foreignPassageRule"), Set.of()),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
             new Slots(
                     Set.of("source", "target", "tokens", "text"),
                     Set.of("summary", "glossaryTerms", "memoryHint", "precedingTargets", "extraInstruction"))),
@@ -58,7 +59,7 @@ public enum PromptName {
             0.1,
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
-            new Slots(Set.of("pairs"), Set.of("glossaryTerms"))),
+            new Slots(Set.of("pairs", "targetLanguage"), Set.of("glossaryTerms"))),
 
     /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
     DIRECTED_FIX(
@@ -68,7 +69,8 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.2,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
             new Slots(Set.of("source", "text", "findings"), Set.of("expectedTokens"))),
 
     /** The reflection critique before a rewrite, for a vague quality concern with no concrete finding. */
@@ -90,8 +92,9 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.35,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
-            new Slots(Set.of("source", "text"), Set.of("issues"))),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
+            new Slots(Set.of("source", "text"), Set.of("issues", "tokens"))),
 
     /** The optional monolingual smoothing pass run only on a borderline improved target. */
     POLISH(
@@ -101,8 +104,9 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.2,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
-            new Slots(Set.of("source", "text"), Set.of())),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
+            new Slots(Set.of("source", "text"), Set.of("tokens"))),
 
     /**
      * Backward revision's re-render of one decided segment whose character's gender became known after it was
@@ -115,8 +119,9 @@ public enum PromptName {
             DraftSchema.SCHEMA,
             0.2,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
-            new Slots(Set.of("source", "text"), Set.of("resolvedFacts"))),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
+            new Slots(Set.of("source", "text"), Set.of("resolvedFacts", "tokens"))),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(

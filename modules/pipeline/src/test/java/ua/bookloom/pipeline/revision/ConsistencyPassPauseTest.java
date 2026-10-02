@@ -61,8 +61,8 @@ class ConsistencyPassPauseTest {
         runWhileTheFirstCallWaits(() -> ok(actions().revert(projectId(), SAM_LEFT)));
 
         assertThat(book.model().requests()).hasSize(2);
-        assertThat(book.userMessage(0)).contains("<Text>\nВона пішла.\n</Text>");
-        assertThat(book.userMessage(1)).contains("<Text>\nСем пішов.\n</Text>");
+        assertThat(book.userMessage(0)).contains("<Translation>\nВона пішла.\n</Translation>");
+        assertThat(book.userMessage(1)).contains("<Translation>\nСем пішов.\n</Translation>");
         assertThat(book.stored(SAM_LEFT))
                 .extracting(SegmentRecord::machineTarget, SegmentRecord::userTarget, SegmentRecord::status)
                 .containsExactly("Сем тоді пішов.", null, SegmentStatus.REVISED);
@@ -82,7 +82,7 @@ class ConsistencyPassPauseTest {
         runWhileTheFirstCallWaits(() -> ok(actions().saveEdit(projectId(), SAM_LEFT, "Сем пішов геть.")));
 
         assertThat(book.model().requests()).hasSize(2);
-        assertThat(book.userMessage(1)).contains("<Text>\nСем пішов геть.\n</Text>");
+        assertThat(book.userMessage(1)).contains("<Translation>\nСем пішов геть.\n</Translation>");
         assertThat(book.stored(SAM_LEFT))
                 .extracting(SegmentRecord::machineTarget, SegmentRecord::userTarget, SegmentRecord::status)
                 .containsExactly("Сем пішов.", "Сем пішов геть.", SegmentStatus.REVISED);

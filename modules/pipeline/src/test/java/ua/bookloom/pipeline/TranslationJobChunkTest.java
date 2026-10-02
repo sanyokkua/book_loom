@@ -323,8 +323,8 @@ class TranslationJobChunkTest {
     private static void assertSecondRoundContinued(final TestProject project, final ScriptedChatModel model) {
         assertThat(formats(model)).containsExactly(DRAFT, JUDGE, FIX, FIX, FIX, JUDGE);
         assertThat(userMessage(model.requests().getLast()))
-                .contains("[s1]\nSource: " + ChunkRunFixtures.DOOR + "\nCandidate: " + DOOR_TARGET)
-                .doesNotContain("[s2]");
+                .contains("<Pair id=\"s1\">\n<Source>" + ChunkRunFixtures.DOOR + "</Source>\n<Candidate>" + DOOR_TARGET)
+                .doesNotContain("<Pair id=\"s2\">");
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::repairRounds)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, 2);

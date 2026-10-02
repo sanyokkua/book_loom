@@ -53,7 +53,7 @@ class PolishTest {
         final String user = model.requests().getFirst().messages().get(1).content();
         assertThat(TextBlockAssertions.textBlockCount(user)).isEqualTo(1);
         assertThat(TextBlockAssertions.textBlockOf(user)).isEqualTo(CANDIDATE);
-        assertThat(user).contains("[Source]").contains(SOURCE);
+        assertThat(user).contains("<Source>\n" + SOURCE);
     }
 
     @Test

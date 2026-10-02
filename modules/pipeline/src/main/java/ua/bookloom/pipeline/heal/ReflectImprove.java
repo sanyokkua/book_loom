@@ -164,6 +164,7 @@ public final class ReflectImprove {
         userValues.put("source", maskedSource);
         userValues.put("text", maskedTarget);
         userValues.put("issues", String.join("\n", issues));
+        userValues.put("tokens", SelfHealCalls.immutableTokens(maskedSource));
         return SelfHealCalls.messagesFor(templates, PromptName.IMPROVE, frame, userValues);
     }
 

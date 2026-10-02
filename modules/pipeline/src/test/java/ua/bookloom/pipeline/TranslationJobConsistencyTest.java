@@ -65,6 +65,13 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
  */
 class TranslationJobConsistencyTest {
 
+    /** The second chunk's judge sees the three drafted pairs and not the reused one. */
+    private static final String[] JUDGED_THREE = {
+        "<Pair id=\"s1\">\n<Source>It was late.",
+        "<Pair id=\"s2\">\n<Source>He paused.",
+        "<Pair id=\"s3\">\n<Source>She smiled."
+    };
+
     private static final String CHAPTER_ONE = "OEBPS/ch0.xhtml:0";
     private static final String CHAPTER_TWO = "OEBPS/ch1.xhtml:0";
     private static final String PAUSED = "Він зупинився.";
@@ -207,9 +214,7 @@ class TranslationJobConsistencyTest {
         assertThat(memory).containsExactlyElementsOf(reuseBetweenSummaries());
         assertThat(drafts.get(4)).contains("He paused. → " + PAUSED);
         assertThat(drafts.get(5)).contains("She smiled. → " + SMILED);
-        assertThat(messagesOf(model, JUDGE).get(1))
-                .contains("[s1]\nSource: It was late.", "[s2]\nSource: He paused.", "[s3]\nSource: She smiled.")
-                .doesNotContain("Yes.", "[s4]");
+        assertThat(messagesOf(model, JUDGE).get(1)).contains(JUDGED_THREE).doesNotContain("Yes.", "<Pair id=\"s4\">");
     }
 
     @Test

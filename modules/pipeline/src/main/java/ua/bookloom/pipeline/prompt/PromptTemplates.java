@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -36,8 +37,11 @@ public final class PromptTemplates {
         InputStream open(String fileName);
     }
 
+    private static final String EXAMPLES = "examples";
+
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
+    private final PromptExamples examples;
 
     /** Loads the bundled templates. */
     @Inject
@@ -47,6 +51,7 @@ public final class PromptTemplates {
 
     PromptTemplates(final ResourceLoader loader) {
         Objects.requireNonNull(loader, "loader");
+        examples = new PromptExamples(loader);
         for (final PromptName name : PromptName.values()) {
             name.systemSlots().ifPresent(slots -> systems.put(name, load(loader, name, "system", slots)));
             users.put(name, load(loader, name, "user", name.userSlots()));
@@ -66,6 +71,27 @@ public final class PromptTemplates {
             throw new IllegalArgumentException(name + " has no system template");
         }
         return render(template, values);
+    }
+
+    /**
+     * Renders the system template of {@code name} from a run's call frame: its four frame slots, plus the bundled
+     * examples for the frame's language pair when the template shows examples.
+     *
+     * @param name the non-null call
+     * @param frame the non-null run's language pair, style sheet and foreign-passage policy
+     * @return the rendered system message
+     */
+    public String renderSystem(final PromptName name, final CallFrame frame) {
+        Objects.requireNonNull(frame, "frame");
+        final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
+        final boolean showsExamples = Objects.requireNonNull(name, "name")
+                .systemSlots()
+                .map(slots -> slots.declares(EXAMPLES))
+                .orElse(false);
+        if (showsExamples) {
+            values.put(EXAMPLES, examples.forPair(frame.sourceLanguage(), frame.targetLanguage()));
+        }
+        return renderSystem(name, values);
     }
 
     /** Renders the user template of {@code name}; the map holds every required slot and only declared ones. */

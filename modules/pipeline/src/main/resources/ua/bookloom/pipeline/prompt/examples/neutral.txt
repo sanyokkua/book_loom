@@ -1,0 +1,15 @@
+# Language-independent examples, shown when no file exists for the target language. Lines starting with # never
+# reach the model. A "# pairs:" note lists the opening and closing token of each pair in the next example, so the
+# example test can check both sides wrap words. Every Reply must keep the Source's tokens, in the same order.
+Source: 1881
+Reply: {"target":"1881"}
+
+Source: * * *
+Reply: {"target":"* * *"}
+
+Source: ⟦g0⟧
+Reply: {"target":"⟦g0⟧"}
+
+# pairs: ⟦g0⟧ ⟦g1⟧
+Source: ⟦g0⟧XIV⟦g1⟧
+Reply: {"target":"⟦g0⟧XIV⟦g1⟧"}
