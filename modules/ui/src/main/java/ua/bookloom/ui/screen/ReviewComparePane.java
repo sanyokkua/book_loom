@@ -135,8 +135,10 @@ final class ReviewComparePane extends VBox {
         label.setWrapText(true);
         label.setMinHeight(Region.USE_PREF_SIZE);
         label.textProperty().bind(text);
+        // A bound value may still be null before the panel has a segment; that is no text, not a failed binding.
         label.visibleProperty()
-                .bind(Bindings.createBooleanBinding(() -> !label.getText().isEmpty(), label.textProperty()));
+                .bind(Bindings.createBooleanBinding(
+                        () -> label.getText() != null && !label.getText().isEmpty(), label.textProperty()));
         label.managedProperty().bind(label.visibleProperty());
         return label;
     }
