@@ -218,10 +218,11 @@ class DiagnosticsTranslationJobTest {
 
         final Future<Result<JobReport>> run = workers.submit(translation::run);
         awaitPaused(pauses);
-
-        assertRecoveryWarning();
+        // Read the log only once the job thread is done: it goes on logging its recovery wait after the pause.
         translation.cancel();
         assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
+
+        assertRecoveryWarning();
         shutdown(workers);
     }
 
