@@ -4,10 +4,14 @@
 {{/summary}}
 
 {{#glossaryTerms}}
-[Glossary — apply these renderings exactly; a line "⟦gN⟧ → name" says which name a token stands for: write the
-token, never the name]
+[Glossary — apply these renderings exactly; write each name out as plain text in the target language]
 {{glossaryTerms}}
 {{/glossaryTerms}}
+
+{{#lockedNames}}
+[Locked names — each token stands for a name the app writes in for you: keep the token, never write the name]
+{{lockedNames}}
+{{/lockedNames}}
 
 {{#suggestedTerms}}
 [Suggested renderings — not confirmed by the person]

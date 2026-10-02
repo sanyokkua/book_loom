@@ -65,6 +65,41 @@ class LengthCheckTest {
         assertThat(result.finding().raisedBy()).isEqualTo("length");
     }
 
+    // A word lost where the model hid it behind a token the repair then dropped: the characters still fit the band,
+    // the words or the space left before the punctuation do not.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', textBlock = """
+            a name dropped before a full stop | We measured it with the help of the old brass pendulum and Nell. \
+            | Ми виміряли це за допомогою старого латунного маятника та .
+            a name dropped before a comma | Vance said it slowly, and Nell wrote every word of it down in the log. \
+            | Сказала це повільно, і , записала кожне слово в журнал на сторінці.
+            half the words gone | When the sun rose over the hill the pendulum was still swinging slowly in the cold. \
+            | Коли зійшло сонцеееееееееееееееееееееее над пагорбоооооооооооооооом.
+            """)
+    void run_wordsMissingFromTheTarget_blocksWithOmissionFinding(
+            final String name, final String source, final String target) {
+        final CheckResult result = LengthCheck.run(SoftCheckFixtures.length(source, target, "en", "uk"));
+
+        assertThat(result.passed()).isFalse();
+        assertThat(result.blocking()).isTrue();
+        assertThat(result.finding()).isNotNull();
+        assertThat(result.finding().kind()).isEqualTo("omission");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', textBlock = """
+            a faithful translation | Words like heavy and light describe weight, not mass, and Vance never let a student mix them up. \
+            | Слова на кшталт «важкий» і «легкий» описують вагу, а не масу, і Венс ніколи не дозволяла студентам їх плутати.
+            a space before punctuation the source has too | Wait , he said , and then nothing more came out of his mouth at all. \
+            | Зачекай , сказав він , і більше нічого не вийшло з його вуст узагалі.
+            a short source is never counted | Mass and weight | Маса і вага
+            """)
+    void run_noWordMissing_passes(final String name, final String source, final String target) {
+        final CheckResult result = LengthCheck.run(SoftCheckFixtures.length(source, target, "en", "uk"));
+
+        assertThat(result.passed()).isTrue();
+    }
+
     // A source of protected tokens only display-texts to empty, exactly like a real all-placeholder segment would.
     @Test
     void run_emptySource_skipsMeasuringLength() {

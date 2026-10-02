@@ -15,6 +15,9 @@ import ua.bookloom.pipeline.Tokens;
 @Slf4j
 public final class DraftPromptBuilder {
 
+    /** What the token line says for a text with no token, the case a small model most often invents one for. */
+    static final String NO_TOKENS = "(none — write no ⟦gN⟧ token at all; write every name as plain text)";
+
     private final PromptTemplates templates;
     private final CallFrame frame;
 
@@ -189,28 +192,29 @@ public final class DraftPromptBuilder {
         return templates
                 .renderUser(
                         PromptName.DRAFT,
-                        Map.of(
-                                "source",
-                                source,
-                                "target",
-                                target,
-                                "tokens",
-                                expectedTokenSequence(shownText),
-                                "text",
-                                shownText,
-                                "summary",
-                                summary == null || summary.isBlank() ? "" : summary,
-                                "glossaryTerms",
-                                String.join("\n", context.glossaryLines()),
-                                "suggestedTerms",
-                                String.join("\n", context.suggestedLines()),
-                                "memoryHint",
-                                String.join("\n", context.memoryLines()),
-                                "precedingTargets",
-                                String.join("\n\n", context.precedingTargets()),
-                                "extraInstruction",
-                                extraInstruction))
+                        Map.ofEntries(
+                                Map.entry("source", source),
+                                Map.entry("target", target),
+                                Map.entry("tokens", expectedTokenSequence(shownText)),
+                                Map.entry("text", shownText),
+                                Map.entry("summary", summary == null || summary.isBlank() ? "" : summary),
+                                Map.entry("glossaryTerms", linesWhere(context.glossaryLines(), false)),
+                                Map.entry("lockedNames", linesWhere(context.glossaryLines(), true)),
+                                Map.entry("suggestedTerms", String.join("\n", context.suggestedLines())),
+                                Map.entry("memoryHint", String.join("\n", context.memoryLines())),
+                                Map.entry("precedingTargets", String.join("\n\n", context.precedingTargets())),
+                                Map.entry("extraInstruction", extraInstruction)))
                 .strip();
+    }
+
+    /**
+     * The glossary lines that name a locked token ({@code ⟦gN⟧ → name}), or the others: the token explanation is shown
+     * only beside a token the segment holds, so a small model is not taught to hide a plain name behind one.
+     */
+    private static String linesWhere(final List<String> lines, final boolean locked) {
+        return String.join(
+                "\n",
+                lines.stream().filter(line -> line.startsWith("⟦g") == locked).toList());
     }
 
     /**
@@ -220,6 +224,6 @@ public final class DraftPromptBuilder {
     public static String expectedTokenSequence(final String masked) {
         Objects.requireNonNull(masked, "masked");
         final List<String> tokens = Tokens.inOrder(masked);
-        return tokens.isEmpty() ? "(none; do not invent placeholders)" : String.join(" ", tokens);
+        return tokens.isEmpty() ? NO_TOKENS : String.join(" ", tokens);
     }
 }

@@ -27,7 +27,19 @@ class GateNotesTest {
     void describe_inventedAndRepeatedTokens_namesThemWithCounts() {
         final String note = GateNotes.describe("a ⟦g0⟧b⟦g1⟧ c", "а ⟦g0⟧б⟦g1⟧⟦g1⟧ в ⟦g7⟧", PAIR, RULE);
 
-        assertThat(note).isEqualTo("The placeholders do not match.\nExtra (remove): ⟦g1⟧ ⟦g7⟧.");
+        assertThat(note).isEqualTo("""
+                        The placeholders do not match.
+                        Extra (remove): ⟦g1⟧.
+                        ⟦g7⟧ is not a placeholder of this text; write names as plain text.""");
+    }
+
+    @Test
+    void describe_tokenInventedForANameInATextWithNone_saysToWriteTheName() {
+        final String note = GateNotes.describe("and Vance never let", "і ⟦g1⟧ ніколи не дозволяв", List.of(), RULE);
+
+        assertThat(note).isEqualTo("""
+                        The placeholders do not match.
+                        ⟦g1⟧ is not a placeholder of this text; write names as plain text.""");
     }
 
     @Test

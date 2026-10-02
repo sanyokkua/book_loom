@@ -1,7 +1,7 @@
 Translate from the language of this segment (infer it from its text) to Ukrainian (uk).
 
 [Immutable tokens for this text]
-Copy this exact ordered sequence unchanged: (none; do not invent placeholders)
+Copy this exact ordered sequence unchanged: (none — write no ⟦gN⟧ token at all; write every name as plain text)
 Do not add, reorder, split, translate, or omit these tokens.
 
 <Text>

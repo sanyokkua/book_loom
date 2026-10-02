@@ -1077,11 +1077,16 @@ WHEN a caller asks the document port to repair a target the placeholder gate ref
 repaired target that passes that gate, or `ErrorCode.validation` when none does, without calling a model and without
 changing any word of the target. Two modes SHALL exist:
 
-- **restore missing** keeps every token the target placed, drops each token the masked form does not hold or holds
-  fewer times, and puts each missing token back at the position of the target most like the one it held in the masked
+- **restore missing** keeps every token the target placed, drops each token the masked form holds fewer times, drops
+  a token the masked form never holds only when a letter or digit touches it (it is glued to a word, which stays), and
+  puts each missing token back at the position of the target most like the one it held in the masked
   form — the same kind of boundary (a word's start, a word's end, after a closing quote) nearest the source position
   scaled to the target's length, and inside a word only where the source's token sat inside a word, at the same letter;
 - **re-place all** strips every token and places all of them again, in the masked form's order, by the same rule.
+
+IF a token the masked form never holds stands where a word would — between two spaces, at an edge, or beside
+punctuation — THEN neither mode SHALL drop it, and the repair SHALL answer `ErrorCode.validation`, so the reply goes to
+the model repair instead of losing the word the token replaced.
 
 The gate itself SHALL stay a check that reports and never repairs; this is a separate operation the caller chooses to
 call.
@@ -1093,7 +1098,10 @@ In plain words: a small model that translated every word but dropped one token o
 translation. The two real paragraphs that reached an export broken — a drop cap and an italic phrase before a closing
 quote — each lost exactly one token; putting it back where the source had it is a deterministic step any person
 could take by hand. The repaired target still has to pass the whole gate, so the repair can never let through what
-the gate refuses, and the caller records that the markup was put back so a person can check it.
+the gate refuses, and the caller records that the markup was put back so a person can check it. A token the text never
+had is different: a small model writes one in place of a name (`і ⟦g1⟧ ніколи` for `and Vance never`), and dropping
+it silently deleted that name in the gemma4:e4b run on the earth-gravity fixture, so only a token glued to a word may
+go.
 
 #### Scenario: A drop cap's lost closing token goes back after the first letter
 
@@ -1107,10 +1115,15 @@ the gate refuses, and the caller records that the markup was put back so a perso
   target `«Пам'ятай ⟦g0⟧це», — сказав він тихим голосом.`
 - **THEN** the repaired target is `«Пам'ятай ⟦g0⟧це»,⟦g1⟧ — сказав він тихим голосом.`
 
-#### Scenario: An invented token is dropped
+#### Scenario: An invented token glued to a word is dropped
 
-- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in restore-missing mode with the target `⟦g0⟧старі⟦g1⟧ ⟦g7⟧ двері`
+- **WHEN** the segment `⟦g0⟧old⟦g1⟧ door` is repaired in restore-missing mode with the target `⟦g0⟧старі⟦g1⟧ ⟦g7⟧двері`
 - **THEN** the repaired target is `⟦g0⟧старі⟦g1⟧ двері`
+
+#### Scenario: An invented token standing for a word is not dropped
+
+- **WHEN** the segment `and Vance never let` is repaired in either mode with the target `і ⟦g1⟧ ніколи не дозволяв`
+- **THEN** the caller receives a failed result carrying `ErrorCode.validation`
 
 #### Scenario: A swapped pair is placed again
 

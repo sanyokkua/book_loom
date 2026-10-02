@@ -29,6 +29,7 @@ public enum PromptName {
                     Set.of(
                             "summary",
                             "glossaryTerms",
+                            "lockedNames",
                             "suggestedTerms",
                             "memoryHint",
                             "precedingTargets",

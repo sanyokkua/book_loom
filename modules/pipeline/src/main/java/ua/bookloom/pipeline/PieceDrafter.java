@@ -18,6 +18,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
+import ua.bookloom.pipeline.prompt.GateNotes;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.PauseDecider;
 
@@ -29,6 +30,8 @@ import ua.bookloom.pipeline.run.PauseDecider;
  */
 @Slf4j
 final class PieceDrafter {
+
+    private static final String PIECE_TOKENS_MISMATCH = "The piece's placeholder tokens do not match its source.";
 
     /** What one piece's draft came to: text to join, or a reply the step itself found unusable. */
     sealed interface Piece permits Text, Unusable {}
@@ -199,12 +202,32 @@ final class PieceDrafter {
         if (response.finishReason() != FinishReason.STOP) {
             return failed(piece, ErrorCode.validation, "The model response did not finish normally.");
         }
-        if (Tokens.inOrder(trimmed).equals(Tokens.inOrder(piece.masked()))) {
+        if (keepsItsTokens(trimmed, Tokens.inOrder(piece.masked()))) {
             return Result.ok(new Text(trimmed));
         }
         return placeholderUsed
-                ? failed(piece, ErrorCode.validation, "The piece's placeholder tokens do not match its source.")
-                : repair(piece, context, DraftStep.PLACEHOLDER_REPAIR, trimmed, "", false);
+                ? failed(piece, ErrorCode.validation, PIECE_TOKENS_MISMATCH)
+                : repair(
+                        piece,
+                        context,
+                        DraftStep.PLACEHOLDER_REPAIR,
+                        trimmed,
+                        GateNotes.describe(piece.masked(), trimmed, piece.pairs(), PIECE_TOKENS_MISMATCH),
+                        false);
+    }
+
+    /**
+     * Whether a piece's reply holds its own tokens in order, apart from tokens it invented glued to a word, which the
+     * whole segment's deterministic repair drops while keeping the word. An invented token standing for a word, or
+     * a missing, repeated or moved own token, sends the piece to its repair.
+     */
+    private static boolean keepsItsTokens(final String reply, final List<String> expected) {
+        final List<String> own =
+                Tokens.inOrder(reply).stream().filter(expected::contains).toList();
+        final boolean keeps = own.equals(expected)
+                && Tokens.inventedStandingAlone(reply, expected).isEmpty();
+        log.debug("Piece tokens kept={} expected={} observed={}", keeps, expected, Tokens.inOrder(reply));
+        return keeps;
     }
 
     private Result<Piece> repair(

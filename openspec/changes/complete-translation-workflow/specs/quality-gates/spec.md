@@ -366,14 +366,26 @@ The application SHALL fail the length-ratio check when target length divided by 
 characters, falls outside the band of the pair's script class — Latin → Cyrillic 0.7–1.8, same script 0.6–1.7,
 Latin → CJK 0.2–1.0, CJK → Latin 1.0–5.0, any other pair 0.5–2.5 — with the lower bound halved and the upper bound
 doubled when the source is shorter than 25 characters, and SHALL otherwise pass it with a margin of the distance to the
-nearer bound divided by one tenth of the band's width, at most 1.0.
+nearer bound divided by one tenth of the band's width, at most 1.0. Inside the band the check SHALL still fail when
+words look missing: when the target has more letter-word-followed-by-space-then-full-stop-or-comma spots (`помогою .`)
+than the source, or — for a source of at least 8 words, neither text in a script written without spaces — when the
+target has fewer than 0.55 words per source word. Its finding SHALL name which of the two it saw.
 
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`.
 In plain words: a translation far shorter than its source has usually dropped content, and one far longer has usually
 added some; the band differs by writing system because Chinese is naturally much shorter than English, and very
 short segments get a wider band because one word more or less changes their ratio a lot. A ratio just inside the band
-passes, but with less confidence than one comfortably inside it.
+passes, but with less confidence than one comfortably inside it. A dropped name or phrase can leave the character count
+inside the band, so the space left before a full stop and a word count far below the source's are read as well; 0.55
+sits well below any real pair's word ratio (English to Ukrainian runs about 0.8), so a faithful translation is never
+caught by it.
+
+#### Scenario: A space left before a full stop fails
+
+- **WHEN** English → Ukrainian, the source is `We measured it with the help of the old brass pendulum and Nell.` and the
+  target `Ми виміряли це за допомогою старого латунного маятника та .`
+- **THEN** the length-ratio check fails with a finding saying a word is missing before a full stop or comma
 
 #### Scenario: A half-length Ukrainian target fails
 

@@ -1,5 +1,7 @@
 package ua.bookloom.pipeline.heal;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.qa.CheckName;
 
 /** The innermost gate: {@link DocumentPort#unmask}'s answer read as a {@link GateResult}. */
@@ -47,13 +50,26 @@ final class DocumentGate implements GateFunction {
             return first;
         }
         final String text = Objects.requireNonNull(repaired.data());
-        log.info("Placeholders put back without a model segment={} mode={}", segment.id(), mode);
+        log.info(
+                "Placeholders restored without a model: put back {}, removed {} segment={} mode={}",
+                surplus(text, maskedReply),
+                surplus(maskedReply, text),
+                segment.id(),
+                mode);
         return switch (restore(segment, text)) {
             case GateResult.Restored restored ->
                 new GateResult.Restored(restored.maskedForm(), restored.restored(), autoRepairFinding(mode));
             case GateResult.GateFailed _ -> first;
             case GateResult.StepError stepError -> stepError;
         };
+    }
+
+    /** How many tokens {@code text} holds beyond those {@code other} holds, repeats counted. */
+    private static int surplus(final String text, final String other) {
+        final Map<String, Integer> counts = new HashMap<>();
+        Tokens.inOrder(text).forEach(token -> counts.merge(token, 1, Integer::sum));
+        Tokens.inOrder(other).forEach(token -> counts.merge(token, -1, Integer::sum));
+        return counts.values().stream().mapToInt(count -> Math.max(0, count)).sum();
     }
 
     private static QaFinding autoRepairFinding(final PlaceholderRepair mode) {

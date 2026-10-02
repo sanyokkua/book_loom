@@ -70,6 +70,26 @@ final class PromptEvalCases {
                     "Simon Lovelace smiled coldly at the boy.",
                     List.of("Simon Lovelace → Саймон Лавлейс (person, male)"),
                     Expect.containing("(?iu)лавлейс")),
+            // The earth-gravity run: glossary names with no token and no target, which gemma4:e4b hid behind a token.
+            new Draft(
+                    "names-no-token",
+                    "Words like heavy and light describe weight, not mass, and Vance never let a student mix them up.",
+                    List.of(
+                            "Earth (other, unknown)",
+                            "Vance (other, unknown)",
+                            "Nell (other, unknown)",
+                            "Moon (other, unknown)"),
+                    Expect.containing("(?iu)^(?!.*⟦).*в[еа]нс")),
+            new Draft(
+                    "names-rendered-no-token",
+                    "Reyes said that patience was the only part of the kit the Institute had never managed to requisition.",
+                    List.of("Reyes → Рейєс (character, male)", "Institute → Інститут (organization, unknown)"),
+                    Expect.containing("(?iu)^(?!.*⟦).*рейєс")),
+            new Draft(
+                    "names-locked-and-plain",
+                    "⟦g0⟧ and Nell carried the pendulum up the hill at nine o’clock in the evening.",
+                    List.of(LOCKED_NAME, "Nell → Нелл (character, female)"),
+                    Expect.containing("(?iu)нелл")),
             new Draft(
                     "long-sentence",
                     "When the boy finally reached the top of the stairs, breathless and frightened, he found the door"

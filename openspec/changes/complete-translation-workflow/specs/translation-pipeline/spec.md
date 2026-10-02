@@ -1839,11 +1839,17 @@ at the first that passes the unchanged placeholder hard gate:
 1. the document port's deterministic repair in restore-missing mode (document-round-trip, "Repair a refused target's
    placeholder tokens without a model"), with no model call;
 2. exactly one model repair containing the original source, the rejected target, the exact required ordered token
-   sequence, and a note naming what is wrong — the gate's reason, each missing token, each extra token, each pair out of
-   order, and the text each affected pair wraps in the source (for example `In <Text>, ⟦g0⟧…⟦g1⟧ wraps "“A"`) — with
-   one worked example in the prompt;
+   sequence, and a note naming what is wrong — the gate's reason, each missing token, each extra token, each token the
+   source never had (`⟦g1⟧ is not a placeholder of this text; write names as plain text.`), each pair out of order, and
+   the text each affected pair wraps in the source (for example `In <Text>, ⟦g0⟧…⟦g1⟧ wraps "“A"`) — with one worked
+   example in the prompt;
 3. on that repair's reply, the deterministic repair in restore-missing mode, then in re-place-all mode; and when that
    repair's reply is unusable (empty, cut off, not the JSON object), the re-place-all repair of the draft's reply.
+
+A piece of a segment drafted in pieces SHALL count as keeping its tokens when its own tokens are in order and every
+other token is glued to a word, which the whole segment's restore-missing repair then drops; a piece with a token it
+invented in place of a word SHALL get its one placeholder repair with the same note. The repair SHALL log
+`Placeholders restored without a model: put back N, removed M`.
 
 A target that passes only through a deterministic repair SHALL carry a low `markup` finding raised by `placeholder`
 ("Markup auto-restored"), which neither blocks acceptance nor lowers confidence and is shown in review. IF every step

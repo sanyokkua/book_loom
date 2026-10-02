@@ -43,19 +43,26 @@ public final class GateNotes {
         Objects.requireNonNull(ruleMessage, "ruleMessage");
         final Map<String, Integer> difference = difference(expected, rejected);
         final List<String> missing = tokensWith(difference, true);
-        final List<String> extra = tokensWith(difference, false);
+        final List<String> invented = invented(expected, rejected);
+        final List<String> extra = tokensWith(difference, false).stream()
+                .filter(token -> invented.stream().noneMatch(token::startsWith))
+                .toList();
         final List<PlaceholderPair> reversed = reversed(rejected, pairs);
-        final boolean ruleOnly = missing.isEmpty() && extra.isEmpty() && reversed.isEmpty();
+        final boolean ruleOnly = missing.isEmpty() && extra.isEmpty() && invented.isEmpty() && reversed.isEmpty();
         final List<String> lines = new ArrayList<>(List.of(ruleMessage));
         addListed(lines, "Missing (put each back once): ", missing);
         addListed(lines, "Extra (remove): ", extra);
+        invented.forEach(token -> lines.add(token + " is not a placeholder of this text; write names as plain text."));
         reversed.forEach(pair -> lines.add("Out of order: " + pair.close() + " comes before " + pair.open() + "."));
         affected(pairs, missing, reversed, ruleOnly).forEach(pair -> lines.add(wraps(expected, pair)));
-        log.debug(
-                "Gate note missing={} extra={} outOfOrder={} lines={}", missing, extra, reversed.size(), lines.size());
+        log.debug("Gate note missing={} extra={} invented={} outOfOrder={}", missing, extra, invented, reversed.size());
+        return joined(lines);
+    }
+
+    private static String joined(final List<String> lines) {
         final String note = String.join("\n", lines);
         if (log.isTraceEnabled()) {
-            log.trace("Gate note text={}", note);
+            log.trace("Gate note lines={} text={}", lines.size(), note);
         }
         return note;
     }
@@ -67,6 +74,18 @@ public final class GateNotes {
         Tokens.inOrder(rejected).forEach(token -> counts.merge(token, -1, Integer::sum));
         counts.values().removeIf(count -> count == 0);
         return counts;
+    }
+
+    /**
+     * The tokens of {@code rejected} that {@code expected} never holds, each once in reply order: a small model invents
+     * one for a name it should have written out, so the note says so rather than only "remove".
+     */
+    private static List<String> invented(final String expected, final String rejected) {
+        final List<String> known = Tokens.inOrder(expected);
+        return Tokens.inOrder(rejected).stream()
+                .filter(token -> !known.contains(token))
+                .distinct()
+                .toList();
     }
 
     private static List<String> tokensWith(final Map<String, Integer> difference, final boolean missing) {

@@ -28,8 +28,7 @@ class DraftPromptBuilderTest {
                         [Book so far — context only; do NOT re-translate it]
                         Гейл шукає брата.
 
-                        [Glossary — apply these renderings exactly; a line "⟦gN⟧ → name" says which name a token stands for: write the
-                        token, never the name]
+                        [Glossary — apply these renderings exactly; write each name out as plain text in the target language]
                         Hale → Гейл (character, male)
 
                         [Suggested renderings — not confirmed by the person]
@@ -49,7 +48,7 @@ class DraftPromptBuilderTest {
                         Translate from English (en) to Ukrainian (uk).
 
                         [Immutable tokens for this text]
-                        Copy this exact ordered sequence unchanged: (none; do not invent placeholders)
+                        Copy this exact ordered sequence unchanged: (none — write no ⟦gN⟧ token at all; write every name as plain text)
                         Do not add, reorder, split, translate, or omit these tokens.
 
                         <Text>
@@ -67,7 +66,7 @@ class DraftPromptBuilderTest {
 
         assertThat(messages.getFirst().content())
                 .contains("from English (en) into Ukrainian (uk)")
-                .contains("Copy every token exactly, each\n   once.")
+                .contains("copy each exactly once; never translate, merge, drop, add or invent one.")
                 .contains("A pair never wraps nothing.")
                 .contains("Output ONLY the JSON object {\"target\":\"...\"}");
         assertThat(messages.get(1).content()).contains("from English (en) to Ukrainian (uk)");

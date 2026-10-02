@@ -44,7 +44,8 @@ final class GateErrors {
                 ErrorCode.validation,
                 TITLE,
                 "The translated text's formatting placeholders could not be put back without a model: no position"
-                        + " for the missing ones keeps the formatting around the same words.");
+                        + " for the missing ones keeps the formatting around the same words, or the text holds a"
+                        + " placeholder of its own where a word belongs.");
     }
 
     private static String messageFor(final GateRule rule) {

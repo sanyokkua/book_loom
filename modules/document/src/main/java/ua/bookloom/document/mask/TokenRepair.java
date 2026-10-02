@@ -18,11 +18,15 @@ import ua.bookloom.api.document.PlaceholderPair;
 import ua.bookloom.api.document.PlaceholderRepair;
 
 /**
- * Repairs a target's placeholder tokens without a model: drops a token the source does not hold (or holds fewer
- * times), and puts each missing token back at the position of the target that looks most like the one it held in the
+ * Repairs a target's placeholder tokens without a model: drops a token the source holds fewer times, drops a token the
+ * source never had only when it is glued to a word (the word stays), and puts each missing token back at the position of the target that looks most like the one it held in the
  * source — the same kind of boundary (a word's start or end, a quote, a drop cap's first letter), nearest the source
  * position scaled to the target's length. The result is returned only when it passes {@link PlaceholderGate} as a
  * whole, so the repair can never let through what the gate refuses.
+ *
+ * <p>A token the source never had that stands where a word would — between two spaces, or beside punctuation — is
+ * never dropped: a small model writes one in place of a name it was not asked to hide, and dropping it would delete
+ * that name from the book without a trace. No repair is offered then, so the reply goes to the model repair instead.
  *
  * <p>This is not the gate: the gate still reports and never fixes. This is the caller's deterministic second chance,
  * tried before (and after) a model repair call, because a small model that drops one token of a pair usually got
@@ -98,11 +102,15 @@ public final class TokenRepair {
                 Placeholders.tokensOf(target),
                 target.length());
         final String cleaned = withoutStrayBrackets(target);
-        final String kept =
+        final Map<String, Integer> expected = Placeholders.multisetOf(expectedMasked);
+        final @Nullable String kept =
                 switch (mode) {
-                    case RESTORE_MISSING -> dropTokens(cleaned, Placeholders.multisetOf(expectedMasked));
-                    case REWRAP_ALL -> dropTokens(cleaned, Map.of());
+                    case RESTORE_MISSING -> dropTokens(cleaned, expected, expected);
+                    case REWRAP_ALL -> dropTokens(cleaned, Map.of(), expected);
                 };
+        if (kept == null) {
+            return Optional.empty();
+        }
         final @Nullable String placed = placeMissing(expectedMasked, kept, pairs);
         return verdict(expectedMasked, placed, pairs, lineBreakTokens);
     }
@@ -140,26 +148,45 @@ public final class TokenRepair {
 
     /**
      * Keeps each token while {@code allowed} still has a count for it and drops every other occurrence, joining the
-     * spaces a dropped token stood between into one.
+     * spaces a dropped token stood between into one — or {@code null} when a token {@code expected} never holds stands
+     * for a word, which no deterministic repair may drop.
      */
-    private static String dropTokens(String text, Map<String, Integer> allowed) {
+    private static @Nullable String dropTokens(
+            String text, Map<String, Integer> allowed, Map<String, Integer> expected) {
         final Map<String, Integer> remaining = new HashMap<>(allowed);
         final Matcher matcher = Placeholders.matcher(text);
         final StringBuilder out = new StringBuilder();
         int cursor = 0;
+        int removed = 0;
         while (matcher.find()) {
             out.append(text, cursor, matcher.start());
             cursor = matcher.end();
-            if (remaining.getOrDefault(matcher.group(), 0) > 0) {
-                remaining.merge(matcher.group(), -1, Integer::sum);
-                out.append(matcher.group());
-            } else {
+            final String token = matcher.group();
+            if (remaining.getOrDefault(token, 0) > 0) {
+                remaining.merge(token, -1, Integer::sum);
+                out.append(token);
+            } else if (expected.containsKey(token) || isGluedToWord(text, matcher.start(), matcher.end())) {
                 cursor = joinSpaces(out, text, cursor);
+                removed++;
+            } else {
+                log.debug("Placeholder repair refused: invented token {} stands for a word", token);
+                return null;
             }
         }
         final String kept = out.append(text, cursor, text.length()).toString();
-        log.debug("Placeholder repair kept tokens={}", Placeholders.tokensOf(kept));
+        log.debug("Placeholder repair kept tokens={} removed={}", Placeholders.tokensOf(kept), removed);
         return kept;
+    }
+
+    /**
+     * Whether a word character touches the token on either side, other tokens skipped: the token is glued to a word
+     * ({@code ⟦g9⟧Vance}) rather than standing in for one, so dropping it keeps every word.
+     */
+    private static boolean isGluedToWord(String text, int start, int end) {
+        final String before = Placeholders.matcher(text.substring(0, start)).replaceAll("");
+        final String after = Placeholders.matcher(text.substring(end)).replaceAll("");
+        return (!before.isEmpty() && Character.isLetterOrDigit(before.codePointBefore(before.length())))
+                || (!after.isEmpty() && Character.isLetterOrDigit(after.codePointAt(0)));
     }
 
     /** Where to continue after a dropped token: past one of two spaces it stood between, or at its end. */

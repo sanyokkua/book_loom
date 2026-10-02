@@ -32,7 +32,10 @@ class TokenRepairTest {
             | «Пам'ятай ⟦g0⟧це»,⟦g1⟧ — сказав він тихим голосом.
             repeated closing token | ⟦g0⟧old⟦g1⟧ door | ⟦g0⟧старі⟦g1⟧ двері ⟦g1⟧ | 0-1 | RESTORE_MISSING \
             | ⟦g0⟧старі⟦g1⟧ двері
-            invented token | ⟦g0⟧old⟦g1⟧ door | ⟦g0⟧старі⟦g1⟧ ⟦g7⟧ двері | 0-1 | RESTORE_MISSING | ⟦g0⟧старі⟦g1⟧ двері
+            invented token glued to a word | ⟦g0⟧old⟦g1⟧ door | ⟦g0⟧старі⟦g1⟧ ⟦g7⟧двері | 0-1 | RESTORE_MISSING \
+            | ⟦g0⟧старі⟦g1⟧ двері
+            invented token glued with a stray bracket | Reyes said so. | ⟦g0⟧Рейєс⟧ так сказала. | "" | REWRAP_ALL \
+            | Рейєс так сказала.
             swapped pair re-placed | See ⟦g0⟧this⟦g1⟧ now. | Дивись ⟦g1⟧це⟦g0⟧ зараз. | 0-1 | REWRAP_ALL \
             | Дивись ⟦g0⟧це⟦g1⟧ зараз.
             """)
@@ -53,7 +56,25 @@ class TokenRepairTest {
                 .isEmpty();
     }
 
+    // A token the text never had, standing where a word stood, replaced that word — a name the model hid behind a
+    // token it invented. Dropping it would delete the word, so no deterministic repair is offered.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', quoteCharacter = '"', textBlock = """
+            name between two spaces | and Vance never let | і ⟦g1⟧ ніколи не дозволяв | RESTORE_MISSING
+            name before a full stop | with the help of Nell. | за допомогою ⟦g3⟧. | RESTORE_MISSING
+            name at the start | Vance smiled. | ⟦g0⟧ усміхнулася. | RESTORE_MISSING
+            name re-placed by position | and Vance never let | і ⟦g1⟧ ніколи не дозволяв | REWRAP_ALL
+            """)
+    void repair_inventedTokenStandsForAWord_returnsEmpty(
+            String name, String masked, String target, PlaceholderRepair mode) {
+        assertThat(TokenRepair.repair(masked, target, List.of(), List.of(), mode))
+                .isEmpty();
+    }
+
     private static List<PlaceholderPair> pairsOf(String spec) {
+        if (spec.isEmpty()) {
+            return List.of();
+        }
         return Arrays.stream(spec.split(";"))
                 .map(pair -> pair.split("-"))
                 .map(ends -> new PlaceholderPair(
