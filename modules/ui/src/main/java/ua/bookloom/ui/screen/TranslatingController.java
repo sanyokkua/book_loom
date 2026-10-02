@@ -15,6 +15,7 @@ import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.PauseNotice;
+import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunInterventions;
@@ -53,6 +54,7 @@ public final class TranslatingController {
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
     private final ChangeListener<Number> onChunk = (observed, was, now) -> renderChunk();
     private final ChangeListener<@Nullable PauseNotice> onPauseNotice = (observed, was, now) -> renderChunk();
+    private final ChangeListener<@Nullable RecoveryState> onRecovery = (observed, was, now) -> renderChunk();
 
     @FXML
     private Pane host;
@@ -124,6 +126,7 @@ public final class TranslatingController {
         mirror.chunk().addListener(new WeakChangeListener<>(onChunk));
         mirror.chunks().addListener(new WeakChangeListener<>(onChunk));
         mirror.review().pauseNotice().addListener(new WeakChangeListener<>(onPauseNotice));
+        mirror.review().recovery().addListener(new WeakChangeListener<>(onRecovery));
         dashboard.render(
                 mirror.runState().get(),
                 viewModel.notice().get(),

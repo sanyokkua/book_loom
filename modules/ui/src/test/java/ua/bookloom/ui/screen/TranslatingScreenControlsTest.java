@@ -34,7 +34,7 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
 
         assertThat(models.selections()).containsExactly(new ModelSelection("ollama", MODEL));
         assertThat(engine.requests()).hasSize(1);
-        assertThat(job.calls()).containsExactly("pauseAt", "subscribe", "run");
+        assertThat(job.calls()).containsExactly("pauseAt", "recoverWith", "subscribe", "run");
         assertThat(enabledControls()).containsExactlyInAnyOrder("translating-pause", "translating-stop");
     }
 

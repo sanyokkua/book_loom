@@ -113,6 +113,12 @@ public final class TranslatingViewModel {
         mirror.runState().addListener((observed, was, now) -> refreshControls());
         otherWork.addListener((observed, was, now) -> refreshControls());
         mirror.review().retryInFlight().addListener((observed, was, now) -> refreshControls());
+        // The countdown republishes the recovery every second; only whether it still waits changes the controls.
+        mirror.review().recovery().addListener((observed, was, now) -> {
+            if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
+                refreshControls();
+            }
+        });
         mirror.runState().addListener(onRunState);
         settings.model().addListener(onModelText);
         current.book().addListener(onOpenedBook);
@@ -345,8 +351,10 @@ public final class TranslatingViewModel {
 
     private void refreshControls() {
         final RunState state = mirror.runState().get();
-        final Controls table =
-                Controls.of(state, preparing.get(), pending.remains().get());
+        final Controls table = state == RunState.PAUSED
+                        && RecoveryState.waits(mirror.review().recovery().get())
+                ? Controls.waitingForProvider()
+                : Controls.of(state, preparing.get(), pending.remains().get());
         final boolean held =
                 otherWork.get() != null || mirror.review().retryInFlight().get();
         final Controls next = held ? table.heldByOtherWork() : table;

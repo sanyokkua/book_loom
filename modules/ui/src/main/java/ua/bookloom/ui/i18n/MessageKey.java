@@ -131,6 +131,8 @@ public enum MessageKey {
     SHELL_RUN_STOPPED("shell.run.stopped"),
     /** State text while paused on an error, whatever its code. */
     SHELL_RUN_PROVIDER_ERROR("shell.run.providerError"),
+    /** State text while the run waits for the provider by itself; argument 0 is the time to the next try as {@code m:ss}. */
+    SHELL_RUN_WAITING_PROVIDER("shell.run.waitingProvider"),
     /** State text once every segment is decided. */
     SHELL_RUN_FINISHED("shell.run.finished"),
     /** State text once the run ended in failure; argument 0 is the whole-number percentage. */
@@ -177,6 +179,8 @@ public enum MessageKey {
     LOG_RETRIED("log.retried"),
     /** Activity-log entry for a recoverable segment error; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_SEGMENT_ERROR("log.segmentError"),
+    /** Activity-log entry for a step of the automatic recovery; arguments: 0 the attempt, 1 the next try as {@code HH:mm:ss} or empty, 2 the last probe's code or {@code none}, 3 {@code waiting}, {@code gaveUp} or {@code held}; all Strings. */
+    LOG_WAITING("log.waiting"),
     /** Activity-log entry for a run milestone; argument 0 is one of the tokens stageStarted, paused, resumed or finished, selecting the catalogue's own wording. */
     LOG_MILESTONE("log.milestone"),
     /** Counted sentence on the translating dashboard; argument 0 is the number of segments left. */
@@ -983,6 +987,14 @@ public enum MessageKey {
     TRANSLATING_STUCK_TITLE("translating.stuckTitle"),
     /** Banner hint under a stuck request, naming the three ways out. */
     TRANSLATING_STUCK_HINT("translating.stuckHint"),
+    /** Banner title while the run waits for the provider by itself. */
+    TRANSLATING_RECOVERY_TITLE("translating.recoveryTitle"),
+    /** Banner text while the run waits for the provider; arguments: 0 the time to the next try as {@code m:ss}, 1 the attempt (a number), 2 when the outage began as {@code HH:mm}, 3 the last probe's code or {@code none}. */
+    TRANSLATING_RECOVERY_TEXT("translating.recoveryText"),
+    /** Banner title once the provider has been down too long for the run to keep retrying by itself. */
+    TRANSLATING_RECOVERY_GAVE_UP_TITLE("translating.recoveryGaveUpTitle"),
+    /** Banner text once the run stopped retrying by itself; arguments: 0 when the outage began as {@code HH:mm}, 1 how many tries were made (a number). */
+    TRANSLATING_RECOVERY_GAVE_UP_TEXT("translating.recoveryGaveUpText"),
     /** Button that flags the failing or stalled segment and lets the run go on. */
     TRANSLATING_SKIP_SEGMENT("translating.skipSegment"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_SKIP_SEGMENT}. */
@@ -1017,6 +1029,8 @@ public enum MessageKey {
     SHELL_CONNECTION_STEADY("shell.connection.steady"),
     /** Status-bar chip after recent failures; argument 0 is how many attempts failed in the last ten minutes. */
     SHELL_CONNECTION_UNSTEADY("shell.connection.unsteady"),
+    /** Status-bar chip while the run waits for an unreachable provider and retries by itself. */
+    SHELL_CONNECTION_RETRYING("shell.connection.retrying"),
     /** Hover explanation of the connection chip; arguments: 0 the model, 1 the last answer's age, 2 the timeouts, 3 the failures, 4 the drafting speed, 5 the judging speed; all Strings. */
     SHELL_CONNECTION_TIP("shell.connection.tip"),
     /** A figure the connection chip's explanation does not know yet. */

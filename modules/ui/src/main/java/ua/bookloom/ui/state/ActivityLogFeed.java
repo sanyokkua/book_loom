@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import java.time.Duration;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,11 +9,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentStarted;
@@ -157,6 +160,40 @@ final class ActivityLogFeed {
         final boolean afterError = pausedOnError;
         pausedOnError = false;
         return afterError ? new LogEntry(LogKind.RETRIED, List.of(RESUME_AFTER_ERROR, "")) : milestone(RESUMED);
+    }
+
+    /**
+     * One line per step of an automatic recovery: the next try and what the last probe found, or why it stopped.
+     *
+     * @param event the engine's announcement
+     * @param nextAt when the next try is due, in the person's zone, or {@code null} when none is scheduled
+     * @return the line; arguments: 0 the attempt, 1 the next try as {@code HH:mm:ss} or empty, 2 the last probe's
+     *     code or {@code none}, 3 the status token {@code waiting}, {@code gaveUp} or {@code held}
+     */
+    LogEntry recovery(final RecoveryWaiting event, final @Nullable LocalTime nextAt) {
+        final ErrorCode probe = event.probeFailure();
+        return new LogEntry(
+                LogKind.WAITING,
+                List.of(
+                        String.valueOf(event.attempt()),
+                        nextAt == null
+                                ? ""
+                                : String.format(
+                                        Locale.ROOT,
+                                        "%02d:%02d:%02d",
+                                        nextAt.getHour(),
+                                        nextAt.getMinute(),
+                                        nextAt.getSecond()),
+                        probe == null ? "none" : probe.name(),
+                        statusToken(event.status())));
+    }
+
+    private static String statusToken(final RecoveryWaiting.Status status) {
+        return switch (status) {
+            case WAITING -> "waiting";
+            case GAVE_UP -> "gaveUp";
+            case HELD -> "held";
+        };
     }
 
     LogEntry finished() {

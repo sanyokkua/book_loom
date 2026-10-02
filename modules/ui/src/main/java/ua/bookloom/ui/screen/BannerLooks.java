@@ -1,15 +1,19 @@
 package ua.bookloom.ui.screen;
 
 import java.time.Duration;
+import java.time.LocalTime;
 import java.util.Locale;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.PauseNotice;
+import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.RunNotice;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
@@ -38,7 +42,9 @@ final class BannerLooks {
         /** Retry now, Skip segment, the settings and Stay paused, for a run paused on a provider error. */
         PROVIDER,
         /** Skip segment, Retry now and Pause, for a request that has waited too long. */
-        STUCK
+        STUCK,
+        /** Retry now, Skip segment and Stop, for a run that waits for the provider and will try it again by itself. */
+        RECOVERING
     }
 
     /** How the banner is told: its glyph, its role class, its words and which actions it offers. */
@@ -117,13 +123,7 @@ final class BannerLooks {
 
     private Look noticeLook(final RunState state, final RunNotice notice, final boolean offerProvider) {
         return switch (notice) {
-            case RunNotice.ProviderError provider ->
-                new Look(
-                        "⛔",
-                        ERR,
-                        provider.error().title(),
-                        providerText(provider),
-                        state != RunState.PAUSED ? Offer.SETTINGS_ONLY : offerProvider ? Offer.PROVIDER : Offer.NONE);
+            case RunNotice.ProviderError provider -> providerLook(state, provider, offerProvider);
             case RunNotice.Refused refused ->
                 new Look(
                         "⚠",
@@ -141,6 +141,46 @@ final class BannerLooks {
                                 missing.which().token()),
                         Offer.NONE);
         };
+    }
+
+    // While the run recovers by itself the banner says when it tries next; once it gave up, how long it was down.
+    private Look providerLook(final RunState state, final RunNotice.ProviderError provider, final boolean offer) {
+        final RecoveryState recovery =
+                state == RunState.PAUSED ? mirror.review().recovery().get() : null;
+        if (recovery != null && recovery.isWaiting()) {
+            return new Look(
+                    "⏳",
+                    WARN,
+                    messages.get(MessageKey.TRANSLATING_RECOVERY_TITLE),
+                    recoveryText(recovery),
+                    Offer.RECOVERING);
+        }
+        final Offer offered = state != RunState.PAUSED ? Offer.SETTINGS_ONLY : offer ? Offer.PROVIDER : Offer.NONE;
+        if (recovery != null && recovery.status() == RecoveryWaiting.Status.GAVE_UP) {
+            final String text = messages.get(
+                    MessageKey.TRANSLATING_RECOVERY_GAVE_UP_TEXT, hhmm(recovery.downSince()), recovery.attempt());
+            return new Look(
+                    "⛔",
+                    ERR,
+                    messages.get(MessageKey.TRANSLATING_RECOVERY_GAVE_UP_TITLE),
+                    text + "\n" + providerText(provider),
+                    offered);
+        }
+        return new Look("⛔", ERR, provider.error().title(), providerText(provider), offered);
+    }
+
+    private String recoveryText(final RecoveryState recovery) {
+        final ErrorCode probe = recovery.probeFailure();
+        return messages.get(
+                MessageKey.TRANSLATING_RECOVERY_TEXT,
+                clock(Duration.ofSeconds(recovery.secondsLeft())),
+                recovery.attempt(),
+                hhmm(recovery.downSince()),
+                probe == null ? NONE : probe.name());
+    }
+
+    private static String hhmm(final LocalTime time) {
+        return String.format(Locale.ROOT, "%02d:%02d", time.getHour(), time.getMinute());
     }
 
     // The pause's details are worded only while the run is paused on this error; a failed preparation has none.

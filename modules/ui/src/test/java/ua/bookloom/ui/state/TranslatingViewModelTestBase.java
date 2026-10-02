@@ -98,7 +98,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 reviewMode,
                 runner,
                 new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
-                prepExecutor);
+                prepExecutor,
+                ScriptedProviderVerifier.idle());
         viewModel = onFx(() -> new TranslatingViewModel(
                 mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor(), activities));
         WaitForAsyncUtils.waitForFxEvents();

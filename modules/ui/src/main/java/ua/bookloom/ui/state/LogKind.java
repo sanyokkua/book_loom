@@ -25,6 +25,8 @@ public enum LogKind {
     SUMMARY_UPDATED(MessageKey.LOG_SUMMARY_UPDATED, StatusRole.INFO, "Σ", "sum"),
     /** The run resumed after a provider error. */
     RETRIED(MessageKey.LOG_RETRIED, StatusRole.WARNING, "↻", "retry"),
+    /** The run waits for the provider by itself: the next try, what the last probe found, or why it stopped. */
+    WAITING(MessageKey.LOG_WAITING, StatusRole.WARNING, "⏲", "wait"),
     /** A segment was flagged instead of accepted. */
     SEGMENT_ERROR(MessageKey.LOG_SEGMENT_ERROR, StatusRole.DANGER, "✕", "err"),
     /** A run-level event: a stage started, a pause, a resume, the end. */
@@ -73,7 +75,7 @@ public enum LogKind {
      * The short tag that starts this kind's entry in the log.
      *
      * @return one of {@code ok}, {@code call}, {@code fail}, {@code pause}, {@code round}, {@code mem}, {@code sum},
-     *     {@code retry}, {@code err} or {@code info}
+     *     {@code retry}, {@code wait}, {@code err} or {@code info}
      */
     public String tag() {
         return tag;

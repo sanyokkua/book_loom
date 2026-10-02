@@ -10,7 +10,8 @@ action.
 WHILE a run exists in the session, the title bar SHALL show, ahead of the theme control and in this order: the file name
 of the book being translated; a state text — "Progress 78%" while running, "Paused at 78%" while paused, "Stopped at
 78%" while stopped, "Provider error" while paused on an error (every pause on error, a provider's `validation`
-refusal included), "Finished" once every segment is decided, "Failed at 78%" once the run has ended in failure; the
+refusal included), "Waiting for the provider · next try in 4:12" while such a pause waits to resume by itself,
+"Finished" once every segment is decided, "Failed at 78%" once the run has ended in failure; the
 elapsed time and, when the run reports one, the time left; and one run control.
 
 The run control SHALL be Pause while the run is running, and Resume while it is paused, stopped or paused by a provider
@@ -71,6 +72,29 @@ control, and the single button acts through the same path as the screen's so the
 
 - **WHEN** Pause has been used and the request in flight has not yet been abandoned
 - **THEN** the title bar's run control is shown unavailable
+
+### Requirement: Keep the computer awake while a run is at work
+
+WHILE a run translates, pauses or stops, or waits for the provider by itself, the desktop application SHALL keep the
+computer from sleeping through the operating system's own mechanism, tied to the application's process: on macOS
+`caffeinate -i -m -w <pid>`, on Linux `systemd-inhibit` when it is installed; on Windows, and on a Linux without it,
+nothing, with one WARN line. It SHALL let the computer sleep again once the run completes, stops or fails, or the person
+pauses it, and at exit. A missing or failing command SHALL never fail the run. The connection chip SHALL read
+"Provider unreachable · retrying" while the run waits for the provider by itself.
+
+**Source:** the overnight plan, step 11 (owner intent: a run left all night must not be frozen by an idle sleep).
+In plain words: a laptop left alone sleeps after a few minutes, and a sleeping computer translates nothing. Starting a
+local system command is not network traffic, so the offline invariant is untouched.
+
+#### Scenario: A run keeps the Mac awake until the person pauses it
+
+- **WHEN** a run starts on macOS, waits for the provider by itself for an hour, then is paused by the person
+- **THEN** `caffeinate -i -m -w <pid>` runs from the start through the wait and is ended at the person's pause
+
+#### Scenario: No command on Windows
+
+- **WHEN** a run starts on Windows
+- **THEN** nothing is started, one WARN line says keep-awake is not implemented on this OS, and the run goes on
 
 ### Requirement: Search any fixed list by typing
 

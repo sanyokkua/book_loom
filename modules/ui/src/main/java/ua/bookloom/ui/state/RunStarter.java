@@ -17,6 +17,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
@@ -45,6 +46,7 @@ public final class RunStarter {
     private final TranslationRunner runner;
     private final SessionReporter reporter;
     private final ExecutorService executor;
+    private final ProviderVerifier verifier;
 
     /**
      * Creates the starter.
@@ -56,6 +58,7 @@ public final class RunStarter {
      * @param runner the runner that owns the one active run
      * @param reporter what tells the detailed log which provider, model and brief the run uses
      * @param executor the daemon executor a run is prepared on, never the FX thread
+     * @param verifier the port a run paused on a provider error probes the provider with before resuming by itself
      */
     @Inject
     public RunStarter(
@@ -65,7 +68,8 @@ public final class RunStarter {
             final ReviewMode reviewMode,
             final TranslationRunner runner,
             final SessionReporter reporter,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final ProviderVerifier verifier) {
         this.current = Objects.requireNonNull(current, "current");
         this.models = Objects.requireNonNull(models, "models");
         this.engine = Objects.requireNonNull(engine, "engine");
@@ -73,6 +77,7 @@ public final class RunStarter {
         this.runner = Objects.requireNonNull(runner, "runner");
         this.reporter = Objects.requireNonNull(reporter, "reporter");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.verifier = Objects.requireNonNull(verifier, "verifier");
     }
 
     /**
@@ -134,6 +139,7 @@ public final class RunStarter {
         }
         final TranslationJob job = Objects.requireNonNull(created.data(), "job");
         job.pauseAt(pausePoints());
+        job.recoverWith(ProviderProbes.of(verifier, selection));
         final BookBrief brief = briefOf();
         final RunContext context =
                 new RunContext(book.projectId(), fileNameOf(book), reviewMode, brief.dial(), selection);

@@ -24,6 +24,7 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ConnectionStatus;
 import ua.bookloom.ui.state.Controls;
+import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.Throughput;
@@ -88,6 +89,7 @@ public final class RunStatusBar {
         mirror.runState().addListener(redraw);
         mirror.figures().addListener(redraw);
         mirror.review().providerError().addListener(redraw);
+        mirror.review().recovery().addListener(redraw);
         mirror.live().throughput().addListener(redraw);
         mirror.live().connection().addListener(redraw);
         viewModel.controls().addListener(redraw);
@@ -175,14 +177,22 @@ public final class RunStatusBar {
     private String stateText(final RunState state, final int percent) {
         return switch (state) {
             case IDLE, RUNNING, PAUSING -> messages.get(MessageKey.SHELL_RUN_PROGRESS, percent);
-            case PAUSED ->
-                mirror.review().providerError().get() != null
-                        ? messages.get(MessageKey.SHELL_RUN_PROVIDER_ERROR)
-                        : messages.get(MessageKey.SHELL_RUN_PAUSED, percent);
+            case PAUSED -> pausedText(percent);
             case STOPPING, STOPPED -> messages.get(MessageKey.SHELL_RUN_STOPPED, percent);
             case COMPLETED -> messages.get(MessageKey.SHELL_RUN_FINISHED);
             case FAILED -> messages.get(MessageKey.SHELL_RUN_FAILED, percent);
         };
+    }
+
+    private String pausedText(final int percent) {
+        final RecoveryState recovery = mirror.review().recovery().get();
+        if (recovery != null && recovery.isWaiting()) {
+            return messages.get(
+                    MessageKey.SHELL_RUN_WAITING_PROVIDER, clock(Duration.ofSeconds(recovery.secondsLeft())));
+        }
+        return mirror.review().providerError().get() != null
+                ? messages.get(MessageKey.SHELL_RUN_PROVIDER_ERROR)
+                : messages.get(MessageKey.SHELL_RUN_PAUSED, percent);
     }
 
     private void showTimes(final Throughput figures) {
@@ -196,14 +206,19 @@ public final class RunStatusBar {
     }
 
     private void showConnection(final ConnectionStatus status) {
-        final ConnectionStatus.Health health = status.health();
+        // While the run waits for the provider by itself, the chip says so whatever the recent calls were.
+        final boolean retrying = RecoveryState.waits(mirror.review().recovery().get());
+        final ConnectionStatus.Health health = retrying ? ConnectionStatus.Health.UNSTEADY : status.health();
         final Duration since = status.sinceLastAnswer();
         connection.setText(
-                switch (health) {
-                    case UNKNOWN -> messages.get(MessageKey.SHELL_CONNECTION_UNKNOWN);
-                    case STEADY -> messages.get(MessageKey.SHELL_CONNECTION_STEADY, clock(since));
-                    case UNSTEADY -> messages.get(MessageKey.SHELL_CONNECTION_UNSTEADY, status.failuresRecently());
-                });
+                retrying
+                        ? messages.get(MessageKey.SHELL_CONNECTION_RETRYING)
+                        : switch (health) {
+                            case UNKNOWN -> messages.get(MessageKey.SHELL_CONNECTION_UNKNOWN);
+                            case STEADY -> messages.get(MessageKey.SHELL_CONNECTION_STEADY, clock(since));
+                            case UNSTEADY ->
+                                messages.get(MessageKey.SHELL_CONNECTION_UNSTEADY, status.failuresRecently());
+                        });
         connection.getStyleClass().removeAll(HEALTH_CLASSES);
         connection.getStyleClass().add(health.styleClass());
         final String model = viewModel.modelText().get();

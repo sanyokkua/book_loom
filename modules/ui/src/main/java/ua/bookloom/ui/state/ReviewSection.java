@@ -40,6 +40,7 @@ public final class ReviewSection {
     private final ReadOnlyObjectWrapper<@Nullable String> reviewPauseSegment = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable Decision> decided = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyBooleanWrapper retryInFlight = new ReadOnlyBooleanWrapper();
+    private final ReadOnlyObjectWrapper<@Nullable RecoveryState> recovery = new ReadOnlyObjectWrapper<>();
 
     /**
      * The model error the run is paused on, whatever its code.
@@ -74,6 +75,27 @@ public final class ReviewSection {
                 notice.pauses(),
                 notice.pausesBeforeFlagging());
         Platform.runLater(() -> pauseNotice.set(notice));
+    }
+
+    /**
+     * Where a run paused on a provider error stands in its automatic recovery.
+     *
+     * @return a read-only property holding {@code null} unless the run recovers or recovered by itself from the error
+     *     it is paused on; read on the FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable RecoveryState> recovery() {
+        return recovery.getReadOnlyProperty();
+    }
+
+    /**
+     * Shows where the automatic recovery stands, or that there is none.
+     *
+     * <p>Silent: the countdown republishes it every second, and the session logs each change of status itself.
+     *
+     * @param state the recovery's state, or {@code null} when the run is not recovering
+     */
+    public void publishRecovery(final @Nullable RecoveryState state) {
+        Platform.runLater(() -> recovery.set(state));
     }
 
     /**
@@ -163,5 +185,6 @@ public final class ReviewSection {
         pauseNotice.set(null);
         reviewPauseSegment.set(null);
         decided.set(null);
+        recovery.set(null);
     }
 }

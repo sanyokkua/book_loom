@@ -12,6 +12,8 @@ import java.util.Objects;
  *   <li>{@code RUNNING}: pause and stop.
  *   <li>{@code PAUSING}: pause unavailable, stop available, no resume.
  *   <li>{@code PAUSED}: resume and stop, and no start, so a second run never begins beside the one that can be resumed.
+ *       While the run waits for the provider by itself, also pause, which holds it for the person, and resume reads
+ *       Retry now ({@link #waitingForProvider()}).
  *   <li>{@code STOPPING}: stop unavailable and nothing else.
  *   <li>{@code STOPPED}: resume only, which starts a new job at the first pending segment.
  *   <li>{@code COMPLETED}: start only while segments are still pending, otherwise nothing.
@@ -61,6 +63,16 @@ public record Controls(ControlState start, ControlState pause, ControlState resu
             case STOPPED -> new Controls(hidden(), hidden(), begin, hidden());
             case COMPLETED -> new Controls(pendingRemain ? begin : hidden(), hidden(), hidden(), hidden());
         };
+    }
+
+    /**
+     * The controls of a run paused on a provider error that it recovers from by itself: pause holds it for the person,
+     * resume tries the provider at once, stop ends it.
+     *
+     * @return the controls; never null
+     */
+    public static Controls waitingForProvider() {
+        return new Controls(hidden(), ControlState.ENABLED, ControlState.ENABLED, ControlState.ENABLED);
     }
 
     /**

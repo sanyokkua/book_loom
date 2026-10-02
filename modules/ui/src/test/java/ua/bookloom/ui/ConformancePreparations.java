@@ -4,6 +4,8 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import com.google.inject.Injector;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +20,7 @@ import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
@@ -32,6 +35,7 @@ import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.LiveRow;
 import ua.bookloom.ui.state.LiveRows;
+import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RoundTrack;
 import ua.bookloom.ui.state.RunState;
@@ -68,6 +72,7 @@ final class ConformancePreparations {
             case LANGUAGE_MISMATCH -> openAMismatchedBook();
             case RUN_COMPLETED -> completeARun();
             case RUN_PROVIDER_FAILED -> pauseARunOnAProviderError();
+            case RUN_WAITING_FOR_PROVIDER -> waitForTheProvider();
             case RUN_STARTED -> startARun();
             case REVIEW_SELECTED -> selectAFlaggedSegment();
             case BOOK_REPORTED -> reportAFinishedBook();
@@ -219,6 +224,20 @@ final class ConformancePreparations {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunState(RunState.PAUSED);
         mirror.review().publishProviderError(unreachable);
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private void waitForTheProvider() {
+        pauseARunOnAProviderError();
+        injector.getInstance(StateMirror.class)
+                .review()
+                .publishRecovery(new RecoveryState(
+                        RecoveryWaiting.Status.WAITING,
+                        6,
+                        LocalTime.of(2, 14),
+                        Instant.parse("2026-10-02T03:00:00Z"),
+                        ErrorCode.unreachable,
+                        252));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

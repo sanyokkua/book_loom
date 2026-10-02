@@ -50,7 +50,7 @@ public final class BookLoomApplication extends Application {
     public void init() {
         final StartupContext startup = StartupContext.take();
 
-        injector = Guice.createInjector(new CoreModules(startup), new UiModule());
+        injector = Guice.createInjector(new CoreModules(startup), new UiModule(), new DesktopModule());
 
         lifecycle.phaseOne(injector);
         lifecycle.phaseTwo(injector);

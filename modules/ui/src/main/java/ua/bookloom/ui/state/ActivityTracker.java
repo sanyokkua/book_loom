@@ -13,6 +13,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.KeepAwake;
 
 /**
  * Every model or provider activity under way, so that one that would compete with another for the model is not
@@ -21,7 +22,8 @@ import org.jspecify.annotations.Nullable;
  * <p>The tracker refuses nothing itself: an owner asks {@link #conflictFor} before it starts, registers with
  * {@link #begin} and ends its {@link Handle} however the work ends — ending twice is harmless. Which kinds conflict is
  * {@link ActivityKind#conflictsWith}. The translation run is registered here from the mirror's run state: it counts
- * while the run translates (running, pausing, stopping), not while it waits paused, stopped or ended. FX thread only.
+ * while the run translates (running, pausing, stopping) or waits for the provider by itself, not while it waits
+ * paused for the person, stopped or ended. FX thread only.
  */
 @Slf4j
 @Singleton
@@ -48,34 +50,65 @@ public final class ActivityTracker {
     private final Map<Long, Runnable> cancels = new HashMap<>();
     private long lastId;
     private @Nullable Handle translation;
+    private final KeepAwake keepAwake;
 
     /**
-     * Creates a tracker that follows the run.
+     * Creates a tracker that follows the run and holds nothing awake.
      *
      * @param mirror where the run's state is read; a translating run is registered as {@link ActivityKind#TRANSLATION}
      */
-    @Inject
     public ActivityTracker(final StateMirror mirror) {
+        this(mirror, new KeepAwake.Off());
+    }
+
+    /**
+     * Creates a tracker that follows the run and keeps the computer awake for as long as the run is registered.
+     *
+     * @param mirror where the run's state is read; a translating run is registered as {@link ActivityKind#TRANSLATION}
+     * @param keepAwake what holds the computer awake while the translation is registered
+     */
+    @Inject
+    public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake) {
         Objects.requireNonNull(mirror, "mirror");
-        mirror.runState().addListener((observed, was, now) -> followRun(now));
-        followRun(mirror.runState().get());
+        this.keepAwake = Objects.requireNonNull(keepAwake, "keepAwake");
+        mirror.runState().addListener((observed, was, now) -> followRun(isTranslating(mirror)));
+        // The countdown republishes the recovery every second; only a change of whether it waits matters here.
+        mirror.review().recovery().addListener((observed, was, now) -> {
+            if (RecoveryState.waits(was) != RecoveryState.waits(now)) {
+                followRun(isTranslating(mirror));
+            }
+        });
+        followRun(isTranslating(mirror));
         log.debug("activity tracker ready");
     }
 
-    private void followRun(final RunState state) {
-        final boolean translating =
-                switch (state) {
-                    case RUNNING, PAUSING, STOPPING -> true;
-                    case IDLE, PAUSED, STOPPED, COMPLETED, FAILED -> false;
-                };
+    /**
+     * Whether the run is at work: translating, or paused on a provider error that it recovers from by itself, which is
+     * still the run's own activity and keeps the machine awake.
+     *
+     * @param mirror where the run's state and recovery are read; on the FX thread
+     * @return {@code true} while the run translates or waits for the provider by itself, {@code false} otherwise
+     */
+    public static boolean isTranslating(final StateMirror mirror) {
+        final RecoveryState recovery = mirror.review().recovery().get();
+        return switch (mirror.runState().get()) {
+            case RUNNING, PAUSING, STOPPING -> true;
+            case PAUSED -> RecoveryState.waits(recovery);
+            case IDLE, STOPPED, COMPLETED, FAILED -> false;
+        };
+    }
+
+    private void followRun(final boolean translating) {
         final Handle registered = translation;
         if (translating && registered == null) {
             translation = begin(ActivityKind.TRANSLATION, null);
+            keepAwake.start();
         } else if (!translating && registered != null) {
             registered.end();
             translation = null;
+            keepAwake.stop();
         } else {
-            log.debug("run state {}: the translation activity stays {}", state, translating ? "registered" : "absent");
+            log.debug("the translation activity stays {}", translating ? "registered" : "absent");
         }
     }
 

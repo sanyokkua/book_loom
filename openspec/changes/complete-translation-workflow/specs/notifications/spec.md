@@ -126,8 +126,18 @@ the application closes; the progress bar drawn in the danger role; and four acti
 provider settings and Stay paused. Every pause on error
 SHALL be shown this way, including a pause on a `validation` refusal the provider returned.
 
-IF a run ends on `ErrorCode.internal`, THEN the screen SHALL NOT show the provider-error state; the run is Failed and the
-blocking dialog reports it. IF a model call answers `ErrorCode.contextWindow` or `ErrorCode.emptyCompletion`, THEN the
+IF a run ends on `ErrorCode.internal` — an unexpected error outside every step, such as while the run starts — THEN the
+screen SHALL NOT show the provider-error state; the run is Failed and the blocking dialog reports it. A step that throws
+is paused on `internal` and recovers by itself (`resume` capability, "Recover from a provider error by itself").
+
+WHILE a paused run waits for the provider by itself, the banner SHALL be of warning severity and say so with the time to
+the next try counting down, the attempt, when the outage began and what the last check found — "Waiting for the
+provider · Next try in 4:12 · attempt 6 · down since 02:14 · last check: unreachable" — that the run resumes by itself,
+and offer Retry now, Skip segment and Stop; the run controls SHALL offer Pause, which holds the run for the person, a
+Resume control labelled Retry now, and Stop. Each step of the wait SHALL add one activity-log line (the next try's time
+and attempt, and what the last check found). Once the run stops waking after 12 hours, the banner SHALL be of error
+severity, say "The provider has been down for over 12 hours", since when and how many tries were made, and offer the
+provider-error actions. Once the person paused the wait, the ordinary provider-error state SHALL be shown. IF a model call answers `ErrorCode.contextWindow` or `ErrorCode.emptyCompletion`, THEN the
 segment is flagged and the run is neither paused nor ended.
 
 WHEN Retry now is used, the application SHALL resume the run, translating the interrupted segment again from its first
@@ -171,9 +181,23 @@ leave it for later. Retry now redoes the one segment that was interrupted, so no
 
 #### Scenario: An internal failure is not a provider error
 
-- **WHEN** the run's model call throws for `ch7 · p41`
+- **WHEN** the run throws while it prepares, before its first segment
 - **THEN** the run ends Failed with `ErrorCode.internal` and the blocking dialog is shown
 - **AND** no provider-error banner is shown
+
+#### Scenario: The run waits for the provider visibly
+
+- **WHEN** the run paused on `ErrorCode.unreachable` at 02:14 waits 4 min 12 s for its sixth wake, and the last check
+  found the server unreachable
+- **THEN** the banner, of warning severity, reads "Waiting for the provider" and "Next try in 4:12 · attempt 6 · down
+  since 02:14 · last check: unreachable", and offers Retry now, Skip segment and Stop
+- **AND** the run controls offer Pause, Retry now and Stop
+
+#### Scenario: After twelve hours the banner hands the run to the person
+
+- **WHEN** the provider has been down since 02:14 and the run gave up after 77 tries
+- **THEN** the banner, of error severity, reads "The provider has been down for over 12 hours" and "Down since 02:14 · 77
+  tries", and offers Retry now, Skip segment, Open provider settings and Stay paused
 
 #### Scenario: Retry now redoes the interrupted segment
 

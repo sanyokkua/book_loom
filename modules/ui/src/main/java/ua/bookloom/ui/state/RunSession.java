@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundStarted;
@@ -118,6 +119,10 @@ final class RunSession implements JobListener {
     boolean requestPause() {
         publishLock.lock();
         try {
+            if (pauseReached && !terminal && !stopRequested && calls.isRecoveryWaiting()) {
+                log.debug("pause requested while the run waits for the provider: holding it for the person");
+                return true;
+            }
             if (terminal || stopRequested || pauseRequested || pauseReached) {
                 log.debug(
                         "pause request ignored: terminal {}, stop requested {}, pause pending {}, pause reached {}",
@@ -204,6 +209,7 @@ final class RunSession implements JobListener {
             terminal = true;
             runClock.ended(clock.instant());
             calls.clearWait("the run ended");
+            calls.clearRecovery();
             if (outcome.state() == RunState.COMPLETED) {
                 queue(feed.finished());
             }
@@ -228,6 +234,7 @@ final class RunSession implements JobListener {
             case MemoryUpdated updated -> onMemory(updated);
             case ContextAssembled assembled -> onLiveRow(() -> liveChunks.contextAssembled(assembled));
             case RoundStarted round -> onRound(round);
+            case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
         }
     }
@@ -316,6 +323,7 @@ final class RunSession implements JobListener {
         record(resumed.progress());
         locked(() -> {
             runClock.resumed(clock.instant());
+            calls.clearRecovery();
             settleLocked(feed.resumed(), RunState.RUNNING, false);
             mirror.review().publishResumed();
         });

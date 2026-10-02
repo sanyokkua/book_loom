@@ -34,6 +34,7 @@ import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ControlState;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.ReviewPauseFollower;
 import ua.bookloom.ui.state.ReviewViewModel;
 import ua.bookloom.ui.state.RunInterventions;
@@ -113,6 +114,8 @@ final class TranslatingView {
             true);
     private static final BannerAction SEND_AGAIN = new BannerAction(
             "translating-send-again", MessageKey.TRANSLATING_RETRY_CALL, MessageKey.TRANSLATING_RETRY_CALL_TIP, false);
+    private static final BannerAction STOP_RUN = new BannerAction(
+            "translating-stop-run", MessageKey.TRANSLATING_STOP, MessageKey.TRANSLATING_STOP_TIP, true);
     private static final BannerAction PAUSE_STUCK = new BannerAction(
             "translating-pause-stuck",
             MessageKey.TRANSLATING_PAUSE_STUCK,
@@ -190,11 +193,12 @@ final class TranslatingView {
         final Button stay = action(STAY_PAUSED, messages, () -> {});
         final Button again = action(SEND_AGAIN, messages, interventions::sendAgain);
         final Button pause = action(PAUSE_STUCK, messages, viewModel::pause);
-        final HBox row = new HBox(ACTION_SPACING, retry, skip, again, settings, pause, stay);
+        final Button stop = action(STOP_RUN, messages, viewModel::stop);
+        final HBox row = new HBox(ACTION_SPACING, retry, skip, again, settings, pause, stay, stop);
         row.setId("translating-banner-actions");
         row.setAlignment(Pos.CENTER_LEFT);
         banner.addDetail(row);
-        return new TranslatingDashboard.LiveBanner(banner, retry, skip, settings, stay, again, pause);
+        return new TranslatingDashboard.LiveBanner(banner, retry, skip, settings, stay, again, pause, stop);
     }
 
     // Hidden until a look offers it; the ghost ones take only their own class, as the plain secondary look would
@@ -275,11 +279,24 @@ final class TranslatingView {
                 ACTION_SPACING,
                 control(START, viewModel::start, controls, messages),
                 control(PAUSE, viewModel::pause, controls, messages),
-                control(RESUME, viewModel::resume, controls, messages),
+                retryNowWhileRecovering(control(RESUME, viewModel::resume, controls, messages), mirror, messages),
                 control(STOP, viewModel::stop, controls, messages),
                 reviewFlagged(mirror, review, panel, messages));
         row.setAlignment(Pos.CENTER_LEFT);
         return new VBox(CARD_SPACING, row, heldNote(viewModel, messages));
+    }
+
+    // While the run waits for the provider by itself, resuming is trying the provider at once, and says so.
+    private static Button retryNowWhileRecovering(
+            final Button resume, final StateMirror mirror, final Messages messages) {
+        resume.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                RecoveryState.waits(mirror.review().recovery().get())
+                                        ? MessageKey.TRANSLATING_RETRY_NOW
+                                        : MessageKey.TRANSLATING_RESUME),
+                        mirror.review().recovery()));
+        return resume;
     }
 
     // Says why start or resume is off while other model work (a scan, an export, a provider test, a retry) runs.

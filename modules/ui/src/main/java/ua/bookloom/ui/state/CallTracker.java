@@ -1,6 +1,8 @@
 package ua.bookloom.ui.state;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalTime;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -11,6 +13,7 @@ import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
 
 /**
  * What a run's model calls tell the screen: the request it waits on, how the server has been answering, and which call
@@ -29,6 +32,7 @@ final class CallTracker {
     private final ConnectionHealth health = new ConnectionHealth();
     private @Nullable CallKind lastFailed;
     private ConnectionStatus shownStatus = ConnectionStatus.UNKNOWN;
+    private @Nullable RecoveryState recovery;
 
     CallTracker(final StateMirror mirror, final Clock clock, final ActivityLogFeed feed) {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
@@ -67,10 +71,63 @@ final class CallTracker {
      */
     void publish(final @Nullable Double draftTokensPerSecond) {
         wait.publish();
+        publishCountdown();
         final ConnectionStatus status = health.snapshot(clock.instant(), draftTokensPerSecond);
         if (!status.equals(shownStatus)) {
             shownStatus = status;
             mirror.live().publishConnection(status);
+        }
+    }
+
+    /**
+     * Follows the engine's automatic recovery: publishes where it stands and words its activity-log line.
+     *
+     * @param waiting the engine's announcement
+     * @return the activity-log line it is reported by
+     */
+    LogEntry recovery(final RecoveryWaiting waiting) {
+        final RecoveryState state = RecoveryState.of(waiting, clock.instant(), clock.getZone());
+        log.debug(
+                "recovery {} attempt {} next in {} s, last probe {}",
+                state.status(),
+                state.attempt(),
+                state.secondsLeft(),
+                state.probeFailure());
+        recovery = state;
+        mirror.review().publishRecovery(state);
+        final Instant next = waiting.nextTryAt();
+        return feed.recovery(waiting, next == null ? null : LocalTime.ofInstant(next, clock.getZone()));
+    }
+
+    /**
+     * Whether the run will try the provider again by itself, so a person's Pause holds it rather than being ignored.
+     *
+     * @return {@code true} while a wake is scheduled, {@code false} otherwise
+     */
+    boolean isRecoveryWaiting() {
+        final RecoveryState state = recovery;
+        return state != null && state.isWaiting();
+    }
+
+    /** Forgets the recovery: the run resumed, paused anew or ended. */
+    void clearRecovery() {
+        if (recovery != null) {
+            log.debug("recovery cleared");
+            recovery = null;
+            mirror.review().publishRecovery(null);
+        }
+    }
+
+    // The countdown moves once a second; publishing only a changed second keeps the FX queue quiet.
+    private void publishCountdown() {
+        final RecoveryState state = recovery;
+        if (state == null || !state.isWaiting()) {
+            return;
+        }
+        final RecoveryState now = state.at(clock.instant());
+        if (now.secondsLeft() != state.secondsLeft()) {
+            recovery = now;
+            mirror.review().publishRecovery(now);
         }
     }
 
@@ -86,6 +143,7 @@ final class CallTracker {
         final String segmentId = paused.segmentId();
         log.debug("paused for {} at segment {}", paused.reason(), segmentId);
         clearWait("the run paused");
+        clearRecovery();
         if (paused.reason() == PauseReason.ON_ERROR && error != null) {
             log.debug("pause on error {}: publishing the provider error", error.code());
             mirror.review().publishPauseNotice(noticeOf(paused));

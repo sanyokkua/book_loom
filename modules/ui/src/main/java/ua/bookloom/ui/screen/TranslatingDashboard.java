@@ -19,8 +19,9 @@ import ua.bookloom.ui.state.StateMirror;
  * <p>The banner is one node whose words and role class are replaced, not one node per state, so that a state change
  * moves nothing on screen. Its role is never the only carrier of meaning: each state also has its own glyph and title.
  * A notice, when there is one, is worded in the same banner in place of the plain state; a provider failure offers the
- * route to the provider settings, and a paused run also Retry now, Skip segment and Stay paused. A request that has
- * waited too long offers Skip segment, Retry now and Pause. {@link BannerLooks} chooses the words.
+ * route to the provider settings, and a paused run also Retry now, Skip segment and Stay paused; a run that waits for
+ * the provider by itself offers Retry now, Skip segment and Stop. A request that has waited too long offers Skip
+ * segment, Retry now and Pause. {@link BannerLooks} chooses the words.
  */
 @Slf4j
 final class TranslatingDashboard {
@@ -33,7 +34,8 @@ final class TranslatingDashboard {
             Button settings,
             Button stay,
             Button sendAgain,
-            Button pauseNow) {}
+            Button pauseNow,
+            Button stopRun) {}
 
     private final Node root;
     private final LiveBanner banner;
@@ -88,8 +90,10 @@ final class TranslatingDashboard {
         }
         final boolean provider = offer == BannerLooks.Offer.PROVIDER;
         final boolean stuck = offer == BannerLooks.Offer.STUCK;
-        Banner.setActionShown(banner.retry(), provider);
-        Banner.setActionShown(banner.skip(), provider || stuck);
+        final boolean recovering = offer == BannerLooks.Offer.RECOVERING;
+        Banner.setActionShown(banner.retry(), provider || recovering);
+        Banner.setActionShown(banner.skip(), provider || stuck || recovering);
+        Banner.setActionShown(banner.stopRun(), recovering);
         Banner.setActionShown(banner.settings(), provider || offer == BannerLooks.Offer.SETTINGS_ONLY);
         Banner.setActionShown(banner.stay(), provider);
         Banner.setActionShown(banner.sendAgain(), stuck);

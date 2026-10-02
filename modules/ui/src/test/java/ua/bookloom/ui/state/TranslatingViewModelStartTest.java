@@ -61,7 +61,7 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
                 .containsExactly(tuple("en", "uk"));
         assertThat(engine.requests()).containsExactly(new RunRequest("p1", ReviewMode.UNATTENDED));
         assertThat(engine.askedOnFxThread()).containsExactly(false);
-        assertThat(job.calls()).containsExactly("pauseAt", "subscribe", "run");
+        assertThat(job.calls()).containsExactly("pauseAt", "recoverWith", "subscribe", "run");
         awaitState(RunState.RUNNING);
         assertThat(preparing()).isFalse();
     }

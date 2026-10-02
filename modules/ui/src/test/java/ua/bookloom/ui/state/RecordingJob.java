@@ -156,6 +156,11 @@ public final class RecordingJob implements TranslationJob {
     }
 
     @Override
+    public void recoverWith(final ua.bookloom.api.pipeline.ProviderProbe probe) {
+        calls.add("recoverWith");
+    }
+
+    @Override
     public void cancel() {
         calls.add("cancel");
         onControl.run();

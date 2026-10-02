@@ -276,6 +276,19 @@ exits with. Through Gradle they collapse: the `translate` task fails on any non-
 1 for both 1 and 2, and a script that must tell them apart reads the printed line (`Invalid command arguments: …`
 starts a usage error).
 
+**Leaving a run overnight.** A window run never hangs silently. A provider outage (`unreachable`, 5xx, 429), a
+timeout or a step that throws pauses the run and it **recovers by itself**: it waits 15 s, 30 s, 1, 2, 5 and 10 min and
+then every 10 min, probes the provider at each wake (connection and model list, no inference) and resumes when the
+probe passes; the banner reads "Waiting for the provider · Next try in 4:12 · attempt 6 · down since 02:14", the title
+bar and the connection chip say so, and every step is an activity-log line and an INFO line in the log. After 12 hours
+down it stops waking and waits for you. Pause holds the run for you, Retry now / Skip segment act at once, Stop ends it.
+A wrong key, a missing model or an unloaded LM Studio model (`validation`) are not fixed by waiting and always wait for
+you. A model call outstanding 1.5 times its own timeout, or 20 minutes with no segment decided, is ended by the stall
+watchdog and retried as a timeout (two pauses, then the segment is flagged and the run goes on). While a run is at
+work — including such a wait — the computer is kept awake: on macOS `caffeinate -i -m -w <pid>`, on Linux
+`systemd-inhibit` when installed, on Windows nothing (one WARN line; set the power plan yourself). It is a local
+process, so the offline invariant is untouched. Nothing is saved to disk: a crash or power loss still loses the run.
+
 **Measuring scroll smoothness.** The build sets no JavaFX rendering flags, and none should be added without numbers.
 To measure, hand the flags to the launched JVM through `JAVA_TOOL_OPTIONS` (the `run` task forwards no `-D` of its
 own) and scroll the long views — the Names & style glossary with a few hundred rows, and the Translating screen's log

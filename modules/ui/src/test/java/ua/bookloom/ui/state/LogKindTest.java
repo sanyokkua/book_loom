@@ -28,6 +28,7 @@ class LogKindTest {
         "GLOSSARY_APPLIED, INFO, LOG_GLOSSARY_APPLIED",
         "SUMMARY_UPDATED, INFO, LOG_SUMMARY_UPDATED",
         "RETRIED, WARNING, LOG_RETRIED",
+        "WAITING, WARNING, LOG_WAITING",
         "SEGMENT_ERROR, DANGER, LOG_SEGMENT_ERROR",
         "MILESTONE, INFO, LOG_MILESTONE"
     })
@@ -46,6 +47,7 @@ class LogKindTest {
         "GLOSSARY_APPLIED, mem",
         "SUMMARY_UPDATED, sum",
         "RETRIED, retry",
+        "WAITING, wait",
         "SEGMENT_ERROR, err",
         "MILESTONE, info"
     })
@@ -75,7 +77,7 @@ class LogKindTest {
         final List<String> marks =
                 Arrays.stream(LogKind.values()).map(LogKind::mark).collect(Collectors.toList());
 
-        assertThat(LogKind.values()).hasSize(10);
+        assertThat(LogKind.values()).hasSize(11);
         assertThat(marks).doesNotHaveDuplicates();
     }
 

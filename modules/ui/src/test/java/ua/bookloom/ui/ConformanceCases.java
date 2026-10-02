@@ -55,6 +55,7 @@ final class ConformanceCases {
         LANGUAGE_MISMATCH,
         RUN_COMPLETED,
         RUN_PROVIDER_FAILED,
+        RUN_WAITING_FOR_PROVIDER,
         RUN_STARTED,
         REVIEW_SELECTED,
         BOOK_REPORTED,
@@ -342,6 +343,15 @@ final class ConformanceCases {
                             new Part("#translating-banner", Kind.BACKGROUND, "err-bg", "#f7e4df", "#3b2b28"),
                             new Part("#translating-banner", Kind.BORDER, "err-bd", "#e4b6ad", "#5e3f39"),
                             new Part("#translating-progress > .bar", Kind.BACKGROUND, "err", "#b0574c", "#cc7a6f"))),
+            // A run that waits for the provider by itself is a warning, not an error: it will go on without the person.
+            new Screen(
+                    "TRANSLATING_WAITING_FOR_PROVIDER",
+                    ViewNames.TRANSLATING,
+                    Preparation.RUN_WAITING_FOR_PROVIDER,
+                    Overlay.NONE,
+                    List.of(
+                            new Part("#translating-banner", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                            new Part("#translating-banner", Kind.BORDER, "warn-bd", "#e4cfa2", "#5c4d31"))),
             // The screen that writes the book: cards and result tiles on the surface role, the side-file boxes and the
             // consistency track on the cool border role. It needs an open book to show them; the finished state
             // follows a real export.
