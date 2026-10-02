@@ -71,7 +71,7 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
-    void chat_fullRequestUsesStrictSchemaAndOmitsReasoningAndAuthorization() {
+    void chat_fullRequestUsesStrictSchemaTurnsReasoningOffAndOmitsAuthorization() {
         stubChat("""
                 {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}]}
                 """);
@@ -86,6 +86,7 @@ class OpenAiCompatibleClientTest {
                           "messages":[{"role":"system","content":"Translate faithfully."},{"role":"user","content":"hello"},{"role":"assistant","content":"prior"}],
                           "stream":false,
                           "temperature":0.2,
+                          "reasoning_effort":"none",
                           "response_format":{"type":"json_schema","json_schema":{"name":"draft","strict":true,"schema":{"type":"object","properties":{"segments":{"type":"array"}},"required":["segments"]}}}
                         }
                         """))

@@ -183,6 +183,37 @@ different path and a shorter leash, and then the failure goes to the run, which 
 
 ## MODIFIED Requirements
 
+### Requirement: Turn reasoning off for an OpenAI-compatible call, and retry a reply that spent its cap reasoning
+
+WHEN a chat request that disables reasoning goes to an OpenAI-compatible provider, the system SHALL send
+`"reasoning_effort":"none"`; a request that leaves reasoning to the provider SHALL carry no `reasoning_effort` key. IF
+the server answers `400` naming the control as unsupported, THEN the request SHALL be sent once more without it, as for
+the Ollama-native `think` (the `inference` capability).
+
+IF a capped reply has blank `content`, non-blank `reasoning` or `reasoning_content` and the finish `length`, THEN the
+system SHALL send the same request once more with its cap raised to four times, bounded by the request's context size
+when one is given, before reading the reply; a second such reply SHALL answer `ErrorCode.emptyCompletion`. Neither
+reasoning field SHALL ever reach the reply text.
+
+**Source:** FR-INFER-02, FR-INFER-09 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
+`docs/specification/02_Architecture/04_LLM_INTEGRATION.md#client-implementations`, `#response-handling`.
+In plain words: through `/v1`, a thinking model (gemma4 on Ollama or LM Studio) writes every output token into
+`message.reasoning` unless told not to, so a call capped at 128–190 tokens came back with no translation and 114 of 163
+segments of the earth-gravity EPUB were flagged as empty. Both servers honour `reasoning_effort: none` (checked against
+Ollama 0.x `/v1` and LM Studio with `google/gemma-4-e4b`); a server that does not still gets one chance with room to
+reason and answer.
+
+#### Scenario: LM Studio is told to skip reasoning
+
+- **WHEN** a draft call with reasoning disabled and the cap `183` goes to LM Studio
+- **THEN** the body posted to `/v1/chat/completions` has `"reasoning_effort":"none"` and `"max_tokens":183`
+
+#### Scenario: A reply that only reasoned is asked for again with room
+
+- **WHEN** the reply to a call capped at `128` with the context size `8192` is
+  `{"choices":[{"message":{"content":"","reasoning_content":"Thinking Process: …"},"finish_reason":"length"}]}`
+- **THEN** the same request is sent once more with `"max_tokens":512`, and its reply is the call's answer
+
 ### Requirement: Shape an Ollama-native chat request
 
 WHEN a chat request goes to an Ollama-native provider, the system SHALL `POST` to `<baseUrl>/api/chat` a JSON body
@@ -241,7 +272,8 @@ nanoseconds), each only when present.
 
 WHEN an OpenAI-compatible provider answers `200` to `/chat/completions`, the system SHALL take the reply text from
 `choices[0].message.content` and the finish from `choices[0].finish_reason`: `stop` is a normal finish, `length` is cut
-off by length, and anything else is other. A `reasoning_content` field and `tool_calls` SHALL be ignored. The system
+off by length, and anything else is other. A `reasoning` or `reasoning_content` field and `tool_calls` SHALL never
+reach the reply text; the reasoning fields are read only to notice a reply that spent its cap reasoning (above). The system
 SHALL take the token usage from `usage.prompt_tokens` and `usage.completion_tokens`, each only when present, and SHALL
 use the call's measured wall-clock time as the generation time when either is present.
 
@@ -316,7 +348,9 @@ the first failure, reporting each stage that ran with its own outcome and its me
 2. **Models**: discovery runs; the stage reports how many models were listed, passes when the model id is in the list,
    fails with `modelUnavailable` when the list does not contain it, and passes softly, with a note that the list could
    not be read, when discovery answers `discoveryFailed` or an empty list.
-3. **Inference**: a schema-constrained probe asks for exactly `{"status":"ok"}` with reasoning disabled. The stage
+3. **Inference**: a schema-constrained probe asks for exactly `{"status":"ok"}` with reasoning disabled and an output
+   cap of `64` — the shape of a run's own calls, so a server whose thinking model spends a capped reply on reasoning
+   fails here (`emptyCompletion`) instead of passing an uncapped probe and then flagging a book. The stage
    reports `structured output: supported` only for that valid envelope. An explicit format rejection or nonconforming
    structured answer is followed by one plain probe; a nonblank plain reply reports `structured output: not confirmed`.
    A `modelNotFound` answer is reported as `modelUnavailable`; any other error is reported as itself.

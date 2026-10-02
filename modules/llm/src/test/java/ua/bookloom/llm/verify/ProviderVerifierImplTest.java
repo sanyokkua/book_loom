@@ -1,9 +1,11 @@
 package ua.bookloom.llm.verify;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -90,7 +92,7 @@ class ProviderVerifierImplTest {
         server.stubFor(
                 post(urlEqualTo(OLLAMA_CHAT_PATH))
                         .withRequestBody(equalToJson("""
-                                        {"model":"test-model","messages":[{"role":"user","content":"Return exactly one JSON object: {\\"status\\":\\"ok\\"}."}],"stream":true,"format":{"type":"object","properties":{"status":{"const":"ok"}},"required":["status"],"additionalProperties":false},"think":false}
+                                        {"model":"test-model","messages":[{"role":"user","content":"Return exactly one JSON object: {\\"status\\":\\"ok\\"}."}],"stream":true,"options":{"num_predict":64},"format":{"type":"object","properties":{"status":{"const":"ok"}},"required":["status"],"additionalProperties":false},"think":false}
                                         """))
                         .willReturn(
                                 okJson(
@@ -164,6 +166,26 @@ class ProviderVerifierImplTest {
         assertThat(retryDelays).containsExactly(Duration.ofMillis(500), Duration.ofSeconds(1));
         server.verify(4, getRequestedFor(urlEqualTo(OPENAI_MODELS_PATH)));
         server.verify(1, postRequestedFor(urlEqualTo(OPENAI_CHAT_PATH)));
+    }
+
+    // The probe is capped and asks for reasoning off like a run's calls, so a server whose thinking model spends every
+    // capped reply on reasoning fails here instead of passing and then flagging most of a book as empty completions.
+    @Test
+    void verify_thinkingModelSpendingTheCapOnReasoning_failsInferenceWithEmptyCompletion() {
+        registerProvider(configs, "lmstudio", ProviderKind.OPENAI_COMPATIBLE, "/v1");
+        server.stubFor(get(urlEqualTo(OPENAI_MODELS_PATH)).willReturn(okJson(OPENAI_MODEL_REPLY)));
+        server.stubFor(post(urlEqualTo(OPENAI_CHAT_PATH))
+                .willReturn(okJson("{\"model\":\"test-model\",\"choices\":[{\"message\":{\"content\":\"\","
+                        + "\"reasoning_content\":\"Thinking Process:\"},\"finish_reason\":\"length\"}]}")));
+
+        final VerificationReport report = report(verifier(configs, gate, retryPolicy)
+                .verify(new ModelSelection("lmstudio", MODEL_ID), VerificationPolicy.FULL));
+
+        assertThat(report.stages().get(2).status()).isEqualTo(StageStatus.FAILED);
+        assertThat(error(report.stages().get(2)).code()).isEqualTo(ErrorCode.emptyCompletion);
+        server.verify(postRequestedFor(urlEqualTo(OPENAI_CHAT_PATH))
+                .withRequestBody(matchingJsonPath("$.reasoning_effort", equalTo("none")))
+                .withRequestBody(matchingJsonPath("$.max_tokens", equalTo("64"))));
     }
 
     @Test

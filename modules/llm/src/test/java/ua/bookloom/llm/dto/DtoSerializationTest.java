@@ -96,10 +96,28 @@ class DtoSerializationTest {
                 null,
                 null,
                 maxTokens,
+                null,
                 null));
 
         assertThat(body.has("max_tokens")).isEqualTo(expectedPresent);
         assertThat(body.path("max_tokens").asInt(-1)).isEqualTo(expectedPresent ? 80 : -1);
+    }
+
+    // Ollama's and LM Studio's OpenAI-compatible endpoints both turn a thinking model's reasoning off for "none".
+    @ParameterizedTest
+    @CsvSource({"none,true", ",false"})
+    void openAiChatRequest_reasoningEffort_serializesOnlyWhenSet(final String effort, final boolean expectedPresent) {
+        final JsonNode body = mapper().valueToTree(new OpenAiChatRequest(
+                "google/gemma-4-e4b",
+                List.of(new OpenAiChatRequest.Message("user", "hello")),
+                false,
+                null,
+                null,
+                null,
+                null,
+                effort));
+
+        assertThat(body.has("reasoning_effort")).isEqualTo(expectedPresent);
     }
 
     // The native thinking control is top-level and remains absent unless a caller explicitly requests it.

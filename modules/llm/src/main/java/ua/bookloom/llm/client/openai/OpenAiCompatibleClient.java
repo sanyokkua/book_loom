@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -20,6 +21,7 @@ import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.llm.client.openai.OpenAiRequestMapper.ParsedFormat;
+import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
 import ua.bookloom.llm.dto.OpenAiModelsResponse;
 import ua.bookloom.llm.dto.OpenAiModelsResponse.Model;
@@ -34,7 +36,11 @@ import ua.bookloom.llm.provider.ProviderCallResult;
 import ua.bookloom.llm.provider.ProviderClient;
 import ua.bookloom.llm.response.ReplySanitizer;
 
-/** Implements the shared OpenAI-shaped models and chat endpoints without provider-specific reasoning controls. */
+/**
+ * Implements the shared OpenAI-shaped models and chat endpoints. A request that turns reasoning off sends
+ * {@code reasoning_effort: none}, and a reply whose cap a thinking model spent on reasoning is asked for once more with
+ * a raised cap ({@link ReasoningBudget}).
+ */
 @Slf4j
 public final class OpenAiCompatibleClient implements ProviderClient {
     private static final String MODELS_PATH = "/models";
@@ -123,10 +129,20 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             return ProviderCallResult.withoutRetryAfter(
                     Result.err(Objects.requireNonNull(parsedFormat.error(), "error")));
         }
-        final Result<String> requestBody = requestMapper.serializeRequest(
+        return exchangeChat(
                 modelId,
                 request,
-                Objects.requireNonNull(parsedFormat.data(), "parsed format").format());
+                Objects.requireNonNull(parsedFormat.data(), "parsed format").format(),
+                true);
+    }
+
+    // A reply whose cap a thinking model spent on reasoning is asked for once more with a raised cap, never twice.
+    private ProviderCallResult<ChatResponse> exchangeChat(
+            String modelId,
+            ChatRequest request,
+            OpenAiChatRequest.@Nullable ResponseFormatDto format,
+            boolean mayRaiseCap) {
+        final Result<String> requestBody = requestMapper.serializeRequest(modelId, request, format);
         if (requestBody.isErr()) {
             return ProviderCallResult.withoutRetryAfter(
                     Result.err(Objects.requireNonNull(requestBody.error(), "error")));
@@ -141,9 +157,13 @@ public final class OpenAiCompatibleClient implements ProviderClient {
             logOutcome("chat", modelId, error);
             return new ProviderCallResult<>(Result.err(error), call.retryAfter(), call.rejectedCapability());
         }
-        return new ProviderCallResult<>(
-                readChatResponse(modelId, Objects.requireNonNull(response.data(), "reply"), elapsed),
-                call.retryAfter());
+        final HttpReply reply = Objects.requireNonNull(response.data(), "reply");
+        final Optional<ChatRequest> raised =
+                mayRaiseCap ? ReasoningBudget.raisedAfter(mapper, reply.body(), request) : Optional.empty();
+        if (raised.isPresent()) {
+            return exchangeChat(modelId, raised.get(), format, false);
+        }
+        return new ProviderCallResult<>(readChatResponse(modelId, reply, elapsed), call.retryAfter());
     }
 
     @Override

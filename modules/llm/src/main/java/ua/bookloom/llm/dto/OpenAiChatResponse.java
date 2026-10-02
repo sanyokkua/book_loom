@@ -41,11 +41,27 @@ public record OpenAiChatResponse(
      *
      * @param role nullable because a partial message may omit the speaker
      * @param content nullable because a partial message may omit generated text
+     * @param reasoning a thinking model's reasoning as Ollama's endpoint names it; read only to tell a reply whose
+     *     cap the reasoning used up, never part of the answer
+     * @param reasoningContent the same as LM Studio names it
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Message(
             @JsonProperty("role") @Nullable String role,
-            @JsonProperty("content") @Nullable String content) {}
+            @JsonProperty("content") @Nullable String content,
+            @JsonProperty("reasoning") @Nullable String reasoning,
+            @JsonProperty("reasoning_content") @Nullable String reasoningContent) {
+
+        /**
+         * Whether the message carries reasoning text.
+         *
+         * @return {@code true} if either reasoning field holds non-blank text, {@code false} otherwise
+         */
+        public boolean hasReasoning() {
+            return (reasoning != null && !reasoning.isBlank())
+                    || (reasoningContent != null && !reasoningContent.isBlank());
+        }
+    }
 
     /**
      * Token counts consumed from a chat completion's reported usage.

@@ -44,6 +44,9 @@ import ua.bookloom.llm.retry.RetryPolicy;
 @Slf4j
 public final class ProviderVerifierImpl implements ProviderVerifier {
 
+    /** The probe's output cap: the smallest cap a run's call has, ample for {@code {"status":"ok"}}. */
+    static final int PROBE_OUTPUT_CAP = 64;
+
     private static final String INFERENCE_PROBE_MESSAGE = "Return exactly one JSON object: {\"status\":\"ok\"}.";
     private static final String STRUCTURED_OUTPUT_SUPPORTED = "structured output: supported";
     private static final String STRUCTURED_OUTPUT_NOT_CONFIRMED = "structured output: not confirmed";
@@ -284,16 +287,26 @@ public final class ProviderVerifierImpl implements ProviderVerifier {
     }
 
     private static ChatRequest structuredProbeRequest(@Nullable Boolean reasoningEnabled) {
-        return new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, INFERENCE_PROBE_MESSAGE)),
-                null,
-                INFERENCE_PROBE_FORMAT,
-                reasoningEnabled);
+        return probeRequest(INFERENCE_PROBE_FORMAT, reasoningEnabled);
     }
 
     private static ChatRequest plainProbeRequest(@Nullable Boolean reasoningEnabled) {
+        return probeRequest(null, reasoningEnabled);
+    }
+
+    // Capped like a run's calls: an uncapped probe let a thinking model reason to the end and answer, hiding a server
+    // that ignores the reasoning control and then spends every capped call of the run on reasoning.
+    private static ChatRequest probeRequest(@Nullable ResponseFormat format, @Nullable Boolean reasoningEnabled) {
         return new ChatRequest(
-                List.of(new ChatMessage(ChatRole.USER, INFERENCE_PROBE_MESSAGE)), null, null, reasoningEnabled);
+                List.of(new ChatMessage(ChatRole.USER, INFERENCE_PROBE_MESSAGE)),
+                null,
+                format,
+                reasoningEnabled,
+                null,
+                null,
+                PROBE_OUTPUT_CAP,
+                null,
+                null);
     }
 
     private <T> ProviderCallResult<T> callWithRetry(

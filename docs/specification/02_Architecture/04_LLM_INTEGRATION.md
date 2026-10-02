@@ -63,7 +63,9 @@ the pipeline stays dialect-agnostic:
 - **OpenAI-compatible client** (`kind = OPENAI_COMPATIBLE`) — uses `/models` to probe and discover and
   `/chat/completions` for inference relative to the configured base URL. It covers LM Studio and other
   OpenAI-compatible servers, sending `stream:false`, optional `temperature`, and strict `json_schema`
-  `response_format` only when requested; it never sends a reasoning parameter.
+  `response_format` only when requested, and `reasoning_effort:"none"` when the request disables reasoning (Ollama's
+  and LM Studio's `/v1` both honour it). A capped reply whose content is blank, whose `reasoning`/`reasoning_content`
+  is not, and whose finish is `length` is asked for once more with four times the cap, bounded by the context size.
 
 ### provider-factory {#provider-factory}
 
