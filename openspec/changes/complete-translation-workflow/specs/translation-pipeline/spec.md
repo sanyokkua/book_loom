@@ -1744,6 +1744,32 @@ lets throughput count only drafts. A provider client that retries a timed-out re
 - **WHEN** a pause is already requested when the engine is about to make a model call
 - **THEN** the provider receives no request and no model-call event is emitted
 
+### Requirement: End a model call that outlives its ceiling
+
+WHILE a run is running, the system SHALL watch its model calls on a daemon ticker of its own (every 5 s, started and
+stopped with the run, every failure of a check logged and swallowed) and SHALL end a call — interrupting it through the
+job's control, as a pause does, so the provider client gives it up and the inference gate is released — when the attempt
+has been outstanding longer than 1.5 times its own timeout (15 min for a call whose model announces none), or when no
+segment has been decided for 20 minutes while a call is outstanding. The ended call SHALL answer `ErrorCode.timeout`,
+log one WARN line with the call's kind, segment and elapsed time, and go through the run's ordinary timeout path: it
+pauses, recovers by itself, and after two such pauses the segment is flagged and the run goes on. Both provider
+clients bound a whole reply by the request timeout (the OpenAI-compatible client's JDK request timeout covers a body
+that stalls after its head), so the watchdog is the last resort behind them, not the first.
+
+**Source:** the overnight plan, step 11 (a stalled call must never hold a night's run).
+In plain words: a provider that accepts a request and never finishes it would otherwise keep the run waiting forever.
+
+#### Scenario: A judge call that never returns is ended at 135 s
+
+- **WHEN** a judge call with a 90 s timeout has been outstanding for 136 s
+- **THEN** the watchdog ends it, the gate is released, and the call answers `ErrorCode.timeout`
+
+#### Scenario: A call that never returns is retried, then flagged
+
+- **WHEN** the draft of `Book.txt:1` never returns three times in a row
+- **THEN** the watchdog ends each attempt, the run pauses and recovers by itself twice, flags `Book.txt:1` with
+  `ErrorCode.timeout` on the third, and ends Completed with two accepted
+
 ### Requirement: Repair invalid structured draft replies once
 
 IF a draft reply is malformed or wrong-shaped — anything but one complete JSON object with exactly one nonblank string

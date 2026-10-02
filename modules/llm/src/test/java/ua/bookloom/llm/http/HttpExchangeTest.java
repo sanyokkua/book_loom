@@ -72,6 +72,24 @@ class HttpExchangeTest {
         assertThat(error.details()).contains("timeoutMs=1000");
     }
 
+    // The OpenAI-compatible client reads its reply whole: a server that sends the head at once and then stalls in the
+    // body must still end at the request timeout, which the JDK client applies to the body too, not only the head.
+    @Test
+    void post_headSentThenBodyStalls_endsAsTimeoutNearTheRequestTimeout() {
+        server.stubFor(com.github.tomakehurst.wiremock.client.WireMock.post("/chat")
+                .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody("{\"choices\":[{\"message\":{\"content\":\"a long reply\"}}]}")
+                        .withChunkedDribbleDelay(5, 6000)));
+        final long started = System.nanoTime();
+
+        final Result<HttpReply> result =
+                exchange().post(config(URI.create(server.baseUrl()), Duration.ofSeconds(1)), "/chat", "{}");
+
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(4));
+        assertThat(Objects.requireNonNull(result.error(), "error").code()).isEqualTo(ErrorCode.timeout);
+    }
+
     @Test
     void get_closedLocalPortMapsToUnreachable() throws IOException {
         final URI endpoint = closedEndpoint();
