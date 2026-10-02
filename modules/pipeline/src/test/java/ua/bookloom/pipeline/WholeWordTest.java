@@ -38,4 +38,14 @@ class WholeWordTest {
             final String term, final String text, final boolean expected) {
         assertThat(WholeWord.pattern(term).matcher(text).find()).isEqualTo(expected);
     }
+
+    // The cache is shared by every run of a session; a night of restored spans must not grow it without end.
+    @org.junit.jupiter.api.Test
+    void pattern_moreDistinctTermsThanTheBound_keepsTheCacheBounded() {
+        java.util.stream.IntStream.range(0, WholeWord.MAX_PATTERNS + 500)
+                .forEach(index -> WholeWord.pattern("term" + index));
+
+        assertThat(WholeWord.cached()).isBetween(1, WholeWord.MAX_PATTERNS);
+        assertThat(WholeWord.pattern("Hale").matcher("Hale opened").find()).isTrue();
+    }
 }

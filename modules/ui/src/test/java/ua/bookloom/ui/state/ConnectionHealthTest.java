@@ -68,4 +68,16 @@ class ConnectionHealthTest {
 
         assertThat(after(health, 5).failuresRecently()).isZero();
     }
+
+    // A burst of failures between two snapshots must not grow the record past its bound.
+    @Test
+    void finished_moreFailuresThanTheBound_keepsTheNewest() {
+        final ConnectionHealth health = new ConnectionHealth();
+
+        java.util.stream.IntStream.range(0, ConnectionHealth.MAX_FAILURES + 100)
+                .forEach(index -> health.finished(
+                        attempt(CallKind.DRAFT, "s-" + index, 1, ErrorCode.upstream), START.plusSeconds(index)));
+
+        assertThat(after(health, 6).failuresRecently()).isEqualTo(ConnectionHealth.MAX_FAILURES);
+    }
 }

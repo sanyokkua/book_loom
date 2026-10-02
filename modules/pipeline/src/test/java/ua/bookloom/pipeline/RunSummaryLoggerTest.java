@@ -118,6 +118,28 @@ class RunSummaryLoggerTest {
                         + " p95CallMs=0 tokensPerSecond=- timeouts=0 current=-");
     }
 
+    // A night's run makes tens of thousands of calls; the line counts them all but keeps only the newest
+    // RunSummaryLogger.PERCENTILE_WINDOW times, so its memory does not grow with the book.
+    @Test
+    void onEvent_moreCallsThanTheWindow_countsAllAndTakesThePercentileOfTheNewest() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+
+        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
+        feed(summary, 500, Duration.ofSeconds(10));
+        feed(summary, 1_000, Duration.ofSeconds(1));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries()).singleElement().asString().contains("calls=1500 avgCallMs=4000 p95CallMs=1000 ");
+        assertThat(summary.heldCallTimes()).isEqualTo(1_000);
+    }
+
+    private static void feed(final RunSummaryLogger summary, final int calls, final Duration elapsed) {
+        java.util.stream.IntStream.range(0, calls)
+                .forEach(ignored -> summary.onEvent(
+                        new ModelCallFinished("ch12.xhtml:4", CallKind.DRAFT, elapsed, null, 200, false)));
+    }
+
     private List<String> summaries() {
         return appender.list.stream()
                 .filter(event -> event.getLevel() == Level.INFO)

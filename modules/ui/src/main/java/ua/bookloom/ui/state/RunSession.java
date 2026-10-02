@@ -2,10 +2,8 @@ package ua.bookloom.ui.state;
 
 import java.time.Clock;
 import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -55,7 +53,8 @@ final class RunSession implements JobListener {
     private final CallTracker calls;
     private final AtomicReference<@Nullable JobProgress> latest = new AtomicReference<>();
     private final AtomicReference<@Nullable JobProgress> lastSeen = new AtomicReference<>();
-    private final ConcurrentLinkedQueue<LogEntry> pending = new ConcurrentLinkedQueue<>();
+    // Guarded by publishLock like the flags below.
+    private final PendingLines pending = new PendingLines();
     private final ReentrantLock publishLock = new ReentrantLock();
     // The four flags below are read and written only while publishLock is held, so a request and an engine event
     // can never each decide on a state the other has just changed.
@@ -362,12 +361,7 @@ final class RunSession implements JobListener {
         if (snapshot != null) {
             mirror.publishProgress(snapshot);
         }
-        final List<LogEntry> batch = new ArrayList<>();
-        LogEntry next = pending.poll();
-        while (next != null) {
-            batch.add(next);
-            next = pending.poll();
-        }
+        final List<LogEntry> batch = pending.drain();
         if (!batch.isEmpty()) {
             mirror.publishLogEntries(batch);
         }

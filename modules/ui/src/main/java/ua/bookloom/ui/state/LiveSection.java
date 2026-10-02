@@ -143,7 +143,18 @@ public final class LiveSection {
     public void publishFlaggedQueue(final List<FlaggedRow> rows) {
         final List<FlaggedRow> copy = List.copyOf(Objects.requireNonNull(rows, "rows"));
         log.debug("publishing a flagged queue of {} segments", copy.size());
-        Platform.runLater(() -> queue.setAll(copy));
+        Platform.runLater(() -> replaceQueue(copy));
+    }
+
+    // A run flags at its end of the book, so the new queue is nearly always the shown one plus a few rows: those are
+    // appended, and the list's view lays out only them instead of every flagged row of the night again.
+    private void replaceQueue(final List<FlaggedRow> rows) {
+        final int shown = queue.size();
+        if (rows.size() >= shown && rows.subList(0, shown).equals(queue)) {
+            queue.addAll(rows.subList(shown, rows.size()));
+            return;
+        }
+        queue.setAll(rows);
     }
 
     /** Clears every field; runs on the FX thread as part of the mirror's reset for a new run. */

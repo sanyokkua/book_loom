@@ -38,7 +38,7 @@ final class ActivityLogFeed {
     static final String MEMORY = "memory";
 
     /** A chunk holds a handful of segments, so far fewer locators than this are ever looked up after their start. */
-    private static final int MAX_LOCATORS = 256;
+    static final int MAX_LOCATORS = 256;
 
     private static final long SECONDS_PER_MINUTE = 60;
 
@@ -53,6 +53,19 @@ final class ActivityLogFeed {
         if (locators.size() > MAX_LOCATORS) {
             locators.remove(locators.keySet().iterator().next());
         }
+        // A segment the run left undecided (a stop, a skip mid-round) never clears its round, so bound those too.
+        if (rounds.size() > MAX_LOCATORS) {
+            rounds.clear();
+        }
+    }
+
+    /**
+     * How many segments' locators and repair rounds are held.
+     *
+     * @return the larger of the two counts, never more than {@link #MAX_LOCATORS} plus one
+     */
+    int heldSegments() {
+        return Math.max(locators.size(), rounds.size());
     }
 
     String locatorOf(final String segmentId) {

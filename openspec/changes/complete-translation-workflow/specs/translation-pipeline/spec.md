@@ -1774,6 +1774,37 @@ In plain words: a provider that accepts a request and never finishes it would ot
 - **THEN** the watchdog ends each attempt, the run pauses and recovers by itself twice, flags `Book.txt:1` with
   `ErrorCode.timeout` on the third, and ends Completed with two accepted
 
+### Requirement: Run a whole book in bounded memory
+
+The system SHALL keep nothing that grows with the number of model calls or log lines of a run, and SHALL keep per
+segment only what the in-memory store holds for it (its record, targets, snapshot and memory entry). In particular:
+the run summary SHALL count every call but take its 95th percentile over the newest 1,000 call times only
+(`RunSummaryLogger.PERCENTILE_WINDOW`); a step's pause count SHALL be forgotten once the step answers, is flagged or
+ends the run; the whole-word pattern cache shared by every run of a session SHALL hold at most 4,096 patterns
+(`WholeWord.MAX_PATTERNS`). The window SHALL show at most 500 activity-log entries (`StateMirror.MAX_LOG_ENTRIES`) and
+queue at most as many between two ticks, dropping the oldest; remember at most 256 segments' locators and repair rounds
+(`ActivityLogFeed.MAX_LOCATORS`); keep at most 256 recent failed attempts for the connection chip
+(`ConnectionHealth.MAX_FAILURES`); keep at most 32 undecided live rows; and grow the flagged queue by appending the new
+rows rather than replacing the rows it already shows. Logging SHALL stay synchronous and size-capped, with no queue
+that a slow disk could fill.
+
+**Source:** the overnight plan, step 13 (a whole book left running all night must not run out of memory).
+In plain words: a 3,700-segment book under injected faults retains about 2.5 KB per decided segment and nothing else
+that grows; the soak harness (`./gradlew :pipeline:soak`) proves it.
+
+#### Scenario: A night's calls do not grow the run summary
+
+- **WHEN** a run makes 1,500 model calls, the first 500 of 10 s and the next 1,000 of 1 s
+- **THEN** the final summary line reads `calls=1500 avgCallMs=4000 p95CallMs=1000` and holds 1,000 call times
+
+#### Scenario: A whole book under faults finishes in bounded memory
+
+- **WHEN** a generated book of 3,700 paragraphs runs on the Balanced dial over a model that times out, hangs, answers
+  5xx bursts, is unreachable for 25 minutes once, unloads its model, answers empty, damages placeholders, refuses,
+  answers the judge with no JSON and throws
+- **THEN** the run ends Completed with no segment pending, the export re-opens with every segment, the live threads
+  are as many as before, and the retained heap grows by less than 16 KB per segment
+
 ### Requirement: Repair invalid structured draft replies once
 
 IF a draft reply is malformed or wrong-shaped — anything but one complete JSON object with exactly one nonblank string

@@ -3,7 +3,8 @@ package ua.bookloom.pipeline;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -29,7 +30,8 @@ import ua.bookloom.api.pipeline.StageStarted;
 
 /**
  * Writes one INFO {@code run summary} line a minute while a job runs, and a last one when it ends: segments accepted,
- * flagged, kept verbatim and pending, model calls with their average and 95th-percentile time, tokens a second,
+ * flagged, kept verbatim and pending, model calls with their average and 95th-percentile time (over the newest
+ * {@link #PERCENTILE_WINDOW} calls, so the memory held does not grow with the run), tokens a second,
  * timeouts so far and the segment being translated.
  *
  * <p>Driven by the job's own events rather than a timer: the first event at least {@link #INTERVAL} after the last
@@ -43,12 +45,17 @@ final class RunSummaryLogger {
     /** How long at least between two periodic lines. */
     static final Duration INTERVAL = Duration.ofSeconds(60);
 
+    /** How many of the newest call times the percentile is taken over, so a night's run holds a fixed number. */
+    static final int PERCENTILE_WINDOW = 1_000;
+
     private static final double PERCENTILE = 0.95;
     private static final double MILLIS_PER_SECOND = 1000.0;
     private static final String NONE = "-";
 
     private final Clock clock;
-    private final List<Long> callMillis = new ArrayList<>();
+    private final Deque<Long> recentMillis = new ArrayDeque<>();
+    private long calls;
+    private long totalMillis;
     // Set by the first event, so a job built long before it runs does not write a line at once.
     private @Nullable Instant lastLine;
     private @Nullable JobProgress progress;
@@ -94,7 +101,13 @@ final class RunSummaryLogger {
     }
 
     private void record(final ModelCallFinished finished) {
-        callMillis.add(finished.elapsed().toMillis());
+        final long millis = finished.elapsed().toMillis();
+        calls++;
+        totalMillis += millis;
+        recentMillis.addLast(millis);
+        if (recentMillis.size() > PERCENTILE_WINDOW) {
+            recentMillis.removeFirst();
+        }
         if (finished.failure() == ErrorCode.timeout) {
             timeouts++;
         }
@@ -118,7 +131,7 @@ final class RunSummaryLogger {
                 at == null ? 0 : at.flagged(),
                 at == null ? 0 : at.keptVerbatim(),
                 at == null ? 0 : at.pending(),
-                callMillis.size(),
+                calls,
                 averageMillis(),
                 percentileMillis(),
                 tokensPerSecond(),
@@ -126,16 +139,20 @@ final class RunSummaryLogger {
                 locator);
     }
 
+    /** How many call times are held for the percentile; never more than {@link #PERCENTILE_WINDOW}. */
+    int heldCallTimes() {
+        return recentMillis.size();
+    }
+
     private long averageMillis() {
-        return Math.round(
-                callMillis.stream().mapToLong(Long::longValue).average().orElse(0));
+        return calls == 0 ? 0 : Math.round((double) totalMillis / calls);
     }
 
     private long percentileMillis() {
-        if (callMillis.isEmpty()) {
+        if (recentMillis.isEmpty()) {
             return 0;
         }
-        final List<Long> sorted = callMillis.stream().sorted().toList();
+        final List<Long> sorted = recentMillis.stream().sorted().toList();
         final int index = (int) Math.ceil(PERCENTILE * sorted.size()) - 1;
         return sorted.get(Math.max(0, index));
     }

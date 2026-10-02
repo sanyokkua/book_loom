@@ -28,6 +28,9 @@ final class ConnectionHealth {
     /** A failure older than this no longer says anything about the server now. */
     static final Duration RECENT = Duration.ofMinutes(10);
 
+    /** At most this many failures are kept, whatever their age, so a burst between two snapshots cannot grow it. */
+    static final int MAX_FAILURES = 256;
+
     /** Which call an attempt belongs to: the same kind about the same segments is the same call tried again. */
     private record CallKey(CallKind kind, @Nullable String segmentId, List<String> segmentIds) {
 
@@ -64,6 +67,9 @@ final class ConnectionHealth {
         }
         log.debug("connection: a {} attempt failed with {}", event.kind(), failure);
         failures.addLast(new Failure(at, failure == ErrorCode.timeout, CallKey.of(event)));
+        if (failures.size() > MAX_FAILURES) {
+            failures.removeFirst();
+        }
     }
 
     private void forgetFailuresOf(final CallKey call) {

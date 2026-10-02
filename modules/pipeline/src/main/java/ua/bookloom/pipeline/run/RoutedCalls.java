@@ -31,7 +31,9 @@ final class RoutedCalls {
             ErrorCode.cancelled, "Segment skipped", "The segment was skipped while its model call was waiting.");
 
     private final RunBoundaries boundaries;
-    // The pauses each give-up-able step caused so far in this run, by step and recovery kind. Job thread only.
+    // The pauses each give-up-able step caused so far, by step and recovery kind, until the step answers or is flagged:
+    // only steps that are still failing are held, so a night's run does not keep one entry per segment. Job thread
+    // only.
     private final Map<String, Integer> pauses = new HashMap<>();
 
     /**
@@ -90,9 +92,20 @@ final class RoutedCalls {
             final StepName step,
             final Supplier<Result<T>> call,
             final Function<AppError, T> flag) {
+        return untilAnsweredOrFlagged(work::currentTranslationProgress, segmentId, step, call, flag);
+    }
+
+    /** As {@link #untilAnsweredOrFlagged(WorkList, String, StepName, Supplier, Function)}, a pause reporting
+     * the progress {@code progress} gives. */
+    <T> Step<T> untilAnsweredOrFlagged(
+            final Supplier<JobProgress> progress,
+            @Nullable final String segmentId,
+            final StepName step,
+            final Supplier<Result<T>> call,
+            final Function<AppError, T> flag) {
         Objects.requireNonNull(step, "step");
         Objects.requireNonNull(flag, "flag");
-        return route(work::currentTranslationProgress, segmentId, call, new GiveUp<>(step, flag));
+        return route(progress, segmentId, call, new GiveUp<>(step, flag));
     }
 
     private <T> Step<T> route(
@@ -107,14 +120,33 @@ final class RoutedCalls {
             final Result<T> result = withSegment(segmentId, call);
             if (result.isOk()) {
                 boundaries.callAnswered();
+                forget(giveUp);
                 return new Step.Done<>(Objects.requireNonNull(result.data(), "data"));
             }
             final AppError error = Objects.requireNonNull(result.error(), "error");
             final Optional<Step<T>> settled = afterError(error, progress.get(), giveUp, unnamedPauses);
             if (settled.isPresent()) {
+                forget(giveUp);
                 return settled.get();
             }
             log.debug("Making the call again segmentId={} after code={}", segmentId, error.code());
+        }
+    }
+
+    /**
+     * How many steps' pause counts are held: the steps that paused the run and have neither answered nor been flagged.
+     *
+     * @return never negative
+     */
+    int heldPauseCounts() {
+        return pauses.size();
+    }
+
+    // A step that answered, was flagged or ended the run is never counted again under this name in this run.
+    private void forget(@Nullable final GiveUp<?> giveUp) {
+        if (giveUp != null && !pauses.isEmpty()) {
+            final String prefix = giveUp.step().key() + "/";
+            pauses.keySet().removeIf(key -> key.startsWith(prefix));
         }
     }
 
