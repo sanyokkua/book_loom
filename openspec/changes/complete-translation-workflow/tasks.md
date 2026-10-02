@@ -1336,6 +1336,24 @@ check leaves evidence.
   the tick, Enter-to-accept, Accept all and a start notice; promptEval `suggest` rows on gemma4:e4b-mlx all pass
   (01a4cc8, 8bae223, 3df8253)
 
+- [x] 14. Headless real-model proof on the earth-gravity fixture (gemma4:e4b-mlx) and its fixes: names are plain text —
+  the draft prompt explains locked-name tokens only in a `[Locked names]` block present when the segment has one, says
+  only `[Immutable tokens]` exist and writes "(none — write no ⟦gN⟧ token at all …)"; `TokenRepair` drops an invented
+  token only when glued to a word, otherwise the model repair runs with "⟦gN⟧ is not a placeholder of this text; write
+  names as plain text" (pieces of an oversized segment too — ch6-p2 now translates); the length check also fails a
+  space left before `.`/`,` or under 0.55 words per source word at a character ratio under 0.85; "Placeholders restored
+  without a model: put back N, removed M"; promptEval `names-*` cases (38b8d71). OpenAI-compatible calls send
+  `reasoning_effort:"none"` (checked against Ollama `/v1` and LM Studio), a capped reply spent on reasoning is asked once
+  more with 4× the cap, and the preflight probe is capped like a run's calls (9952968). TXT lists, stanzas and contents
+  blocks get line-break tokens, and unmask restores the line end around a line-break token a model spaced (01f5811).
+  Retry now during an outage keeps `downSince` and spends no segment budget (454261a). The command line runs unattended
+  with the window's recovery (`ProviderProbe.of` in `:api`, `--max-outage`), stops at a pause only a person ends, exports
+  what a stopped or interrupted run translated (exit 3; `--no-partial`), and takes `--quality`, `--names`,
+  `--review-names` and `--report`; `scripts/e2e-fixture.sh` (50cdbc8). From the first proof round: a wider band under
+  60 characters, the word rule tied to the character ratio, equations kept verbatim (db2293c). Result (Balanced,
+  Transliterate, review-names): 0 flagged and validator PASS in all four formats; LM Studio EPUB 4 flagged, PASS; 12b
+  EPUB 1 flagged, one `Венс` slip ([DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#running) table)
+
 ## 16. The gate — after every group above
 
 - [ ] 16.1 Bring the whole project green with no pre-existing-failure exemption, and paste the gate's tail as evidence. Each group ended on `./gradlew build :app:archTest`; only the whole-project clean gate — `clean`, `check` with its coverage gate, and `spotlessCheck` — proves the groups agree with each other, and a red check anywhere means the change is not done. → all modules, build

@@ -307,6 +307,23 @@ scripts/e2e-fixture.sh epub --provider lmstudio                   # google/gemma
 scripts/e2e-fixture.sh epub --model gemma4:12b-mlx                # a larger model for comparison
 ```
 
+**Headless proof results** (earth-gravity fixture, en → uk, gemma4:e4b-mlx on Ollama unless named; *before* = the
+harness runs of 2026-10-02 04:53–05:10, *after* = `scripts/e2e-fixture.sh`, Balanced, Transliterate, `--review-names`):
+
+| Run | Format | Time | Segments | Accepted | Flagged | Validator |
+|---|---|---|---|---|---|---|
+| before (Fast, Translate) | TXT | 177 s | 92 | 91 | 1 | FAIL — 3 lists/stanzas merged, ch6-p2 left English, names |
+| before (Fast, Translate) | MD | 237 s | 140 | 137 | 3 | FAIL — stanzas 1–2 and ch6-p2 left English, names |
+| before (Fast, Translate) | FB2 | 193 s | 147 | 144 | 3 | FAIL — ch6-p2 left English, names |
+| before (Balanced) | EPUB | 275 s | 163 | 159 | 4 | FAIL — ch6-p2 left English, names |
+| before, OpenAI-compatible `/v1` | EPUB | — | 163 | — | 114 (`emptyCompletion`) | — |
+| after | TXT | 245 s | 92 | 92 | 0 | PASS |
+| after | MD | 284 s | 140 | 140 | 0 | PASS |
+| after | FB2 | 294 s | 147 | 147 | 0 | PASS |
+| after | EPUB | 304 s | 163 | 163 | 0 | PASS |
+| after, LM Studio `google/gemma-4-e4b` (`/v1`) | EPUB | 644 s | 163 | 159 | 4 | PASS |
+| after, gemma4:12b-mlx | EPUB | 1321 s | 163 | 162 | 1 | FAIL — one `Венс` for the accepted `Ванс` (a model slip) |
+
 **Leaving a run overnight.** A window run never hangs silently. A provider outage (`unreachable`, 5xx, 429), a
 timeout or a step that throws pauses the run and it **recovers by itself**: it waits 15 s, 30 s, 1, 2, 5 and 10 min and
 then every 10 min, probes the provider at each wake (connection and model list, no inference) and resumes when the

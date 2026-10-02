@@ -55,6 +55,7 @@ if [[ -z "${MODEL}" ]]; then
         *) MODEL="gemma4:e4b-mlx" ;;
     esac
 fi
+mkdir -p "${OUT}" && OUT="$(cd "${OUT}" && pwd)"
 case "${WHICH}" in
     all) FORMATS=(epub fb2 md txt) ;;
     epub | fb2 | md | txt) FORMATS=("${WHICH}") ;;
