@@ -47,8 +47,9 @@ public final class JudgeCall {
      * @param calls the seam the call is sent through
      * @return the chunk's verdict — {@link Result#ok} even for an unreadable reply or a call answered
      *     {@link ErrorCode#emptyCompletion}/{@link ErrorCode#contextWindow}, and an unavailable verdict for a call
-     *     answered {@link ErrorCode#timeout}/{@link ErrorCode#unreachable}; {@link Result#err} for any other call
-     *     failure
+     *     answered {@link ErrorCode#timeout}; {@link Result#err} for any other call failure, so a provider outage
+     *     ({@link ErrorCode#unreachable}, {@link ErrorCode#upstream}, {@link ErrorCode#rateLimited}) waits for the
+     *     provider as a draft call does
      */
     public Result<JudgeVerdict> judge(
             final List<JudgedPair> pairs,
@@ -103,8 +104,9 @@ public final class JudgeCall {
             log.warn("Unreadable judge reply segmentIds={} code={}", segmentIds, error.code());
             return Result.ok(JudgeVerdict.unreadable());
         }
-        // The provider already retried the call; pausing the run on it again would only wait for the same stall.
-        if (error.code() == ErrorCode.timeout || error.code() == ErrorCode.unreachable) {
+        // The provider already retried the stalled call; pausing the run on it again would only wait for the same
+        // stall. An outage is different: the judge says nothing while the provider is down, so the run waits for it.
+        if (error.code() == ErrorCode.timeout) {
             log.warn(
                     "Judge unavailable; its segments are decided by the quality checks alone and flagged"
                             + " segmentIds={} code={}",

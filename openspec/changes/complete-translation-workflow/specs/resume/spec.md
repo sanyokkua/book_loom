@@ -386,9 +386,9 @@ act on. "Resume and stop pausing" means clearing the pause points, then resuming
 WHERE pause on error is enabled, IF a model call fails with a provider error that survived the retry policy —
 `ErrorCode.unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable` or
 `missingCredential` — or the model call itself answers `ErrorCode.validation` (a provider refusing the request), THEN the system SHALL pause with that error, keep every count as it stood, and on resume
-make the interrupted call again from its first request — except a judge call answered `timeout` or `unreachable`,
-which does not pause the run: its segments are flagged as the `quality-gates` capability's "Flag a segment the judge
-could not judge" says.
+make the interrupted call again from its first request — except a judge call answered `timeout`, which does not pause
+the run: its segments are flagged as the `quality-gates` capability's "Flag a segment the judge could not judge" says.
+A judge call answered `unreachable`, `upstream` or `rateLimited` pauses and recovers like any other call.
 
 The system SHALL count the pauses of each step — a segment's draft, a segment's decision, or a chunk's judge call — by
 the kind of recovery its error needs, and SHALL, on the failure past that kind's budget, flag the step's segment (for a

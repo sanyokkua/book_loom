@@ -642,19 +642,22 @@ context-matched memory reuse without the judge"), so neither is shown to it. Fas
 
 ### Requirement: Flag a segment the judge could not judge
 
-IF a judge call — a chunk's, or a repaired segment's re-judge — ends with `ErrorCode.timeout` or
-`ErrorCode.unreachable` after the provider's own retries, THEN the system SHALL NOT pause the run for it: it SHALL
-decide every segment the call was for by its quality checks alone, keep the segment's latest target that passed every
-hard gate (the draft, or the last repair), add the finding `judge-unavailable` (severity medium, raised by `judge`), and
-flag the segment with that error, never accept it; it SHALL make no further repair round for it, and the run SHALL go
-on with the next segment. A judge call answered with any other provider error still pauses or fails the run as the
-`resume` capability says.
+IF a judge call — a chunk's, or a repaired segment's re-judge — ends with `ErrorCode.timeout` after the provider's
+own retries, THEN the system SHALL NOT pause the run for it: it SHALL decide every segment the call was for by its
+quality checks alone, keep the segment's latest target that passed every hard gate (the draft, or the last repair), add
+the finding `judge-unavailable` (severity medium, raised by `judge`), and flag the segment with that error, never accept
+it; it SHALL make no further repair round for it, and the run SHALL go on with the next segment. A judge call answered
+with any other provider error — a provider outage (`unreachable`, `upstream`, `rateLimited`) included — still pauses
+the run as the `resume` capability says, so an outage is waited out and the judge call made again, exactly as for a
+draft call.
 
 **Source:** FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b.
 In plain words: on the Bartimaeus hand test a re-judge after a directed fix hung seven times for the full timeout, and
 each time the run paused, was resumed, and paid the same calls again. A judge that does not answer says nothing about
-the translation, so the translation is kept and handed to the person for review instead of holding the whole book.
+the translation, so the translation is kept and handed to the person for review instead of holding the whole book. A
+provider that is down is another matter: overnight it would flag every segment judged while it was down, so the run
+waits for it and judges again.
 
 #### Scenario: A re-judge times out after a directed fix
 
@@ -665,10 +668,17 @@ the translation, so the translation is kept and handed to the person for review 
   the run report lists it with `ErrorCode.timeout`
 - **AND** `Book.md:1` is decided by the chunk's verdict and the run ends Completed
 
-#### Scenario: A chunk's judge cannot be reached
+#### Scenario: A chunk's judge stalls
 
-- **WHEN** a Balanced chunk of two drafted segments is judged and the judge call ends with `ErrorCode.unreachable`
+- **WHEN** a Balanced chunk of two drafted segments is judged and the judge call ends with `ErrorCode.timeout`
 - **THEN** both segments are FLAGGED with their drafts as targets and no further call is made for them
+
+#### Scenario: A provider outage during judging is waited out
+
+- **WHEN** an Unattended Balanced run drafts `One.`, `Two.` and `Three.` and the chunk's judge call ends with
+  `ErrorCode.unreachable` (or `upstream`, or `rateLimited`) while the provider is down for a minute
+- **THEN** the run waits, probes at 0:15, 0:45 and 1:45, judges the chunk again once a probe passes, and ends Completed
+  with all three ACCEPTED and none flagged
 
 ### Requirement: Stop repairing a segment that does not change
 

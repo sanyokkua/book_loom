@@ -89,9 +89,10 @@ class TranslationJobStallTest {
         assertThat(formats(model)).containsExactly(DRAFT, DRAFT, JUDGE, FIX, JUDGE);
     }
 
+    // Only a stall degrades the judge; a provider outage pauses, as TranslationJobUnattendedRecoveryTest proves.
     @Test
-    void run_chunkJudgeUnreachable_flagsTheChunkAndFinishesWithoutAPause() {
-        final ScriptedChatModel model = replies(T0, T1).answerTo(JUDGE, Result.err(error(ErrorCode.unreachable)));
+    void run_chunkJudgeTimesOut_flagsTheChunkAndFinishesWithoutAPause() {
+        final ScriptedChatModel model = replies(T0, T1).answerTo(JUDGE, Result.err(error(ErrorCode.timeout)));
         final TestProject project = project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);

@@ -153,12 +153,10 @@ class JudgeCallTest {
         assertThat(Objects.requireNonNull(result.data()).readable()).isFalse();
     }
 
-    // A judge that cannot be reached after the provider's own retries must not hold the run: its verdict says so.
-    @ParameterizedTest
-    @EnumSource(
-            value = ErrorCode.class,
-            names = {"timeout", "unreachable"})
-    void judge_modelAnswersTimeoutOrUnreachable_readsAsUnavailableWithThatError(final ErrorCode code) {
+    // A judge that stalls after the provider's own retries must not hold the run: its verdict says so.
+    @Test
+    void judge_modelAnswersTimeout_readsAsUnavailableWithThatError() {
+        final ErrorCode code = ErrorCode.timeout;
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(Result.err(AppError.of(code, "Model failure", "no answer")));
 
@@ -180,7 +178,7 @@ class JudgeCallTest {
     @ParameterizedTest
     @EnumSource(
             value = ErrorCode.class,
-            names = {"auth", "upstream", "cancelled"})
+            names = {"auth", "unreachable", "upstream", "rateLimited", "cancelled"})
     void judge_modelAnswersAnotherError_returnsThatError(final ErrorCode code) {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(Result.err(AppError.of(code, "Model failure", "no answer")));

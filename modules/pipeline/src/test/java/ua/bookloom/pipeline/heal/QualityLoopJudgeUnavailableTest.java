@@ -26,9 +26,9 @@ import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
- * A judge that cannot be reached — timed out or unreachable after the provider's own retries — never holds the run: the
- * segment keeps its latest target, decided by the quality checks alone, and is flagged with a {@code judge-unavailable}
- * finding, never accepted.
+ * A judge that stalls — timed out after the provider's own retries — never holds the run: the segment keeps its latest
+ * target, decided by the quality checks alone, and is flagged with a {@code judge-unavailable} finding, never accepted.
+ * A provider outage is not a stall: it ends the step with its error, so the run waits for the provider.
  */
 class QualityLoopJudgeUnavailableTest {
 
@@ -44,7 +44,7 @@ class QualityLoopJudgeUnavailableTest {
     @ParameterizedTest
     @EnumSource(
             value = ErrorCode.class,
-            names = {"timeout", "unreachable"})
+            names = {"timeout"})
     void nextDecision_rejudgeAfterAFixUnavailable_flagsTheFixedTargetWithJudgeUnavailable(final ErrorCode code) {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable(MEANING_AT_085))
@@ -66,7 +66,7 @@ class QualityLoopJudgeUnavailableTest {
     @ParameterizedTest
     @EnumSource(
             value = ErrorCode.class,
-            names = {"timeout", "unreachable"})
+            names = {"timeout"})
     void nextDecision_chunkJudgeUnavailable_flagsTheDraftWithoutAnotherCall(final ErrorCode code) {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(Result.err(AppError.of(code, "No answer", "the judge did not answer")));
@@ -81,16 +81,34 @@ class QualityLoopJudgeUnavailableTest {
         assertThat(model.requests()).hasSize(1);
     }
 
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"unreachable", "upstream", "rateLimited"})
+    void nextDecision_rejudgeDuringAnOutage_endsTheStepWithThatErrorInsteadOfFlagging(final ErrorCode code) {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable(MEANING_AT_085))
+                .answer(readable(targetReply(FIXED_TARGET)))
+                .answer(Result.err(AppError.of(code, "Provider down", "the provider did not answer")));
+
+        final Result<SegmentOutcome> decision = decision(model);
+
+        assertThat(decision.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(decision.error()).code()).isEqualTo(code);
+    }
+
     private SegmentOutcome decide(final ScriptedChatModel model) {
+        return Objects.requireNonNull(decision(model).data(), "decision");
+    }
+
+    private Result<SegmentOutcome> decision(final ScriptedChatModel model) {
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, GOOD_TARGET, null);
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED, JUDGE_TWO_ROUNDS, QualityLoopFixtures.FRAME, NamePolicy.TRANSLITERATE, List.of());
         final Result<ChunkDecider> started =
                 loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model));
-        final Result<SegmentOutcome> decision =
-                Objects.requireNonNull(started.data(), "decider").nextDecision();
-        return Objects.requireNonNull(decision.data(), "decision");
+        return Objects.requireNonNull(started.data(), "decider").nextDecision();
     }
 
     static Segment segment() {

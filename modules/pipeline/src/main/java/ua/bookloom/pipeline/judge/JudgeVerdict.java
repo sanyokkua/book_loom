@@ -15,8 +15,8 @@ import ua.bookloom.api.AppError;
  * @param findings the findings whose label fell inside {@code s1}..{@code sk} and whose severity was recognised
  * @param deferrals the deferrals whose label fell inside {@code s1}..{@code sk}
  * @param readable false when the reply could not be parsed, or its {@code score} was missing or outside 0.0-1.0
- * @param unavailableBecause the error a judge call that never answered ended with — a timeout or an unreachable
- *     provider after the provider's own retries — or null when the judge answered
+ * @param unavailableBecause the error a judge call that never answered ended with — a timeout after the provider's
+ *     own retries — or null when the judge answered
  */
 public record JudgeVerdict(
         double score,
