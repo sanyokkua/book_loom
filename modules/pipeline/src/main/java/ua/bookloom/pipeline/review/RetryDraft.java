@@ -33,6 +33,7 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.SnapshotTerm;
+import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.chunk.TokenBudget;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
@@ -311,7 +312,14 @@ public final class RetryDraft {
     private static List<GlossaryEntry> termsOf(final ContextSnapshot snapshot, final String projectId) {
         return snapshot.glossary().stream()
                 .map(term -> new GlossaryEntry(
-                        term.term(), projectId, term.term(), term.target(), term.type(), term.gender(), term.locked()))
+                        term.term(),
+                        projectId,
+                        term.term(),
+                        term.target(),
+                        term.type(),
+                        term.gender(),
+                        term.locked(),
+                        term.suggested() ? TargetOrigin.SUGGESTED : TargetOrigin.PERSON))
                 .toList();
     }
 

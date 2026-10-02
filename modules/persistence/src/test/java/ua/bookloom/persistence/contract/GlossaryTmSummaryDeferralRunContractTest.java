@@ -20,6 +20,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
+import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 
@@ -120,6 +121,18 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
         assertThat(repository.findByTerm("p1", "hale").data())
                 .isPresent()
                 .hasValueSatisfying(e -> assertThat(e.target()).isEqualTo("Гейл 2"));
+    }
+
+    @Test
+    void update_suggestedTarget_readsBackAsASuggestion() {
+        final GlossaryRepository repository = glossaryRepository();
+        repository.add(glossaryEntry("e1", "Hale"));
+
+        repository.update(glossaryEntry("e1", "Hale").withLocked(false).withSuggestedTarget("Гейл"));
+
+        assertThat(repository.findByTerm("p1", "Hale").data())
+                .isPresent()
+                .hasValueSatisfying(e -> assertThat(e.origin()).isEqualTo(TargetOrigin.SUGGESTED));
     }
 
     @Test

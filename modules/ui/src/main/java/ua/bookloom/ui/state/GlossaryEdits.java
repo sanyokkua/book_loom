@@ -8,7 +8,10 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 
-/** The four single-field changes a glossary row allows, each leaving the rest of the entry as it was. */
+/**
+ * The four single-field changes a glossary row allows, each leaving the rest of the entry as it was — except that a
+ * typed target or a lock turned on makes a suggested target the person's.
+ */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -16,23 +19,19 @@ import ua.bookloom.api.project.TermType;
 final class GlossaryEdits {
 
     static GlossaryEntry target(final GlossaryEntry held, final @Nullable String target) {
-        return new GlossaryEntry(
-                held.id(), held.projectId(), held.term(), target, held.type(), held.gender(), held.locked());
+        return held.withTarget(target);
     }
 
     static GlossaryEntry locked(final GlossaryEntry held, final boolean locked) {
-        return new GlossaryEntry(
-                held.id(), held.projectId(), held.term(), held.target(), held.type(), held.gender(), locked);
+        return held.withLocked(locked);
     }
 
     static GlossaryEntry type(final GlossaryEntry held, final TermType type) {
-        return new GlossaryEntry(
-                held.id(), held.projectId(), held.term(), held.target(), type, held.gender(), held.locked());
+        return held.withType(type);
     }
 
     static GlossaryEntry gender(final GlossaryEntry held, final Gender gender) {
-        return new GlossaryEntry(
-                held.id(), held.projectId(), held.term(), held.target(), held.type(), gender, held.locked());
+        return held.withGender(gender);
     }
 
     static int indexOf(final List<GlossaryEntry> rows, final String entryId) {

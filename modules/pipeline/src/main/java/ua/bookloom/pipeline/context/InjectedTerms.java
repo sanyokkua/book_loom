@@ -89,6 +89,7 @@ final class InjectedTerms {
     }
 
     private static SnapshotTerm snapshotOf(final GlossaryEntry entry) {
-        return new SnapshotTerm(entry.term(), entry.target(), entry.type(), entry.gender(), entry.locked());
+        return new SnapshotTerm(
+                entry.term(), entry.target(), entry.type(), entry.gender(), entry.locked(), entry.isSuggested());
     }
 }
