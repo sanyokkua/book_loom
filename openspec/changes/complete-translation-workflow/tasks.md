@@ -1305,6 +1305,19 @@ check leaves evidence.
   Stop, en/uk, a conformance case; the waiting run counts as translation activity and keeps the computer awake
   (`KeepAwake`, `OsKeepAwake`: `caffeinate` on macOS, `systemd-inhibit` on Linux, nothing on Windows) (091c4e9,
   807b30a, 14f66c4)
+- [x] 13. Bounded memory and a soak test with fault injection: an unloaded model (LM Studio's `Model unloaded` / `No
+  models loaded`, now `modelUnavailable`, not `validation`) recovers by itself on the outage schedule but at most six
+  wakes per outage, then the banner asks the person to load it and press Resume (`auth`/`modelNotFound`/
+  `missingCredential`/`validation` stay manual); the run-length-dependent collections are bounded — the run summary's
+  call times (newest 1,000), the per-step pause counts (forgotten once the step answers), the session-wide whole-word
+  pattern cache (4,096), the window's pending log lines (500), repair rounds (256), connection failures (256), and the
+  flagged queue grows by appending; a `soak` tag and task (`./gradlew :pipeline:soak`, ~2.5 min) run a generated
+  3,700-paragraph Markdown and TXT book through the real job, export and re-open over a seeded fault-injecting pseudo
+  model on a scripted clock (timeouts, watchdog-ended hangs, 5xx bursts, a 25-minute outage, unloaded model, empty
+  replies, damaged placeholders, refusals, judge junk, throws) and the fixture exports through
+  `validate-translated-book.py`; `FixtureBookSoakTest` and `TranslatingScreenSoakTest` (`slow`) run in the gate; two
+  side fixes the run turned up — a flaky diagnostics test and a null-text binding in the review panel (a305c8e,
+  0419f90, fe6e9fe, 149c166, 968d02c)
 - [ ] 9. Prompts: the audit's rewrites (placeholder pairs, data-not-instructions, literal replies, judge anchors,
   `<Source>`/`<Translation>`), bundled examples, `PromptShapeTest`, golden files for judge and directed fix, the
   `promptEval` harness
