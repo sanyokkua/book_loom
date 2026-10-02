@@ -493,7 +493,10 @@ connection and the model list, which must still offer the run's model) and resum
 interrupted call being made again; a failed probe SHALL only extend the wait. An outage SHALL last from its first failure
 until a model call answers again; once it has lasted 12 hours (`RecoverySchedule.MAX_OUTAGE`) the system SHALL stop
 waking and wait for the person. The person's Retry now, Skip segment and Resume SHALL end the wait at once and start the
-schedule afresh; Pause SHALL hold the run for the person, after which no wake resumes it; Stop SHALL end the run at once.
+wake schedule afresh, but SHALL keep when the outage began (`downSince`), which only an answered model call clears; the
+call sent again on the person's word during an outage or an unloaded model SHALL NOT count toward the pauses after
+which the step is flagged (after a timeout or a throwing step it still counts). Pause SHALL hold
+the run for the person, after which no wake resumes it; Stop SHALL end the run at once.
 An unloaded model SHALL wake at most six times in one outage (`PauseDecider.UNLOADED_MODEL_WAKES`), counted across its
 pauses until a model call answers again, after which the system SHALL announce that it gave up and wait for the person,
 and the window SHALL say "The model is not available — load it in the provider at <host> and press Resume". A pause for
@@ -511,6 +514,13 @@ limits are common over a night. The run waits, checks the server now and then wi
 goes on by itself; a wrong key or a missing model is not fixed by waiting, so those still wait for the person. A local
 server that unloaded an idle model usually loads it again on the next request, so the run tries six times — about
 nineteen minutes — and then asks the person to load it, instead of probing a model nobody loads all night.
+
+#### Scenario: Retry now keeps the outage clock and the segment's budget
+
+- **WHEN** the provider is down and the person presses Retry now at each of eleven waits, each call failing again with
+  `ErrorCode.unreachable`, and the twelfth call answers
+- **THEN** every wait says the provider is down since the first failure, each wait is attempt 1 of a fresh schedule,
+  and the segment is accepted, not flagged after its tenth pause
 
 #### Scenario: A twenty-minute outage resumes at the seventh wake
 

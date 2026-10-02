@@ -84,6 +84,16 @@ public interface RunBoundaries {
     boolean takeSkipRequest();
 
     /**
+     * Takes the fact that the pause just ended on a provider outage was ended by the person, not by a probe that found
+     * the provider back, so the call sent again is not counted against the failing step.
+     *
+     * @return {@code true} once for each such pause, {@code false} otherwise
+     */
+    default boolean takeRetryByPerson() {
+        return false;
+    }
+
+    /**
      * Tells the boundaries a model call answered, which ends any provider outage the run was recovering from, so the
      * next failure starts its wait schedule afresh.
      */

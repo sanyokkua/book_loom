@@ -22,8 +22,9 @@ import ua.bookloom.pipeline.run.PauseDecider;
  * Waits through a pause on a provider error the run recovers from by itself, so a run left alone overnight is in the
  * morning either finished or visibly waiting with its reason: it sleeps by {@link RecoverySchedule}, probes the
  * provider at each wake and resumes as soon as a probe passes. A failed probe only extends the wait; a person's Retry
- * now, Skip segment or Resume ends it at once and restarts the schedule; Pause holds the run for the person; Stop ends
- * it. The outage — when it began and how many wakes it took — lasts until a model call answers again. An unloaded model
+ * now, Skip segment or Resume ends it at once and restarts the wake schedule, keeping when the outage began, and the call
+ * it sends again spends no segment budget; Pause holds the run for the person; Stop ends it. The outage — when it began
+ * — lasts until a model call answers again. An unloaded model
  * wakes at most {@link PauseDecider#UNLOADED_MODEL_WAKES} times in one outage, after which the person loads it.
  *
  * <p>Used from the job thread only, apart from {@link #probeWith(ProviderProbe)}.
@@ -40,6 +41,7 @@ final class UnattendedRecovery {
     private int wakes;
     private int cappedWakes;
     private @Nullable ErrorCode lastProbe;
+    private boolean retriedByPerson;
 
     UnattendedRecovery(
             final JobControl control, final Clock clock, final RecoveryTimer timer, final Consumer<JobEvent> emit) {
@@ -52,6 +54,18 @@ final class UnattendedRecovery {
     void probeWith(final ProviderProbe probe) {
         this.probe = Objects.requireNonNull(probe, "probe");
         log.debug("Recovery probe set");
+    }
+
+    /**
+     * Takes the fact that the wait just ended was ended by the person — Retry now, Skip segment or Resume — rather
+     * than by a probe that found the provider back: the call it sends again is theirs, so it spends no segment budget.
+     *
+     * @return {@code true} once for each such ending, {@code false} otherwise
+     */
+    boolean takeRetriedByPerson() {
+        final boolean taken = retriedByPerson;
+        retriedByPerson = false;
+        return taken;
     }
 
     /** A model call answered: the outage, if there was one, is over. */
@@ -174,8 +188,13 @@ final class UnattendedRecovery {
                 yield Optional.of(PauseWait.CANCELLED);
             }
             case RESUMED -> {
-                log.info("Recovery ended: the person resumed the run; the wait schedule starts again");
-                forget();
+                log.info(
+                        "Recovery ended: the person asked to retry now; the wait schedule starts again, the outage"
+                                + " clock does not (down since {})",
+                        since);
+                wakes = 0;
+                cappedWakes = 0;
+                retriedByPerson = true;
                 yield Optional.of(PauseWait.RESUMED);
             }
             case HELD -> {

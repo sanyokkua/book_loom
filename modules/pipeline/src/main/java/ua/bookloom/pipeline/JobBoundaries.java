@@ -69,6 +69,13 @@ final class JobBoundaries implements RunBoundaries {
     }
 
     @Override
+    public boolean takeRetryByPerson() {
+        final boolean taken = recovery.takeRetriedByPerson();
+        log.debug("Took the person's retry during an outage taken={}", taken);
+        return taken;
+    }
+
+    @Override
     public boolean takeSkipRequest() {
         final boolean taken = skipRequested.getAndSet(false);
         log.debug("Took the skip request taken={}", taken);
@@ -100,6 +107,8 @@ final class JobBoundaries implements RunBoundaries {
         Objects.requireNonNull(error, "error");
         Objects.requireNonNull(step, "step");
         forgetSkip();
+        // A retry asked during an earlier pause that no step took is not this pause's.
+        recovery.takeRetriedByPerson();
         final BoundaryDecision decision = control.failureBoundary(error);
         if (decision.cancelled()) {
             return Optional.of(new RunEnd(JobState.CANCELLED, null));

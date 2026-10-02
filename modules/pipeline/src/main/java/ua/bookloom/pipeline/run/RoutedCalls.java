@@ -240,7 +240,13 @@ final class RoutedCalls {
 
     private <T> Optional<Step<T>> afterResume(
             final AppError error, final GiveUp<T> giveUp, final PauseDecider.Recovery recovery) {
-        final int paused = pauses.merge(countKey(giveUp, recovery), 1, Integer::sum);
+        // The person's Retry now while the provider is down is not the step's fault; after a stalled or failing step
+        // it still counts, so a step that keeps timing out is flagged however it was retried.
+        final boolean outage =
+                recovery == PauseDecider.Recovery.OUTAGE || recovery == PauseDecider.Recovery.UNLOADED_MODEL;
+        final int paused = boundaries.takeRetryByPerson() && outage
+                ? pauses.getOrDefault(countKey(giveUp, recovery), 0)
+                : pauses.merge(countKey(giveUp, recovery), 1, Integer::sum);
         if (boundaries.takeSkipRequest()) {
             log.info("Skipping step={} as asked from the pause code={}; it is flagged", giveUp.step(), error.code());
             return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
