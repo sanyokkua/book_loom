@@ -371,8 +371,8 @@ step that throws). The clock is scripted, so every recovery wait and watchdog ce
 completes with no segment pending, every fault class shows up as its pause, stall or flag, the export re-opens with every
 segment, the retained heap stays under 400 MB and grows by less than 16 KB per segment, the live threads return to the
 baseline +2, the run takes under 5 minutes and no ERROR line or stack trace appears that no injected fault explains; the
-fixture book in TXT, Markdown and EPUB then passes `scripts/validate-translated-book.py --lang none` (FB2 is not
-validated: its `<code>` is prose by design D11 and is translated). The task logs at INFO; each run's numbers are one
+fixture book in all four formats then passes `scripts/validate-translated-book.py --lang none` (FB2's `<code>` is prose
+by design D11 and is translated, which the validator accepts for FB2). The task logs at INFO; each run's numbers are one
 `soak …` INFO line in `modules/pipeline/build/test-logs/`. Last run: 3,774 segments a book, ~65 s each, about 5,100
 model calls, 2 h 35 min of scripted time, retained heap 21 → 32 MB (about 2.5 KB a segment, the in-memory store), threads
 9 → 9. The same harness runs the four fixture formats in the gate as `FixtureBookSoakTest` (`slow`, under a second each),

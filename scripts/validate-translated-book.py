@@ -9,7 +9,8 @@ The source fixture's directory must hold the manifest.json written by scripts/ma
 by id (EPUB, FB2 — the skeleton keeps every id) or by position (Markdown, TXT). Two families of checks run:
 
   structure  container validity, block inventory, inline markup per block (tags, links, images, footnote refs),
-             code spans, verbatim and invisible blocks unchanged, images/fonts byte-identical, no leftover ⟦gN⟧
+             code spans (not FB2, whose <code> is translated),
+             verbatim and invisible blocks unchanged, images/fonts byte-identical, no leftover ⟦gN⟧
   language   target-script letters in every translatable block, no long untranslated runs, glossary names rendered
              one way across the translated blocks (aligned by block id; a block left untranslated is the
              target-script check's finding, not the name's), declared language updated
@@ -527,14 +528,16 @@ class Validator:
             if s.markup != o.markup:
                 diff = (o.markup - s.markup) + Counter({f"-{k}": v for k, v in (s.markup - o.markup).items()})
                 markup.append(f"{exp['id']} ({' '.join(f'{k}×{v}' for k, v in diff.items())})")
-            if s.codes != o.codes:
+            # FB2 has no code semantics of its own: its <code> is ordinary inline text the pipeline translates.
+            fb2_code = self.fmt == "fb2"
+            if s.codes != o.codes and not fb2_code:
                 code.append(exp["id"])
             if s.lines != o.lines and exp["kind"] in ("list", "table", "stanza"):
                 lines.append(f"{exp['id']} lines {o.lines}!={s.lines}")
             if s.indent != o.indent:
                 lines.append(f"{exp['id']} indent changed")
             cat = exp["category"]
-            if cat in ("verbatim", "code") and o.text != s.text:
+            if (cat == "verbatim" or (cat == "code" and not fb2_code)) and o.text != s.text:
                 verbatim.append(f"{exp['id']} ({s.text!r} -> {o.text!r})")
             if cat in ("invisible", "image") and visible(o.text):
                 invisible.append(f"{exp['id']} gained text {o.text[:30]!r}")
@@ -785,6 +788,7 @@ def self_test() -> int:
                               quiet=True)
             expect.true(f"{fmt}: transliterated stand-in translation passes", overall(result) == "PASS", result)
         run_mutations(expect, gen, fixtures, fake_dir, tmp_path)
+        expect_fb2_code_translated(expect, gen, fixtures, fake_dir, tmp_path)
         expect_inflection_tolerated(expect, gen, fixtures, fake_dir, tmp_path)
         expect_untranslated_block_not_blamed_on_names(expect, gen, fixtures, fake_dir, tmp_path)
         integrity = fixture_integrity(fixtures, gen.BASENAME)
@@ -836,7 +840,6 @@ def run_mutations(expect: Expectations, gen, fixtures: Path, fake_dir: Path, tmp
         ("txt", "verbatim", txt.replace("\n\nXIV\n\n", "\n\nЧотирнадцять\n\n", 1)),
         ("txt", "target-script", txt.replace(translit(gen.REPEATED), gen.REPEATED, 1)),
         ("fb2", "names", fb2[:first_vance] + "Венс" + fb2[first_vance + len(translit("Vance")):]),
-        ("fb2", "code", fb2.replace("<code>g = 9.81 m/s²</code>", "<code>g = 9,81 м/с²</code>", 1)),
         ("epub", "markup", epub_edit(fake_dir / f"{base}.epub", "OEBPS/text/ch1.xhtml",
                                      lambda s: s.replace("<strong>", "", 1).replace("</strong>", "", 1))),
         ("epub", "binaries", epub_edit(fake_dir / f"{base}.epub", "OEBPS/images/diagram.png",
@@ -853,6 +856,18 @@ def run_mutations(expect: Expectations, gen, fixtures: Path, fake_dir: Path, tmp
         failed = {r.name for r in results if r.status == "FAIL"}
         expect.true(f"{fmt}: mutation caught by '{check}'", check in failed,
                     [f"failed checks: {sorted(failed)}"])
+
+
+def expect_fb2_code_translated(expect: Expectations, gen, fixtures: Path, fake_dir: Path, tmp: Path) -> None:
+    """FB2 <code> is translated by design, so a translated code span is not a structure failure there."""
+    fb2 = (fake_dir / f"{gen.BASENAME}.fb2").read_text(encoding="utf-8")
+    target = tmp / "fb2-code" / f"{gen.BASENAME}.fb2"
+    target.parent.mkdir(parents=True)
+    target.write_text(fb2.replace("<code>g = 9.81 m/s²</code>", "<code>g = 9,81 м/с²</code>", 1), encoding="utf-8")
+    results = validate("fb2", fixtures / f"{gen.BASENAME}.fb2", target, "uk", quiet=True)
+    failed = {r.name for r in results if r.status == "FAIL"}
+    expect.true("fb2: a translated <code> span is accepted", not failed & {"code", "verbatim"},
+                [f"failed checks: {sorted(failed)}"])
 
 
 def expect_inflection_tolerated(expect: Expectations, gen, fixtures: Path, fake_dir: Path, tmp: Path) -> None:

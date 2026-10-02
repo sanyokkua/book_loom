@@ -48,11 +48,10 @@ class WholeBookSoakTest {
         SoakAssertions.assertNoLeftoverPlaceholders(exported);
     }
 
-    // Faults three times as often on a book a twentieth the size, so each kind still strikes. FB2 is not validated:
-    // its <code> is prose there (design D11 of the document round trip) and is translated, which the validator's
-    // code and verbatim checks count as a change; FixtureBookSoakTest still runs and re-opens it.
+    // Faults three times as often on a book a twentieth the size, so each kind still strikes. FB2's <code> is prose
+    // (design D11 of the document round trip) and is translated; the validator accepts that for FB2.
     @ParameterizedTest
-    @CsvSource({"txt,earth-gravity.txt", "md,earth-gravity.md", "epub,earth-gravity.epub"})
+    @CsvSource({"txt,earth-gravity.txt", "md,earth-gravity.md", "fb2,earth-gravity.fb2", "epub,earth-gravity.epub"})
     void run_fixtureBookUnderFaults_passesTheStructureValidator(final String format, final String fixture) {
         final Path book = SoakAssertions.copyFixture(fixture, tempDir);
         final Path exported = tempDir.resolve("translated." + format);
