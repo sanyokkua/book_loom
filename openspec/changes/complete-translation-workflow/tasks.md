@@ -1318,9 +1318,17 @@ check leaves evidence.
   `validate-translated-book.py`; `FixtureBookSoakTest` and `TranslatingScreenSoakTest` (`slow`) run in the gate; two
   side fixes the run turned up — a flaky diagnostics test and a null-text binding in the review panel (a305c8e,
   0419f90, fe6e9fe, 149c166, 968d02c)
-- [ ] 9. Prompts: the audit's rewrites (placeholder pairs, data-not-instructions, literal replies, judge anchors,
-  `<Source>`/`<Translation>`), bundled examples, `PromptShapeTest`, golden files for judge and directed fix, the
-  `promptEval` harness
+- [x] 9. Prompts: every prompt rewritten for a ~4B model — one task, numbered rules, book text declared as data, the
+  JSON schema with a literal valid reply, the token rules wherever text carries tokens; rewrites delimit `<Source>` and
+  `<Translation>` (only the draft keeps `<Text>`), the judge `<Pair>`/`<Source>`/`<Candidate>` with score anchors,
+  defined finding types, a language check first and at most 12 findings; improve/polish/revision list the immutable
+  tokens, reflect may answer `{"issues":[]}`, polish and revision may return the text unchanged, the directed fix
+  returns the full text with a worked example; bundled few-shot examples (`PromptExamples`: `<src>-<tgt>` → `<tgt>` →
+  `neutral`; en-uk, de, fr, es, pl) in the draft and rewriting calls; `PromptShapeTest`, `PromptExamplesTest`, golden
+  files for judge and directed fix; the `promptEval` harness (`BOOKLOOM_EVAL_OLLAMA_URL`/`BOOKLOOM_EVAL_MODEL`, 26
+  cases) — on gemma4:e4b-mlx gate 91% → 100%, judge separation 50% → 100%; plus a judge call during a provider outage
+  now waits instead of flagging (only a timeout degrades), and the validator accepts translated FB2 `<code>`
+  (1a542aa, 8c0f20f, b35802c, 43daafd)
 - [ ] 10. Suggested targets for names: `GlossaryEntry` origin (`PERSON`/`SUGGESTED`), a `SUGGEST_TARGETS` call per name
   policy, suggestions written only into unlocked rows without a person's target, softer injection wording, and the
   table's suggestion badge with accept actions
