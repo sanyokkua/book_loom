@@ -94,6 +94,19 @@ class PseudoChatModelTest {
                         + "{\"term\":\"Well\",\"verdict\":\"name\",\"type\":\"other\",\"gender\":\"unknown\"}]}");
     }
 
+    // The offline model knows no target language, so it suggests no rendering for any listed term.
+    @Test
+    void chat_suggestTargetsFormat_answersEveryListedTermWithNoSuggestion() {
+        final ChatResponse response = send(
+                "[Names]\n- Hale — person, male — \"Hale left.\"\n- Milton — place, unknown — \"In Milton.\"\n",
+                "suggest-targets");
+
+        assertThat(response.content())
+                .isEqualTo("{\"suggestions\":["
+                        + "{\"term\":\"Hale\",\"target\":\"\",\"gender\":\"unknown\"},"
+                        + "{\"term\":\"Milton\",\"target\":\"\",\"gender\":\"unknown\"}]}");
+    }
+
     // Summary is always empty and reports no facts.
     @Test
     void chat_summaryFormat_repliesWithEmptyBilingualSummary() {

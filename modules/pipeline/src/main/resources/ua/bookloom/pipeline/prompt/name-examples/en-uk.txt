@@ -1,0 +1,9 @@
+# English → Ukrainian examples for the suggestion call. Lines starting with # never reach the model.
+# Nathaniel has no Ukrainian equivalent, so it is spelled by its sound; Wales has an established Ukrainian name;
+# the institute is made of ordinary words and is translated by meaning; "Well" is not a name.
+- Nathaniel — person, male — "Nathaniel climbed the stairs to his master's study."
+- Wales — place — "They had driven across Wales in the rain."
+- Meridian Survey Institute — org — "She worked for the Meridian Survey Institute."
+- Well — other — "Well, I never."
+A valid reply:
+{"suggestions":[{"term":"Nathaniel","target":"Натаніель","gender":"male"},{"term":"Wales","target":"Уельс","gender":"male"},{"term":"Meridian Survey Institute","target":"Інститут Меридіанського зондування","gender":"male"},{"term":"Well","target":"","gender":"unknown"}]}

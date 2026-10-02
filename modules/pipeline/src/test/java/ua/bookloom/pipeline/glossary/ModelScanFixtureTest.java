@@ -2,16 +2,21 @@ package ua.bookloom.pipeline.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
@@ -24,9 +29,13 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -39,6 +48,9 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
  * step drops what the proposal stage kept wrongly.
  */
 class ModelScanFixtureTest {
+
+    private static final SuggestTargets SUGGEST = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
+    private static final NamePolicy POLICY = NamePolicy.TRANSLITERATE;
 
     private static final Path FIXTURES = Path.of("../app/src/test/resources/fixtures/earth-gravity");
     private static final CallFrame FRAME =
@@ -82,12 +94,71 @@ class ModelScanFixtureTest {
                 new PromptTemplates(),
                 new ObjectMapper(),
                 glossary,
-                new TermReview(new PromptTemplates(), new ObjectMapper(), glossary));
+                new TermReview(new PromptTemplates(), new ObjectMapper(), glossary, SUGGEST),
+                SUGGEST);
 
         final Result<List<GlossaryEntry>> added =
-                preScan.scan("p1", body("earth-gravity.md"), FRAME, keepsAllThenJudges(Set.copyOf(NAMES)));
+                preScan.scan("p1", body("earth-gravity.md"), FRAME, POLICY, keepsAllThenJudges(Set.copyOf(NAMES)));
 
         assertThat(added.data()).extracting(GlossaryEntry::term).containsExactlyInAnyOrderElementsOf(NAMES);
+    }
+
+    // The manifest's names under each policy: Keep original leaves only the object to the model, the other two ask
+    // about every name, each with a sentence of the book.
+    @ParameterizedTest
+    @CsvSource({"KEEP_ORIGINAL,1", "TRANSLITERATE,5", "TRANSLATE,5"})
+    void suggest_manifestNames_asksAboutWhatThePolicyLeavesToTheModel(final NamePolicy policy, final int asked)
+            throws IOException {
+        final List<GlossaryEntry> names = manifestNames();
+        final List<ChatRequest> requests = new ArrayList<>();
+
+        final Result<List<Suggestion>> suggested =
+                SUGGEST.suggest(names, body("earth-gravity.md"), FRAME, policy, (kind, segmentId, request) -> {
+                    requests.add(request);
+                    return Result.ok(new ChatResponse("{\"suggestions\":[]}", FinishReason.STOP));
+                });
+
+        assertThat(requests).hasSize(1);
+        assertThat(lines(requests.getFirst())).hasSize(asked).allMatch(line -> line.contains(" — \""));
+        assertThat(suggested.data()).hasSize(names.size() - asked);
+    }
+
+    /** The manifest's names as the glossary would hold them: without an article or a title, typed by their kind. */
+    private static List<GlossaryEntry> manifestNames() throws IOException {
+        final JsonNode names = new ObjectMapper()
+                .readTree(FIXTURES.resolve("manifest.json").toFile())
+                .path("names");
+        return StreamSupport.stream(names.spliterator(), false)
+                .map(name -> {
+                    final String term = name.path("name").asText().replaceFirst("^(Dr\\. |The |the )", "");
+                    return new GlossaryEntry(
+                            "p1:" + term,
+                            "p1",
+                            term,
+                            null,
+                            typeOf(name.path("kind").asText()),
+                            Gender.UNKNOWN,
+                            false);
+                })
+                .toList();
+    }
+
+    private static TermType typeOf(final String kind) {
+        return switch (kind) {
+            case "person" -> TermType.CHARACTER;
+            case "place" -> TermType.PLACE;
+            case "object" -> TermType.TERM;
+            default -> TermType.OTHER;
+        };
+    }
+
+    private static List<String> lines(final ChatRequest request) {
+        return request.messages()
+                .getLast()
+                .content()
+                .lines()
+                .filter(line -> line.startsWith("- "))
+                .toList();
     }
 
     private List<Segment> body(final String file) {

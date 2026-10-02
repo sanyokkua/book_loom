@@ -10,17 +10,33 @@ import org.jspecify.annotations.Nullable;
  *
  * @param precedingTargets the earlier segments' target text of the same unit, in order, as plain text
  * @param summary the rolling summary, or null when none exists yet
- * @param glossaryLines one line per injected glossary term
+ * @param glossaryLines one line per injected glossary term whose target, if any, the person chose
  * @param memoryLines one {@code source → target} line per translation-memory hint or suggestion
+ * @param suggestedLines one line per injected glossary term whose target the model suggested and nobody confirmed,
+ *     shown apart as a hint rather than a rendering to apply exactly
  */
 public record DraftContext(
-        List<String> precedingTargets, @Nullable String summary, List<String> glossaryLines, List<String> memoryLines) {
+        List<String> precedingTargets,
+        @Nullable String summary,
+        List<String> glossaryLines,
+        List<String> memoryLines,
+        List<String> suggestedLines) {
 
     /** Rejects null entries and makes the context immutable at the prompt boundary. */
     public DraftContext {
         precedingTargets = List.copyOf(Objects.requireNonNull(precedingTargets, "precedingTargets"));
         glossaryLines = List.copyOf(Objects.requireNonNull(glossaryLines, "glossaryLines"));
         memoryLines = List.copyOf(Objects.requireNonNull(memoryLines, "memoryLines"));
+        suggestedLines = List.copyOf(Objects.requireNonNull(suggestedLines, "suggestedLines"));
+    }
+
+    /** A context with no suggested rendering. */
+    public DraftContext(
+            final List<String> precedingTargets,
+            @Nullable final String summary,
+            final List<String> glossaryLines,
+            final List<String> memoryLines) {
+        this(precedingTargets, summary, glossaryLines, memoryLines, List.of());
     }
 
     /** A context holding only preceding targets. */

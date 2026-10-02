@@ -196,7 +196,8 @@ public final class SegmentTranslator {
                 budgetTokens);
         return translate(
                 segment,
-                new DraftContext(List.of(), context.summary(), context.glossaryLines(), List.of()),
+                new DraftContext(
+                        List.of(), context.summary(), context.glossaryLines(), List.of(), context.suggestedLines()),
                 mask,
                 attempt.extraInstruction(),
                 attempt.lowerTemperature());

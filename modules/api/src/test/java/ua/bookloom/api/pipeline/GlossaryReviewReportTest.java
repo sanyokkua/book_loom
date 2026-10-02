@@ -16,9 +16,10 @@ import ua.bookloom.api.project.TermType;
 class GlossaryReviewReportTest {
 
     @ParameterizedTest
-    @CsvSource({"-1,0", "0,-1"})
-    void new_negativeCount_isRejected(final int removed, final int updated) {
-        assertThatIllegalArgumentException().isThrownBy(() -> new GlossaryReviewReport(removed, updated, List.of()));
+    @CsvSource({"-1,0,0", "0,-1,0", "0,0,-1"})
+    void new_negativeCount_isRejected(final int removed, final int updated, final int suggested) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GlossaryReviewReport(removed, updated, suggested, List.of()));
     }
 
     @Test

@@ -23,11 +23,11 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.persistence.GlossaryRepository;
-import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
@@ -40,6 +40,9 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /** The model pre-scan: batching, the reply's mapping, and what is merged into the glossary and what never is. */
 class PreScanTest {
+
+    private static final SuggestTargets SUGGEST = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
+    private static final NamePolicy POLICY = NamePolicy.TRANSLITERATE;
 
     private static final String PROJECT = "p1";
     private static final Pattern SLASH = Pattern.compile("/");
@@ -60,7 +63,8 @@ class PreScanTest {
                 new PromptTemplates(),
                 new ObjectMapper(),
                 glossary,
-                new TermReview(new PromptTemplates(), new ObjectMapper(), glossary));
+                new TermReview(new PromptTemplates(), new ObjectMapper(), glossary, SUGGEST),
+                SUGGEST);
     }
 
     @Test
@@ -74,7 +78,7 @@ class PreScanTest {
                                 "{\"terms\":[{\"term\":\"hale\",\"type\":\"other\"},{\"term\":\"Milton\",\"type\":\"place\"}]}"));
 
         final Result<List<GlossaryEntry>> result =
-                preScan.scan(PROJECT, book("We met Hale today.", "We met Milton today."), FRAME, calls(model));
+                preScan.scan(PROJECT, book("We met Hale today.", "We met Milton today."), FRAME, POLICY, calls(model));
 
         final GlossaryEntry milton =
                 new GlossaryEntry("p1:milton", PROJECT, "Milton", null, TermType.PLACE, Gender.UNKNOWN, false);
@@ -89,7 +93,8 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[]}"))
                 .answer(reply("{\"terms\":[]}"));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, ninetyFiveNames(), FRAME, calls(model));
+        final Result<List<GlossaryEntry>> result =
+                preScan.scan(PROJECT, ninetyFiveNames(), FRAME, POLICY, calls(model));
 
         assertThat(result.isOk()).isTrue();
         final List<ChatRequest> requests = model.requests();
@@ -114,7 +119,8 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[{\"term\":\"Xaa\",\"type\":\"person\"}]}"))
                 .answer(Result.err(failure));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, ninetyFiveNames(), FRAME, calls(model));
+        final Result<List<GlossaryEntry>> result =
+                preScan.scan(PROJECT, ninetyFiveNames(), FRAME, POLICY, calls(model));
 
         assertThat(result.error()).isEqualTo(failure);
         assertThat(glossary.all(PROJECT).data()).containsExactly(held);
@@ -124,7 +130,7 @@ class PreScanTest {
     void scan_modelThrows_returnsInternalErrorAndWritesNothing() {
         final ScriptedChatModel model = new ScriptedChatModel().throwFailure(new IllegalStateException("boom"));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, calls(model));
+        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
         assertThat(glossary.all(PROJECT).data()).isEmpty();
@@ -134,7 +140,7 @@ class PreScanTest {
     void scan_termWithNoTypeOrGender_addsOtherUnknown() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"terms\":[{\"term\":\"Moreau\"}]}"));
 
-        preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, calls(model));
+        preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
@@ -161,7 +167,7 @@ class PreScanTest {
                 + (gender == null ? "" : gender) + "\"}]}";
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply(json));
 
-        preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, calls(model));
+        preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::locked)
@@ -177,8 +183,8 @@ class PreScanTest {
                         reply(
                                 "{\"terms\":[{\"term\":\"Chapter\",\"type\":\"term\"},{\"term\":\"Milton\",\"type\":\"place\"}]}"));
 
-        final Result<List<GlossaryEntry>> result =
-                preScan.scan(PROJECT, book("We read Chapter today.", "We read Milton today."), FRAME, calls(model));
+        final Result<List<GlossaryEntry>> result = preScan.scan(
+                PROJECT, book("We read Chapter today.", "We read Milton today."), FRAME, POLICY, calls(model));
 
         assertThat(result.data()).extracting(GlossaryEntry::term).containsExactly("Milton");
         assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Milton");
@@ -189,7 +195,7 @@ class PreScanTest {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(reply("{\"terms\":[{\"term\":\"Ghost\"},{\"term\":\"Moreau\"}]}"));
 
-        preScan.scan(PROJECT, book("We met Moreau today."), FRAME, calls(model));
+        preScan.scan(PROJECT, book("We met Moreau today."), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Moreau");
     }
@@ -201,7 +207,7 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[]}"))
                 .answer(reply("{\"terms\":[]}"));
 
-        preScan.scan(PROJECT, ninetyFiveNames(), FRAME, calls(model));
+        preScan.scan(PROJECT, ninetyFiveNames(), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data()).isEmpty();
     }
@@ -211,7 +217,7 @@ class PreScanTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(reply("{\"terms\":[{\"term\":\"milton\",\"type\":\"place\"},{\"term\":\"MILTON\"}]}"));
 
-        preScan.scan(PROJECT, book("We met Milton today."), FRAME, calls(model));
+        preScan.scan(PROJECT, book("We met Milton today."), FRAME, POLICY, calls(model));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::type)
@@ -223,7 +229,7 @@ class PreScanTest {
     void scan_unreadableReply_addsNothingAndReportsNoError(final String replyText) {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply(replyText));
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, calls(model));
+        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model));
 
         assertThat(result.isOk()).isTrue();
         assertThat(result.data()).isEmpty();
@@ -238,6 +244,7 @@ class PreScanTest {
                 PROJECT,
                 book("We saw Hale at the door.", "We saw Hale at the door.", "We saw Hale at the door."),
                 FRAME,
+                POLICY,
                 (kind, segmentId, request) -> pseudo.chat(request));
 
         assertThat(result.data()).extracting(GlossaryEntry::term).containsExactly("Hale");
@@ -248,7 +255,7 @@ class PreScanTest {
         glossary.add(new GlossaryEntry("e1", PROJECT, "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, true));
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"terms\":[]}"));
 
-        preScan.scan(PROJECT, book("We met Milton today."), FRAME, calls(model));
+        preScan.scan(PROJECT, book("We met Milton today."), FRAME, POLICY, calls(model));
 
         assertThat(userMessage(model.requests().getFirst()))
                 .contains("[Existing glossary terms")
@@ -259,7 +266,7 @@ class PreScanTest {
     void scan_emptyGlossary_requestHasNoExistingTermsBlock() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"terms\":[]}"));
 
-        preScan.scan(PROJECT, book("We met Milton today."), FRAME, calls(model));
+        preScan.scan(PROJECT, book("We met Milton today."), FRAME, POLICY, calls(model));
 
         assertThat(userMessage(model.requests().getFirst())).doesNotContain("[Existing glossary terms");
     }
@@ -268,7 +275,8 @@ class PreScanTest {
     void scan_noCandidates_makesNoCallAndAddsNothing() {
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        final Result<List<GlossaryEntry>> result = preScan.scan(PROJECT, book("We saw the door."), FRAME, calls(model));
+        final Result<List<GlossaryEntry>> result =
+                preScan.scan(PROJECT, book("We saw the door."), FRAME, POLICY, calls(model));
 
         assertThat(result.data()).isEmpty();
         assertThat(model.requests()).isEmpty();
@@ -282,7 +290,11 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[{\"term\":\"Moreau\"},{\"term\":\"Acme\"},{\"term\":\"Justine\"}]}"));
 
         final Result<List<GlossaryEntry>> result = preScan.scan(
-                PROJECT, book(NAMES_BOOK), FRAME, calls(model, Map.of("Acme", "not-a-name", "Justine", "none")));
+                PROJECT,
+                book(NAMES_BOOK),
+                FRAME,
+                POLICY,
+                calls(model, Map.of("Acme", "not-a-name", "Justine", "none")));
 
         assertThat(result.data()).extracting(GlossaryEntry::term).containsExactly("Moreau");
         assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Moreau");
@@ -292,7 +304,7 @@ class PreScanTest {
     void scan_verdictGivesTheTypeAProposalLacked_writesTheVerdictsType() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"terms\":[{\"term\":\"Acme\"}]}"));
 
-        preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, calls(model, Map.of("Acme", "name/place")));
+        preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, POLICY, calls(model, Map.of("Acme", "name/place")));
 
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::term, GlossaryEntry::type)
@@ -306,8 +318,8 @@ class PreScanTest {
                 .answer(reply("{\"terms\":[{\"term\":\"Moreau\"}]}"))
                 .answer(Result.err(failure));
 
-        final Result<List<GlossaryEntry>> result =
-                preScan.scan(PROJECT, book(NAMES_BOOK), FRAME, (kind, segmentId, request) -> model.chat(request));
+        final Result<List<GlossaryEntry>> result = preScan.scan(
+                PROJECT, book(NAMES_BOOK), FRAME, POLICY, (kind, segmentId, request) -> model.chat(request));
 
         assertThat(result.error()).isEqualTo(failure);
         assertThat(glossary.all(PROJECT).data()).isEmpty();
@@ -342,13 +354,16 @@ class PreScanTest {
     // The verdict step's call answers "name" for every term it lists, as the pseudo model does, so a test of the
     // proposal stage reads what the proposals alone would write.
     private static ModelCalls calls(final ScriptedChatModel model) {
-        return (kind, segmentId, request) ->
-                kind == CallKind.REVIEW_TERMS ? reply(verdicts(request, Map.of())) : model.chat(request);
+        return calls(model, Map.of());
     }
 
+    // The suggestion step answers "no suggestion", so a test of the proposals reads what they alone would write.
     private static ModelCalls calls(final ScriptedChatModel model, final Map<String, String> verdictByTerm) {
-        return (kind, segmentId, request) ->
-                kind == CallKind.REVIEW_TERMS ? reply(verdicts(request, verdictByTerm)) : model.chat(request);
+        return (kind, segmentId, request) -> switch (kind) {
+            case REVIEW_TERMS -> reply(verdicts(request, verdictByTerm));
+            case SUGGEST_TARGETS -> reply("{\"suggestions\":[]}");
+            default -> model.chat(request);
+        };
     }
 
     /**

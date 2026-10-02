@@ -63,7 +63,7 @@ class RequestTimeoutsTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"PRESCAN", "REVIEW_TERMS", "SUMMARY"})
+    @CsvSource({"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "SUMMARY"})
     void forChat_prescanOrSummary_isTwoMinutes(CallKind kind) {
         final ProviderConfig bounded = RequestTimeouts.forChat(config(Duration.ofMinutes(3)), request(kind, null));
 

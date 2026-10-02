@@ -28,7 +28,8 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * The prompt eval: the fixed case set through the production prompt builders against a real local Ollama model,
  * measured before any repair a run would make. Local-only — {@code ./gradlew :pipeline:promptEval} with
  * {@code BOOKLOOM_EVAL_OLLAMA_URL} (for example {@code http://localhost:11434}) and optionally
- * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}); skipped when the URL is unset. The table is written to
+ * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
+ * as {@code suggest}, to run only those cases); skipped when the URL is unset. The table is written to
  * {@code build/reports/promptEval/<model>.txt}.
  */
 @Slf4j
@@ -43,7 +44,12 @@ class PromptEvalTest {
         final String model = System.getenv().getOrDefault("BOOKLOOM_EVAL_MODEL", DEFAULT_MODEL);
         final PromptEvalRunner runner = new PromptEvalRunner(calls(model));
 
-        final EvalReport report = new EvalReport(model, runner.runAll(PromptEvalCases.ALL));
+        final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
+        final EvalReport report = new EvalReport(
+                model,
+                runner.runAll(PromptEvalCases.ALL.stream()
+                        .filter(evalCase -> evalCase.name().startsWith(only))
+                        .toList()));
 
         final Path file = Path.of("build", "reports", "promptEval", model.replace(':', '_') + ".txt");
         Files.createDirectories(Objects.requireNonNull(file.getParent()));

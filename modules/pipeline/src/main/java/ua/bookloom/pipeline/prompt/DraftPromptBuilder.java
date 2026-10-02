@@ -202,6 +202,8 @@ public final class DraftPromptBuilder {
                                 summary == null || summary.isBlank() ? "" : summary,
                                 "glossaryTerms",
                                 String.join("\n", context.glossaryLines()),
+                                "suggestedTerms",
+                                String.join("\n", context.suggestedLines()),
                                 "memoryHint",
                                 String.join("\n", context.memoryLines()),
                                 "precedingTargets",

@@ -22,6 +22,8 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -37,7 +39,10 @@ import ua.bookloom.util.text.GlossaryKeys;
  * how often the book uses it and where, and the model says whether it is a name, a term or not a name. Nothing is
  * changed until every batch has answered, so a failed or cancelled call leaves the glossary as it was.
  *
- * <p>The person's work is never undone: a locked term or one with a target is not sent, and at commit time an entry is
+ * <p>Once every verdict is in, the terms that remain are given a suggested target in calls of their own
+ * ({@link SuggestTargets}), and verdicts and suggestions are written together.
+ *
+ * <p>The person's work is never undone: a locked term or one with the person's target is not sent, and at commit time an entry is
  * read again, so an edit made while the model was thinking wins. A term judged not a name is removed only when its
  * type and gender were never set — a set type means a person or an earlier scan already judged it — and a type or
  * gender takes the model's guess only while it is still {@code OTHER}/{@code UNKNOWN}.
@@ -55,6 +60,7 @@ public final class TermReview {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final GlossaryRepository glossary;
+    private final SuggestTargets suggestions;
 
     /**
      * Reviews the project's glossary with the model.
@@ -62,18 +68,25 @@ public final class TermReview {
      * @param projectId the project whose glossary is reviewed; never null
      * @param segments the book's body segments, where the evidence is read; never null
      * @param frame the run's language pair and style, for the system message; never null
+     * @param policy the Book Brief's name policy, which the suggested targets follow; never null
      * @param calls the seam every model call goes through; never null
-     * @return what was removed and updated and the glossary after; or the first failed call's or glossary access's
-     *     error, with nothing changed by the model's answers
+     * @return what was removed, updated and suggested and the glossary after; or the first failed call's or glossary
+     *     access's error, with nothing changed by the model's answers
      */
     public Result<GlossaryReviewReport> review(
-            final String projectId, final List<Segment> segments, final CallFrame frame, final ModelCalls calls) {
+            final String projectId,
+            final List<Segment> segments,
+            final CallFrame frame,
+            final NamePolicy policy,
+            final ModelCalls calls) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(segments, "segments");
         Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         try {
-            return glossary.all(projectId).flatMap(held -> run(projectId, held, segments, frame, calls));
+            return glossary.all(projectId)
+                    .flatMap(held -> run(projectId, held, new Inputs(segments, frame, policy, calls)));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
@@ -86,31 +99,38 @@ public final class TermReview {
         }
     }
 
-    private Result<GlossaryReviewReport> run(
-            final String projectId,
-            final List<GlossaryEntry> held,
-            final List<Segment> segments,
-            final CallFrame frame,
-            final ModelCalls calls) {
+    /** What every call of one review is asked with. */
+    private record Inputs(List<Segment> segments, CallFrame frame, NamePolicy policy, ModelCalls calls) {}
+
+    private Result<GlossaryReviewReport> run(final String projectId, final List<GlossaryEntry> held, final Inputs in) {
         final List<GlossaryEntry> open =
                 held.stream().filter(TermReview::isOpen).toList();
         log.info(
-                "Glossary review started project={} held={} reviewed={} batches={}",
+                "Glossary review started project={} held={} reviewed={} batches={} policy={}",
                 projectId,
                 held.size(),
                 open.size(),
-                (open.size() + BATCH_SIZE - 1) / BATCH_SIZE);
+                (open.size() + BATCH_SIZE - 1) / BATCH_SIZE,
+                in.policy());
         if (open.isEmpty()) {
             return Result.ok(new GlossaryReviewReport(0, 0, held));
         }
-        final Map<String, Evidence> evidence =
-                TermEvidence.of(segments, open.stream().map(GlossaryEntry::term).toList());
-        final Result<List<Verdict>> verdicts = ask(open, evidence, frame, calls);
+        final Map<String, Evidence> evidence = TermEvidence.of(
+                in.segments(), open.stream().map(GlossaryEntry::term).toList());
+        final Result<List<Verdict>> verdicts = ask(open, evidence, in.frame(), in.calls());
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
             return Result.err(Objects.requireNonNull(verdicts.error(), "error"));
         }
-        return ReviewCommit.apply(glossary, projectId, Objects.requireNonNull(verdicts.data(), "verdicts"));
+        final List<Verdict> answered = Objects.requireNonNull(verdicts.data(), "verdicts");
+        final Result<List<Suggestion>> suggested = suggestions.suggest(
+                ReviewCommit.survivors(open, answered), in.segments(), in.frame(), in.policy(), in.calls());
+        if (suggested.isErr()) {
+            log.warn("Glossary review project={} changed nothing: a suggestion call failed", projectId);
+            return Result.err(Objects.requireNonNull(suggested.error(), "error"));
+        }
+        return ReviewCommit.apply(
+                glossary, projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"));
     }
 
     /**
@@ -208,8 +228,15 @@ public final class TermReview {
         return "- " + term + " — " + evidence.count() + "×" + (examples.isEmpty() ? "" : " — " + examples);
     }
 
+    /**
+     * Whether the model may still change an entry: it is unlocked and its target is empty or only an earlier
+     * suggestion, so a re-run refreshes suggestions but never touches the person's choice.
+     */
     static boolean isOpen(final GlossaryEntry entry) {
         return !entry.locked()
-                && Optional.ofNullable(entry.target()).map(String::isBlank).orElse(true);
+                && (entry.isSuggested()
+                        || Optional.ofNullable(entry.target())
+                                .map(String::isBlank)
+                                .orElse(true));
     }
 }

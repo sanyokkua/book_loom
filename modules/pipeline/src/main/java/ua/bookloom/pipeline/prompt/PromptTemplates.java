@@ -82,14 +82,31 @@ public final class PromptTemplates {
      * @return the rendered system message
      */
     public String renderSystem(final PromptName name, final CallFrame frame) {
+        return renderSystem(name, frame, Map.of());
+    }
+
+    /**
+     * Renders the system template of {@code name} from a run's call frame and the call's own further slots, such as
+     * the suggestion call's name rule.
+     *
+     * @param name the non-null call
+     * @param frame the non-null run's language pair, style sheet and foreign-passage policy
+     * @param extra the non-null further slot values, each declared by the template
+     * @return the rendered system message
+     */
+    public String renderSystem(final PromptName name, final CallFrame frame, final Map<String, String> extra) {
         Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(extra, "extra");
         final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
+        values.putAll(extra);
         final boolean showsExamples = Objects.requireNonNull(name, "name")
                 .systemSlots()
                 .map(slots -> slots.declares(EXAMPLES))
                 .orElse(false);
         if (showsExamples) {
-            values.put(EXAMPLES, examples.forPair(frame.sourceLanguage(), frame.targetLanguage()));
+            values.put(
+                    EXAMPLES,
+                    examples.forPair(name.examplesDirectory(), frame.sourceLanguage(), frame.targetLanguage()));
         }
         return renderSystem(name, values);
     }

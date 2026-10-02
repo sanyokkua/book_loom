@@ -32,6 +32,10 @@ class DraftPromptBuilderTest {
                         token, never the name]
                         Hale → Гейл (character, male)
 
+                        [Suggested renderings — not confirmed by the person]
+                        Use each rendering unless it is clearly wrong; inflect it as the sentence needs.
+                        Wales → Уельс (place, unknown)
+
                         [Earlier decisions — keep consistent]
                         He left. → Він пішов.
 
@@ -172,7 +176,8 @@ class DraftPromptBuilderTest {
                 List.of("Один.", "Два."),
                 "Гейл шукає брата.",
                 List.of("Hale → Гейл (character, male)"),
-                List.of("He left. → Він пішов."));
+                List.of("He left. → Він пішов."),
+                List.of("Wales → Уельс (place, unknown)"));
 
         final String user =
                 builder.messagesFor(segment("Hello."), context).get(1).content();

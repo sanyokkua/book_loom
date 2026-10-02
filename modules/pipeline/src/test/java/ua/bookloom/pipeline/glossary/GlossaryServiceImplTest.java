@@ -275,18 +275,22 @@ class GlossaryServiceImplTest {
                         FinishReason.STOP)))
                 .answer(Result.ok(new ChatResponse(
                         "{\"verdicts\":[{\"term\":\"Moreau\",\"verdict\":\"name\",\"type\":\"person\"}]}",
+                        FinishReason.STOP)))
+                .answer(Result.ok(new ChatResponse(
+                        "{\"suggestions\":[{\"term\":\"Moreau\",\"target\":\"Моро\",\"gender\":\"male\"}]}",
                         FinishReason.STOP)));
 
         final Result<List<GlossaryEntry>> added = service.prescan(PROJECT, model, events::add);
 
         assertThat(added.data())
-                .containsExactly(new GlossaryEntry(
-                        "p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.MALE, false));
-        assertThat(model.requests()).hasSize(2);
+                .containsExactly(
+                        new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.MALE, false)
+                                .withSuggestedTarget("Моро"));
+        assertThat(model.requests()).hasSize(3);
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).kind())
-                .containsExactly(CallKind.PRESCAN, CallKind.REVIEW_TERMS);
+                .containsExactly(CallKind.PRESCAN, CallKind.REVIEW_TERMS, CallKind.SUGGEST_TARGETS);
     }
 
     @Test

@@ -61,4 +61,9 @@ class OutputLimitTest {
     void forPrescan_fortyCandidates_capsAtNineteenTwentyFour() {
         assertThat(OutputLimit.forPrescan(40)).isEqualTo(new OutputLimit(992, 1984));
     }
+
+    @Test
+    void forSuggestions_twentyTerms_capsAtNineHundredTwentyEight() {
+        assertThat(OutputLimit.forSuggestions(20)).isEqualTo(new OutputLimit(464, 928));
+    }
 }

@@ -108,10 +108,11 @@ candidates per call; SHALL read each proposed type as person → character, plac
 anything else → other, and each gender other than female, male or neuter as unknown; SHALL then, in the same action,
 send every proposal the glossary does not hold and the person has not removed to the verdict step of "Review the
 glossary with the model when the person asks" — the same prompt, evidence and batches — and keep only a proposal it
-calls a name or a term, taking the verdict's type and gender where the proposal's were other and unknown; and SHALL
-write the kept proposals into the glossary only after every call has answered, matching terms by their glossary
-key (see "Compare glossary terms by one key"), keeping any existing entry unchanged and adding each new term unlocked
-with no target. IF any call fails, THEN it SHALL write nothing, keep the existing entries and show the provider's error
+calls a name or a term, taking the verdict's type and gender where the proposal's were other and unknown; SHALL then
+give each kept proposal a suggested target as "Suggest target renderings with the model" says; and SHALL write the
+kept proposals into the glossary only after every call has answered, matching terms by their glossary key (see
+"Compare glossary terms by one key"), keeping any existing entry unchanged and adding each new term unlocked, with its
+suggested target where the model gave one. IF any call fails, THEN it SHALL write nothing, keep the existing entries and show the provider's error
 in place. Each call SHALL be announced, timed and attempt-counted as a run's model calls are, the screen SHALL show
 which request it is waiting on, and WHEN the person presses Stop the request in flight SHALL be interrupted and
 nothing written. The application SHALL NOT run the model scan on its own, when a run starts included.
@@ -233,15 +234,16 @@ its name so the screen does not change under the person's hand.
 ### Requirement: Review the glossary with the model when the person asks
 
 WHEN the person presses Review with model on Names & style, the application SHALL send the chosen model every
-unlocked entry with no target, 40 per call, each with how many times the book uses it in any case and up to two
+unlocked entry with no target or with a target the model suggested, 40 per call, each with how many times the book uses it in any case and up to two
 sentences that hold it, and SHALL ask for each a verdict — name, term or not a name — with a type (person, place, org,
 term, title or other) and a gender (male, female, neuter or unknown) under a strict schema. Only after every call has
 answered, and against each entry as it then stands, the application SHALL remove through the glossary (so the removal is
 remembered) each entry judged not a name whose type is still other and gender still unknown, and SHALL set the type of
-an entry still of type other and the gender of an entry still of gender unknown to the model's guess; it SHALL NOT
-change a locked entry or one with a target, and SHALL then show the glossary as it stands and the line
-`Model review done: N rows removed, M rows updated.` IF any call fails or the person presses Stop, THEN it SHALL
-change nothing. The calls SHALL be announced, timed, attempt-counted and stoppable as the model scan's are, and SHALL
+an entry still of type other and the gender of an entry still of gender unknown to the model's guess, and SHALL write
+the suggested targets that "Suggest target renderings with the model" asks for after the verdicts, in the same
+action; it SHALL NOT change a locked entry or one whose target the person chose, and SHALL then show the glossary as it
+stands and the line `Model review done: N rows removed, M rows updated, K targets suggested.` IF any call fails or the
+person presses Stop, THEN it SHALL change nothing. The calls SHALL be announced, timed, attempt-counted and stoppable as the model scan's are, and SHALL
 NOT be sent unless the person presses the button.
 
 **Source:** FR-GLOSS-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
@@ -261,7 +263,7 @@ a target is theirs and is never sent.
 - **THEN** `Well` is removed and remembered as removed, `Hale` reads character, male, `Moreau` reads character, female,
   and `Milton` and `Baker Street` are unchanged
 - **AND** only `Well`, `Hale` and `Moreau` were sent, and the line reads `Model review done: 1 row removed, 2 rows
-  updated.`
+  updated, 0 targets suggested.` when the suggestion call suggests nothing
 
 #### Scenario: A term locked while the model thinks is left alone
 
@@ -274,6 +276,87 @@ a target is theirs and is never sent.
 - **WHEN** the glossary holds 41 open entries and the second call fails with `ErrorCode.unreachable`, or the person
   presses Stop while a call is out
 - **THEN** the glossary holds the same 41 entries as before
+
+### Requirement: Suggest target renderings with the model
+
+WHEN the model review or the model scan has its verdicts, the application SHALL, in the same action, send the entries
+that remain open — unlocked, with no target or with a target the model suggested — to a separate suggestion call, at
+most 20 per call, each with its type, its gender when known and one sentence of the book that holds it (cut at 120
+characters), and SHALL ask for each a target in its dictionary form and a gender under a strict schema
+(`{"suggestions":[{"term","target","gender"}]}`, at most 20 items, a target at most 80 characters, `""` meaning no
+suggestion). The system message SHALL state the Book Brief's name policy: Translate asks for the natural
+target-language equivalent a published translation would print, transliterating only a name with none; Transliterate
+asks for the name spelled in the target language by its sound, by the target language's own convention for foreign
+names when the application bundles one (for Ukrainian, the orthography's practical transcription of foreign names)
+and a neutral sentence otherwise, a real place or person keeping an established target-language name; both translate
+a name made of ordinary words and a domain term by meaning. UNDER Keep original the application SHALL make no call for
+an entry that is not of type term and SHALL suggest its source spelling as its target; an entry of type term is still
+asked about, to be translated by meaning. The application SHALL keep a suggestion only for a term of its batch, on one
+line, without a placeholder token, at most 80 characters, and — under Transliterate when the source and target scripts
+differ — with no letter left in the source's script once a Latin look-alike inside a Cyrillic word (`Вeнс`) is put back
+as its Cyrillic twin. Only after every call has answered, and against each entry as it then stands, it SHALL write a
+suggestion into an unlocked entry whose target is empty or was suggested, as a suggested target, and the suggested
+gender only into a character whose gender is still unknown; it SHALL NOT overwrite a target the person typed,
+imported, accepted or locked. The writes SHALL record no deferral. IF any suggestion call fails or the person presses
+Stop, THEN nothing of the action SHALL be written. WHILE the suggestion calls run, the screen SHALL show
+`Suggesting renderings B/N` with the batch under way.
+
+The table SHALL show a suggested target slanted with an `AI` badge and a tick that accepts it; Enter in the field with
+the suggestion unchanged SHALL accept it too, and typing another target or turning the lock on SHALL make the target
+the person's. An `Accept all` button beside Review with model SHALL accept every suggested target; it SHALL be shown
+only while a suggested target is, so the toolbar keeps to one line at 1000 px, and SHALL be off while a model action
+runs. WHEN a run is started from Names & style while suggested targets
+remain, the application SHALL start it and SHALL note `K suggested targets are unreviewed and will be used as hints.`
+A CSV export SHALL write a suggested target as a plain target; a CSV import SHALL read every target as the person's.
+
+**Source:** FR-GLOSS-01, FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#glossary-target-suggestions`, DD-46
+(`docs/specification/00_Foundation/04_DESIGN_DECISIONS.md#dd-46-glossary-llm-pre-scan`).
+In plain words: a glossary of names with no targets leaves every draft to spell each name afresh, so the model proposes
+one spelling per name, following the policy the person chose. It is a call of its own because a small model does one
+task per call far better than two. A suggestion is only a hint until the person confirms it — the draft may inflect it
+— and the model never undoes the person's choice. On gemma4:e4b every place and thing came back "neuter", masculine
+Ukrainian nouns included, so a suggested gender is kept for characters only; and the same model wrote a Latin `e`
+inside `Венс`, which reads right and matches nothing.
+
+#### Scenario: Transliterated names get Cyrillic targets
+
+- **WHEN** the policy is Transliterate, the target is Ukrainian and the review keeps `Hale` (character, male) and
+  `Moreau` (character, female), and the model suggests `Гейл` and `Моро`
+- **THEN** `Hale` reads `Гейл` and `Moreau` reads `Моро`, each suggested and slanted with the `AI` badge, and the line
+  reads `Model review done: 1 row removed, 2 rows updated, 2 targets suggested.`
+
+#### Scenario: A copied name is no transliteration
+
+- **WHEN** the policy is Transliterate and the model answers `Hale` for `Hale`
+- **THEN** `Hale` keeps no target, while under Translate the same answer is kept
+
+#### Scenario: Keep original needs no call for a name
+
+- **WHEN** the policy is Keep original and the open entries are `Hale` (character), `Milton` (place) and `Amulet`
+  (term)
+- **THEN** `Hale` and `Milton` are suggested as written with no call, and only `Amulet` is sent
+
+#### Scenario: The person's target is never overwritten
+
+- **WHEN** the person types `Хейл` into `Hale` while the suggestion call is out, or `Moreau` already reads `Мору` typed
+  by the person, and the model suggests `Гейл` and `Моро`
+- **THEN** `Hale` reads `Хейл` and `Moreau` reads `Мору`, neither suggested
+
+#### Scenario: A second review refreshes a suggestion
+
+- **WHEN** `Hale` reads `Хейл` suggested and the next review's suggestion is `Гейл`
+- **THEN** `Hale` reads `Гейл`, still suggested
+
+#### Scenario: A failed suggestion call writes nothing
+
+- **WHEN** the verdicts answered and the suggestion call fails with `ErrorCode.timeout`
+- **THEN** the glossary holds the same entries as before the review, verdicts included
+
+#### Scenario: Accepting a suggestion
+
+- **WHEN** the person presses the tick, or Enter in the unchanged field, on `Hale` → `Гейл` suggested
+- **THEN** `Hale` reads `Гейл` as the person's target, with no badge
 
 ### Requirement: Compare glossary terms by one key
 
@@ -478,9 +561,12 @@ quality-gates capability's "Treat each protected span's placeholder as a hard ga
 ### Requirement: Give the model only the terms that occur in the chunk
 
 WHEN a chunk is sent to the model, the application SHALL include only the glossary entries whose source term occurs as
-a whole word in that chunk, each with its type and gender: an unlocked entry with its target rendering as guidance, an
-entry with no target by its type and gender alone, and a locked entry — which the model sees only as a placeholder —
-as that placeholder with its rendering, type and gender.
+a whole word in that chunk, each with its type and gender: an unlocked entry with the person's target rendering as
+guidance, an entry with no target by its type and gender alone, and a locked entry — which the model sees only as a
+placeholder — as that placeholder with its rendering, type and gender. An entry whose target the model suggested and
+nobody confirmed SHALL be listed apart, under `[Suggested renderings — not confirmed by the person]` with the line `Use
+each rendering unless it is clearly wrong; inflect it as the sentence needs.`, and SHALL never be hidden behind a
+placeholder.
 
 **Source:** FR-GLOSS-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-gloss`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#name-term-dictionary`.
@@ -504,6 +590,13 @@ not make `відчинив` or `відчинила` agree with it.
 
 - **WHEN** the glossary holds `Moreau` (character, male, no target) and the chunk mentions `Moreau`
 - **THEN** the prompt lists `Moreau` with `character` and `male` and no rendering
+
+#### Scenario: A suggested rendering is a hint
+
+- **WHEN** `Hale` → `Гейл` (character, male) is suggested and `Milton` → `Мілтон` is the person's, and the chunk mentions
+  both
+- **THEN** the prompt lists `Milton → Мілтон (place, unknown)` under the glossary heading and `Hale → Гейл (character,
+  male)` under the suggested-renderings heading, and `Hale` is sent as written
 
 #### Scenario: An empty glossary adds nothing
 

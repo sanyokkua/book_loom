@@ -64,6 +64,11 @@ class ProtectedSpansTest {
                         "Milton opened it.",
                         List.of(ProtectedSpansFixtures.unlocked("Milton", "Мілтон"))),
                 Arguments.of(
+                        "a suggested rendering, which is a hint and never a locked name",
+                        "Milton opened it.",
+                        List.of(ProtectedSpansFixtures.unlocked("Milton", "Мілтон")
+                                .withSuggestedTarget("Мілтон"))),
+                Arguments.of(
                         "a locked entry with no target",
                         "Milton opened it.",
                         List.of(ProtectedSpansFixtures.locked("Milton", null))),

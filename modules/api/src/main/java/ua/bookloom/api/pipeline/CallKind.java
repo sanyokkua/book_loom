@@ -35,6 +35,9 @@ public enum CallKind {
     /** A glossary review call: the model judges held terms as a name, a term or not a name. */
     REVIEW_TERMS,
 
+    /** A glossary suggestion call: the model proposes a target rendering and a gender for held terms. */
+    SUGGEST_TARGETS,
+
     /** A rolling-summary update call. */
     SUMMARY,
 

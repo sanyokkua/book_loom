@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -28,7 +29,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
  * The glossary's two model actions, the name scan and the review, sharing what both need: the open book, a brief
- * with a target language, and the run's model-call seam, so each call is announced, timed and attempt-counted exactly
+ * with a target language and a name policy for the suggested targets, and the run's model-call seam, so each call is announced, timed and attempt-counted exactly
  * as a run's calls are. A cancelled call (the calling thread interrupted) ends the action with nothing changed.
  */
 @Slf4j
@@ -42,19 +43,20 @@ public final class GlossaryModelScans {
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
-    private record Book(List<Segment> segments, CallFrame frame) {}
+    private record Book(List<Segment> segments, CallFrame frame, NamePolicy names) {}
 
     Result<List<GlossaryEntry>> prescan(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return book(projectId)
-                .flatMap(book -> preScan.scan(projectId, book.segments(), book.frame(), calls(model, progress, book)));
+                .flatMap(book -> preScan.scan(
+                        projectId, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
     }
 
     Result<GlossaryReviewReport> review(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return book(projectId)
-                .flatMap(book ->
-                        termReview.review(projectId, book.segments(), book.frame(), calls(model, progress, book)));
+                .flatMap(book -> termReview.review(
+                        projectId, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
@@ -92,6 +94,7 @@ public final class GlossaryModelScans {
         log.debug("Glossary model action project={} source={} target={}", projectId, source, target);
         return Result.ok(new Book(
                 GlossaryServiceImpl.bodySegments(document),
-                new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages())));
+                new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages()),
+                brief.names()));
     }
 }

@@ -24,6 +24,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
@@ -39,8 +40,9 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
  * The model's name scan, run only when the person asks for it: it finds names a frequency count misses and guesses
  * their type and gender, but it costs time and a provider call. It runs in two stages within one action: the model
  * proposes from the candidates, then the review's verdict step ({@link TermReview}) judges each proposal against every
- * use the book makes of it, and only a name or a term is written. Nothing is written until every call has answered, so
- * a failed call never wipes what the person already has.
+ * use the book makes of it, and only a name or a term is kept; then each kept entry is given a suggested target
+ * ({@link SuggestTargets}). Nothing is written until every call has answered, so a failed call never wipes what the
+ * person already has.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -53,6 +55,7 @@ public final class PreScan {
     private final ObjectMapper mapper;
     private final GlossaryRepository glossary;
     private final TermReview verdicts;
+    private final SuggestTargets suggestions;
 
     /**
      * Asks the model about the book's candidate names and adds what it proposes to the glossary.
@@ -60,19 +63,25 @@ public final class PreScan {
      * @param projectId the project whose glossary receives the entries; never null
      * @param segments the segments whose capitalised words are the candidates; never null, may be empty
      * @param frame the run's language pair and style, for the system message
+     * @param policy the Book Brief's name policy, which the suggested targets follow
      * @param calls the seam every model call goes through
-     * @return the entries added, unlocked and with no target — a term the glossary holds or the person removed is not
-     *     among them; or the error of the first failed call or glossary access, with nothing added by the model's
-     *     answers
+     * @return the entries added, unlocked, each with a suggested target where the model gave one — a term the glossary
+     *     holds or the person removed is not among them; or the error of the first failed call or glossary access,
+     *     with nothing added by the model's answers
      */
     public Result<List<GlossaryEntry>> scan(
-            final String projectId, final List<Segment> segments, final CallFrame frame, final ModelCalls calls) {
+            final String projectId,
+            final List<Segment> segments,
+            final CallFrame frame,
+            final NamePolicy policy,
+            final ModelCalls calls) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(segments, "segments");
         Objects.requireNonNull(frame, "frame");
+        Objects.requireNonNull(policy, "policy");
         Objects.requireNonNull(calls, "calls");
         try {
-            return run(projectId, segments, frame, calls);
+            return run(projectId, segments, frame, policy, calls);
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal, "Name scan failed", "The model name scan could not be completed.", null, cause);
@@ -82,7 +91,11 @@ public final class PreScan {
     }
 
     private Result<List<GlossaryEntry>> run(
-            final String projectId, final List<Segment> segments, final CallFrame frame, final ModelCalls calls) {
+            final String projectId,
+            final List<Segment> segments,
+            final CallFrame frame,
+            final NamePolicy policy,
+            final ModelCalls calls) {
         final List<NameCandidate> candidates = FrequencyScan.candidates(segments, 1, frame.sourceLanguage());
         log.info(
                 "Model pre-scan started project={} candidates={} batches={}",
@@ -106,6 +119,7 @@ public final class PreScan {
         final Result<List<GlossaryEntry>> merged = fresh(
                         projectId, Objects.requireNonNull(proposals.data(), "proposals"))
                 .flatMap(fresh -> confirmed(fresh, segments, frame, calls))
+                .flatMap(confirmed -> suggestions.suggestOnto(confirmed, segments, frame, policy, calls))
                 .flatMap(this::addAll);
         log.info("Model pre-scan finished project={} ok={} entriesAdded={}", projectId, merged.isOk(), added(merged));
         return merged;
@@ -138,14 +152,8 @@ public final class PreScan {
 
     private static GlossaryEntry withVerdict(final Verdict verdict) {
         final GlossaryEntry entry = verdict.entry();
-        return new GlossaryEntry(
-                entry.id(),
-                entry.projectId(),
-                entry.term(),
-                null,
-                entry.type() == TermType.OTHER ? verdict.type() : entry.type(),
-                entry.gender() == Gender.UNKNOWN ? verdict.gender() : entry.gender(),
-                false);
+        return entry.withType(entry.type() == TermType.OTHER ? verdict.type() : entry.type())
+                .withGender(entry.gender() == Gender.UNKNOWN ? verdict.gender() : entry.gender());
     }
 
     private Result<List<GlossaryEntry>> addAll(final List<GlossaryEntry> entries) {

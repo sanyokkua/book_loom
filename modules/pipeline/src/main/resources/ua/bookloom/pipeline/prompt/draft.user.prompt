@@ -9,6 +9,12 @@ token, never the name]
 {{glossaryTerms}}
 {{/glossaryTerms}}
 
+{{#suggestedTerms}}
+[Suggested renderings — not confirmed by the person]
+Use each rendering unless it is clearly wrong; inflect it as the sentence needs.
+{{suggestedTerms}}
+{{/suggestedTerms}}
+
 {{#memoryHint}}
 [Earlier decisions — keep consistent]
 {{memoryHint}}

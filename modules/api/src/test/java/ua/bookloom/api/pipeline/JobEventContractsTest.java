@@ -2,12 +2,15 @@ package ua.bookloom.api.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentStatus;
 
@@ -82,7 +85,15 @@ class JobEventContractsTest {
             case ContextAssembled assembled -> "ContextAssembled";
             case RoundStarted round -> "RoundStarted";
             case RecoveryWaiting waiting -> "RecoveryWaiting";
+            case BatchStarted batch -> "BatchStarted";
         };
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,1", "3,2"})
+    void batchStarted_impossibleBatch_isRejected(final int batch, final int batches) {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new BatchStarted(CallKind.SUGGEST_TARGETS, batch, batches));
     }
 
     @Test

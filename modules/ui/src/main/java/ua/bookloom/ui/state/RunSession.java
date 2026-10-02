@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -235,6 +236,7 @@ final class RunSession implements JobListener {
             case RoundStarted round -> onRound(round);
             case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
+            case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
         }
     }
 

@@ -35,6 +35,10 @@ public record OutputLimit(int expectedTokens, int capTokens) {
     // confidence.
     private static final int PRESCAN_BASE_TOKENS = 64;
     private static final int PRESCAN_TOKENS_PER_CANDIDATE = 48;
+    // A suggestion reply holds one short item per term: the term, a rendering of a few words and a gender word; a
+    // non-Latin rendering costs more tokens than its letters suggest, hence the margin.
+    private static final int SUGGEST_BASE_TOKENS = 128;
+    private static final int SUGGEST_TOKENS_PER_TERM = 40;
 
     /**
      * The limit for one judge call.
@@ -80,6 +84,20 @@ public record OutputLimit(int expectedTokens, int capTokens) {
             throw new IllegalArgumentException("candidateCount must be positive: " + candidateCount);
         }
         final int cap = PRESCAN_BASE_TOKENS + PRESCAN_TOKENS_PER_CANDIDATE * candidateCount;
+        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
+    }
+
+    /**
+     * The limit for one target-suggestion batch.
+     *
+     * @param termCount how many terms the batch sends; at least one
+     * @return the limit, growing with the terms, whose expected length is half the cap
+     */
+    public static OutputLimit forSuggestions(final int termCount) {
+        if (termCount < 1) {
+            throw new IllegalArgumentException("termCount must be positive: " + termCount);
+        }
+        final int cap = SUGGEST_BASE_TOKENS + SUGGEST_TOKENS_PER_TERM * termCount;
         return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
     }
 

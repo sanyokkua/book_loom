@@ -83,6 +83,36 @@ class ContextPackageAssemblerTest {
     }
 
     @Test
+    void assemble_suggestedTarget_isListedApartFromThePersonsRenderings() {
+        final GlossaryEntry suggested = HALE.withSuggestedTarget("Гейл");
+        final Chunk chunk = ContextFixtures.chunk("Hale met Milton.");
+        final List<GlossaryEntry> glossary = List.of(suggested, MILTON);
+
+        final ContextPackage context =
+                assemble(chunk, 0, ContextFixtures.inputs(null, 0, glossary, List.of()), ContextFixtures.NO_MEMORY);
+
+        assertThat(context.draftContext().glossaryLines()).containsExactly("Milton → Мілтон (place, unknown)");
+        assertThat(context.draftContext().suggestedLines()).containsExactly("Hale → Гейл (character, male)");
+        assertThat(context.snapshot().glossary())
+                .extracting(SnapshotTerm::suggested)
+                .containsExactly(true, false);
+    }
+
+    @Test
+    void replay_snapshotWithASuggestedTerm_listsItApartAgain() {
+        final Chunk chunk = ContextFixtures.chunk("Hale opened the door.");
+        final List<GlossaryEntry> glossary = List.of(HALE.withSuggestedTarget("Гейл"));
+        final ContextPackage first =
+                assemble(chunk, 0, ContextFixtures.inputs(null, 0, glossary, List.of()), ContextFixtures.NO_MEMORY);
+
+        final var replayed = ContextPackageAssembler.replay(
+                first.snapshot(), ContextFixtures.mask(chunk.segments().getFirst(), glossary));
+
+        assertThat(replayed.glossaryLines()).isEmpty();
+        assertThat(replayed.suggestedLines()).containsExactly("Hale → Гейл (character, male)");
+    }
+
+    @Test
     void assemble_termOnlyInAnotherSegmentOfTheChunk_isStillListed() {
         final Chunk chunk = ContextFixtures.chunk("It was late.", "Milton was quiet.");
 

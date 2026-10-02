@@ -39,8 +39,11 @@ public final class PseudoChatModel implements ChatModel {
     private static final String FORMAT_PRESCAN = "prescan";
     private static final String FORMAT_SUMMARY = "summary";
     private static final String FORMAT_REVIEW_TERMS = "review-terms";
+    private static final String FORMAT_SUGGEST_TARGETS = "suggest-targets";
     // One listed term of a glossary review: "- <term> — <count>× — ...".
     private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
+    // One listed term of a suggestion request: "- <term> — <type>, <gender> ...".
+    private static final Pattern SUGGEST_LINE = Pattern.compile("(?m)^- (.+?) — ");
 
     private static final String JUDGE_REPLY = "{\"score\":1.0,\"verdict\":\"accept\",\"findings\":[],\"deferrals\":[]}";
     private static final String REFLECT_REPLY = "{\"issues\":[]}";
@@ -113,6 +116,7 @@ public final class PseudoChatModel implements ChatModel {
             case FORMAT_PRESCAN -> prescanReply(source);
             case FORMAT_SUMMARY -> SUMMARY_REPLY;
             case FORMAT_REVIEW_TERMS -> reviewReply(source);
+            case FORMAT_SUGGEST_TARGETS -> suggestReply(source);
             default -> targetReply(translation);
         };
     }
@@ -141,6 +145,21 @@ public final class PseudoChatModel implements ChatModel {
         }
         log.debug("Pseudo glossary review judged {} terms names", verdicts.size());
         return writeValue(Map.of("verdicts", verdicts));
+    }
+
+    // The offline model knows no target language, so it answers every term with an empty target: "no suggestion".
+    private String suggestReply(String source) {
+        final Matcher matcher = SUGGEST_LINE.matcher(source);
+        final List<Map<String, String>> suggestions = new ArrayList<>();
+        while (matcher.find()) {
+            final Map<String, String> suggestion = new LinkedHashMap<>();
+            suggestion.put("term", matcher.group(1));
+            suggestion.put("target", "");
+            suggestion.put("gender", "unknown");
+            suggestions.add(suggestion);
+        }
+        log.debug("Pseudo glossary suggestion answered {} terms with no suggestion", suggestions.size());
+        return writeValue(Map.of("suggestions", suggestions));
     }
 
     private static Map<String, String> termEntry(String term) {

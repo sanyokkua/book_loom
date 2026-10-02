@@ -3,18 +3,23 @@ package ua.bookloom.pipeline.eval;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Fix;
 import ua.bookloom.pipeline.eval.EvalCase.Judge;
+import ua.bookloom.pipeline.eval.EvalCase.Suggest;
+import ua.bookloom.pipeline.eval.EvalCase.SuggestedName;
 
 /**
  * The fixed English → Ukrainian case set: the shapes a real book sends a small model — dialogue with a locked name,
  * headings, number- and symbol-only paragraphs, drop caps, nested emphasis, footnote references, a kept foreign run,
  * glossary names, a long sentence and text that reads like an instruction to the model — plus judge and directed-fix
- * cases. A locked name or a kept run reaches the model as one standalone token, as it does in a run.
+ * cases, and one batch of the fixture book's names given suggested targets. A locked name or a kept run reaches the
+ * model as one standalone token, as it does in a run.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -138,5 +143,18 @@ final class PromptEvalCases {
                     "judge-meaning",
                     "Nobody in the city had ever seen the djinni smile.",
                     "Ніхто в місті ніколи не бачив, щоб джин усміхався.",
-                    "Усі в місті щодня бачили, як джин плаче."));
+                    "Усі в місті щодня бачили, як джин плаче."),
+            new Suggest(
+                    "suggest",
+                    NamePolicy.TRANSLITERATE,
+                    List.of(
+                            "Dr. Eleanor Vance unpacked her instruments in the cold hall at Harrow Vale.",
+                            "Eleanor Vance had worked for the Meridian Survey Institute for twelve years.",
+                            "The Meridian Survey Institute sent a second team to Harrow Vale in spring.",
+                            "Nobody knew who had left the Amulet on the plumb line."),
+                    List.of(
+                            new SuggestedName("Eleanor Vance", TermType.CHARACTER, "^Ел(е|л)онор(а)? Венс$"),
+                            new SuggestedName("Harrow Vale", TermType.PLACE, "^Гарр?оу[- ]В[еє]йл$"),
+                            new SuggestedName("Meridian Survey Institute", TermType.OTHER, "^Інститут [^ ]"),
+                            new SuggestedName("Amulet", TermType.TERM, "^Амулет$"))));
 }

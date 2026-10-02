@@ -534,7 +534,11 @@ only as buttons on Names & style: they never run automatically and never at a ru
 reversing this decision's earlier automatic-pre-scan shape). The scan reads running text only — never a heading or a
 title line, nor a block or run marked as another language — and never proposes a number word or a language name alone;
 the pre-scan's proposals pass through the review's verdict step in the same action before anything is written, since a
-small model asked once kept chapter-title words, numbers and language names as names (fixture run, 2026-10-02). **Why:**
+small model asked once kept chapter-title words, numbers and language names as names (fixture run, 2026-10-02). Both
+buttons end with a third, separate call that **suggests a target** for each open entry by the Book Brief's name policy
+(Keep original suggests a name as written without a call); a suggestion is marked as the model's (`TargetOrigin`), is
+written only where the target is empty or was itself suggested, reaches a draft as a hint the model may inflect rather
+than a rendering to apply exactly, and becomes the person's when accepted, edited or locked. **Why:**
 Type/gender are not deterministically derivable from source text without an LLM, and the app forbids NER
 libraries/embeddings (DD-18), but an automatic model call at every run's start costs time and network the automatic-
 first pipeline should not spend without the person asking. **Consequences:** No model call in Phase B by default; the

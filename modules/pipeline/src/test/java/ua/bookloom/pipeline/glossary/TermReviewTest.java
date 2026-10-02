@@ -26,6 +26,8 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
@@ -38,6 +40,9 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /** The model's glossary review: what it is asked, what it may change, and that a failure changes nothing. */
 class TermReviewTest {
+
+    private static final SuggestTargets SUGGEST = new SuggestTargets(new PromptTemplates(), new ObjectMapper());
+    private static final NamePolicy POLICY = NamePolicy.TRANSLITERATE;
 
     private static final String PROJECT = "p1";
     private static final CallFrame FRAME =
@@ -52,15 +57,16 @@ class TermReviewTest {
     void setUp() {
         glossary = Guice.createInjector(new DocumentModule(), new PersistenceModule())
                 .getInstance(GlossaryRepository.class);
-        review = new TermReview(new PromptTemplates(), new ObjectMapper(), glossary);
+        review = new TermReview(new PromptTemplates(), new ObjectMapper(), glossary, SUGGEST);
     }
 
     @Test
     void review_verdicts_removeTheCommonWordFillTypeAndGenderAndLeaveThePersonsWork() {
         heldGlossary();
-        final ScriptedChatModel model = new ScriptedChatModel().answer(reply(VERDICTS));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, calls(model));
+        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
 
         assertThat(report.data())
                 .extracting(GlossaryReviewReport::removed, GlossaryReviewReport::updated)
@@ -79,7 +85,7 @@ class TermReviewTest {
         heldGlossary();
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"verdicts\":[]}"));
 
-        review.review(PROJECT, BOOK, FRAME, calls(model));
+        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
 
         final ChatRequest request = model.requests().getFirst();
         assertThat(termLines(request))
@@ -101,7 +107,7 @@ class TermReviewTest {
             return reply(VERDICTS);
         };
 
-        review.review(PROJECT, BOOK, FRAME, lockingMeanwhile);
+        review.review(PROJECT, BOOK, FRAME, POLICY, lockingMeanwhile);
 
         assertThat(glossary.all(PROJECT).data()).contains(locked);
     }
@@ -118,7 +124,7 @@ class TermReviewTest {
                         + "\"gender\":\"unknown\"}]}"))
                 .answer(Result.err(failure));
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, calls(model));
+        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
 
         assertThat(report.error()).isEqualTo(failure);
         assertThat(model.requests()).hasSize(2);
@@ -130,7 +136,7 @@ class TermReviewTest {
         glossary.add(entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true));
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, calls(model));
+        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
 
         assertThat(report.data()).extracting(GlossaryReviewReport::removed).isEqualTo(0);
         assertThat(model.requests()).isEmpty();
@@ -143,10 +149,94 @@ class TermReviewTest {
         final PseudoChatModel model = new PseudoChatModel(new ObjectMapper());
 
         final Result<GlossaryReviewReport> report =
-                review.review(PROJECT, BOOK, FRAME, (kind, segmentId, request) -> model.chat(request));
+                review.review(PROJECT, BOOK, FRAME, POLICY, (kind, segmentId, request) -> model.chat(request));
 
         assertThat(report.data()).extracting(GlossaryReviewReport::entries).isEqualTo(before);
     }
+
+    @Test
+    void review_suggestions_fillTheOpenTargetsAsSuggestionsAndCountThem() {
+        heldGlossary();
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(SUGGESTIONS));
+
+        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        assertThat(report.data())
+                .extracting(
+                        GlossaryReviewReport::removed, GlossaryReviewReport::updated, GlossaryReviewReport::suggested)
+                .containsExactly(1, 2, 2);
+        assertThat(glossary.all(PROJECT).data())
+                .containsExactly(
+                        suggested("p1:hale", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE),
+                        suggested("p1:moreau", "Moreau", "Моро", TermType.CHARACTER, Gender.FEMALE),
+                        entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true),
+                        entry("p1:baker", "Baker Street", "Бейкер-стріт", TermType.OTHER, Gender.UNKNOWN, false));
+    }
+
+    @Test
+    void review_suggestionRequest_listsTheSurvivorsWithTheirVerdictsTypeAndOneSentence() {
+        heldGlossary();
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(VERDICTS)).answer(reply(NO_SUGGESTIONS));
+
+        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        final ChatRequest request = model.requests().getLast();
+        assertThat(request.callKind()).isEqualTo(CallKind.SUGGEST_TARGETS);
+        assertThat(termLines(request))
+                .containsExactly(
+                        "- Hale — person, male — \"Well, Hale said.\"",
+                        "- Moreau — person, female — \"Moreau smiled.\"");
+    }
+
+    @Test
+    void review_personTypesATargetWhileTheModelSuggests_keepsThePersonsTarget() {
+        heldGlossary();
+        final GlossaryEntry typed = entry("p1:hale", "Hale", "Хейл", TermType.OTHER, Gender.UNKNOWN, false);
+
+        review.review(PROJECT, BOOK, FRAME, POLICY, updatingWhileSuggesting(typed));
+
+        assertThat(glossary.all(PROJECT).data())
+                .contains(entry("p1:hale", "Hale", "Хейл", TermType.OTHER, Gender.UNKNOWN, false));
+    }
+
+    @Test
+    void review_earlierSuggestion_isRefreshedAndAnswersAPersonsTargetNever() {
+        glossary.add(suggested("p1:hale", "Hale", "Хейл", TermType.CHARACTER, Gender.MALE));
+        glossary.add(entry("p1:moreau", "Moreau", "Мору", TermType.CHARACTER, Gender.FEMALE, false));
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply("{\"verdicts\":[]}")).answer(reply(SUGGESTIONS));
+
+        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        assertThat(report.data()).extracting(GlossaryReviewReport::suggested).isEqualTo(1);
+        assertThat(glossary.all(PROJECT).data())
+                .containsExactly(
+                        suggested("p1:hale", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE),
+                        entry("p1:moreau", "Moreau", "Мору", TermType.CHARACTER, Gender.FEMALE, false));
+    }
+
+    @Test
+    void review_suggestionCallFails_returnsThatErrorAndChangesNothing() {
+        heldGlossary();
+        final List<GlossaryEntry> before = glossary.all(PROJECT).data();
+        final AppError failure = AppError.of(ErrorCode.timeout, "Too slow", "The provider did not answer in time.");
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(VERDICTS)).answer(Result.err(failure));
+
+        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        assertThat(report.error()).isEqualTo(failure);
+        assertThat(glossary.all(PROJECT).data()).isEqualTo(before);
+    }
+
+    private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";
+
+    private static final String SUGGESTIONS = "{\"suggestions\":["
+            + "{\"term\":\"Hale\",\"target\":\"Гейл\",\"gender\":\"female\"},"
+            + "{\"term\":\"Moreau\",\"target\":\"Моро\",\"gender\":\"male\"},"
+            + "{\"term\":\"Milton\",\"target\":\"Мілтон-2\",\"gender\":\"male\"}]}";
 
     private static final String VERDICTS = "{\"verdicts\":["
             + "{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\",\"gender\":\"unknown\"},"
@@ -171,6 +261,22 @@ class TermReviewTest {
             final Gender gender,
             final boolean locked) {
         return new GlossaryEntry(id, PROJECT, term, target, type, gender, locked);
+    }
+
+    /** Answers the verdicts, then stores {@code edit} as the person would while the suggestion call is out. */
+    private ModelCalls updatingWhileSuggesting(final GlossaryEntry edit) {
+        return (kind, segmentId, request) -> switch (kind) {
+            case SUGGEST_TARGETS -> {
+                glossary.update(edit);
+                yield reply(SUGGESTIONS);
+            }
+            default -> reply(VERDICTS);
+        };
+    }
+
+    private static GlossaryEntry suggested(
+            final String id, final String term, final String target, final TermType type, final Gender gender) {
+        return new GlossaryEntry(id, PROJECT, term, target, type, gender, false, TargetOrigin.SUGGESTED);
     }
 
     private static List<String> termLines(final ChatRequest request) {

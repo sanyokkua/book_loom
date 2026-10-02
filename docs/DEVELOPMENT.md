@@ -363,11 +363,13 @@ BOOKLOOM_EVAL_OLLAMA_URL=http://localhost:11434 \
 ./gradlew visual                                                      # local-only set when its tests exist
 ```
 
-**The prompt eval** (`@Tag("promptEval")`, `PromptEvalTest`) sends 26 fixed English → Ukrainian cases through the
-production prompt builders to a real Ollama model (`BOOKLOOM_EVAL_MODEL`, default `gemma4:e4b-mlx`; skipped when
-`BOOKLOOM_EVAL_OLLAMA_URL` is unset) and measures each reply before any repair: it parses, its tokens are intact with
-every pair around words (gate), it is in Cyrillic, it holds the case's marker (a glossary rendering, a correct drop cap,
-a translated instruction), and the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands in
+**The prompt eval** (`@Tag("promptEval")`, `PromptEvalTest`) sends 26 fixed English → Ukrainian cases, and one batch of
+the fixture book's names given suggested targets (four rows, one per name), through the production prompt builders to a
+real Ollama model (`BOOKLOOM_EVAL_MODEL`, default `gemma4:e4b-mlx`; `BOOKLOOM_EVAL_ONLY=<case-name prefix>`, such as
+`suggest`, runs only those cases; skipped when `BOOKLOOM_EVAL_OLLAMA_URL` is unset) and measures each reply before any
+repair: it parses, its tokens are intact with every pair around words (gate), it is in Cyrillic, it holds the case's
+marker (a glossary rendering, a correct drop cap, a translated instruction, a name's uninflected dictionary form), and
+the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands in
 `modules/pipeline/build/reports/promptEval/<model>.txt`; the task fails below parse 95%, gate 90% or judge separation
 80%. Calibration on 2026-10-02 (one sample per case, temperature as in production):
 
@@ -376,10 +378,13 @@ a translated instruction), and the judge scores a good candidate ≥ 0.8 and a b
 | before (step 8g) | gemma4:e4b-mlx | 100% | 91% | 50% | 100% | 67% | 100% |
 | after (step 9) | gemma4:e4b-mlx | 100% | 100% | 100% | 100% | 89% | 100% |
 | after (step 9) | gemma4:e2b-mlx (floor) | 100% | 82% | 100% | 100% | 100% | 100% |
+| after (step 10, with the 4 suggest rows) | gemma4:e4b-mlx | 100% | 100% | 100% | 100% | 92% | 100% |
 
 Before, the judge scored an untranslated English candidate 1.0, a pair was moved off its words and a locked name was
 written out instead of its token; after, the one miss on e4b is the drop cap (`⟦g0⟧Т⟦g1⟧іч` — the source letter kept),
-and e2b drops pairs, which the run's placeholder gate refuses and sends to repair.
+and e2b drops pairs, which the run's placeholder gate refuses and sends to repair. The suggestion rows read `Елеонора Венс`, `Гарроу Вейл`,
+`Інститут Меридіанського зондування` and `Амулет`; the first prompt came back with `Вeнс` (a Latin `e`, now put back as
+Cyrillic) and every place and thing as `neuter` (a suggested gender is now kept for characters only).
 
 **The soak run** (`@Tag("soak")`, `WholeBookSoakTest`) replays an overnight run in about a minute per book: a generated
 Markdown and TXT book of 3,700 paragraphs (`SoakBooks`: chapter headings, recurring names, emphasis and links,

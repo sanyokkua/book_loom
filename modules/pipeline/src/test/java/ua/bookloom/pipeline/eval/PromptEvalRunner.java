@@ -19,6 +19,7 @@ import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Fix;
 import ua.bookloom.pipeline.eval.EvalCase.Judge;
+import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
 import ua.bookloom.pipeline.heal.DirectedFix;
 import ua.bookloom.pipeline.heal.RepairReply;
@@ -66,15 +67,16 @@ final class PromptEvalRunner {
     }
 
     List<EvalRow> runAll(final List<EvalCase> cases) {
-        return cases.stream().map(this::run).toList();
+        return cases.stream().flatMap(evalCase -> run(evalCase).stream()).toList();
     }
 
-    private EvalRow run(final EvalCase evalCase) {
+    private List<EvalRow> run(final EvalCase evalCase) {
         log.info("Prompt eval case {}", evalCase.name());
         return switch (evalCase) {
-            case Draft draft -> draft(draft);
-            case Fix fix -> fix(fix);
-            case Judge judge -> judge(judge);
+            case Draft draft -> List.of(draft(draft));
+            case Fix fix -> List.of(fix(fix));
+            case Judge judge -> List.of(judge(judge));
+            case Suggest suggest -> SuggestEval.rows(suggest, frame, calls);
         };
     }
 
@@ -166,7 +168,7 @@ final class PromptEvalRunner {
         return new EvalRow(name, kind, Check.FAIL, Check.FAIL, Check.FAIL, marker, injection, Check.NA, detail);
     }
 
-    private static Segment segment(final String masked) {
+    static Segment segment(final String masked) {
         return new Segment(
                 "Eval:0",
                 "Eval",

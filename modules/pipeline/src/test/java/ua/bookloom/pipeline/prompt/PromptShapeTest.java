@@ -13,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 
 /**
@@ -43,7 +44,7 @@ class PromptShapeTest {
             "prescan", "terms");
 
     private static final Map<String, String> OTHER_REPLY_KEYS =
-            Map.of("review-terms", "verdicts", "summary", "summary");
+            Map.of("review-terms", "verdicts", "suggest-targets", "suggestions", "summary", "summary");
 
     private static final int DRAFT_SYSTEM_BUDGET = 700;
     private static final int SYSTEM_BUDGET = 900;
@@ -66,7 +67,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"PRESCAN", "REVIEW_TERMS", "SUMMARY"},
+            names = {"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "SUMMARY"},
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
         assertThat(prompt(name)).contains("⟦gN⟧ token");
@@ -118,7 +119,10 @@ class PromptShapeTest {
     /** The system message the call is sent with; the two repairs reuse the draft's. */
     private static String system(final PromptName name) {
         final PromptName owner = name.systemSlots().isPresent() ? name : PromptName.DRAFT;
-        return TEMPLATES.renderSystem(owner, FRAME);
+        return owner == PromptName.SUGGEST_TARGETS
+                ? TEMPLATES.renderSystem(
+                        owner, FRAME, Map.of("nameRule", NameRules.bundled().rule(NamePolicy.TRANSLITERATE, "uk")))
+                : TEMPLATES.renderSystem(owner, FRAME);
     }
 
     /** The user message with every slot the template declares filled, tokens included where it lists them. */

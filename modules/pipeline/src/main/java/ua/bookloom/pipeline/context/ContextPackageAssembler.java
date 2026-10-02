@@ -52,13 +52,14 @@ public final class ContextPackageAssembler {
         final List<InjectedTerm> terms = InjectedTerms.select(chunk, mask, inputs.glossary());
         final List<String> preceding = precedingTexts(inputs);
         final List<SnapshotTmHit> hits = memoryHits(memory);
-        final List<String> glossaryLines =
-                terms.stream().flatMap(term -> term.lines().stream()).toList();
+        final List<SnapshotTerm> snapshotTerms =
+                terms.stream().map(InjectedTerm::term).toList();
         final List<String> memoryLines = memoryLines(hits);
-        final DraftContext context = new DraftContext(preceding, inputs.summary(), glossaryLines, memoryLines);
+        final DraftContext context =
+                new DraftContext(preceding, inputs.summary(), lines(terms, false), memoryLines, lines(terms, true));
         final ContextSnapshot snapshot = new ContextSnapshot(
                 preceding,
-                terms.stream().map(InjectedTerm::term).toList(),
+                snapshotTerms,
                 hits,
                 inputs.summary(),
                 inputs.styleSheet().text());
@@ -78,19 +79,33 @@ public final class ContextPackageAssembler {
     public static DraftContext replay(final ContextSnapshot snapshot, final ProtectedMask mask) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(mask, "mask");
-        final List<String> glossaryLines = snapshot.glossary().stream()
-                .flatMap(term -> InjectedTerms.lines(term, mask).stream())
+        final List<InjectedTerm> terms = snapshot.glossary().stream()
+                .map(term -> new InjectedTerm(term, InjectedTerms.lines(term, mask)))
                 .toList();
+        final List<String> glossaryLines = lines(terms, false);
         final DraftContext context = new DraftContext(
-                snapshot.precedingTargets(), snapshot.summary(), glossaryLines, memoryLines(snapshot.tmHits()));
+                snapshot.precedingTargets(),
+                snapshot.summary(),
+                glossaryLines,
+                memoryLines(snapshot.tmHits()),
+                lines(terms, true));
         log.debug(
-                "Replayed context preceding={} terms={} glossaryLines={} memoryLines={} summary={}",
+                "Replayed context preceding={} terms={} glossaryLines={} suggestedLines={} memoryLines={} summary={}",
                 context.precedingTargets().size(),
                 snapshot.glossary().size(),
                 glossaryLines.size(),
+                context.suggestedLines().size(),
                 context.memoryLines().size(),
                 snapshot.summary() != null);
         return context;
+    }
+
+    /** The prompt lines of the terms whose target is, or is not, an unconfirmed suggestion. */
+    private static List<String> lines(final List<InjectedTerm> terms, final boolean suggested) {
+        return terms.stream()
+                .filter(term -> term.term().suggested() == suggested)
+                .flatMap(term -> term.lines().stream())
+                .toList();
     }
 
     private static List<String> memoryLines(final List<SnapshotTmHit> hits) {
@@ -140,24 +155,35 @@ public final class ContextPackageAssembler {
                 .count();
         final long noTarget =
                 terms.stream().filter(term -> !InjectedTerms.hasTarget(term)).count();
+        final long suggested = terms.stream().filter(SnapshotTerm::suggested).count();
         log.debug(
-                "Assembled context segment={} preceding={} lockedTerms={} unlockedTerms={} noTargetTerms={} "
-                        + "hints={} suggestions={} reuse={} summary={}",
+                "Assembled context segment={} preceding={} lockedTerms={} unlockedTerms={} suggestedTerms={} "
+                        + "noTargetTerms={} hints={} suggestions={} reuse={} summary={}",
                 segment.id(),
                 snapshot.precedingTargets().size(),
                 locked,
-                terms.size() - locked - noTarget,
+                terms.size() - locked - noTarget - suggested,
+                suggested,
                 noTarget,
                 hitsOfKind(snapshot, TmHitKind.EXACT),
                 hitsOfKind(snapshot, TmHitKind.FUZZY),
                 hitsOfKind(snapshot, TmHitKind.CONTEXT) > 0,
                 snapshot.summary() != null);
+        logBlocks(segment, snapshot, memoryLines, context);
+    }
+
+    private static void logBlocks(
+            final Segment segment,
+            final ContextSnapshot snapshot,
+            final List<String> memoryLines,
+            final DraftContext context) {
         if (log.isTraceEnabled()) {
             log.trace(
-                    "Context blocks segment={} summary={} terms={} memory={} preceding={}",
+                    "Context blocks segment={} summary={} terms={} suggested={} memory={} preceding={}",
                     segment.id(),
                     snapshot.summary(),
                     context.glossaryLines(),
+                    context.suggestedLines(),
                     memoryLines,
                     context.precedingTargets());
         }

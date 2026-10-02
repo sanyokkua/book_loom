@@ -25,6 +25,7 @@ import org.jspecify.annotations.Nullable;
 final class PromptExamples {
 
     static final String DIRECTORY = "examples/";
+    static final String NAME_DIRECTORY = "name-examples/";
     static final String NEUTRAL = "neutral";
     private static final String SUFFIX = ".txt";
     private static final String COMMENT = "#";
@@ -44,9 +45,22 @@ final class PromptExamples {
      * @return the examples as the prompt shows them; never blank
      */
     String forPair(@Nullable final String sourceTag, final String targetTag) {
+        return forPair(DIRECTORY, sourceTag, targetTag);
+    }
+
+    /**
+     * The examples for a language pair, read from one call's examples directory.
+     *
+     * @param directory the directory beside the templates, ending in {@code /}
+     * @param sourceTag the source language tag, or null when it is inferred from the text, which skips the pair file
+     * @param targetTag the non-null target language tag
+     * @return the examples as the prompt shows them; never blank
+     */
+    String forPair(final String directory, @Nullable final String sourceTag, final String targetTag) {
+        Objects.requireNonNull(directory, "directory");
         Objects.requireNonNull(targetTag, "targetTag");
         final List<String> candidates = candidates(sourceTag, targetTag);
-        return byPair.computeIfAbsent(String.join("|", candidates), key -> load(candidates));
+        return byPair.computeIfAbsent(directory + String.join("|", candidates), key -> load(directory, candidates));
     }
 
     /**
@@ -66,16 +80,16 @@ final class PromptExamples {
         return List.copyOf(names);
     }
 
-    private String load(final List<String> candidates) {
+    private String load(final String directory, final List<String> candidates) {
         for (final String name : candidates) {
-            final String text = read(DIRECTORY + name + SUFFIX);
+            final String text = read(directory + name + SUFFIX);
             if (text != null) {
-                log.debug("Chose prompt examples file={} candidates={}", name, candidates);
+                log.debug("Chose prompt examples directory={} file={} candidates={}", directory, name, candidates);
                 return withoutNotes(text);
             }
             log.debug("No prompt examples file={}", name);
         }
-        throw new IllegalStateException("The bundled " + NEUTRAL + SUFFIX + " prompt examples are missing");
+        throw new IllegalStateException("The bundled " + directory + NEUTRAL + SUFFIX + " prompt examples are missing");
     }
 
     private @Nullable String read(final String fileName) {

@@ -26,7 +26,13 @@ public enum PromptName {
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
             new Slots(
                     Set.of("source", "target", "tokens", "text"),
-                    Set.of("summary", "glossaryTerms", "memoryHint", "precedingTargets", "extraInstruction"))),
+                    Set.of(
+                            "summary",
+                            "glossaryTerms",
+                            "suggestedTerms",
+                            "memoryHint",
+                            "precedingTargets",
+                            "extraInstruction"))),
 
     /** The correction call after a reply is not the required JSON object. */
     STRUCTURAL_REPAIR(
@@ -148,6 +154,22 @@ public enum PromptName {
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
             new Slots(Set.of("terms"), Set.of())),
 
+    /**
+     * The glossary's target suggestions, run after the review's or the name scan's verdicts: a batch of held names and
+     * terms, each with one sentence from the book, given a rendering by the Book Brief's name policy and a gender.
+     */
+    SUGGEST_TARGETS(
+            "suggest-targets",
+            CallKind.SUGGEST_TARGETS,
+            "suggest-targets",
+            SuggestTargetsSchema.SCHEMA,
+            0.1,
+            null,
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "nameRule"),
+                    Set.of("styleSheet", "foreignPassageRule", "examples")),
+            new Slots(Set.of("terms"), Set.of())),
+
     /** The chapter-end summary the Max dial asks the model for; the reply's target text is what later prompts carry. */
     SUMMARY(
             "summary",
@@ -222,6 +244,11 @@ public enum PromptName {
             throw new IllegalArgumentException(name() + " has no lower temperature");
         }
         return lowerTemperature;
+    }
+
+    /** The directory the call's few-shot examples are read from, beside the templates. */
+    String examplesDirectory() {
+        return this == SUGGEST_TARGETS ? PromptExamples.NAME_DIRECTORY : PromptExamples.DIRECTORY;
     }
 
     /** The system template's slots, or empty when the call reuses another call's system message. */

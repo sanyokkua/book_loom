@@ -2,9 +2,14 @@ package ua.bookloom.pipeline.eval;
 
 import java.util.List;
 import java.util.Objects;
+import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.TermType;
 
-/** One prompt-eval case: a draft, a directed fix or a judge pair, each sent through its production prompt builder. */
+/**
+ * One prompt-eval case: a draft, a directed fix, a judge pair or a batch of glossary names, each sent through its
+ * production prompt builder.
+ */
 sealed interface EvalCase {
 
     /** The case's short name, the first column of the report. */
@@ -85,4 +90,32 @@ sealed interface EvalCase {
      * @param bad a candidate with a meaning error, an omission or text left untranslated
      */
     record Judge(String name, String masked, String good, String bad) implements EvalCase {}
+
+    /**
+     * A batch of glossary names given suggested targets under one name policy; each name becomes its own report row.
+     *
+     * @param name the case name
+     * @param policy the Book Brief name policy the suggestions follow
+     * @param sentences the book text the names occur in
+     * @param names each name, its type and what its suggestion must match
+     */
+    record Suggest(String name, NamePolicy policy, List<String> sentences, List<SuggestedName> names)
+            implements EvalCase {
+
+        /** Copies the lists. */
+        public Suggest {
+            sentences = List.copyOf(sentences);
+            names = List.copyOf(names);
+        }
+    }
+
+    /**
+     * One name of a {@link Suggest} case.
+     *
+     * @param term the name as the glossary holds it
+     * @param type its glossary type
+     * @param marker a regular expression the whole suggested target must match: the dictionary form in the target
+     *     script, uninflected
+     */
+    record SuggestedName(String term, TermType type, String marker) {}
 }

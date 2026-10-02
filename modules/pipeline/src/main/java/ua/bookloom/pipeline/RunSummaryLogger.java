@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -87,7 +88,8 @@ final class RunSummaryLogger {
                     MemoryUpdated _,
                     ContextAssembled _,
                     RoundStarted _,
-                    RecoveryWaiting _ -> {
+                    RecoveryWaiting _,
+                    BatchStarted _ -> {
                 // Nothing to count: these say what is happening, the counts change on the events above.
             }
         }
