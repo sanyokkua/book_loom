@@ -758,8 +758,27 @@ public enum MessageKey {
     NAMES_STYLE_MODEL_PROGRESS("namesStyle.modelProgress"),
     /** The line shown once a model scan or review was stopped. */
     NAMES_STYLE_MODEL_STOPPED("namesStyle.modelStopped"),
-    /** Result of a model review; argument 0 is the removed count, 1 the updated count, each passed as an Integer. */
+    /**
+     * Result of a model review; argument 0 is the removed count, 1 the updated count and 2 the count of targets
+     * suggested, each passed as an Integer.
+     */
     NAMES_STYLE_REVIEWED("namesStyle.reviewed"),
+    /** The line shown while targets are suggested; argument 0 is the batch and 1 the batches, each an Integer. */
+    NAMES_STYLE_SUGGESTING("namesStyle.suggesting"),
+    /** Button that confirms every suggested target. */
+    NAMES_STYLE_ACCEPT_ALL("namesStyle.acceptAll"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_ACCEPT_ALL}. */
+    NAMES_STYLE_ACCEPT_ALL_TIP("namesStyle.acceptAll.tip"),
+    /** Accessible name of a row's action that confirms its suggested target. */
+    NAMES_STYLE_ACCEPT("namesStyle.accept"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_ACCEPT}. */
+    NAMES_STYLE_ACCEPT_TIP("namesStyle.accept.tip"),
+    /** The short badge on a target the model suggested. */
+    NAMES_STYLE_SUGGESTED_BADGE("namesStyle.suggestedBadge"),
+    /** Hover explanation of the badge labelled by {@link #NAMES_STYLE_SUGGESTED_BADGE}. */
+    NAMES_STYLE_SUGGESTED_BADGE_TIP("namesStyle.suggestedBadge.tip"),
+    /** Notice on starting a run with suggestions unconfirmed; argument 0 is their count, passed as an Integer. */
+    NAMES_STYLE_SUGGESTIONS_UNREVIEWED("namesStyle.suggestionsUnreviewed"),
     /** Result of an import; argument 0 is the row count, passed as an Integer. */
     NAMES_STYLE_IMPORT_DONE("namesStyle.import.done"),
     /** Lines an import could not read; argument 0 is the joined line numbers, argument 1 their count. */

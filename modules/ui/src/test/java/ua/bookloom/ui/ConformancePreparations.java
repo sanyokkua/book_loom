@@ -102,7 +102,9 @@ final class ConformancePreparations {
     // The names screen loads the stored glossary as the book opens; one row is enough to show a term cell.
     private void listAGlossary() throws TimeoutException {
         glossary.willAnswer(Result.ok(List.of(
-                new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false))));
+                new GlossaryEntry("e1", "p1", "Frankenstein", null, TermType.CHARACTER, Gender.UNKNOWN, false),
+                new GlossaryEntry("e2", "p1", "Victor", null, TermType.CHARACTER, Gender.MALE, false)
+                        .withSuggestedTarget("Віктор"))));
         openABook();
     }
 

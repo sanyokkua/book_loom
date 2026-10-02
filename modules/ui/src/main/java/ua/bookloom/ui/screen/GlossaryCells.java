@@ -1,5 +1,6 @@
 package ua.bookloom.ui.screen;
 
+import javafx.css.PseudoClass;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -34,6 +35,7 @@ import ua.bookloom.ui.state.NamesStyleViewModel;
 final class GlossaryCells {
 
     private static final double ROW_SPACING = 8;
+    private static final double BADGE_SPACING = 4;
 
     /** A cell holding one control that is filled from the row it shows. */
     abstract static class EntryCell<N extends Node> extends TableCell<GlossaryEntry, GlossaryEntry> {
@@ -102,27 +104,66 @@ final class GlossaryCells {
         }
     }
 
-    /** The target as a text field that writes on Enter and on losing focus. */
-    static final class TargetCell extends EntryCell<TextField> {
+    /**
+     * The target as a text field that writes on Enter and on losing focus. A target the model suggested is slanted and
+     * badged, with a tick that accepts it; Enter on an untouched suggestion accepts it too.
+     */
+    static final class TargetCell extends EntryCell<HBox> {
+
+        private static final PseudoClass SUGGESTED = PseudoClass.getPseudoClass("suggested");
 
         private final NamesStyleViewModel model;
+        private final TextField field;
+        private final Label badge;
+        private final Button accept;
         private @Nullable String syncedId;
         private String syncedText = "";
 
         TargetCell(final Messages messages, final NamesStyleViewModel model) {
-            super(Tips.installOnHover(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP));
+            super(new HBox(BADGE_SPACING));
             this.model = model;
-            control().setOnAction(event -> commit());
-            control().focusedProperty().addListener((observed, was, now) -> {
+            field = Tips.installOnHover(messages, new TextField(), MessageKey.NAMES_STYLE_COLUMN_TARGET_TIP);
+            badge = Tips.installOnHover(
+                    messages,
+                    new Label(messages.get(MessageKey.NAMES_STYLE_SUGGESTED_BADGE)),
+                    MessageKey.NAMES_STYLE_SUGGESTED_BADGE_TIP);
+            badge.getStyleClass().addAll("chip", "glossary-suggested-badge");
+            badge.setMinWidth(Region.USE_PREF_SIZE);
+            accept = Tips.installOnHover(messages, new Button("✓"), MessageKey.NAMES_STYLE_ACCEPT_TIP);
+            accept.getStyleClass().addAll("btn-ghost", "glossary-accept");
+            accept.setAccessibleText(messages.get(MessageKey.NAMES_STYLE_ACCEPT));
+            accept.setMinWidth(Region.USE_PREF_SIZE);
+            accept.setOnAction(event -> acceptShown());
+            HBox.setHgrow(field, Priority.ALWAYS);
+            field.setOnAction(event -> onEnter());
+            field.focusedProperty().addListener((observed, was, now) -> {
                 if (!now) {
                     commit();
                 }
             });
+            control().setAlignment(Pos.CENTER_LEFT);
+            control().getChildren().addAll(field, badge, accept);
+        }
+
+        private void onEnter() {
+            final GlossaryEntry shown = getItem();
+            if (shown != null && shown.isSuggested() && field.getText().equals(syncedText)) {
+                acceptShown();
+                return;
+            }
+            commit();
+        }
+
+        private void acceptShown() {
+            final GlossaryEntry shown = getItem();
+            if (shown != null && shown.id().equals(syncedId)) {
+                model.accept(shown.id());
+            }
         }
 
         private void commit() {
             final GlossaryEntry shown = getItem();
-            final String typed = control().getText();
+            final String typed = field.getText();
             if (shown == null || !shown.id().equals(syncedId) || typed.equals(syncedText)) {
                 return;
             }
@@ -131,10 +172,16 @@ final class GlossaryCells {
         }
 
         @Override
-        void show(final TextField shown, final GlossaryEntry entry) {
+        void show(final HBox shown, final GlossaryEntry entry) {
             syncedId = entry.id();
             syncedText = entry.target() == null ? "" : entry.target();
-            shown.setText(syncedText);
+            field.setText(syncedText);
+            final boolean suggested = entry.isSuggested();
+            field.pseudoClassStateChanged(SUGGESTED, suggested);
+            badge.setVisible(suggested);
+            badge.setManaged(suggested);
+            accept.setVisible(suggested);
+            accept.setManaged(suggested);
         }
     }
 

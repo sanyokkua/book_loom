@@ -29,6 +29,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.AddTermDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.GlossaryNotice;
 import ua.bookloom.ui.state.NamesStyleViewModel;
@@ -59,18 +60,21 @@ final class NamesStyleView {
     private final TranslatingViewModel translating;
     private final NamesStyleViewModel glossary;
     private final ModalHost modalHost;
+    private final Toasts toasts;
 
     NamesStyleView(
             final Messages messages,
             final Navigator navigator,
             final TranslatingViewModel translating,
             final NamesStyleViewModel glossary,
-            final ModalHost modalHost) {
+            final ModalHost modalHost,
+            final Toasts toasts) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
+        this.toasts = Objects.requireNonNull(toasts, "toasts");
     }
 
     Node build(final String projectId) {
@@ -170,6 +174,8 @@ final class NamesStyleView {
     }
 
     // The two model actions are not offered while one runs or other model work does; Stop is shown only while one runs.
+    // Accept all is shown only while a row holds a suggestion — the toolbar must still fit one line at 1000 px — and is
+    // off while a model action could replace the suggestions it would accept.
     private List<Button> modelActions() {
         final Button scan = action(
                 "names-style-model-scan",
@@ -192,7 +198,19 @@ final class NamesStyleView {
                 .bind(glossary.busy().or(glossary.modelBlockedReason().isNotEmpty()));
         stop.visibleProperty().bind(glossary.busy());
         stop.managedProperty().bind(glossary.busy());
-        return List.of(scan, review, stop);
+        return List.of(scan, review, acceptAll(), stop);
+    }
+
+    private Button acceptAll() {
+        final Button acceptAll = action(
+                "names-style-accept-all",
+                MessageKey.NAMES_STYLE_ACCEPT_ALL,
+                MessageKey.NAMES_STYLE_ACCEPT_ALL_TIP,
+                glossary::acceptAll);
+        acceptAll.disableProperty().bind(glossary.busy());
+        acceptAll.visibleProperty().bind(glossary.suggestedCount().greaterThan(0));
+        acceptAll.managedProperty().bind(acceptAll.visibleProperty());
+        return acceptAll;
     }
 
     private Button action(final String id, final MessageKey caption, final MessageKey tip, final Runnable onPress) {
@@ -271,11 +289,23 @@ final class NamesStyleView {
         final Forward action = Forward.of(translating.controls().get());
         log.debug("forward pressed on names and style: {}", action);
         switch (action) {
-            case START -> translating.start();
+            case START -> {
+                noteUnconfirmedSuggestions();
+                translating.start();
+            }
             case RESUME -> translating.resume();
             case TO_RUN -> log.debug("a run is under way: showing it");
         }
         navigator.navigate(ViewNames.TRANSLATING);
+    }
+
+    // A run drafts with a suggested target as a hint, not as the person's choice; starting does not wait for a review.
+    private void noteUnconfirmedSuggestions() {
+        final int suggested = glossary.suggestedCount().get();
+        log.debug("starting with {} suggested targets unconfirmed", suggested);
+        if (suggested > 0) {
+            toasts.info(MessageKey.NAMES_STYLE_SUGGESTIONS_UNREVIEWED, suggested);
+        }
     }
 
     /** What the forward button does, read from the run controls Translating offers. */

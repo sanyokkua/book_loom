@@ -49,8 +49,8 @@ table sorts and searches.
 The window opens a book on the stored project (one current project, the import states chosen from the inspection's
 verdict, a replace-run prompt, start and resume without importing again), shows the run and a connection chip in its
 title bar, numbers six workflow steps with a provider footer, and its Book Brief, Structure, Names & style, Translating
-and Export screens are live: the glossary table with scans, model review and CSV; the seven run states with a live
-panel showing each model call (kind, segment, attempt, its clock against the timeout), the round tracker and the
+and Export screens are live: the glossary table with scans, model review, suggested targets by the name policy and
+CSV; the seven run states with a live panel showing each model call (kind, segment, attempt, its clock against the timeout), the round tracker and the
 context sent to the model, a timed activity log with an errors-only view, the provider-error and stuck-call banners with
 Skip segment and Retry now, and the review panel with retry and proposals; the Export screen writes the book (Save to,
 side files, consistency pass, result tiles and checks, a neutral line for the file just written, the export-complete

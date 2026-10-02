@@ -3,8 +3,8 @@ package ua.bookloom.ui.state;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -17,6 +17,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -24,7 +25,6 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModelFactory;
-import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -50,11 +50,12 @@ public final class NamesStyleViewModel {
     private final GlossaryCalls calls;
     private final GlossaryModelRuns modelRuns;
     private final Messages messages;
-    private final ImportSummary summary;
-    private final Supplier<String> ids;
+    private final GlossaryFiles files;
     private final ObservableList<GlossaryEntry> rows = FXCollections.observableArrayList();
     private final ReadOnlyObjectWrapper<@Nullable GlossaryNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
+    private final GlossaryAdditions additions;
     private String projectId = "";
     private long generation;
 
@@ -109,8 +110,11 @@ public final class NamesStyleViewModel {
                         () -> projectId,
                         Objects.requireNonNull(activities, "activities")),
                 calls);
-        this.summary = new ImportSummary(messages);
-        this.ids = Objects.requireNonNull(ids, "ids");
+        this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages));
+        this.additions = new GlossaryAdditions(
+                glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
+        rows.addListener((ListChangeListener<GlossaryEntry>) change -> suggestedCount.set(
+                (int) rows.stream().filter(GlossaryEntry::isSuggested).count()));
     }
 
     /**
@@ -307,19 +311,7 @@ public final class NamesStyleViewModel {
      */
     public void importCsv(final Path source) {
         Objects.requireNonNull(source, "source");
-        final String project = projectId;
-        final long ticket = generation;
-        log.debug("importing glossary csv {} into project {}", source, project);
-        calls.run(
-                "import",
-                () -> ImportSummary.readAfterImport(glossary, project, source),
-                answer -> ifCurrent(ticket, () -> settle("import", answer, this::imported)));
-    }
-
-    private void imported(final ImportSummary.Imported done) {
-        final GlossaryImportReport report = done.report();
-        rows.setAll(done.all());
-        notice.set(new GlossaryNotice(GlossaryNotice.Level.INFO, summary.of(report)));
+        files.importCsv(projectId, source, whileCurrent());
     }
 
     /**
@@ -329,14 +321,7 @@ public final class NamesStyleViewModel {
      */
     public void exportCsv(final Path destination) {
         Objects.requireNonNull(destination, "destination");
-        final String project = projectId;
-        final long ticket = generation;
-        log.debug("exporting the glossary of project {} to {}", project, destination);
-        calls.run(
-                "export",
-                () -> glossary.exportCsv(project, destination),
-                answer -> ifCurrent(
-                        ticket, () -> settle("export", answer, written -> notice.set(summary.exported(written)))));
+        files.exportCsv(projectId, destination, whileCurrent());
     }
 
     /**
@@ -347,29 +332,41 @@ public final class NamesStyleViewModel {
      * @param onRefused run on the FX thread with the reason, in the display language, the term was not added
      */
     public void add(final NewTerm term, final Runnable onAdded, final Consumer<String> onRefused) {
-        Objects.requireNonNull(term, "term");
-        Objects.requireNonNull(onAdded, "onAdded");
-        Objects.requireNonNull(onRefused, "onRefused");
-        final String source = term.term().strip();
-        final Optional<String> refusal = term.refusal(rows, messages);
-        log.debug("adding a term to project {}, refused up front: {}", projectId, refusal.isPresent());
-        if (refusal.isPresent()) {
-            onRefused.accept(refusal.get());
-            return;
-        }
-        final String target = term.target().isBlank() ? null : term.target().strip();
-        final GlossaryEntry entry =
-                new GlossaryEntry(ids.get(), projectId, source, target, term.type(), term.gender(), term.locked());
-        calls.run("add", () -> glossary.add(entry), answer -> {
-            final AppError failure = answer.error();
-            if (failure != null) {
-                log.warn("adding entry {} refused with {}", entry.id(), failure.code());
-                onRefused.accept(failure.message());
-                return;
-            }
-            rows.add(Objects.requireNonNull(answer.data(), "data"));
-            onAdded.run();
-        });
+        additions.add(term, onAdded, onRefused);
+    }
+
+    /**
+     * Confirms a row's suggested target as the person's, so it is applied exactly and never replaced by the model.
+     *
+     * @param entryId the row's entry id
+     */
+    public void accept(final String entryId) {
+        change(entryId, "accept", GlossaryEntry::accepted);
+    }
+
+    /** Confirms every row's suggested target, each as {@link #accept(String)} would. */
+    public void acceptAll() {
+        final List<String> suggested = rows.stream()
+                .filter(GlossaryEntry::isSuggested)
+                .map(GlossaryEntry::id)
+                .toList();
+        log.info("accepting {} suggested targets of project {}", suggested.size(), projectId);
+        suggested.forEach(this::accept);
+    }
+
+    /**
+     * How many rows hold a suggested target nobody confirmed.
+     *
+     * @return a read-only count that follows the rows
+     */
+    public ReadOnlyIntegerProperty suggestedCount() {
+        return suggestedCount.getReadOnlyProperty();
+    }
+
+    /** Publishes an answer only while the opening that asked for it is still the screen's current one. */
+    private Consumer<Runnable> whileCurrent() {
+        final long ticket = generation;
+        return publish -> ifCurrent(ticket, publish);
     }
 
     private void ifCurrent(final long ticket, final Runnable publish) {

@@ -60,6 +60,7 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         "names-style-add,NAMES_STYLE_ADD_TIP",
         "names-style-model-scan,NAMES_STYLE_MODEL_SCAN_TIP",
         "names-style-review,NAMES_STYLE_REVIEW_TIP",
+        "names-style-accept-all,NAMES_STYLE_ACCEPT_ALL_TIP",
         "names-style-model-stop,NAMES_STYLE_MODEL_STOP_TIP",
         "names-style-search,NAMES_STYLE_SEARCH_TIP",
         "names-style-import,NAMES_STYLE_IMPORT_TIP",

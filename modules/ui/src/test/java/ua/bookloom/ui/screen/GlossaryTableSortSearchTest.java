@@ -117,6 +117,7 @@ class GlossaryTableSortSearchTest extends TranslatingScreenTestBase {
         awaitFx(() -> table().getItems().size() == 1);
 
         assertThat(glossary.calls()).contains("review(p1)");
-        assertThat(labelText("names-style-notice-text")).isEqualTo("Model review done: 3 rows removed, 1 row updated.");
+        assertThat(labelText("names-style-notice-text"))
+                .isEqualTo("Model review done: 3 rows removed, 1 row updated, 0 targets suggested.");
     }
 }

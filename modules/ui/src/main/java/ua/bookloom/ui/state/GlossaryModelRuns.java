@@ -22,6 +22,8 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -32,7 +34,7 @@ import ua.bookloom.ui.i18n.Messages;
 
 /**
  * The glossary's model actions — the name scan and the review — as the names and style screen runs them: one at a time,
- * with the chosen model, a waiting line that counts the requests, and a stop that interrupts the request in flight. A
+ * with the chosen model, a waiting line that counts the requests and, while targets are suggested, the batches, and a stop that interrupts the request in flight. A
  * stopped action changes nothing, since the service writes only after every request has answered. Neither starts while
  * other model work runs ({@link ActivityTracker}); each registers itself while it runs, so the title bar can name and
  * stop it and leaving the screen asks first.
@@ -81,6 +83,7 @@ final class GlossaryModelRuns {
     private ActivityTracker.@Nullable Handle handle;
     private long ticket;
     private int requests;
+    private @Nullable BatchStarted suggesting;
 
     GlossaryModelRuns(final Screen screen, final GlossaryCalls calls) {
         this.screen = Objects.requireNonNull(screen, "screen");
@@ -155,11 +158,16 @@ final class GlossaryModelRuns {
     }
 
     private void reviewed(final GlossaryReviewReport report) {
-        log.info("model review removed {} and updated {} entries", report.removed(), report.updated());
+        log.info(
+                "model review removed {}, updated {} and suggested targets for {} entries",
+                report.removed(),
+                report.updated(),
+                report.suggested());
         screen.rows().setAll(report.entries());
         line(
                 GlossaryNotice.Level.INFO,
-                screen.messages().get(MessageKey.NAMES_STYLE_REVIEWED, report.removed(), report.updated()));
+                screen.messages()
+                        .get(MessageKey.NAMES_STYLE_REVIEWED, report.removed(), report.updated(), report.suggested()));
     }
 
     private <T> void start(
@@ -181,6 +189,7 @@ final class GlossaryModelRuns {
                 selection.get().providerId());
         final long mine = ++ticket;
         requests = 0;
+        suggesting = null;
         handle = screen.activities().begin(what, this::stop);
         busy.set(true);
         screen.notice().set(null);
@@ -240,9 +249,21 @@ final class GlossaryModelRuns {
     }
 
     private void progress(final long mine, final JobEvent event) {
-        if (!(event instanceof ModelCallStarted started) || mine != ticket || running == null) {
+        if (mine != ticket || running == null) {
             return;
         }
+        if (event instanceof BatchStarted batch) {
+            suggesting = batch;
+            log.debug("suggestion batch {} of {} is out", batch.batch(), batch.batches());
+            line(GlossaryNotice.Level.INFO, suggestingLine(batch));
+            return;
+        }
+        if (event instanceof ModelCallStarted started) {
+            requestOut(started);
+        }
+    }
+
+    private void requestOut(final ModelCallStarted started) {
         if (started.attempt() == 1) {
             requests++;
             final ActivityTracker.Handle registered = handle;
@@ -251,14 +272,21 @@ final class GlossaryModelRuns {
             }
         }
         log.debug("model request {} attempt {} of {} is out", requests, started.attempt(), started.maxAttempts());
+        final BatchStarted batch = suggesting;
         line(
                 GlossaryNotice.Level.INFO,
-                screen.messages()
-                        .get(
-                                MessageKey.NAMES_STYLE_MODEL_PROGRESS,
-                                requests,
-                                started.attempt(),
-                                started.maxAttempts()));
+                started.kind() == CallKind.SUGGEST_TARGETS && batch != null
+                        ? suggestingLine(batch)
+                        : screen.messages()
+                                .get(
+                                        MessageKey.NAMES_STYLE_MODEL_PROGRESS,
+                                        requests,
+                                        started.attempt(),
+                                        started.maxAttempts()));
+    }
+
+    private String suggestingLine(final BatchStarted batch) {
+        return screen.messages().get(MessageKey.NAMES_STYLE_SUGGESTING, batch.batch(), batch.batches());
     }
 
     private void endActivity() {

@@ -12,6 +12,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 import ua.bookloom.ui.state.OpenedBook;
@@ -35,6 +36,7 @@ public final class NamesStyleController {
     private final TranslatingViewModel translating;
     private final NamesStyleViewModel glossary;
     private final ModalHost modalHost;
+    private final Toasts toasts;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
@@ -49,6 +51,7 @@ public final class NamesStyleController {
      * @param translating what Start translation asks to begin the run
      * @param glossary the state of the glossary table
      * @param modalHost where the Add term card is shown
+     * @param toasts where starting with unconfirmed suggestions is noted
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -59,13 +62,15 @@ public final class NamesStyleController {
             final Navigator navigator,
             final TranslatingViewModel translating,
             final NamesStyleViewModel glossary,
-            final ModalHost modalHost) {
+            final ModalHost modalHost,
+            final Toasts toasts) {
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
+        this.toasts = Objects.requireNonNull(toasts, "toasts");
     }
 
     @FXML
@@ -80,7 +85,8 @@ public final class NamesStyleController {
     private void show(final @Nullable OpenedBook book) {
         log.debug("showing the {}", book != null ? "glossary" : "no-book state");
         final Node content = book != null
-                ? new NamesStyleView(messages, navigator, translating, glossary, modalHost).build(book.projectId())
+                ? new NamesStyleView(messages, navigator, translating, glossary, modalHost, toasts)
+                        .build(book.projectId())
                 : NoBookView.build(messages, navigator);
         body.getChildren().setAll(content);
     }

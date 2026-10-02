@@ -87,13 +87,14 @@ class NamesStyleModelActionsTest extends FxTestBase {
         final NamesStyleViewModel vm = viewModel(new DirectExecutor());
         interact(() -> settings.model().set("gemma3:12b"));
         final GlossaryEntry typed = hale(TermType.CHARACTER, Gender.MALE);
-        glossary.willAnswer(Result.ok(new GlossaryReviewReport(1, 1, List.of(typed))));
+        glossary.willAnswer(Result.ok(new GlossaryReviewReport(1, 1, 2, List.of(typed))));
 
         run(vm::review);
 
         assertThat(glossary.calls()).contains("review(p1)");
         assertThat(onFx(() -> List.copyOf(vm.rows()))).containsExactly(typed);
-        assertThat(onFx(() -> vm.notice().get().text())).isEqualTo("Model review done: 1 row removed, 1 row updated.");
+        assertThat(onFx(() -> vm.notice().get().text()))
+                .isEqualTo("Model review done: 1 row removed, 1 row updated, 2 targets suggested.");
         assertThat(onFx(() -> vm.busy().get())).isFalse();
     }
 

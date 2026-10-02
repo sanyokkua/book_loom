@@ -1873,6 +1873,20 @@
     -fx-padding: 4px 8px 4px 8px;
 }
 
+/* A target the model suggested and nobody confirmed is slanted and badged until the person accepts it. */
+.glossary-table .text-field:suggested {
+    -fx-font-style: italic;
+}
+
+.glossary-suggested-badge {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-text-fill: -color-info;
+    -fx-font-size: 10.5px;
+    -fx-font-weight: bold;
+    -fx-padding: 1px 6px 1px 6px;
+}
+
 .glossary-table .scroll-bar > .track {
     -fx-background-color: transparent;
 }
