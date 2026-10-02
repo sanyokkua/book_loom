@@ -995,6 +995,10 @@ public enum MessageKey {
     TRANSLATING_RECOVERY_GAVE_UP_TITLE("translating.recoveryGaveUpTitle"),
     /** Banner text once the run stopped retrying by itself; arguments: 0 when the outage began as {@code HH:mm}, 1 how many tries were made (a number). */
     TRANSLATING_RECOVERY_GAVE_UP_TEXT("translating.recoveryGaveUpText"),
+    /** Banner title once a model the server never loaded again made the run stop retrying by itself. */
+    TRANSLATING_MODEL_UNLOADED_TITLE("translating.modelUnloadedTitle"),
+    /** Banner text for {@link #TRANSLATING_MODEL_UNLOADED_TITLE}; arguments: 0 the provider's endpoint host or {@code none}, 1 how many tries were made (a number), 2 when the outage began as {@code HH:mm}. */
+    TRANSLATING_MODEL_UNLOADED_TEXT("translating.modelUnloadedText"),
     /** Button that flags the failing or stalled segment and lets the run go on. */
     TRANSLATING_SKIP_SEGMENT("translating.skipSegment"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_SKIP_SEGMENT}. */

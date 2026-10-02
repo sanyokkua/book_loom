@@ -128,6 +128,7 @@ class HttpErrorMapperTest {
     private static Stream<Arguments> httpStatusCases() {
         return Stream.of(
                         authenticationAndModelCases(),
+                        unloadedModelCases(),
                         rateAndFallbackCases(),
                         contextWindowCases(),
                         ollamaModelBodyCases())
@@ -151,6 +152,25 @@ class HttpErrorMapperTest {
                         ProviderKind.OLLAMA,
                         HttpErrorMapper.CallPurpose.DISCOVERY,
                         ErrorCode.modelNotFound));
+    }
+
+    // A local server that unloaded an idle model answers the chat with a refusal, which loading the model fixes: it is
+    // modelUnavailable, which a run waits through by itself for a while, never a validation failure of the request.
+    private static Stream<Arguments> unloadedModelCases() {
+        return Stream.of(
+                chatStatus(400, "{\"error\":\"Model unloaded\"}", ErrorCode.modelUnavailable),
+                chatStatus(400, "{\"error\":{\"message\":\"Model is unloaded.\"}}", ErrorCode.modelUnavailable),
+                chatStatus(
+                        404,
+                        "{\"error\":\"No models loaded. Please load a model in the developer page.\"}",
+                        ErrorCode.modelUnavailable),
+                chatStatus(400, "{\"error\":\"model 'gemma' is not loaded\"}", ErrorCode.modelUnavailable),
+                statusCase(
+                        400,
+                        "{\"error\":\"Model unloaded\"}",
+                        ProviderKind.OPENAI_COMPATIBLE,
+                        HttpErrorMapper.CallPurpose.DISCOVERY,
+                        ErrorCode.validation));
     }
 
     private static Stream<Arguments> ollamaModelBodyCases() {

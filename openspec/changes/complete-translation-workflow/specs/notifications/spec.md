@@ -175,7 +175,7 @@ leave it for later. Retry now redoes the one segment that was interrupted, so no
 #### Scenario: An unloaded model shows the provider-error state
 
 - **WHEN** LM Studio answers `400` `{"error":"Model unloaded"}` for `ch7 · p41` and the run pauses with
-  `ErrorCode.validation`
+  `ErrorCode.modelUnavailable`
 - **THEN** the translating screen shows the provider-error banner with Retry now, Skip segment, Open provider settings and Stay paused
 - **AND** no dialog is opened
 
@@ -222,8 +222,7 @@ The application SHALL choose a failure's surface from the typed code it carries,
 - `unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable` and
   `missingCredential` reaching a run SHALL be shown as the run's provider-error state, naming the code, the run paused
   and resumable, not ended;
-- `validation` answered by a model call during a run — a provider refusing the request, such as LM Studio's
-  `Model unloaded` — SHALL likewise be shown as the provider-error state naming that code, the run paused;
+- `validation` answered by a model call during a run — a provider refusing the request — SHALL likewise be shown as the provider-error state naming that code, the run paused;
 - `contextWindow` and `emptyCompletion` SHALL flag the segment they were returned for, shown in the review list with
   that finding, and SHALL NOT pause or end the run or open a dialog;
 - `cancelled` SHALL be shown as the run's stopped state, with no dialog and no message of error severity;
@@ -269,7 +268,7 @@ screen decides for itself.
 
 #### Scenario: A provider refusal answered as validation takes the provider-error state
 
-- **WHEN** a run's model call is answered `400` `{"error":"Model unloaded"}`, which the client reports as
+- **WHEN** a run's model call is answered `400` `{"error":"invalid request"}`, which the client reports as
   `ErrorCode.validation`
 - **THEN** the run is paused and the translating screen shows its provider-error state naming `validation`, with Retry
   now offered

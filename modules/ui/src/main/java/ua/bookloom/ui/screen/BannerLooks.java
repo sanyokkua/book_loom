@@ -157,16 +157,39 @@ final class BannerLooks {
         }
         final Offer offered = state != RunState.PAUSED ? Offer.SETTINGS_ONLY : offer ? Offer.PROVIDER : Offer.NONE;
         if (recovery != null && recovery.status() == RecoveryWaiting.Status.GAVE_UP) {
-            final String text = messages.get(
-                    MessageKey.TRANSLATING_RECOVERY_GAVE_UP_TEXT, hhmm(recovery.downSince()), recovery.attempt());
+            return gaveUpLook(provider, recovery, offered);
+        }
+        return new Look("⛔", ERR, provider.error().title(), providerText(provider), offered);
+    }
+
+    // An unloaded model is named as what the person must do; any other outage by how long it lasted.
+    private Look gaveUpLook(final RunNotice.ProviderError provider, final RecoveryState recovery, final Offer offered) {
+        if (provider.error().code() == ErrorCode.modelUnavailable) {
             return new Look(
                     "⛔",
                     ERR,
-                    messages.get(MessageKey.TRANSLATING_RECOVERY_GAVE_UP_TITLE),
-                    text + "\n" + providerText(provider),
+                    messages.get(MessageKey.TRANSLATING_MODEL_UNLOADED_TITLE),
+                    unloadedText(provider, recovery),
                     offered);
         }
-        return new Look("⛔", ERR, provider.error().title(), providerText(provider), offered);
+        final String text = messages.get(
+                MessageKey.TRANSLATING_RECOVERY_GAVE_UP_TEXT, hhmm(recovery.downSince()), recovery.attempt());
+        return new Look(
+                "⛔",
+                ERR,
+                messages.get(MessageKey.TRANSLATING_RECOVERY_GAVE_UP_TITLE),
+                text + "\n" + providerText(provider),
+                offered);
+    }
+
+    // A server that answers but has no model loaded is the person's to fix: the words say what to do, not that it is
+    // down.
+    private String unloadedText(final RunNotice.ProviderError provider, final RecoveryState recovery) {
+        return messages.get(
+                MessageKey.TRANSLATING_MODEL_UNLOADED_TEXT,
+                provider.endpointHost().orElse(NONE),
+                recovery.attempt(),
+                hhmm(recovery.downSince()));
     }
 
     private String recoveryText(final RecoveryState recovery) {

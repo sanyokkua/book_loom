@@ -45,6 +45,12 @@ public final class PauseDecider {
         FAIL
     }
 
+    /** The wakes an outage of a kind with no cap may make: as many as {@code RecoverySchedule} allows. */
+    public static final int UNCAPPED_WAKES = Integer.MAX_VALUE;
+
+    /** The wakes one outage of an unloaded model may make before the person has to load it. */
+    public static final int UNLOADED_MODEL_WAKES = 6;
+
     /**
      * How a run paused on an error gets going again, and how many such pauses one step may cause before it is flagged.
      * Kept apart from {@link Route} because it matters only for {@link Route#PAUSE_OR_FAIL}.
@@ -56,26 +62,36 @@ public final class PauseDecider {
          * outage is not the step's fault: it spends a budget of its own, large enough that only calls made after a probe
          * found the provider reachable again use it up.
          */
-        OUTAGE(true, 10),
+        OUTAGE(true, 10, UNCAPPED_WAKES),
 
         /** A call ran out of time. The run waits and tries again by itself, and the step's own budget is spent. */
-        STALL(true, 2),
+        STALL(true, 2, UNCAPPED_WAKES),
 
         /** An unexpected failure inside the run. The run waits and tries again by itself a few times. */
-        FAULT(true, 3),
+        FAULT(true, 3, UNCAPPED_WAKES),
 
         /**
-         * Something only the person can fix (a credential, a missing or unloaded model, a rejected request): the run
-         * waits for them, because retrying by itself would flag the rest of the book one segment at a time.
+         * The server has no model loaded — LM Studio unloaded an idle model, or a just-in-time load was evicted. The
+         * next request often loads it again, so the run waits and tries by itself like an outage, which is not the
+         * step's fault either; but a model nobody loads never comes back, so after {@link #UNLOADED_MODEL_WAKES}
+         * wakes the run waits for the person to load it.
          */
-        PERSON(false, 2);
+        UNLOADED_MODEL(true, 10, UNLOADED_MODEL_WAKES),
+
+        /**
+         * Something only the person can fix (a credential, a missing model, a rejected request): the run waits for
+         * them, because retrying by itself would flag the rest of the book one segment at a time.
+         */
+        PERSON(false, 2, 0);
 
         private final boolean automatic;
         private final int pausesBeforeFlagging;
+        private final int wakesPerOutage;
 
-        Recovery(final boolean automatic, final int pausesBeforeFlagging) {
+        Recovery(final boolean automatic, final int pausesBeforeFlagging, final int wakesPerOutage) {
             this.automatic = automatic;
             this.pausesBeforeFlagging = pausesBeforeFlagging;
+            this.wakesPerOutage = wakesPerOutage;
         }
 
         /**
@@ -94,6 +110,15 @@ public final class PauseDecider {
          */
         public int pausesBeforeFlagging() {
             return pausesBeforeFlagging;
+        }
+
+        /**
+         * How many wakes one outage of this kind may make before the run waits for the person.
+         *
+         * @return zero for a kind that never wakes, {@link #UNCAPPED_WAKES} for one only the outage's length limits
+         */
+        public int wakesPerOutage() {
+            return wakesPerOutage;
         }
     }
 
@@ -138,9 +163,9 @@ public final class PauseDecider {
                     case unreachable, upstream, rateLimited -> Recovery.OUTAGE;
                     case timeout -> Recovery.STALL;
                     case internal -> Recovery.FAULT;
+                    case modelUnavailable -> Recovery.UNLOADED_MODEL;
                     case auth,
                             modelNotFound,
-                            modelUnavailable,
                             missingCredential,
                             validation,
                             emptyCompletion,

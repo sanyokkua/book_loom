@@ -43,6 +43,12 @@ public final class ScriptedChatModel implements ChatModel {
         return this;
     }
 
+    /** Scripts the same answer for the next {@code times} requests. */
+    public ScriptedChatModel answerTimes(final int times, final Result<ChatResponse> result) {
+        java.util.stream.IntStream.range(0, times).forEach(ignored -> answer(result));
+        return this;
+    }
+
     public ScriptedChatModel answerTo(final String responseFormatName, final Result<ChatResponse> result) {
         Objects.requireNonNull(responseFormatName, "responseFormatName");
         Objects.requireNonNull(result, "result");

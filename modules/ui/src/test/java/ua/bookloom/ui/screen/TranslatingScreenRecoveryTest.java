@@ -29,18 +29,30 @@ class TranslatingScreenRecoveryTest extends TranslatingScreenTestBase {
     private static final AppError UNREACHABLE = AppError.of(
             ErrorCode.unreachable, "Model server unreachable", "Nothing is listening.", "endpointHost=localhost", null);
 
+    private static final AppError UNLOADED = AppError.of(
+            ErrorCode.modelUnavailable,
+            "Provider model is not loaded",
+            "The provider has no model loaded to answer the request.",
+            "httpStatus=400, endpointHost=localhost:1234",
+            null);
+
     private void waitForProvider(final RecoveryWaiting.Status status, final int attempt, final long secondsLeft) {
+        waitForProvider(UNREACHABLE, status, attempt, secondsLeft);
+    }
+
+    private void waitForProvider(
+            final AppError error, final RecoveryWaiting.Status status, final int attempt, final long secondsLeft) {
         mirror().publishRunStarted("Frankenstein.epub");
         mirror().publishProgress(ProgressFixtures.progress(7, 11, 78, 0, 22));
         mirror().publishRunState(RunState.PAUSED);
-        mirror().review().publishProviderError(UNREACHABLE);
+        mirror().review().publishProviderError(error);
         mirror().review()
                 .publishRecovery(new RecoveryState(
                         status,
                         attempt,
                         LocalTime.of(2, 14),
                         status == RecoveryWaiting.Status.WAITING ? Instant.parse("2026-10-02T03:00:00Z") : null,
-                        ErrorCode.unreachable,
+                        error.code(),
                         secondsLeft));
         WaitForAsyncUtils.waitForFxEvents();
     }
@@ -91,5 +103,20 @@ class TranslatingScreenRecoveryTest extends TranslatingScreenTestBase {
         assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS, STAY);
         assertThat(button("translating-resume").getText()).isEqualTo("Resume");
         assertThat(labelText("shell-run-state")).isEqualTo("Provider error");
+    }
+
+    // IF a model nobody loads read like a provider outage, THEN the person would wait for a server that is already up.
+    @Test
+    void banner_unloadedModelGaveUp_asksThePersonToLoadItAndResume() {
+        showTranslating();
+
+        waitForProvider(UNLOADED, RecoveryWaiting.Status.GAVE_UP, 6, 0);
+
+        assertThat(labelText("translating-banner-title")).isEqualTo("The model is not available");
+        assertThat(labelText("translating-banner-text"))
+                .contains("load it in the provider at localhost:1234 and press Resume")
+                .contains("6 tries since 02:14");
+        assertThat(required("translating-banner").getStyleClass()).contains("banner-err");
+        assertThat(shownActions()).containsExactly(RETRY, SKIP, SETTINGS, STAY);
     }
 }

@@ -1272,8 +1272,12 @@ that error:
 
 - the model call answers, after the retry policy is exhausted, `ErrorCode.unreachable`, `timeout`, `auth`,
   `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable` or `missingCredential`;
-- the model call itself answers `ErrorCode.validation` — the provider refusing the request, such as an HTTP `400`
-  carrying LM Studio's `Model unloaded`.
+- the model call itself answers `ErrorCode.validation` — the provider refusing the request as invalid.
+
+A chat reply of HTTP `400` or `404` whose body says the server has no model loaded — LM Studio's `Model unloaded`,
+`Model is unloaded`, `No models loaded`, or a model "not loaded" — SHALL be classified `ErrorCode.modelUnavailable`, not
+`validation`: loading the model fixes it, which the resume capability's "Recover from a provider error by itself" waits
+for.
 
 IF the model call throws or answers `ErrorCode.internal` or any code this requirement and "Flag a segment whose reply
 cannot be used, and continue" do not name — `ErrorCode.busy` and `ErrorCode.discoveryFailed` included, which a run's
@@ -1305,7 +1309,7 @@ than pausing it; a code a run's call should never answer means the same. Only a 
 
 - **WHEN** pause on error is enabled and LM Studio answers `400` with the body `{"error":"Model unloaded"}` for the second
   of 40 segments
-- **THEN** the job pauses with `ErrorCode.validation`, with 0 flagged and 39 pending
+- **THEN** the job pauses with `ErrorCode.modelUnavailable`, with 0 flagged and 39 pending
 
 #### Scenario: An unreachable model fails the job
 

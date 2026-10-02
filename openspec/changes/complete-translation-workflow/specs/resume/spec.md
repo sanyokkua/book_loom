@@ -385,8 +385,7 @@ act on. "Resume and stop pausing" means clearing the pause points, then resuming
 
 WHERE pause on error is enabled, IF a model call fails with a provider error that survived the retry policy —
 `ErrorCode.unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable` or
-`missingCredential` — or the model call itself answers `ErrorCode.validation` (a provider refusing the request, such as
-LM Studio's `Model unloaded`), THEN the system SHALL pause with that error, keep every count as it stood, and on resume
+`missingCredential` — or the model call itself answers `ErrorCode.validation` (a provider refusing the request), THEN the system SHALL pause with that error, keep every count as it stood, and on resume
 make the interrupted call again from its first request — except a judge call answered `timeout` or `unreachable`,
 which does not pause the run: its segments are flagged as the `quality-gates` capability's "Flag a segment the judge
 could not judge" says.
@@ -394,10 +393,10 @@ could not judge" says.
 The system SHALL count the pauses of each step — a segment's draft, a segment's decision, or a chunk's judge call — by
 the kind of recovery its error needs, and SHALL, on the failure past that kind's budget, flag the step's segment (for a
 chunk's judge call, decide the chunk as if the judge were unavailable) with the error and go on with the run: two
-pauses for `timeout` and for the codes only a person can fix (`auth`, `modelNotFound`, `modelUnavailable`,
-`missingCredential`, `validation`); three for `ErrorCode.internal`, which a step answers when it throws instead of
-answering; and ten for an outage (`unreachable`, `upstream`, `rateLimited`), which is not the step's fault and so never
-spends the step's own budget. WHILE the run is paused on such an error, the job SHALL offer to skip the step: the run
+pauses for `timeout` and for the codes only a person can fix (`auth`, `modelNotFound`, `missingCredential`,
+`validation`); three for `ErrorCode.internal`, which a step answers when it throws instead of answering; and ten for an
+outage (`unreachable`, `upstream`, `rateLimited`) and for an unloaded model (`modelUnavailable`), which are not the
+step's fault and so never spend the step's own budget. WHILE the run is paused on such an error, the job SHALL offer to skip the step: the run
 resumes, the step's segment is flagged with the error without its call being sent again, and the run goes on
 (`TranslationJob.skipSegment`).
 
@@ -445,11 +444,11 @@ three times and then flagged, so one bad segment cannot end a night's run.
 - **WHEN** the person presses Stay paused on the same pause
 - **THEN** the run stays paused and no request is sent
 
-#### Scenario: A provider refusal answered as validation pauses too
+#### Scenario: An unloaded model pauses too
 
 - **WHEN** pause on error is enabled and, on the Fast dial, LM Studio answers `400` with `{"error":"Model unloaded"}`
   for the second of three segments
-- **THEN** the job pauses with `ErrorCode.validation`, with 1 accepted, 0 flagged and 2 pending
+- **THEN** the job pauses with `ErrorCode.modelUnavailable`, with 1 accepted, 0 flagged and 2 pending
 - **AND** the window shows the provider-error state naming that error with Retry now
 
 #### Scenario: A step that throws is retried, then flagged
@@ -487,7 +486,7 @@ three times and then flagged, so one bad segment cannot end a night's run.
 ### Requirement: Recover from a provider error by itself
 
 WHILE a run is paused on an error whose recovery is automatic — an outage (`unreachable`, `upstream`, `rateLimited`),
-a `timeout`, or an `internal` error a step answered — and the step has pauses of that kind left, the system SHALL wait
+a `timeout`, an `internal` error a step answered, or an unloaded model (`modelUnavailable`) — and the step has pauses of that kind left, the system SHALL wait
 and resume by itself, in every review mode, without the person: it SHALL wait 15 s, 30 s, 1 min, 2 min, 5 min and
 10 min before the first six wakes and 10 min before every later one; at each wake it SHALL probe the provider (the
 connection and the model list, which must still offer the run's model) and resume as soon as a probe passes, the
@@ -495,8 +494,11 @@ interrupted call being made again; a failed probe SHALL only extend the wait. An
 until a model call answers again; once it has lasted 12 hours (`RecoverySchedule.MAX_OUTAGE`) the system SHALL stop
 waking and wait for the person. The person's Retry now, Skip segment and Resume SHALL end the wait at once and start the
 schedule afresh; Pause SHALL hold the run for the person, after which no wake resumes it; Stop SHALL end the run at once.
-A pause for review, a pause the person asked for, and a pause on an error only a person can fix (`auth`,
-`modelNotFound`, `modelUnavailable`, `missingCredential`, `validation`) SHALL NOT resume by itself.
+An unloaded model SHALL wake at most six times in one outage (`PauseDecider.UNLOADED_MODEL_WAKES`), counted across its
+pauses until a model call answers again, after which the system SHALL announce that it gave up and wait for the person,
+and the window SHALL say "The model is not available — load it in the provider at <host> and press Resume". A pause for
+review, a pause the person asked for, and a pause on an error only a person can fix (`auth`, `modelNotFound`,
+`missingCredential`, `validation`) SHALL NOT resume by itself.
 
 The system SHALL announce each step of the recovery to its listeners (`RecoveryWaiting`: waiting with the next try's
 time and attempt, gave up, or held) and log at INFO the outage's start, each wait, each probe's result and the resume
@@ -506,7 +508,9 @@ after N minutes.
 morning or visibly retrying with a clear reason, never silently stuck).
 In plain words: a local server that restarts, a laptop that loses its network for a while, or a provider that rate
 limits are common over a night. The run waits, checks the server now and then without asking the model anything, and
-goes on by itself; a wrong key or an unloaded model is not fixed by waiting, so those still wait for the person.
+goes on by itself; a wrong key or a missing model is not fixed by waiting, so those still wait for the person. A local
+server that unloaded an idle model usually loads it again on the next request, so the run tries six times — about
+nineteen minutes — and then asks the person to load it, instead of probing a model nobody loads all night.
 
 #### Scenario: A twenty-minute outage resumes at the seventh wake
 
@@ -532,10 +536,22 @@ goes on by itself; a wrong key or an unloaded model is not fixed by waiting, so 
 - **WHEN** the person presses Pause while the run waits for its second wake
 - **THEN** the recovery is announced as held, no wake resumes the run, and the person's Resume continues it
 
-#### Scenario: An unloaded model waits for the person
+#### Scenario: A rejected request waits for the person
 
 - **WHEN** the draft is answered `ErrorCode.validation`
 - **THEN** the run pauses and never wakes by itself
+
+#### Scenario: An unloaded model loads again at the first wake
+
+- **WHEN** the draft of the second of three segments is answered `ErrorCode.modelUnavailable` once and the probe passes
+- **THEN** the run wakes once, 15 s after the failure, resumes, and ends Completed with three accepted
+
+#### Scenario: A model that never loads gives up after six wakes
+
+- **WHEN** every draft call is answered `ErrorCode.modelUnavailable` while every probe passes
+- **THEN** the run wakes six times, pausing seven times in all, flags nothing, and announces that it gave up after the
+  sixth wake
+- **AND** the window shows "The model is not available" asking the person to load it and press Resume
 
 ### Requirement: Cancel a job
 

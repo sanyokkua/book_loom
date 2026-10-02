@@ -132,8 +132,8 @@ final class CallTracker {
     }
 
     /**
-     * Publishes why a run paused: on an error, its notice and then the error, whatever its code, so a model that was
-     * unloaded and is reported as a validation failure reaches the provider-error state too; on a review pause, the
+     * Publishes why a run paused: on an error, its notice and then the error, whatever its code, so a request the provider
+     * refused as invalid reaches the provider-error state too; on a review pause, the
      * segment it stopped at.
      *
      * @param paused the pause the engine reported

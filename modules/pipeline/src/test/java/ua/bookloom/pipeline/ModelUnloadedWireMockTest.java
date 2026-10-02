@@ -57,7 +57,7 @@ class ModelUnloadedWireMockTest {
 
     // Flagging the 400 would burn every remaining paragraph of the book on a model that is merely unloaded.
     @Test
-    void run_secondRequestModelUnloaded_pausesWithValidationAndKeepsThirtyNinePending() {
+    void run_secondRequestModelUnloaded_pausesWithModelUnavailableAndKeepsThirtyNinePending() {
         final WireMockProvider provider = new WireMockProvider(ProviderKind.OPENAI_COMPATIBLE);
         started = provider;
         provider.stubSequence(List.of(
@@ -77,7 +77,7 @@ class ModelUnloadedWireMockTest {
         translation.cancel();
 
         assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
-        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.validation);
+        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.modelUnavailable);
         assertThat(pause.progress())
                 .extracting(p -> p.accepted(), p -> p.flagged(), p -> p.pending())
                 .containsExactly(1, 0, PARAGRAPHS - 1);

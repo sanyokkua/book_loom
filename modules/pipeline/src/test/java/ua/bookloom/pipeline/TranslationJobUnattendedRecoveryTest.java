@@ -204,7 +204,7 @@ class TranslationJobUnattendedRecoveryTest {
                 .containsOnly(fault);
     }
 
-    // An unloaded model answers validation for every segment; waking by itself would flag the rest of the book.
+    // A request the provider rejects is rejected again for every segment; waking by itself would flag the whole book.
     @Test
     void run_validationError_waitsForThePersonWithoutWaking() {
         final ScriptedChatModel model = replies("ONE.").answer(error(ErrorCode.validation));
@@ -218,6 +218,66 @@ class TranslationJobUnattendedRecoveryTest {
         assertThat(pauses()).hasSize(1);
         assertThat(waits()).isEmpty();
         assertThat(waited).hasValue(0);
+    }
+
+    // LM Studio unloaded the idle model; the first wake's probe finds the server up and the next request loads it.
+    @Test
+    void run_modelUnloadedOnce_resumesByItselfAtTheFirstWake() {
+        final ScriptedChatModel model = replies("ONE.")
+                .answer(error(ErrorCode.modelUnavailable))
+                .answer(target("TWO."))
+                .answer(target("THREE."));
+        final TranslationJobImpl job = job(model, wake -> {});
+        job.recoverWith(downFor(Duration.ZERO));
+
+        final JobReport report = report(job.run());
+
+        assertThat(report)
+                .extracting(JobReport::end, JobReport::accepted, JobReport::flagged)
+                .containsExactly(JobState.COMPLETED, 3, 0);
+        assertThat(waits()).extracting(RecoveryWaiting::attempt).containsExactly(1);
+        assertThat(clock.sinceStart()).isEqualTo(Duration.ofSeconds(15));
+    }
+
+    // The server answers every probe but never loads the model: six wakes, then the person, with nothing flagged.
+    @Test
+    void run_modelThatNeverLoads_givesUpAfterSixWakesWithoutFlagging() {
+        final ScriptedChatModel model = replies("ONE.").answerTimes(7, error(ErrorCode.modelUnavailable));
+        final TranslationJobImpl job = job(model, wake -> {});
+        job.recoverWith(downFor(Duration.ZERO));
+        job.subscribe(event -> stopOnHold(job, event));
+
+        final JobReport report = report(job.run());
+
+        assertThat(report).extracting(JobReport::end, JobReport::flagged).containsExactly(JobState.CANCELLED, 0);
+        assertThat(waits())
+                .extracting(RecoveryWaiting::status, RecoveryWaiting::attempt)
+                .last()
+                .isEqualTo(org.assertj.core.groups.Tuple.tuple(RecoveryWaiting.Status.GAVE_UP, 6));
+        assertThat(probes).hasValue(6);
+        assertThat(pauses()).hasSize(7);
+        assertThat(model.requests()).hasSize(8);
+    }
+
+    // The model list no longer offers the model: every probe fails, and after six wakes the person loads it.
+    @Test
+    void run_modelMissingFromEveryProbe_givesUpAfterSixWakes() {
+        final ScriptedChatModel model = replies("ONE.").answer(error(ErrorCode.modelUnavailable));
+        final TranslationJobImpl job = job(model, wake -> {});
+        job.recoverWith(() -> {
+            probes.incrementAndGet();
+            return Result.err(AppError.of(ErrorCode.modelUnavailable, "Not offered", "The model is not listed."));
+        });
+        job.subscribe(event -> stopOnHold(job, event));
+
+        final JobReport report = report(job.run());
+
+        assertThat(report.end()).isEqualTo(JobState.CANCELLED);
+        assertThat(waits().getLast())
+                .extracting(RecoveryWaiting::status, RecoveryWaiting::attempt, RecoveryWaiting::probeFailure)
+                .containsExactly(RecoveryWaiting.Status.GAVE_UP, 6, ErrorCode.modelUnavailable);
+        assertThat(clock.sinceStart()).isEqualTo(Duration.parse("PT18M45S"));
+        assertThat(model.requests()).hasSize(2);
     }
 
     // A fault before any segment has nothing to retry or flag: the run ends Failed and says why.

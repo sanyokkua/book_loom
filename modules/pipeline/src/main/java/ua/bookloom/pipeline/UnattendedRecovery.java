@@ -16,13 +16,15 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.ProviderProbe;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
+import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
  * Waits through a pause on a provider error the run recovers from by itself, so a run left alone overnight is in the
  * morning either finished or visibly waiting with its reason: it sleeps by {@link RecoverySchedule}, probes the
  * provider at each wake and resumes as soon as a probe passes. A failed probe only extends the wait; a person's Retry
  * now, Skip segment or Resume ends it at once and restarts the schedule; Pause holds the run for the person; Stop ends
- * it. The outage — when it began and how many wakes it took — lasts until a model call answers again.
+ * it. The outage — when it began and how many wakes it took — lasts until a model call answers again. An unloaded model
+ * wakes at most {@link PauseDecider#UNLOADED_MODEL_WAKES} times in one outage, after which the person loads it.
  *
  * <p>Used from the job thread only, apart from {@link #probeWith(ProviderProbe)}.
  */
@@ -36,6 +38,7 @@ final class UnattendedRecovery {
     private volatile ProviderProbe probe = ProviderProbe.ASSUME_REACHABLE;
     private @Nullable Instant downSince;
     private int wakes;
+    private int cappedWakes;
     private @Nullable ErrorCode lastProbe;
 
     UnattendedRecovery(
@@ -76,6 +79,7 @@ final class UnattendedRecovery {
         if (downSince == null) {
             downSince = now;
             wakes = 0;
+            cappedWakes = 0;
             log.info("Provider outage began code={} segmentId={}", error.code(), paused.segmentId());
         }
         control.beginRecovery();
@@ -88,33 +92,50 @@ final class UnattendedRecovery {
 
     private PauseWait waitThrough(final AppError error, final JobProgress progress, final Instant since) {
         lastProbe = null;
+        final int cap = PauseDecider.recovery(error.code()).wakesPerOutage();
         while (true) {
             final Instant now = clock.instant();
             final Optional<Duration> delay = RecoverySchedule.delayBefore(wakes + 1, Duration.between(since, now));
-            if (delay.isEmpty()) {
-                log.warn(
-                        "Provider down since {} for over {}; waiting for the person",
-                        since,
-                        RecoverySchedule.MAX_OUTAGE);
+            if (delay.isEmpty() || cappedWakes >= cap) {
+                logGivingUp(error, since, cap);
                 return holdFor(RecoveryWaiting.Status.GAVE_UP, error, progress, since, lastProbe);
             }
             announce(error, progress, since, now.plus(delay.get()));
-            final Optional<PauseWait> ended = wake(delay.get(), error, progress, since);
+            final Optional<PauseWait> ended = wake(delay.get(), error, progress, since, cap);
             if (ended.isPresent()) {
                 return ended.get();
             }
         }
     }
 
+    private void logGivingUp(final AppError error, final Instant since, final int cap) {
+        if (cappedWakes >= cap) {
+            log.warn(
+                    "No model loaded after {} wakes code={}; waiting for the person to load it and resume",
+                    cappedWakes,
+                    error.code());
+            return;
+        }
+        log.warn("Provider down since {} for over {}; waiting for the person", since, RecoverySchedule.MAX_OUTAGE);
+    }
+
     // One wait and its probe: empty to wait again, or how the pause ended.
+    // A capped kind counts its wakes apart, so an outage that changes kind is capped only for what the cap is about.
     private Optional<PauseWait> wake(
-            final Duration delay, final AppError error, final JobProgress progress, final Instant since) {
+            final Duration delay,
+            final AppError error,
+            final JobProgress progress,
+            final Instant since,
+            final int cap) {
         final Optional<PauseWait> settled =
                 settle(control.awaitWake(timer.nanosToWait(delay)), error, progress, since, lastProbe);
         if (settled.isPresent()) {
             return settled;
         }
         wakes++;
+        if (cap != PauseDecider.UNCAPPED_WAKES) {
+            cappedWakes++;
+        }
         lastProbe = probeOnce();
         return lastProbe == null ? resumeAfterProbe(error, progress, since) : Optional.empty();
     }
@@ -203,5 +224,6 @@ final class UnattendedRecovery {
     private void forget() {
         downSince = null;
         wakes = 0;
+        cappedWakes = 0;
     }
 }
