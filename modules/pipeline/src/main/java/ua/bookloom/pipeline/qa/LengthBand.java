@@ -16,6 +16,9 @@ public record LengthBand(double lower, double upper) {
 
     private static final Set<Script> CJK = Set.of(Script.HAN, Script.JAPANESE, Script.HANGUL);
     private static final int SHORT_SOURCE_CHARS = 25;
+    private static final int MEDIUM_SOURCE_CHARS = 60;
+    private static final double MEDIUM_LOWER_FACTOR = 0.85;
+    private static final double MEDIUM_UPPER_FACTOR = 1.25;
     private static final LengthBand LATIN_TO_CYRILLIC = new LengthBand(0.7, 1.8);
     private static final LengthBand SAME_SCRIPT = new LengthBand(0.6, 1.7);
     private static final LengthBand LATIN_TO_CJK = new LengthBand(0.2, 1.0);
@@ -52,12 +55,19 @@ public record LengthBand(double lower, double upper) {
     }
 
     /**
-     * Widens the band for a short source, whose ratio swings widely.
+     * Widens the band for a short source, whose ratio swings widely: a title or a verse line loses its articles and
+     * auxiliaries in a language without them and comes out much shorter, though nothing is missing.
      *
      * @param sourceChars the source's display-text length in characters
-     * @return this band, or with the lower bound halved and the upper doubled when {@code sourceChars} is under 25
+     * @return this band; with the lower bound halved and the upper doubled when {@code sourceChars} is under 25; with
+     *     the lower bound at 0.85 times and the upper at 1.25 times when it is under 60
      */
     public LengthBand widenedFor(final int sourceChars) {
-        return sourceChars < SHORT_SOURCE_CHARS ? new LengthBand(lower / 2, upper * 2) : this;
+        if (sourceChars < SHORT_SOURCE_CHARS) {
+            return new LengthBand(lower / 2, upper * 2);
+        }
+        return sourceChars < MEDIUM_SOURCE_CHARS
+                ? new LengthBand(lower * MEDIUM_LOWER_FACTOR, upper * MEDIUM_UPPER_FACTOR)
+                : this;
     }
 }

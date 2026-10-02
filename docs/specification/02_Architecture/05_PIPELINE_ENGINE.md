@@ -154,7 +154,9 @@ Each soft check is made **testable** by an explicit threshold. Defaults:
 | glossary compliance             | every locked in-chunk term present in the target per its dictionary rendering                                                | binary per term; margin = fraction of locked terms honoured                                                                     |
 
 **Omission length-ratio bands** (`target/source` char ratio; widen the lower/upper bound outward by ×0.5 / ×2 for
-**short** source segments `< 25 chars`):
+**short** source segments `< 25 chars`, and by ×0.85 / ×1.25 for those `< 60 chars`). Inside the band the check also
+fails a target with more `letter + space + . or ,` spots than its source (a dropped word's gap), or — for a source of
+8+ words in a spaced script — under 0.55 target words per source word while the char ratio is under 0.85:
 
 | Language-pair class           | Band `[lo, hi]` |
 |-------------------------------|-----------------|

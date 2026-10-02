@@ -353,7 +353,8 @@ turning it on again makes the untranslated ones pending once more.
 
 WHEN a run reaches a PENDING segment whose visible text — its masked text with every `⟦gN⟧` token removed, normalized to
 NFC, with every Unicode separator, control and format character dropped — is empty, holds no letter (only digits,
-punctuation and symbols), is an upper-case Roman numeral with at most punctuation around it, or is a single character,
+punctuation and symbols), is an upper-case Roman numeral with at most punctuation around it, is a single character, or
+is an equation of one-letter symbols (an equals sign and no run of two or more letters, as `F = G × (m₁ × m₂) / r²`),
 the system SHALL decide it ACCEPTED with its own text as the target, through the chunk's gate, with the path `verbatim`
 and no model call, no judge, no quality check and no finding. A segment whose only visible letters belong to a locked
 glossary name SHALL be decided the same way, written with the name's locked rendering. The system SHALL still announce

@@ -74,7 +74,9 @@ class LengthCheckTest {
             a name dropped before a comma | Vance said it slowly, and Nell wrote every word of it down in the log. \
             | Сказала це повільно, і , записала кожне слово в журнал на сторінці.
             half the words gone | When the sun rose over the hill the pendulum was still swinging slowly in the cold. \
-            | Коли зійшло сонцеееееееееееееееееееееее над пагорбоооооооооооооооом.
+            | Коли зійшло сонцеееееееееееее над пагорбоооооооооооом.
+            a closing sentence dropped | Don’t trust a single reading, Vance wrote in the margin. Trust the pattern. \
+            | Не довіряй жодному показанню, — написала Венс уmargin.
             """)
     void run_wordsMissingFromTheTarget_blocksWithOmissionFinding(
             final String name, final String source, final String target) {
@@ -93,6 +95,8 @@ class LengthCheckTest {
             a space before punctuation the source has too | Wait , he said , and then nothing more came out of his mouth at all. \
             | Зачекай , сказав він , і більше нічого не вийшло з його вуст узагалі.
             a short source is never counted | Mass and weight | Маса і вага
+            a verse line Ukrainian says in fewer words | A stone let go will find the ground, \
+            | Камінь, відпущений, знайде землю,
             """)
     void run_noWordMissing_passes(final String name, final String source, final String target) {
         final CheckResult result = LengthCheck.run(SoftCheckFixtures.length(source, target, "en", "uk"));

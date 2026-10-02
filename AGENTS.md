@@ -34,7 +34,7 @@ and every record its snapshot, repeated passages reuse the translation memory, t
 deferrals are kept as the run goes, and it pauses for review as the review mode says, announcing each segment and
 model call as events. The review desk acts on segments (accept, edit, revert, skip, apply a proposal, retry with the
 context the first draft saw), Max revises backwards after the last segment, export is checked per segment and writes
-the chosen side files, the command line refuses an existing destination before any model call and cancels cleanly, the
+the chosen side files, the command line refuses an existing destination before any model call, runs a book unattended with the window's outage recovery, writes what a stopped run translated and is the headless proof tool (`scripts/e2e-fixture.sh`), the
 review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam.
 
 Real-book hardening (group 15b, after a 3,700-segment Ollama run): every model call is bounded — the judge capped by its

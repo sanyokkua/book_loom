@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.qa;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,8 +31,19 @@ class LengthBandTest {
         assertThat(LengthBand.forPair("en", "uk").widenedFor(3)).isEqualTo(new LengthBand(0.35, 3.6));
     }
 
+    // A short line Ukrainian says compactly — "it has been falling night and day" → "вона падає ніч і день" (0.64),
+    // "Distance between the centres of mass" → "Відстань між центрами мас" (0.69) — is not an omission.
+    @ParameterizedTest
+    @CsvSource({"25", "36", "59"})
+    void widenedFor_underSixtyCharacters_lowersTheLowerBoundAndRaisesTheUpper(final int sourceChars) {
+        final LengthBand band = LengthBand.forPair("en", "uk").widenedFor(sourceChars);
+
+        assertThat(band.lower()).isCloseTo(0.595, within(1e-9));
+        assertThat(band.upper()).isCloseTo(2.25, within(1e-9));
+    }
+
     @Test
-    void widenedFor_twentyFiveCharacters_isUnchanged() {
-        assertThat(LengthBand.forPair("en", "uk").widenedFor(25)).isEqualTo(new LengthBand(0.7, 1.8));
+    void widenedFor_sixtyCharacters_isUnchanged() {
+        assertThat(LengthBand.forPair("en", "uk").widenedFor(60)).isEqualTo(new LengthBand(0.7, 1.8));
     }
 }

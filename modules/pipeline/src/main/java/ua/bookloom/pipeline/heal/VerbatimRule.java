@@ -28,7 +28,16 @@ public enum VerbatimRule {
     ROMAN_NUMERAL,
 
     /** A single visible character — a section letter {@code A}. */
-    SINGLE_CHARACTER;
+    SINGLE_CHARACTER,
+
+    /**
+     * An equation of one-letter symbols — {@code F = G × (m₁ × m₂) / r²}, {@code g = 9.81 m/s²}: every run of letters is
+     * one letter and an equals sign holds it together. A model echoes it, which the echo check then flags.
+     */
+    FORMULA;
+
+    /** A run of two or more letters: a word, which a formula holds none of. */
+    private static final Pattern WORD = Pattern.compile("\\p{L}{2,}");
 
     // Upper case only: lower-case runs of Roman letters are ordinary words too often ("mix", "vi", "di").
     private static final Pattern ROMAN = Pattern.compile("M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})");
@@ -52,7 +61,10 @@ public enum VerbatimRule {
         if (ROMAN.matcher(letters).matches() && hasNoDigit(visible)) {
             return ROMAN_NUMERAL;
         }
-        return visible.codePointCount(0, visible.length()) == 1 ? SINGLE_CHARACTER : null;
+        if (visible.codePointCount(0, visible.length()) == 1) {
+            return SINGLE_CHARACTER;
+        }
+        return visible.indexOf('=') >= 0 && !WORD.matcher(visible).find() ? FORMULA : null;
     }
 
     private static String lettersOf(final String text) {

@@ -31,6 +31,13 @@ final class LengthCheck {
     /** A source shorter than this many words swings too widely for a word ratio to mean anything. */
     static final int MIN_SOURCE_WORDS = 8;
 
+    /**
+     * The character ratio under which a low word ratio counts: a verse line Ukrainian says in half the words
+     * ({@code A stone let go will find the ground,} → {@code Камінь, відпущений, знайде землю,}) keeps about its length,
+     * a translation that dropped a phrase does not.
+     */
+    static final double MAX_CHAR_RATIO_FOR_WORDS = 0.85;
+
     private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’-]*");
 
     /** A letter, spaces, then a full stop or comma that ends the text or is followed by a space: a dropped word. */
@@ -54,14 +61,14 @@ final class LengthCheck {
             return CheckResult.fail(
                     LENGTH, "length ratio " + ratio + " outside [" + band.lower() + "," + band.upper() + "]");
         }
-        final Optional<String> omission = omission(input.sourceDisplayText(), input.targetDisplayText());
+        final Optional<String> omission = omission(input.sourceDisplayText(), input.targetDisplayText(), ratio);
         return omission.isPresent()
                 ? CheckResult.fail(LENGTH, omission.get())
                 : CheckResult.pass(LENGTH, marginWithinBand(ratio, band));
     }
 
     /** The note on words missing from {@code target}, or empty when none look missing. */
-    private static Optional<String> omission(final String source, final String target) {
+    private static Optional<String> omission(final String source, final String target, final double charRatio) {
         final int dangling = count(DANGLING_PUNCTUATION, target) - count(DANGLING_PUNCTUATION, source);
         if (dangling > 0) {
             log.debug("Length check: {} space(s) before punctuation the source does not have", dangling);
@@ -72,8 +79,15 @@ final class LengthCheck {
         }
         final int sourceWords = count(WORD, source);
         final int targetWords = count(WORD, target);
-        final boolean missing = sourceWords >= MIN_SOURCE_WORDS && targetWords < MIN_WORD_RATIO * sourceWords;
-        log.debug("Length check words source={} target={} missing={}", sourceWords, targetWords, missing);
+        final boolean missing = sourceWords >= MIN_SOURCE_WORDS
+                && targetWords < MIN_WORD_RATIO * sourceWords
+                && charRatio < MAX_CHAR_RATIO_FOR_WORDS;
+        log.debug(
+                "Length check words source={} target={} charRatio={} missing={}",
+                sourceWords,
+                targetWords,
+                charRatio,
+                missing);
         return missing
                 ? Optional.of("only " + targetWords + " words for a source of " + sourceWords
                         + " — words or a phrase may be missing")

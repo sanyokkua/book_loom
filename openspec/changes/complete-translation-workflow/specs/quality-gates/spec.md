@@ -365,11 +365,13 @@ decode loop without punishing ordinary repetition in prose, while a phrase said 
 The application SHALL fail the length-ratio check when target length divided by source length, in display-text
 characters, falls outside the band of the pair's script class — Latin → Cyrillic 0.7–1.8, same script 0.6–1.7,
 Latin → CJK 0.2–1.0, CJK → Latin 1.0–5.0, any other pair 0.5–2.5 — with the lower bound halved and the upper bound
-doubled when the source is shorter than 25 characters, and SHALL otherwise pass it with a margin of the distance to the
+doubled when the source is shorter than 25 characters, and the lower bound at 0.85 times and the upper at 1.25 times
+when it is shorter than 60, and SHALL otherwise pass it with a margin of the distance to the
 nearer bound divided by one tenth of the band's width, at most 1.0. Inside the band the check SHALL still fail when
 words look missing: when the target has more letter-word-followed-by-space-then-full-stop-or-comma spots (`помогою .`)
 than the source, or — for a source of at least 8 words, neither text in a script written without spaces — when the
-target has fewer than 0.55 words per source word. Its finding SHALL name which of the two it saw.
+target has fewer than 0.55 words per source word while its character ratio is under 0.85. Its finding SHALL name which
+of the two it saw.
 
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`.
@@ -378,8 +380,10 @@ added some; the band differs by writing system because Chinese is naturally much
 short segments get a wider band because one word more or less changes their ratio a lot. A ratio just inside the band
 passes, but with less confidence than one comfortably inside it. A dropped name or phrase can leave the character count
 inside the band, so the space left before a full stop and a word count far below the source's are read as well; 0.55
-sits well below any real pair's word ratio (English to Ukrainian runs about 0.8), so a faithful translation is never
-caught by it.
+sits well below any real pair's word ratio (English to Ukrainian runs about 0.8), and a verse line Ukrainian says in
+half the words keeps its length (`A stone let go will find the ground,` → `Камінь, відпущений, знайде землю,`), so a
+faithful translation is not caught by it; for the same reason a line under 60 characters gets a wider band
+(`it has been falling night and day` → `вона падає ніч і день`, 0.64, is no omission).
 
 #### Scenario: A space left before a full stop fails
 
