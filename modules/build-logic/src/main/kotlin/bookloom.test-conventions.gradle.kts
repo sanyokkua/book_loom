@@ -21,7 +21,8 @@ fun lib(alias: String) = catalog.findLibrary(alias).orElseThrow()
 
 fun bundle(alias: String) = catalog.findBundle(alias).orElseThrow()
 
-// --- The four local-only tag sets (design D5; `corpus` added by fix-document-round-trip-corpus-defects D6) ------
+// --- The local-only tag sets (design D5; `corpus` added by fix-document-round-trip-corpus-defects D6; `soak` by
+// the overnight-run work: a whole generated book under injected faults, about a minute a format) ------------------
 //
 // `liveLocal` needs a real Ollama / LM Studio, `promptEval` needs a real model plus an embedding scorer, `visual`
 // needs a pinned rendering environment, `corpus` needs a real, locally configured book corpus. None of the four
@@ -30,7 +31,7 @@ fun bundle(alias: String) = catalog.findBundle(alias).orElseThrow()
 //
 // The task name and the tag name are deliberately identical: `./gradlew liveLocal` runs tag `liveLocal`. That is
 // what makes the mechanism inspectable — `./gradlew tasks` shows the whole partition.
-val localOnlyTags = listOf("liveLocal", "promptEval", "visual", "corpus")
+val localOnlyTags = listOf("liveLocal", "promptEval", "visual", "corpus", "soak")
 
 // `slow` marks the heavy end-to-end classes (a whole book through the engine, the three-mode workspace run). It is
 // NOT local-only: `test` — and so `check`, pre-push and CI — still runs it. Only `fastTest`, the inner development
@@ -85,7 +86,7 @@ dependencies {
 // today that is `:app`'s `archTest`, which must be subject to exactly the same tag exclusions as `test`. A rule
 // that only ever configured the default task would leave a second, unfiltered execution path open.
 tasks.withType<Test>().configureEach {
-    // The four tagged tasks are registered below and configure `includeTags` for their own tag. They must NOT
+    // The local-only tagged tasks are registered below and configure `includeTags` for their own tag. They must NOT
     // also receive the exclusions: both actions mutate the same `JUnitPlatformOptions`, exclusion beats inclusion
     // in JUnit's filter algebra, and `liveLocal` would then match nothing — forever, and silently.
     if (name !in localOnlyTags) {
@@ -154,7 +155,7 @@ tasks.withType<Test>().matching { it.name == "test" || it.name == "fastTest" }.c
     maxParallelForks = testForks
 }
 
-// --- The four local-only tasks (design D5) -----------------------------------------------------------------------
+// --- The local-only tasks (design D5) ----------------------------------------------------------------------------
 //
 // Each includes exactly its own tag and is NOT wired into `check`. They run the same `test` source set as the
 // default task — the partition is by tag, not by directory, so a `liveLocal` case sits next to the WireMock test
@@ -175,6 +176,12 @@ localOnlyTags.forEach { tag ->
         // Deliberately no `dependsOn`/`finalizedBy` onto `check`, and no JaCoCo verification: these tests prove
         // behaviour against a real server or a pinned display, which is not the kind of evidence a merge gate can
         // reproduce (`06_TESTING_STRATEGY.md#coverage-traceability`).
+
+        if (tag == "soak") {
+            // A night's run in a minute logs too much at DEBUG to be worth keeping; its numbers are INFO lines.
+            systemProperty("BOOKLOOM_LOG_LEVEL", "INFO")
+            outputs.upToDateWhen { false }
+        }
 
         if (tag in neverUpToDateTags) {
             // The evidence of a `corpus` run is its report file, never the exit code (design.md D6, trap 1): the

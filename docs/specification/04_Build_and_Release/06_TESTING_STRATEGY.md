@@ -209,7 +209,7 @@ place it in a **separate `liveLocal` source set** with its own task. Concretely,
 `useJUnitPlatform { excludeTags("liveLocal", "promptEval", "visual") }`, and separate registered tasks (`liveLocal`,
 `promptEval`, `visual`) each `includeTags(...)` their own tag, are **not** wired into `check`, and are invoked manually
 (`./gradlew liveLocal` / `promptEval` / `visual`). Each documents its required env vars and no-ops (all-skipped) when
-they are absent. The same exclusion keeps the prompt-eval and visual sets out of the merge gate.
+they are absent. The same exclusion keeps the prompt-eval, visual, `corpus` and `soak` sets out of the merge gate.
 
 ### 2026-09-24 machine-local route observations
 
@@ -314,6 +314,7 @@ manual.
 | Visual vision-model assisted review (real app screenshots)       | **no**                                                                                  | yes (on-demand, late phases) |
 | Prompt evals (`promptEval`, real local model + embedding scorer) | **no** (excluded)                                                                       | yes (env-gated, per prompt)  |
 | Live-local provider (`liveLocal`, real Ollama + LM Studio)       | **no** (excluded)                                                                       | yes (env-gated, manual)      |
+| Soak (`soak`, a generated 3,700-paragraph book under injected faults, scripted clock) | **no** (excluded; its fixture-book form `FixtureBookSoakTest` is `slow` and in the gate) | yes (`./gradlew :pipeline:soak`) |
 
 The pre-push hook runs the fast subset — unit tests excluding UI/TestFX plus the fast ArchUnit subset — and the full
 automated suite (including headless UI and coverage) runs in the CI quality job (`02_QUALITY_GATES.md#lefthook-stages`).

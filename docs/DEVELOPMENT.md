@@ -357,8 +357,27 @@ BOOKLOOM_LIVE_OLLAMA_URL=http://localhost:11434 \
   BOOKLOOM_LIVE_OLLAMA_MODEL=<model-id> ./gradlew :llm:liveLocal :app:liveLocal
 BOOKLOOM_LIVE_LMSTUDIO_URL=http://localhost:1234/v1 \
   BOOKLOOM_LIVE_LMSTUDIO_MODEL=<model-id> ./gradlew :llm:liveLocal :app:liveLocal
+./gradlew :pipeline:soak                                              # a night's run under faults, ~2.5 min
 ./gradlew promptEval visual                                           # local-only sets when their tests exist
 ```
+
+**The soak run** (`@Tag("soak")`, `WholeBookSoakTest`) replays an overnight run in about a minute per book: a generated
+Markdown and TXT book of 3,700 paragraphs (`SoakBooks`: chapter headings, recurring names, emphasis and links,
+number- and symbol-only paragraphs, a few huge paragraphs) goes through the real `TranslationJobImpl`, export and
+re-open, over `FaultyModel` — the pseudo model at the model port behind a seeded fault injector (timeouts, a call that
+hangs until the stall watchdog ends it, 5xx bursts, an unreachable server, one 25-minute outage, an unloaded model,
+empty replies, dropped/doubled/garbled `⟦gN⟧` tokens and stray brackets, refusals, judge junk, a hang on a re-judge, a
+step that throws). The clock is scripted, so every recovery wait and watchdog ceiling passes at once. It asserts the run
+completes with no segment pending, every fault class shows up as its pause, stall or flag, the export re-opens with every
+segment, the retained heap stays under 400 MB and grows by less than 16 KB per segment, the live threads return to the
+baseline +2, the run takes under 5 minutes and no ERROR line or stack trace appears that no injected fault explains; the
+fixture book in TXT, Markdown and EPUB then passes `scripts/validate-translated-book.py --lang none` (FB2 is not
+validated: its `<code>` is prose by design D11 and is translated). The task logs at INFO; each run's numbers are one
+`soak …` INFO line in `modules/pipeline/build/test-logs/`. Last run: 3,774 segments a book, ~65 s each, about 5,100
+model calls, 2 h 35 min of scripted time, retained heap 21 → 32 MB (about 2.5 KB a segment, the in-memory store), threads
+9 → 9. The same harness runs the four fixture formats in the gate as `FixtureBookSoakTest` (`slow`, under a second each),
+and `TranslatingScreenSoakTest` (`slow`) feeds 3,700 decisions and 20,000 log lines through the real run session and
+translating screen (worst FX-thread latency 16 ms, heap growth 1 MB).
 
 The `liveLocal` provider suites use the four `BOOKLOOM_LIVE_OLLAMA_URL`, `BOOKLOOM_LIVE_OLLAMA_MODEL`,
 `BOOKLOOM_LIVE_LMSTUDIO_URL`, and `BOOKLOOM_LIVE_LMSTUDIO_MODEL` variables; URL absence skips that provider's cases.

@@ -15,4 +15,13 @@
     <Match>
         <Class name="~.*\.package-info"/>
     </Match>
+    <!-- DM_GC in the two soak measurements only: they report the heap a run retains, which is only meaningful after a
+         full collection; production code never calls System.gc(). -->
+    <Match>
+        <Or>
+            <Class name="ua.bookloom.pipeline.HeapSamples"/>
+            <Class name="ua.bookloom.ui.screen.TranslatingScreenSoakTest"/>
+        </Or>
+        <Bug pattern="DM_GC"/>
+    </Match>
 </FindBugsFilter>

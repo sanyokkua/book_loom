@@ -122,7 +122,7 @@ fi
 # An abstract contract test runs only through its subclasses, and a local-only class never runs in `test`; neither
 # can be named to `--tests` on its own.
 runnable_test() {
-    ! grep -qE '^(public )?abstract class|^@Tag\("(liveLocal|promptEval|visual|corpus)"\)' "$1"
+    ! grep -qE '^(public )?abstract class|^@Tag\("(liveLocal|promptEval|visual|corpus|soak)"\)' "$1"
 }
 
 # Prints one fully-qualified class per line, or nothing when some changed file maps to no test (then the caller
