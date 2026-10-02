@@ -1329,9 +1329,12 @@ check leaves evidence.
   cases) — on gemma4:e4b-mlx gate 91% → 100%, judge separation 50% → 100%; plus a judge call during a provider outage
   now waits instead of flagging (only a timeout degrades), and the validator accepts translated FB2 `<code>`
   (1a542aa, 8c0f20f, b35802c, 43daafd)
-- [ ] 10. Suggested targets for names: `GlossaryEntry` origin (`PERSON`/`SUGGESTED`), a `SUGGEST_TARGETS` call per name
-  policy, suggestions written only into unlocked rows without a person's target, softer injection wording, and the
-  table's suggestion badge with accept actions
+- [x] 10. Suggested targets for names: `GlossaryEntry` origin (`PERSON`/`SUGGESTED`), a `SUGGEST_TARGETS` call per name
+  policy (a third call after the verdicts of Review with model and Model scan, 20 per batch, Keep original suggests a
+  name as written with no call), suggestions written only into unlocked rows without a person's target, all or nothing,
+  a suggested gender for characters only, softer injection wording under its own heading, and the table's AI badge with
+  the tick, Enter-to-accept, Accept all and a start notice; promptEval `suggest` rows on gemma4:e4b-mlx all pass
+  (01a4cc8, 8bae223, 3df8253)
 
 ## 16. The gate — after every group above
 
