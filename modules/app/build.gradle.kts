@@ -22,6 +22,8 @@ dependencies {
     implementation(project(":pipeline"))
     implementation(project(":ui"))
     implementation(libs.guice)
+    // The command line's JSON run report.
+    implementation(libs.jackson.databind)
 
     // The SLF4J facade, used by every class in `:app` that is allowed to log at all.
     implementation(libs.slf4j.api)

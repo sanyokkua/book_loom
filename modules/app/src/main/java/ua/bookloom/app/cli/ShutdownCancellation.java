@@ -27,6 +27,7 @@ public final class ShutdownCancellation implements Runnable {
     private final AtomicReference<Runnable> held = new AtomicReference<>(() -> {});
     private final AtomicBoolean requested = new AtomicBoolean();
     private final CountDownLatch finished = new CountDownLatch(1);
+    private final AtomicReference<Duration> extension = new AtomicReference<>(Duration.ZERO);
 
     /** Waits the production limit of five seconds. */
     @Inject
@@ -48,6 +49,26 @@ public final class ShutdownCancellation implements Runnable {
         }
     }
 
+    /**
+     * Whether the process was asked to stop.
+     *
+     * @return {@code true} once Ctrl+C or a termination signal arrived, {@code false} otherwise
+     */
+    public boolean isRequested() {
+        return requested.get();
+    }
+
+    /**
+     * Lets the stop wait longer for the command: after a stop ended the run, the command still writes what it
+     * translated, which a large book cannot do in the first five seconds.
+     *
+     * @param extra how much longer to wait at most; never null
+     */
+    public void extendWaitBy(Duration extra) {
+        extension.set(Objects.requireNonNull(extra, "extra"));
+        log.info("translate shutdown waits up to {} more for the partial export", extra);
+    }
+
     /** Called by the command when its run has returned, whatever the outcome. */
     public void finished() {
         finished.countDown();
@@ -65,7 +86,9 @@ public final class ShutdownCancellation implements Runnable {
 
     private boolean awaitFinished() {
         try {
-            return finished.await(wait.toMillis(), TimeUnit.MILLISECONDS);
+            return finished.await(wait.toMillis(), TimeUnit.MILLISECONDS)
+                    || finished.await(
+                            Objects.requireNonNull(extension.get(), "extension").toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
             return false;

@@ -20,4 +20,12 @@ class RecoveryScheduleTest {
     void delayBefore_outageNearTheLimit_wakesOnlyBeforeTwelveHours(final Duration down, final boolean wakes) {
         assertThat(RecoverySchedule.delayBefore(9, down).isPresent()).isEqualTo(wakes);
     }
+
+    // The command line's --max-outage sets a shorter or longer limit than the window's twelve hours.
+    @ParameterizedTest
+    @CsvSource({"PT29M, PT30M, true", "PT30M, PT30M, false", "PT20H, PT24H, true", "PT24H, PT24H, false"})
+    void delayBefore_outageAgainstItsOwnLimit_wakesOnlyBeforeIt(
+            final Duration down, final Duration maxOutage, final boolean wakes) {
+        assertThat(RecoverySchedule.delayBefore(9, down, maxOutage).isPresent()).isEqualTo(wakes);
+    }
 }

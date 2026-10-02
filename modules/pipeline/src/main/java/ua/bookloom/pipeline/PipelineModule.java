@@ -48,4 +48,9 @@ public final class PipelineModule extends AbstractModule {
     Clock clock() {
         return Clock.systemUTC();
     }
+
+    @Provides
+    RecoveryTimer recoveryTimer() {
+        return RecoveryTimer.REAL;
+    }
 }

@@ -243,7 +243,9 @@ text: it stays on the machine unless the person shares it.
 
 ```bash
 ./gradlew -q :app:translate --args="'<book>' [--to <lang>] [--from <lang>] [--overwrite] \
-  [--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] [--timeout <seconds>]"
+  [--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] [--timeout <seconds>] \
+  [--quality fast|balanced|max] [--names translate|transliterate|keep] [--review-names] \
+  [--max-outage <duration>] [--report <file>] [--no-partial]"
 ```
 
 Without provider flags it translates `<book>` with the deterministic offline `pseudo` model — the text comes back
@@ -252,6 +254,18 @@ upper-cased — and writes `<name>.<to><suffix>` beside it; `--to` defaults to `
 requires `--base-url`. `--timeout` overrides the per-request timeout in seconds. `-q` keeps Gradle's own build chatter
 out of the way, so the command's preflight and completion lines are what you see; `--overwrite` allows replacing an
 existing destination.
+
+It is the headless proof tool, so it runs a book the way a window run does. `--quality` and `--names` are saved on the
+brief (defaults Balanced and Transliterate; `keep` is Keep original). `--review-names` runs the names scan, Review with
+model and Accept all before translating and prints one `names: …` line. The run pauses on an error and **recovers from
+an outage by itself** with the window's schedule and probe (below) for up to `--max-outage` (default `12h`; `90m`,
+`1h30m`, `45s` or ISO `PT2H`), printing a line when an outage begins; a pause only a person could end — a wrong key, a
+missing model, a refused request, an outage past the limit — stops the run with `Stopping the run: <reason>`. A run that
+did not complete, Ctrl+C included, **still exports what it translated** (the rest in the source) and prints
+`Partial: <path> (accepted=…, flagged=…, pending=…) — the run ended <state>: <reason>`; `--no-partial` writes nothing
+instead. `--report <file>` writes a JSON summary: provider, model, dial and names, phase timings and model calls, how
+the run ended and why, every flagged segment with its reason and finding kinds, each outage, the names review counts and
+what the export wrote, source fallbacks included.
 
 For LM Studio, an unknown requested model id can still yield a reply from the model currently loaded by the server.
 BookLoom warns about that model mismatch but retains an otherwise usable reply; use the preflight output and the server's
@@ -267,14 +281,31 @@ tokenizer splits it into two arguments before the command ever sees one:
 An unquoted path with spaces reproduces exactly this failure: it is parsed as two arguments and exits 2, printing the
 reason first, then the usage line.
 
-**Exit codes** are distinct from the desktop app's above, deliberately: **0** the book completed; **1** the book did
-not make it — it could not be opened, the job failed or was cancelled, the destination already exists and
-`--overwrite` was not given, or BookLoom is already running; **2** invalid arguments. The desktop app exits **0**
+**Exit codes** are distinct from the desktop app's above, deliberately: **0** the book completed and was written;
+**3** the run did not complete (failed, stopped or interrupted) and what it translated was written; **1** nothing was
+written — the book could not be opened, the run did not complete under `--no-partial`, the export failed, the
+destination already exists and `--overwrite` was not given, or BookLoom is already running; **2** invalid arguments. The desktop app exits **0**
 when another instance already runs, because a second window is a refusal, not a failure; the command line exits **1**
 for the same case, because a script needs to know that nothing was written. Those are the codes `TranslateLauncher`
 exits with. Through Gradle they collapse: the `translate` task fails on any non-zero code, so `./gradlew` itself exits
-1 for both 1 and 2, and a script that must tell them apart reads the printed line (`Invalid command arguments: …`
-starts a usage error).
+1 for 1, 2 and 3, and a script that must tell them apart reads the printed line (`Invalid command arguments: …`
+starts a usage error, `Partial: …` a partial export).
+
+**The headless end-to-end proof** — `scripts/e2e-fixture.sh <epub|fb2|md|txt|all> [--provider ollama|lmstudio]
+[--model <id>] [--quality fast|balanced|max] [--names …] [--no-review-names] [--out <dir>] [-- <more flags>]` —
+translates the earth-gravity fixture (`modules/app/src/test/resources/fixtures/earth-gravity/`) through this command
+with a real local model, the way a window run would (`--names transliterate --review-names` by default), then checks the
+written book with `scripts/validate-translated-book.py --lang uk` and prints one line per format: time, exit code,
+segment counts (accepted, flagged and its share, auto-accepted, repaired, kept verbatim, pending, source fallbacks,
+outages) and the validator's result with each FAIL line under it. Per format it keeps the book, the `--report` JSON,
+the console and the validator output under `build/e2e/<fmt>/`. The model must already be served (`ollama serve`, or LM
+Studio's server; Ollama loads it on the first call, 30–60 s); the script starts and stops nothing.
+
+```bash
+scripts/e2e-fixture.sh all                                        # gemma4:e4b-mlx on Ollama, Balanced
+scripts/e2e-fixture.sh epub --provider lmstudio                   # google/gemma-4-e4b via LM Studio's /v1
+scripts/e2e-fixture.sh epub --model gemma4:12b-mlx                # a larger model for comparison
+```
 
 **Leaving a run overnight.** A window run never hangs silently. A provider outage (`unreachable`, 5xx, 429), a
 timeout or a step that throws pauses the run and it **recovers by itself**: it waits 15 s, 30 s, 1, 2, 5 and 10 min and

@@ -2,6 +2,7 @@ package ua.bookloom.app.cli;
 
 import com.google.inject.Injector;
 import java.net.URI;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,11 +21,16 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.pipeline.ExportService;
-import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.TranslationEngine;
 
 /** Recording seams for translate-command provider tests. */
 final class TranslateCommandTestFakes {
+
+    /** The usage line the command prints after an argument error. */
+    static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
+            + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] "
+            + "[--timeout <seconds>] [--quality fast|balanced|max] [--names translate|transliterate|keep] "
+            + "[--review-names] [--max-outage <duration>] [--report <file>] [--no-partial]";
 
     private TranslateCommandTestFakes() {}
 
@@ -44,11 +50,12 @@ final class TranslateCommandTestFakes {
         return new TranslateCommand(
                 core.getInstance(TranslationEngine.class),
                 models,
-                configs,
-                verifier,
-                core.getInstance(ProjectService.class),
+                new ProviderSetup(configs, verifier),
+                core.getInstance(BookOpener.class),
+                core.getInstance(NameReview.class),
                 exports,
-                core.getInstance(ShutdownCancellation.class));
+                core.getInstance(ShutdownCancellation.class),
+                core.getInstance(Clock.class));
     }
 
     static final class RecordingProviderConfigs implements ProviderConfigs {

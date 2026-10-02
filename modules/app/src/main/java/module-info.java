@@ -23,6 +23,9 @@ module ua.bookloom.app {
     requires javafx.graphics;
     requires com.google.guice;
     requires org.slf4j;
+    // The command line's JSON run report (`ua.bookloom.app.cli.RunReport`), built as a tree, so nothing is reflected
+    // on.
+    requires com.fasterxml.jackson.databind;
     // The Logback binding, required rather than merely on the runtime path because logging is configured
     // PROGRAMMATICALLY: `LoggerContext` and `RollingFileAppender` are compiled against. Confined to one class in
     // `ua.bookloom.app.bootstrap` — no other module requires it, and `api-is-framework-free` bans it from `:api`

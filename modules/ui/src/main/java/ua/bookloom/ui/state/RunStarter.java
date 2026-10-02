@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.pipeline.PausePoint;
+import ua.bookloom.api.pipeline.ProviderProbe;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
@@ -139,7 +140,7 @@ public final class RunStarter {
         }
         final TranslationJob job = Objects.requireNonNull(created.data(), "job");
         job.pauseAt(pausePoints());
-        job.recoverWith(ProviderProbes.of(verifier, selection));
+        job.recoverWith(ProviderProbe.of(verifier, selection));
         final BookBrief brief = briefOf();
         final RunContext context =
                 new RunContext(book.projectId(), fileNameOf(book), reviewMode, brief.dial(), selection);

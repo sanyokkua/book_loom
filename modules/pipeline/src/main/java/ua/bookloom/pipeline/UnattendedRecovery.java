@@ -27,7 +27,7 @@ import ua.bookloom.pipeline.run.PauseDecider;
  * — lasts until a model call answers again. An unloaded model
  * wakes at most {@link PauseDecider#UNLOADED_MODEL_WAKES} times in one outage, after which the person loads it.
  *
- * <p>Used from the job thread only, apart from {@link #probeWith(ProviderProbe)}.
+ * <p>Used from the job thread only, apart from {@link #probeWith(ProviderProbe, Duration)}.
  */
 @Slf4j
 final class UnattendedRecovery {
@@ -37,6 +37,7 @@ final class UnattendedRecovery {
     private final RecoveryTimer timer;
     private final Consumer<JobEvent> emit;
     private volatile ProviderProbe probe = ProviderProbe.ASSUME_REACHABLE;
+    private volatile Duration maxOutage = RecoverySchedule.MAX_OUTAGE;
     private @Nullable Instant downSince;
     private int wakes;
     private int cappedWakes;
@@ -51,9 +52,14 @@ final class UnattendedRecovery {
         this.emit = Objects.requireNonNull(emit, "emit");
     }
 
-    void probeWith(final ProviderProbe probe) {
+    void probeWith(final ProviderProbe probe, final Duration maxOutage) {
         this.probe = Objects.requireNonNull(probe, "probe");
-        log.debug("Recovery probe set");
+        Objects.requireNonNull(maxOutage, "maxOutage");
+        if (maxOutage.isNegative() || maxOutage.isZero()) {
+            throw new IllegalArgumentException("maxOutage must be positive: " + maxOutage);
+        }
+        this.maxOutage = maxOutage;
+        log.debug("Recovery probe set maxOutage={}", maxOutage);
     }
 
     /**
@@ -109,7 +115,8 @@ final class UnattendedRecovery {
         final int cap = PauseDecider.recovery(error.code()).wakesPerOutage();
         while (true) {
             final Instant now = clock.instant();
-            final Optional<Duration> delay = RecoverySchedule.delayBefore(wakes + 1, Duration.between(since, now));
+            final Optional<Duration> delay =
+                    RecoverySchedule.delayBefore(wakes + 1, Duration.between(since, now), maxOutage);
             if (delay.isEmpty() || cappedWakes >= cap) {
                 logGivingUp(error, since, cap);
                 return holdFor(RecoveryWaiting.Status.GAVE_UP, error, progress, since, lastProbe);
@@ -130,7 +137,7 @@ final class UnattendedRecovery {
                     error.code());
             return;
         }
-        log.warn("Provider down since {} for over {}; waiting for the person", since, RecoverySchedule.MAX_OUTAGE);
+        log.warn("Provider down since {} for over {}; waiting for the person", since, maxOutage);
     }
 
     // One wait and its probe: empty to wait again, or how the pause ended.

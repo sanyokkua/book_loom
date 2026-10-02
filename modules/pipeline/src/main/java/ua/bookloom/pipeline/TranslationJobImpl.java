@@ -193,9 +193,9 @@ final class TranslationJobImpl implements TranslationJob {
     }
 
     @Override
-    public void recoverWith(final ProviderProbe probe) {
-        log.debug("Recovery probe set for translation job project={}", request.projectId());
-        recovery.probeWith(probe);
+    public void recoverWith(final ProviderProbe probe, final Duration maxOutage) {
+        log.debug("Recovery probe set for translation job project={} maxOutage={}", request.projectId(), maxOutage);
+        recovery.probeWith(probe, maxOutage);
     }
 
     @Override

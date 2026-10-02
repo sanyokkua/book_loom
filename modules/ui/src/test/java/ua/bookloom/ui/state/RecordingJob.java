@@ -156,7 +156,7 @@ public final class RecordingJob implements TranslationJob {
     }
 
     @Override
-    public void recoverWith(final ua.bookloom.api.pipeline.ProviderProbe probe) {
+    public void recoverWith(final ua.bookloom.api.pipeline.ProviderProbe probe, final java.time.Duration maxOutage) {
         calls.add("recoverWith");
     }
 

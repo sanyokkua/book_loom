@@ -107,8 +107,6 @@ final class JobBoundaries implements RunBoundaries {
         Objects.requireNonNull(error, "error");
         Objects.requireNonNull(step, "step");
         forgetSkip();
-        // A retry asked during an earlier pause that no step took is not this pause's.
-        recovery.takeRetriedByPerson();
         final BoundaryDecision decision = control.failureBoundary(error);
         if (decision.cancelled()) {
             return Optional.of(new RunEnd(JobState.CANCELLED, null));
@@ -127,14 +125,24 @@ final class JobBoundaries implements RunBoundaries {
                 step.pauses(),
                 step.pausesBeforeFlagging(),
                 automatic);
-        return pause(
-                new Paused(reason, error, progress, step.segmentId(), step.pauses(), step.pausesBeforeFlagging()),
-                automatic);
+        return pause(pausedOn(reason, error, progress, step, automatic), automatic);
     }
 
     // Cleared before a boundary can pause, so only a skip asked during the pause that follows may skip anything.
+    private static Paused pausedOn(
+            final PauseReason reason,
+            final AppError error,
+            final JobProgress progress,
+            final FailingStep step,
+            final boolean automatic) {
+        return new Paused(
+                reason, error, progress, step.segmentId(), step.pauses(), step.pausesBeforeFlagging(), automatic);
+    }
+
     private void forgetSkip() {
         skipRequested.set(false);
+        // A retry asked during an earlier pause that no step took is not this pause's either.
+        recovery.takeRetriedByPerson();
     }
 
     private Optional<RunEnd> honor(final BoundaryDecision decision, final JobProgress progress) {

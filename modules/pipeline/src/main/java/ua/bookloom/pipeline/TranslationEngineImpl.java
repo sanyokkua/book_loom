@@ -42,11 +42,12 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final SentenceSplitter splitter;
     private final ConsistencyPass revision;
     private final Clock clock;
+    private final RecoveryTimer timer;
 
     /**
      * Creates an engine with the application-wide tolerant JSON mapper, the quality loop every run decides through,
-     * the sentence splitter an oversized segment is drafted in pieces with, and the backward-revision pass a Max run
-     * ends with.
+     * the sentence splitter an oversized segment is drafted in pieces with, the backward-revision pass a Max run
+     * ends with, and the timer a run's recovery waits pass by.
      */
     @Inject
     public TranslationEngineImpl(
@@ -64,7 +65,8 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final QualityLoop qualityLoop,
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
-            final Clock clock) {
+            final Clock clock,
+            final RecoveryTimer timer) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
@@ -73,6 +75,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
         this.splitter = Objects.requireNonNull(splitter, "splitter");
         this.revision = Objects.requireNonNull(revision, "revision");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.timer = Objects.requireNonNull(timer, "timer");
     }
 
     @Override
@@ -82,7 +85,18 @@ public final class TranslationEngineImpl implements TranslationEngine {
             Objects.requireNonNull(model, "model");
             log.debug("Preparing translation job project={} mode={}", request.projectId(), request.mode());
             return Result.ok(new TranslationJobImpl(
-                    documents, request, model, mapper, templates, stores, qualityLoop, splitter, revision, clock));
+                    documents,
+                    request,
+                    model,
+                    mapper,
+                    templates,
+                    stores,
+                    qualityLoop,
+                    splitter,
+                    revision,
+                    clock,
+                    timer,
+                    RunTicks.DAEMON));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,

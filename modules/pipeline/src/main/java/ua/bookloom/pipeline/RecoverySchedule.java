@@ -38,11 +38,24 @@ final class RecoverySchedule {
      * @return the wait, or empty once the outage has lasted {@link #MAX_OUTAGE}
      */
     static Optional<Duration> delayBefore(final int wake, final Duration down) {
+        return delayBefore(wake, down, MAX_OUTAGE);
+    }
+
+    /**
+     * The wait before a wake, for a run that waits through outages of up to {@code maxOutage}.
+     *
+     * @param wake the wake about to be waited for, counted from one
+     * @param down how long the outage has lasted so far, never negative
+     * @param maxOutage the longest outage waited through; never null
+     * @return the wait, or empty once the outage has lasted {@code maxOutage}
+     */
+    static Optional<Duration> delayBefore(final int wake, final Duration down, final Duration maxOutage) {
         Objects.requireNonNull(down, "down");
+        Objects.requireNonNull(maxOutage, "maxOutage");
         if (wake < 1) {
             throw new IllegalArgumentException("wake counts from one: " + wake);
         }
-        final Optional<Duration> delay = down.compareTo(MAX_OUTAGE) >= 0
+        final Optional<Duration> delay = down.compareTo(maxOutage) >= 0
                 ? Optional.empty()
                 : Optional.of(DELAYS.get(Math.min(wake, DELAYS.size()) - 1));
         log.debug("Recovery delay wake={} down={} delay={}", wake, down, delay.orElse(null));

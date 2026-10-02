@@ -130,7 +130,8 @@ class TranslationEngineImplTest {
                 TranslationJobTestSupport.qualityLoop(),
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
                 ConsistencyPassFixture.over(project),
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                RecoveryTimer.REAL);
     }
 
     private static ScriptedChatModel answers(final String reply) {

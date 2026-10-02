@@ -1314,7 +1314,8 @@ answered as that refusal, not as a pause.
 `docs/implementation_plan/CHANGE_BACKLOG.md` (D19).
 In plain words: an unreachable server, a missing key or an unloaded model would make every following call fail too.
 Flagging them used to finish a run with every remaining segment flagged; now the segment waits, and the run pauses so
-the person can fix the server and press Retry now. The command line, which enables no pause, ends Failed instead. An
+the person can fix the server and press Retry now. The command line pauses on an error like the window and recovers from
+an outage by itself, but stops a pause only a person could end and writes what it translated. An
 internal error is a bug in the application, which pressing Retry now cannot fix, so it ends the run with a dialog rather
 than pausing it; a code a run's call should never answer means the same. Only a reply the model actually produced, or a prompt too long for the model, can be flagged.
 
@@ -1438,7 +1439,8 @@ A run now translates into memory only; the person decides when and where the boo
 
 WHEN the translate command runs as `./gradlew :app:translate --args="<book> [--to <lang>] [--from <lang>]
 [--overwrite] [--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>]
-[--timeout <seconds>]"` for a supported book, the system SHALL:
+[--timeout <seconds>] [--quality fast|balanced|max] [--names translate|transliterate|keep] [--review-names]
+[--max-outage <duration>] [--report <file>] [--no-partial]"` for a supported book, the system SHALL:
 
 - take `--provider` as `pseudo` (the default), `ollama`, `lmstudio` or `openai-compatible`; `--model` is required
   for every provider but `pseudo`; `--base-url` is required for `openai-compatible` and overrides the preset for
@@ -1448,23 +1450,43 @@ WHEN the translate command runs as `./gradlew :app:translate --args="<book> [--t
 - check the destination `<name>.<to>.<ext>` beside the book, with `--to` defaulting to `uk`, before any model call;
 - for a provider other than `pseudo`, run the preflight and print one line per stage that ran, in the form
   `<stage>: ok`, `<stage>: ok (<note>)`, `<stage>: skipped` or `<stage>: failed - <title>`;
-- translate the book in the Unattended review mode with no pause points and on the brief's default quality dial,
-  Balanced, ignoring any review-mode launch flag and writing one line to the log that it did;
-- then export the translation to that destination;
+- save `--quality` as the brief's quality dial and `--names` as its name policy (`keep` is Keep original); without them
+  the brief keeps its defaults (Balanced, Transliterate);
+- with `--review-names`, before translating, run the names scan, Review with model (verdicts and suggested targets) and
+  accept every suggested target, printing one `names: …` line with the counts; a failed step is printed and the run goes
+  on with the glossary as it stands;
+- translate the book in the Unattended review mode, ignoring any review-mode launch flag and writing one line to the
+  log that it did, with the window's recovery: pause on an error, wait through an outage by the recovery schedule and
+  the connection-and-models probe (`resume` capability) for up to `--max-outage` (default `12h`; `90m`, `1h30m`,
+  `45s` or ISO-8601), printing one line when an outage begins; and, since nobody can end a pause at a terminal, stop
+  the run at a pause only a person ends (`auth`, `modelNotFound`, `missingCredential`, `validation`, or an outage past
+  its limit), printing `Stopping the run: <reason>`;
+- then export the translation to that destination — also when the run ended Failed or Cancelled or was interrupted,
+  writing what it translated with the rest in the source, unless `--no-partial` is given;
+- with `--report <file>`, write a JSON summary of the run: provider, model, dial, name policy, phase timings and model
+  calls, how the run ended and why, every flagged segment with its reason and finding kinds, each outage with its start,
+  wakes and how it ended, the names review counts, and what the export wrote, source fallbacks included;
 - print one report line naming the output and the accepted and flagged counts, as
   `Completed: <output path> (accepted=<n>, flagged=<m>)`;
 - send diagnostics only to the log file, and open a connection only to the chosen provider;
-- exit with code 0 when the translation completed and the export wrote the book.
+- exit with code 0 when the translation completed and the export wrote the book; 3 when the run did not complete and
+  what it translated was written, after printing `Partial: <output path> (accepted=<n>, flagged=<m>, pending=<p>) — the
+  run ended <state>: <reason>`; 1 when nothing was written; 2 for invalid arguments, as before.
 
-WHEN the command is interrupted (Ctrl+C) while it translates or exports, the system SHALL cancel the running job, wait up
-to 5 seconds for it to end, and leave no hidden temporary file beside the destination.
+WHEN the command is interrupted (Ctrl+C) while it translates, the system SHALL cancel the running job and then export
+what it translated, waiting up to 5 seconds for the job and 60 seconds more for that export; WHEN it is interrupted
+while it exports, it SHALL cancel the export, wait up to 5 seconds for it to end, and leave no hidden temporary file
+beside the destination.
 
 **Source:** FR-INFER-01, FR-INFER-08 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
 `docs/specification/02_Architecture/01_SYSTEM_ARCHITECTURE.md#fx-free-core`,
 `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#outbound-scope`, `docs/next_features.md` §13, ADR-0035,
 ADR-0036.
-In plain words: the command line keeps its flags, its output name and its exit codes, though it now translates and then
-exports as two steps. It checks the destination first so an existing file stops it before an hour of translation. There
+In plain words: the command line is the headless proof tool, so it runs a book as a window run would — the brief's dial
+and names, the names review, the recovery from an outage — and never throws a night's work away: a harness run that
+hit a provider error ended Failed with 5 accepted and 27 flagged segments and wrote nothing. Partial exports get their
+own exit code, 3, because 2 already means a usage mistake and a script must tell the three apart. It keeps its older
+flags and its output name, and translates and then exports as two steps. It checks the destination first so an existing file stops it before an hour of translation. There
 is nobody at a terminal to review, so it never pauses, and a Ctrl+C no longer leaves a half-written hidden file behind.
 The pseudo model answers with the source in capitals, which the quality checks rightly call untranslated, so its
 paragraphs of 20 or more characters are counted as flagged — and still written, with that capitalised text.
@@ -1506,6 +1528,25 @@ paragraphs of 20 or more characters are counted as flagged — and still written
 
 - **WHEN** the command runs with `BOOKLOOM_REVIEW_MODE` set to `manual`
 - **THEN** it never pauses and the log holds one line saying the review mode was ignored
+
+#### Scenario: An outage in the middle of a book is waited through
+
+- **WHEN** the command runs a three-paragraph book with Ollama, the second draft answers `ErrorCode.unreachable` and the
+  first probe fails
+- **THEN** it prints `Provider unreachable — waiting and retrying by itself, down since …`, waits, probes again,
+  resumes, and ends with `Completed: …` and exit code 0
+
+#### Scenario: A wrong key stops the run and keeps the first paragraph
+
+- **WHEN** the second draft answers `ErrorCode.auth`
+- **THEN** it prints `Stopping the run: auth …` and `Partial: … pending=2) …`, writes the first paragraph translated and
+  the other two in the source, and exits with code 3
+- **AND** with `--no-partial` it writes nothing and exits with code 1
+
+#### Scenario: Ctrl+C during translation writes what was translated
+
+- **WHEN** the command is interrupted while the second of three paragraphs is drafted
+- **THEN** the destination holds the first paragraph translated and the rest in the source, and the exit code is 3
 
 #### Scenario: Ctrl+C leaves no temporary file
 

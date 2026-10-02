@@ -26,7 +26,9 @@ class TranslateLauncherTest {
     private static final String MARKDOWN = "He opened the *old* door.\n";
     private static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
             + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] "
-            + "[--base-url <url>] [--timeout <seconds>]";
+            + "[--base-url <url>] [--timeout <seconds>] [--quality fast|balanced|max] "
+            + "[--names translate|transliterate|keep] [--review-names] [--max-outage <duration>] [--report <file>] "
+            + "[--no-partial]";
 
     @TempDir
     private Path tempDir;
@@ -169,8 +171,8 @@ class TranslateLauncherTest {
                         && line.contains("Book.uk.md")
                         && line.contains("overwrite=true"));
         assertThat(logLines)
-                .anyMatch(line -> atLevel(line, "DEBUG")
-                        && line.contains("translate command report state=COMPLETED")
+                .anyMatch(line -> atLevel(line, "INFO")
+                        && line.contains("translate command run ended state=COMPLETED")
                         && line.contains("accepted=0")
                         && line.contains("flagged=1"));
         assertThat(logLines).anyMatch(line -> atLevel(line, "INFO") && line.contains("translate command exitCode=0"));

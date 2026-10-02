@@ -15,7 +15,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 
-/** Parsed, validated arguments for one translate command invocation. */
+/** Parsed, validated arguments for one translate command invocation, its {@link RunOptions} included. */
 @Slf4j
 record TranslateArguments(
         Path source,
@@ -26,7 +26,8 @@ record TranslateArguments(
         String providerId,
         @Nullable String modelId,
         @Nullable URI baseUrl,
-        @Nullable Duration requestTimeout) {
+        @Nullable Duration requestTimeout,
+        RunOptions options) {
 
     private static final String DEFAULT_TARGET_LANGUAGE = "uk";
     private static final String PSEUDO_PROVIDER = "pseudo";
@@ -44,6 +45,7 @@ record TranslateArguments(
     private static final class Parser {
 
         private final List<String> args;
+        private final RunOptionsParser runOptions = new RunOptionsParser();
         private @Nullable Path source;
         private String targetLanguage = DEFAULT_TARGET_LANGUAGE;
         private @Nullable String sourceLanguage;
@@ -90,7 +92,7 @@ record TranslateArguments(
                 case "--model" -> consumeModel(index);
                 case "--base-url" -> consumeBaseUrl(index);
                 case "--timeout" -> consumeTimeout(index);
-                default -> invalidOption(argument, "unknown option");
+                default -> runOptions.consume(args, index).orElseGet(() -> invalidOption(argument, "unknown option"));
             };
         }
 
@@ -236,7 +238,8 @@ record TranslateArguments(
                     providerId,
                     modelId,
                     baseUrl,
-                    requestTimeout));
+                    requestTimeout,
+                    runOptions.options()));
         }
 
         private Result<BookFormat> validateSource(Path selectedSource) {

@@ -285,10 +285,7 @@ class TranslateCommandTest {
         assertThat(exit).isEqualTo(2);
         assertThat(consoleText(console).lines())
                 .containsExactly(
-                        "Invalid command arguments: " + invalidReason(invalidCase),
-                        "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
-                                + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] "
-                                + "[--base-url <url>] [--timeout <seconds>]");
+                        "Invalid command arguments: " + invalidReason(invalidCase), TranslateCommandTestFakes.USAGE);
         assertThat(children()).isEqualTo(before);
     }
 
