@@ -1291,6 +1291,20 @@ check leaves evidence.
   the "Context sent to the model" sections stay as the person left them across visits (`SectionMemory`); long chapter
   names wrap in the structure tree with the full name on hover; a failed call answered on its retry no longer counts
   in the title bar's failed-call warning (8bdcbf2)
+- [x] 11. Never hang: a pause on an outage (`unreachable`, 5xx, 429), a timeout or a step that throws recovers by
+  itself in every review mode — waits 15 s, 30 s, 1, 2, 5, 10 min then every 10 min, probes the provider (connection
+  and model list) at each wake and resumes when it passes, up to a 12 h outage, after which it waits for the person;
+  Pause holds it for the person, Retry now / Skip / Resume restart the schedule, Stop ends it (`UnattendedRecovery`,
+  `RecoverySchedule`, `RecoveryWaiting`, `ProviderProbe`); an outage spends a budget of its own (10), a timeout two
+  pauses, a throwing step three (it is caught as `internal` instead of ending the run), and `auth`/`modelNotFound`/
+  `modelUnavailable`/`missingCredential`/`validation` still wait for the person; a run-level stall watchdog ends a call
+  outstanding 1.5× its timeout or 20 min without a decision and retries it as a timeout (`StallWatchdog`; the
+  OpenAI-compatible client already bounds a stalled body by its request timeout, now proven by a test); the banner
+  "Waiting for the provider · Next try in 4:12 · attempt 6 · down since 02:14" with Retry now / Skip segment / Stop, the
+  title bar's state, the "Provider unreachable · retrying" chip, a log line per step, the controls Pause / Retry now /
+  Stop, en/uk, a conformance case; the waiting run counts as translation activity and keeps the computer awake
+  (`KeepAwake`, `OsKeepAwake`: `caffeinate` on macOS, `systemd-inhibit` on Linux, nothing on Windows) (091c4e9,
+  807b30a, 14f66c4)
 - [ ] 9. Prompts: the audit's rewrites (placeholder pairs, data-not-instructions, literal replies, judge anchors,
   `<Source>`/`<Translation>`), bundled examples, `PromptShapeTest`, golden files for judge and directed fix, the
   `promptEval` harness
