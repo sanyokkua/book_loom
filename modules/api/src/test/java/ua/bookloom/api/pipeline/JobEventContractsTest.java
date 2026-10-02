@@ -81,6 +81,7 @@ class JobEventContractsTest {
             case MemoryUpdated updated -> "MemoryUpdated";
             case ContextAssembled assembled -> "ContextAssembled";
             case RoundStarted round -> "RoundStarted";
+            case RecoveryWaiting waiting -> "RecoveryWaiting";
         };
     }
 

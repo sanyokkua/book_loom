@@ -38,11 +38,13 @@ public interface RunBoundaries {
      *     step is never flagged for failing
      * @param pausesBeforeFlagging how many pauses the step may cause before its next failure flags it; zero when the
      *     step is never flagged for failing
+     * @param automatic whether the pause may resume by itself once a probe finds the provider answering, rather than
+     *     waiting for the person
      */
-    record FailingStep(@Nullable String segmentId, int pauses, int pausesBeforeFlagging) {
+    record FailingStep(@Nullable String segmentId, int pauses, int pausesBeforeFlagging, boolean automatic) {
 
-        /** A step of no segment that is never flagged for failing. */
-        public static final FailingStep NONE = new FailingStep(null, 0, 0);
+        /** A step of no segment that is never flagged for failing and waits for the person. */
+        public static final FailingStep NONE = new FailingStep(null, 0, 0, false);
     }
 
     /**
@@ -80,4 +82,10 @@ public interface RunBoundaries {
      * @return {@code true} once for each skip asked during the pause just ended
      */
     boolean takeSkipRequest();
+
+    /**
+     * Tells the boundaries a model call answered, which ends any provider outage the run was recovering from, so the
+     * next failure starts its wait schedule afresh.
+     */
+    void callAnswered();
 }

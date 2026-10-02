@@ -391,14 +391,20 @@ make the interrupted call again from its first request — except a judge call a
 which does not pause the run: its segments are flagged as the `quality-gates` capability's "Flag a segment the judge
 could not judge" says.
 
-The system SHALL pause at most twice for the same step — a segment's draft, a segment's decision, or a chunk's judge
-call — and SHALL, on the third failure of that step, flag its segment (for a chunk's judge call, decide the chunk as if
-the judge were unavailable) with the error and go on with the run. WHILE the run is paused on such an error, the job
-SHALL offer to skip the step: the run resumes, the step's segment is flagged with the error without its call being sent
-again, and the run goes on (`TranslationJob.skipSegment`).
+The system SHALL count the pauses of each step — a segment's draft, a segment's decision, or a chunk's judge call — by
+the kind of recovery its error needs, and SHALL, on the failure past that kind's budget, flag the step's segment (for a
+chunk's judge call, decide the chunk as if the judge were unavailable) with the error and go on with the run: two
+pauses for `timeout` and for the codes only a person can fix (`auth`, `modelNotFound`, `modelUnavailable`,
+`missingCredential`, `validation`); three for `ErrorCode.internal`, which a step answers when it throws instead of
+answering; and ten for an outage (`unreachable`, `upstream`, `rateLimited`), which is not the step's fault and so never
+spends the step's own budget. WHILE the run is paused on such an error, the job SHALL offer to skip the step: the run
+resumes, the step's segment is flagged with the error without its call being sent again, and the run goes on
+(`TranslationJob.skipSegment`).
 
-The system SHALL NOT pause on `ErrorCode.internal`, which ends the run Failed, nor on `ErrorCode.contextWindow` or
-`ErrorCode.emptyCompletion`, which flag the one segment and let the run go on.
+The system SHALL NOT pause on `ErrorCode.contextWindow` or `ErrorCode.emptyCompletion`, which flag the one segment and
+let the run go on, nor on `busy` or `discoveryFailed`, which a run never sees and which end it Failed with
+`ErrorCode.internal`. An unexpected error outside every step — before the first segment, while the run starts — SHALL
+end the run Failed with `ErrorCode.internal` and a message saying the run could not begin.
 
 WHILE a run from the window is paused on any such error, the translating screen SHALL show the provider-error state
 naming the error — Retry now, which resumes the run; Open provider settings; and Stay paused, which leaves it paused.
@@ -411,7 +417,8 @@ In plain words: a stopped local server or an unloaded model is often fixed in a 
 an error, whatever the review mode (see "Pause for review as the review mode says"), so the person fixes it and presses
 Retry now instead of translating the book again. The call that failed — a draft, a repair or a chunk's judge call — is
 made again; nothing already decided is redone. A bug in the application is not fixed by waiting, so it ends the run; a
-prompt too long for the model belongs to one segment, so only that segment is flagged.
+prompt too long for the model belongs to one segment, so only that segment is flagged. A step that throws is retried
+three times and then flagged, so one bad segment cannot end a night's run.
 
 #### Scenario: The model is unreachable once
 
@@ -445,19 +452,31 @@ prompt too long for the model belongs to one segment, so only that segment is fl
 - **THEN** the job pauses with `ErrorCode.validation`, with 1 accepted, 0 flagged and 2 pending
 - **AND** the window shows the provider-error state naming that error with Retry now
 
-#### Scenario: An internal error never pauses
+#### Scenario: A step that throws is retried, then flagged
 
-- **WHEN** pause on error is enabled and, on the Fast dial, the model call throws an exception for the second of three
-  segments
-- **THEN** the job ends Failed with `ErrorCode.internal`, with 1 accepted and 2 pending, and does not pause
+- **WHEN** pause on error is enabled and, on the Fast dial, the model call throws an exception four times in a row for
+  the second of three segments
+- **THEN** the job pauses three times with `ErrorCode.internal`, each pause recovering by itself
+- **AND** the fourth failure flags `Book.txt:1` with `ErrorCode.internal`, and the job ends Completed with two accepted
+
+#### Scenario: A failure while the run starts ends it Failed
+
+- **WHEN** the glossary store throws while the run prepares, before any segment
+- **THEN** the job ends Failed with `ErrorCode.internal` and the message "An unexpected error stopped the run before it
+  began."
 
 
-#### Scenario: A segment that keeps failing is flagged after two pauses
+#### Scenario: A segment that keeps timing out is flagged after two pauses
 
-- **WHEN** the draft of `Book.txt:1` is answered with `ErrorCode.unreachable` three times in a row, and the person
-  resumes after each of the first two pauses
-- **THEN** the run pauses twice, then flags `Book.txt:1` with `ErrorCode.unreachable` and drafts `Book.txt:2`
+- **WHEN** the draft of `Book.txt:1` is answered with `ErrorCode.timeout` three times in a row, and the run resumes
+  after each of the first two pauses
+- **THEN** the run pauses twice, then flags `Book.txt:1` with `ErrorCode.timeout` and drafts `Book.txt:2`
 - **AND** the run ends Completed with two segments accepted and one flagged
+
+#### Scenario: A 429 does not spend the segment's budget
+
+- **WHEN** the draft of `Book.txt:1` is answered with `ErrorCode.rateLimited` three times in a row, then normally
+- **THEN** the run pauses three times and recovers by itself each time, and `Book.txt:1` is accepted, not flagged
 
 #### Scenario: Skipping the failing segment from the pause
 
@@ -465,6 +484,59 @@ prompt too long for the model belongs to one segment, so only that segment is fl
   skips the segment
 - **THEN** `Book.txt:1` is flagged with `ErrorCode.upstream`, its draft is not sent again, and `Book.txt:2` is drafted
   next
+### Requirement: Recover from a provider error by itself
+
+WHILE a run is paused on an error whose recovery is automatic — an outage (`unreachable`, `upstream`, `rateLimited`),
+a `timeout`, or an `internal` error a step answered — and the step has pauses of that kind left, the system SHALL wait
+and resume by itself, in every review mode, without the person: it SHALL wait 15 s, 30 s, 1 min, 2 min, 5 min and
+10 min before the first six wakes and 10 min before every later one; at each wake it SHALL probe the provider (the
+connection and the model list, which must still offer the run's model) and resume as soon as a probe passes, the
+interrupted call being made again; a failed probe SHALL only extend the wait. An outage SHALL last from its first failure
+until a model call answers again; once it has lasted 12 hours (`RecoverySchedule.MAX_OUTAGE`) the system SHALL stop
+waking and wait for the person. The person's Retry now, Skip segment and Resume SHALL end the wait at once and start the
+schedule afresh; Pause SHALL hold the run for the person, after which no wake resumes it; Stop SHALL end the run at once.
+A pause for review, a pause the person asked for, and a pause on an error only a person can fix (`auth`,
+`modelNotFound`, `modelUnavailable`, `missingCredential`, `validation`) SHALL NOT resume by itself.
+
+The system SHALL announce each step of the recovery to its listeners (`RecoveryWaiting`: waiting with the next try's
+time and attempt, gave up, or held) and log at INFO the outage's start, each wait, each probe's result and the resume
+after N minutes.
+
+**Source:** `docs/implementation_plan` overnight plan step 11 (owner intent: a run left all night is finished in the
+morning or visibly retrying with a clear reason, never silently stuck).
+In plain words: a local server that restarts, a laptop that loses its network for a while, or a provider that rate
+limits are common over a night. The run waits, checks the server now and then without asking the model anything, and
+goes on by itself; a wrong key or an unloaded model is not fixed by waiting, so those still wait for the person.
+
+#### Scenario: A twenty-minute outage resumes at the seventh wake
+
+- **WHEN** the draft of the second of three segments is answered `ErrorCode.unreachable` and the provider stays down for
+  20 minutes
+- **THEN** the wakes at 0:15, 0:45, 1:45, 3:45, 8:45 and 18:45 find the provider down, and the seventh wake, 28 min 45 s
+  after the failure (attempt 8 counting the failed call), finds it back and resumes the run
+- **AND** the segment is sent again and accepted, and the run ends Completed with three accepted
+
+#### Scenario: An outage longer than twelve hours waits for the person
+
+- **WHEN** the provider stays down for two days
+- **THEN** the run wakes 77 times, and after the wake at 12 h 8 min 45 s it announces that it gave up and stays paused
+  until the person resumes or stops it
+
+#### Scenario: Stop during the wait cancels the recovery
+
+- **WHEN** the person stops the run while it waits for its third wake
+- **THEN** the run ends Cancelled at once and the provider is probed no more
+
+#### Scenario: Pause during the wait holds the run
+
+- **WHEN** the person presses Pause while the run waits for its second wake
+- **THEN** the recovery is announced as held, no wake resumes the run, and the person's Resume continues it
+
+#### Scenario: An unloaded model waits for the person
+
+- **WHEN** the draft is answered `ErrorCode.validation`
+- **THEN** the run pauses and never wakes by itself
+
 ### Requirement: Cancel a job
 
 WHEN cancellation is requested, the system SHALL end the job Cancelled without waiting for the segment in progress or

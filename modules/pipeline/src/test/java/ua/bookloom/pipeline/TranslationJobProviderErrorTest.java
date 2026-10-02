@@ -132,22 +132,35 @@ class TranslationJobProviderErrorTest {
         shutdown(workers);
     }
 
-    // Pausing on an application bug would offer Retry now for something retrying cannot fix.
+    // An application fault inside a step is retried like a provider error, so one bad segment cannot end the night.
     @Test
-    void run_internalWithOnError_endsFailedInternalWithoutPausing() {
+    void run_internalWithOnError_pausesWithInternalAndKeepsTheSegmentPending() {
         final ScriptedChatModel model = replies("ONE.").answer(Result.err(error(ErrorCode.internal)));
 
-        final JobReport result = finishedWithOnError(job(project(book(), brief("en", "uk")), model));
+        final Paused pause = pausedThenCancelled(model);
 
-        assertThat(result.end()).isEqualTo(JobState.FAILED);
-        assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
+        assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
+        assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
+        assertThat(pause.pausesBeforeFlagging()).isEqualTo(3);
     }
 
     @Test
-    void run_thrownCallWithOnError_endsFailedInternalWithoutPausing() {
-        final ScriptedChatModel model = replies("ONE.").throwFailure(new IllegalStateException("model broke"));
+    void run_thrownCallWithOnError_pausesWithInternalCarryingTheCause() {
+        final IllegalStateException thrown = new IllegalStateException("model broke");
+        final ScriptedChatModel model = replies("ONE.").throwFailure(thrown);
 
-        final JobReport result = finishedWithOnError(job(project(book(), brief("en", "uk")), model));
+        final Paused pause = pausedThenCancelled(model);
+
+        assertThat(pause.error())
+                .extracting(AppError::code, AppError::cause)
+                .containsExactly(ErrorCode.internal, thrown);
+    }
+
+    @Test
+    void run_internalWithoutOnError_endsFailedInternal() {
+        final ScriptedChatModel model = replies("ONE.").answer(Result.err(error(ErrorCode.internal)));
+
+        final JobReport result = finished(job(project(book(), brief("en", "uk")), model));
 
         assertThat(result.end()).isEqualTo(JobState.FAILED);
         assertThat(result.error()).extracting(AppError::code).isEqualTo(ErrorCode.internal);
@@ -223,6 +236,18 @@ class TranslationJobProviderErrorTest {
 
         assertThat(result.flaggedSegments()).containsExactly(new FlaggedSegment("Book.txt:0", ErrorCode.validation));
         assertThat(model.requests()).hasSize(1);
+    }
+
+    private Paused pausedThenCancelled(final ScriptedChatModel model) {
+        final TranslationJobImpl translation = job(project(book(), brief("en", "uk")), model);
+        final LinkedBlockingQueue<Paused> pauses = new LinkedBlockingQueue<>();
+        translation.subscribe(event -> capturePaused(pauses, event));
+        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
+        final Future<Result<JobReport>> run = executor().submit(translation::run);
+        final Paused pause = awaitPaused(pauses);
+        translation.cancel();
+        assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
+        return pause;
     }
 
     private JobReport finishedWithOnError(final TranslationJobImpl translation) {

@@ -60,7 +60,7 @@ final class TranslationJobTestSupport {
 
     private static final long WAIT_SECONDS = 5;
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final SentenceSplitter SPLITTER =
+    static final SentenceSplitter SPLITTER =
             Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class);
     private static final ConcurrentLinkedQueue<ExecutorService> EXECUTORS = new ConcurrentLinkedQueue<>();
 

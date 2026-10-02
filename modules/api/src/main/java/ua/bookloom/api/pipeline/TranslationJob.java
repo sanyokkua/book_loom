@@ -28,6 +28,14 @@ public interface TranslationJob {
      */
     void skipSegment();
 
+    /**
+     * Sets how a pause on a provider error checks the provider before the run resumes by itself; until it is set the
+     * provider counts as reachable at every wake.
+     *
+     * @param probe the non-null probe of the run's provider and model
+     */
+    void recoverWith(ProviderProbe probe);
+
     /** Requests cancellation at the next safe point. */
     void cancel();
 

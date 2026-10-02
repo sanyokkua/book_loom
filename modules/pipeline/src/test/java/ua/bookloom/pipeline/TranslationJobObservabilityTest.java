@@ -115,8 +115,8 @@ class TranslationJobObservabilityTest {
     @Test
     void run_draftFailingTwice_eachPauseNamesTheSegmentAndCountsItsPauses() {
         final ScriptedChatModel model = replies("ONE.")
-                .answer(Result.err(error(ErrorCode.unreachable)))
-                .answer(Result.err(error(ErrorCode.unreachable)))
+                .answer(Result.err(error(ErrorCode.timeout)))
+                .answer(Result.err(error(ErrorCode.timeout)))
                 .answer(target("TWO."))
                 .answer(target("THREE."));
         final TranslationJobImpl translation = job(project(threeLines(), brief("en", "uk")), model);

@@ -36,11 +36,13 @@ final class JobBoundaries implements RunBoundaries {
     private final SegmentRepository segments;
     private final String projectId;
     private final AtomicBoolean skipRequested;
+    private final UnattendedRecovery recovery;
 
     /**
      * Creates the boundaries of one run.
      *
      * @param skipRequested set by the job's skip action while paused, cleared as each pause begins and taken once
+     * @param recovery waits through a pause on an error the run recovers from by itself
      */
     JobBoundaries(
             final JobControl control,
@@ -49,7 +51,8 @@ final class JobBoundaries implements RunBoundaries {
             final Consumer<JobEvent> emit,
             final SegmentRepository segments,
             final String projectId,
-            final AtomicBoolean skipRequested) {
+            final AtomicBoolean skipRequested,
+            final UnattendedRecovery recovery) {
         this.control = Objects.requireNonNull(control, "control");
         this.pending = Objects.requireNonNull(pending, "pending");
         this.recorder = Objects.requireNonNull(recorder, "recorder");
@@ -57,6 +60,12 @@ final class JobBoundaries implements RunBoundaries {
         this.segments = Objects.requireNonNull(segments, "segments");
         this.projectId = Objects.requireNonNull(projectId, "projectId");
         this.skipRequested = Objects.requireNonNull(skipRequested, "skipRequested");
+        this.recovery = Objects.requireNonNull(recovery, "recovery");
+    }
+
+    @Override
+    public void callAnswered() {
+        recovery.callAnswered();
     }
 
     @Override
@@ -75,7 +84,7 @@ final class JobBoundaries implements RunBoundaries {
         final PauseReason reason = answer.pauseReason();
         if (reason != null && PauseDecider.namesSegment(reason)) {
             JobPauseLogger.reviewPause(reason, decision.segmentId(), progress);
-            return pause(new Paused(reason, null, progress, decision.segmentId()));
+            return pause(new Paused(reason, null, progress, decision.segmentId()), false);
         }
         return honor(answer, progress);
     }
@@ -101,12 +110,17 @@ final class JobBoundaries implements RunBoundaries {
             return Optional.of(new RunEnd(JobState.FAILED, error));
         }
         JobPauseLogger.recoveryPause(error, reason, progress);
+        // A pause the person asked for is theirs even when an error arrived with it: only an error pause wakes itself.
+        final boolean automatic = step.automatic() && reason == PauseReason.ON_ERROR;
         log.debug(
-                "Pausing on a provider error segmentId={} pauses={} of {}",
+                "Pausing on a provider error segmentId={} pauses={} of {} automatic={}",
                 step.segmentId(),
                 step.pauses(),
-                step.pausesBeforeFlagging());
-        return pause(new Paused(reason, error, progress, step.segmentId(), step.pauses(), step.pausesBeforeFlagging()));
+                step.pausesBeforeFlagging(),
+                automatic);
+        return pause(
+                new Paused(reason, error, progress, step.segmentId(), step.pauses(), step.pausesBeforeFlagging()),
+                automatic);
     }
 
     // Cleared before a boundary can pause, so only a skip asked during the pause that follows may skip anything.
@@ -123,11 +137,11 @@ final class JobBoundaries implements RunBoundaries {
             return Optional.empty();
         }
         JobPauseLogger.boundaryPause(reason, progress);
-        return pause(new Paused(reason, null, progress));
+        return pause(new Paused(reason, null, progress), false);
     }
 
     // A pause on an error names its segment for the person only; nothing about it was decided, so nothing is re-read.
-    private Optional<RunEnd> pause(final Paused paused) {
+    private Optional<RunEnd> pause(final Paused paused, final boolean automatic) {
         final JobProgress progress = paused.progress();
         final String segmentId = paused.error() == null ? paused.segmentId() : null;
         final Result<Integer> flushed = pending.flush();
@@ -136,7 +150,8 @@ final class JobBoundaries implements RunBoundaries {
         }
         recorder.paused();
         emit.accept(paused);
-        if (control.awaitPause() == PauseWait.CANCELLED) {
+        final PauseWait wait = automatic ? recovery.await(paused) : control.awaitPause();
+        if (wait == PauseWait.CANCELLED) {
             log.info("Translation job stopped after pause reason={}", paused.reason());
             return Optional.of(new RunEnd(JobState.CANCELLED, null));
         }

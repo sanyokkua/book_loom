@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.PauseReason;
+import ua.bookloom.pipeline.run.PauseDecider.Recovery;
 import ua.bookloom.pipeline.run.PauseDecider.Route;
 
 class PauseDeciderTest {
@@ -33,12 +34,41 @@ class PauseDeciderTest {
         "modelUnavailable,PAUSE_OR_FAIL",
         "missingCredential,PAUSE_OR_FAIL",
         "validation,PAUSE_OR_FAIL",
-        "internal,FAIL",
+        "internal,PAUSE_OR_FAIL",
         "busy,FAIL",
         "discoveryFailed,FAIL"
     })
     void route_everyCode_matchesTheTable(final ErrorCode code, final Route expected) {
         assertThat(PauseDecider.route(code)).isEqualTo(expected);
+    }
+
+    // An outage must never spend a segment's budget, and a code only the person can fix must never wake by itself,
+    // or an unloaded model would flag the rest of the book one segment at a time.
+    @ParameterizedTest
+    @CsvSource({
+        "unreachable,OUTAGE,true,10",
+        "upstream,OUTAGE,true,10",
+        "rateLimited,OUTAGE,true,10",
+        "timeout,STALL,true,2",
+        "internal,FAULT,true,3",
+        "auth,PERSON,false,2",
+        "modelNotFound,PERSON,false,2",
+        "modelUnavailable,PERSON,false,2",
+        "missingCredential,PERSON,false,2",
+        "validation,PERSON,false,2",
+        "emptyCompletion,PERSON,false,2",
+        "contextWindow,PERSON,false,2",
+        "cancelled,PERSON,false,2",
+        "busy,PERSON,false,2",
+        "discoveryFailed,PERSON,false,2"
+    })
+    void recovery_everyCode_matchesTheTable(
+            final ErrorCode code, final Recovery expected, final boolean automatic, final int budget) {
+        final Recovery recovery = PauseDecider.recovery(code);
+
+        assertThat(recovery).isEqualTo(expected);
+        assertThat(recovery.isAutomatic()).isEqualTo(automatic);
+        assertThat(recovery.pausesBeforeFlagging()).isEqualTo(budget);
     }
 
     // The last segment of a book ends a segment, a section and the stage at once and must pause once; a flagged

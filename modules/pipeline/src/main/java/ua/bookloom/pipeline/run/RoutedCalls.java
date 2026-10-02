@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.run;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -25,15 +26,12 @@ import ua.bookloom.api.pipeline.JobState;
 @Slf4j
 final class RoutedCalls {
 
-    /** How many pauses one step may cause before the run flags it and goes on. */
-    static final int PAUSES_BEFORE_FLAGGING = 2;
-
     // The answer a step skipped while its call waited is flagged with: the person left it, so it has no other error.
     private static final AppError SKIPPED = AppError.of(
             ErrorCode.cancelled, "Segment skipped", "The segment was skipped while its model call was waiting.");
 
     private final RunBoundaries boundaries;
-    // The pauses each give-up-able step caused so far in this run. Used from the job thread only.
+    // The pauses each give-up-able step caused so far in this run, by step and recovery kind. Job thread only.
     private final Map<String, Integer> pauses = new HashMap<>();
 
     /**
@@ -72,8 +70,8 @@ final class RoutedCalls {
     }
 
     /**
-     * Makes a call until it answers, the run ends, or the run gives up on it: after {@link #PAUSES_BEFORE_FLAGGING}
-     * pauses for the same step, or when the person skips it from a pause, the step's error is turned into a flagged
+     * Makes a call until it answers, the run ends, or the run gives up on it: after as many pauses for the same step
+     * as its kind of recovery allows ({@link PauseDecider.Recovery#pausesBeforeFlagging()}), or when the person skips it from a pause, the step's error is turned into a flagged
      * answer by {@code flag} and the run goes on ({@code specs/translation-pipeline/spec.md} "Give up on a step that
      * keeps failing").
      *
@@ -102,13 +100,17 @@ final class RoutedCalls {
             @Nullable final String segmentId,
             final Supplier<Result<T>> call,
             @Nullable final GiveUp<T> giveUp) {
+        // The pauses a call no step names has caused, by kind: such a call is never flagged, so past its budget it
+        // waits for the person instead of recovering by itself again.
+        final Map<PauseDecider.Recovery, Integer> unnamedPauses = new EnumMap<>(PauseDecider.Recovery.class);
         while (true) {
             final Result<T> result = withSegment(segmentId, call);
             if (result.isOk()) {
+                boundaries.callAnswered();
                 return new Step.Done<>(Objects.requireNonNull(result.data(), "data"));
             }
             final AppError error = Objects.requireNonNull(result.error(), "error");
-            final Optional<Step<T>> settled = afterError(error, progress.get(), giveUp);
+            final Optional<Step<T>> settled = afterError(error, progress.get(), giveUp, unnamedPauses);
             if (settled.isPresent()) {
                 return settled.get();
             }
@@ -127,10 +129,13 @@ final class RoutedCalls {
     }
 
     private <T> Optional<Step<T>> afterError(
-            final AppError error, final JobProgress progress, @Nullable final GiveUp<T> giveUp) {
+            final AppError error,
+            final JobProgress progress,
+            @Nullable final GiveUp<T> giveUp,
+            final Map<PauseDecider.Recovery, Integer> unnamedPauses) {
         return switch (PauseDecider.route(error.code())) {
             case CANCELLED -> afterAbortedCall(progress, giveUp);
-            case PAUSE_OR_FAIL -> afterProviderError(error, progress, giveUp);
+            case PAUSE_OR_FAIL -> afterProviderError(error, progress, giveUp, unnamedPauses);
             case FLAG_AT_ONCE, FAIL -> Optional.of(new Step.Stopped<>(failedBy(endingError(error))));
         };
     }
@@ -148,31 +153,62 @@ final class RoutedCalls {
         return Optional.empty();
     }
 
-    // The budget is checked before the pause, so the third failure of a step flags it instead of pausing again.
+    // The budget is checked before the pause, so the failure past it flags the step instead of pausing again. Each
+    // kind of recovery has its own count, so an outage never spends what a stalled call may use.
     private <T> Optional<Step<T>> afterProviderError(
-            final AppError error, final JobProgress progress, @Nullable final GiveUp<T> giveUp) {
-        final int pausedBefore =
-                giveUp == null ? 0 : pauses.getOrDefault(giveUp.step().key(), 0);
-        if (giveUp != null && pausedBefore >= PAUSES_BEFORE_FLAGGING) {
+            final AppError error,
+            final JobProgress progress,
+            @Nullable final GiveUp<T> giveUp,
+            final Map<PauseDecider.Recovery, Integer> unnamedPauses) {
+        final PauseDecider.Recovery recovery = PauseDecider.recovery(error.code());
+        final int budget = recovery.pausesBeforeFlagging();
+        final int pausedBefore = giveUp == null
+                ? unnamedPauses.getOrDefault(recovery, 0)
+                : pauses.getOrDefault(countKey(giveUp, recovery), 0);
+        if (giveUp != null && pausedBefore >= budget) {
             log.warn(
-                    "Flagging step={} after {} pauses for it code={}; the run goes on",
+                    "Flagging step={} after {} pauses for it recovery={} code={}; the run goes on",
                     giveUp.step(),
-                    PAUSES_BEFORE_FLAGGING,
+                    budget,
+                    recovery,
                     error.code());
             return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
         }
-        final RunBoundaries.FailingStep failing = giveUp == null
-                ? RunBoundaries.FailingStep.NONE
-                : new RunBoundaries.FailingStep(giveUp.step().segmentId(), pausedBefore + 1, PAUSES_BEFORE_FLAGGING);
-        final Optional<RunEnd> end = boundaries.afterRoutedError(error, progress, failing);
+        final Optional<RunEnd> end =
+                boundaries.afterRoutedError(error, progress, failing(error, recovery, pausedBefore, giveUp));
         if (end.isPresent()) {
             return Optional.of(new Step.Stopped<>(end.get()));
         }
-        return giveUp == null ? Optional.empty() : afterResume(error, giveUp);
+        if (giveUp == null) {
+            unnamedPauses.merge(recovery, 1, Integer::sum);
+            return Optional.empty();
+        }
+        return afterResume(error, giveUp, recovery);
     }
 
-    private <T> Optional<Step<T>> afterResume(final AppError error, final GiveUp<T> giveUp) {
-        final int paused = pauses.merge(giveUp.step().key(), 1, Integer::sum);
+    // Past its budget a step no one names waits for the person rather than recovering by itself once more.
+    private static RunBoundaries.FailingStep failing(
+            final AppError error,
+            final PauseDecider.Recovery recovery,
+            final int pausedBefore,
+            @Nullable final GiveUp<?> giveUp) {
+        final int budget = recovery.pausesBeforeFlagging();
+        final boolean automatic = recovery.isAutomatic() && pausedBefore < budget;
+        log.debug(
+                "Pausing on a model-call error code={} recovery={} pausedBefore={} budget={} automatic={}",
+                error.code(),
+                recovery,
+                pausedBefore,
+                budget,
+                automatic);
+        return giveUp == null
+                ? new RunBoundaries.FailingStep(null, 0, 0, automatic)
+                : new RunBoundaries.FailingStep(giveUp.step().segmentId(), pausedBefore + 1, budget, automatic);
+    }
+
+    private <T> Optional<Step<T>> afterResume(
+            final AppError error, final GiveUp<T> giveUp, final PauseDecider.Recovery recovery) {
+        final int paused = pauses.merge(countKey(giveUp, recovery), 1, Integer::sum);
         if (boundaries.takeSkipRequest()) {
             log.info("Skipping step={} as asked from the pause code={}; it is flagged", giveUp.step(), error.code());
             return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
@@ -181,8 +217,33 @@ final class RoutedCalls {
         return Optional.empty();
     }
 
+    private static String countKey(final GiveUp<?> giveUp, final PauseDecider.Recovery recovery) {
+        return giveUp.step().key() + "/" + recovery;
+    }
+
     private static <T> Result<T> withSegment(@Nullable final String segmentId, final Supplier<Result<T>> call) {
-        return SegmentLogContext.within(segmentId, () -> Objects.requireNonNull(call.get(), "call result"));
+        return SegmentLogContext.within(segmentId, () -> guarded(segmentId, call));
+    }
+
+    // A step that throws is a fault of the run, not of the book: it is answered as internal and recovered from like
+    // a provider error, so one bad segment cannot end a night's run. A virtual-machine error is never caught.
+    private static <T> Result<T> guarded(@Nullable final String segmentId, final Supplier<Result<T>> call) {
+        try {
+            return Objects.requireNonNull(call.get(), "call result");
+        } catch (VirtualMachineError fatal) {
+            throw fatal;
+        } catch (RuntimeException | Error thrown) {
+            log.error(
+                    "A run step threw instead of answering segmentId={}; it is retried as an internal error",
+                    segmentId,
+                    thrown);
+            return Result.err(AppError.of(
+                    ErrorCode.internal,
+                    "Unexpected error in the run",
+                    "An unexpected error interrupted this segment; the run will try it again.",
+                    null,
+                    thrown));
+        }
     }
 
     // A model error the run cannot recover from is an application fault, never a provider error that Retry now

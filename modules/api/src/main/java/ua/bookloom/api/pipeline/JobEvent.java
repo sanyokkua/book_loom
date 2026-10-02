@@ -15,4 +15,5 @@ public sealed interface JobEvent
                 ModelCallFinished,
                 MemoryUpdated,
                 ContextAssembled,
-                RoundStarted {}
+                RoundStarted,
+                RecoveryWaiting {}

@@ -1,0 +1,207 @@
+package ua.bookloom.pipeline;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Consumer;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.JobProgress;
+import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.ProviderProbe;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
+
+/**
+ * Waits through a pause on a provider error the run recovers from by itself, so a run left alone overnight is in the
+ * morning either finished or visibly waiting with its reason: it sleeps by {@link RecoverySchedule}, probes the
+ * provider at each wake and resumes as soon as a probe passes. A failed probe only extends the wait; a person's Retry
+ * now, Skip segment or Resume ends it at once and restarts the schedule; Pause holds the run for the person; Stop ends
+ * it. The outage — when it began and how many wakes it took — lasts until a model call answers again.
+ *
+ * <p>Used from the job thread only, apart from {@link #probeWith(ProviderProbe)}.
+ */
+@Slf4j
+final class UnattendedRecovery {
+
+    private final JobControl control;
+    private final Clock clock;
+    private final RecoveryTimer timer;
+    private final Consumer<JobEvent> emit;
+    private volatile ProviderProbe probe = ProviderProbe.ASSUME_REACHABLE;
+    private @Nullable Instant downSince;
+    private int wakes;
+    private @Nullable ErrorCode lastProbe;
+
+    UnattendedRecovery(
+            final JobControl control, final Clock clock, final RecoveryTimer timer, final Consumer<JobEvent> emit) {
+        this.control = Objects.requireNonNull(control, "control");
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.timer = Objects.requireNonNull(timer, "timer");
+        this.emit = Objects.requireNonNull(emit, "emit");
+    }
+
+    void probeWith(final ProviderProbe probe) {
+        this.probe = Objects.requireNonNull(probe, "probe");
+        log.debug("Recovery probe set");
+    }
+
+    /** A model call answered: the outage, if there was one, is over. */
+    void callAnswered() {
+        final Instant began = downSince;
+        if (began != null) {
+            log.info(
+                    "Provider answers again after an outage of {} min and {} wakes",
+                    Duration.between(began, clock.instant()).toMinutes(),
+                    wakes);
+            forget();
+        }
+    }
+
+    /**
+     * Waits through the pause just announced until the provider answers a probe, the person acts, or the outage has
+     * lasted too long, after which it waits for the person alone.
+     *
+     * @param paused the non-null pause on an error, already announced
+     * @return how the wait ended
+     */
+    PauseWait await(final Paused paused) {
+        final AppError error = Objects.requireNonNull(paused.error(), "a recovering pause is on an error");
+        final Instant now = clock.instant();
+        if (downSince == null) {
+            downSince = now;
+            wakes = 0;
+            log.info("Provider outage began code={} segmentId={}", error.code(), paused.segmentId());
+        }
+        control.beginRecovery();
+        try {
+            return waitThrough(error, paused.progress(), Objects.requireNonNull(downSince, "downSince"));
+        } finally {
+            control.endRecovery();
+        }
+    }
+
+    private PauseWait waitThrough(final AppError error, final JobProgress progress, final Instant since) {
+        lastProbe = null;
+        while (true) {
+            final Instant now = clock.instant();
+            final Optional<Duration> delay = RecoverySchedule.delayBefore(wakes + 1, Duration.between(since, now));
+            if (delay.isEmpty()) {
+                log.warn(
+                        "Provider down since {} for over {}; waiting for the person",
+                        since,
+                        RecoverySchedule.MAX_OUTAGE);
+                return holdFor(RecoveryWaiting.Status.GAVE_UP, error, progress, since, lastProbe);
+            }
+            announce(error, progress, since, now.plus(delay.get()));
+            final Optional<PauseWait> ended = wake(delay.get(), error, progress, since);
+            if (ended.isPresent()) {
+                return ended.get();
+            }
+        }
+    }
+
+    // One wait and its probe: empty to wait again, or how the pause ended.
+    private Optional<PauseWait> wake(
+            final Duration delay, final AppError error, final JobProgress progress, final Instant since) {
+        final Optional<PauseWait> settled =
+                settle(control.awaitWake(timer.nanosToWait(delay)), error, progress, since, lastProbe);
+        if (settled.isPresent()) {
+            return settled;
+        }
+        wakes++;
+        lastProbe = probeOnce();
+        return lastProbe == null ? resumeAfterProbe(error, progress, since) : Optional.empty();
+    }
+
+    private void announce(final AppError error, final JobProgress progress, final Instant since, final Instant at) {
+        emit.accept(
+                new RecoveryWaiting(RecoveryWaiting.Status.WAITING, error, wakes + 1, since, at, lastProbe, progress));
+        log.info(
+                "Waiting for the provider: wake {} at {} code={} lastProbe={}", wakes + 1, at, error.code(), lastProbe);
+    }
+
+    // A person may act between a good probe and the resume; the wait of zero reads what they did.
+    private Optional<PauseWait> resumeAfterProbe(
+            final AppError error, final JobProgress progress, final Instant since) {
+        if (control.resumeAutomatically()) {
+            log.info(
+                    "Resumed by itself after {} min and {} wakes code={}",
+                    Duration.between(since, clock.instant()).toMinutes(),
+                    wakes,
+                    error.code());
+            return Optional.of(PauseWait.RESUMED);
+        }
+        return settle(control.awaitWake(0), error, progress, since, null);
+    }
+
+    private Optional<PauseWait> settle(
+            final RecoveryWake wake,
+            final AppError error,
+            final JobProgress progress,
+            final Instant since,
+            @Nullable final ErrorCode probeFailure) {
+        return switch (wake) {
+            case DUE -> Optional.empty();
+            case CANCELLED -> {
+                log.info("Recovery ended: the run was stopped while waiting for the provider");
+                yield Optional.of(PauseWait.CANCELLED);
+            }
+            case RESUMED -> {
+                log.info("Recovery ended: the person resumed the run; the wait schedule starts again");
+                forget();
+                yield Optional.of(PauseWait.RESUMED);
+            }
+            case HELD -> {
+                log.info("Recovery held: the person paused the run while it waited for the provider");
+                yield Optional.of(holdFor(RecoveryWaiting.Status.HELD, error, progress, since, probeFailure));
+            }
+        };
+    }
+
+    private PauseWait holdFor(
+            final RecoveryWaiting.Status status,
+            final AppError error,
+            final JobProgress progress,
+            final Instant since,
+            @Nullable final ErrorCode probeFailure) {
+        emit.accept(new RecoveryWaiting(status, error, wakes, since, null, probeFailure, progress));
+        control.endRecovery();
+        final PauseWait wait = control.awaitPause();
+        if (wait == PauseWait.RESUMED) {
+            forget();
+        }
+        return wait;
+    }
+
+    // A probe that throws is a failed probe, never a reason to leave the wait.
+    private @Nullable ErrorCode probeOnce() {
+        try {
+            final Result<Duration> probed = Objects.requireNonNull(probe.probe(), "probe result");
+            if (probed.isOk()) {
+                log.info("Provider probe at wake {} passed in {} ms", wakes, millisOf(probed));
+                return null;
+            }
+            final AppError failure = Objects.requireNonNull(probed.error(), "probe error");
+            log.info("Provider probe at wake {} failed code={}", wakes, failure.code());
+            return failure.code();
+        } catch (RuntimeException thrown) {
+            log.warn("Provider probe at wake {} threw; counted as a failed probe", wakes, thrown);
+            return ErrorCode.internal;
+        }
+    }
+
+    private static long millisOf(final Result<Duration> probed) {
+        return Objects.requireNonNull(probed.data(), "probe time").toMillis();
+    }
+
+    private void forget() {
+        downSince = null;
+        wakes = 0;
+    }
+}

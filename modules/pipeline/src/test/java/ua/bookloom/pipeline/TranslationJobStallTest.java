@@ -104,13 +104,14 @@ class TranslationJobStallTest {
         assertThat(stored(project, "Book.md:1").machineTarget()).isEqualTo(T1);
     }
 
-    // Two pauses for the same draft are the budget: the third failure flags it and the run sends the next draft.
+    // Two pauses for the same draft are the budget: the third failure flags it and the run sends the next draft. A
+    // timeout spends the budget; an outage would not, as TranslationJobUnattendedRecoveryTest proves.
     @Test
     void run_draftFailingAfterTwoPauses_isFlaggedAndTheRunGoesOn() {
         final ScriptedChatModel model = replies("ONE.")
-                .answer(Result.err(error(ErrorCode.unreachable)))
-                .answer(Result.err(error(ErrorCode.unreachable)))
-                .answer(Result.err(error(ErrorCode.unreachable)))
+                .answer(Result.err(error(ErrorCode.timeout)))
+                .answer(Result.err(error(ErrorCode.timeout)))
+                .answer(Result.err(error(ErrorCode.timeout)))
                 .answer(target("THREE."));
         final TranslationJobImpl translation = job(project(threeLines(), brief("en", "uk")), model);
         final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
@@ -125,7 +126,7 @@ class TranslationJobStallTest {
 
         assertThat(pauses).isEmpty();
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.txt:1", ErrorCode.unreachable));
+        assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.txt:1", ErrorCode.timeout));
         assertThat(report.accepted()).isEqualTo(2);
     }
 

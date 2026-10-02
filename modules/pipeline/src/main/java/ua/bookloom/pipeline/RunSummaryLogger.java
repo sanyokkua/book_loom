@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.Paused;
+import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.Resumed;
 import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.pipeline.SegmentDecided;
@@ -74,7 +75,12 @@ final class RunSummaryLogger {
                 write("final");
                 return;
             }
-            case ModelCallStarted _, SegmentDrafted _, MemoryUpdated _, ContextAssembled _, RoundStarted _ -> {
+            case ModelCallStarted _,
+                    SegmentDrafted _,
+                    MemoryUpdated _,
+                    ContextAssembled _,
+                    RoundStarted _,
+                    RecoveryWaiting _ -> {
                 // Nothing to count: these say what is happening, the counts change on the events above.
             }
         }

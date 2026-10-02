@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -33,6 +34,8 @@ final class JobControl {
     // Set only when this control interrupted the model-call thread, so exitModelCall clears that interrupt and
     // never one somebody else sent, such as an executor shutdown, which must still end the run.
     private boolean interruptSent;
+    // Set while a pause on an error recovers by itself; a person's pause clears it, which holds the run for them.
+    private boolean recovering;
 
     /**
      * Creates the control of one job.
@@ -44,91 +47,62 @@ final class JobControl {
     }
 
     boolean claimRun() {
-        final boolean claimedNow;
-        final JobState observed;
-        lock.lock();
-        try {
+        final boolean claimedNow = locked(() -> {
             if (claimed) {
-                claimedNow = false;
-            } else {
-                claimed = true;
-                if (state == JobState.NEW) {
-                    transition(JobState.RUNNING);
-                }
-                claimedNow = true;
+                return false;
             }
-            observed = state;
-        } finally {
-            lock.unlock();
-        }
-        log.debug("Claimed translation job run accepted={} state={}", claimedNow, observed);
+            claimed = true;
+            if (state == JobState.NEW) {
+                transition(JobState.RUNNING);
+            }
+            return true;
+        });
+        log.debug("Claimed translation job run accepted={} state={}", claimedNow, state());
         return claimedNow;
     }
 
     void pause() {
-        final JobState observed;
-        final boolean ignored;
-        final boolean interrupted;
-        lock.lock();
-        try {
-            ignored = isTerminal();
-            if (!ignored) {
-                pauseRequested = true;
+        final boolean interrupted = locked(() -> {
+            if (isTerminal()) {
+                return false;
             }
-            interrupted = !ignored && interruptModelCall();
-            pauseAbortedCall |= interrupted;
-            observed = state;
-        } finally {
-            lock.unlock();
-        }
-        log.debug("Requested pause state={} ignored={} interruptedModelCall={}", observed, ignored, interrupted);
+            pauseRequested = true;
+            holdRecovery();
+            final boolean sent = interruptModelCall();
+            pauseAbortedCall |= sent;
+            return sent;
+        });
+        log.debug("Requested pause state={} interruptedModelCall={}", state(), interrupted);
     }
 
     void resume() {
-        final JobState observed;
-        final boolean ignored;
-        lock.lock();
-        try {
-            ignored = isTerminal();
-            if (!ignored) {
+        locked(() -> {
+            if (!isTerminal()) {
                 pauseRequested = false;
                 if (state == JobState.PAUSED) {
                     transition(JobState.RUNNING);
                     changed.signalAll();
                 }
             }
-            observed = state;
-        } finally {
-            lock.unlock();
-        }
-        log.debug("Resumed translation job state={} ignored={}", observed, ignored);
+            return state;
+        });
+        log.debug("Resumed translation job state={}", state());
     }
 
     void cancel() {
-        final JobState observed;
-        final boolean ignored;
-        final boolean interrupted;
-        lock.lock();
-        try {
-            ignored = isTerminal();
-            if (!ignored) {
-                cancelRequested = true;
-                pauseRequested = false;
-                if (state == JobState.NEW || state == JobState.PAUSED) {
-                    transition(JobState.CANCELLED);
-                    changed.signalAll();
-                }
+        final boolean interrupted = locked(() -> {
+            if (isTerminal()) {
+                return false;
             }
-            interrupted = !ignored && interruptModelCall();
-            observed = state;
-        } finally {
-            lock.unlock();
-        }
-        log.debug(
-                "Cancelled translation job state={} ignored={} interruptedModelCall={}",
-                observed,
-                ignored,
-                interrupted);
+            cancelRequested = true;
+            pauseRequested = false;
+            if (state == JobState.NEW || state == JobState.PAUSED) {
+                transition(JobState.CANCELLED);
+                changed.signalAll();
+            }
+            return interruptModelCall();
+        });
+        log.debug("Cancelled translation job state={} interruptedModelCall={}", state(), interrupted);
     }
 
     /**
@@ -140,22 +114,17 @@ final class JobControl {
      * @return {@code true} if the call may go ahead and must be closed with {@link #exitModelCall()}
      */
     boolean enterModelCall() {
-        final boolean entered;
-        final JobState observed;
-        lock.lock();
-        try {
-            entered = !cancelRequested && !pauseRequested;
-            if (entered) {
+        final boolean entered = locked(() -> {
+            final boolean free = !cancelRequested && !pauseRequested;
+            if (free) {
                 modelCallThread = Thread.currentThread();
                 pauseAbortedCall = false;
             } else {
                 pauseAbortedCall |= !cancelRequested;
             }
-            observed = state;
-        } finally {
-            lock.unlock();
-        }
-        log.debug("Model call entry entered={} state={}", entered, observed);
+            return free;
+        });
+        log.debug("Model call entry entered={}", entered);
         return entered;
     }
 
@@ -164,18 +133,15 @@ final class JobControl {
      * wait from ever seeing the interrupt that aborted a call. An interrupt from anywhere else is left in place.
      */
     void exitModelCall() {
-        final boolean cleared;
-        lock.lock();
-        try {
+        final boolean cleared = locked(() -> {
             modelCallThread = null;
-            cleared = interruptSent;
+            final boolean sent = interruptSent;
             interruptSent = false;
-            if (cleared) {
+            if (sent) {
                 Thread.interrupted();
             }
-        } finally {
-            lock.unlock();
-        }
+            return sent;
+        });
         log.debug("Model call exit interruptCleared={}", cleared);
     }
 
@@ -185,65 +151,108 @@ final class JobControl {
      * something outside this control interrupted the run.
      */
     BoundaryDecision abortedCallBoundary() {
-        final BoundaryDecision decision;
-        lock.lock();
-        try {
+        final BoundaryDecision decision = locked(() -> {
+            final BoundaryDecision decided;
             if (cancelRequested) {
-                decision = BoundaryDecision.cancel();
+                decided = BoundaryDecision.cancel();
             } else if (pauseRequested) {
-                decision = pause(consumeRequestedPause());
+                decided = pause(consumeRequestedPause());
             } else {
-                decision = pauseAbortedCall ? BoundaryDecision.continueRunning() : BoundaryDecision.cancel();
+                decided = pauseAbortedCall ? BoundaryDecision.continueRunning() : BoundaryDecision.cancel();
             }
             pauseAbortedCall = false;
-        } finally {
-            lock.unlock();
-        }
+            return decided;
+        });
         log.debug("Checked aborted-call boundary decision={}", decision);
         return decision;
     }
 
-    void pauseAt(final Set<PausePoint> points) {
-        Objects.requireNonNull(points, "points");
-        final JobState observed;
+    /**
+     * Interrupts the model call in flight for the stall watchdog, so the provider client gives it up and releases the
+     * gate. Unlike a pause, it leaves no request behind: the call's answer is what the run acts on.
+     *
+     * @return {@code true} if a call was in flight and was interrupted, {@code false} otherwise
+     */
+    boolean interruptStalledCall() {
+        final boolean interrupted = locked(() -> !isTerminal() && interruptModelCall());
+        log.debug("Stall watchdog interrupt interruptedModelCall={}", interrupted);
+        return interrupted;
+    }
+
+    /** Marks the pause just entered as one that recovers by itself until the person pauses, resumes or stops. */
+    void beginRecovery() {
+        final boolean began =
+                locked(() -> recovering = state == JobState.PAUSED && !cancelRequested && !pauseRequested);
+        log.debug("Began automatic recovery began={}", began);
+    }
+
+    /** Waits up to {@code nanos} (zero or less returns at once) for the person while the run recovers by itself. */
+    RecoveryWake awaitWake(final long nanos) {
+        boolean interrupted = false;
+        final RecoveryWake wake;
         lock.lock();
         try {
+            long left = nanos;
+            while (state == JobState.PAUSED && !cancelRequested && recovering && left > 0) {
+                try {
+                    left = changed.awaitNanos(left);
+                } catch (InterruptedException cause) {
+                    cancelRequested = true;
+                    transition(JobState.CANCELLED);
+                    interrupted = true;
+                }
+            }
+            wake = wakeOf();
+        } finally {
+            lock.unlock();
+            restoreInterrupt(interrupted);
+        }
+        log.debug("Recovery wait ended wake={} interrupted={}", wake, interrupted);
+        return wake;
+    }
+
+    /** Resumes a recovering run after a good probe unless the person acted meanwhile; {@code true} if it did. */
+    boolean resumeAutomatically() {
+        final boolean resumed = locked(() -> {
+            final boolean due = state == JobState.PAUSED && !cancelRequested && recovering;
+            if (due) {
+                recovering = false;
+                transition(JobState.RUNNING);
+                changed.signalAll();
+            }
+            return due;
+        });
+        log.debug("Automatic resume resumed={}", resumed);
+        return resumed;
+    }
+
+    /** Ends the recovery: whatever the wait ends in, a later pause is an ordinary one again. */
+    void endRecovery() {
+        locked(() -> recovering = false);
+    }
+
+    void pauseAt(final Set<PausePoint> points) {
+        Objects.requireNonNull(points, "points");
+        final JobState observed = locked(() -> {
             if (!isTerminal()) {
                 pausePoints = Set.copyOf(points);
             }
-            observed = state;
-        } finally {
-            lock.unlock();
-        }
+            return state;
+        });
         log.debug("Replaced pause points state={} points={}", observed, points);
     }
 
     // Silent on purpose: a screen reads the state as often as it draws, and a line per read would bury the run's own.
     JobState state() {
-        lock.lock();
-        try {
-            return state;
-        } finally {
-            lock.unlock();
-        }
+        return locked(() -> state);
     }
 
     boolean isCancellationRequested() {
-        lock.lock();
-        try {
-            return cancelRequested;
-        } finally {
-            lock.unlock();
-        }
+        return locked(() -> cancelRequested);
     }
 
     Set<PausePoint> pausePoints() {
-        lock.lock();
-        try {
-            return pausePoints;
-        } finally {
-            lock.unlock();
-        }
+        return locked(() -> pausePoints);
     }
 
     /**
@@ -277,20 +286,15 @@ final class JobControl {
 
     BoundaryDecision failureBoundary(final AppError error) {
         Objects.requireNonNull(error, "error");
-        final BoundaryDecision decision;
-        lock.lock();
-        try {
+        final BoundaryDecision decision = locked(() -> {
             if (cancelRequested) {
-                decision = BoundaryDecision.cancel();
-            } else {
-                final PauseReason reason = pauseRequested
-                        ? consumeRequestedPause()
-                        : pausePoints.contains(PausePoint.ON_ERROR) ? PauseReason.ON_ERROR : null;
-                decision = reason == null ? BoundaryDecision.continueRunning() : pause(reason);
+                return BoundaryDecision.cancel();
             }
-        } finally {
-            lock.unlock();
-        }
+            final PauseReason reason = pauseRequested
+                    ? consumeRequestedPause()
+                    : pausePoints.contains(PausePoint.ON_ERROR) ? PauseReason.ON_ERROR : null;
+            return reason == null ? BoundaryDecision.continueRunning() : pause(reason);
+        });
         log.debug("Checked failure boundary errorCode={} decision={}", error.code(), decision);
         return decision;
     }
@@ -319,14 +323,39 @@ final class JobControl {
     }
 
     void finish(final JobState terminal) {
-        lock.lock();
-        try {
+        locked(() -> {
             transition(terminal);
             changed.signalAll();
+            return terminal;
+        });
+        log.debug("Finished translation job terminal={}", terminal);
+    }
+
+    private <T> T locked(final Supplier<T> action) {
+        lock.lock();
+        try {
+            return action.get();
         } finally {
             lock.unlock();
         }
-        log.debug("Finished translation job terminal={}", terminal);
+    }
+
+    private RecoveryWake wakeOf() {
+        if (cancelRequested) {
+            return RecoveryWake.CANCELLED;
+        }
+        if (state != JobState.PAUSED) {
+            return RecoveryWake.RESUMED;
+        }
+        return recovering ? RecoveryWake.DUE : RecoveryWake.HELD;
+    }
+
+    // A person's pause while the run recovers by itself takes the run over: no wake resumes it any more.
+    private void holdRecovery() {
+        if (recovering && state == JobState.PAUSED) {
+            recovering = false;
+            changed.signalAll();
+        }
     }
 
     private PauseReason consumeRequestedPause() {

@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
+import ua.bookloom.api.pipeline.ProviderProbe;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
@@ -81,6 +82,9 @@ final class TranslationJobImpl implements TranslationJob {
     private final PendingCommit pending;
     // Written and read only on the job thread, from the claim on.
     private Instant startedAt;
+    private final UnattendedRecovery recovery;
+    private final StallWatchdog watchdog;
+    private final RunTicks ticks;
 
     TranslationJobImpl(
             final DocumentPort documents,
@@ -93,6 +97,38 @@ final class TranslationJobImpl implements TranslationJob {
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
             final Clock clock) {
+        this(
+                documents,
+                request,
+                model,
+                mapper,
+                templates,
+                stores,
+                qualityLoop,
+                splitter,
+                revision,
+                clock,
+                RecoveryTimer.REAL,
+                RunTicks.DAEMON);
+    }
+
+    /**
+     * Creates a job whose recovery waits and watchdog cadence are the given ones, so a test replays hours of an outage
+     * or a stall on a scripted clock.
+     */
+    TranslationJobImpl(
+            final DocumentPort documents,
+            final RunRequest request,
+            final ChatModel model,
+            final ObjectMapper mapper,
+            final PromptTemplates templates,
+            final RunStores stores,
+            final QualityLoop qualityLoop,
+            final SentenceSplitter splitter,
+            final ConsistencyPass revision,
+            final Clock clock,
+            final RecoveryTimer timer,
+            final RunTicks ticks) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.request = Objects.requireNonNull(request, "request");
         this.model = Objects.requireNonNull(model, "model");
@@ -108,6 +144,9 @@ final class TranslationJobImpl implements TranslationJob {
         this.recorder = new RunRecorder(stores.runs(), jobId, request.projectId(), clock);
         this.pending = new PendingCommit(stores.checkpoint(), request.projectId());
         this.startedAt = clock.instant();
+        this.recovery = new UnattendedRecovery(control, clock, Objects.requireNonNull(timer, "timer"), this::emit);
+        this.watchdog = new StallWatchdog(control, clock);
+        this.ticks = Objects.requireNonNull(ticks, "ticks");
     }
 
     @Override
@@ -117,12 +156,15 @@ final class TranslationJobImpl implements TranslationJob {
             return Result.err(TranslationJobErrors.alreadyRun());
         }
         MDC.put("job", jobId);
+        Runnable stopWatchdog = () -> {};
         try {
+            stopWatchdog = watchdog.start(ticks);
             return runClaimed();
         } catch (Throwable cause) {
             control.finish(JobState.FAILED);
             return Result.err(unexpectedError(cause));
         } finally {
+            stopWatchdog.run();
             MDC.remove("segment");
             MDC.remove("job");
         }
@@ -148,6 +190,12 @@ final class TranslationJobImpl implements TranslationJob {
             skipRequested.set(true);
             control.resume();
         }
+    }
+
+    @Override
+    public void recoverWith(final ProviderProbe probe) {
+        log.debug("Recovery probe set for translation job project={}", request.projectId());
+        recovery.probeWith(probe);
     }
 
     @Override
@@ -224,7 +272,10 @@ final class TranslationJobImpl implements TranslationJob {
                 brief.foreignPassages(),
                 CallFrame.bookLanguageOf(run.document()));
         final ModelCalls calls = new JobModelCalls(
-                onSent -> new CancellableChatModel(model, control, onSent), this::emit, clock, frame.targetLanguage());
+                onSent -> new CancellableChatModel(model, control, onSent, watchdog),
+                this::emit,
+                clock,
+                frame.targetLanguage());
         final RunSettings settings = new RunSettings(
                 request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names());
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
@@ -252,7 +303,14 @@ final class TranslationJobImpl implements TranslationJob {
 
     private JobBoundaries boundaries() {
         return new JobBoundaries(
-                control, pending, recorder, this::emit, stores.segments(), request.projectId(), skipRequested);
+                control,
+                pending,
+                recorder,
+                this::emit,
+                stores.segments(),
+                request.projectId(),
+                skipRequested,
+                recovery);
     }
 
     private Result<JobReport> finish(final JobState end, final RunStart.Started run, @Nullable final AppError error) {
@@ -283,6 +341,7 @@ final class TranslationJobImpl implements TranslationJob {
     private void emit(final JobEvent event) {
         log.debug("Sending translation job event type={}", event.getClass().getSimpleName());
         runSummary.onEvent(event);
+        watchdog.onEvent(event);
         subscribers.deliver(event);
     }
 
@@ -291,7 +350,8 @@ final class TranslationJobImpl implements TranslationJob {
         return AppError.of(
                 ErrorCode.internal,
                 "Translation job failed",
-                "An unexpected failure stopped this translation job.",
+                "An unexpected error stopped the run outside any segment, so it could not be retried. The segments"
+                        + " decided so far are kept, and the log names the error.",
                 null,
                 cause);
     }

@@ -15,8 +15,8 @@ import ua.bookloom.api.pipeline.PauseReason;
  * functions, kept apart from the job so that a call which names no single segment — a chunk's judge — is routed by the
  * same table, and so that the lock-held control only asks and records.
  *
- * <p>The switch lists all fifteen codes without a {@code default}, so a sixteenth code cannot compile until someone
- * decides where it goes.
+ * <p>Each switch lists all fifteen codes without a {@code default}, so a sixteenth code cannot compile until
+ * someone decides where it goes.
  */
 // Checkstyle parses source text before Lombok's annotation processor creates the private constructor,
 // so suppress only its source-level utility-constructor false positive.
@@ -35,13 +35,66 @@ public final class PauseDecider {
         CANCELLED,
 
         /**
-         * The provider could not answer now: the run pauses with the error where the person can retry, or fails
-         * where pausing on an error is not enabled, and the interrupted call is made again on resume.
+         * The call could not be answered now — the provider failed, or the step threw: the run pauses with the error,
+         * or fails where pausing on an error is not enabled, and the interrupted call is made again on resume.
+         * {@link Recovery} says whether the pause resumes by itself.
          */
         PAUSE_OR_FAIL,
 
-        /** The error is not the provider's to fix, so it never pauses: the run ends Failed with {@code internal}. */
+        /** A code a run never sees, so it never pauses: the run ends Failed with {@code internal}. */
         FAIL
+    }
+
+    /**
+     * How a run paused on an error gets going again, and how many such pauses one step may cause before it is flagged.
+     * Kept apart from {@link Route} because it matters only for {@link Route#PAUSE_OR_FAIL}.
+     */
+    public enum Recovery {
+
+        /**
+         * The provider is down or refusing for now (unreachable, 5xx, 429). The run waits and probes by itself, and an
+         * outage is not the step's fault: it spends a budget of its own, large enough that only calls made after a probe
+         * found the provider reachable again use it up.
+         */
+        OUTAGE(true, 10),
+
+        /** A call ran out of time. The run waits and tries again by itself, and the step's own budget is spent. */
+        STALL(true, 2),
+
+        /** An unexpected failure inside the run. The run waits and tries again by itself a few times. */
+        FAULT(true, 3),
+
+        /**
+         * Something only the person can fix (a credential, a missing or unloaded model, a rejected request): the run
+         * waits for them, because retrying by itself would flag the rest of the book one segment at a time.
+         */
+        PERSON(false, 2);
+
+        private final boolean automatic;
+        private final int pausesBeforeFlagging;
+
+        Recovery(final boolean automatic, final int pausesBeforeFlagging) {
+            this.automatic = automatic;
+            this.pausesBeforeFlagging = pausesBeforeFlagging;
+        }
+
+        /**
+         * Whether a pause of this kind resumes by itself once the provider answers a probe.
+         *
+         * @return {@code true} if the run recovers without the person, {@code false} otherwise
+         */
+        public boolean isAutomatic() {
+            return automatic;
+        }
+
+        /**
+         * How many pauses of this kind one step may cause before its next failure flags it.
+         *
+         * @return a positive count
+         */
+        public int pausesBeforeFlagging() {
+            return pausesBeforeFlagging;
+        }
     }
 
     /**
@@ -64,11 +117,40 @@ public final class PauseDecider {
                             modelNotFound,
                             modelUnavailable,
                             missingCredential,
-                            validation -> Route.PAUSE_OR_FAIL;
-                    case internal, busy, discoveryFailed -> Route.FAIL;
+                            validation,
+                            internal -> Route.PAUSE_OR_FAIL;
+                    case busy, discoveryFailed -> Route.FAIL;
                 };
         log.debug("Routed model-call error code={} route={}", code, route);
         return route;
+    }
+
+    /**
+     * Classifies an error the run pauses on by how it recovers.
+     *
+     * @param code the non-null code of the error
+     * @return how a pause on it gets going again; {@link Recovery#PERSON} for a code that never pauses at all
+     */
+    public static Recovery recovery(final ErrorCode code) {
+        Objects.requireNonNull(code, "code");
+        final Recovery recovery =
+                switch (code) {
+                    case unreachable, upstream, rateLimited -> Recovery.OUTAGE;
+                    case timeout -> Recovery.STALL;
+                    case internal -> Recovery.FAULT;
+                    case auth,
+                            modelNotFound,
+                            modelUnavailable,
+                            missingCredential,
+                            validation,
+                            emptyCompletion,
+                            contextWindow,
+                            cancelled,
+                            busy,
+                            discoveryFailed -> Recovery.PERSON;
+                };
+        log.debug("Classified paused-on error code={} recovery={}", code, recovery);
+        return recovery;
     }
 
     /**
