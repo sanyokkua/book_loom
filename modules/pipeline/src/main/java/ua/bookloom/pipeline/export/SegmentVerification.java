@@ -128,10 +128,15 @@ final class SegmentVerification {
     }
 
     private static boolean samePlaceholders(final Segment written, final String masked, final Segment reopened) {
+        // A placeholder that stands for nothing — a plain-text line mark — carries no markup to compare, and whether a
+        // paragraph gets them depends on its line lengths, which a translation changes.
         final List<@Nullable String> expected = Tokens.inOrder(masked).stream()
                 .map(token -> written.placeholders().get(token.substring(1, token.length() - 1)))
+                .filter(fragment -> fragment == null || !fragment.isEmpty())
                 .toList();
-        final List<String> observed = List.copyOf(reopened.placeholders().values());
+        final List<String> observed = reopened.placeholders().values().stream()
+                .filter(fragment -> !fragment.isEmpty())
+                .toList();
         log.trace("segment={} placeholders written={} reopened={}", written.id(), expected, observed);
         if (expected.size() != observed.size()) {
             log.debug(

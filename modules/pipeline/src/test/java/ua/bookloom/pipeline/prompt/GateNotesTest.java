@@ -43,6 +43,17 @@ class GateNotesTest {
     }
 
     @Test
+    void describe_lineBreakTokenDropped_saysItEndsALine() {
+        final String note =
+                GateNotes.describe("• Mass.⟦g0⟧\n• Weight.", "• Маса. • Вага.", List.of(), List.of("⟦g0⟧"), RULE);
+
+        assertThat(note).isEqualTo("""
+                        The placeholders do not match.
+                        Missing (put each back once): ⟦g0⟧.
+                        ⟦g0⟧ ends a line: keep it at the end of the same line as in <Text>.""");
+    }
+
+    @Test
     void describe_pairReversed_namesTheOrderAndThePair() {
         final String note = GateNotes.describe("a ⟦g0⟧b⟦g1⟧ c", "а ⟦g1⟧б⟦g0⟧ в", PAIR, RULE);
 

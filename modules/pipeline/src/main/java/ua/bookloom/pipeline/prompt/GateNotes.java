@@ -37,9 +37,29 @@ public final class GateNotes {
      */
     public static String describe(
             final String expected, final String rejected, final List<PlaceholderPair> pairs, final String ruleMessage) {
+        return describe(expected, rejected, pairs, List.of(), ruleMessage);
+    }
+
+    /**
+     * Describes what is wrong with {@code rejected}, saying of each missing line-break token that it ends a line.
+     *
+     * @param expected the non-null text the model was shown, every token it must return in place
+     * @param rejected the non-null reply the gate refused
+     * @param pairs the non-null segment's pairs
+     * @param lineBreakTokens the non-null segment's line-break tokens
+     * @param ruleMessage the non-null message of the gate that refused the reply, stated first
+     * @return the note, one statement per line; never blank
+     */
+    public static String describe(
+            final String expected,
+            final String rejected,
+            final List<PlaceholderPair> pairs,
+            final List<String> lineBreakTokens,
+            final String ruleMessage) {
         Objects.requireNonNull(expected, "expected");
         Objects.requireNonNull(rejected, "rejected");
         Objects.requireNonNull(pairs, "pairs");
+        Objects.requireNonNull(lineBreakTokens, "lineBreakTokens");
         Objects.requireNonNull(ruleMessage, "ruleMessage");
         final Map<String, Integer> difference = difference(expected, rejected);
         final List<String> missing = tokensWith(difference, true);
@@ -51,12 +71,20 @@ public final class GateNotes {
         final boolean ruleOnly = missing.isEmpty() && extra.isEmpty() && invented.isEmpty() && reversed.isEmpty();
         final List<String> lines = new ArrayList<>(List.of(ruleMessage));
         addListed(lines, "Missing (put each back once): ", missing);
+        addLineEnds(lines, missing, lineBreakTokens);
         addListed(lines, "Extra (remove): ", extra);
         invented.forEach(token -> lines.add(token + " is not a placeholder of this text; write names as plain text."));
         reversed.forEach(pair -> lines.add("Out of order: " + pair.close() + " comes before " + pair.open() + "."));
         affected(pairs, missing, reversed, ruleOnly).forEach(pair -> lines.add(wraps(expected, pair)));
         log.debug("Gate note missing={} extra={} invented={} outOfOrder={}", missing, extra, invented, reversed.size());
         return joined(lines);
+    }
+
+    private static void addLineEnds(
+            final List<String> lines, final List<String> missing, final List<String> lineBreakTokens) {
+        missing.stream()
+                .filter(lineBreakTokens::contains)
+                .forEach(token -> lines.add(token + " ends a line: keep it at the end of the same line as in <Text>."));
     }
 
     private static String joined(final List<String> lines) {

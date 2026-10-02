@@ -135,7 +135,10 @@ public final class TxtReader {
                 span,
                 null,
                 SegmentStatus.PENDING,
-                INITIAL_CONFIDENCE);
+                INITIAL_CONFIDENCE,
+                null,
+                masked.pairs(),
+                masked.lineBreakTokens());
     }
 
     /**

@@ -1071,6 +1071,41 @@ are not Markdown content and are restored as plain text.
 
 ## ADDED Requirements
 
+### Requirement: Keep the lines of a list or a stanza
+
+WHEN a TXT paragraph is masked and it has at least two lines of which either two open with a list marker (a bullet,
+a dash or `1.`/`1)`) or none is longer than 60 characters, the system SHALL put a line-break token that stands for
+nothing before each line end inside it (`• Mass…⟦g0⟧` + line end + `• Weight…`), so a target that merges the lines
+fails the placeholder gate; a paragraph of longer lines is prose wrapped at a column and SHALL carry no such token.
+Export verification SHALL ignore a placeholder that stands for nothing, since whether a paragraph carries one depends
+on its line lengths, which a translation changes.
+
+WHEN a target is restored, the system SHALL first replace the whitespace on both sides of each line-break token that
+the masked form has next to a line end with the masked form's own whitespace there, leaving the token where the target
+put it — for Markdown and TXT alike.
+
+**Source:** FR-DOC-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-doc`),
+`docs/specification/01_Product/03_DOCUMENT_FORMATS.md#inline-masking-rules`.
+In plain words: in the gemma4:e4b run on the earth-gravity fixture, the TXT lists and one stanza came back as one line
+each and were accepted, because nothing marked where a line ended; and a Markdown stanza whose model wrote a space
+after a hard-break token restored as `землю,\ він`, failed the structure check and stayed in English. A merged
+reply now gets its line end put back by position (the restore-missing repair) or a repair note saying the token ends
+a line; a space next to the token is simply put back as the line end it was.
+
+#### Scenario: A TXT list keeps one item per line
+
+- **WHEN** the TXT paragraph `• Mass describes how much matter an object contains.` / `• Weight describes the
+  gravitational force acting on that mass.` (two lines) is masked
+- **THEN** its masked form ends the first line with `⟦g0⟧`, and the target `• Маса … тіло.⟦g0⟧ • Вага … масу.` restores
+  as two lines
+- **AND** the target `• Маса … тіло. • Вага … масу.` is refused by the gate
+
+#### Scenario: A Markdown stanza with a space after its hard break
+
+- **WHEN** the stanza `A stone let go will find the ground,\` / `it never asks the way;\` / … is restored from
+  `Камінь знайде землю,⟦g0⟧ він не питає шляху;⟦g1⟧ …`
+- **THEN** the restored text is `Камінь знайде землю,\` / `він не питає шляху;\` / …, one line each
+
 ### Requirement: Repair a refused target's placeholder tokens without a model
 
 WHEN a caller asks the document port to repair a target the placeholder gate refused, the system SHALL return a

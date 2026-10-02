@@ -361,6 +361,7 @@ public final class SegmentTranslator {
                 attempt.shownText(),
                 rejectedTarget,
                 segment.pairs(),
+                segment.lineBreakTokens(),
                 failed.finding().note());
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
         final Result<DraftOutcome> repaired = send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, note);

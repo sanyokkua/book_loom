@@ -22,6 +22,7 @@ import ua.bookloom.document.epub.EpubWriter;
 import ua.bookloom.document.fb2.Fb2Reader;
 import ua.bookloom.document.fb2.Fb2Writer;
 import ua.bookloom.document.mask.GateOutcome;
+import ua.bookloom.document.mask.LineBreakSpacing;
 import ua.bookloom.document.mask.PlaceholderGate;
 import ua.bookloom.document.mask.RestoredContent;
 import ua.bookloom.document.mask.TokenRepair;
@@ -204,14 +205,16 @@ public final class DocumentService implements DocumentPort {
         Objects.requireNonNull(translatedMasked, "translatedMasked");
         logUnmaskEntry(format, segment, translatedMasked);
         try {
-            final GateOutcome outcome = PlaceholderGate.compare(
-                    segment.masked(), translatedMasked, segment.pairs(), segment.lineBreakTokens());
+            final String spaced =
+                    LineBreakSpacing.normalise(segment.masked(), translatedMasked, segment.lineBreakTokens());
+            final GateOutcome outcome =
+                    PlaceholderGate.compare(segment.masked(), spaced, segment.pairs(), segment.lineBreakTokens());
             if (!outcome.matches()) {
                 final AppError error = GateErrors.of(outcome);
                 log.debug("Unmasked segment format={} segmentId={} outcome={}", format, segment.id(), error.code());
                 return Result.err(error);
             }
-            final Result<String> result = restore(format, segment, translatedMasked);
+            final Result<String> result = restore(format, segment, spaced);
             logUnmaskOutcome(format, segment.id(), result);
             return result;
         } catch (Throwable t) {
