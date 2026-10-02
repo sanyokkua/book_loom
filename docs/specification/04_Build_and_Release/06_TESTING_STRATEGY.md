@@ -233,6 +233,19 @@ matrix rather than extrapolating these observations.
 
 ## prompt-evals {#prompt-evals}
 
+**Built today (Layers 0 and 1):** `ua.bookloom.pipeline.eval.PromptEvalTest` sends ~25 fixed English → Ukrainian cases
+— dialogue with a locked name, a heading, number-, symbol- and Roman-numeral-only paragraphs, a drop cap, nested
+emphasis, a footnote reference, a kept foreign run, glossary names, a long sentence, a link pair, two instruction-like
+texts that must be translated rather than obeyed, directed fixes (echo, missing token, omission, refusal) and judge
+cases (a good and a bad candidate each) — through `DraftPromptBuilder`, `DirectedFix` and `JudgeCall` to a real
+Ollama model via the production client. It measures, before any repair: the reply parses as its schema, the token
+sequence is intact with every pair still around words (gate), the target script, a per-case marker (a glossary
+rendering, a correct drop cap, a translated instruction), and judge separation (good ≥ 0.8, bad ≤ 0.6). It writes a
+table to `modules/pipeline/build/reports/promptEval/<model>.txt` and fails below parse 95%, gate 90% or judge
+separation 80%. Run it with `BOOKLOOM_EVAL_OLLAMA_URL=http://localhost:11434 [BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx]
+./gradlew :pipeline:promptEval`; with the URL unset it is skipped. The layered design below (embeddings, LLM judge)
+remains the target.
+
 Every pipeline prompt has a **local-only prompt eval** implemented as a JUnit test (tag **`promptEval`**, excluded from
 CI, env-gated like `liveLocal`). The eval calls the **same production prompt builder** the app uses to produce the
 `{system, user}` messages, sends them to a real local model, and scores the response with a **layered rubric** (DD-40).

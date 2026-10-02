@@ -51,7 +51,8 @@ val testForks =
 // `corpus` alone reads its target from an environment variable Gradle does not treat as a task input, so a
 // second consecutive run would otherwise be reported `UP-TO-DATE` while printing `BUILD SUCCESSFUL` and doing
 // nothing (design.md D6, trap 1). The other three tagged tasks keep Gradle's normal up-to-date checking.
-val neverUpToDateTags = setOf("corpus")
+// `promptEval` reads its endpoint and model the same way, and its evidence is the report it writes.
+val neverUpToDateTags = setOf("corpus", "promptEval")
 
 dependencies {
     // The BOM pins every `org.junit.*` coordinate from one version, so `junit-jupiter` and
