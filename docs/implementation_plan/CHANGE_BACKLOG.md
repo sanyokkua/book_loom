@@ -756,3 +756,36 @@ Introducing a capability outside this list requires an ADR first — the map kee
 left unowned. `FR-A11Y-*` and `NFR-A11Y-*` (17 ids) are deliberately **unowned and excluded from coverage**: the
 specification declares accessibility advisory and never a merge gate, so it is a review item on `:ui` changes rather
 than an implementation obligation. Cite ids in the canonical zero-padded form (`FR-THEME-01`, not `FR-THEME-1`).
+
+## Real-run follow-ups, 2026-10-03
+
+Source: the first whole-book run (Bartimaeus, 3,783 segments, EPUB en→uk, LM Studio `google/gemma-4-26b-a4b-qat`, **Balanced** dial, Unattended, 23:16 → 07:34 = 8h18m) and its analysis. The pipeline was healthy (0 ERROR, 0 timeouts/retries/stalls, longest gap between decisions 2 min; model busy 99.4% of wall time; 5,662 calls: draft 52.7%, judge 34.8%, directed fix 11.4%). Fast would take ≈ 4.5 h, Max ≈ 14 h. Not yet exercised in a real run: outage recovery (proven only by the soak/headless harness), a Max-dial whole book, the UI click-through after the last UI changes (screen was locked).
+
+Bugs
+- Review queue count is one behind (`Review flagged (169)` vs 170 flagged): `RunSession` refreshes on `SegmentDecided` before the chunk commit, and nothing refreshes after the run ends.
+- A flagged segment with no target (`ch48 p16`, draft cut off by output length) is exported as untranslated English and is not listed in `sourceFallbacks`.
+- One full English paragraph was accepted unflagged (`part0044.html:16`, judge 0.85, no repair): the language/echo check missed it.
+- Detailed trace retention (20 MB × 5) covered only ≈ 3.6 h of the 8.3 h run; the ordinary log covered all. Raise the cap or log TRACE bodies only for flagged/repaired segments.
+- The dial (and review mode) used by a run is not visible in the UI/title bar.
+- The review panel shows raw `⟦gN⟧` tokens (footnote markers); the export restores them correctly but readers are confused.
+
+Judge and acceptance calibration (170 flagged: ≈ 50% false alarms, ≈ 40% genuine, ≈ 10% mixed)
+- A medium/high judge finding blocks acceptance even at score ≥ 0.85 (70% of flags): make medium findings notes at score ≥ 0.85.
+- The judge never sees glossary renderings (`ChunkContext.terms()`), so its glossary findings are guesses: pass source→target pairs or drop judge glossary findings.
+- Deterministic soft failures override a clean judge (14 length "omission" false positives, ISBN/URL lines flagged "wrong lang?"): downgrade when the judge scores ≥ 0.9 with no findings; skip script/echo checks for digit/URL/identifier text.
+- The repair loop often makes text worse (of 150 segments with two scores: 78 worse, 59 equal, 13 better) and never reverts: keep the best-scoring text; do not stop on `repeated-verdict` when the text changed; require a quoted span in findings.
+- The "low score" badge is the default label for every non-glossary finding: show the finding kind and the judge score.
+- Judge noise: garbled notes, Chinese characters, chunk-level score driving a single pair; per-pair scores and one severity per segment.
+
+Translation quality (reader view; ≈ 8–10% of paragraphs need an editor)
+- Dialogue punctuation: 74 unbalanced « », 33 mis-nested «A» — narr — B», 203 quoted paragraphs switching to dash dialogue, nested quotes as «…»»; 88% straight apostrophes.
+- Lexical drift (master 233× "господар" vs "учитель"/"наставник"; imp; pentacle; Mr/Mrs "містер" vs "пан"): needs a style/term policy entry for titles and recurring nouns.
+- ≈ 10 garbled/coined words, ≈ 12 gender/agreement slips (Bartimaeus switching gender in one scene), footnote-marker spacing, 5 Latin-lookalike words.
+- Glossary junk (≈ 25 entries: T-shirt, Yellow Pages, CROYDON, Hyperion Books…), 4 empty targets, name variants (Heddleham ×3).
+- Metadata: `calibre:title_sort` and `file-as` left in English; chapter headings rendered as digits only.
+
+Housekeeping
+- `PausedRunHoldsNoPermitTest` and `ProviderVerifierImplTest.verify_authenticationFailureStopsAfterConnection` each failed once under parallel forks (passed on rerun).
+- `gemma4:12b` ignored one unlocked glossary entry (Венс vs Ванс): no gate catches an unlocked rendering miss.
+- Still to do in group 16: 16.2 (packaged image + launch smoke), 16.3 (hand run), 16.4 (documents).
+
