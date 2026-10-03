@@ -428,6 +428,33 @@ the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands
 | after (step 9) | gemma4:e2b-mlx (floor) | 100% | 82% | 100% | 100% | 100% | 100% |
 | after (step 10, with the 4 suggest rows) | gemma4:e4b-mlx | 100% | 100% | 100% | 100% | 92% | 100% |
 
+**Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
+prompt eval plus 19 labelled judge cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
+« », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints
+one table. `falseNegative` is the share of defective candidates the judge accepted, `falsePositive` the share of clean ones
+it refused, `stability` the share of cases whose `BOOKLOOM_EVAL_STABILITY` repeats agree. Thresholds per model class are in
+`eval/thresholds.json`. Env: `BOOKLOOM_EVAL_URL`, `BOOKLOOM_EVAL_PROVIDER=lmstudio`. 2026-10-03, one sample, stability 1:
+
+| Model | judge FN before → after | FP before → after | other |
+|---|---|---|---|
+| gemma4:e4b-mlx | 38% → 25% | 0% → 0% | all draft rates 100% except marker 94% |
+| gemma4:e4b-mxfp8 | 38% (not re-run) | 0% | |
+| google/gemma-4-e4b (LM Studio) | 50% → 25% | 0% → 0% | gate 96% |
+| gemma4:12b-mxfp8 | 12% → 0% | 0% → 9% | |
+| gemma4:12b-mlx | 25% (not re-run) | 0% | |
+| gemma4:26b-mlx | 12% (not re-run) | 0% | judge separation 75% |
+| google/gemma-4-26b-a4b-qat (LM Studio) | 0% (not re-run) | 0% | every rate 100% |
+| gemma4:e2b-mlx (floor) | 25% → 38% | 18% → 18% | gate 84%, judge separation 75% |
+| qwen3.8:27b-mlx | 25% (not re-run) | 0% | |
+| qwen/qwen3-vl-4b (LM Studio) | 88% (not re-run) | 0% | judge accepts nearly everything |
+| muse-glimmer:30b-nvfp4-dflash | 12% (not re-run) | 9% | script 48%, gate 84%, injection 50% |
+| gpt-oss:20b (Ollama) | n/a | n/a | parse 6%: `emptyCompletion` — Ollama's `think:false` is ignored by gpt-oss, the cap is spent on reasoning (needs an `:llm` fix) |
+| qwen/qwen3-4b-2507 (LM Studio) | n/a | n/a | run hung over 49 minutes and was killed; needs a per-call timeout look |
+
+"After" is the judge prompt with a defect checklist (garbled word, mixed script, unbalanced quotes, name drift, gender
+agreement, omission). The misses that remain on the 4B class — mixed script, unbalanced quotes, drift — are the
+deterministic checks of 15d.2.
+
 Before, the judge scored an untranslated English candidate 1.0, a pair was moved off its words and a locked name was
 written out instead of its token; after, the one miss on e4b is the drop cap (`⟦g0⟧Т⟦g1⟧іч` — the source letter kept),
 and e2b drops pairs, which the run's placeholder gate refuses and sends to repair. The suggestion rows read `Елеонора Венс`, `Гарроу Вейл`,

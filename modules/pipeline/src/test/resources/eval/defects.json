@@ -1,0 +1,21 @@
+[
+ {"id":"garbled-word","kind":"garbled","source":"He ran quickly to the forest.","candidate":"Він швидко побіг до лісфвуту.","defective":true,"rationale":"coined, garbled word"},
+ {"id":"garbled-word-clean","kind":"garbled","source":"He ran quickly to the forest.","candidate":"Він швидко побіг до лісу.","defective":false,"rationale":"faithful"},
+ {"id":"mixed-script","kind":"mixed-script","source":"He studied hard all year.","candidate":"Він наполегливо навчg3вся цілий рік.","defective":true,"rationale":"Latin letter and digit inside a Ukrainian word"},
+ {"id":"mixed-script-clean","kind":"mixed-script","source":"He studied hard all year.","candidate":"Він наполегливо навчався цілий рік.","defective":false,"rationale":"faithful"},
+ {"id":"unbalanced-quotes","kind":"quotes","source":"“Come here,” she said.","candidate":"«Іди сюди, — сказала вона.","defective":true,"rationale":"opening « never closed"},
+ {"id":"balanced-quotes","kind":"quotes","source":"“Come here,” she said.","candidate":"«Іди сюди», — сказала вона.","defective":false,"rationale":"faithful"},
+ {"id":"english-accepted","kind":"untranslated","source":"The night was cold and the streets were empty.","candidate":"The night was cold and the streets were empty.","defective":true,"rationale":"left in English"},
+ {"id":"translated-clean","kind":"untranslated","source":"The night was cold and the streets were empty.","candidate":"Ніч була холодна, а вулиці порожні.","defective":false,"rationale":"faithful"},
+ {"id":"idiom-clean","kind":"idiom","source":"It was raining cats and dogs.","candidate":"Дощ ллє як із відра.","defective":false,"rationale":"idiomatic rendering, not an error"},
+ {"id":"name-clean","kind":"glossary","source":"Nathaniel opened the door.","candidate":"Натаніель відчинив двері.","defective":false,"rationale":"faithful; the judge must not invent glossary violations"},
+ {"id":"gender-slip","kind":"gender","source":"She was tired, but she kept walking.","candidate":"Вона втомився, але йшов далі.","defective":true,"rationale":"masculine verbs for a female subject"},
+ {"id":"gender-clean","kind":"gender","source":"She was tired, but she kept walking.","candidate":"Вона втомилася, але йшла далі.","defective":false,"rationale":"faithful"},
+ {"id":"lexical-drift","kind":"drift","source":"The magician raised his staff. The magician spoke.","candidate":"Чарівник підняв свій посох. Фокусник заговорив.","defective":true,"rationale":"the same character named two ways"},
+ {"id":"lexical-clean","kind":"drift","source":"The magician raised his staff. The magician spoke.","candidate":"Чарівник підняв свій посох. Чарівник заговорив.","defective":false,"rationale":"faithful"},
+ {"id":"omission","kind":"omission","source":"He opened the door, looked around, and left the house.","candidate":"Він відчинив двері.","defective":true,"rationale":"two actions dropped"},
+ {"id":"meaning-error","kind":"meaning","source":"The king died, and his son took the throne.","candidate":"Король народився, а його син втратив трон.","defective":true,"rationale":"opposite meaning"},
+ {"id":"meaning-clean","kind":"meaning","source":"The king died, and his son took the throne.","candidate":"Король помер, і його син посів трон.","defective":false,"rationale":"faithful"},
+ {"id":"short-line-clean","kind":"length","source":"Well, that is that.","candidate":"Ну, то й усе.","defective":false,"rationale":"compact but complete; no length false positive"},
+ {"id":"yes-clean","kind":"length","source":"Yes.","candidate":"Так.","defective":false,"rationale":"one word is complete"}
+]

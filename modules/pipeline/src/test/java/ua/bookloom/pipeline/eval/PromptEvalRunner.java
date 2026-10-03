@@ -70,6 +70,32 @@ final class PromptEvalRunner {
         return cases.stream().flatMap(evalCase -> run(evalCase).stream()).toList();
     }
 
+    /** Judges every corpus case {@code repeats} times and records whether the verdicts agree. */
+    List<DefectRow> runDefects(final List<DefectCase> corpus, final int repeats) {
+        return corpus.stream().map(defect -> defect(defect, repeats)).toList();
+    }
+
+    private DefectRow defect(final DefectCase defect, final int repeats) {
+        log.info("Corpus case {} x{}", defect.id(), repeats);
+        final List<JudgeVerdict> verdicts = java.util.stream.IntStream.range(0, Math.max(1, repeats))
+                .mapToObj(run -> judgeOne(defect.source(), defect.candidate()))
+                .toList();
+        final boolean first = refused(verdicts.get(0), defect.defective());
+        return new DefectRow(
+                defect.id(),
+                defect.kind(),
+                defect.defective(),
+                first,
+                verdicts.stream().allMatch(JudgeVerdict::readable),
+                verdicts.stream().allMatch(verdict -> refused(verdict, defect.defective()) == first),
+                verdicts.size());
+    }
+
+    /** An unreadable verdict is always wrong: a defect not caught, a clean text refused. */
+    private static boolean refused(final JudgeVerdict verdict, final boolean defective) {
+        return verdict.readable() ? verdict.score() < GOOD_FLOOR : !defective;
+    }
+
     private List<EvalRow> run(final EvalCase evalCase) {
         log.info("Prompt eval case {}", evalCase.name());
         return switch (evalCase) {

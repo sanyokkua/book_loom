@@ -9,6 +9,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
@@ -27,14 +28,14 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 /**
  * The prompt eval: the fixed case set through the production prompt builders against a real local Ollama model,
  * measured before any repair a run would make. Local-only — {@code ./gradlew :pipeline:promptEval} with
- * {@code BOOKLOOM_EVAL_OLLAMA_URL} (for example {@code http://localhost:11434}) and optionally
+ * {@code BOOKLOOM_EVAL_URL} (for example {@code http://localhost:11434}; with {@code BOOKLOOM_EVAL_PROVIDER=lmstudio} the OpenAI-compatible {@code http://localhost:1234/v1}), {@code BOOKLOOM_EVAL_STABILITY} (judge each corpus case this many times) and optionally
  * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
  * as {@code suggest}, to run only those cases); skipped when the URL is unset. The table is written to
  * {@code build/reports/promptEval/<model>.txt}.
  */
 @Slf4j
 @Tag("promptEval")
-@EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_OLLAMA_URL", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_URL", matches = ".+")
 class PromptEvalTest {
 
     private static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
@@ -45,25 +46,36 @@ class PromptEvalTest {
         final PromptEvalRunner runner = new PromptEvalRunner(calls(model));
 
         final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
+        final int repeats = Integer.parseInt(System.getenv().getOrDefault("BOOKLOOM_EVAL_STABILITY", "1"));
+        final boolean corpusOnly = "corpus".equals(only);
         final EvalReport report = new EvalReport(
                 model,
-                runner.runAll(PromptEvalCases.ALL.stream()
-                        .filter(evalCase -> evalCase.name().startsWith(only))
-                        .toList()));
+                corpusOnly
+                        ? List.of()
+                        : runner.runAll(PromptEvalCases.ALL.stream()
+                                .filter(evalCase -> evalCase.name().startsWith(only))
+                                .toList()),
+                runner.runDefects(EvalCorpus.defects(), repeats));
 
-        final Path file = Path.of("build", "reports", "promptEval", model.replace(':', '_') + ".txt");
+        final Path file = Path.of("build", "reports", "promptEval", safeName(model) + ".txt");
         Files.createDirectories(Objects.requireNonNull(file.getParent()));
         Files.writeString(file, report.table() + "\n", StandardCharsets.UTF_8);
+        Files.writeString(file.resolveSibling(safeName(model) + ".json"), report.json() + "\n", StandardCharsets.UTF_8);
         log.info("Prompt eval report {}\n{}", file.toAbsolutePath(), report.table());
         assertThat(report.meetsThresholds()).as(report.table()).isTrue();
     }
 
+    private static String safeName(final String model) {
+        return model.replaceAll("[^A-Za-z0-9._-]", "_");
+    }
+
     private static ModelCalls calls(final String modelId) {
         final Injector injector = Guice.createInjector(new LlmModule());
+        final boolean lmStudio = "lmstudio".equalsIgnoreCase(System.getenv("BOOKLOOM_EVAL_PROVIDER"));
         final ProviderConfig config = new ProviderConfig(
                 "eval",
-                ProviderKind.OLLAMA,
-                URI.create(Objects.requireNonNull(System.getenv("BOOKLOOM_EVAL_OLLAMA_URL"))),
+                lmStudio ? ProviderKind.OPENAI_COMPATIBLE : ProviderKind.OLLAMA,
+                URI.create(Objects.requireNonNull(System.getenv("BOOKLOOM_EVAL_URL"))),
                 ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
                 ProviderConfig.DEFAULT_REQUEST_TIMEOUT);
         final Result<ProviderConfig> registered =
