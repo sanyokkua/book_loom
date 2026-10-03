@@ -12,7 +12,7 @@ ONLY=""
 TABLE_ONLY=0
 MODELS="ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx ollama:gpt-oss:20b ollama:gemma4:12b-mxfp8 ollama:gemma4:12b-mlx
 ollama:gemma4:e4b-mxfp8 ollama:gemma4:e2b-mlx ollama:qwen3.8:27b-mlx ollama:muse-glimmer:30b-nvfp4-dflash
-lmstudio:google/gemma-4-26b-a4b-qat lmstudio:google/gemma-4-e4b lmstudio:qwen/qwen3-4b-2507 lmstudio:qwen/qwen3-vl-4b"
+lmstudio:google/gemma-4-26b-a4b-qat lmstudio:google/gemma-4-e4b  lmstudio:qwen/qwen3-vl-4b"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -36,8 +36,12 @@ run_one() {
   fi
   echo "== $provider $model"
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 \
-    || echo "   (below threshold or failed — see $REPORTS)"
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
+  local pid=$!
+  ( sleep "${MODEL_TIMEOUT:-1500}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
+  local dog=$!
+  wait "$pid" || echo "   (below threshold, failed or timed out — see $REPORTS)"
+  kill "$dog" 2>/dev/null
   if [ "$provider" = lmstudio ]; then lms unload --all >/dev/null 2>&1; else ollama stop "$model" >/dev/null 2>&1; fi
 }
 

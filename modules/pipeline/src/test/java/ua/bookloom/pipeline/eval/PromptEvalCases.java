@@ -36,6 +36,32 @@ final class PromptEvalCases {
                     "“Stay where you are, ⟦g0⟧,” said Nathaniel. “You are ⟦g1⟧mine⟦g2⟧ now.”",
                     List.of(LOCKED_NAME),
                     Expect.translate()),
+            new Draft(
+                    "quotes-balanced",
+                    "“Come here,” she said, “and bring the lamp.”",
+                    List.of(),
+                    Expect.containing("^[^«»]*«[^«»]*»[^«»]*«[^«»]*»[^«»]*$|^[^«»]*«[^«»]*»[^«»]*$")),
+            new Draft(
+                    "gender-she",
+                    "She was tired, but she kept walking until dawn.",
+                    List.of(),
+                    Expect.containing("(?iu)(втомилас|втомлена)")),
+            new Draft(
+                    "gender-he",
+                    "He was tired, but he kept walking until dawn.",
+                    List.of(),
+                    Expect.containing("(?iu)(втомивс|втомлений)")),
+            new Draft(
+                    "idiom",
+                    "It was raining cats and dogs when they left the station.",
+                    List.of(),
+                    Expect.containing("(?iu)^(?!.*(коти|кішки|собак)).*")),
+            new Draft(
+                    "dash-dialogue",
+                    "“Where is the key?” asked the old man. “In the drawer,” said the boy.",
+                    List.of(),
+                    Expect.containing("(?iu)ключ")),
+            new Draft("plain-short", "Well, that is that.", List.of(), Expect.containing("(?iu)усе|все")),
             new Draft("heading", "CHAPTER ONE", List.of(), Expect.containing("(?iu)розділ")),
             new Draft("number-only", "1881", List.of(), Expect.copied()),
             new Draft("symbol-only", "* * *", List.of(), Expect.copied()),

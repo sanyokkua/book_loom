@@ -181,14 +181,39 @@ public final class OllamaClient implements ProviderClient {
         final List<OllamaChatRequest.Message> messages =
                 request.messages().stream().map(this::toOllamaMessage).toList();
         final OllamaChatRequest.Options options = new OllamaChatRequest.Options(
-                request.temperature(), request.contextWindow(), request.maxOutputTokens(), request.seed());
+                request.temperature(),
+                request.contextWindow(),
+                withReasoningHeadroom(modelId, request.maxOutputTokens()),
+                request.seed());
         try {
-            final OllamaChatRequest payload =
-                    new OllamaChatRequest(modelId, messages, true, options, schema, request.reasoningEnabled());
+            final OllamaChatRequest payload = new OllamaChatRequest(
+                    modelId, messages, true, options, schema, thinkControl(modelId, request.reasoningEnabled()));
             return Result.ok(mapper.writeValueAsString(payload));
         } catch (JsonProcessingException failure) {
             return Result.err(unexpectedError("serialize chat request", modelId, failure));
         }
+    }
+
+    /**
+     * Ollama's native {@code think} value. A gpt-oss model ignores {@code false} and spends the whole output cap on
+     * reasoning, so "reasoning off" is asked of it as its lowest level.
+     */
+    private static final int GPT_OSS_REASONING_HEADROOM = 1024;
+
+    static @Nullable Object thinkControl(final String modelId, final @Nullable Boolean reasoningEnabled) {
+        if (Boolean.FALSE.equals(reasoningEnabled)
+                && modelId.toLowerCase(Locale.ROOT).contains("gpt-oss")) {
+            return "low";
+        }
+        return reasoningEnabled;
+    }
+
+    /** A gpt-oss model reasons even at its lowest level, and that text counts against the cap the answer needs. */
+    static @Nullable Integer withReasoningHeadroom(final String modelId, final @Nullable Integer cap) {
+        if (cap == null || !modelId.toLowerCase(Locale.ROOT).contains("gpt-oss")) {
+            return cap;
+        }
+        return cap + GPT_OSS_REASONING_HEADROOM;
     }
 
     private OllamaChatRequest.Message toOllamaMessage(ChatMessage message) {

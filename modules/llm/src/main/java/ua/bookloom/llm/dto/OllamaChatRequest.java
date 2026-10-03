@@ -15,7 +15,8 @@ import org.jspecify.annotations.Nullable;
  * @param stream whether Ollama should stream the reply; inference clients send {@code false}
  * @param options optional native generation controls, omitted when absent
  * @param format optional structured-output format, omitted when absent
- * @param think optional native reasoning-output control, omitted when unsupported or unspecified
+ * @param think optional native reasoning-output control, omitted when unsupported or unspecified: a boolean, or a
+ *     level string such as {@code low} for a model that cannot turn reasoning off
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OllamaChatRequest(
@@ -24,7 +25,7 @@ public record OllamaChatRequest(
         @JsonProperty("stream") boolean stream,
         @JsonProperty("options") @Nullable Options options,
         @JsonProperty("format") @Nullable JsonNode format,
-        @JsonProperty("think") @Nullable Boolean think) {
+        @JsonProperty("think") @Nullable Object think) {
 
     /** Rejects incomplete requests, omits empty options, and protects message order from caller mutation. */
     public OllamaChatRequest {
