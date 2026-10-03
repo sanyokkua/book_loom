@@ -789,3 +789,4 @@ Housekeeping
 - `gemma4:12b` ignored one unlocked glossary entry (Венс vs Ванс): no gate catches an unlocked rendering miss.
 - Still to do in group 16: 16.2 (packaged image + launch smoke), 16.3 (hand run), 16.4 (documents).
 
+Planned: group 15d of `openspec/changes/complete-translation-workflow/tasks.md` (translation-quality engineering: evals first, deterministic text checks, typography normalizer, binary evidence-based judge, best-candidate repair, context budget, batched drafting, terminology lexicon, narrator/gender, garbled-word defence, final audit, review/export/ops fixes, numeric acceptance) addresses every item in the section above.
