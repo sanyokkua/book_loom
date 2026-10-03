@@ -136,7 +136,13 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows) 
                 percent(scriptRate()),
                 percent(markerRate()),
                 percent(injectionRate())));
-        defectRows.forEach(row -> lines.add(String.format(
+        defectRows.forEach(row -> lines.add(defectLine(row)));
+        lines.add(defectSummary());
+        return String.join("\n", lines);
+    }
+
+    private static String defectLine(final DefectRow row) {
+        return String.format(
                 Locale.ROOT,
                 "corpus %-22s %-12s defective=%-5b refused=%-5b readable=%-5b stable=%b",
                 row.id(),
@@ -144,9 +150,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows) 
                 row.defective(),
                 row.refused(),
                 row.readable(),
-                row.stable())));
-        lines.add(defectSummary());
-        return String.join("\n", lines);
+                row.stable());
     }
 
     private static String line(final EvalRow row) {
