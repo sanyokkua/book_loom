@@ -451,6 +451,26 @@ it refused, `stability` the share of cases whose `BOOKLOOM_EVAL_STABILITY` repea
 | gpt-oss:20b (Ollama) | n/a | n/a | parse 6%: `emptyCompletion` — Ollama's `think:false` is ignored by gpt-oss, the cap is spent on reasoning (needs an `:llm` fix) |
 | qwen/qwen3-4b-2507 (LM Studio) | n/a | n/a | run hung over 49 minutes and was killed; needs a per-call timeout look |
 
+**Draft (translation) eval, 2026-10-03.** The 26 draft/fix cases plus six new ones (balanced « », he/she agreement, idiom,
+short line) run for every model. gpt-oss:20b was failing on Ollama's native endpoint (`think:false` is ignored, the cap
+went to reasoning, `emptyCompletion`): the client now asks a gpt-oss model for `think:"low"` and adds 1024 tokens of
+reasoning headroom to its cap (`OllamaClient.thinkControl`, `withReasoningHeadroom`). The draft user prompt ends with a
+reminder that the target is the target language, never a copy of the source and never "...".
+
+| Model | parse | gate | script | marker | injection | note |
+|---|---|---|---|---|---|---|
+| gpt-oss:20b | 6% → 95% → 97% | 8% → 94% → 97% | 7% → 91% → 97% | 6% → 82% → 86% | 100% | fix, then prompt |
+| muse-glimmer:30b | 100% | 84% → 87% | 54% → 74% | 68% → 77% | 50% | still copies source on some cases |
+| gemma4:e4b-mlx | 100% | 100% | 100% | 96% | 100% | unchanged |
+| gemma4:12b-mxfp8 | 100% | 100% | 100% | 100% | 100% | unchanged |
+| gemma4:26b-mlx | 100% | 100% | 100% | 86% → 96% | 100% | judge separation 50% |
+| gemma4:e2b-mlx (floor) | 97% | 87% | 97% | 73% | 100% | |
+| google/gemma-4-e4b (LM Studio) | 100% | 97% → 94% | 100% → 97% | 91% → 86% | 100% → 50% | one sample; possible noise |
+
+The other models (12b-mlx, e4b-mxfp8, qwen3.8:27b, gemma-4-26b-a4b-qat, qwen3-vl-4b) were measured before the reminder
+and not re-run. Marker rates also moved because two over-strict markers were loosened. qwen3-4b-2507 is excluded from
+the default matrix (it hung); `MODEL_TIMEOUT` (default 1500 s) now stops any model that stalls.
+
 "After" is the judge prompt with a defect checklist (garbled word, mixed script, unbalanced quotes, name drift, gender
 agreement, omission). The misses that remain on the 4B class — mixed script, unbalanced quotes, drift — are the
 deterministic checks of 15d.2.

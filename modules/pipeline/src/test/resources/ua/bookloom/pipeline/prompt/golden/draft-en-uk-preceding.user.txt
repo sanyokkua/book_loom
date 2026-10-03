@@ -15,4 +15,5 @@ Do not add, reorder, split, translate, or omit these tokens.
 He opened the ⟦g0⟧old⟦g1⟧ door.
 </Text>
 
+Reminder: the target is written in Ukrainian (uk), not in English (en); never copy the text above and never write "...".
 Return exactly one JSON object matching this schema: {"target":"<translation>"}

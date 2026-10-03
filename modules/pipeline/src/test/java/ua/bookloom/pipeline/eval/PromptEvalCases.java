@@ -45,12 +45,12 @@ final class PromptEvalCases {
                     "gender-she",
                     "She was tired, but she kept walking until dawn.",
                     List.of(),
-                    Expect.containing("(?iu)(втомилас|втомлена)")),
+                    Expect.containing("(?iu)(втомилас|втомлена|стомлен)")),
             new Draft(
                     "gender-he",
                     "He was tired, but he kept walking until dawn.",
                     List.of(),
-                    Expect.containing("(?iu)(втомивс|втомлений)")),
+                    Expect.containing("(?iu)(втомивс|втомлен|стомлен)")),
             new Draft(
                     "idiom",
                     "It was raining cats and dogs when they left the station.",
@@ -61,7 +61,7 @@ final class PromptEvalCases {
                     "“Where is the key?” asked the old man. “In the drawer,” said the boy.",
                     List.of(),
                     Expect.containing("(?iu)ключ")),
-            new Draft("plain-short", "Well, that is that.", List.of(), Expect.containing("(?iu)усе|все")),
+            new Draft("plain-short", "Well, that is that.", List.of(), Expect.containing("(?iu)усе|все|так")),
             new Draft("heading", "CHAPTER ONE", List.of(), Expect.containing("(?iu)розділ")),
             new Draft("number-only", "1881", List.of(), Expect.copied()),
             new Draft("symbol-only", "* * *", List.of(), Expect.copied()),

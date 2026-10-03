@@ -55,6 +55,7 @@ class DraftPromptBuilderTest {
                         Hello.
                         </Text>
 
+                        Reminder: the target is written in Ukrainian (uk), not in English (en); never copy the text above and never write "...".
                         Return exactly one JSON object matching this schema: {"target":"<translation>"}""";
 
     // A BCP-47 language pair must reach the model as unambiguous English names plus its raw tags.
