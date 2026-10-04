@@ -739,6 +739,18 @@ public enum MessageKey {
     NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_LOCKED}. */
     NAMES_STYLE_COLUMN_LOCKED_TIP("namesStyle.column.locked.tip"),
+    /** Glossary column that flags rows needing a look: no target, likely junk. */
+    NAMES_STYLE_COLUMN_FLAGS("namesStyle.column.flags"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_FLAGS}. */
+    NAMES_STYLE_COLUMN_FLAGS_TIP("namesStyle.column.flags.tip"),
+    /** Chip on a row whose target is empty. */
+    NAMES_STYLE_FLAG_NO_TARGET("namesStyle.flag.noTarget"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_FLAG_NO_TARGET}. */
+    NAMES_STYLE_FLAG_NO_TARGET_TIP("namesStyle.flag.noTarget.tip"),
+    /** Chip on a row whose term looks like printing text or an ordinary word rather than a name. */
+    NAMES_STYLE_FLAG_JUNK("namesStyle.flag.junk"),
+    /** Hover explanation of the control labelled by {@link #NAMES_STYLE_FLAG_JUNK}. */
+    NAMES_STYLE_FLAG_JUNK_TIP("namesStyle.flag.junk.tip"),
     /** Accessible name of the row's remove action. */
     NAMES_STYLE_REMOVE("namesStyle.remove"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_REMOVE}. */
@@ -1289,6 +1301,18 @@ public enum MessageKey {
     DIALOG_REPLACE_RUN_CONFIRM_TIP("dialog.replaceRun.confirm.tip"),
     /** Line shown while the discarded run is being stopped. */
     DIALOG_REPLACE_RUN_STOPPING("dialog.replaceRun.stopping"),
+    /** Title of the question asked before starting with glossary entries that have no target. */
+    DIALOG_NO_TARGET_TITLE("dialog.noTarget.title"),
+    /** Body of that question; argument 0 is the number of entries without a target. */
+    DIALOG_NO_TARGET_TEXT("dialog.noTarget.text"),
+    /** Button that closes that question and stays on the glossary. */
+    DIALOG_NO_TARGET_REVIEW("dialog.noTarget.review"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_NO_TARGET_REVIEW}. */
+    DIALOG_NO_TARGET_REVIEW_TIP("dialog.noTarget.review.tip"),
+    /** Button that starts the translation without those targets. */
+    DIALOG_NO_TARGET_START("dialog.noTarget.start"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_NO_TARGET_START}. */
+    DIALOG_NO_TARGET_START_TIP("dialog.noTarget.start.tip"),
     /** Title of the question asked before leaving a screen whose model work is still running. */
     DIALOG_LEAVE_TITLE("dialog.leave.title"),
     /** Body of the leave question; argument 0 is the name of the running work. */

@@ -333,10 +333,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
     }
 
     static List<Segment> bodySegments(final Document document) {
-        return document.units().stream()
-                .filter(unit -> !unit.isAuxiliary())
-                .flatMap(unit -> unit.segments().stream())
-                .toList();
+        return FrequencyScan.storyText(document);
     }
 
     private static boolean isLockedWithoutTarget(final GlossaryEntry entry) {

@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -72,7 +73,7 @@ class ModelScanFixtureTest {
             "French",
             "Plumb Line");
     private static final Pattern CANDIDATE_LINE = Pattern.compile("(?m)^(.+?) — ");
-    private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
+    private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×(?: — \"(.*?)\")?");
 
     private final Injector injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
 
@@ -187,6 +188,11 @@ class ModelScanFixtureTest {
                 + "]}";
     }
 
+    // The model quotes the first example sentence it was shown, without the quotes that would break the JSON.
+    private static String quotedExample(final @Nullable String example) {
+        return example == null ? "" : example.replace("\"", "").replace("\\", "");
+    }
+
     private static String judge(final ChatRequest request, final Set<String> names) {
         return "{\"verdicts\":["
                 + String.join(
@@ -195,7 +201,10 @@ class ModelScanFixtureTest {
                                 .matcher(userMessage(request))
                                 .results()
                                 .map(match -> "{\"term\":\"" + match.group(1) + "\",\"verdict\":\""
-                                        + (names.contains(match.group(1)) ? "name" : "not-a-name") + "\"}")
+                                        + (names.contains(match.group(1)) ? "name" : "not-a-name")
+                                        + "\",\"evidence\":\""
+                                        + (names.contains(match.group(1)) ? "" : quotedExample(match.group(2)))
+                                        + "\"}")
                                 .toList())
                 + "]}";
     }

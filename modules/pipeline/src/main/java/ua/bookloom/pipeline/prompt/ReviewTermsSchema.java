@@ -6,7 +6,8 @@ import lombok.NoArgsConstructor;
 /**
  * The glossary review's structured response schema. Every field is required and every value is from a closed list, so
  * a reply is either a verdict per term or unreadable, and the item count is capped at one batch so a looping reply
- * cannot run on.
+ * cannot run on. {@code evidence} stays a flat string: the quote that backs a "not-a-name" verdict, empty for the
+ * others, and checked against the example sentences in code.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -19,8 +20,9 @@ public final class ReviewTermsSchema {
             "term":{"type":"string","maxLength":120},\
             "verdict":{"type":"string","enum":["name","term","not-a-name"]},\
             "type":{"type":"string","enum":["person","place","org","term","title","other"]},\
-            "gender":{"type":"string","enum":["male","female","neuter","unknown"]}\
-            },"required":["term","verdict","type","gender"],"additionalProperties":false}}\
+            "gender":{"type":"string","enum":["male","female","neuter","unknown"]},\
+            "evidence":{"type":"string","maxLength":240}\
+            },"required":["term","verdict","type","gender","evidence"],"additionalProperties":false}}\
             },"required":["verdicts"],"additionalProperties":false}
             """.strip();
 }

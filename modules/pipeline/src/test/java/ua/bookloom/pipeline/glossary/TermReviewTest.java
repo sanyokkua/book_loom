@@ -10,6 +10,8 @@ import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -78,6 +80,41 @@ class TermReviewTest {
                         entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true),
                         entry("p1:baker", "Baker Street", "Бейкер-стріт", TermType.OTHER, Gender.UNKNOWN, false));
         assertThat(glossary.wasRemoved(PROJECT, "Well").data()).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "'' | no quote at all",
+                "'The well was deep' | a sentence the book does not hold",
+                "'Well Hale' | words that are not one phrase of an example"
+            })
+    void review_notANameWithoutAQuotedExample_leavesTheEntryInTheGlossary(final String evidence, final String why) {
+        glossary.add(entry("p1:well", "Well", null, TermType.OTHER, Gender.UNKNOWN, false));
+        final String reply = "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
+                + "\"gender\":\"unknown\",\"evidence\":\"" + evidence + "\"}]}";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
+
+        final Result<GlossaryReviewReport> report = review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        assertThat(report.data()).extracting(GlossaryReviewReport::removed).isEqualTo(0);
+        assertThat(glossary.all(PROJECT).data()).extracting(GlossaryEntry::term).containsExactly("Well");
+        assertThat(glossary.wasRemoved(PROJECT, "Well").data()).as(why).isFalse();
+    }
+
+    @Test
+    void review_notANameQuotingAnExampleWithOtherCaseAndQuotes_removesTheEntry() {
+        glossary.add(entry("p1:well", "Well", null, TermType.OTHER, Gender.UNKNOWN, false));
+        final String reply = "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
+                + "\"gender\":\"unknown\",\"evidence\":\"“HE knew it well…”\"}]}";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(reply)).answer(reply(NO_SUGGESTIONS));
+
+        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        assertThat(glossary.all(PROJECT).data()).isEmpty();
     }
 
     @Test
@@ -239,7 +276,8 @@ class TermReviewTest {
             + "{\"term\":\"Milton\",\"target\":\"Мілтон-2\",\"gender\":\"male\"}]}";
 
     private static final String VERDICTS = "{\"verdicts\":["
-            + "{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\",\"gender\":\"unknown\"},"
+            + "{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\",\"gender\":\"unknown\","
+            + "\"evidence\":\"He knew it well\"},"
             + "{\"term\":\"Hale\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"male\"},"
             + "{\"term\":\"Moreau\",\"verdict\":\"name\",\"type\":\"place\",\"gender\":\"female\"},"
             + "{\"term\":\"Milton\",\"verdict\":\"not-a-name\",\"type\":\"other\",\"gender\":\"unknown\"},"

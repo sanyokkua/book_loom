@@ -40,6 +40,7 @@ public final class WorkList {
     private final String projectId;
     private final List<Unit> units;
     private final int bodyUnits;
+    private final StoryUnits story;
     private final int segments;
     private List<WorkItem> pending = List.of();
     private List<Segment> decided = List.of();
@@ -57,6 +58,7 @@ public final class WorkList {
         document.units().stream().filter(Unit::isAuxiliary).forEach(ordered::add);
         this.units = List.copyOf(ordered);
         this.bodyUnits = body.size();
+        this.story = StoryUnits.of(body);
         this.segments = body.stream().mapToInt(unit -> unit.segments().size()).sum();
     }
 
@@ -344,6 +346,11 @@ public final class WorkList {
      */
     public List<Segment> decidedSegments() {
         return decided;
+    }
+
+    /** The units a name scan may read; never null. */
+    public StoryUnits story() {
+        return story;
     }
 
     /**

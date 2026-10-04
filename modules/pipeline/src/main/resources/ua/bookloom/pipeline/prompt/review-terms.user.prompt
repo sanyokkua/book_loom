@@ -3,4 +3,4 @@
 
 Return JSON exactly as:
 {"verdicts":[{"term":"<term as listed>","verdict":"name|term|not-a-name","type":"person|place|org|term|title|other",
- "gender":"male|female|neuter|unknown"}]}
+ "gender":"male|female|neuter|unknown","evidence":"<phrase copied from an example for not-a-name, else empty>"}]}

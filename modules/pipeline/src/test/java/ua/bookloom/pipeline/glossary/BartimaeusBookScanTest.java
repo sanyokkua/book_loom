@@ -30,10 +30,7 @@ class BartimaeusBookScanTest {
         final Result<Document> opened = Guice.createInjector(new DocumentModule())
                 .getInstance(DocumentPort.class)
                 .open(BOOK);
-        final List<Segment> body = Objects.requireNonNull(opened.data(), "opened").units().stream()
-                .filter(unit -> !unit.isAuxiliary())
-                .flatMap(unit -> unit.segments().stream())
-                .toList();
+        final List<Segment> body = FrequencyScan.storyText(Objects.requireNonNull(opened.data(), "opened"));
 
         final List<String> terms = FrequencyScan.candidates(body, FrequencyScan.PROPOSAL_MIN_COUNT, "en").stream()
                 .map(NameCandidate::term)
@@ -41,6 +38,27 @@ class BartimaeusBookScanTest {
 
         assertThat(terms)
                 .contains("Nathaniel", "Bartimaeus", "Lovelace", "Underwood", "Simon Lovelace", "Sholto Pinn")
-                .doesNotContain("Well", "Don", "Words", "Seal", "Shield", "Al", "Eastern", "Shields", "Simon", "I’m");
+                .doesNotContain("Well", "Don", "Words", "Seal", "Shield", "Al", "Eastern", "Shields", "Simon", "I’m")
+                .doesNotContain("T-shirt", "Yellow Pages", "CROYDON", "Hyperion Books", "Jonathan Stroud", "Stroud");
+    }
+
+    // The proposal threshold hides single mentions; at one, front and back matter and printing notes must still not
+    // show.
+    @Test
+    void candidates_realBookAtEveryMention_hasNoPrintingNoteOrAuthorLine() {
+        assumeTrue(Files.isRegularFile(BOOK), "the owner's local example book is not present");
+        final Result<Document> opened = Guice.createInjector(new DocumentModule())
+                .getInstance(DocumentPort.class)
+                .open(BOOK);
+
+        final List<String> terms =
+                FrequencyScan.candidates(
+                                FrequencyScan.storyText(Objects.requireNonNull(opened.data(), "opened")), 1, "en")
+                        .stream()
+                        .map(NameCandidate::term)
+                        .toList();
+
+        assertThat(terms)
+                .doesNotContain("T-shirt", "Yellow Pages", "CROYDON", "Hyperion Books", "Jonathan Stroud", "Stroud");
     }
 }

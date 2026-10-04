@@ -301,7 +301,7 @@ class GlossaryServiceImplTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(new ChatResponse(
                         "{\"verdicts\":[{\"term\":\"Well\",\"verdict\":\"not-a-name\",\"type\":\"other\","
-                                + "\"gender\":\"unknown\"}]}",
+                                + "\"gender\":\"unknown\",\"evidence\":\"Well, we met Moreau\"}]}",
                         FinishReason.STOP)));
 
         final Result<GlossaryReviewReport> report = service.review(PROJECT, model, events::add);

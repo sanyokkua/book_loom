@@ -163,7 +163,7 @@ public final class EpubReader {
                     skipped,
                     units.size());
         }
-        return withAuxiliaryUnit(opf, byName, units, trees);
+        return withAuxiliaryUnit(opf, byName, EpubUnitRoles.assign(opf, byName, units, trees), trees);
     }
 
     private static ParsedEpub parsedEpub(

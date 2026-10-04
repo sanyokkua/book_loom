@@ -14,9 +14,17 @@ import java.util.Objects;
  * @param mediaType the unit's declared media type (for example {@code application/xhtml+xml})
  * @param skeleton the opaque handle to this unit's parsed tree; see {@link SkeletonHandle}
  * @param segments this unit's translatable segments, in document order
+ * @param role whether the book's own markup (landmarks, guide, section types, navigation labels) places this unit in
+ *     its front matter, its body or its back matter; {@link UnitRole#BODY} when the format says nothing
  */
 public record Unit(
-        String id, int order, String href, String mediaType, SkeletonHandle skeleton, List<Segment> segments) {
+        String id,
+        int order,
+        String href,
+        String mediaType,
+        SkeletonHandle skeleton,
+        List<Segment> segments,
+        UnitRole role) {
 
     /** The synthetic metadata/auxiliary unit's stable id — book title/author/description, frontmatter, alt text and
      * nav labels are all recorded as segments of this one unit. */
@@ -32,10 +40,25 @@ public record Unit(
         Objects.requireNonNull(mediaType, "mediaType");
         Objects.requireNonNull(skeleton, "skeleton");
         Objects.requireNonNull(segments, "segments");
+        Objects.requireNonNull(role, "role");
         if (order < 0) {
             throw new IllegalArgumentException("order must be >= 0, but was " + order);
         }
         segments = List.copyOf(segments);
+    }
+
+    /**
+     * A unit whose format says nothing about front or back matter, so it is {@link UnitRole#BODY}.
+     *
+     * @param id the unit's stable id
+     * @param order this unit's position in reading order
+     * @param href the unit's resource path/name within the source container
+     * @param mediaType the unit's declared media type
+     * @param skeleton the opaque handle to this unit's parsed tree
+     * @param segments this unit's translatable segments, in document order
+     */
+    public Unit(String id, int order, String href, String mediaType, SkeletonHandle skeleton, List<Segment> segments) {
+        this(id, order, href, mediaType, skeleton, segments, UnitRole.BODY);
     }
 
     /**
@@ -46,7 +69,7 @@ public record Unit(
      */
     public Unit withSegments(final List<Segment> segments) {
         Objects.requireNonNull(segments, "segments");
-        return new Unit(id, order, href, mediaType, skeleton, segments);
+        return new Unit(id, order, href, mediaType, skeleton, segments, role);
     }
 
     /**
@@ -56,5 +79,16 @@ public record Unit(
      */
     public boolean isAuxiliary() {
         return id.equals(AUXILIARY_ID);
+    }
+
+    /**
+     * Returns a unit placed in another part of the book while preserving everything else.
+     *
+     * @param role the non-null role the book's markup gives this unit
+     * @return a new unit with the supplied role
+     */
+    public Unit withRole(final UnitRole role) {
+        Objects.requireNonNull(role, "role");
+        return new Unit(id, order, href, mediaType, skeleton, segments, role);
     }
 }

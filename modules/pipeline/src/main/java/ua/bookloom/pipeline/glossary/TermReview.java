@@ -198,7 +198,7 @@ public final class TermReview {
         log.trace("Glossary review batch {} reply {}", index, content);
         final Map<String, GlossaryEntry> byKey = new LinkedHashMap<>();
         batch.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
-        final List<Verdict> verdicts = TermReviewReplies.read(mapper, content, byKey);
+        final List<Verdict> verdicts = TermReviewReplies.read(mapper, content, byKey, evidence);
         log.debug("Glossary review batch {} answered: size={} verdicts={}", index, batch.size(), verdicts.size());
         return Result.ok(verdicts);
     }

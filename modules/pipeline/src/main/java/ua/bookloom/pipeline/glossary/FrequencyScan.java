@@ -15,12 +15,15 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.util.text.GlossaryKeys;
+import ua.bookloom.util.text.JunkRules;
 
 /**
  * The deterministic name scan: every capitalised word, and every run of two or three, that occurs often enough away
@@ -51,6 +54,27 @@ public final class FrequencyScan {
     static final double ALIAS_STANDALONE_LIMIT = 0.4;
 
     /**
+     * The segments of a book a name scan reads: those of the units the book itself places in its body, not its front
+     * or back matter (title and copyright pages, "also by" lists, acknowledgements) and not the auxiliary unit.
+     *
+     * @param document the opened book; never null
+     * @return the segments in reading order; never null, empty when the book has no body unit
+     */
+    public static List<Segment> storyText(final Document document) {
+        Objects.requireNonNull(document, "document");
+        final List<Segment> story = document.units().stream()
+                .filter(unit -> !unit.isAuxiliary() && unit.role() == UnitRole.BODY)
+                .flatMap(unit -> unit.segments().stream())
+                .toList();
+        log.debug(
+                "Story text of {}: {} segments of {} units",
+                document.id(),
+                story.size(),
+                document.units().size());
+        return story;
+    }
+
+    /**
      * Counts the capitalised words and runs of the segments.
      *
      * @param segments the segments to read, by their masked text; never null, may be empty
@@ -70,6 +94,7 @@ public final class FrequencyScan {
         final Set<String> stopWords = StopWords.of(sourceLanguage);
         final Set<String> neverAlone = StopWords.neverAlone(sourceLanguage);
         final Map<String, NameCandidate> tallies = tally(read, word -> isNameLike(word, counts, stopWords));
+        dropJunk(tallies);
         final List<NameCandidate> candidates = tallies.values().stream()
                 .filter(tally -> tally.count() >= minCount)
                 .filter(tally -> isNotCommonWord(tally, counts, neverAlone))
@@ -80,6 +105,17 @@ public final class FrequencyScan {
         candidates.forEach(candidate ->
                 log.trace("Name candidate {} x{}: {}", candidate.term(), candidate.count(), candidate.firstSentence()));
         return candidates;
+    }
+
+    private static void dropJunk(final Map<String, NameCandidate> tallies) {
+        tallies.keySet().removeIf(term -> {
+            final boolean junk = JunkRules.isJunk(term);
+            if (junk) {
+                log.debug("Name candidate dropped as junk, score {}", JunkRules.likelihood(term));
+                log.trace("Name candidate {} dropped as junk", term);
+            }
+            return junk;
+        });
     }
 
     private static boolean isNameLike(

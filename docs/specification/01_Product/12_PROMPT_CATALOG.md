@@ -805,15 +805,18 @@ For each listed term decide:
 Give each its type (person, place, org, term, title or other) and, for a person, the gender target-language
 agreement needs, or "unknown" when the examples do not show it.
 Judge from the count and the example sentences. Keep the term exactly as listed; do not translate it.
+A "not-a-name" verdict needs evidence: copy into "evidence", word for word, a short phrase from one of the listed
+example sentences that shows the term used as an ordinary word. If no listed sentence shows it, do not answer
+"not-a-name"; answer "name" or "term". For "name" and "term" leave "evidence" empty ("").
 
 Examples:
-- "Well" — used 120 times, mostly in lower case → {"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown"}
-- "Simon Lovelace" → {"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male"}
-- "Al-Arish" → {"term":"Al-Arish","verdict":"name","type":"place","gender":"unknown"}
+- "Well" — 120×, "Well, perhaps it was my mood" → {"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown","evidence":"Well, perhaps it was my mood"}
+- "Simon Lovelace" → {"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male","evidence":""}
+- "Al-Arish" → {"term":"Al-Arish","verdict":"name","type":"place","gender":"unknown","evidence":""}
 
 Output ONLY the JSON object, one verdict per listed term: no commentary, markdown or code fences.
 A valid reply:
-{"verdicts":[{"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown"},{"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male"}]}
+{"verdicts":[{"term":"Well","verdict":"not-a-name","type":"other","gender":"unknown","evidence":"Well, perhaps it was my mood"},{"term":"Simon Lovelace","verdict":"name","type":"person","gender":"male","evidence":""}]}
 ```
 
 **USER**
@@ -824,7 +827,7 @@ A valid reply:
 
 Return JSON exactly as:
 {"verdicts":[{"term":"<term as listed>","verdict":"name|term|not-a-name","type":"person|place|org|term|title|other",
- "gender":"male|female|neuter|unknown"}]}
+ "gender":"male|female|neuter|unknown","evidence":"<phrase copied from an example for not-a-name, else empty>"}]}
 ```
 
 | Variable                                   | Required? | Source / notes                                                                                     |
@@ -838,12 +841,13 @@ Return JSON exactly as:
 
 ```json
 { "verdicts": [
-  { "term": "Well", "verdict": "not-a-name", "type": "other", "gender": "unknown" },
-  { "term": "Hale", "verdict": "name", "type": "person", "gender": "male" } ] }
+  { "term": "Well", "verdict": "not-a-name", "type": "other", "gender": "unknown", "evidence": "He knew it well" },
+  { "term": "Hale", "verdict": "name", "type": "person", "gender": "male", "evidence": "" } ] }
 ```
 
 Tolerant read: a verdict on a term outside the batch is dropped; an unlisted verdict, type or gender reads as no
-opinion; an unreadable reply is no verdicts, so it changes nothing. The pseudo model judges every listed term a name
+opinion; a "not-a-name" verdict whose `evidence` is empty or is not a phrase of one of the example sentences the term
+was sent with (case, quotes and ellipses ignored) reads as no opinion, so nothing is removed on an unsupported say-so; an unreadable reply is no verdicts, so it changes nothing. The pseudo model judges every listed term a name
 with no type or gender, so a review with it changes nothing.
 
 ## glossary-target-suggestions {#glossary-target-suggestions}

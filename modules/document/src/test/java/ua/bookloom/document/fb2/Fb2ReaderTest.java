@@ -13,6 +13,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.document.fixture.Fb2Fixtures;
 import ua.bookloom.document.model.CorruptContainerException;
 import ua.bookloom.document.model.DrmRefusedException;
@@ -67,6 +68,19 @@ class Fb2ReaderTest {
         assertThat(bodies).extracting(Unit::id).containsExactly("book.fb2#0", "book.fb2#1");
         assertThat(bodies).extracting(Unit::href).containsOnly("book.fb2");
         assertThat(bodies).extracting(Unit::mediaType).containsOnly("application/x-fictionbook+xml");
+    }
+
+    // FB2 marks the apparatus after the story with a body named "notes"; that body is back matter, the main body is
+    // not.
+    @Test
+    void read_mainAndNotesBodies_notesBodyIsBackMatter() {
+        final Document document = readPrimary();
+
+        assertThat(document.units().stream()
+                        .filter(unit -> !unit.isAuxiliary())
+                        .map(Unit::role)
+                        .toList())
+                .containsExactly(UnitRole.BODY, UnitRole.BACK_MATTER);
     }
 
     // Every book ends with an auxiliary unit named for the file, holding its title and author; body units keep their

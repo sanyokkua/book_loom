@@ -157,6 +157,7 @@ final class DecisionFollowUp {
      */
     private Optional<AppError> scanNames(final WorkList work, final String unitId) {
         final List<Segment> scanned = Stream.concat(work.decidedSegments().stream(), decidedInUnit.stream())
+                .filter(work.story()::holds)
                 .toList();
         final Result<List<GlossaryEntry>> proposed =
                 FrequencyScan.newTerms(projectId, scanned, sourceLanguage, glossary);

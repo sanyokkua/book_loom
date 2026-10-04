@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.document.detect.CharsetLadder;
 import ua.bookloom.document.model.AuxiliarySlots;
 import ua.bookloom.document.model.AuxiliaryUnit;
@@ -60,6 +62,8 @@ public final class Fb2Reader {
     private static final String ZIP_SUFFIX = ".fb2.zip";
     private static final String FB2_SUFFIX = ".fb2";
     private static final String BODY_ELEMENT = "body";
+    private static final String BODY_NAME_ATTRIBUTE = "name";
+    private static final Set<String> APPARATUS_BODIES = Set.of("notes", "comments");
 
     private final OpenFb2Registry registry;
 
@@ -228,7 +232,17 @@ public final class Fb2Reader {
         bodies.put(handleId, body);
         final List<Segment> segments =
                 BlockSegmentWalker.walk(Jdom2TreeNode.of(body), unitId, TreeDialect.FICTION_BOOK);
-        units.add(new Unit(unitId, order, sourceName, FB2_MEDIA_TYPE, new SkeletonHandle(handleId), segments));
+        units.add(new Unit(
+                unitId, order, sourceName, FB2_MEDIA_TYPE, new SkeletonHandle(handleId), segments, roleOf(body)));
+    }
+
+    // FB2 names a body "notes" or "comments" when it holds the apparatus after the story; a section has no role.
+    private static UnitRole roleOf(Element body) {
+        final String name = body.getAttributeValue(BODY_NAME_ATTRIBUTE);
+        final boolean apparatus =
+                name != null && APPARATUS_BODIES.contains(name.strip().toLowerCase(Locale.ROOT));
+        log.debug("FB2 body name={} role={}", name, apparatus ? UnitRole.BACK_MATTER : UnitRole.BODY);
+        return apparatus ? UnitRole.BACK_MATTER : UnitRole.BODY;
     }
 
     /** The FB2 bytes plus where they came from — identical for a bare file and for a zipped member. */

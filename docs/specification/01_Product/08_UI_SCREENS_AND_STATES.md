@@ -205,7 +205,7 @@ Purpose: review and edit the glossary before or during a run.
 
 | Control              | JavaFX control                       | Behaviour                                                                                          |
 |------------------------|-----------------------------------------|--------------------------------------------------------------------------------------------------|
-| Glossary table         | `TableView`                             | Columns: Source term, Type, Target, Gender, Locked; Source term, Type, Gender and Locked sort by header, ties by term |
+| Glossary table         | `TableView`                             | Columns: Source term, Type, Target, Gender, Locked, Check; Source term, Type, Gender, Locked and Check sort by header, ties by term. Check shows a "No target" chip for an empty target and a "Likely junk" chip for a term the junk rules mark, and sorts the likeliest junk first. Start translation asks "N entries have no target — the model will choose" (listing them) when any entry has no target |
 | Search field           | `TextField`                             | Shows only rows whose term or target contains the text; Escape clears it                           |
 | Model-scan button      | `Button`                                | Runs a model-assisted name scan in addition to the deterministic scan                             |
 | Review with model      | `Button`                                | Asks the model which open rows are names; removes the rest and fills an unset type or gender       |

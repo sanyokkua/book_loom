@@ -33,8 +33,10 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.NamesStyleViewModel;
 
 /**
- * Builds the glossary table: Source term, Type, Target, Gender and Locked, each edited in its own cell, and the search
+ * Builds the glossary table: Source term, Type, Target, Gender, Locked and Check, each edited in its own cell, and the search
  * field that filters it.
+ *
+ * <p>A last column flags rows that need a look, "no target" and "likely junk", and sorts the likeliest junk first.
  *
  * <p>Term, Type, Gender and Locked sort by a header click. Ties are always broken by the term, which no two rows share,
  * so a change to anything but the sorted column — above all a target being typed — never moves its row; a change to
@@ -51,6 +53,7 @@ final class GlossaryTable {
     private static final double CHOICE_WIDTH = 140;
     private static final double TARGET_WIDTH = 260;
     private static final double LOCK_WIDTH = 100;
+    private static final double FLAGS_WIDTH = 220;
 
     private static final Comparator<GlossaryEntry> BY_TERM =
             Comparator.comparing(GlossaryEntry::term, Collator.getInstance());
@@ -153,7 +156,14 @@ final class GlossaryTable {
                         MessageKey.NAMES_STYLE_COLUMN_LOCKED_TIP,
                         LOCK_WIDTH,
                         Comparator.comparing(GlossaryEntry::locked),
-                        () -> new GlossaryCells.LockCell(messages, model)));
+                        () -> new GlossaryCells.LockCell(messages, model)),
+                column(
+                        messages,
+                        MessageKey.NAMES_STYLE_COLUMN_FLAGS,
+                        MessageKey.NAMES_STYLE_COLUMN_FLAGS_TIP,
+                        FLAGS_WIDTH,
+                        Comparator.comparingInt(GlossaryFlags::junkScore).reversed(),
+                        () -> new GlossaryCells.FlagsCell(messages)));
     }
 
     private static GlossaryCells.EntryCell<?> typeCell(final Messages messages, final NamesStyleViewModel model) {

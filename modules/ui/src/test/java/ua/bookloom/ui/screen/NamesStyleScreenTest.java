@@ -168,14 +168,14 @@ class NamesStyleScreenTest extends TranslatingScreenTestBase {
 
     // IF a column were missing, THEN part of what the person settles could not be seen or edited.
     @Test
-    void table_bookOpenEmptyGlossary_hasTheFiveColumnsAndAnEnabledStart() throws Exception {
+    void table_bookOpenEmptyGlossary_hasTheSixColumnsAndAnEnabledStart() throws Exception {
         openBookOnly();
         showNamesStyle();
 
         assertThat(ThemeTestSupport.onFx(() -> table().getColumns().stream()
                         .map(column -> ((Label) column.getGraphic()).getText())
                         .toList()))
-                .containsExactly("Source term", "Type", "Target", "Gender", "Locked");
+                .containsExactly("Source term", "Type", "Target", "Gender", "Locked", "Check");
         assertThat(ThemeTestSupport.onFx(() -> table().getItems())).isEmpty();
         assertThat(button("names-style-start").isDisabled()).isFalse();
         assertThat(button("names-style-model-scan").getText()).isEqualTo("Model scan");

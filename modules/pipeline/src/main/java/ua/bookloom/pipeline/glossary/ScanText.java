@@ -14,6 +14,7 @@ import ua.bookloom.api.document.PlaceholderPair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.util.lang.LanguageTags;
+import ua.bookloom.util.text.JunkRules;
 
 /**
  * The segments a name scan reads: the book's running text only. A heading, a title page line or a contents entry
@@ -84,9 +85,22 @@ final class ScanText {
         return text;
     }
 
-    // A plain-text book keeps a contents list or a heading as lines of one paragraph.
+    // A plain-text book keeps a contents list or a heading as lines of one paragraph; a printing note is a line too.
     private static String withoutTitleLines(final String text) {
-        return LINE_BREAK.splitAsStream(text).filter(line -> !isTitleLine(line)).collect(Collectors.joining("\n"));
+        return LINE_BREAK
+                .splitAsStream(text)
+                .filter(line -> !isPrintingNote(line))
+                .filter(line -> !isTitleLine(line))
+                .collect(Collectors.joining("\n"));
+    }
+
+    private static boolean isPrintingNote(final String line) {
+        final boolean note = JunkRules.isPrintingNote(line);
+        if (note) {
+            log.debug("Scan text: printing note dropped");
+            log.trace("Scan text: printing note dropped {}", line);
+        }
+        return note;
     }
 
     // Every word holding a letter starts with a capital, apart from a title's small words.

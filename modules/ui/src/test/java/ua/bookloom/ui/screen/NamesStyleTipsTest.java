@@ -82,7 +82,8 @@ class NamesStyleTipsTest extends TranslatingScreenTestBase {
         "1,NAMES_STYLE_COLUMN_TYPE_TIP",
         "2,NAMES_STYLE_COLUMN_TARGET_TIP",
         "3,NAMES_STYLE_COLUMN_GENDER_TIP",
-        "4,NAMES_STYLE_COLUMN_LOCKED_TIP"
+        "4,NAMES_STYLE_COLUMN_LOCKED_TIP",
+        "5,NAMES_STYLE_COLUMN_FLAGS_TIP"
     })
     void table_columnHeader_explainsItsColumn(final int column, final String tip) throws Exception {
         showWithOneTerm();

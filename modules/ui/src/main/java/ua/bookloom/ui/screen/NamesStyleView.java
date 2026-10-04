@@ -27,6 +27,7 @@ import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.AddTermDialog;
+import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.Toasts;
@@ -61,6 +62,7 @@ final class NamesStyleView {
     private final NamesStyleViewModel glossary;
     private final ModalHost modalHost;
     private final Toasts toasts;
+    private final NoTargetDialog noTargetDialog;
 
     NamesStyleView(
             final Messages messages,
@@ -68,13 +70,15 @@ final class NamesStyleView {
             final TranslatingViewModel translating,
             final NamesStyleViewModel glossary,
             final ModalHost modalHost,
-            final Toasts toasts) {
+            final Toasts toasts,
+            final NoTargetDialog noTargetDialog) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
+        this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
     }
 
     Node build(final String projectId) {
@@ -289,13 +293,35 @@ final class NamesStyleView {
         final Forward action = Forward.of(translating.controls().get());
         log.debug("forward pressed on names and style: {}", action);
         switch (action) {
-            case START -> {
-                noteUnconfirmedSuggestions();
-                translating.start();
+            case START -> startUnlessTargetsAreMissing();
+            case RESUME -> {
+                translating.resume();
+                navigator.navigate(ViewNames.TRANSLATING);
             }
-            case RESUME -> translating.resume();
-            case TO_RUN -> log.debug("a run is under way: showing it");
+            case TO_RUN -> {
+                log.debug("a run is under way: showing it");
+                navigator.navigate(ViewNames.TRANSLATING);
+            }
         }
+    }
+
+    // An entry with no target leaves its spelling to the model, which may spell it differently each time; ask first.
+    private void startUnlessTargetsAreMissing() {
+        final List<String> missing = glossary.rows().stream()
+                .filter(GlossaryFlags::hasNoTarget)
+                .map(GlossaryEntry::term)
+                .toList();
+        log.debug("start pressed with {} entries that have no target", missing.size());
+        if (missing.isEmpty()) {
+            begin();
+        } else {
+            noTargetDialog.ask(missing, this::begin);
+        }
+    }
+
+    private void begin() {
+        noteUnconfirmedSuggestions();
+        translating.start();
         navigator.navigate(ViewNames.TRANSLATING);
     }
 

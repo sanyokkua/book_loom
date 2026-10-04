@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
 import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.CurrentProject;
@@ -37,6 +38,7 @@ public final class NamesStyleController {
     private final NamesStyleViewModel glossary;
     private final ModalHost modalHost;
     private final Toasts toasts;
+    private final NoTargetDialog noTargetDialog;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
@@ -52,6 +54,7 @@ public final class NamesStyleController {
      * @param glossary the state of the glossary table
      * @param modalHost where the Add term card is shown
      * @param toasts where starting with unconfirmed suggestions is noted
+     * @param noTargetDialog the question asked before starting with entries that have no target
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -63,7 +66,8 @@ public final class NamesStyleController {
             final TranslatingViewModel translating,
             final NamesStyleViewModel glossary,
             final ModalHost modalHost,
-            final Toasts toasts) {
+            final Toasts toasts,
+            final NoTargetDialog noTargetDialog) {
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
@@ -71,6 +75,7 @@ public final class NamesStyleController {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
+        this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
     }
 
     @FXML
@@ -85,7 +90,7 @@ public final class NamesStyleController {
     private void show(final @Nullable OpenedBook book) {
         log.debug("showing the {}", book != null ? "glossary" : "no-book state");
         final Node content = book != null
-                ? new NamesStyleView(messages, navigator, translating, glossary, modalHost, toasts)
+                ? new NamesStyleView(messages, navigator, translating, glossary, modalHost, toasts, noTargetDialog)
                         .build(book.projectId())
                 : NoBookView.build(messages, navigator);
         body.getChildren().setAll(content);

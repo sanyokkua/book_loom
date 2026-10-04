@@ -19,6 +19,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SkeletonHandle;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
@@ -146,6 +147,24 @@ class WorkListTest {
 
         assertThat(work.remaining().getFirst().segment().id()).isEqualTo("one:3");
         assertThat(pendingIds(work)).containsExactly("one:3", "two:0");
+    }
+
+    // The unit-end name scan reads story text only: a unit the book places in its front matter is no story.
+    @Test
+    void story_unitInFrontMatter_isNotStoryText() {
+        final Document book = documentWithAuxiliary();
+        final Document placed = book.withUnits(List.of(
+                book.units().get(0).withRole(UnitRole.FRONT_MATTER),
+                book.units().get(1),
+                book.units().get(2)));
+        final WorkList work = read(placed, Map.of());
+
+        assertThat(placed.units().stream()
+                        .flatMap(unit -> unit.segments().stream())
+                        .filter(work.story()::holds)
+                        .map(Segment::id)
+                        .toList())
+                .containsExactly("two:0");
     }
 
     // The unit-end name scan reads everything decided so far, an earlier run's decisions and a flagged one included.
