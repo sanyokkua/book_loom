@@ -430,7 +430,7 @@ the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands
 
 **Model list.** `scripts/eval-models.txt` is the one list of models `scripts/eval-matrix.sh` runs (refreshed 2026-10-04 to what
 `ollama ls` and `lms ls` show: gemma-4 e4b in every quant first, then e2b, 12b, 26b, gpt-oss, the two qwen3.8-27b builds, muse-glimmer
-and nemotron-3-nano). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. 
+and the rest). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. 
 
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
 prompt eval plus 19 labelled judge cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
