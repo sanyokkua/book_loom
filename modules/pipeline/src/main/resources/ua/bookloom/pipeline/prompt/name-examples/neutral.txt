@@ -1,5 +1,0 @@
-# Language-independent example for the suggestion call, shown when no file exists for the language pair or the target
-# language. Lines starting with # never reach the model. Only "no suggestion" is literal in every language.
-- Well — other — "Well, I never."
-A valid reply:
-{"suggestions":[{"term":"Well","target":"","gender":"unknown"}]}

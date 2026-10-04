@@ -8,7 +8,7 @@ First check the language of every candidate. A candidate written in {{sourceLang
 Then check every candidate, word by word, for each of these defects. Any one of them caps the score at 0.69 and needs
 a finding:
 - a word that is garbled, invented or not a real {{targetLanguage}} word (fluency);
-- a letter or digit of another script inside a word, such as a Latin letter in a Cyrillic word (language);
+- a letter or digit of another script inside a word, such as a Latin letter inside a word of another alphabet (language);
 - a quotation mark or bracket that opens and never closes, or closes without opening (fluency);
 - a character or thing called by one name in the source but by two different names in the candidate (meaning);
 - a verb, adjective or pronoun whose gender or number does not agree with its subject (fluency);
@@ -42,6 +42,10 @@ Rules:
 Style the translation had to follow:
 {{styleSheet}}
 
+{{#languageRules}}
+{{languageRules}}
+
+{{/languageRules}}
 Output ONLY the JSON object: no commentary, markdown or code fences.
 A valid reply when every candidate is good:
 {"score":0.95,"verdict":"accept","findings":[],"deferrals":[]}

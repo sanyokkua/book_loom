@@ -210,9 +210,8 @@ public final class TermReview {
                 batch.stream()
                         .map(entry -> line(entry.term(), evidence.getOrDefault(entry.term(), Evidence.NONE)))
                         .toList());
-        final String system = templates
-                .renderSystem(PromptName.REVIEW_TERMS, frame.systemSlotValues())
-                .strip();
+        final String system =
+                templates.renderSystem(PromptName.REVIEW_TERMS, frame).strip();
         final String user = templates
                 .renderUser(PromptName.REVIEW_TERMS, Map.of("terms", lines))
                 .strip();

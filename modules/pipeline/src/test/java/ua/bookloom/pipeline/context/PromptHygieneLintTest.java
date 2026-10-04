@@ -13,6 +13,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
@@ -104,6 +105,37 @@ class PromptHygieneLintTest {
         final String second = system(name);
 
         assertThat(first).isEqualTo(second);
+    }
+
+    // A language file with an empty heading, a repeated rule or a placeholder would reach every call of its pair.
+    @ParameterizedTest
+    @MethodSource("ua.bookloom.pipeline.prompt.V1Languages#languages")
+    void render_languageRulesOfEveryV1Language_passTheLintAsTargetAndAsSource(final String tag) {
+        final CallFrame asTarget =
+                new CallFrame("en", tag, StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
+        final CallFrame asSource =
+                new CallFrame(tag, "uk", StyleSheet.from(BookBrief.defaults(tag)), ForeignPassagePolicy.KEEP);
+
+        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.DRAFT, asTarget), SAMPLE_FACTS))
+                .isEmpty();
+        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.JUDGE, asTarget), SAMPLE_FACTS))
+                .isEmpty();
+        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.JUDGE, asSource), SAMPLE_FACTS))
+                .isEmpty();
+    }
+
+    @ParameterizedTest
+    @MethodSource("ua.bookloom.pipeline.prompt.V1Languages#pairs")
+    void render_languageRulesOfEveryPair_passTheLint(final String pair) {
+        final int dash = pair.indexOf('-');
+        final CallFrame frame = new CallFrame(
+                pair.substring(0, dash),
+                pair.substring(dash + 1),
+                StyleSheet.from(BookBrief.defaults(pair.substring(0, dash))),
+                ForeignPassagePolicy.KEEP);
+
+        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.JUDGE, frame), SAMPLE_FACTS))
+                .isEmpty();
     }
 
     @Test

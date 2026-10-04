@@ -5,6 +5,10 @@ The book's style, for context:
 {{styleSheet}}
 {{/styleSheet}}
 
+{{#languageRules}}
+{{languageRules}}
+
+{{/languageRules}}
 How to render:
 {{nameRule}}
 - Give the dictionary form only: the nominative singular, as a glossary or an index prints it. Never inflect it to fit

@@ -1,0 +1,80 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "cs",
+ "drafts": [
+  {
+   "name": "cs-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "„[^„“]*“",
+    "injection": false
+   }
+  },
+  {
+   "name": "cs-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)unaven[áa]",
+    "injection": false
+   }
+  },
+  {
+   "name": "cs-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)kapitol",
+    "injection": false
+   }
+  },
+  {
+   "name": "cs-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)unaven[ýy]",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "cs-gender",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Byla unavený.",
+   "defective": true,
+   "rationale": "masculine adjective for she"
+  },
+  {
+   "id": "cs-gender-clean",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Byla unavená.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "cs-case",
+   "kind": "case",
+   "source": "She saw two old dogs.",
+   "candidate": "Viděla dva starý pes.",
+   "defective": true,
+   "rationale": "wrong case and number"
+  },
+  {
+   "id": "cs-case-clean",
+   "kind": "case",
+   "source": "She saw two old dogs.",
+   "candidate": "Viděla dva staré psy.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

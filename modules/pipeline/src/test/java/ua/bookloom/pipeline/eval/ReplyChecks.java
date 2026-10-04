@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.eval;
 
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import lombok.AccessLevel;
@@ -8,14 +9,18 @@ import lombok.NoArgsConstructor;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
+import ua.bookloom.util.lang.Languages;
+import ua.bookloom.util.lang.Script;
 
 /** The deterministic checks a reply is measured by; no model judges another model here. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class ReplyChecks {
 
-    /** The share of a reply's letters that must be Cyrillic for it to count as Ukrainian. */
+    /** The share of a reply's letters that must be in the target language's script for it to count as translated. */
     private static final double MIN_TARGET_SCRIPT_SHARE = 0.6;
+
+    private static final String DEFAULT_TARGET = "uk";
 
     /**
      * Whether {@code target} holds exactly the source's tokens in order, no bracket outside a token, and words between
@@ -45,6 +50,11 @@ final class ReplyChecks {
 
     /** Whether {@code target} is in the target script, or unchanged where the case asks for a copy. */
     static Check script(final String masked, final String target, final Expect expect) {
+        return script(masked, target, expect, DEFAULT_TARGET);
+    }
+
+    /** As {@link #script(String, String, Expect)}, for the script of {@code targetTag}'s language. */
+    static Check script(final String masked, final String target, final Expect expect, final String targetTag) {
         if (expect.copy()) {
             return Check.of(target.strip().equals(masked.strip()));
         }
@@ -53,11 +63,13 @@ final class ReplyChecks {
                 .filter(Character::isLetter)
                 .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
                 .toString();
-        final long cyrillic = letters.codePoints()
-                .filter(cp -> Character.UnicodeScript.of(cp) == Character.UnicodeScript.CYRILLIC)
+        final Set<Character.UnicodeScript> expected =
+                Languages.scriptOf(targetTag).orElse(Script.UNKNOWN).letterScripts();
+        final long inScript = letters.codePoints()
+                .filter(cp -> expected.contains(Character.UnicodeScript.of(cp)))
                 .count();
         final int total = letters.codePointCount(0, letters.length());
-        return Check.of(total > 0 && cyrillic >= MIN_TARGET_SCRIPT_SHARE * total);
+        return Check.of(total > 0 && inScript >= MIN_TARGET_SCRIPT_SHARE * total);
     }
 
     /** Whether {@code target} matches the case's marker pattern; {@link Check#NA} for a case with none. */

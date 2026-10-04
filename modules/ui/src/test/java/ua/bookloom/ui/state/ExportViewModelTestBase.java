@@ -57,7 +57,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         current = new CurrentProject();
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
-        brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
+        brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor(), tag -> true));
         mirror = onFx(StateMirror::new);
         activities = onFx(() -> new ActivityTracker(mirror));
         desk = new ScriptedReviewDesk();

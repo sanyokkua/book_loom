@@ -1,0 +1,90 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "sl",
+ "drafts": [
+  {
+   "name": "sl-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "„[^„“]*“",
+    "injection": false
+   }
+  },
+  {
+   "name": "sl-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)utrujena",
+    "injection": false
+   }
+  },
+  {
+   "name": "sl-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)poglavje",
+    "injection": false
+   }
+  },
+  {
+   "name": "sl-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)utrujen\\b",
+    "injection": false
+   }
+  },
+  {
+   "name": "sl-dual",
+   "masked": "Two dogs were sleeping.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)dva psa",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "sl-gender",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Bila je utrujen.",
+   "defective": true,
+   "rationale": "masculine adjective for she"
+  },
+  {
+   "id": "sl-gender-clean",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Bila je utrujena.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "sl-dual",
+   "kind": "dual",
+   "source": "Two dogs were sleeping.",
+   "candidate": "Dva psi so spali.",
+   "defective": true,
+   "rationale": "plural instead of the dual"
+  },
+  {
+   "id": "sl-dual-clean",
+   "kind": "dual",
+   "source": "Two dogs were sleeping.",
+   "candidate": "Dva psa sta spala.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

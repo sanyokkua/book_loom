@@ -11,6 +11,10 @@ Do not translate the terms; propose the source form exactly as listed.
 Propose only terms from the candidate list; do not invent entries.
 If gender is not inferable, use "unknown". If no candidate is a name or a term, return {"terms":[]}.
 
+{{#languageRules}}
+{{languageRules}}
+
+{{/languageRules}}
 Examples:
 - "Well" opening "Well, I never." → not a name: leave it out.
 - "Simon Lovelace" in "Simon Lovelace smiled at his guests." → {"term":"Simon Lovelace","type":"person","gender":"male","note":"a magician","confidence":0.9}

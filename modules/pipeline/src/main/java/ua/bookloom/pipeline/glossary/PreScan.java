@@ -219,9 +219,7 @@ public final class PreScan {
                 batch.stream()
                         .map(candidate -> candidate.term() + " — " + candidate.firstSentence())
                         .toList());
-        final String system = templates
-                .renderSystem(PromptName.PRESCAN, frame.systemSlotValues())
-                .strip();
+        final String system = templates.renderSystem(PromptName.PRESCAN, frame).strip();
         final String user = templates
                 .renderUser(PromptName.PRESCAN, Map.of("candidates", lines, "existingTerms", existing))
                 .strip();

@@ -1205,6 +1205,47 @@ small model reads every token it is given and may echo it, so nothing is sent th
 - **WHEN** two drafts of different segments with different context are built in one run
 - **THEN** their system messages are equal
 
+### Requirement: Tell the model about the language pair from one language-rules map
+
+The system SHALL build, for each source and target language of a run, one section `[Language rules: <Source> -> <Target>]`
+from bundled `prompt/languages/<tag>.properties` files — the target language's rules, at most three notes on reading the
+source language, and the pair's own rules from `prompt/languages/pairs/<source>-<target>.properties` — and SHALL inject it
+as `{{languageRules}}` into the draft, judge, summary, prescan and suggest-targets system messages, with the language's
+`reviewerChecks` added only in the judge. A language is matched by its primary subtag; a tag with no file SHALL get the
+rules of `generic.properties`, so that any language the platform can name keeps working. The system SHALL open only the
+files of the target, the source, their pair and `generic.properties`, SHALL build the section once per pair so that every
+call of a run carries the same bytes, and SHALL keep a target's rules within 200 estimated tokens, a source's notes within
+80 and a pair's rules within 100. The few-shot examples and the name-rendering lines are keys of the same files
+(`example.N`, `nameExample`, `names.*`); no per-language example file and no multi-language advice stays in a static
+prompt. The draft system message of English to Ukrainian SHALL be smaller than it was before the map (698 estimated
+tokens). Setting `BOOKLOOM_EVAL_RULES=generic` or the system property `bookloom.eval.rules=generic` SHALL build every
+section from the generic rules alone, so a prompt eval can measure what the language files add.
+
+**Source:** `tasks.md` 15d.5b; `docs/specification/01_Product/12_PROMPT_CATALOG.md#language-rules`. In plain words: what
+to watch for in Ukrainian, or in going from English to Ukrainian, is written once as data, sent only for the pair in
+hand, and a language nobody has written rules for is translated with general advice instead of failing.
+
+#### Scenario: English to Ukrainian loads only its own files
+
+- **WHEN** the section for English to Ukrainian is built
+- **THEN** only `generic.properties`, `uk.properties`, `en.properties` and `pairs/en-uk.properties` are opened
+- **AND** no rule of any other language appears in it
+
+#### Scenario: An unknown language gets the generic rules
+
+- **WHEN** the target is a tag with no file, such as `ja`
+- **THEN** the section holds the generic rules and the translation runs
+
+#### Scenario: The judge also gets the reviewer checks
+
+- **WHEN** the draft and the judge system messages are built for English to Ukrainian
+- **THEN** only the judge's carries the `Check:` lines
+
+#### Scenario: Rules forced to generic
+
+- **WHEN** `BOOKLOOM_EVAL_RULES=generic` is set and the section for English to Ukrainian is built
+- **THEN** it holds the generic rules and no Ukrainian, English or pair rule
+
 ## MODIFIED Requirements
 
 ### Requirement: Send each pending segment to the model in document order

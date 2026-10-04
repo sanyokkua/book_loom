@@ -45,7 +45,23 @@ final class BriefLanguagesCard {
         final Label undeclared = BriefCards.shownWhile(
                 BriefCards.hint(messages, MessageKey.BRIEF_SOURCE_UNDECLARED), viewModel.sourceUndeclared());
         undeclared.setId("brief-source-undeclared");
-        final Banner same = BriefCards.shownWhile(
+        final Label required = required(messages, target);
+        final Label untested = untested(messages, viewModel);
+        this.node = BriefCards.card(
+                "brief-languages-card",
+                messages,
+                MessageKey.BRIEF_CARD_LANGUAGES,
+                new VBox(FIELD_SPACING, BriefCards.field(messages, MessageKey.BRIEF_SOURCE_LABEL, source), undeclared),
+                new VBox(
+                        FIELD_SPACING,
+                        BriefCards.field(messages, MessageKey.BRIEF_TARGET_LABEL, target),
+                        required,
+                        untested),
+                sameLanguage(messages, viewModel));
+    }
+
+    private static Banner sameLanguage(final Messages messages, final BookBriefViewModel viewModel) {
+        return BriefCards.shownWhile(
                 new Banner(
                         "brief-languages-same",
                         Banner.Role.WARN,
@@ -53,14 +69,6 @@ final class BriefLanguagesCard {
                         "",
                         messages.get(MessageKey.BRIEF_LANGUAGES_SAME)),
                 viewModel.sameLanguage());
-        final Label required = required(messages, target);
-        this.node = BriefCards.card(
-                "brief-languages-card",
-                messages,
-                MessageKey.BRIEF_CARD_LANGUAGES,
-                new VBox(FIELD_SPACING, BriefCards.field(messages, MessageKey.BRIEF_SOURCE_LABEL, source), undeclared),
-                new VBox(FIELD_SPACING, BriefCards.field(messages, MessageKey.BRIEF_TARGET_LABEL, target), required),
-                same);
     }
 
     // Nothing can be translated without a target, so an empty one says so under the box until one is chosen.
@@ -71,6 +79,15 @@ final class BriefLanguagesCard {
         required.setId("brief-target-required");
         required.getStyleClass().add("field-required");
         return required;
+    }
+
+    // A language with no tested rules still translates, with the general rules; the note says so instead of leaving a
+    // person to wonder why its quotes or gender come out worse than Ukrainian's.
+    private static Label untested(final Messages messages, final BookBriefViewModel viewModel) {
+        final Label untested = BriefCards.shownWhile(
+                BriefCards.hint(messages, MessageKey.BRIEF_TARGET_UNTESTED), viewModel.targetUntested());
+        untested.setId("brief-target-untested");
+        return Tips.install(messages, untested, MessageKey.BRIEF_TARGET_UNTESTED_TIP);
     }
 
     Node node() {

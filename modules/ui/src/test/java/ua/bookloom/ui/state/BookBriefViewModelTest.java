@@ -107,6 +107,20 @@ class BookBriefViewModelTest extends BookBriefViewModelTestBase {
         assertThat(canContinue()).isTrue();
     }
 
+    // IF an untested target looked like a tested one, THEN the note about general rules would never reach the person.
+    @Test
+    void targetUntested_languageWithoutTestedRules_isTrueOnlyWhileSuchATargetIsChosen() {
+        openBook(BookFixtures.frankensteinImport());
+        assertThat(brief.targetUntested().get()).isFalse();
+
+        change(() -> brief.setTargetLanguage("xx"));
+        assertThat(brief.targetUntested().get()).isTrue();
+        assertThat(canContinue()).isTrue();
+
+        change(() -> brief.setTargetLanguage("uk"));
+        assertThat(brief.targetUntested().get()).isFalse();
+    }
+
     // IF free text were replaced by a suggestion, THEN a genre no list holds could not be given.
     @Test
     void setGenre_freeText_isKeptAsWritten() {

@@ -1,0 +1,90 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "es",
+ "drafts": [
+  {
+   "name": "es-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?s)«.*»|^—",
+    "injection": false
+   }
+  },
+  {
+   "name": "es-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)cansada",
+    "injection": false
+   }
+  },
+  {
+   "name": "es-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)cap[ií]tulo",
+    "injection": false
+   }
+  },
+  {
+   "name": "es-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)cansado",
+    "injection": false
+   }
+  },
+  {
+   "name": "es-question",
+   "masked": "Where are you going?",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "^¿.*\\?$",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "es-question",
+   "kind": "punctuation",
+   "source": "Where are you going?",
+   "candidate": "Adónde vas?",
+   "defective": true,
+   "rationale": "missing opening question mark"
+  },
+  {
+   "id": "es-question-clean",
+   "kind": "punctuation",
+   "source": "Where are you going?",
+   "candidate": "¿Adónde vas?",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "es-false-friend",
+   "kind": "false-friend",
+   "source": "She is pregnant.",
+   "candidate": "Ella está embarazosa.",
+   "defective": true,
+   "rationale": "embarazosa is embarrassing"
+  },
+  {
+   "id": "es-false-friend-clean",
+   "kind": "false-friend",
+   "source": "She is pregnant.",
+   "candidate": "Ella está embarazada.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

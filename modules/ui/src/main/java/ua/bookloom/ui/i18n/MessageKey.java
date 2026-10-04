@@ -468,6 +468,10 @@ public enum MessageKey {
     /** Hover explanation of the control labelled by {@link #BRIEF_TARGET_LABEL}. */
     BRIEF_TARGET_LABEL_TIP("brief.target.label.tip"),
     BRIEF_TARGET_REQUIRED("brief.target.required"),
+    /** Note under the target box when the chosen language has no tested translation rules. */
+    BRIEF_TARGET_UNTESTED("brief.target.untested"),
+    /** Hover explanation of the note {@link #BRIEF_TARGET_UNTESTED}. */
+    BRIEF_TARGET_UNTESTED_TIP("brief.target.untested.tip"),
     /** Label of the genre field. */
     BRIEF_TONE_GENRE("brief.tone.genre"),
     /** Hover explanation of the control labelled by {@link #BRIEF_TONE_GENRE}. */

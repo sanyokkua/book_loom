@@ -13,8 +13,10 @@ import ua.bookloom.pipeline.eval.EvalRow.Check;
  * @param model the model the run measured
  * @param rows every case's outcome, in case order
  * @param defectRows the corpus judge outcomes
+ * @param rules {@code language} for a run with the language-rules map, {@code generic} for one forced to the generic
+ *     rules, so a matrix can set the two side by side
  */
-record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows) {
+record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, String rules) {
 
     static final double PARSE_FLOOR = 0.95;
     static final double GATE_FLOOR = 0.90;
@@ -26,12 +28,13 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows) 
     /** Copies the rows. */
     EvalReport {
         Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(rules, "rules");
         rows = List.copyOf(rows);
         defectRows = List.copyOf(defectRows);
     }
 
     EvalReport(final String model, final List<EvalRow> rows) {
-        this(model, rows, List.of());
+        this(model, rows, List.of(), "language");
     }
 
     double parseRate() {
@@ -97,11 +100,12 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows) 
     String json() {
         return String.format(
                 Locale.ROOT,
-                "{\"model\":\"%s\",\"class\":\"%s\",\"parse\":%.3f,\"gate\":%.3f,\"script\":%.3f,"
+                "{\"model\":\"%s\",\"rules\":\"%s\",\"class\":\"%s\",\"parse\":%.3f,\"gate\":%.3f,\"script\":%.3f,"
                         + "\"marker\":%.3f,\"injection\":%.3f,\"judgeSeparation\":%.3f,"
                         + "\"judgeParse\":%.3f,\"falseNegative\":%.3f,\"falsePositive\":%.3f,"
                         + "\"stability\":%.3f,\"meetsThresholds\":%b}",
                 model,
+                rules,
                 EvalThresholds.classOf(model),
                 parseRate(),
                 gateRate(),
@@ -119,7 +123,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows) 
     /** The table: one line per case, then the rates. */
     String table() {
         final List<String> lines = new ArrayList<>();
-        lines.add("promptEval model=" + model);
+        lines.add("promptEval model=" + model + " rules=" + rules);
         lines.add(String.format(
                 Locale.ROOT, ROW, "case", "kind", "parse", "gate", "script", "marker", "inject", "judge", "reply"));
         rows.forEach(row -> lines.add(line(row)));

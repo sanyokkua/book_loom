@@ -41,13 +41,13 @@ abstract class BookBriefViewModelTestBase extends FxTestBase {
         saves = new QueuedExecutor();
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
-        brief = onFx(() -> new BookBriefViewModel(current, projects, saves));
+        brief = onFx(() -> new BookBriefViewModel(current, projects, saves, tag -> !"xx".equals(tag)));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
     /** Replaces the view model with a new one over the same current project, as a later first visit would. */
     void recreateBrief() {
-        brief = onFx(() -> new BookBriefViewModel(current, projects, saves));
+        brief = onFx(() -> new BookBriefViewModel(current, projects, saves, tag -> !"xx".equals(tag)));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

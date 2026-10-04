@@ -38,20 +38,25 @@ public final class PromptTemplates {
     }
 
     private static final String EXAMPLES = "examples";
+    private static final String LANGUAGE_RULES = "languageRules";
 
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
-    private final PromptExamples examples;
+    private final LanguageRules rules;
 
     /** Loads the bundled templates. */
     @Inject
     public PromptTemplates() {
-        this(fileName -> PromptTemplates.class.getResourceAsStream(fileName));
+        this(fileName -> PromptTemplates.class.getResourceAsStream(fileName), LanguageRules.forEnvironment());
     }
 
     PromptTemplates(final ResourceLoader loader) {
+        this(loader, new LanguageRules(loader, false));
+    }
+
+    PromptTemplates(final ResourceLoader loader, final LanguageRules rules) {
         Objects.requireNonNull(loader, "loader");
-        examples = new PromptExamples(loader);
+        this.rules = Objects.requireNonNull(rules, "rules");
         for (final PromptName name : PromptName.values()) {
             name.systemSlots().ifPresent(slots -> systems.put(name, load(loader, name, "system", slots)));
             users.put(name, load(loader, name, "user", name.userSlots()));
@@ -74,8 +79,8 @@ public final class PromptTemplates {
     }
 
     /**
-     * Renders the system template of {@code name} from a run's call frame: its four frame slots, plus the bundled
-     * examples for the frame's language pair when the template shows examples.
+     * Renders the system template of {@code name} from a run's call frame: its four frame slots, plus the language
+     * rules and the bundled examples for the frame's language pair when the template declares them.
      *
      * @param name the non-null call
      * @param frame the non-null run's language pair, style sheet and foreign-passage policy
@@ -99,16 +104,26 @@ public final class PromptTemplates {
         Objects.requireNonNull(extra, "extra");
         final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
         values.putAll(extra);
-        final boolean showsExamples = Objects.requireNonNull(name, "name")
-                .systemSlots()
-                .map(slots -> slots.declares(EXAMPLES))
-                .orElse(false);
-        if (showsExamples) {
+        if (declares(name, EXAMPLES)) {
             values.put(
                     EXAMPLES,
-                    examples.forPair(name.examplesDirectory(), frame.sourceLanguage(), frame.targetLanguage()));
+                    name.showsNameExamples()
+                            ? rules.nameExamples(frame.sourceLanguage(), frame.targetLanguage())
+                            : rules.examples(frame.sourceLanguage(), frame.targetLanguage()));
+        }
+        if (declares(name, LANGUAGE_RULES)) {
+            values.put(
+                    LANGUAGE_RULES,
+                    rules.section(frame.sourceLanguage(), frame.targetLanguage(), name.reviewsTranslation()));
         }
         return renderSystem(name, values);
+    }
+
+    private static boolean declares(final PromptName name, final String slot) {
+        return Objects.requireNonNull(name, "name")
+                .systemSlots()
+                .map(slots -> slots.declares(slot))
+                .orElse(false);
     }
 
     /** Renders the user template of {@code name}; the map holds every required slot and only declared ones. */

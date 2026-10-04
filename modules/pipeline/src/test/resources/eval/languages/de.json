@@ -1,0 +1,80 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "de",
+ "drafts": [
+  {
+   "name": "de-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?s)„.*“|».*«",
+    "injection": false
+   }
+  },
+  {
+   "name": "de-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)müde",
+    "injection": false
+   }
+  },
+  {
+   "name": "de-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)kapitel",
+    "injection": false
+   }
+  },
+  {
+   "name": "de-capital",
+   "masked": "The old house was quiet.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?u)\\bHaus\\b",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "de-capital",
+   "kind": "capitalisation",
+   "source": "The old house was quiet.",
+   "candidate": "Das alte haus war still.",
+   "defective": true,
+   "rationale": "noun not capitalised"
+  },
+  {
+   "id": "de-capital-clean",
+   "kind": "capitalisation",
+   "source": "The old house was quiet.",
+   "candidate": "Das alte Haus war still.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "de-false-friend",
+   "kind": "false-friend",
+   "source": "She received a present.",
+   "candidate": "Sie bekam ein Gift.",
+   "defective": true,
+   "rationale": "Gift is poison"
+  },
+  {
+   "id": "de-false-friend-clean",
+   "kind": "false-friend",
+   "source": "She received a present.",
+   "candidate": "Sie bekam ein Geschenk.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

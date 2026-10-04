@@ -1,0 +1,80 @@
+{
+ "sourceLanguage": "uk",
+ "targetLanguage": "en",
+ "drafts": [
+  {
+   "name": "en-dialogue",
+   "masked": "«Йди сюди», — сказала вона.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?s)^(?!.*[«»])[^“]*“.*”.*$",
+    "injection": false
+   }
+  },
+  {
+   "name": "en-gender-she",
+   "masked": "Вона була втомлена, але йшла до світанку.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?is)^(?!.*\\bhe\\b).*\\bshe\\b",
+    "injection": false
+   }
+  },
+  {
+   "name": "en-gender-he",
+   "masked": "Він був втомлений, але йшов до світанку.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?is)^(?!.*\\bshe\\b).*\\bhe\\b",
+    "injection": false
+   }
+  },
+  {
+   "name": "en-heading",
+   "masked": "РОЗДІЛ ПЕРШИЙ",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?i)chapter (one|1|i)\\b",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "en-gender",
+   "kind": "gender",
+   "source": "Вона відчинила двері.",
+   "candidate": "He opened the door.",
+   "defective": true,
+   "rationale": "a woman became a man"
+  },
+  {
+   "id": "en-gender-clean",
+   "kind": "gender",
+   "source": "Вона відчинила двері.",
+   "candidate": "She opened the door.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "en-idiom",
+   "kind": "idiom",
+   "source": "Дощ ішов як з відра.",
+   "candidate": "The rain went as from a bucket.",
+   "defective": true,
+   "rationale": "word-for-word idiom"
+  },
+  {
+   "id": "en-idiom-clean",
+   "kind": "idiom",
+   "source": "Дощ ішов як з відра.",
+   "candidate": "It was pouring with rain.",
+   "defective": false,
+   "rationale": "idiomatic"
+  }
+ ]
+}

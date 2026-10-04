@@ -134,9 +134,9 @@ class DraftPromptBuilderTest {
 
         assertThat(system)
                 .contains("Examples (Source = the <Text>, Reply = your whole answer):\n")
-                .contains("Source: ⟦g0⟧T⟦g1⟧he night was cold.\nReply: {\"target\":\"⟦g0⟧Н⟦g1⟧іч була холодна.\"}")
-                .contains("Source: 1881\nReply: {\"target\":\"1881\"}")
-                .doesNotContain("# pairs:");
+                .contains("Source: “Don’t move, ⟦g0⟧,” she said. “You are ⟦g1⟧mine⟦g2⟧.”\nGlossary: ⟦g0⟧ → Бартімеус")
+                .contains("Reply: {\"target\":\"«Не рухайся, ⟦g0⟧, — сказала вона. — Ти ⟦g1⟧мій⟦g2⟧.»\"}")
+                .doesNotContain(".pairs");
     }
 
     // A target with no examples file of its own falls back to the language-independent cases.

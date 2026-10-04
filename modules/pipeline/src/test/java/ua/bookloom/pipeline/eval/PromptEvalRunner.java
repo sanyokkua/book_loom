@@ -51,23 +51,46 @@ final class PromptEvalRunner {
     private static final double BAD_CEILING = 0.6;
 
     private final ModelCalls calls;
-    private final CallFrame frame = new CallFrame(
-            PromptEvalCases.SOURCE_LANGUAGE,
-            PromptEvalCases.TARGET_LANGUAGE,
-            StyleSheet.from(BookBrief.defaults(PromptEvalCases.SOURCE_LANGUAGE)),
-            ForeignPassagePolicy.KEEP);
+    private final CallFrame frame;
     private final PromptTemplates templates = new PromptTemplates();
     private final DraftReplyParser parser = new DraftReplyParser(new ObjectMapper());
-    private final DraftPromptBuilder builder = new DraftPromptBuilder(templates, frame);
+    private final DraftPromptBuilder builder;
     private final DirectedFix directedFix = new DirectedFix(templates, parser);
     private final JudgeCall judgeCall = new JudgeCall(templates, new JudgeReplyParser(new ObjectMapper()));
 
     PromptEvalRunner(final ModelCalls calls) {
+        this(calls, PromptEvalCases.SOURCE_LANGUAGE, PromptEvalCases.TARGET_LANGUAGE);
+    }
+
+    /** A runner for one language pair; the language corpora run one of these per target language. */
+    PromptEvalRunner(final ModelCalls calls, final String sourceLanguage, final String targetLanguage) {
         this.calls = Objects.requireNonNull(calls, "calls");
+        this.frame = new CallFrame(
+                sourceLanguage,
+                targetLanguage,
+                StyleSheet.from(BookBrief.defaults(sourceLanguage)),
+                ForeignPassagePolicy.KEEP);
+        this.builder = new DraftPromptBuilder(templates, frame);
     }
 
     List<EvalRow> runAll(final List<EvalCase> cases) {
         return cases.stream().flatMap(evalCase -> run(evalCase).stream()).toList();
+    }
+
+    /** Runs a language corpus: its drafts, then its reviewer cases. */
+    LanguageRun runLanguage(final LanguageCorpus corpus, final int repeats) {
+        final List<EvalRow> rows = corpus.drafts().stream().map(this::draft).toList();
+        return new LanguageRun(rows, runDefects(corpus.reviews(), repeats));
+    }
+
+    /** The outcome of one language corpus. */
+    record LanguageRun(List<EvalRow> rows, List<DefectRow> defectRows) {
+
+        /** Copies the lists. */
+        LanguageRun {
+            rows = List.copyOf(rows);
+            defectRows = List.copyOf(defectRows);
+        }
     }
 
     /** Judges every corpus case {@code repeats} times and records whether the verdicts agree. */
@@ -174,14 +197,14 @@ final class PromptEvalRunner {
         return verdict.isOk() ? Objects.requireNonNull(verdict.data()) : JudgeVerdict.unreadable();
     }
 
-    private static EvalRow measured(
+    private EvalRow measured(
             final String name, final String kind, final String masked, final String target, final Expect expect) {
         return new EvalRow(
                 name,
                 kind,
                 Check.PASS,
                 ReplyChecks.gate(masked, target),
-                ReplyChecks.script(masked, target, expect),
+                ReplyChecks.script(masked, target, expect, frame.targetLanguage()),
                 ReplyChecks.marker(target, expect),
                 ReplyChecks.injection(target, expect),
                 Check.NA,

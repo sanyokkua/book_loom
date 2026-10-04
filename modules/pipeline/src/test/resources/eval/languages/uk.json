@@ -1,0 +1,70 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "uk",
+ "drafts": [
+  {
+   "name": "uk-quotes",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "^[^«»]*«[^«»]*»[^«»]*«[^«»]*»[^«»]*$|^[^«»]*«[^«»]*»[^«»]*$",
+    "injection": false
+   }
+  },
+  {
+   "name": "uk-gender",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)втомилас|втомлена|стомлен",
+    "injection": false
+   }
+  },
+  {
+   "name": "uk-russism",
+   "masked": "She took part in the contest.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)^(?!.*прийма).*участь",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "uk-gender",
+   "kind": "gender",
+   "source": "She opened the door and left.",
+   "candidate": "Вона відчинив двері і пішов.",
+   "defective": true,
+   "rationale": "masculine forms for she"
+  },
+  {
+   "id": "uk-gender-clean",
+   "kind": "gender",
+   "source": "She opened the door and left.",
+   "candidate": "Вона відчинила двері й пішла.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "uk-russism",
+   "kind": "russism",
+   "source": "He took part in the contest.",
+   "candidate": "Він приймав участь у конкурсі.",
+   "defective": true,
+   "rationale": "russism"
+  },
+  {
+   "id": "uk-russism-clean",
+   "kind": "russism",
+   "source": "He took part in the contest.",
+   "candidate": "Він брав участь у конкурсі.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

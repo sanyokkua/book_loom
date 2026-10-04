@@ -67,9 +67,7 @@ final class SummaryModelCall {
 
     private List<ChatMessage> messagesFor(
             final String previousSummary, final String chapterSource, final String chapterTarget) {
-        final String system = templates
-                .renderSystem(PromptName.SUMMARY, frame.systemSlotValues())
-                .strip();
+        final String system = templates.renderSystem(PromptName.SUMMARY, frame).strip();
         final String user = templates
                 .renderUser(
                         PromptName.SUMMARY,

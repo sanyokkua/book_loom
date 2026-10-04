@@ -432,6 +432,26 @@ with confidence.
 - **WHEN** the interface is Ukrainian and the window is 1024 pixels wide
 - **THEN** the name-policy labels `Транслітерувати` and `Залишати оригінал` are shown in full, with no ellipsis
 
+### Requirement: Say when the target language has no tested translation rules
+
+The Book Brief SHALL show, under the target language box, a note stating that the language's translation rules are not
+tested yet and that the general rules are used, with a hover explanation, in the interface language, for any target whose
+language-rules file is not marked `status=tested` or does not exist, and SHALL show no note for a tested language or while
+no target is chosen. The note SHALL never block continuing.
+
+**Source:** `tasks.md` 15d.5b. In plain words: a language written for with care translates better than one with only
+general advice, and a person should know which one they picked.
+
+#### Scenario: A language without tested rules
+
+- **WHEN** the target is German and German's rules are untested
+- **THEN** the note is shown and Continue stays available
+
+#### Scenario: A tested language
+
+- **WHEN** the target is Ukrainian
+- **THEN** no note is shown
+
 ## REMOVED Requirements
 
 ### Requirement: Choose the target language and show the source the book declares

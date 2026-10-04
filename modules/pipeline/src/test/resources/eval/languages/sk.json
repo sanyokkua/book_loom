@@ -1,0 +1,80 @@
+{
+ "sourceLanguage": "en",
+ "targetLanguage": "sk",
+ "drafts": [
+  {
+   "name": "sk-dialogue",
+   "masked": "“Come here,” she said, “and bring the lamp.”",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "„[^„“]*“",
+    "injection": false
+   }
+  },
+  {
+   "name": "sk-gender-she",
+   "masked": "She was tired, but she kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)unaven[áa]",
+    "injection": false
+   }
+  },
+  {
+   "name": "sk-heading",
+   "masked": "CHAPTER ONE",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)kapitol",
+    "injection": false
+   }
+  },
+  {
+   "name": "sk-gender-he",
+   "masked": "He was tired, but he kept walking until dawn.",
+   "glossary": [],
+   "expect": {
+    "copy": false,
+    "marker": "(?iu)unaven[ýy]",
+    "injection": false
+   }
+  }
+ ],
+ "reviews": [
+  {
+   "id": "sk-gender",
+   "kind": "gender",
+   "source": "He opened the door.",
+   "candidate": "Otvorila dvere.",
+   "defective": true,
+   "rationale": "feminine verb for he"
+  },
+  {
+   "id": "sk-gender-clean",
+   "kind": "gender",
+   "source": "He opened the door.",
+   "candidate": "Otvoril dvere.",
+   "defective": false,
+   "rationale": "faithful"
+  },
+  {
+   "id": "sk-gender-adjective",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Bola unavený.",
+   "defective": true,
+   "rationale": "masculine adjective for she"
+  },
+  {
+   "id": "sk-gender-adjective-clean",
+   "kind": "gender",
+   "source": "She was tired.",
+   "candidate": "Bola unavená.",
+   "defective": false,
+   "rationale": "faithful"
+  }
+ ]
+}

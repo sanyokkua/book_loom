@@ -5,18 +5,21 @@ import com.google.inject.Provides;
 import java.time.Clock;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.ReviewDeskImpl;
 
 /**
  * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine}, {@code ExportService},
  * {@code ProjectService}, {@code GlossaryService} and {@code ReviewDesk} ports bound to their implementations, the
+ * language-rules map behind {@code LanguageSupport}, the
  * clock a run times itself with, and the prompt
  * templates, loaded and slot-checked once at injector creation so a broken template fails the start, not a run.
  *
@@ -37,6 +40,7 @@ public final class PipelineModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(PromptTemplates.class).asEagerSingleton();
+        bind(LanguageSupport.class).toInstance(LanguageRules.bundled());
         bind(TranslationEngine.class).to(TranslationEngineImpl.class);
         bind(ExportService.class).to(ExportServiceImpl.class);
         bind(ProjectService.class).to(ProjectServiceImpl.class);

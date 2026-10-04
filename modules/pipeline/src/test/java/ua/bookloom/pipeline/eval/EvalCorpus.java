@@ -21,6 +21,16 @@ final class EvalCorpus {
         return load(DEFECTS);
     }
 
+    /** The mini-corpus of one target language, {@code eval/languages/<tag>.json}. */
+    static LanguageCorpus language(final String tag) {
+        try (InputStream in = EvalCorpus.class.getResourceAsStream("/eval/languages/" + tag + ".json")) {
+            Objects.requireNonNull(in, tag);
+            return new ObjectMapper().readValue(in, LanguageCorpus.class);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     static List<DefectCase> load(final String resource) {
         try (InputStream in = EvalCorpus.class.getResourceAsStream(resource)) {
             Objects.requireNonNull(in, resource);

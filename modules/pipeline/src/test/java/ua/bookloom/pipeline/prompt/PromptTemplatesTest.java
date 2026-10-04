@@ -49,7 +49,8 @@ class PromptTemplatesTest {
 
     @Test
     void load_missingFile_namesFile() {
-        final PromptTemplates.ResourceLoader loader = fileName -> null;
+        final PromptTemplates.ResourceLoader loader =
+                fileName -> fileName.startsWith("languages/") ? BUNDLED.open(fileName) : null;
 
         assertThatThrownBy(() -> new PromptTemplates(loader))
                 .isInstanceOf(IllegalStateException.class)
@@ -196,5 +197,22 @@ class PromptTemplatesTest {
                 new PipelineModule(), new ReviewModeTestModule(), new DocumentModule(), new PersistenceModule());
 
         assertThat(injector.getInstance(PromptTemplates.class)).isNotNull();
+    }
+
+    // The eval's generic switch must reach the rendered prompt, or "rules on vs generic" would compare a prompt with
+    // itself.
+    @Test
+    void renderSystem_genericOnlyRules_carryTheGenericSectionAndNoLanguageRule() {
+        final PromptTemplates templates = new PromptTemplates(BUNDLED, new LanguageRules(BUNDLED, true));
+        final CallFrame frame = new CallFrame(
+                "en",
+                "uk",
+                StyleSheet.from(ua.bookloom.api.project.BookBrief.defaults("en")),
+                ua.bookloom.api.project.ForeignPassagePolicy.KEEP);
+
+        assertThat(templates.renderSystem(PromptName.DRAFT, frame))
+                .contains(
+                        "[Language rules: English -> Ukrainian]", "Use the quotation marks, dashes and number formats")
+                .doesNotContain("«…» for speech", "russisms");
     }
 }

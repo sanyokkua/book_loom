@@ -19,6 +19,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -83,6 +84,7 @@ public final class UiTestInjector {
         private ProviderVerifier verifier = ScriptedProviderVerifier.idle();
         private ModelCatalog catalog = ScriptedModelCatalog.idle();
         private ProjectService projects = new ScriptedProjectService();
+        private LanguageSupport languages = tag -> true;
         private ExportService exports = new ScriptedExportService();
         private ChatModelFactory models = ScriptedChatModelFactory.ok();
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
@@ -117,6 +119,12 @@ public final class UiTestInjector {
         /** What the graph's {@link ProjectService} is, so the test can read what the window asked of it. */
         public Builder projects(final ProjectService value) {
             projects = Objects.requireNonNull(value, "projects");
+            return this;
+        }
+
+        /** What the graph's {@link LanguageSupport} is; by default every language has tested rules. */
+        public Builder languages(final LanguageSupport value) {
+            languages = Objects.requireNonNull(value, "languages");
             return this;
         }
 
@@ -192,6 +200,7 @@ public final class UiTestInjector {
                             bind(ChatModelFactory.class).toInstance(models);
                             bind(TranslationEngine.class).toInstance(engine);
                             bind(ProjectService.class).toInstance(projects);
+                            bind(LanguageSupport.class).toInstance(languages);
                             bind(ExportService.class).toInstance(exports);
                             bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
                             bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());

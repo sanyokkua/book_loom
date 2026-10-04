@@ -23,7 +23,8 @@ public enum PromptName {
             0.2,
             0.1,
             new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
+                    Set.of("examples", "languageRules")),
             new Slots(
                     Set.of("source", "target", "tokens", "text"),
                     Set.of(
@@ -65,7 +66,9 @@ public enum PromptName {
             JudgeSchema.SCHEMA,
             0.1,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
+                    Set.of("languageRules")),
             new Slots(Set.of("pairs", "targetLanguage"), Set.of("glossaryTerms"))),
 
     /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
@@ -138,7 +141,9 @@ public enum PromptName {
             PrescanSchema.SCHEMA,
             0.2,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage"),
+                    Set.of("styleSheet", "foreignPassageRule", "languageRules")),
             new Slots(Set.of("candidates"), Set.of("existingTerms"))),
 
     /**
@@ -168,7 +173,7 @@ public enum PromptName {
             null,
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "nameRule"),
-                    Set.of("styleSheet", "foreignPassageRule", "examples")),
+                    Set.of("styleSheet", "foreignPassageRule", "examples", "languageRules")),
             new Slots(Set.of("terms"), Set.of())),
 
     /** The chapter-end summary the Max dial asks the model for; the reply's target text is what later prompts carry. */
@@ -179,7 +184,9 @@ public enum PromptName {
             SummarySchema.SCHEMA,
             0.2,
             null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage"),
+                    Set.of("styleSheet", "foreignPassageRule", "languageRules")),
             new Slots(Set.of("chapterSource", "chapterTarget"), Set.of("previousSummary")));
 
     private final String resourceBaseName;
@@ -247,9 +254,14 @@ public enum PromptName {
         return lowerTemperature;
     }
 
-    /** The directory the call's few-shot examples are read from, beside the templates. */
-    String examplesDirectory() {
-        return this == SUGGEST_TARGETS ? PromptExamples.NAME_DIRECTORY : PromptExamples.DIRECTORY;
+    /** Whether the {@code examples} slot holds name-suggestion examples rather than translation examples. */
+    boolean showsNameExamples() {
+        return this == SUGGEST_TARGETS;
+    }
+
+    /** Whether the call judges a translation, so its language rules include the reviewer checks. */
+    boolean reviewsTranslation() {
+        return this == JUDGE;
     }
 
     /** The system template's slots, or empty when the call reuses another call's system message. */

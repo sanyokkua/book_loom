@@ -46,8 +46,11 @@ class PromptShapeTest {
     private static final Map<String, String> OTHER_REPLY_KEYS =
             Map.of("review-terms", "verdicts", "suggest-targets", "suggestions", "summary", "summary");
 
-    private static final int DRAFT_SYSTEM_BUDGET = 700;
+    // The draft system measured 698 before the language-rules map replaced the per-language example files.
+    private static final int DRAFT_SYSTEM_BUDGET = 697;
     private static final int SYSTEM_BUDGET = 900;
+    // The judge also carries the languages' reviewer checks; the suggestion call carries its name examples.
+    private static final int LARGE_SYSTEM_BUDGET = 1200;
 
     @ParameterizedTest
     @EnumSource(PromptName.class)
@@ -82,7 +85,10 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(PromptName.class)
     void render_everyCall_keepsItsSystemMessageWithinBudget(final PromptName name) {
-        assertThat(TokenEstimator.estimate(system(name), "en")).isLessThanOrEqualTo(SYSTEM_BUDGET);
+        final boolean large = name == PromptName.JUDGE || name == PromptName.SUGGEST_TARGETS;
+
+        assertThat(TokenEstimator.estimate(system(name), "en"))
+                .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : SYSTEM_BUDGET);
     }
 
     // The draft system is sent with every segment of a book; a small model must still read its last rule.
@@ -92,6 +98,23 @@ class PromptShapeTest {
 
         assertThat(system).contains("Examples (");
         assertThat(TokenEstimator.estimate(system, "en")).isLessThanOrEqualTo(DRAFT_SYSTEM_BUDGET);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = PromptName.class,
+            names = {"DRAFT", "JUDGE", "SUMMARY", "PRESCAN", "SUGGEST_TARGETS"})
+    void render_callWithTheLanguageRulesSlot_carriesOneSectionForThePair(final PromptName name) {
+        assertThat(system(name))
+                .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")
+                .contains("Source — English", "Pair — English -> Ukrainian")
+                .doesNotContain("Polish", "Russian");
+    }
+
+    @Test
+    void render_judge_addsTheReviewerChecksTheDraftDoesNotCarry() {
+        assertThat(system(PromptName.JUDGE)).contains("Check: Quotes are «…» and balanced");
+        assertThat(system(PromptName.DRAFT)).doesNotContain("Check: ");
     }
 
     @ParameterizedTest

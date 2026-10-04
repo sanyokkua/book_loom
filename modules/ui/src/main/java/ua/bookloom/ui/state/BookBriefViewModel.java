@@ -10,6 +10,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
@@ -45,6 +46,8 @@ public final class BookBriefViewModel {
     private final BriefSaver saver;
     private final ReadOnlyBooleanWrapper sourceUndeclared = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyBooleanWrapper sameLanguage = new ReadOnlyBooleanWrapper(false);
+    private final ReadOnlyBooleanWrapper targetUntested = new ReadOnlyBooleanWrapper(false);
+    private final LanguageSupport languages;
     private final ReadOnlyBooleanWrapper canContinue = new ReadOnlyBooleanWrapper(false);
 
     /**
@@ -53,13 +56,16 @@ public final class BookBriefViewModel {
      * @param project the holder of the open book and its brief, which outlives this view model
      * @param projects the port a changed brief is saved through
      * @param executor the daemon executor a save runs on, never the FX thread
+     * @param languages tells whether the chosen target language has tested translation rules
      */
     @Inject
     public BookBriefViewModel(
             final CurrentProject project,
             final ProjectService projects,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final LanguageSupport languages) {
         this.project = Objects.requireNonNull(project, "project");
+        this.languages = Objects.requireNonNull(languages, "languages");
         this.saver = new BriefSaver(
                 Objects.requireNonNull(projects, "projects"), Objects.requireNonNull(executor, "executor"));
         project.brief().addListener((observed, was, now) -> derive(now));
@@ -78,8 +84,8 @@ public final class BookBriefViewModel {
     }
 
     /**
-     * Whether a book is open whose brief has no source language, because the book declares none the application
-     * recognises and none has been chosen.
+     * Whether a book is open whose brief has no source language: the book declares none the application recognises
+     * and none has been chosen.
      *
      * @return a read-only property
      */
@@ -94,6 +100,15 @@ public final class BookBriefViewModel {
      */
     public ReadOnlyBooleanProperty sameLanguage() {
         return sameLanguage.getReadOnlyProperty();
+    }
+
+    /**
+     * Whether the chosen target has no tested translation rules, so the general ones are used.
+     *
+     * @return a read-only property
+     */
+    public ReadOnlyBooleanProperty targetUntested() {
+        return targetUntested.getReadOnlyProperty();
     }
 
     /**
@@ -377,12 +392,8 @@ public final class BookBriefViewModel {
         final boolean same = source != null && source.equals(target);
         sourceUndeclared.set(brief != null && source == null);
         sameLanguage.set(same);
+        targetUntested.set(target != null && !languages.hasTestedRules(target));
         canContinue.set(source != null && target != null && !same);
-        log.debug(
-                "brief languages source {} target {}: same {}, can continue {}",
-                source,
-                target,
-                same,
-                canContinue.get());
+        log.debug("languages {} -> {}: same {}, untested {}", source, target, same, targetUntested.get());
     }
 }

@@ -8,7 +8,7 @@ Ukrainian (uk), is not a translation: score below 0.40 and add a high "language"
 Then check every candidate, word by word, for each of these defects. Any one of them caps the score at 0.69 and needs
 a finding:
 - a word that is garbled, invented or not a real Ukrainian (uk) word (fluency);
-- a letter or digit of another script inside a word, such as a Latin letter in a Cyrillic word (language);
+- a letter or digit of another script inside a word, such as a Latin letter inside a word of another alphabet (language);
 - a quotation mark or bracket that opens and never closes, or closes without opening (fluency);
 - a character or thing called by one name in the source but by two different names in the candidate (meaning);
 - a verb, adjective or pronoun whose gender or number does not agree with its subject (fluency);
@@ -41,6 +41,19 @@ Rules:
 
 Style the translation had to follow:
 Neutral, faithful literary prose: keep the author's register, sentence rhythm and paragraph breaks; use the standard modern orthography of the target language.
+
+[Language rules: English -> Ukrainian]
+Target — Ukrainian
+- Quotes: «…» for speech, „…“ inside; never “…”.
+- Agreement: Past-tense verbs and adjectives agree with the subject's gender and number (він пішов, вона пішла).
+- Watch: Do not copy the source's word order or passive; no russisms (брати участь, not приймати участь).
+- Check: Quotes are «…» and balanced; a hyphen never stands for a dash.
+- Check: Every past-tense verb and adjective matches its subject's gender and number.
+Source — English
+- I, you, they and past-tense verbs show no gender, and you may be formal or plural: use the glossary or the scene.
+Pair — English -> Ukrainian
+- Watch: English hides gender: choose Ukrainian past-tense forms from the glossary or the nearest clue (he, she); else avoid a gendered form.
+- Check: Check each gendered Ukrainian form against its person.
 
 Output ONLY the JSON object: no commentary, markdown or code fences.
 A valid reply when every candidate is good:

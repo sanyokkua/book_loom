@@ -69,7 +69,7 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         prepExecutor = queued;
         imports = onFx(() -> new ImportViewModel(
                 projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
-        brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor()));
+        brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor(), tag -> true));
         settings = onFx(() -> newSettings(activities));
     }
 

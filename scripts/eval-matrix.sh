@@ -2,6 +2,10 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
+#                          [--rules generic] [--langs all|fr,de,...]
+# --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
+# once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
+# mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -10,6 +14,8 @@ LMSTUDIO_URL=${LMSTUDIO_URL:-http://localhost:1234/v1}
 STABILITY=1
 ONLY=""
 TABLE_ONLY=0
+RULES=language
+LANGS=""
 MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | tr '\n' ' ')
 
 while [ $# -gt 0 ]; do
@@ -18,6 +24,8 @@ while [ $# -gt 0 ]; do
     --only) ONLY=$2; shift 2 ;;
     --models) MODELS=$2; shift 2 ;;
     --table-only) TABLE_ONLY=1; shift ;;
+    --rules) RULES=$2; shift 2 ;;
+    --langs) LANGS=$2; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -34,7 +42,7 @@ run_one() {
   fi
   echo "== $provider $model"
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
   local pid=$!
   ( sleep "${MODEL_TIMEOUT:-1500}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
   local dog=$!
@@ -51,7 +59,7 @@ python3 - "$REPORTS" <<'PY'
 import glob, json, sys
 rows = [json.load(open(f)) for f in sorted(glob.glob(sys.argv[1] + "/*.json"))]
 cols = ["parse", "gate", "script", "marker", "injection", "judgeSeparation", "judgeParse", "falseNegative", "falsePositive", "stability"]
-print("%-36s %-6s " % ("model", "class") + " ".join("%7s" % c[:7] for c in cols) + "  ok")
+print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + "  ok")
 for r in rows:
-    print("%-36s %-6s " % (r["model"], r["class"]) + " ".join("%6.0f%%" % (100 * r[c]) for c in cols) + "  " + ("yes" if r["meetsThresholds"] else "NO"))
+    print("%-36s %-8s %-6s " % (r["model"], r.get("rules", "language"), r["class"]) + " ".join("%6.0f%%" % (100 * r[c]) for c in cols) + "  " + ("yes" if r["meetsThresholds"] else "NO"))
 PY
