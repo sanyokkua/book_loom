@@ -19,7 +19,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
-import ua.bookloom.pipeline.chunk.TokenBudget;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
@@ -120,16 +120,20 @@ public final class ChunkRunner {
         if (glossary.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), "error")));
         }
-        final int headroom = ChunkBudget.headroom(
-                settings.frame(), segments, Objects.requireNonNull(glossary.data(), "glossary"), followUp.summary());
-        final int budget = TokenBudget.chunkTokens(headroom);
+        final ContextBudget window = ChunkBudget.budget(
+                settings.frame(),
+                segments,
+                Objects.requireNonNull(glossary.data(), "glossary"),
+                followUp.summary(),
+                ContextBudget.DEFAULT_WINDOW);
+        final int budget = window.chunkTokens();
         final int cap = settings.dial().chunkCap(settings.mode());
         final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);
         log.debug(
-                "Packed unit unitId={} budget={} headroom={} cap={} chunkSizes={}",
+                "Packed unit unitId={} budget={} {} cap={} chunkSizes={}",
                 segments.getFirst().unit(),
                 budget,
-                headroom,
+                window.describe(),
                 cap,
                 chunks.stream().map(chunk -> chunk.segments().size()).toList());
         return runChunks(work, items, chunks, budget);

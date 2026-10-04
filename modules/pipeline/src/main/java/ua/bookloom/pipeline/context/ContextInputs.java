@@ -15,19 +15,35 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
  * @param glossary every glossary entry as the chunk read it
  * @param earlierMaskedTargets the masked forms of the same unit's earlier segments in document order — decided, or
  *     drafted and waiting in the same chunk; empty at a unit's start
+ * @param dynamicTokens the tokens the dynamic context may take, from {@link ContextBudget#dynamicAllowance}; the
+ *     lowest-priority sections are cut to fit it
  */
 public record ContextInputs(
         StyleSheet styleSheet,
         @Nullable String summary,
         int precedingCount,
         List<GlossaryEntry> glossary,
-        List<String> earlierMaskedTargets) {
+        List<String> earlierMaskedTargets,
+        int dynamicTokens) {
+
+    /** A set of inputs with no limit on the dynamic context, as a caller with no window to respect has. */
+    public ContextInputs(
+            final StyleSheet styleSheet,
+            @Nullable final String summary,
+            final int precedingCount,
+            final List<GlossaryEntry> glossary,
+            final List<String> earlierMaskedTargets) {
+        this(styleSheet, summary, precedingCount, glossary, earlierMaskedTargets, Integer.MAX_VALUE);
+    }
 
     /** Rejects a missing component or a negative count and copies both lists. */
     public ContextInputs {
         Objects.requireNonNull(styleSheet, "styleSheet");
         if (precedingCount < 0) {
             throw new IllegalArgumentException("precedingCount must not be negative: " + precedingCount);
+        }
+        if (dynamicTokens < 0) {
+            throw new IllegalArgumentException("dynamicTokens must not be negative: " + dynamicTokens);
         }
         glossary = List.copyOf(Objects.requireNonNull(glossary, "glossary"));
         earlierMaskedTargets = List.copyOf(Objects.requireNonNull(earlierMaskedTargets, "earlierMaskedTargets"));

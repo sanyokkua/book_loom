@@ -2,6 +2,7 @@ package ua.bookloom.llm.provider;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -28,6 +29,16 @@ public interface ProviderClient {
      */
     default @Nullable Duration chatTimeout(ChatRequest request) {
         return null;
+    }
+
+    /**
+     * Asks the provider for a model's context length; never fails the caller.
+     *
+     * @param modelId the model to ask about; never null
+     * @return the context length in tokens, or empty when the provider cannot or does not say
+     */
+    default Optional<Integer> contextLength(String modelId) {
+        return Optional.empty();
     }
 
     /** Identifies the wire dialect implemented by this client. */

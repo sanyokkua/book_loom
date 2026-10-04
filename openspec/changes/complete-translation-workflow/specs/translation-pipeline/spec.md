@@ -1153,6 +1153,58 @@ every line.
 - **THEN** every line of `bookloom-trace.log` holding `He opened the` is a TRACE line
 - **AND** no line holds the credential value
 
+### Requirement: Size every call from one context budget
+
+The system SHALL divide the usable window with the `ContextBudget`: the window `W` is the override when one is set, else
+the detected context length limited to 8192, else 8192; the static prefix (the system message and the style sheet), the
+dynamic context (glossary and lexicon lines for terms present in the chunk, memory, preceding translated text of the same
+unit, summary) and a safety margin of 500 tokens are taken off `W`, and what remains is split between a chunk's source
+tokens `T` and its reply `r·T`, where `r` is the length band's upper ratio for the language pair corrected for the
+scripts' characters per token. A chunk SHALL hold at most `min(1200, T)` source tokens. The dynamic context SHALL take at
+most 40% of what the prefix and margin leave, and never more than 1100 tokens, and SHALL be cut by priority — the
+summary is dropped first, then preceding text (oldest first), then memory, and glossary lines last — before the context snapshot is
+recorded, so a retry replays what the first draft saw.
+
+**Source:** `tasks.md` 15d.5. In plain words: a model with a 4k window is given a smaller chunk and a smaller context
+instead of a prompt it silently truncates.
+
+#### Scenario: The 8k window
+
+- **WHEN** the window is 8192, the prefix 900, the dynamic context 1100 and the ratio 1.5
+- **THEN** a batch may hold 2276 source tokens and a chunk 1200
+
+#### Scenario: A 4k window is never over budget
+
+- **WHEN** a unit with 80 glossary terms, a long summary and three preceding texts is drafted at a window of 4096
+- **THEN** every draft prompt plus the reply its chunk may need plus 500 is at most 4096 estimated tokens
+
+#### Scenario: A short allowance cuts the summary first
+
+- **WHEN** the dynamic allowance holds the glossary line and the two preceding texts but not the summary
+- **THEN** the prompt carries the glossary line and both preceding texts and no summary block
+
+### Requirement: Keep the prompt free of garbage and its prefix byte-identical
+
+The system SHALL leave out of every prompt an empty value, an empty heading, a placeholder line such as `(none)`, `n/a`
+or a dash, a repeated line, a glossary or locked-name line whose term does not occur in the chunk, and any preceding
+translated text that is not from the chunk's own unit. The system message and style sheet of a call kind SHALL be the same
+bytes for every call of a run, so a server can reuse its prompt cache. Each model call SHALL log, at DEBUG, the estimated
+tokens of the system message, of the rest of the prompt and the system message's share, and, when the server reports them,
+the prompt-evaluation time and the cached prompt tokens.
+
+**Source:** `tasks.md` 15d.5; `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`. In plain words: a
+small model reads every token it is given and may echo it, so nothing is sent that carries no information.
+
+#### Scenario: Filler never reaches the model
+
+- **WHEN** a draft context holds the preceding text `(none)`, a blank glossary line and the same memory line twice
+- **THEN** the prompt has no preceding block, no glossary block and the memory line once
+
+#### Scenario: Two calls share their prefix
+
+- **WHEN** two drafts of different segments with different context are built in one run
+- **THEN** their system messages are equal
+
 ## MODIFIED Requirements
 
 ### Requirement: Send each pending segment to the model in document order

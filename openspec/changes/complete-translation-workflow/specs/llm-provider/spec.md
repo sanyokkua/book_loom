@@ -181,6 +181,36 @@ different path and a shorter leash, and then the failure goes to the run, which 
 - **WHEN** every attempt times out
 - **THEN** the result is `ErrorCode.timeout` and the server received exactly 2 requests
 
+### Requirement: Detect a model's context length, optionally and without failing
+
+WHEN asked for a model's context length, the system SHALL ask an Ollama-native provider with `POST /api/show` and read
+the `<architecture>.context_length` entry of `model_info`, and an OpenAI-compatible provider with
+`GET /api/v0/models/<model id>` at the server's root (LM Studio's native endpoint, outside the configured `/v1` base),
+preferring `loaded_context_length` over `max_context_length`. The answer SHALL be `ContextLength` with the figure, or
+`ContextLength.unknown()` when the server is not reachable, answers a non-200 status, answers a body without the field or
+is not that server at all; no such outcome is an error. Only an unregistered provider id is a `validation` error, and no
+request is sent for it. Detection is a user-triggered provider communication, never a background call, and a chat call
+never triggers it.
+
+**Source:** `tasks.md` 15d.5; `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md` (optional, safe, degrades
+without an error). In plain words: the window a model really has decides how much of the prompt it may be given, but a
+server that cannot say must never stop a run; it just gets the default 8k.
+
+#### Scenario: Ollama reports its context length
+
+- **WHEN** `/api/show` answers `{"model_info":{"general.architecture":"gemma3","gemma3.context_length":131072}}`
+- **THEN** the detected length is 131072
+
+#### Scenario: LM Studio prefers the loaded length
+
+- **WHEN** `/api/v0/models/google/gemma-3` answers `max_context_length` 131072 and `loaded_context_length` 4096
+- **THEN** the detected length is 4096
+
+#### Scenario: A server that cannot say
+
+- **WHEN** the server answers 404 or 500, answers a body without the field, or refuses the connection
+- **THEN** the length is unknown and the result is not an error
+
 ## MODIFIED Requirements
 
 ### Requirement: Turn reasoning off for an OpenAI-compatible call, and retry a reply that spent its cap reasoning
@@ -245,7 +275,7 @@ size it needs; absent fields remain omitted because a strict server rejects an e
   provider `ollama` for the model `gemma4:e4b-mlx` with reasoning disabled
 - **THEN** the body posted to `/api/chat` has `"model":"gemma4:e4b-mlx"`, `"stream":true`,
   `"options":{"temperature":0.2,"num_ctx":8192}` and a `"format"` object holding that schema
-- **AND** it has `"think":false`, no `keep_alive` key, and `/api/show` is never requested
+- **AND** it has `"think":false`, no `keep_alive` key, and `/api/show` is never requested by the chat call
 
 #### Scenario: An output cap joins the options
 

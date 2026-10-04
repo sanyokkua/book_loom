@@ -22,12 +22,16 @@ public record DraftContext(
         List<String> memoryLines,
         List<String> suggestedLines) {
 
-    /** Rejects null entries and makes the context immutable at the prompt boundary. */
+    /**
+     * Rejects null entries and makes the context immutable at the prompt boundary, leaving out empty and
+     * placeholder lines and repeats so no prompt carries filler (see {@link PromptHygiene}).
+     */
     public DraftContext {
-        precedingTargets = List.copyOf(Objects.requireNonNull(precedingTargets, "precedingTargets"));
-        glossaryLines = List.copyOf(Objects.requireNonNull(glossaryLines, "glossaryLines"));
-        memoryLines = List.copyOf(Objects.requireNonNull(memoryLines, "memoryLines"));
-        suggestedLines = List.copyOf(Objects.requireNonNull(suggestedLines, "suggestedLines"));
+        precedingTargets = PromptHygiene.clean(Objects.requireNonNull(precedingTargets, "precedingTargets"));
+        summary = PromptHygiene.cleanText(summary);
+        glossaryLines = PromptHygiene.clean(Objects.requireNonNull(glossaryLines, "glossaryLines"));
+        memoryLines = PromptHygiene.clean(Objects.requireNonNull(memoryLines, "memoryLines"));
+        suggestedLines = PromptHygiene.clean(Objects.requireNonNull(suggestedLines, "suggestedLines"));
     }
 
     /** A context with no suggested rendering. */

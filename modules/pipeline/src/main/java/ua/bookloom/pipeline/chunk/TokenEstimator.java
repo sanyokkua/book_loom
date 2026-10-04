@@ -47,6 +47,18 @@ public final class TokenEstimator {
     }
 
     /**
+     * How many output tokens one source token is expected to cost at the widest the pair allows: the length band's
+     * upper ratio, corrected for the two scripts' different characters per token.
+     *
+     * @param sourceTag the source language tag, or null when unknown
+     * @param targetTag the target language tag; never null
+     * @return the output-to-source token ratio, positive
+     */
+    public static double outputRatio(@Nullable final String sourceTag, final String targetTag) {
+        return LengthBand.forPair(sourceTag, targetTag).upper() * charsPerToken(sourceTag) / charsPerToken(targetTag);
+    }
+
+    /**
      * The hard cap on a reply that is expected to take {@code allowance} tokens: half as much again, a fixed
      * headroom and room for each placeholder token, never below a floor that keeps a short reply from being cut.
      *

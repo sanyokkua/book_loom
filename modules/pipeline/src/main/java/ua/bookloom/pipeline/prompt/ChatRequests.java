@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
@@ -11,6 +12,7 @@ import ua.bookloom.api.llm.ResponseFormat;
 import ua.bookloom.pipeline.chunk.TokenBudget;
 
 /** The one place a generation request gets its settings, so no call leaves without a context size. */
+@Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ChatRequests {
@@ -31,6 +33,10 @@ public final class ChatRequests {
             @Nullable final OutputLimit limit,
             final boolean lowerTemperature) {
         Objects.requireNonNull(name, "name");
+        log.debug(
+                "Prompt breakdown call={} {}",
+                name.callKind(),
+                PromptBreakdown.of(messages).describe());
         return new ChatRequest(
                 messages,
                 name.temperature(lowerTemperature),

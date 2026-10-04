@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.chunk;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,5 +32,12 @@ class TokenEstimatorTest {
     @CsvSource({"16,0,64", "41,2,90", "100,0,166", "414,4,661", "2880,0,4336"})
     void outputCap_allowanceAndTokens_matchesTheFormula(final int allowance, final int tokenCount, final int expected) {
         assertThat(TokenEstimator.outputCap(allowance, tokenCount)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"en,uk,2.4", "uk,en,1.875", "en,en,1.7", "en,xx,3.3333333333333335"})
+    void outputRatio_languagePair_isBandUpperTimesCharsPerTokenRatio(
+            final String from, final String to, final double expected) {
+        assertThat(TokenEstimator.outputRatio(from, to)).isCloseTo(expected, within(1e-9));
     }
 }

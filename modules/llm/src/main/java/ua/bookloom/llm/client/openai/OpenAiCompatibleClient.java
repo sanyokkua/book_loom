@@ -20,6 +20,7 @@ import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.llm.capability.ContextLengthProbe;
 import ua.bookloom.llm.client.openai.OpenAiRequestMapper.ParsedFormat;
 import ua.bookloom.llm.dto.OpenAiChatRequest;
 import ua.bookloom.llm.dto.OpenAiChatResponse;
@@ -117,6 +118,11 @@ public final class OpenAiCompatibleClient implements ProviderClient {
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
         }
+    }
+
+    @Override
+    public Optional<Integer> contextLength(String modelId) {
+        return new ContextLengthProbe(exchange, mapper).lmStudio(config, modelId);
     }
 
     @Override

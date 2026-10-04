@@ -198,9 +198,10 @@ public final class JobModelCalls implements ModelCalls {
                 final boolean estimated,
                 final int outputChars) {
             final Duration generation = usage.generation();
+            final Duration promptEval = usage.promptEval();
             log.debug(
                     "Model call finished kind={} segmentIds={} attempt={} elapsedMs={} usage={} promptTokens={}"
-                            + " completionTokens={} generationMs={} outputChars={}",
+                            + " completionTokens={} generationMs={} promptEvalMs={} cachedPromptTokens={} outputChars={}",
                     call.kind(),
                     call.segmentIds(),
                     attempt.number(),
@@ -209,6 +210,8 @@ public final class JobModelCalls implements ModelCalls {
                     usage.prompt(),
                     usage.completion(),
                     generation == null ? null : generation.toMillis(),
+                    promptEval == null ? null : promptEval.toMillis(),
+                    usage.cachedPrompt(),
                     outputChars);
         }
 

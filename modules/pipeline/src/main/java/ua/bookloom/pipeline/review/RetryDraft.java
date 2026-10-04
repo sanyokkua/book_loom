@@ -35,7 +35,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.pipeline.SegmentTranslator;
-import ua.bookloom.pipeline.chunk.TokenBudget;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.ChunkDecider;
@@ -226,11 +226,11 @@ public final class RetryDraft {
                 .findFirst()
                 .map(Unit::segments)
                 .orElse(List.of(segment));
-        final int headroom =
-                ChunkBudget.headroom(plan.frame(), unit, terms, plan.snapshot().summary());
-        final int budget = TokenBudget.chunkTokens(headroom);
+        final ContextBudget window =
+                ChunkBudget.budget(plan.frame(), unit, terms, plan.snapshot().summary(), ContextBudget.DEFAULT_WINDOW);
+        final int budget = window.chunkTokens();
         log.debug(
-                "retry: segment={} budget={} headroom={} unitSegments={}", segment.id(), budget, headroom, unit.size());
+                "retry: segment={} budget={} {} unitSegments={}", segment.id(), budget, window.describe(), unit.size());
         return budget;
     }
 

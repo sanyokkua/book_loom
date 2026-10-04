@@ -49,19 +49,24 @@ public final class ContextPackageAssembler {
         Objects.requireNonNull(mask, "mask");
         Objects.requireNonNull(memory, "memory");
         Objects.requireNonNull(inputs, "inputs");
-        final List<InjectedTerm> terms = InjectedTerms.select(chunk, mask, inputs.glossary());
-        final List<String> preceding = precedingTexts(inputs);
-        final List<SnapshotTmHit> hits = memoryHits(memory);
+        final DynamicFit fit = DynamicFit.of(
+                InjectedTerms.select(chunk, mask, inputs.glossary()),
+                memoryHits(memory),
+                precedingTexts(inputs),
+                inputs.summary(),
+                inputs.dynamicTokens());
+        final List<InjectedTerm> terms = fit.terms();
+        final List<SnapshotTmHit> hits = fit.hits();
         final List<SnapshotTerm> snapshotTerms =
                 terms.stream().map(InjectedTerm::term).toList();
         final List<String> memoryLines = memoryLines(hits);
         final DraftContext context =
-                new DraftContext(preceding, inputs.summary(), lines(terms, false), memoryLines, lines(terms, true));
+                new DraftContext(fit.preceding(), fit.summary(), lines(terms, false), memoryLines, lines(terms, true));
         final ContextSnapshot snapshot = new ContextSnapshot(
-                preceding,
+                fit.preceding(),
                 snapshotTerms,
                 hits,
-                inputs.summary(),
+                fit.summary(),
                 inputs.styleSheet().text());
         logAssembly(segment, snapshot, memoryLines, context);
         return new ContextPackage(context, snapshot);

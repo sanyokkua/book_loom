@@ -19,11 +19,19 @@ summary**. There is no embedding or RAG step anywhere in this catalogue.
 
 ## prompt-construction {#prompt-construction}
 
-Every prompt is assembled from a fixed template with named slots. Unless a prompt defines a stricter contract, slots
-that carry no content for a given chunk collapse to a literal `(none)` rather than being left dangling, and any purely
-optional block may be omitted entirely; the model is told to translate what is present, not to expect every slot. The
-single-segment draft contract is the exception: it omits all absent optional blocks, including preceding context, so
-its model-facing input is only context when present, the source text, and the strict reply shape. **Load-bearing slots
+Every prompt is assembled from a fixed template with named slots. **No-garbage rule (15d.5):** a slot that carries no
+content for a given chunk is omitted with its heading, never filled with a placeholder; no prompt carries an empty value,
+an empty heading, a `(none)`/`n/a`/dash line, a repeated line, a glossary line whose term is not in the chunk, or
+preceding text from another chapter. `PromptHygiene` enforces it where a context is built, and the prompt-hygiene lint
+(`PromptHygieneLintTest`) fails on each of those over the really rendered prompt of every call kind. The one deliberate
+parenthesised sentence is the token line's instruction for a text with no token. The single-segment draft contract
+omits all absent optional blocks, including preceding context, so its model-facing input is only context when present,
+the source text, and the strict reply shape.
+
+**Window budget (15d.5):** the usable window minus the static prefix (system message and style sheet, byte-identical for
+every call of a run so a server can reuse its prompt cache), minus the dynamic context, minus a 500-token margin is split
+between a chunk's source tokens and its reply (`ContextBudget`); the dynamic sections are cut in the order summary,
+preceding text, memory, glossary. At DEBUG every call logs its system-message tokens, the rest and the system share. **Load-bearing slots
 sit at the prompt edges** (the
 instruction frame at the top, the masked source at the bottom) to counter lost-in-the-middle
 (`05_TRANSLATION_ALGORITHM.md#context-package`).
@@ -36,15 +44,15 @@ How each source of context is built and adapted:
 - **Glossary / name dictionary injection** — only the terms **occurring in the current chunk** are injected into
   `{{glossaryTerms}}` (never the whole dictionary), each with its target rendering, type, and gender for agreement.
   Hard-locked terms are already masked to `⟦gN⟧` and are additionally listed so the model knows their meaning. Optional:
-  empty chunk → `(none)`.
+  no term in the chunk → the block is omitted.
 - **Translation-memory matches** — injected into `{{tmHits}}` labelled by kind: a **context match** (source and
   neighbours match) is offered as a reuse candidate, an **exact match** as a hint, a **fuzzy match** (deterministic
   string similarity) as a suggestion only. Optional.
 - **Rolling bilingual summary** — the book/chapter-so-far summary is injected into `{{rollingSummary}}` for tone and
-  terminology continuity. Optional: empty at book start → `(none)`.
+  terminology continuity. Optional: empty at book start → the block is omitted.
 - **Preceding-target window** — the last ~3 accepted **target** blocks (dial-capped, soft-reset at chapter start) are
   injected into `{{precedingTarget}}`. This is the main consistency lever; the model is told to continue that voice, not
-  re-translate it. Optional: empty at chapter start → `(none)`.
+  re-translate it. Optional: empty at chapter start → the block is omitted.
 - **Foreign-passage policy** — `{{foreignPassageRule}}` expands from the project's foreign-passage flag (`FR-BRIEF-04`).
   Default keep-as-is renders: *"If a passage is deliberately in a language other than {{sourceLang}}, keep it verbatim;
   do not translate it."* The deterministic target-script QA check is made policy-aware so a kept passage is not scored

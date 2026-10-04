@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -20,6 +21,7 @@ import ua.bookloom.api.llm.ModelInfo;
 import ua.bookloom.api.llm.ProviderConfig;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.llm.capability.ContextLengthProbe;
 import ua.bookloom.llm.dto.OllamaChatRequest;
 import ua.bookloom.llm.dto.OllamaTagsResponse;
 import ua.bookloom.llm.http.HttpErrorMapper;
@@ -115,6 +117,11 @@ public final class OllamaClient implements ProviderClient {
         } catch (Throwable failure) {
             return ProviderCallResult.withoutRetryAfter(Result.err(unexpectedError("chat", modelId, failure)));
         }
+    }
+
+    @Override
+    public Optional<Integer> contextLength(String modelId) {
+        return new ContextLengthProbe(exchange, mapper).ollama(config, modelId);
     }
 
     @Override
