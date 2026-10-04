@@ -15,4 +15,3 @@ ollama:gpt-oss:20b
 ollama:qwen3.8:27b-mlx
 lmstudio:qwen/qwen3.8-27b
 ollama:muse-glimmer:30b-nvfp4-dflash
-lmstudio:nvidia/nemotron-3-nano

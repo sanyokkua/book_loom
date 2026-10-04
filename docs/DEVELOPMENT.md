@@ -430,8 +430,7 @@ the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands
 
 **Model list.** `scripts/eval-models.txt` is the one list of models `scripts/eval-matrix.sh` runs (refreshed 2026-10-04 to what
 `ollama ls` and `lms ls` show: gemma-4 e4b in every quant first, then e2b, 12b, 26b, gpt-oss, the two qwen3.8-27b builds, muse-glimmer
-and nemotron-3-nano). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. The two models added to LM Studio
-since the last matrix (`google/gemma-4-e2b`, `nvidia/nemotron-3-nano`, `qwen/qwen3.8-27b`) have no numbers yet.
+and nemotron-3-nano). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. 
 
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
 prompt eval plus 19 labelled judge cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
@@ -474,10 +473,9 @@ reminder that the target is the target language, never a copy of the source and 
 
 **New LM Studio models, 2026-10-04** (current prompts, one sample): `google/gemma-4-e2b` parse 97%, gate 94%, script 97%, marker 86%,
 judge false-negative 38% / false-positive 9% (an e2b floor like the Ollama build). `qwen/qwen3.8-27b` parse, gate and script 100%, marker 86%,
-judge false-negative 25% / false-positive 0%. `nvidia/nemotron-3-nano` (draft, fix and suggest cases only, `BOOKLOOM_EVAL_SKIP_JUDGE=1`): parse 83%
-(truncated JSON), script 80%, marker 55%, obeys an instruction hidden in the book text (injection 50%) — not a recommended translator. Its judge
-call stalls: with the judge's JSON-schema `response_format` (with `maxItems`/`maxLength` limits) LM Studio never answers (100 s, model stuck in
-`PROCESSINGPROMPT`), while the same prompt without a schema answers in 5 s and the simple draft schema works. Keep the reviewer schema of
+judge false-negative 25% / false-positive 0%. One LM Studio model that was tried and excluded (weak Ukrainian drafts, parse 83%, obeys instructions hidden in the book text) also stalled on the
+judge call: with the judge's JSON-schema `response_format` (with `maxItems`/`maxLength` limits) LM Studio never answered (100 s, model stuck in
+`PROCESSINGPROMPT`), while the same prompt without a schema answered in 5 s and the simple draft schema worked. Keep the reviewer schema of
 task 15d.6 flat and free of `maxItems`/`maxLength`, and consider dropping `response_format` for a model after a structured call timed out.
 
 The other models (12b-mlx, e4b-mxfp8, qwen3.8:27b, gemma-4-26b-a4b-qat, qwen3-vl-4b) were measured before the reminder
