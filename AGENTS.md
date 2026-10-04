@@ -58,7 +58,7 @@ dialog), and the Settings Providers tab tests a provider three ways with measure
 both light and dark, every operable control explains itself on hover, wheel scrolling glides, the long lists have fixed
 row heights, and the time left is the average of the last 20 timed segments. Not built: saving (nothing survives a
 restart, no remembered settings, no SQLite), the other Settings tabs (Models, Generation, Automation, Storage) and the
-Projects screen. Eval foundation (15d.1, done): a judge defect corpus, a draft case set, per-class thresholds and
+Projects screen. Measurements (15d.0, done): per-call-kind tokens and times in the run summary and the report, `scripts/segment-histogram.py`, `--stop-after`, and the "where the time goes" table in `docs/DEVELOPMENT.md`. Eval foundation (15d.1, done): a judge defect corpus, a draft case set, per-class thresholds and
 `scripts/eval-matrix.sh` over the models in `scripts/eval-models.txt`; gpt-oss now works on Ollama's native endpoint. Next: group 15d
 of `openspec/changes/complete-translation-workflow` in its revised order (measure first, language-rules map, batched drafting,
 a reviewer that fixes in place with edits verified in code), then group 16 (the gate).

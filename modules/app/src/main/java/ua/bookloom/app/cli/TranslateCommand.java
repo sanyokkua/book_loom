@@ -54,7 +54,7 @@ public final class TranslateCommand {
     private static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
             + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] "
             + "[--timeout <seconds>] [--quality fast|balanced|max] [--names translate|transliterate|keep] "
-            + "[--review-names] [--max-outage <duration>] [--report <file>] [--no-partial]";
+            + "[--review-names] [--max-outage <duration>] [--report <file>] [--stop-after <segments>] [--no-partial]";
 
     private final TranslationEngine engine;
     private final ChatModelFactory models;
@@ -171,7 +171,8 @@ public final class TranslateCommand {
     private int runAndExport(
             TranslationJob job, ModelSelection selection, Target target, RunReport report, PrintStream out) {
         final RunOptions options = target.arguments().options();
-        final UnattendedRun watch = UnattendedRun.attach(job, providers.probeFor(selection), options.maxOutage(), out);
+        final UnattendedRun watch =
+                UnattendedRun.attach(job, providers.probeFor(selection), options.maxOutage(), options.stopAfter(), out);
         shutdown.hold(job::cancel);
         final Result<JobReport> result = timed(report, "translate", job::run);
         report.run(result, watch);

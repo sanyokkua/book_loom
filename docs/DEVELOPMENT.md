@@ -245,7 +245,7 @@ text: it stays on the machine unless the person shares it.
 ./gradlew -q :app:translate --args="'<book>' [--to <lang>] [--from <lang>] [--overwrite] \
   [--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] [--timeout <seconds>] \
   [--quality fast|balanced|max] [--names translate|transliterate|keep] [--review-names] \
-  [--max-outage <duration>] [--report <file>] [--no-partial]"
+  [--max-outage <duration>] [--report <file>] [--stop-after <segments>] [--no-partial]"
 ```
 
 Without provider flags it translates `<book>` with the deterministic offline `pseudo` model — the text comes back
@@ -265,7 +265,11 @@ did not complete, Ctrl+C included, **still exports what it translated** (the res
 `Partial: <path> (accepted=…, flagged=…, pending=…) — the run ended <state>: <reason>`; `--no-partial` writes nothing
 instead. `--report <file>` writes a JSON summary: provider, model, dial and names, phase timings and model calls, how
 the run ended and why, every flagged segment with its reason and finding kinds, each outage, the names review counts and
-what the export wrote, source fallbacks included.
+what the export wrote, source fallbacks included. `modelCallsByKind` in it holds, per call kind (draft, judge, directed
+fix …), the attempts and failures, prompt and completion tokens, the tokens the server says its cache served, and the
+elapsed, prompt-evaluation and generation seconds — counts and times only, never book text; the final `run summary`
+log line carries the same totals as `byKind[…]`. `--stop-after <n>` ends the run once `n` segments are decided
+(the partial export is written as for any stopped run), so a measurement can use part of a book.
 
 For LM Studio, an unknown requested model id can still yield a reply from the model currently loaded by the server.
 BookLoom warns about that model mismatch but retains an otherwise usable reply; use the preflight output and the server's
@@ -354,6 +358,45 @@ whether vsync is on. The pulse logger prints every pulse slower than one frame (
 change on the same book and window size; a run of long pulses while scrolling a list points at its cells.
 
 ---
+
+### Where the time goes {#where-the-time-goes}
+
+Measured by task 15d.0 (2026-10-04): the first 300 decided segments of Bartimaeus 1 (EPUB, en→uk) through the command
+line — `--provider ollama --quality balanced --names transliterate --stop-after 300`, Ollama native endpoint, one
+inference at a time — with the provider's own counts and timings from `modelCallsByKind` in the `--report` JSON.
+Prompt evaluation and generation are the server's `prompt_eval_duration` and `eval_duration`; their shares of a call's
+wall time do not add to 100 % because the rest is load, queueing and the client. Ollama reports no cached-token
+figure (it counts only the tokens it evaluated), so the cache saving is not measured here; the prompt-evaluation
+throughput below is what the cache would have to beat.
+
+| Model | Call kind | Calls | Input tokens | Output tokens | Wall (share of model time) | Prompt-eval share | Generation share |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `gemma4:e4b-mlx` | draft | 296 | 301,148 | 19,117 | 756 s (81 %) | 24 % | 74 % |
+| | judge | 83 | 117,542 | 1,753 | 168 s (18 %) | 59 % | 39 % |
+| | directed fix | 8 | 6,061 | 211 | 12 s (1 %) | 35 % | 62 % |
+| `gemma4:26b-mlx` | draft | 296 | 303,970 | 19,978 | 1,138 s (56 %) | 34 % | 65 % |
+| | judge | 135 | 179,781 | 9,060 | 602 s (30 %) | 44 % | 54 % |
+| | directed fix | 56 | 50,901 | 6,119 | 285 s (14 %) | 29 % | 70 % |
+| | repair, reflect, improve | 3 | 2,350 | 146 | 10 s (0 %) | — | — |
+
+Whole run: e4b 387 calls, 936 s of model time, **3.1 s per segment**, 1.29 calls per segment, 296 accepted and 4 flagged
+of 300; 26b 490 calls, 2,035 s, **6.8 s per segment**, 1.63 calls per segment, 280 accepted and 20 flagged. A draft call
+sends about 1,020 tokens and returns about 65, so a quarter to a third of its time is evaluating a prompt that is mostly
+the same instructions again; a judge call sends about 1,400 tokens for about 20–70 back, so on e4b more than half of
+a judge call is prompt evaluation. The 26b judge and fix calls fire far more often (135 and 56 against 83 and 8), which,
+with the larger model's slower generation, makes up the extra 3.7 s a segment over e4b.
+
+**Segment lengths** (`scripts/segment-histogram.py <book>`, words per block; a block approximates a segment, so counts
+differ by a few from the app's own):
+
+| Book | Blocks | Words | Mean | Median | Blocks at 1–3 / 4–10 / 11–30 / over 30 words | Words at 1–3 / 4–10 / 11–30 / over 30 |
+|---|---:|---:|---:|---:|---|---|
+| Bartimaeus 1 | 3,579 | 127,228 | 35.5 | 25 | 9.6 / 17.6 / 29.3 / 43.4 % | 0.5 / 3.5 / 15.9 / 80.1 % |
+| Harry Potter 1 | 2,937 | 80,745 | 27.5 | 19 | 5.4 / 22.9 / 39.7 / 31.9 % | 0.4 / 5.7 / 27.3 / 66.6 % |
+
+Reading both together: 27 % of Bartimaeus blocks have at most 10 words yet carry about 4 % of its words, so one call per
+segment spends most of its calls on very little text, and the 1,020-token prompt is mostly fixed instructions. That is what
+batching (15d.8) and a lean reviewer (15d.6) have to win back; generation of the translation itself is the floor.
 
 ## 6. IDE (IntelliJ IDEA) {#ide}
 

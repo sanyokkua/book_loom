@@ -28,7 +28,7 @@ class TranslateLauncherTest {
             + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] "
             + "[--base-url <url>] [--timeout <seconds>] [--quality fast|balanced|max] "
             + "[--names translate|transliterate|keep] [--review-names] [--max-outage <duration>] [--report <file>] "
-            + "[--no-partial]";
+            + "[--stop-after <segments>] [--no-partial]";
 
     @TempDir
     private Path tempDir;

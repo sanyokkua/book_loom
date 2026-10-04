@@ -83,6 +83,7 @@ final class RunReport {
         run.put("stoppedBecause", watch.stopReason());
         timings.put("modelCalls", watch.modelCalls());
         timings.put("modelSeconds", seconds(watch.modelTime()));
+        modelCallsByKind(watch);
         recovery(watch);
         flagged(watch);
         progress(run, watch.lastProgress());
@@ -144,6 +145,21 @@ final class RunReport {
             return Result.err(AppError.of(
                     ErrorCode.internal, "The run report was not written", "The report file could not be written."));
         }
+    }
+
+    private void modelCallsByKind(UnattendedRun watch) {
+        final ObjectNode kinds = root.putObject("modelCallsByKind");
+        watch.kindTotals().totals().forEach((kind, totals) -> {
+            final ObjectNode node = kinds.putObject(kind.name());
+            node.put("attempts", totals.attempts());
+            node.put("failed", totals.failed());
+            node.put("promptTokens", totals.promptTokens());
+            node.put("completionTokens", totals.completionTokens());
+            node.put("cachedPromptTokens", totals.cachedPromptTokens());
+            node.put("elapsedSeconds", seconds(totals.elapsed()));
+            node.put("promptEvalSeconds", seconds(totals.promptEval()));
+            node.put("generationSeconds", seconds(totals.generation()));
+        });
     }
 
     private void recovery(UnattendedRun watch) {

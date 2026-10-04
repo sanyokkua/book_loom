@@ -54,6 +54,7 @@ final class RunSummaryLogger {
     private static final String NONE = "-";
 
     private final Clock clock;
+    private final CallKindTotals kindTotals = new CallKindTotals();
     private final Deque<Long> recentMillis = new ArrayDeque<>();
     private long calls;
     private long totalMillis;
@@ -104,6 +105,7 @@ final class RunSummaryLogger {
 
     private void record(final ModelCallFinished finished) {
         final long millis = finished.elapsed().toMillis();
+        kindTotals.record(finished);
         calls++;
         totalMillis += millis;
         recentMillis.addLast(millis);
@@ -127,7 +129,7 @@ final class RunSummaryLogger {
         final JobProgress at = progress;
         log.info(
                 "run summary {} accepted={} flagged={} verbatim={} pending={} calls={} avgCallMs={} p95CallMs={}"
-                        + " tokensPerSecond={} timeouts={} current={}",
+                        + " tokensPerSecond={} timeouts={} current={}{}",
                 kind,
                 at == null ? 0 : at.accepted(),
                 at == null ? 0 : at.flagged(),
@@ -138,7 +140,29 @@ final class RunSummaryLogger {
                 percentileMillis(),
                 tokensPerSecond(),
                 timeouts,
-                locator);
+                locator,
+                "final".equals(kind) ? byKind() : "");
+    }
+
+    private String byKind() {
+        final StringBuilder line = new StringBuilder();
+        kindTotals.totals().forEach((kind, totals) -> {
+            if (!line.isEmpty()) {
+                line.append(' ');
+            }
+            line.append(String.format(
+                    Locale.ROOT,
+                    "%s=%d/%d in:%d out:%d promptEvalMs:%d generationMs:%d cached:%d",
+                    kind,
+                    totals.attempts(),
+                    totals.failed(),
+                    totals.promptTokens(),
+                    totals.completionTokens(),
+                    totals.promptEval().toMillis(),
+                    totals.generation().toMillis(),
+                    totals.cachedPromptTokens()));
+        });
+        return line.isEmpty() ? "" : " byKind[" + line + "]";
     }
 
     /** How many call times are held for the percentile; never more than {@link #PERCENTILE_WINDOW}. */

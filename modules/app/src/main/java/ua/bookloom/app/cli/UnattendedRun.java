@@ -35,6 +35,7 @@ import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.TranslationJob;
+import ua.bookloom.pipeline.CallKindTotals;
 
 /**
  * A run with nobody at the terminal, wired like a window run: it pauses on a provider error and waits through an
@@ -54,17 +55,21 @@ final class UnattendedRun {
 
     private final TranslationJob job;
     private final PrintStream out;
+    private final int stopAfter;
     private final Map<Instant, Outage> outages = new LinkedHashMap<>();
     private final List<FlaggedDetail> flagged = new ArrayList<>();
     private final AtomicReference<@Nullable String> stopReason = new AtomicReference<>();
     private @Nullable JobProgress lastProgress;
+    private final CallKindTotals kindTotals = new CallKindTotals();
     private int modelCalls;
+    private int decidedSegments;
     private Duration modelTime = Duration.ZERO;
     private int waits;
 
-    private UnattendedRun(TranslationJob job, PrintStream out) {
+    private UnattendedRun(TranslationJob job, PrintStream out, int stopAfter) {
         this.job = job;
         this.out = out;
+        this.stopAfter = stopAfter;
     }
 
     /**
@@ -73,11 +78,14 @@ final class UnattendedRun {
      * @param job the job, not yet run; never null
      * @param probe the probe each wake checks the provider with; never null
      * @param maxOutage the longest outage waited through before the run is stopped; never null
+     * @param stopAfter how many decided segments end the run early, or zero to run the whole book
      * @param out where the outage lines go; never null
      * @return the watcher, whose tallies are complete once the job's run returns
      */
-    static UnattendedRun attach(TranslationJob job, ProviderProbe probe, Duration maxOutage, PrintStream out) {
-        final UnattendedRun run = new UnattendedRun(Objects.requireNonNull(job, "job"), Objects.requireNonNull(out));
+    static UnattendedRun attach(
+            TranslationJob job, ProviderProbe probe, Duration maxOutage, int stopAfter, PrintStream out) {
+        final UnattendedRun run =
+                new UnattendedRun(Objects.requireNonNull(job, "job"), Objects.requireNonNull(out), stopAfter);
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         job.recoverWith(Objects.requireNonNull(probe, "probe"), Objects.requireNonNull(maxOutage, "maxOutage"));
         job.subscribe(run::onEvent);
@@ -92,6 +100,7 @@ final class UnattendedRun {
             case Resumed resumed -> onResumed();
             case SegmentDecided decided -> onDecided(decided);
             case ModelCallFinished finished -> {
+                kindTotals.record(finished);
                 modelCalls++;
                 modelTime = modelTime.plus(finished.elapsed());
             }
@@ -142,6 +151,10 @@ final class UnattendedRun {
 
     private void onDecided(SegmentDecided decided) {
         lastProgress = decided.progress();
+        decidedSegments++;
+        if (stopAfter > 0 && decidedSegments >= stopAfter) {
+            stop("the " + stopAfter + " segments asked for with --stop-after were decided");
+        }
         if (decided.status() == SegmentStatus.FLAGGED) {
             final SegmentDetail detail = decided.detail();
             flagged.add(new FlaggedDetail(
@@ -175,6 +188,10 @@ final class UnattendedRun {
 
     List<FlaggedDetail> flagged() {
         return List.copyOf(flagged);
+    }
+
+    CallKindTotals kindTotals() {
+        return kindTotals;
     }
 
     int modelCalls() {

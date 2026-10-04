@@ -112,6 +112,8 @@ class TranslateArgumentsTest {
                 "1h30m",
                 "--report",
                 "build/e2e/run.json",
+                "--stop-after",
+                "300",
                 "--no-partial"));
 
         assertThat(dataOf(result).options())
@@ -121,7 +123,16 @@ class TranslateArgumentsTest {
                         true,
                         Duration.ofMinutes(90),
                         false,
-                        Path.of("build/e2e/run.json")));
+                        Path.of("build/e2e/run.json"),
+                        300));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"0", "-3", "many"})
+    void parse_stopAfterNotAPositiveNumber_isRejected(String value) throws IOException {
+        assertThat(TranslateArguments.parse(List.of(book().toString(), "--stop-after", value))
+                        .isErr())
+                .isTrue();
     }
 
     @ParameterizedTest(name = "{0}")

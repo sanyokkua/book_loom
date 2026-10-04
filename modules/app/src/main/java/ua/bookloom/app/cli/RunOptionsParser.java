@@ -38,6 +38,7 @@ final class RunOptionsParser {
     private Duration maxOutage = RunOptions.DEFAULTS.maxOutage();
     private boolean partialExport = true;
     private @Nullable Path report;
+    private int stopAfter;
 
     /**
      * Consumes the option at {@code index} when it is a run option.
@@ -53,7 +54,8 @@ final class RunOptionsParser {
                 switch (option) {
                     case "--review-names" -> Optional.of(flag(option, index, () -> reviewNames = true));
                     case "--no-partial" -> Optional.of(flag(option, index, () -> partialExport = false));
-                    case "--quality", "--names", "--max-outage", "--report" -> Optional.of(valued(args, index, option));
+                    case "--quality", "--names", "--max-outage", "--report", "--stop-after" ->
+                        Optional.of(valued(args, index, option));
                     default -> Optional.empty();
                 };
         consumed.ifPresent(result ->
@@ -63,7 +65,7 @@ final class RunOptionsParser {
 
     /** The options consumed so far. */
     RunOptions options() {
-        return new RunOptions(quality, names, reviewNames, maxOutage, partialExport, report);
+        return new RunOptions(quality, names, reviewNames, maxOutage, partialExport, report, stopAfter);
     }
 
     private Result<Integer> flag(String option, int index, Runnable set) {
@@ -87,6 +89,7 @@ final class RunOptionsParser {
                     case "--quality" -> setQuality(value);
                     case "--names" -> setNames(value);
                     case "--max-outage" -> setMaxOutage(value);
+                    case "--stop-after" -> setStopAfter(value);
                     default -> setReport(value);
                 };
         return set.isErr() ? Result.err(Objects.requireNonNull(set.error())) : Result.ok(index + 2);
@@ -119,6 +122,15 @@ final class RunOptionsParser {
         }
         maxOutage = parsed;
         return Result.ok(Boolean.TRUE);
+    }
+
+    private Result<Boolean> setStopAfter(String value) {
+        try {
+            stopAfter = Integer.parseInt(value);
+        } catch (NumberFormatException notANumber) {
+            stopAfter = 0;
+        }
+        return stopAfter > 0 ? Result.ok(Boolean.TRUE) : invalid("--stop-after must be a positive number of segments");
     }
 
     private Result<Boolean> setReport(String value) {

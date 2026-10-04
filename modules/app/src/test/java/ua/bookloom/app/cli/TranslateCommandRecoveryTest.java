@@ -117,6 +117,27 @@ class TranslateCommandRecoveryTest {
                 .isEqualTo("RESUMED");
         assertThat(json.path("export").path("partial").asBoolean()).isFalse();
         assertThat(json.path("exitCode").asInt()).isEqualTo(0);
+        // The scripted models report no usage, so the pipeline's estimate of the reply tokens is what is counted.
+        assertThat(json.path("modelCallsByKind").path("DRAFT").path("attempts").asInt())
+                .isPositive();
+        assertThat(json.path("modelCallsByKind")
+                        .path("DRAFT")
+                        .path("completionTokens")
+                        .asInt())
+                .isPositive();
+    }
+
+    @Test
+    void run_stopAfterOneSegment_endsTheRunEarlyAndSaysWhy() throws IOException {
+        final Path report = tempDir.resolve("reports/stop.json");
+
+        final int exit = command(new ScriptedModels(Set.of(), ErrorCode.unreachable), new ScriptedProbe(0))
+                .run(arguments("--stop-after", "1", "--report", report.toString()), print(new ByteArrayOutputStream()));
+
+        final JsonNode json = new ObjectMapper().readTree(Files.readString(report));
+        assertThat(json.path("run").path("stoppedBecause").asText()).contains("--stop-after");
+        assertThat(json.path("run").path("accepted").asInt()).isLessThan(3);
+        assertThat(exit).isEqualTo(TranslateCommand.PARTIAL_EXIT);
     }
 
     private List<String> arguments(String... extra) throws IOException {

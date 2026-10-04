@@ -9,11 +9,27 @@ import org.jspecify.annotations.Nullable;
  * @param prompt the number of prompt tokens the provider counted, or null when not reported
  * @param completion the number of completion tokens the provider counted, or null when not reported
  * @param generation the wall-clock time the provider spent generating the completion, or null when not reported
+ * @param promptEval the time the provider spent evaluating the prompt before the first token, or null when not
+ *     reported
+ * @param cachedPrompt how many prompt tokens the provider says it served from its cache, or null when not reported
  */
 public record TokenUsage(
         @Nullable Integer prompt,
         @Nullable Integer completion,
-        @Nullable Duration generation) {
+        @Nullable Duration generation,
+        @Nullable Duration promptEval,
+        @Nullable Integer cachedPrompt) {
+
+    /**
+     * Builds a usage with no prompt-evaluation time and no cache figure, as a provider that reports only counts does.
+     *
+     * @param prompt the number of prompt tokens the provider counted, or null when not reported
+     * @param completion the number of completion tokens the provider counted, or null when not reported
+     * @param generation the time spent generating the completion, or null when not reported
+     */
+    public TokenUsage(@Nullable Integer prompt, @Nullable Integer completion, @Nullable Duration generation) {
+        this(prompt, completion, generation, null, null);
+    }
 
     /**
      * Rejects a negative reported count and a reply that reports nothing at all: a response with no figures
@@ -26,8 +42,12 @@ public record TokenUsage(
         if (completion != null && completion < 0) {
             throw new IllegalArgumentException("completion must not be negative: " + completion);
         }
-        if (prompt == null && completion == null && generation == null) {
-            throw new IllegalArgumentException("at least one of prompt, completion or generation must be reported");
+        if (cachedPrompt != null && cachedPrompt < 0) {
+            throw new IllegalArgumentException("cachedPrompt must not be negative: " + cachedPrompt);
+        }
+        if (prompt == null && completion == null && generation == null && promptEval == null) {
+            throw new IllegalArgumentException(
+                    "at least one of prompt, completion, generation or promptEval must be reported");
         }
     }
 }

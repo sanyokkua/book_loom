@@ -118,6 +118,23 @@ class RunSummaryLoggerTest {
                         + " p95CallMs=0 tokensPerSecond=- timeouts=0 current=-");
     }
 
+    // The final line says per kind what the calls cost, so a shared log shows where the time went.
+    @Test
+    void onEvent_finishedAfterCalls_finalLineCarriesTheTotalsOfEachKind() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+
+        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
+        summary.onEvent(answered(
+                Duration.ofSeconds(3), new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries())
+                .singleElement()
+                .asString()
+                .endsWith(" byKind[DRAFT=1/0 in:800 out:90 promptEvalMs:400 generationMs:2500 cached:600]");
+    }
+
     // A night's run makes tens of thousands of calls; the line counts them all but keeps only the newest
     // RunSummaryLogger.PERCENTILE_WINDOW times, so its memory does not grow with the book.
     @Test

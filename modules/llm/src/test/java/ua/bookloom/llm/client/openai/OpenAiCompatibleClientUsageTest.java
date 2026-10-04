@@ -84,6 +84,19 @@ class OpenAiCompatibleClientUsageTest {
         assertThat(response.usage()).isEqualTo(new TokenUsage(640, 75, Duration.ofMillis(2500)));
     }
 
+    // LM Studio's stats replace the wall clock with its own generation time and give the prompt-evaluation time.
+    @Test
+    void chat_statsAndCachedTokensReported_carriesProviderTimingAndCache() {
+        stubChat("""
+                {"model":"google/gemma-4-e4b","choices":[{"message":{"content":"reply"},"finish_reason":"stop"}],"usage":{"prompt_tokens":640,"completion_tokens":75,"prompt_tokens_details":{"cached_tokens":512}},"stats":{"time_to_first_token":0.4,"generation_time":1.9}}
+                """);
+
+        final ChatResponse response = sendChat(client(scriptedNanoTime(0L, 2_500_000_000L)), messageOnlyRequest());
+
+        assertThat(response.usage())
+                .isEqualTo(new TokenUsage(640, 75, Duration.ofMillis(1900), Duration.ofMillis(400), 512));
+    }
+
     // No reported usage object means no token usage, whatever the measured duration was.
     @Test
     void chat_noUsageReported_carriesNullUsage() {

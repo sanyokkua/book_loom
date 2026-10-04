@@ -11,12 +11,14 @@ import org.jspecify.annotations.Nullable;
  * @param model nullable because provider replies may omit metadata
  * @param choices nullable because malformed or partial replies may omit the collection
  * @param usage nullable because providers may omit reported token counts
+ * @param stats nullable; LM Studio's own timing of the call, which other providers do not send
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OpenAiChatResponse(
         @JsonProperty("model") @Nullable String model,
         @JsonProperty("choices") @Nullable List<Choice> choices,
-        @JsonProperty("usage") @Nullable Usage usage) {
+        @JsonProperty("usage") @Nullable Usage usage,
+        @JsonProperty("stats") @Nullable Stats stats) {
 
     /** Copies a present choices list to preserve its order and prevent mutation. */
     public OpenAiChatResponse {
@@ -68,9 +70,31 @@ public record OpenAiChatResponse(
      *
      * @param promptTokens nullable because a provider may omit the prompt token count
      * @param completionTokens nullable because a provider may omit the completion token count
+     * @param promptTokensDetails nullable; the split of the prompt tokens, which only some providers send
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Usage(
             @JsonProperty("prompt_tokens") @Nullable Integer promptTokens,
-            @JsonProperty("completion_tokens") @Nullable Integer completionTokens) {}
+            @JsonProperty("completion_tokens") @Nullable Integer completionTokens,
+            @JsonProperty("prompt_tokens_details") @Nullable PromptTokensDetails promptTokensDetails) {}
+
+    /**
+     * The part of the prompt a provider reports on.
+     *
+     * @param cachedTokens nullable count of prompt tokens served from the provider's cache
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record PromptTokensDetails(
+            @JsonProperty("cached_tokens") @Nullable Integer cachedTokens) {}
+
+    /**
+     * A provider's own timing of one call, in seconds.
+     *
+     * @param timeToFirstToken nullable time before the first token, which is the prompt evaluation
+     * @param generationTime nullable time spent generating the completion
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Stats(
+            @JsonProperty("time_to_first_token") @Nullable Double timeToFirstToken,
+            @JsonProperty("generation_time") @Nullable Double generationTime) {}
 }

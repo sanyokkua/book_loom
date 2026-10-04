@@ -30,7 +30,7 @@ final class TranslateCommandTestFakes {
     static final String USAGE = "Usage: translate <book> [--to <lang>] [--from <lang>] [--overwrite] "
             + "[--provider pseudo|ollama|lmstudio|openai-compatible] [--model <id>] [--base-url <url>] "
             + "[--timeout <seconds>] [--quality fast|balanced|max] [--names translate|transliterate|keep] "
-            + "[--review-names] [--max-outage <duration>] [--report <file>] [--no-partial]";
+            + "[--review-names] [--max-outage <duration>] [--report <file>] [--stop-after <segments>] [--no-partial]";
 
     private TranslateCommandTestFakes() {}
 
