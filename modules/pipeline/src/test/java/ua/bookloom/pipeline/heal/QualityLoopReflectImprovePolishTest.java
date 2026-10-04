@@ -203,14 +203,13 @@ class QualityLoopReflectImprovePolishTest {
 
     // Max's real dial (repair budget 3, judge on): an echoing draft's first directed fix still echoes, the second
     // returns a real translation eligible for re-judge — accepted as repaired after exactly 2 rounds, well inside
-    // the budget of 3.
+    // the budget of 3. The echoed English paragraph is a blocking text finding, so the chunk judge is never asked.
     @Test
     void nextDecision_maxDialAcceptedInItsSecondRound_isRepairedWithTwoRoundsUsed() {
         final String echo = DRAFT_SOURCE.toUpperCase(Locale.ROOT);
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment(), DRAFT_SOURCE, List.of(), echo, echo, echo, null);
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"score\":0.5,\"verdict\":\"revise\"}"))
                 .answer(readable(targetReply(DRAFT_SOURCE)))
                 .answer(readable(targetReply(GOOD_DRAFT_TARGET)))
                 .answer(readable("{\"score\":0.95,\"verdict\":\"accept\"}"));

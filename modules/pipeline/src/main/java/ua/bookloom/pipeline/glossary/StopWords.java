@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -29,7 +30,7 @@ import org.jspecify.annotations.Nullable;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class StopWords {
+public final class StopWords {
 
     static final String FALLBACK = "en";
     private static final String DIRECTORY = "stopwords/";
@@ -43,7 +44,7 @@ final class StopWords {
      * @param languageTag the BCP 47 tag of the book's source language, or null when it is not known
      * @return the lower-cased words of that language's list, or of the English list when it has none
      */
-    static Set<String> of(@Nullable final String languageTag) {
+    public static Set<String> of(@Nullable final String languageTag) {
         final String bundled = bundled(DIRECTORY, languageOf(languageTag));
         log.debug("Stop words for language tag {} read from the {} list", languageTag, bundled);
         return LOADED.computeIfAbsent(bundled, language -> load(DIRECTORY, language));
@@ -82,6 +83,22 @@ final class StopWords {
 
     private static String bundled(final String directory, final String language) {
         return StopWords.class.getResource(directory + language + ".txt") == null ? FALLBACK : language;
+    }
+
+    /**
+     * The stop words of a language only when a list is bundled for it — unlike {@link #of}, which reads the English
+     * list for any other language, a wrong answer for a check that must know the language is really there.
+     *
+     * @param languageTag the BCP 47 tag of the language, or null when it is not known
+     * @return the lower-cased words of that language's own list, or empty when none is bundled
+     */
+    public static Optional<Set<String>> bundled(@Nullable final String languageTag) {
+        if (languageTag == null || languageTag.isBlank()) {
+            return Optional.empty();
+        }
+        final String language = languageOf(languageTag);
+        final boolean has = StopWords.class.getResource(DIRECTORY + language + ".txt") != null;
+        return has ? Optional.of(LOADED.computeIfAbsent(language, key -> load(DIRECTORY, key))) : Optional.empty();
     }
 
     private static Set<String> load(final String directory, final String language) {

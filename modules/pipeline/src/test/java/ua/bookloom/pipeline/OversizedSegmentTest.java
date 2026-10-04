@@ -73,8 +73,9 @@ class OversizedSegmentTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // Two sentence-aligned pieces, both echoed: the round repairs by drafting each piece again, naming the echo
-    // finding in the piece's own request, and never sends the whole oversized segment to a directed fix.
+    // Two sentence-aligned pieces, both echoed: the English paragraph is a blocking text finding, so no judge is asked
+    // about it; the round repairs by drafting each piece again, naming the echo finding in the piece's own request,
+    // and never sends the whole oversized segment to a directed fix.
     @Test
     void run_oversizedBalancedSegmentFailingEcho_redraftsBothPiecesWithFindings() {
         final String text = IntStream.range(100, 300)
@@ -88,10 +89,10 @@ class OversizedSegmentTest {
         TranslationJobTestSupport.report(
                 TranslationJobTestSupport.job(project, model).run());
 
-        assertThat(model.formats()).containsExactly("draft", "draft", "judge", "draft", "draft", "judge");
+        assertThat(model.formats()).containsExactly("draft", "draft", "draft", "draft", "judge");
         assertThat(model.userMessages().subList(0, 2))
                 .allSatisfy(user -> assertThat(user).doesNotContain("[Extra instruction]"));
-        assertThat(model.userMessages().subList(3, 5))
+        assertThat(model.userMessages().subList(2, 4))
                 .allSatisfy(user -> assertThat(user)
                         .contains("[Extra instruction]\n")
                         .contains("echo similarity 1.0 at or above 0.9\n\n<Text>\n"));

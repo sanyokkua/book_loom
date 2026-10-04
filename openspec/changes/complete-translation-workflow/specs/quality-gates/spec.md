@@ -371,7 +371,9 @@ nearer bound divided by one tenth of the band's width, at most 1.0. Inside the b
 words look missing: when the target has more letter-word-followed-by-space-then-full-stop-or-comma spots (`помогою .`)
 than the source, or — for a source of at least 8 words, neither text in a script written without spaces — when the
 target has fewer than 0.55 words per source word while its character ratio is under 0.85. Its finding SHALL name which
-of the two it saw.
+of the two it saw. A compact short line — a source under 40 characters and of at most 8 words whose target keeps at
+least half of its words — SHALL NOT fail for a ratio below the band's lower bound; a ratio above the upper bound still
+fails.
 
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`.
@@ -383,7 +385,11 @@ inside the band, so the space left before a full stop and a word count far below
 sits well below any real pair's word ratio (English to Ukrainian runs about 0.8), and a verse line Ukrainian says in
 half the words keeps its length (`A stone let go will find the ground,` → `Камінь, відпущений, знайде землю,`), so a
 faithful translation is not caught by it; for the same reason a line under 60 characters gets a wider band
-(`it has been falling night and day` → `вона падає ніч і день`, 0.64, is no omission).
+(`it has been falling night and day` → `вона падає ніч і день`, 0.64, is no omission). A compact line such as
+`Unfortunately, nothing happened.` → `На жаль, нічого.` (0.50) is complete in half the characters because Ukrainian
+needs fewer function words; one real run flagged 14 such lines as omissions, so below the lower bound a compact line is
+trusted as long as it keeps half its words (`The monster met me at midnight.` → `Чудовисько тут` is still an
+omission).
 
 #### Scenario: A space left before a full stop fails
 
@@ -719,6 +725,50 @@ budget is not spent on it.
 - **WHEN** the chunk judge scores 0.85 with a medium `meaning` finding, the directed fix answers a new target, and the
   re-judge again scores 0.85 with a medium `meaning` finding, with three rounds allowed
 - **THEN** the segment is FLAGGED after 1 round with that fixed target, after 3 requests
+
+### Requirement: Fail a segment on a deterministic text defect before any judge reads it
+
+The application SHALL run the deterministic text checks on every restored candidate, after the refusal gate and before
+any model judge, and SHALL treat a blocking finding as a failed hard gate: a word that holds a letter of the target's
+script beside a letter of another script or a digit (`навчg3вся`, `імпoву`) raises a medium-or-higher `language`
+finding from `script-purity`; a quote pair of the target language's convention table that the target leaves open,
+closes without opening or closes with the wrong mark, while the source's own pairs balance, raises a `fluency` finding
+from `quote-balance`; a paragraph of at least 12 words whose letters are under 60% in the target script, or, when the
+scripts match, whose share of source-language function words (those the target language does not also use) is at
+least 30%, raises a `language` finding from `language-identity`. A doubled word and a spacing artefact the source does
+not have SHALL only add a low `fluency` finding (`duplicate-word`, `spacing`). Each finding SHALL carry the exact span
+and a plain explanation, and the directed fix SHALL repeat both in its findings list. The checks SHALL be skipped for a
+kept foreign passage, SHALL read only quote marks (never dashes, commas or full stops, which differ by language), and
+SHALL leave a text of only digits, URLs, e-mail addresses and ISBN labels alone, as the script and echo checks do.
+
+**Source:** FR-QA-01, FR-QA-07, ADR-0038; tasks 15d.2.
+In plain words: a mixed-alphabet word, a quote left open and a whole English paragraph accepted as Ukrainian are facts
+code can see, so the segment is repaired or flagged before a model is asked to opine on it; a short English line is
+left to the echo check, because a name or an exclamation can read the same in both languages. A word wholly in another
+script (a name) and a number's suffix (`90х`) are not mixed words, and a coined word in the right alphabet
+(`розлізяв`) cannot be seen by code and stays with the judge.
+
+#### Scenario: A mixed-script word blocks acceptance
+
+- **WHEN** English → Ukrainian and the draft for `He studied hard all year.` is `Він наполегливо навчg3вся цілий рік.`
+- **THEN** the segment fails a hard gate with a `language` finding from `script-purity` whose note quotes `навчg3вся`
+- **AND** the chunk judge is not asked about that segment
+
+#### Scenario: A quote left open blocks acceptance
+
+- **WHEN** the source `“Yes, sir,” said the boy.` balances and the Ukrainian target is `«Ні, сер, — відповів хлопчик.`
+- **THEN** the segment fails with a `fluency` finding from `quote-balance`
+- **AND** a source that is itself open lets the target be open too
+
+#### Scenario: An English paragraph is a hard failure
+
+- **WHEN** English → Ukrainian or English → Polish and the target of a 19-word English paragraph is that paragraph
+- **THEN** the segment fails with a `language` finding from `language-identity`
+
+#### Scenario: A doubled word is only a note
+
+- **WHEN** the target is `Мені одно одно таки.` and the source has no doubled word
+- **THEN** the segment still passes its hard gates and carries a low `duplicate-word` finding
 
 ### Requirement: Accept a segment only by the acceptance rule
 

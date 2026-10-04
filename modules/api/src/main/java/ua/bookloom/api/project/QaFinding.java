@@ -12,7 +12,7 @@ import java.util.Objects;
  * @param note a human-readable explanation of the finding
  * @param raisedBy which check or the judge raised the finding — one of {@code script}, {@code echo},
  *     {@code repetition}, {@code length}, {@code glossary}, {@code refusal}, {@code placeholder},
- *     {@code locked-term}, {@code kept-run} or {@code judge}
+ *     {@code locked-term}, {@code kept-run}, {@code script-purity}, {@code quote-balance}, {@code language-identity}, {@code duplicate-word}, {@code spacing} or {@code judge}
  */
 public record QaFinding(String kind, Severity severity, String note, String raisedBy) {
 

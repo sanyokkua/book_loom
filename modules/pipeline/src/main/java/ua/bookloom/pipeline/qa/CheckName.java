@@ -1,7 +1,7 @@
 package ua.bookloom.pipeline.qa;
 
 /**
- * The nine quality-gate checks — five soft checks blended into confidence and four hard gates that never enter the
+ * The quality-gate checks — five soft checks blended into confidence and four hard gates that never enter the
  * blend — each carrying the wire vocabulary a {@link ua.bookloom.api.project.QaFinding} names its cause by
  * ({@code raisedBy}), the {@link ua.bookloom.api.project.QaFinding#kind()} it raises, and its confidence weight.
  */
@@ -32,7 +32,22 @@ public enum CheckName {
     LOCKED_TERM(0.0, "glossary", "locked-term", true),
 
     /** Hard gate: a kept-foreign-run protected span did not come back exactly once. */
-    KEPT_RUN(0.0, "markup", "kept-run", true);
+    KEPT_RUN(0.0, "markup", "kept-run", true),
+
+    /** Text check, blocking: a word mixing the target script with a letter of another script or a digit. */
+    SCRIPT_PURITY(0.0, "language", "script-purity", true),
+
+    /** Text check, blocking: a quote pair the source balanced that the target leaves open, stray or crossed. */
+    QUOTE_BALANCE(0.0, "fluency", "quote-balance", true),
+
+    /** Text check, blocking: a paragraph of at least 12 words still in the source language. */
+    LANGUAGE_IDENTITY(0.0, "language", "language-identity", true),
+
+    /** Text check, soft: the same word twice in a row. */
+    DUPLICATE_WORD(0.0, "fluency", "duplicate-word", false),
+
+    /** Text check, soft: a doubled space, or a space before a full stop or comma or inside a bracket. */
+    SPACING(0.0, "fluency", "spacing", false);
 
     private final double weight;
     private final String findingKind;

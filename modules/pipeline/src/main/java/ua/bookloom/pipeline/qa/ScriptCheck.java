@@ -8,6 +8,7 @@ import java.util.OptionalDouble;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.pipeline.checks.NonProse;
 import ua.bookloom.util.lang.Languages;
 import ua.bookloom.util.lang.Script;
 
@@ -26,7 +27,7 @@ final class ScriptCheck {
 
     static CheckResult run(final SoftCheckInput input) {
         Objects.requireNonNull(input, "input");
-        if (ForeignMarking.isMarked(input)) {
+        if (ForeignMarking.isMarked(input) || NonProse.isLocatorOnly(input.sourceDisplayText())) {
             return CheckResult.skip(SCRIPT);
         }
         final Optional<Script> targetScript = Languages.scriptOf(input.targetLanguage());

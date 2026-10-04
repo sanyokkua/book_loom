@@ -6,6 +6,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.pipeline.checks.NonProse;
 
 /**
  * The untranslated-echo check: whether the target merely copies its source back, with the echo floor (owner
@@ -24,7 +25,7 @@ final class EchoCheck {
 
     static CheckResult run(final SoftCheckInput input) {
         Objects.requireNonNull(input, "input");
-        if (ForeignMarking.isMarked(input)) {
+        if (ForeignMarking.isMarked(input) || NonProse.isLocatorOnly(input.sourceDisplayText())) {
             return CheckResult.skip(ECHO);
         }
         final String source = NameRemoval.sourceWithoutNames(input);

@@ -42,6 +42,45 @@ class LengthCheckTest {
         assertThat(result.passed()).isTrue();
     }
 
+    // The 14 faithful compact lines of the real run the old band flagged as omissions: 25 to 39 characters, at most
+    // five words, the target about half the length and keeping at least half the words.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Unfortunately, nothing happened.|На жаль, нічого.",
+                "Whatever happens, happens, sir.|Що буде, те буде.",
+                "Nevertheless, everybody listened.|Проте всі слухали.",
+                "Unfortunately, impossible.|На жаль, ні.",
+                "Understandably, everyone left.|Усі пішли.",
+                "Interestingly, nobody noticed.|Ніхто не помітив.",
+                "Obviously, you misunderstood.|Ви не зрозуміли.",
+                "Sometimes, nothing matters.|Часом байдуже.",
+                "Apparently, somebody knocked.|Хтось постукав.",
+                "Fortunately, everybody survived.|Усі вціліли.",
+                "Thoroughly disgusting, Dudley.|Бридко, Дадлі.",
+                "Unfortunately, nobody believed.|Ніхто не повірив.",
+                "Eventually, everyone understood.|Усі зрозуміли.",
+                "Surprisingly, nothing exploded.|Нічого не сталось.",
+                "Gravity keeps the oceans in place|Гравітація утримує океани на місці"
+            })
+    void run_compactShortLineSaidInAboutHalfTheCharacters_passes(final String source, final String target) {
+        final CheckResult result = LengthCheck.run(SoftCheckFixtures.length(source, target, "en", "uk"));
+
+        assertThat(result.passed()).isTrue();
+        assertThat(result.blocking()).isFalse();
+        assertThat(result.finding()).isNull();
+    }
+
+    @Test
+    void run_longerLineCutToAFragment_stillFailsAsAnOmission() {
+        final CheckResult result = LengthCheck.run(
+                SoftCheckFixtures.length("The monster met me at midnight.", "Чудовисько тут", "en", "uk"));
+
+        assertThat(result.passed()).isFalse();
+        assertThat(result.finding()).isNotNull();
+    }
+
     @ParameterizedTest(name = "{0}")
     @CsvSource({
         "a half-length Ukrainian target fails,100,50,en,uk",

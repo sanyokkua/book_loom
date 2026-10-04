@@ -38,6 +38,11 @@ final class LengthCheck {
      */
     static final double MAX_CHAR_RATIO_FOR_WORDS = 0.85;
 
+    /** A source of at most this many words, and under {@link #COMPACT_MAX_CHARS} chars, is a compact line. */
+    private static final int COMPACT_MAX_WORDS = 8;
+
+    private static final int COMPACT_MAX_CHARS = 40;
+
     private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’-]*");
 
     /** A letter, spaces, then a full stop or comma that ends the text or is followed by a space: a dropped word. */
@@ -57,14 +62,32 @@ final class LengthCheck {
         final double ratio = (double) targetChars / sourceChars;
         final LengthBand band = LengthBand.forPair(input.sourceLanguage(), input.targetLanguage())
                 .widenedFor(sourceChars);
-        if (ratio < band.lower() || ratio > band.upper()) {
+        final boolean compact = isCompactLine(input.sourceDisplayText(), input.targetDisplayText(), sourceChars);
+        if (ratio > band.upper() || (ratio < band.lower() && !compact)) {
             return CheckResult.fail(
                     LENGTH, "length ratio " + ratio + " outside [" + band.lower() + "," + band.upper() + "]");
         }
         final Optional<String> omission = omission(input.sourceDisplayText(), input.targetDisplayText(), ratio);
         return omission.isPresent()
                 ? CheckResult.fail(LENGTH, omission.get())
-                : CheckResult.pass(LENGTH, marginWithinBand(ratio, band));
+                : CheckResult.pass(LENGTH, ratio < band.lower() ? 1.0 : marginWithinBand(ratio, band));
+    }
+
+    /**
+     * Whether a short source is a compact line — {@code Not now, boy.}, {@code Unfortunately, nothing happened.} — that
+     * a language with fewer function words says in about half the characters, complete: its ratio below the band says
+     * nothing (14 faithful short lines were flagged as omissions in one real run). It is compact only while the target
+     * keeps at least half of the source's words; a phrase cut to a fragment is still an omission.
+     */
+    private static boolean isCompactLine(final String source, final String target, final int sourceChars) {
+        final int sourceWords = count(WORD, source);
+        final boolean compact = sourceChars < COMPACT_MAX_CHARS
+                && sourceWords <= COMPACT_MAX_WORDS
+                && 2 * count(WORD, target) >= sourceWords;
+        if (compact) {
+            log.debug("Length check: compact line ({} chars, {} words)", sourceChars, sourceWords);
+        }
+        return compact;
     }
 
     /** The note on words missing from {@code target}, or empty when none look missing. */

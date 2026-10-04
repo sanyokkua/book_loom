@@ -10,7 +10,8 @@ import ua.bookloom.api.project.QaFinding;
  * (owner decision D-3).
  *
  * @param hardGates the refusal gate's result together with whatever placeholder/protected-span results the caller
- *     already computed
+ *     already computed, then one result per deterministic text finding — a blocking one fails, a soft one passes with
+ *     a low finding
  * @param soft the five soft-check results, in {@link SoftChecks#run(SoftCheckInput)}'s fixed order
  * @param confidence the soft checks' blended confidence, in {@code [0,1]}; a hard-gate failure never lowers it
  * @param findings every finding a failed hard gate or soft check raised, hard gates first

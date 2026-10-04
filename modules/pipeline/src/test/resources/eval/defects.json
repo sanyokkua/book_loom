@@ -17,5 +17,17 @@
  {"id":"meaning-error","kind":"meaning","source":"The king died, and his son took the throne.","candidate":"Король народився, а його син втратив трон.","defective":true,"rationale":"opposite meaning"},
  {"id":"meaning-clean","kind":"meaning","source":"The king died, and his son took the throne.","candidate":"Король помер, і його син посів трон.","defective":false,"rationale":"faithful"},
  {"id":"short-line-clean","kind":"length","source":"Well, that is that.","candidate":"Ну, то й усе.","defective":false,"rationale":"compact but complete; no length false positive"},
- {"id":"yes-clean","kind":"length","source":"Yes.","candidate":"Так.","defective":false,"rationale":"one word is complete"}
+ {"id":"yes-clean","kind":"length","source":"Yes.","candidate":"Так.","defective":false,"rationale":"one word is complete"},
+ {"id":"mixed-script-look-alike","kind":"mixed-script","source":"They explained the import.","candidate":"Вони пояснили імпoву причину.","defective":true,"rationale":"Latin o inside a Ukrainian word"},
+ {"id":"mixed-script-look-alike-clean","kind":"mixed-script","source":"They explained the import.","candidate":"Вони пояснили імпортну причину.","defective":false,"rationale":"faithful"},
+ {"id":"quotes-missing-close","kind":"quotes","source":"“Yes, sir,” said the boy.","candidate":"«Ні, сер, — відповів хлопчик.","defective":true,"rationale":"opening « never closed"},
+ {"id":"quotes-stray-close","kind":"quotes","source":"“Stop!” he shouted. “Go away!”","candidate":"«Зупинись!» — крикнув він. — Геть!»","defective":true,"rationale":"closing » with no opening mark"},
+ {"id":"quotes-stray-close-clean","kind":"quotes","source":"“Stop!” he shouted. “Go away!”","candidate":"«Зупинись!» — крикнув він. — «Геть!»","defective":false,"rationale":"faithful"},
+ {"id":"leftover-english-paragraph","kind":"leftover-language","source":"The night was cold and the streets were empty, and nobody had seen the old man since the evening.","candidate":"The night was cold and the streets were empty, and nobody had seen the old man since the evening.","defective":true,"rationale":"a whole paragraph left in English"},
+ {"id":"leftover-english-paragraph-clean","kind":"leftover-language","source":"The night was cold and the streets were empty, and nobody had seen the old man since the evening.","candidate":"Ніч була холодна, а вулиці порожні, і ніхто не бачив старого відтоді, як настав вечір.","defective":false,"rationale":"faithful"},
+ {"id":"duplicate-word","kind":"duplicate","source":"It is all the same to me, still.","candidate":"Мені одно одно таки.","defective":true,"rationale":"a word written twice in a row"},
+ {"id":"duplicate-word-clean","kind":"duplicate","source":"It is all the same to me, still.","candidate":"Мені все одно, хоч як.","defective":false,"rationale":"faithful"},
+ {"id":"spacing-before-stop","kind":"spacing","source":"He left (quietly).","candidate":"Він пішов (тихо) .","defective":true,"rationale":"a space before the full stop"},
+ {"id":"spacing-clean","kind":"spacing","source":"He left (quietly).","candidate":"Він пішов (тихо).","defective":false,"rationale":"faithful"},
+ {"id":"heading-clean","kind":"length","source":"Gravity keeps the oceans in place","candidate":"Гравітація утримує океани на місці","defective":false,"rationale":"faithful six-word line; no length false positive"}
 ]
