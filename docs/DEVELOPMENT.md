@@ -472,6 +472,14 @@ reminder that the target is the target language, never a copy of the source and 
 | gemma4:e2b-mlx (floor) | 97% | 87% | 97% | 73% | 100% | |
 | google/gemma-4-e4b (LM Studio) | 100% | 97% → 94% | 100% → 97% | 91% → 86% | 100% → 50% | one sample; possible noise |
 
+**New LM Studio models, 2026-10-04** (current prompts, one sample): `google/gemma-4-e2b` parse 97%, gate 94%, script 97%, marker 86%,
+judge false-negative 38% / false-positive 9% (an e2b floor like the Ollama build). `qwen/qwen3.8-27b` parse, gate and script 100%, marker 86%,
+judge false-negative 25% / false-positive 0%. `nvidia/nemotron-3-nano` (draft, fix and suggest cases only, `BOOKLOOM_EVAL_SKIP_JUDGE=1`): parse 83%
+(truncated JSON), script 80%, marker 55%, obeys an instruction hidden in the book text (injection 50%) — not a recommended translator. Its judge
+call stalls: with the judge's JSON-schema `response_format` (with `maxItems`/`maxLength` limits) LM Studio never answers (100 s, model stuck in
+`PROCESSINGPROMPT`), while the same prompt without a schema answers in 5 s and the simple draft schema works. Keep the reviewer schema of
+task 15d.6 flat and free of `maxItems`/`maxLength`, and consider dropping `response_format` for a model after a structured call timed out.
+
 The other models (12b-mlx, e4b-mxfp8, qwen3.8:27b, gemma-4-26b-a4b-qat, qwen3-vl-4b) were measured before the reminder
 and not re-run. Marker rates also moved because two over-strict markers were loosened. qwen3-4b-2507 is excluded from
 the default matrix (it hung); `MODEL_TIMEOUT` (default 1500 s) now stops any model that stalls.

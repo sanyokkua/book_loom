@@ -29,7 +29,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * The prompt eval: the fixed case set through the production prompt builders against a real local Ollama model,
  * measured before any repair a run would make. Local-only — {@code ./gradlew :pipeline:promptEval} with
  * {@code BOOKLOOM_EVAL_URL} (for example {@code http://localhost:11434}; with {@code BOOKLOOM_EVAL_PROVIDER=lmstudio} the OpenAI-compatible {@code http://localhost:1234/v1}), {@code BOOKLOOM_EVAL_STABILITY} (judge each corpus case this many times) and optionally
- * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
+ * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_SKIP_JUDGE=1} (draft, fix and suggest cases only, for a model whose judge call stalls) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
  * as {@code suggest}, to run only those cases); skipped when the URL is unset. The table is written to
  * {@code build/reports/promptEval/<model>.txt}.
  */
@@ -47,6 +47,7 @@ class PromptEvalTest {
 
         final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
         final int repeats = Integer.parseInt(System.getenv().getOrDefault("BOOKLOOM_EVAL_STABILITY", "1"));
+        final boolean skipJudge = "1".equals(System.getenv("BOOKLOOM_EVAL_SKIP_JUDGE"));
         final boolean corpusOnly = "corpus".equals(only);
         final EvalReport report = new EvalReport(
                 model,
@@ -54,8 +55,9 @@ class PromptEvalTest {
                         ? List.of()
                         : runner.runAll(PromptEvalCases.ALL.stream()
                                 .filter(evalCase -> evalCase.name().startsWith(only))
+                                .filter(evalCase -> !skipJudge || !(evalCase instanceof EvalCase.Judge))
                                 .toList()),
-                runner.runDefects(EvalCorpus.defects(), repeats));
+                skipJudge ? List.of() : runner.runDefects(EvalCorpus.defects(), repeats));
 
         final Path file = Path.of("build", "reports", "promptEval", safeName(model) + ".txt");
         Files.createDirectories(Objects.requireNonNull(file.getParent()));
