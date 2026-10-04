@@ -199,9 +199,8 @@ final class ExportJobImpl implements ExportJob {
                 opened,
                 stored,
                 kept,
-                (segment, masked) -> parts.documents()
-                        .unmask(opened.format(), segment, masked)
-                        .isOk());
+                (segment, masked) -> parts.documents().unmask(opened.format(), segment, masked),
+                Objects.requireNonNull(project.brief().targetLanguage(), "target language"));
         final Fallbacks fallbacks = new Fallbacks(opened, stored, ExportCounts.of(stored, kept, opened));
         return glossaryEntries(project.id()).flatMap(glossary -> publish(project, targets, fallbacks, glossary, pass));
     }

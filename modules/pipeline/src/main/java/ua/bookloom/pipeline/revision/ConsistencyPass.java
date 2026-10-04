@@ -34,6 +34,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * Backward revision, shared by the Max run's last stage and by Export: first the deterministic sweep of every renamed
@@ -168,7 +169,7 @@ public final class ConsistencyPass {
                 projectId,
                 new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages()),
                 brief.names(),
-                GateFunction.of(documents, document.format()),
+                TypographyGate.around(GateFunction.of(documents, document.format()), target),
                 sources,
                 SegmentLocators.of(document),
                 entries);

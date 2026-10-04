@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
@@ -25,7 +26,7 @@ import org.jspecify.annotations.Nullable;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class QuoteConventions {
+public final class QuoteConventions {
 
     private static final String RESOURCE = "quote-pairs.properties";
     private static final String FALLBACK_KEY = "*";
@@ -44,6 +45,19 @@ final class QuoteConventions {
         final List<QuotePair> pairs =
                 Objects.requireNonNull(TABLE.containsKey(language) ? TABLE.get(language) : TABLE.get(FALLBACK_KEY));
         return pairs;
+    }
+
+    /**
+     * The quote pairs of a language that has a line of its own, so a caller that rewrites quotes touches only the
+     * languages whose convention is known.
+     *
+     * @param languageTag a BCP 47 tag
+     * @return the language's pairs, primary first and nested second where it has one; empty when only the general line
+     *     applies
+     */
+    public static Optional<List<QuotePair>> ownLine(final String languageTag) {
+        Objects.requireNonNull(languageTag, "languageTag");
+        return Optional.ofNullable(TABLE.get(Locale.forLanguageTag(languageTag).getLanguage()));
     }
 
     private static Map<String, List<QuotePair>> load() {

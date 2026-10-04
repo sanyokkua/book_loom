@@ -770,6 +770,44 @@ script (a name) and a number's suffix (`90х`) are not mixed words, and a coined
 - **WHEN** the target is `Мені одно одно таки.` and the source has no doubled word
 - **THEN** the segment still passes its hard gates and carries a low `duplicate-word` finding
 
+### Requirement: Normalise a candidate's typography before it is judged
+
+The application SHALL, with no setting, put every candidate target — a draft, a repair round's rewrite, a review retry,
+a reused memory entry, a consistency-pass revision — through a deterministic typography pass before the placeholder
+gates restore it, so that the checks, the judge and the stored masked target all read the normalised text: a straight
+apostrophe between two letters becomes `’`; three dots become `…`; a space before `,` `.` `;` `!` `?` or `…` is
+removed (French keeps the space before `?` `!` `;`); and, for a target language that has a line in the quote table, a
+straight `"` becomes that language's primary pair at the top level and its nested pair inside it (`«…„…“…»` in
+Ukrainian). A dash dialogue SHALL stay a dash dialogue. A quote whose side cannot be told, a stray closing mark and an
+inch sign SHALL stay as they are. The pass SHALL read only the text between `⟦gN⟧` tokens, so markup, code spans,
+kept foreign runs and locked names (all tokens at that point) and the characters touching a token are never changed;
+it SHALL give the same text when run twice; and it SHALL never run on a source text. A change SHALL add a low
+`fluency` finding from `normalised` naming how many of each kind were changed, and SHALL never change the verdict of a
+gate. A language with no line in the tables gets the apostrophe, ellipsis and spacing fixes only. The space before a
+footnote marker is not handled, because a marker is a token like any other and the text cannot say which one it is.
+
+**Source:** FR-QA-01, ADR-0038; tasks 15d.3.
+In plain words: the model writes `п'ять...` and `"Іди геть"` about nine times in ten, so code puts `п’ять…` and
+`«Іди геть»` in, instead of asking a model to fix what code can see, and a person's later edit gets the same finish when
+the book is written.
+
+#### Scenario: Apostrophe, ellipsis and quotes are normalised
+
+- **WHEN** the Ukrainian draft is `Він сказав: "Не пам'ятаю..."`
+- **THEN** the stored target is `Він сказав: «Не пам’ятаю…»`
+- **AND** the segment carries a low `normalised` finding
+
+#### Scenario: Tokens are never touched
+
+- **WHEN** the draft is `Він ⟦g1⟧сказав...⟦g2⟧ "так" ⟦g3⟧ , ⟦g4⟧.`
+- **THEN** every token is still in its place, and the text between them is `сказав…`, `«так»`, and nothing next to a
+  token loses a space
+
+#### Scenario: A second pass changes nothing
+
+- **WHEN** an already normalised text is normalised again
+- **THEN** it is the same text and no finding is added
+
 ### Requirement: Accept a segment only by the acceptance rule
 
 The application SHALL accept a drafted segment only when its hard gates pass, no soft check failed outright (see

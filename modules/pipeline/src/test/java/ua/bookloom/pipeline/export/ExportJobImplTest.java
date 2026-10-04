@@ -171,6 +171,35 @@ class ExportJobImplTest {
         assertThat(read(destination)).isEqualTo("Він пішов геть.");
     }
 
+    // An edit never passes through the run's typography gate, so the export gives it the same finish.
+    @Test
+    void run_editedTargetWithStraightMarks_writesItNormalised() {
+        final String id = markdown("He went away.");
+        fixture.decide(
+                id,
+                "Book.md:0",
+                record -> record.withStatus(SegmentStatus.REVISED)
+                        .withMachineTarget("Він пішов.", "Він пішов.")
+                        .withUserTarget("Він пішов геть... \"Не пам'ятаю\"", "Він пішов геть... \"Не пам'ятаю\""));
+        final Path destination = tempDir.resolve("Book.uk.md");
+
+        ok(fixture.export(request(id, destination, false)));
+
+        assertThat(read(destination)).isEqualTo("Він пішов геть… «Не пам’ятаю»");
+    }
+
+    // The machine target was normalised when it was accepted, so the export writes it as stored.
+    @Test
+    void run_acceptedTarget_isWrittenAsStored() {
+        final String id = markdown("He went away.");
+        fixture.accept(id, "Book.md:0", "Він пішов геть...");
+        final Path destination = tempDir.resolve("Book.uk.md");
+
+        ok(fixture.export(request(id, destination, false)));
+
+        assertThat(read(destination)).isEqualTo("Він пішов геть...");
+    }
+
     // A pending segment the run did not reach is written in its source, in the Markdown format.
     @Test
     void run_pendingSegment_writesSourceUnchanged() {

@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.heal;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.AccessLevel;
@@ -50,14 +51,29 @@ public final class DraftEvaluation {
         if (outcome.restoredTarget() == null) {
             return List.of(failedGateFrom(Objects.requireNonNull(outcome.gateFinding())));
         }
-        @Nullable final QaFinding autoRepair = outcome.autoRepair();
-        if (autoRepair == null) {
-            return List.of();
+        return notices(outcome.segment().id(), outcome.autoRepair(), outcome.normalised());
+    }
+
+    /**
+     * The low notes a restored candidate carries: markup put back without a model, typography normalised.
+     *
+     * @param segmentId the segment, for the log
+     * @param autoRepair the markup note, or {@code null}
+     * @param normalised the typography note, or {@code null}
+     * @return the notes as passing results, markup first; empty when there are none
+     */
+    static List<CheckResult> notices(
+            final String segmentId, @Nullable final QaFinding autoRepair, @Nullable final QaFinding normalised) {
+        final List<CheckResult> notices = new ArrayList<>();
+        if (autoRepair != null) {
+            log.debug("Markup was auto-restored segmentId={}; recorded as a low finding", segmentId);
+            notices.add(CheckResult.passWithNotice(CheckName.PLACEHOLDER, autoRepair));
         }
-        log.debug(
-                "Draft markup was auto-restored segmentId={}; recorded as a low finding",
-                outcome.segment().id());
-        return List.of(CheckResult.passWithNotice(CheckName.PLACEHOLDER, autoRepair));
+        if (normalised != null) {
+            log.debug("Typography was normalised segmentId={}; recorded as a low finding", segmentId);
+            notices.add(CheckResult.passWithNotice(CheckName.TYPOGRAPHY, normalised));
+        }
+        return notices;
     }
 
     /** Rebuilds the draft's own hard-gate failure as a {@link CheckResult}, from the finding it already raised. */

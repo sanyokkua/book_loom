@@ -1,15 +1,10 @@
 package ua.bookloom.pipeline.heal;
 
-import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.PlaceholderRepair;
-import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.WhitespaceRestoration;
-import ua.bookloom.pipeline.qa.CheckName;
-import ua.bookloom.pipeline.qa.CheckResult;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
@@ -80,9 +75,8 @@ final class RoundEvaluator {
         log.debug(
                 "Self-heal round gate outcome segment={} outcome=Restored",
                 outcome.segment().id());
-        @Nullable final QaFinding autoRepair = restored.autoRepair();
         final QaResult qa = QaEvaluation.evaluate(
-                autoRepair == null ? List.of() : List.of(CheckResult.passWithNotice(CheckName.PLACEHOLDER, autoRepair)),
+                DraftEvaluation.notices(outcome.segment().id(), restored.autoRepair(), restored.normalised()),
                 outcome.segment(),
                 outcome.maskedSource(),
                 maskedCandidate,

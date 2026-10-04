@@ -19,9 +19,14 @@ public sealed interface GateResult {
      * @param restored {@code maskedForm} restored into the segment's markup
      * @param autoRepair the low {@code markup} finding saying the placeholders were put back without a model, or
      *     {@code null} when the candidate passed as the model wrote it
+     * @param normalised the low {@code normalised} finding saying the typography pass changed the candidate, or
+     *     {@code null} when it left it as it was
      */
     record Restored(
-            String maskedForm, String restored, @Nullable QaFinding autoRepair) implements GateResult {
+            String maskedForm,
+            String restored,
+            @Nullable QaFinding autoRepair,
+            @Nullable QaFinding normalised) implements GateResult {
 
         /** Rejects a missing component. */
         public Restored {
@@ -31,7 +36,22 @@ public sealed interface GateResult {
 
         /** A candidate that passed as the model wrote it. */
         public Restored(final String maskedForm, final String restored) {
-            this(maskedForm, restored, null);
+            this(maskedForm, restored, null, null);
+        }
+
+        /** A candidate whose placeholders may have been put back, with its typography as written. */
+        public Restored(final String maskedForm, final String restored, @Nullable final QaFinding autoRepair) {
+            this(maskedForm, restored, autoRepair, null);
+        }
+
+        /**
+         * The same restoration noting that the typography pass changed the candidate.
+         *
+         * @param finding the non-null low finding to carry
+         * @return this restoration with the finding
+         */
+        public Restored withNormalised(final QaFinding finding) {
+            return new Restored(maskedForm, restored, autoRepair, Objects.requireNonNull(finding, "finding"));
         }
 
         /**
@@ -40,7 +60,7 @@ public sealed interface GateResult {
          * @return this restoration without its finding
          */
         public Restored withoutAutoRepair() {
-            return new Restored(maskedForm, restored, null);
+            return new Restored(maskedForm, restored, null, normalised);
         }
     }
 

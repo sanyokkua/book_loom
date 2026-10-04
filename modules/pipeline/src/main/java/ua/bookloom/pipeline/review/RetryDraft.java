@@ -56,6 +56,7 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.run.ChunkBudget;
 import ua.bookloom.pipeline.run.OutcomeRecords;
+import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * Retry and Retry with note: one fair second attempt at a FLAGGED or ACCEPTED segment. It replays the context its first
@@ -198,9 +199,11 @@ public final class RetryDraft {
         final ProtectedMask mask = ProtectedSpans.mask(segment, plan.frame(), terms);
         final DraftContext context = ContextPackageAssembler.replay(snapshot, mask);
         logReplayed(segment.id(), snapshot);
-        final GateFunction gate = ProtectedSpans.gate(
-                Map.of(segment.id(), mask),
-                GateFunction.of(documents, plan.document().format()));
+        final GateFunction gate = TypographyGate.around(
+                ProtectedSpans.gate(
+                        Map.of(segment.id(), mask),
+                        GateFunction.of(documents, plan.document().format())),
+                plan.frame().targetLanguage());
         final ModelCalls calls = (kind, id, request) -> model.chat(request);
         final SegmentTranslator translator = new SegmentTranslator(
                 gate,

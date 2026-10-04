@@ -115,7 +115,11 @@ final class DraftShortcuts {
                 sibling.maskedReply(),
                 restored.maskedForm(),
                 restored.restored(),
-                null);
+                null,
+                null,
+                null,
+                null,
+                restored.normalised());
         log.debug(
                 "Auxiliary segmentId={} takes the draft of identical segmentId={}, no call",
                 segment.id(),

@@ -47,7 +47,10 @@ public enum CheckName {
     DUPLICATE_WORD(0.0, "fluency", "duplicate-word", false),
 
     /** Text check, soft: a doubled space, or a space before a full stop or comma or inside a bracket. */
-    SPACING(0.0, "fluency", "spacing", false);
+    SPACING(0.0, "fluency", "spacing", false),
+
+    /** Note only: the typography pass changed the target's apostrophes, ellipses, quote marks or spacing. */
+    TYPOGRAPHY(0.0, "fluency", "normalised", false);
 
     private final double weight;
     private final String findingKind;

@@ -47,7 +47,8 @@ final class DraftOutcomes {
                 null,
                 attempt.pieceRedraft(),
                 restored.autoRepair(),
-                null));
+                null,
+                restored.normalised()));
     }
 
     // Design D3 rule 5: a reply whose markup still does not restore after its repair is not flagged here; its markup

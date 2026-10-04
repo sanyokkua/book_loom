@@ -25,6 +25,7 @@ import ua.bookloom.pipeline.memory.ProtectedSpan;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.qa.CheckName;
+import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * One chunk's glossary as it stood when the chunk started, and what each of its segments is shown from it: the spans
@@ -73,7 +74,9 @@ final class ChunkContext {
         return glossary.all(settings.projectId()).map(entries -> {
             final Map<String, ProtectedMask> masks = new LinkedHashMap<>();
             chunk.segments().forEach(segment -> masks.put(segment.id(), maskOf(segment, settings, entries)));
-            return new ChunkContext(chunk, settings, entries, masks, ProtectedSpans.gate(masks, documentGate));
+            final GateFunction gate = TypographyGate.around(
+                    ProtectedSpans.gate(masks, documentGate), settings.frame().targetLanguage());
+            return new ChunkContext(chunk, settings, entries, masks, gate);
         });
     }
 

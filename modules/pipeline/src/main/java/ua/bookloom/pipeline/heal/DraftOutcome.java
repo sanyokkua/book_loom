@@ -51,6 +51,8 @@ public sealed interface DraftOutcome {
      *     or {@code null} when the reply restored as written or did not restore
      * @param rejectedForm the refused reply with its protected spans put back, kept so review can show the model's
      *     words when no target passed; {@code null} when the gate passed or no such form exists
+     * @param normalised the low {@code normalised} finding saying the typography pass changed the reply, or
+     *     {@code null} when it left it as it was or the reply did not restore
      */
     record Drafted(
             Segment segment,
@@ -62,8 +64,35 @@ public sealed interface DraftOutcome {
             @Nullable QaFinding gateFinding,
             @Nullable PieceRedraft pieceRedraft,
             @Nullable QaFinding autoRepair,
-            @Nullable String rejectedForm)
+            @Nullable String rejectedForm,
+            @Nullable QaFinding normalised)
             implements DraftOutcome {
+
+        /** A reply whose typography was left as written. */
+        public Drafted(
+                final Segment segment,
+                final String maskedSource,
+                final List<LockedRendering> lockedRenderings,
+                final String maskedReply,
+                @Nullable final String maskedForm,
+                @Nullable final String restoredTarget,
+                @Nullable final QaFinding gateFinding,
+                @Nullable final PieceRedraft pieceRedraft,
+                @Nullable final QaFinding autoRepair,
+                @Nullable final String rejectedForm) {
+            this(
+                    segment,
+                    maskedSource,
+                    lockedRenderings,
+                    maskedReply,
+                    maskedForm,
+                    restoredTarget,
+                    gateFinding,
+                    pieceRedraft,
+                    autoRepair,
+                    rejectedForm,
+                    null);
+        }
 
         /** A segment drafted in pieces or whole, restored as the model wrote it or refused with no form kept. */
         public Drafted(
