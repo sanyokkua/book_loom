@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the :pipeline promptEval over a list of local models (Ollama and LM Studio), one model resident at a time and
+# Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
 set -uo pipefail
@@ -10,9 +10,7 @@ LMSTUDIO_URL=${LMSTUDIO_URL:-http://localhost:1234/v1}
 STABILITY=1
 ONLY=""
 TABLE_ONLY=0
-MODELS="ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx ollama:gpt-oss:20b ollama:gemma4:12b-mxfp8 ollama:gemma4:12b-mlx
-ollama:gemma4:e4b-mxfp8 ollama:gemma4:e2b-mlx ollama:qwen3.8:27b-mlx ollama:muse-glimmer:30b-nvfp4-dflash
-lmstudio:google/gemma-4-26b-a4b-qat lmstudio:google/gemma-4-e4b  lmstudio:qwen/qwen3-vl-4b"
+MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | tr '\n' ' ')
 
 while [ $# -gt 0 ]; do
   case "$1" in

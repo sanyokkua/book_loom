@@ -1,0 +1,18 @@
+# The models scripts/eval-matrix.sh runs by default: <provider>:<model-id>, one per line, in run order.
+# Provider is ollama or lmstudio. Refresh this file when `ollama ls` / `lms ls` change; nothing else lists models.
+# Not listed on purpose: ollama qwen2.5:1.5b (a stub for API checks only, cannot translate to Ukrainian).
+# Order: the gemma-4 e4b target in every quant first, then the other sizes, then the rest.
+ollama:gemma4:e4b-mlx
+ollama:gemma4:e4b-mxfp8
+lmstudio:google/gemma-4-e4b
+ollama:gemma4:e2b-mlx
+lmstudio:google/gemma-4-e2b
+ollama:gemma4:12b-mxfp8
+ollama:gemma4:12b-mlx
+ollama:gemma4:26b-mlx
+lmstudio:google/gemma-4-26b-a4b-qat
+ollama:gpt-oss:20b
+ollama:qwen3.8:27b-mlx
+lmstudio:qwen/qwen3.8-27b
+ollama:muse-glimmer:30b-nvfp4-dflash
+lmstudio:nvidia/nemotron-3-nano

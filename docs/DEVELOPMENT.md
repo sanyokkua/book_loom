@@ -428,6 +428,11 @@ the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands
 | after (step 9) | gemma4:e2b-mlx (floor) | 100% | 82% | 100% | 100% | 100% | 100% |
 | after (step 10, with the 4 suggest rows) | gemma4:e4b-mlx | 100% | 100% | 100% | 100% | 92% | 100% |
 
+**Model list.** `scripts/eval-models.txt` is the one list of models `scripts/eval-matrix.sh` runs (refreshed 2026-10-04 to what
+`ollama ls` and `lms ls` show: gemma-4 e4b in every quant first, then e2b, 12b, 26b, gpt-oss, the two qwen3.8-27b builds, muse-glimmer
+and nemotron-3-nano). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. The two models added to LM Studio
+since the last matrix (`google/gemma-4-e2b`, `nvidia/nemotron-3-nano`, `qwen/qwen3.8-27b`) have no numbers yet.
+
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
 prompt eval plus 19 labelled judge cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
 « », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints
@@ -446,10 +451,10 @@ it refused, `stability` the share of cases whose `BOOKLOOM_EVAL_STABILITY` repea
 | google/gemma-4-26b-a4b-qat (LM Studio) | 0% (not re-run) | 0% | every rate 100% |
 | gemma4:e2b-mlx (floor) | 25% → 38% | 18% → 18% | gate 84%, judge separation 75% |
 | qwen3.8:27b-mlx | 25% (not re-run) | 0% | |
-| qwen/qwen3-vl-4b (LM Studio) | 88% (not re-run) | 0% | judge accepts nearly everything |
+| qwen/qwen3-vl-4b (LM Studio, no longer installed) | 88% (not re-run) | 0% | judge accepts nearly everything |
 | muse-glimmer:30b-nvfp4-dflash | 12% (not re-run) | 9% | script 48%, gate 84%, injection 50% |
 | gpt-oss:20b (Ollama) | n/a | n/a | parse 6%: `emptyCompletion` — Ollama's `think:false` is ignored by gpt-oss, the cap is spent on reasoning (needs an `:llm` fix) |
-| qwen/qwen3-4b-2507 (LM Studio) | n/a | n/a | run hung over 49 minutes and was killed; needs a per-call timeout look |
+| qwen/qwen3-4b-2507 (LM Studio, no longer installed) | n/a | n/a | run hung over 49 minutes and was killed |
 
 **Draft (translation) eval, 2026-10-03.** The 26 draft/fix cases plus six new ones (balanced « », he/she agreement, idiom,
 short line) run for every model. gpt-oss:20b was failing on Ollama's native endpoint (`think:false` is ignored, the cap
