@@ -72,14 +72,35 @@ public final class ExportReportLines {
      * @return the line naming their count and locators, or empty when there were none
      */
     public static Optional<String> sourceFallbacks(final Messages messages, final ExportReport report) {
+        return fallbackLine(
+                messages, report, SourceFallback.Reason.BROKEN_FORMATTING, MessageKey.EXPORT_SOURCE_FALLBACKS);
+    }
+
+    /**
+     * The flagged segments the export wrote in their source because no draft ever passed the gates.
+     *
+     * @param messages the catalogue the line is worded from
+     * @param report the finished export's report
+     * @return the line naming their count and locators, or empty when there were none
+     */
+    public static Optional<String> noTargetFallbacks(final Messages messages, final ExportReport report) {
+        return fallbackLine(messages, report, SourceFallback.Reason.NO_TARGET, MessageKey.EXPORT_NO_TARGET_FALLBACKS);
+    }
+
+    private static Optional<String> fallbackLine(
+            final Messages messages,
+            final ExportReport report,
+            final SourceFallback.Reason reason,
+            final MessageKey key) {
         Objects.requireNonNull(messages, "messages");
         Objects.requireNonNull(report, "report");
-        if (report.sourceFallbacks().isEmpty()) {
+        final List<SourceFallback> named = report.sourceFallbacks().stream()
+                .filter(fallback -> fallback.reason() == reason)
+                .toList();
+        if (named.isEmpty()) {
             return Optional.empty();
         }
-        final String locators =
-                report.sourceFallbacks().stream().map(SourceFallback::locator).collect(Collectors.joining(", "));
-        return Optional.of(messages.get(
-                MessageKey.EXPORT_SOURCE_FALLBACKS, report.sourceFallbacks().size(), locators));
+        final String locators = named.stream().map(SourceFallback::locator).collect(Collectors.joining(", "));
+        return Optional.of(messages.get(key, named.size(), locators));
     }
 }

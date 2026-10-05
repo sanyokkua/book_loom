@@ -2339,3 +2339,25 @@ fails the export", are now false. The rule that no `?` is ever substituted is ke
 **Migration**: Replaced by *Write a TXT or Markdown export as UTF-8 when its encoding cannot hold the translation*,
 whose first scenario reuses this one's `windows-1251` file and `車`. No refusal title exists any more; nothing shows
 `This translation cannot be saved in the book's text encoding`.
+
+### Requirement: Drop the sort keys of a translated title or author
+
+WHEN an EPUB is written with a different text in a `dc:title` or `dc:creator` than it was read with, the system SHALL
+remove the sort keys that described the old text: that element's `opf:file-as` attribute, a `file-as` refinement meta
+that refines its `id`, and, for a title, every `calibre:title_sort` meta. An element whose text is unchanged SHALL keep
+all of its keys, so a book written with nothing translated stays canonical-equal to its source. This is a permitted
+change of the package document beside the language rewrite.
+
+**Source:** FR-DOC-EPUB metadata, task 15d.13.
+In plain words: a translated book is not shelved under the source-language title or author spelling; a reader that
+finds no key sorts by the translated text.
+
+#### Scenario: A translated title loses its Calibre sort key
+
+- **WHEN** `The Amulet of Samarkand` (`calibre:title_sort` = `Amulet of Samarkand, The`) is written with the title `Амулет Самарканда`
+- **THEN** the package holds the new title and no `calibre:title_sort`, while `calibre:series` is unchanged
+
+#### Scenario: Nothing translated keeps every key
+
+- **WHEN** the same book is written with no translated title or author
+- **THEN** every `file-as` and `calibre:title_sort` is still there

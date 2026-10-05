@@ -91,7 +91,7 @@ class AppShellNavigationTest extends ShellTestBase {
             progress.markDone(ViewNames.BOOK_BRIEF);
             progress.markDone(ViewNames.STRUCTURE);
         });
-        injector.getInstance(StateMirror.class).publishRunStarted("Frankenstein.epub");
+        injector.getInstance(StateMirror.class).publishRunStarted("Frankenstein.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(doneEntryIds()).containsExactly("nav-import", "nav-book-brief", "nav-structure", "nav-names-style");
@@ -102,7 +102,7 @@ class AppShellNavigationTest extends ShellTestBase {
         // IF completion did not reach the column, THEN a finished run would look unfinished.
         openBook();
         final StateMirror mirror = injector.getInstance(StateMirror.class);
-        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.publishRunState(RunState.COMPLETED);
         WaitForAsyncUtils.waitForFxEvents();
 

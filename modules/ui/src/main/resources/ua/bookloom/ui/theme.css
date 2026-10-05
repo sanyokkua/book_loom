@@ -1951,6 +1951,32 @@
     -fx-text-fill: -color-text;
 }
 
+/* The readable view of a segment: formatting tokens as chips, a finding's quoted words marked. Tokens only. */
+.flow-text {
+    -fx-fill: -color-text;
+}
+
+.placeholder-chip {
+    -fx-background-color: -color-surface-2;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 0px 6px 0px 6px;
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-text;
+}
+
+.evidence-mark {
+    -fx-background-color: -color-warn-bg;
+    -fx-border-color: -color-warn-bd;
+    -fx-border-width: 1px;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+    -fx-padding: 0px 3px 0px 3px;
+    -fx-text-fill: -color-warn;
+}
+
 .diff-removed {
     -fx-background-color: -color-err-bg;
     -fx-text-fill: -color-err;

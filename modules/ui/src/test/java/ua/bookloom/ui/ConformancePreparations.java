@@ -202,7 +202,7 @@ final class ConformancePreparations {
     // A run with one segment in progress whose draft was sent a context, so the live row's parts are drawn.
     private void startARun() {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
-        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.live()
                 .publishLiveRows(new LiveRows(
                         null,

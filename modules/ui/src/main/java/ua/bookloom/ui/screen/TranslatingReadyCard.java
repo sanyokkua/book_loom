@@ -11,11 +11,11 @@ import javafx.scene.layout.HBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
+import ua.bookloom.ui.state.RunMode;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.TranslatingViewModel;
 
@@ -80,7 +80,7 @@ final class TranslatingReadyCard {
                 "kv-value",
                 () -> current.brief().get() == null
                         ? ""
-                        : messages.get(dialName(current.brief().get().dial())),
+                        : messages.get(RunMode.dialKey(current.brief().get().dial())),
                 current.brief());
     }
 
@@ -93,14 +93,6 @@ final class TranslatingReadyCard {
         }
         final Path name = book.source().getFileName();
         return name == null ? book.source().toString() : name.toString();
-    }
-
-    private static MessageKey dialName(final QualityDial dial) {
-        return switch (dial) {
-            case FAST -> MessageKey.BRIEF_QUALITY_FAST;
-            case BALANCED -> MessageKey.BRIEF_QUALITY_BALANCED;
-            case MAX -> MessageKey.BRIEF_QUALITY_MAX;
-        };
     }
 
     private static Label fixed(final String id, final String text) {

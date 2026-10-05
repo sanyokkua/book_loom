@@ -42,7 +42,7 @@ class TaggedLogFollowTest extends TranslatingScreenTestBase {
     }
 
     private void running() {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
         showTranslating();
         publishLines(0, LINES);

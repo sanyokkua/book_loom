@@ -89,7 +89,7 @@ class StateMirrorTest extends FxTestBase {
     static Stream<Arguments> publishers() {
         return Stream.of(
                 Arguments.of(Named.<Consumer<StateMirror>>of(
-                        "publishRunStarted", mirror -> mirror.publishRunStarted("Book.epub"))),
+                        "publishRunStarted", mirror -> mirror.publishRunStarted("Book.epub", null))),
                 Arguments.of(
                         Named.<Consumer<StateMirror>>of("publishRunState", m -> m.publishRunState(RunState.PAUSED))),
                 Arguments.of(Named.<Consumer<StateMirror>>of(
@@ -133,7 +133,7 @@ class StateMirrorTest extends FxTestBase {
     @Test
     void publishRunCleared_afterARun_returnsEveryFigureToIdle() {
         final StateMirror mirror = new StateMirror();
-        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.publishProgress(ProgressFixtures.progress(1, 1, 3, 1, 5));
         mirror.publishLogEntries(List.of(new LogEntry(LogKind.ACCEPTED, List.of("s-1"))));
         mirror.publishOutcome(RunState.STOPPED, null, null);
@@ -242,7 +242,7 @@ class StateMirrorTest extends FxTestBase {
         final StateMirror mirror = new StateMirror();
         assertThat(onFx(() -> mirror.runFileName().get())).isNull();
 
-        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishRunStarted("Frankenstein.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.runFileName().get())).isEqualTo("Frankenstein.epub");
@@ -310,7 +310,7 @@ class StateMirrorTest extends FxTestBase {
         mirror.publishOutcome(RunState.FAILED, cancelledReport(), error());
         WaitForAsyncUtils.waitForFxEvents();
 
-        mirror.publishRunStarted("Book.epub");
+        mirror.publishRunStarted("Book.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(onFx(() -> mirror.runState().get())).isEqualTo(RunState.RUNNING);

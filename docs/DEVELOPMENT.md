@@ -237,6 +237,14 @@ open **About** (title bar): it says whether the detailed log is on, names the fo
 detailed log is off) plus `session.json`, written where you choose and sent nowhere. The detailed log contains book
 text: it stays on the machine unless the person shares it.
 
+**The evidence log.** The detailed log rolls at 20 MB, so a long run keeps only its last hours (an 8.3-hour run kept
+3.6). Beside it, **`bookloom-trace-evidence.log`** (10 MB, rolled into `bookloom-trace-evidence.1.log.gz` … `.3.log.gz`)
+keeps the full `TRACE` of every segment that ended **flagged** or went through **repair**, for the whole run: each
+segment's lines are held in memory (at most 64 segments of 400 lines) until the pipeline's decision line carries the
+`EVIDENCE_KEEP` marker, then written with the segment's later lines; a segment accepted at once is forgotten. It is on and
+off with the detailed log, and the diagnostic bundle includes it. To read why `part0044.html:16` was flagged, grep that
+segment key in the evidence file first.
+
 **Command line.** `./gradlew :app:translate` runs `ua.bookloom.app.bootstrap.TranslateLauncher`, which repeats
 `Launcher`'s pre-injector steps — paths, single-instance lock, logging — without starting JavaFX, then runs
 `ua.bookloom.app.cli.TranslateCommand`:

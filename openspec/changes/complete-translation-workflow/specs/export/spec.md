@@ -734,3 +734,19 @@ audit adds nothing to the console.
 
 - **WHEN** a command run accepts a segment holding a doubled word
 - **THEN** the console has one `Audit: 1 accepted segment(s) look suspicious` line and the JSON `audit.suspicious` is 1 with the segment id and `duplicate-word`
+
+### Requirement: List flagged segments written without a translation among the source fallbacks
+
+WHEN an export writes a FLAGGED segment that has no target in its source, the export SHALL list it in the report's
+`sourceFallbacks` with the reason `NO_TARGET` and its locator, beside the segments whose stored translation broke the
+formatting (reason `BROKEN_FORMATTING`). It SHALL keep counting such a segment as `pending` once, so the counts do not
+change. The export result and the completion dialog SHALL name them on a line of their own, in English and Ukrainian,
+and the command's `--report` JSON SHALL carry each fallback's `reason`.
+
+**Source:** FR-EXPORT-05, task 15d.13.
+In plain words: every place the written book is not a translation is named, not only those a broken tag caused.
+
+#### Scenario: A flagged segment with no draft is named
+
+- **WHEN** `ch1 · p01` is FLAGGED with no machine target and the book is exported
+- **THEN** `sourceFallbacks` holds `ch1 · p01` with reason `NO_TARGET`, `pending` is 1, and the dialog says `1 flagged segment has no translation and was written in the source language: ch1 · p01`

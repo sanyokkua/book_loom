@@ -86,7 +86,9 @@ public final class EpubWriter {
         final ParsedEpub parsed =
                 registry.find(document.id()).orElseThrow(() -> new DocumentNotOpenException(document.id()));
 
+        final EpubSortKeys sortKeys = EpubSortKeys.snapshot(parsed.opfDocument());
         final Set<String> changed = new HashSet<>(writeSegmentsBack(document, parsed));
+        sortKeys.dropStale(parsed.opfDocument());
         EpubLanguageRewriter.rewrite(parsed, document, sourceLanguage, targetLanguage, changed);
         repackage(parsed, document, destination, changed);
         return destination;

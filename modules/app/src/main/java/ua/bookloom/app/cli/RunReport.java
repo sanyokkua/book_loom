@@ -133,7 +133,11 @@ final class RunReport {
         export.put("verifiedSegments", report.verifiedSegments());
         final ArrayNode fallbacks = export.putArray("sourceFallbacks");
         for (final SourceFallback fallback : report.sourceFallbacks()) {
-            fallbacks.addObject().put("segmentId", fallback.segmentId()).put("locator", fallback.locator());
+            fallbacks
+                    .addObject()
+                    .put("segmentId", fallback.segmentId())
+                    .put("locator", fallback.locator())
+                    .put("reason", fallback.reason().name());
         }
     }
 

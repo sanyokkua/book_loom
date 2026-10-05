@@ -61,7 +61,7 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
     }
 
     private void running(final ContextSnapshot context) {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().live()
                 .publishLiveRows(new LiveRows(
                         new LiveRow(

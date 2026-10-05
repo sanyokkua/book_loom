@@ -114,6 +114,36 @@ class ExportCompleteDialogTest extends ShellTestBase {
                         + " formatting: ch12 · p02, ch12 · p06");
     }
 
+    // IF a flagged segment with no translation were written in the source without being named, THEN the book would hold
+    // an untranslated paragraph nobody could find.
+    @Test
+    void show_flaggedSegmentsWithNoTarget_areNamedOnTheirOwnLine() {
+        final ExportReport report = new ExportReport(
+                BOOK,
+                8,
+                2,
+                0,
+                0,
+                8,
+                0,
+                List.of(),
+                10,
+                ConsistencySummary.NOT_RUN,
+                0,
+                List.of(
+                        new SourceFallback("part0009.html:1", "ch12 · p02", SourceFallback.Reason.NO_TARGET),
+                        new SourceFallback("part0009.html:5", "ch12 · p06", SourceFallback.Reason.NO_TARGET)),
+                List.of());
+        onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
+
+        final Label line = (Label) scene.getRoot().lookup("#export-complete-no-target-text");
+        assertThat(line.getText())
+                .isEqualTo("2 flagged segments have no translation and were written in the source language:"
+                        + " ch12 · p02, ch12 · p06");
+        assertThat(scene.getRoot().lookup("#export-complete-source-fallbacks-text"))
+                .isNull();
+    }
+
     // IF a partial book were reported as only "written and validated", THEN the untranslated part would be a surprise;
     // the two segments written in the source for a broken translation are named on their own line, not counted here.
     @Test

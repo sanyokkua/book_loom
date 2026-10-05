@@ -99,7 +99,7 @@ public final class TranslationRunner {
                 context.selection().providerId(),
                 context.selection().modelId());
         try {
-            mirror.publishRunStarted(context.fileName());
+            mirror.publishRunStarted(context.fileName(), new RunMode(context.dial(), context.reviewMode()));
             return launch(run);
         } catch (Throwable cause) {
             return abandon(run, cause);

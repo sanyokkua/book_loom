@@ -328,7 +328,7 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
     @Test
     void retryInFlight_pausedRun_disablesResumeOnTheScreenAndInTheTitleBar() throws Exception {
         openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         publish(RunState.PAUSED);
         assertThat(button("translating-resume").isDisabled()).isFalse();
         assertThat(button("shell-run-control").isDisabled()).isFalse();

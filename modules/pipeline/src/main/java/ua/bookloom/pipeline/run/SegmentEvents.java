@@ -6,8 +6,11 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ChunkPosition;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -19,12 +22,14 @@ import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentLocator;
+import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.heal.DraftEvaluation;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.LoopSettings;
+import ua.bookloom.util.log.EvidenceLog;
 
 /**
  * A segment's three announcements — started, drafted and decided — which the Translating screen's live panel, tiles
@@ -35,6 +40,8 @@ import ua.bookloom.pipeline.heal.LoopSettings;
  */
 @Slf4j
 final class SegmentEvents {
+
+    private static final Marker KEEP = MarkerFactory.getMarker(EvidenceLog.KEEP_MARKER);
 
     private final Consumer<JobEvent> emit;
     private final Map<String, SegmentLocator> locators;
@@ -162,6 +169,23 @@ final class SegmentEvents {
                 record.judgeScore(),
                 record.path(),
                 kinds);
+        keepEvidence(record);
         emit.accept(new SegmentDecided(record.segmentId(), record.status(), reason, progress, detail));
+    }
+
+    // The detailed log rotates away a long run's early TRACE; a flagged or repaired segment is the one a person will
+    // ask about, so its held lines are told to go to the evidence log, which does not rotate with the rest.
+    private void keepEvidence(final SegmentRecord record) {
+        if (record.status() == SegmentStatus.FLAGGED || record.path() == SegmentPath.REPAIRED) {
+            SegmentLogContext.within(record.segmentId(), () -> {
+                log.debug(
+                        KEEP,
+                        "Keeping the TRACE lines of segment {}: {} via {}",
+                        record.segmentId(),
+                        record.status(),
+                        record.path());
+                return null;
+            });
+        }
     }
 }

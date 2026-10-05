@@ -68,7 +68,7 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
     @Test
     void translating_runningWithLiveRowsAndLog_atMinimumWidth_needsNoSidewaysScrolling() {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
-        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.live()
                 .publishLiveRows(new LiveRows(
                         new LiveRow("s-1", "ch7 · p41", LONG_TEXT, LONG_TEXT, 0.93, SegmentPath.DRAFT, false, false),

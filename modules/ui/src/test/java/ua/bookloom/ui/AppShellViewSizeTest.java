@@ -52,7 +52,7 @@ class AppShellViewSizeTest extends ShellTestBase {
         useLocale(Locale.forLanguageTag("uk"));
         resizeScene(CONTENT_AT_MINIMUM_WIDTH, CONTENT_AT_MINIMUM_HEIGHT);
         final StateMirror mirror = injector.getInstance(StateMirror.class);
-        mirror.publishRunStarted("a-very-long-book-title-".repeat(3).substring(0, 60) + ".epub");
+        mirror.publishRunStarted("a-very-long-book-title-".repeat(3).substring(0, 60) + ".epub", null);
         mirror.publishProgress(ProgressFixtures.progress(7, 11, 78, 0, 22));
         mirror.live().publishThroughput(new Throughput(null, false, Duration.ofMinutes(80), Duration.ofMinutes(62)));
         mirror.publishRunState(RunState.PAUSED);

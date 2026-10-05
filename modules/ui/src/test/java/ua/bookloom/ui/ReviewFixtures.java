@@ -73,6 +73,21 @@ public final class ReviewFixtures {
                 fullContext());
     }
 
+    /** A flagged segment whose finding quotes the word of the target it is about. */
+    public static SegmentView withEvidence() {
+        return view(
+                "ch12.xhtml:3",
+                "ch12 · p04",
+                SegmentStatus.FLAGGED,
+                List.of(new QaFinding(
+                        "glossary",
+                        Severity.MEDIUM,
+                        "\"відчинив\" — the name is not the locked rendering",
+                        "reviewer")),
+                null,
+                null);
+    }
+
     public static SegmentView nameIssue() {
         return view(
                 "ch07.xhtml:39",

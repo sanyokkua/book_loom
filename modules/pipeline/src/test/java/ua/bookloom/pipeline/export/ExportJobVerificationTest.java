@@ -127,6 +127,26 @@ class ExportJobVerificationTest {
                 .contains("Вона пішла.");
     }
 
+    // A segment flagged with no target is written in its source and the report names it, so the person can find every
+    // place the book is not a translation; it is not counted as a broken-formatting fallback.
+    @Test
+    void run_flaggedSegmentWithNoTarget_isListedAsASourceFallbackWithNoTarget() {
+        final String id = fixture.importBook(
+                TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the door.\n\nShe left."), "en");
+        fixture.decide(
+                id,
+                "Book.md:0",
+                record -> record.withStatus(SegmentStatus.FLAGGED).withMachineTarget(null, null));
+        fixture.accept(id, "Book.md:1", "Вона пішла.");
+
+        final ExportReport report = ok(fixture.export(request(id, tempDir.resolve("Book.uk.md"), false)));
+
+        assertThat(report.sourceFallbacks())
+                .containsExactly(new SourceFallback("Book.md:0", "ch1 · p01", SourceFallback.Reason.NO_TARGET));
+        assertThat(report.pending()).isEqualTo(1);
+        assertThat(report.written()).isEqualTo(1);
+    }
+
     // Two broken targets are both written in the source and both listed, in book order.
     @Test
     void run_twoStoredTargetsWithBrokenPlaceholders_listsBoth() throws IOException {

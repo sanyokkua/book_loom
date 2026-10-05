@@ -77,7 +77,7 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
     }
 
     private void running() {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         publishLiveRows(true);
         mirror().publishLogEntries(List.of(new LogEntry(LogKind.RETRIED, List.of("format", "ch7 · p42"))));
         WaitForAsyncUtils.waitForFxEvents();

@@ -162,4 +162,17 @@ class ReviewViewModelListTest extends ReviewViewModelTestBase {
 
         assertThat(onFx(() -> review.flaggedCount().get())).isEqualTo(7);
     }
+
+    // IF the count were read only while the run produced decisions, THEN the records the final flush stores would
+    // never be counted and the screen would say 169 where the desk holds 170.
+    @Test
+    void runEnded_finalFlushStoredMore_countFollowsTheDeskAtTheEnd() {
+        buildReview();
+        setRunState(RunState.RUNNING);
+        desk.willAnswerCounts(flaggedCount(170));
+
+        setRunState(RunState.COMPLETED);
+
+        assertThat(onFx(() -> review.flaggedCount().get())).isEqualTo(170);
+    }
 }

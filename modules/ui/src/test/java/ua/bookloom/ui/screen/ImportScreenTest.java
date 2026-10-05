@@ -317,7 +317,7 @@ class ImportScreenTest extends ImportScreenTestBase {
         openImport();
         openBook(first);
         final StateMirror mirror = injector.getInstance(StateMirror.class);
-        mirror.publishRunStarted("Frankenstein.epub");
+        mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.publishRunState(RunState.PAUSED);
         awaitFx(() -> mirror.runState().get() == RunState.PAUSED);
 

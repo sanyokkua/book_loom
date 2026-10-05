@@ -42,7 +42,7 @@ class TranslatingScreenRecoveryTest extends TranslatingScreenTestBase {
 
     private void waitForProvider(
             final AppError error, final RecoveryWaiting.Status status, final int attempt, final long secondsLeft) {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().publishProgress(ProgressFixtures.progress(7, 11, 78, 0, 22));
         mirror().publishRunState(RunState.PAUSED);
         mirror().review().publishProviderError(error);

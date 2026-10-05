@@ -190,7 +190,7 @@ final class ExportRun {
             final ExportReport report = done.report();
             log.info(
                     "export finished: {} segments written, {} pending, {} kept as source, {} flagged, {} bytes,"
-                            + " {} written in source for broken formatting",
+                            + " {} written in source (broken formatting or flagged with no target)",
                     report.written(),
                     report.pending(),
                     report.sourceKept(),

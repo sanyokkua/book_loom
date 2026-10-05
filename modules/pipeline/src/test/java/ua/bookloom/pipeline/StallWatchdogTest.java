@@ -2,13 +2,18 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.LoggerFactory;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
@@ -20,9 +25,21 @@ class StallWatchdogTest {
     private final JobControl control = new JobControl(Set.of());
     private final StallWatchdog watchdog = new StallWatchdog(control, clock);
 
+    private final ListAppender<ILoggingEvent> appender = new ListAppender<>();
+    private Logger logger;
+
+    @BeforeEach
+    void attachAppender() {
+        logger = (Logger) LoggerFactory.getLogger(StallWatchdog.class);
+        appender.start();
+        logger.addAppender(appender);
+    }
+
     @AfterEach
     void clearInterrupt() {
         Thread.interrupted();
+        logger.detachAppender(appender);
+        appender.stop();
     }
 
     // A judge call has a 90 s timeout, so the watchdog ends it at 135 s and not a second before.
@@ -65,6 +82,25 @@ class StallWatchdogTest {
                 .isNotNull()
                 .extracting(StallWatchdog.Stall::ceiling)
                 .isEqualTo(Duration.ofMinutes(20));
+    }
+
+    // IF a batch call's line named no segment (`DRAFT null`), THEN a person reading the log could not tell which
+    // paragraphs the stalled call was about.
+    @Test
+    void check_batchCallStalls_logNamesEverySegmentOfTheBatch() {
+        control.claimRun();
+        control.enterModelCall();
+        watchdog.onEvent(new ModelCallStarted(
+                null, CallKind.DRAFT, List.of("s1", "s2", "s3"), 1, 2, Duration.ofSeconds(60), null));
+
+        clock.advance(Duration.ofSeconds(100));
+        watchdog.check();
+
+        assertThat(appender.list)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .anySatisfy(line -> assertThat(line)
+                        .contains("DRAFT call segmentIds=[s1, s2, s3]")
+                        .doesNotContain("null"));
     }
 
     // A paused run is waiting on purpose, however long it waits.

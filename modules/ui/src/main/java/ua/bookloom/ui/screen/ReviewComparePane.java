@@ -3,7 +3,6 @@ package ua.bookloom.ui.screen;
 import java.text.NumberFormat;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import javafx.beans.binding.Bindings;
@@ -25,9 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
-import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.ui.control.ComparePanes;
 import ua.bookloom.ui.control.ContextSection;
 import ua.bookloom.ui.control.Tips;
@@ -64,10 +61,13 @@ final class ReviewComparePane extends VBox {
     private final Label locator = new Label();
     private final Label judge = new Label();
     private final ContextSection context;
+    private final ReadableView readable;
+    private final FindingRows rows;
     private final VBox findings = new VBox(SPACING / 2);
     private final VBox proposalBox = new VBox(SPACING / 2);
     private final Label proposal = new Label();
     private final ChangeListener<@Nullable SegmentView> onSelected = (observed, was, now) -> show(now);
+    private final ChangeListener<@Nullable String> readableFollowsTyping = (observed, was, now) -> refreshReadable();
     // The segments already logged as flagged with no finding, so a re-read of one does not log it again.
     private final Set<String> explainedEmpty = new HashSet<>();
 
@@ -88,6 +88,9 @@ final class ReviewComparePane extends VBox {
         score.setMinimumFractionDigits(SCORE_DIGITS);
         score.setMaximumFractionDigits(SCORE_DIGITS);
         panes = new ComparePanes(sourceName, targetName, messages);
+        readable = new ReadableView(messages);
+        rows = new FindingRows(messages);
+        viewModel.editorText().addListener(new WeakChangeListener<>(readableFollowsTyping));
         Tips.install(messages, panes.target(), MessageKey.REVIEW_EDITABLE_TIP);
         panes.target().textProperty().bindBidirectional(viewModel.editorText());
         // Read-only while the actions are not offered, so typing never meets a Save that silently stays off.
@@ -103,6 +106,7 @@ final class ReviewComparePane extends VBox {
                 context,
                 banner("review-target-note", "banner-info", viewModel.editor().targetNote()),
                 panes,
+                readable,
                 proposalBox(),
                 note("review-hint", viewModel.editor().hint().map(this::wording)),
                 note("review-problem", viewModel.problem()),
@@ -149,6 +153,17 @@ final class ReviewComparePane extends VBox {
         label.getStyleClass().setAll("banner", role, "banner-text");
         label.setMaxWidth(Double.MAX_VALUE);
         return label;
+    }
+
+    // The target text the person is typing is what the readable view must show, so it follows every change.
+    private void refreshReadable() {
+        final SegmentView view = viewModel.selected().get();
+        if (view == null) {
+            readable.setVisible(false);
+        } else {
+            readable.show(
+                    view, Objects.requireNonNullElse(viewModel.editorText().get(), ""));
+        }
     }
 
     private VBox findingsBox() {
@@ -289,6 +304,7 @@ final class ReviewComparePane extends VBox {
         proposalBox.setVisible(view.proposal() != null);
         proposalBox.setManaged(view.proposal() != null);
         showSource(view);
+        refreshReadable();
     }
 
     // Opened, the section shows what the draft was given in full; a snapshot naming no part shows nothing.
@@ -323,56 +339,6 @@ final class ReviewComparePane extends VBox {
             findings.getChildren().setAll(none);
             return;
         }
-        findings.getChildren()
-                .setAll(view.findings().stream().map(this::findingRow).toList());
-    }
-
-    private VBox findingRow(final QaFinding finding) {
-        return AppliedEdit.from(finding).map(this::editRow).orElseGet(() -> plainRow(finding));
-    }
-
-    // An edit the reviewer made and the app verified, as the words it removed beside the words it put there.
-    private VBox editRow(final AppliedEdit edit) {
-        final Label heading = new Label(messages.get(
-                MessageKey.REVIEW_EDIT_APPLIED,
-                messages.get(MessageKey.REVIEW_EDIT_CRITERION, edit.criterion().replace('-', '_'))));
-        heading.setId("review-edit-criterion");
-        heading.getStyleClass().add("finding-kind");
-        final Label removed = diffLine("review-edit-removed", "diff-removed", "− " + edit.quote());
-        final Label added = diffLine(
-                "review-edit-added",
-                "diff-added",
-                "+ "
-                        + (edit.replacement().isEmpty()
-                                ? messages.get(MessageKey.REVIEW_EDIT_DELETED)
-                                : edit.replacement()));
-        final VBox row = new VBox(2, heading, removed, added);
-        Tips.install(messages, removed, MessageKey.REVIEW_EDIT_TIP);
-        Tips.install(messages, added, MessageKey.REVIEW_EDIT_TIP);
-        return row;
-    }
-
-    private static Label diffLine(final String id, final String style, final String text) {
-        final Label line = new Label(text);
-        line.setId(id);
-        line.getStyleClass().add(style);
-        line.setWrapText(true);
-        line.setMinHeight(Region.USE_PREF_SIZE);
-        return line;
-    }
-
-    private VBox plainRow(final QaFinding finding) {
-        final Label kind = new Label(messages.get(
-                MessageKey.REVIEW_FINDING_KIND,
-                finding.kind(),
-                finding.severity().name().toLowerCase(Locale.ROOT)));
-        kind.getStyleClass().add("finding-kind");
-        final Label note = new Label(finding.note());
-        note.getStyleClass().add("finding-note");
-        note.setWrapText(true);
-        note.setMinHeight(Region.USE_PREF_SIZE);
-        final Label source = new Label(messages.get(MessageKey.REVIEW_RAISED_BY, finding.raisedBy()));
-        source.getStyleClass().add("muted");
-        return new VBox(2, kind, note, source);
+        findings.getChildren().setAll(view.findings().stream().map(rows::of).toList());
     }
 }

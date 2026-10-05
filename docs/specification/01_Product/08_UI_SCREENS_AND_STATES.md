@@ -43,7 +43,8 @@ own minimum height is zero, so the height is fixed in the stylesheet).
 While the current project has no run, the title bar shows only the product name and the theme toggle. While a run
 exists — from Start until the project's book is replaced by a different import — the title bar shows, between the
 product name and the theme toggle: the file name; the state text (`Progress 78%` while running, `Paused at 78%`,
-`Stopped at 78%`, `Provider error`, `Finished`, or `Failed at 78%`); and the elapsed time and the time left. It
+`Stopped at 78%`, `Provider error`, `Finished`, or `Failed at 78%`); the run's quality dial and review mode joined by ` · ` (`Balanced · Unattended`; `#shell-run-mode`, with a hover
+explanation, absent when the start names none); and the elapsed time and the time left. It
 offers **Pause** while running, **Resume** while paused, stopped or in a provider error, and **no control** once the
 run has finished or failed. The title bar's control does exactly what the Translating screen's control of the same
 name does — pressing either one acts on the same run.
@@ -266,7 +267,8 @@ Purpose: review flagged segments (and, on request, every segment) without leavin
 | Filter chips           | `ToggleGroup` of chips          | `all`, `names`, `omissions`, `foreign · kept`, and `All segments` — the one list that also shows segments kept as source, each marked `kept as source` |
 | Flagged list           | `ListView`/`TableView`          | Items by locator (e.g. `ch5 · p12`) with a main-finding badge: the highest-severity finding, ties broken `name` > `wrong lang?` > `omission` > `low score` |
 | Compare panes          | two `TextArea`                  | Source (read-only) and target (editable)                                                                                          |
-| Findings / context     | `Label`s/chips                  | The segment's QA findings and a line of surrounding context                                                                       |
+| Readable view          | two `TextFlow`s (`#review-source-preview`, `#review-target-preview`) | Under the panes: each `⟦gN⟧` token as a chip (`g0`), and the words a finding quotes marked in the target; shown only when the text holds a token or a found quote; the target follows the editor |
+| Findings / context     | `Label`s/chips                  | The segment's QA findings, each with a kind badge (`name`, `wrong lang?`, `omission`) when its kind maps to one, and a line of surrounding context |
 | Actions                | `Button`s                       | Save edit / Accept / Revert to machine target / Retry / Retry with note / Skip                                                    |
 
 **Target editor.** The editable pane shows, in order of preference: the saved human edit, else the machine target,

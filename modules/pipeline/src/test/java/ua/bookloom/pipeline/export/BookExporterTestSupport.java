@@ -65,7 +65,7 @@ public final class BookExporterTestSupport {
                 .flatMap(unit -> unit.segments().stream())
                 .filter(segment -> segment.targetInner() != null)
                 .collect(java.util.stream.Collectors.toMap(Segment::id, Segment::masked));
-        return new EffectiveTargets(decided, masked, List.of());
+        return new EffectiveTargets(decided, masked, List.of(), List.of());
     }
 
     static int segmentCount(final Document document) {

@@ -64,6 +64,7 @@ public final class ReviewViewModel {
     private final ReviewEditor editor = new ReviewEditor(this::refreshAvailability);
     private final ReadOnlyStringWrapper problem = new ReadOnlyStringWrapper();
     private final ReviewAvailability availability;
+    private final FlaggedCount counts;
     private final ListChangeListener<FlaggedRow> onMirrorQueue = change -> refreshCount();
 
     /**
@@ -90,6 +91,7 @@ public final class ReviewViewModel {
             @BackgroundExecutor final ExecutorService executor) {
         this.desk = Objects.requireNonNull(desk, "desk");
         this.queries = new ReviewQueries(desk);
+        this.counts = new FlaggedCount(queries, Objects.requireNonNull(executor, "executor"));
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.current = Objects.requireNonNull(current, "current");
         this.availability = new ReviewAvailability(mirror, Objects.requireNonNull(reviewMode, "reviewMode"));
@@ -100,7 +102,10 @@ public final class ReviewViewModel {
                 editor::saveRefused);
         this.retry = Objects.requireNonNull(retry, "retry");
         this.executor = Objects.requireNonNull(executor, "executor");
-        mirror.runState().addListener((observed, was, now) -> refreshAvailability());
+        mirror.runState().addListener((observed, was, now) -> {
+            refreshAvailability();
+            counts.afterRun(now, this::refreshCount);
+        });
         mirror.review().retryInFlight().addListener((observed, was, now) -> refreshAvailability());
         mirror.live().flaggedQueue().addListener(onMirrorQueue);
         refreshAvailability();
@@ -192,10 +197,7 @@ public final class ReviewViewModel {
     public void refreshCount() {
         final OpenedBook book = current.book().get();
         if (book != null) {
-            executor.execute(() -> {
-                final int flagged = queries.flagged(book.projectId(), flaggedCount.get());
-                Platform.runLater(() -> publishCount(flagged));
-            });
+            counts.read(book.projectId(), flaggedCount.get(), this::publishCount);
         }
     }
 

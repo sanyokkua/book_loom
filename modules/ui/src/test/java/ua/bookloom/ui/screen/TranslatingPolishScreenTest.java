@@ -80,7 +80,7 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
     }
 
     private void runningWithContext() {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().live()
                 .publishLiveRows(new LiveRows(
                         new LiveRow(

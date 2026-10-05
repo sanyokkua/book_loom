@@ -52,6 +52,7 @@ public final class StateMirror {
     private final ReadOnlyObjectWrapper<@Nullable AppError> failure = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable JobReport> report = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<@Nullable String> runFileName = new ReadOnlyObjectWrapper<>();
+    private final ReadOnlyObjectWrapper<@Nullable RunMode> runMode = new ReadOnlyObjectWrapper<>();
     private final ObservableList<LogEntry> logEntries = FXCollections.observableArrayList();
     private final ObservableList<LogEntry> readOnlyLog = FXCollections.unmodifiableObservableList(logEntries);
     private final LiveSection live = new LiveSection();
@@ -199,6 +200,15 @@ public final class StateMirror {
     }
 
     /**
+     * The quality dial and review mode the run started with.
+     *
+     * @return a read-only property, {@code null} while no run exists or none was named; FX thread
+     */
+    public ReadOnlyObjectProperty<@Nullable RunMode> runMode() {
+        return runMode.getReadOnlyProperty();
+    }
+
+    /**
      * The newest activity-log entries, oldest first.
      *
      * @return an unmodifiable list of at most {@link #MAX_LOG_ENTRIES} entries; read on the FX thread
@@ -230,11 +240,12 @@ public final class StateMirror {
      * runs on, and shows it running.
      *
      * @param fileName the non-null name of the book file the run translates
+     * @param mode the dial and review mode the title bar names, or {@code null} when the caller names none
      */
-    public void publishRunStarted(final String fileName) {
+    public void publishRunStarted(final String fileName, final @Nullable RunMode mode) {
         Objects.requireNonNull(fileName, "fileName");
-        log.debug("publishing run started on {}", fileName);
-        Platform.runLater(() -> resetForNewRun(fileName));
+        log.debug("publishing run started on {} with mode {}", fileName, mode);
+        Platform.runLater(() -> resetTo(fileName, mode, RunState.RUNNING));
     }
 
     /**
@@ -330,17 +341,14 @@ public final class StateMirror {
         });
     }
 
-    private void resetForNewRun(final String fileName) {
-        resetTo(fileName, RunState.RUNNING);
-    }
-
     private void resetToIdle() {
-        resetTo(null, RunState.IDLE);
+        resetTo(null, null, RunState.IDLE);
     }
 
-    private void resetTo(final @Nullable String fileName, final RunState state) {
+    private void resetTo(final @Nullable String fileName, final @Nullable RunMode mode, final RunState state) {
         applyFigures(RunFigures.EMPTY);
         runFileName.set(fileName);
+        runMode.set(mode);
         logEntries.clear();
         failure.set(null);
         report.set(null);

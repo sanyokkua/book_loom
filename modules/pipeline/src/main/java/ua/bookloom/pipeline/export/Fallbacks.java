@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
@@ -17,8 +18,10 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.project.SegmentLocators;
 
 /**
- * The segments an export wrote in their source although they had a translation, named for a person by their locator
- * and taken out of the written count, so the report never claims a translation the file does not hold.
+ * The segments an export wrote in their source although the run had worked on them, named for a person by their
+ * locator: those whose translation broke the formatting are taken out of the written count, so the report never claims
+ * a translation the file does not hold, and flagged segments with no target are only named, because the counts already
+ * hold them as pending.
  *
  * @param opened the book the export decided its targets over
  * @param stored the project's stored records
@@ -47,16 +50,24 @@ record Fallbacks(Document opened, List<SegmentRecord> stored, ExportCounts count
      *
      * @param beforeWriting the non-null ids whose stored targets no longer passed the placeholder gate
      * @param onReopening the non-null ids whose markup changed in the written book
-     * @return the adjusted counts and the named fallbacks
+     * @param noTarget the non-null ids of flagged segments with no target, already counted as pending
+     * @return the adjusted counts and the named fallbacks, the broken ones first and the target-less ones after, each
+     *     group in the order given
      */
-    Fallen of(final List<String> beforeWriting, final List<String> onReopening) {
+    Fallen of(final List<String> beforeWriting, final List<String> onReopening, final List<String> noTarget) {
         final Set<String> ids = new LinkedHashSet<>(beforeWriting);
         ids.addAll(onReopening);
         final Map<String, SegmentLocator> locators = SegmentLocators.of(opened);
         final Map<String, SegmentRecord> byId = stored.stream()
                 .collect(Collectors.toMap(SegmentRecord::segmentId, Function.identity(), (first, ignored) -> first));
-        final List<SourceFallback> listed = ids.stream()
-                .map(id -> new SourceFallback(id, locatorOf(locators.get(id), id)))
+        final List<SourceFallback> listed = Stream.concat(
+                        ids.stream()
+                                .map(id -> new SourceFallback(
+                                        id, locatorOf(locators.get(id), id), SourceFallback.Reason.BROKEN_FORMATTING)),
+                        noTarget.stream()
+                                .filter(id -> !ids.contains(id))
+                                .map(id -> new SourceFallback(
+                                        id, locatorOf(locators.get(id), id), SourceFallback.Reason.NO_TARGET)))
                 .toList();
         final int flagged = (int) ids.stream()
                 .map(byId::get)
@@ -64,11 +75,13 @@ record Fallbacks(Document opened, List<SegmentRecord> stored, ExportCounts count
                 .count();
         if (!listed.isEmpty()) {
             log.info(
-                    "Export wrote {} segments in their source because their translation broke the formatting: {}",
+                    "Export wrote {} segments in their source: {} broken formatting, {} flagged with no target: {}",
                     listed.size(),
+                    ids.size(),
+                    listed.size() - ids.size(),
                     listed.stream().map(SourceFallback::locator).toList());
         }
-        return new Fallen(counts.withSourceFallbacks(listed.size(), flagged), listed);
+        return new Fallen(counts.withSourceFallbacks(ids.size(), flagged), listed);
     }
 
     private static String locatorOf(@Nullable final SegmentLocator locator, final String id) {

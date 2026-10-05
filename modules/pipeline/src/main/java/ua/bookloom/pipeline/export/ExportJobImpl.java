@@ -264,8 +264,11 @@ final class ExportJobImpl implements ExportJob {
 
     private Result<ExportReport> withSideFiles(
             final Project project, final Written book, final BookExporter.Exported exported) {
-        final Fallbacks.Fallen fallen =
-                book.fallbacks().of(book.targets().sourceFallbacks(), exported.sourceFallbacks());
+        final Fallbacks.Fallen fallen = book.fallbacks()
+                .of(
+                        book.targets().sourceFallbacks(),
+                        exported.sourceFallbacks(),
+                        book.targets().noTarget());
         final List<SuspiciousSegment> suspicious = audit(project, book.fallbacks(), book.glossary());
         final List<SideFiles.Content> sideFiles = SideFiles.build(
                 request.sideFiles(),

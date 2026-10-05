@@ -130,6 +130,7 @@ public final class LoggingBootstrap {
         attachOrdinary(context, root, logDir, devConsole, trace.enabled() ? ordinary : null);
         if (trace.enabled()) {
             root.addAppender(traceAppender(context, logDir, header));
+            root.addAppender(EvidenceAppender.create(context, logDir, headerEncoder(context, header)));
         }
         context.getLogger(BOOKLOOM_LOGGERS).setLevel(trace.enabled() ? Level.TRACE : ordinary);
         final ch.qos.logback.classic.Logger bootstrapLogger = context.getLogger(LoggingBootstrap.class);

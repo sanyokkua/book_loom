@@ -10,7 +10,10 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.QualityDial;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.ProgressFixtures;
+import ua.bookloom.ui.state.RunMode;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.Throughput;
 import ua.bookloom.ui.state.TranslatingViewModel;
@@ -22,7 +25,7 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
     private static final String CONTROL = "shell-run-control";
 
     private void runAt78(final RunState state) {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().publishProgress(ProgressFixtures.progress(7, 11, 78, 0, 22));
         mirror().live().publishThroughput(new Throughput(null, false, Duration.ofMinutes(80), Duration.ofMinutes(62)));
         mirror().publishRunState(state);
@@ -71,7 +74,7 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
     @Test
     void bar_andTheProgressCard_atOneShare_showTheSamePercent() {
         showTranslating();
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().publishProgress(ProgressFixtures.progress(8, 12, 81, 0, 82));
         mirror().publishRunState(RunState.RUNNING);
         WaitForAsyncUtils.waitForFxEvents();
@@ -83,11 +86,32 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
     // IF the time left were shown when the run reports none, THEN the bar would claim an estimate it does not have.
     @Test
     void bar_noTimeLeft_showsNoTimeLeft() {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(barText()).contains("Progress 0%").doesNotContain("left");
         assertThat(required("shell-run-left").isManaged()).isFalse();
+    }
+
+    // IF the dial and the review mode were not beside the state, THEN a person on another screen could not tell how
+    // hard the run works or when it will stop to ask for them.
+    @Test
+    void bar_runStartedWithADialAndAMode_showsBalancedUnattendedNextToTheState() {
+        mirror().publishRunStarted("Frankenstein.epub", new RunMode(QualityDial.BALANCED, ReviewMode.UNATTENDED));
+        mirror().publishRunState(RunState.RUNNING);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(labelText("shell-run-mode")).isEqualTo("Balanced · Unattended");
+        assertThat(textsUnder(required(BAR))).containsSubsequence("Progress 0%", "Balanced · Unattended");
+    }
+
+    // IF a start that names no mode left the label showing, THEN the bar would show a mode no run has.
+    @Test
+    void bar_runStartedWithoutAMode_hidesTheModeLabel() {
+        mirror().publishRunStarted("Frankenstein.epub", null);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(required("shell-run-mode").isManaged()).isFalse();
     }
 
     // IF a state read as another, THEN the person would trust the wrong thing about their run.

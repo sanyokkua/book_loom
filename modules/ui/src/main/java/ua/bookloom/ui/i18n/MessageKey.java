@@ -141,6 +141,10 @@ public enum MessageKey {
     SHELL_RUN_ELAPSED("shell.run.elapsed"),
     /** Title-bar time left; argument 0 is the formatted duration. */
     SHELL_RUN_LEFT("shell.run.left"),
+    /** Title-bar dial and review mode of the run; argument 0 is the dial's name, argument 1 the review mode's. */
+    SHELL_RUN_MODE("shell.run.mode"),
+    /** Hover explanation of the text shown by {@link #SHELL_RUN_MODE}. */
+    SHELL_RUN_MODE_TIP("shell.run.mode.tip"),
     /** Title-bar run control that pauses the run. */
     SHELL_RUN_PAUSE("shell.run.pause"),
     /** Hover explanation of the control labelled by {@link #SHELL_RUN_PAUSE}. */
@@ -1217,6 +1221,8 @@ public enum MessageKey {
      * 0 is the count, argument 1 the segments' locators joined by commas.
      */
     EXPORT_SOURCE_FALLBACKS("export.sourceFallbacks"),
+    /** Warning naming the flagged segments written in the source because no draft passed; arguments: count, locators. */
+    EXPORT_NO_TARGET_FALLBACKS("export.noTargetFallbacks"),
     /** Size of a written book under a kilobyte; argument 0 is the byte count. */
     EXPORT_SIZE_BYTES("export.size.bytes"),
     /** Size of a written book in kilobytes; argument 0 is the count. */
@@ -1463,6 +1469,8 @@ public enum MessageKey {
     REVIEW_CONTEXT("review.context"),
     /** Caption of the list of a segment's findings. */
     REVIEW_FINDINGS("review.findings"),
+    /** Caption of the readable view under the two panes: formatting tokens as chips, quoted words marked. */
+    REVIEW_READABLE("review.readable"),
     /** Shown under the findings heading of a flagged segment whose record holds no finding. */
     REVIEW_FINDINGS_NONE("review.findings.none"),
     /** Kind and severity of one finding; argument 0 is the kind, argument 1 the severity in lower case. */

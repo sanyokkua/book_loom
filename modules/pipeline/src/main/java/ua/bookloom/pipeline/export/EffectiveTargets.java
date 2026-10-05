@@ -16,6 +16,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
+import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.typography.Normalisation;
@@ -31,15 +32,18 @@ import ua.bookloom.pipeline.typography.TypographyNormalizer;
  *     placeholders were written in, which the re-open check compares; a segment written in its source is absent
  * @param sourceFallbacks the segments written in their source although their record holds a target, because that
  *     target's placeholders no longer match the segment's, in book order
+ * @param noTarget the FLAGGED segments written in their source because no draft ever passed the gates, in book order
  */
 @Slf4j
-record EffectiveTargets(Document document, Map<String, String> maskedTargets, List<String> sourceFallbacks) {
+record EffectiveTargets(
+        Document document, Map<String, String> maskedTargets, List<String> sourceFallbacks, List<String> noTarget) {
 
     /** Copies the map and the list so the targets cannot change after construction. */
     EffectiveTargets {
         Objects.requireNonNull(document, "document");
         maskedTargets = Collections.unmodifiableMap(new LinkedHashMap<>(maskedTargets));
         sourceFallbacks = List.copyOf(sourceFallbacks);
+        noTarget = List.copyOf(noTarget);
     }
 
     /**
@@ -74,18 +78,20 @@ record EffectiveTargets(Document document, Map<String, String> maskedTargets, Li
                 keptKinds);
         final Map<String, String> masked = new LinkedHashMap<>();
         final List<String> fallbacks = new ArrayList<>();
-        final Decision decision = new Decision(keptKinds, unmask, targetLanguage, masked, fallbacks);
+        final List<String> noTarget = new ArrayList<>();
+        final Decision decision = new Decision(keptKinds, unmask, targetLanguage, masked, fallbacks, noTarget);
         final List<Unit> units = opened.units().stream()
                 .map(unit -> unit.withSegments(unit.segments().stream()
                         .map(segment -> decide(segment, byId.get(segment.id()), decision))
                         .toList()))
                 .toList();
         log.debug(
-                "Effective targets applied document={} writtenWithTarget={} sourceFallbacks={}",
+                "Effective targets applied document={} writtenWithTarget={} sourceFallbacks={} noTarget={}",
                 opened.id(),
                 masked.size(),
-                fallbacks);
-        return new EffectiveTargets(opened.withUnits(units), masked, fallbacks);
+                fallbacks,
+                noTarget);
+        return new EffectiveTargets(opened.withUnits(units), masked, fallbacks, noTarget);
     }
 
     /** What deciding one segment reads and fills. */
@@ -94,7 +100,8 @@ record EffectiveTargets(Document document, Map<String, String> maskedTargets, Li
             BiFunction<Segment, String, Result<String>> unmask,
             String targetLanguage,
             Map<String, String> masked,
-            List<String> fallbacks) {}
+            List<String> fallbacks,
+            List<String> noTarget) {}
 
     private static Segment decide(
             final Segment segment, @Nullable final SegmentRecord record, final Decision decision) {
@@ -105,6 +112,9 @@ record EffectiveTargets(Document document, Map<String, String> maskedTargets, Li
         final String target = writtenTarget(record);
         if (target == null) {
             log.trace("segment={} status={} written as source: no target", segment.id(), record.status());
+            if (record.status() == SegmentStatus.FLAGGED) {
+                decision.noTarget().add(segment.id());
+            }
             return segment;
         }
         final String maskedTarget =

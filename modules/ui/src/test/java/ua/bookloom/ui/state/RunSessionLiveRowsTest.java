@@ -176,7 +176,7 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
         session.finish(Result.ok(completedReport(10)), () -> {});
         tick(session);
 
-        mirror.publishRunStarted("Dracula.epub");
+        mirror.publishRunStarted("Dracula.epub", null);
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(rows()).isEqualTo(LiveRows.EMPTY);

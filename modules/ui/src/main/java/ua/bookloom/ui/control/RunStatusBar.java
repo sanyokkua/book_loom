@@ -25,6 +25,7 @@ import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ConnectionStatus;
 import ua.bookloom.ui.state.Controls;
 import ua.bookloom.ui.state.RecoveryState;
+import ua.bookloom.ui.state.RunMode;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.Throughput;
@@ -56,6 +57,7 @@ public final class RunStatusBar {
     private final HBox view = new HBox(PART_SPACING);
     private final Label fileName = new Label();
     private final Label stateText = new Label();
+    private final Label modeText = new Label();
     private final Label elapsed = new Label();
     private final Label timeLeft = new Label();
     private final Button control = new Button();
@@ -86,6 +88,7 @@ public final class RunStatusBar {
         build();
         final InvalidationListener redraw = observed -> refresh();
         mirror.runFileName().addListener(redraw);
+        mirror.runMode().addListener(redraw);
         mirror.runState().addListener(redraw);
         mirror.figures().addListener(redraw);
         mirror.review().providerError().addListener(redraw);
@@ -111,11 +114,13 @@ public final class RunStatusBar {
         view.setAlignment(Pos.CENTER_LEFT);
         name(fileName, "shell-run-file", "run-status-text");
         name(stateText, "shell-run-state", "run-status-text");
+        name(modeText, "shell-run-mode", "run-status-detail");
+        Tips.install(messages, modeText, MessageKey.SHELL_RUN_MODE_TIP);
         name(elapsed, "shell-run-elapsed", "run-status-detail");
         name(timeLeft, "shell-run-left", "run-status-detail");
         fileName.setMinWidth(0);
         fileName.setTextOverrun(OverrunStyle.ELLIPSIS);
-        for (final Label part : new Label[] {stateText, elapsed, timeLeft}) {
+        for (final Label part : new Label[] {stateText, modeText, elapsed, timeLeft}) {
             part.setMinWidth(Region.USE_PREF_SIZE);
         }
         control.setId("shell-run-control");
@@ -124,6 +129,11 @@ public final class RunStatusBar {
         control.setMinWidth(Region.USE_PREF_SIZE);
         control.setOnAction(event -> press());
         Tips.install(messages, control, MessageKey.SHELL_RUN_PAUSE_TIP);
+        buildConnection();
+        view.getChildren().addAll(fileName, stateText, modeText, elapsed, timeLeft, connection, control);
+    }
+
+    private void buildConnection() {
         connection.setId("shell-run-connection");
         connection.getStyleClass().addAll("shell-title-button", "connection-chip");
         connection.setMinWidth(Region.USE_PREF_SIZE);
@@ -133,7 +143,6 @@ public final class RunStatusBar {
             log.debug("connection chip pressed: opening the provider settings");
             navigator.navigate(ViewNames.SETTINGS);
         });
-        view.getChildren().addAll(fileName, stateText, elapsed, timeLeft, connection, control);
     }
 
     private static void name(final Label label, final String id, final String styleClass) {
@@ -160,6 +169,7 @@ public final class RunStatusBar {
         final RunState state = mirror.runState().get();
         final int percent = mirror.figures().get().percent();
         stateText.setText(stateText(state, percent));
+        showMode(mirror.runMode().get());
         showTimes(mirror.live().throughput().get());
         showConnection(mirror.live().connection().get());
         showControl(state, viewModel.controls().get());
@@ -193,6 +203,19 @@ public final class RunStatusBar {
         return mirror.review().providerError().get() != null
                 ? messages.get(MessageKey.SHELL_RUN_PROVIDER_ERROR)
                 : messages.get(MessageKey.SHELL_RUN_PAUSED, percent);
+    }
+
+    private void showMode(final @Nullable RunMode mode) {
+        modeText.setVisible(mode != null);
+        modeText.setManaged(mode != null);
+        if (mode != null) {
+            modeText.setText(messages.get(
+                    MessageKey.SHELL_RUN_MODE,
+                    messages.get(RunMode.dialKey(mode.dial())),
+                    messages.get(
+                            MessageKey.TRANSLATING_READY_REVIEW_MODE,
+                            mode.reviewMode().name().toLowerCase(Locale.ROOT))));
+        }
     }
 
     private void showTimes(final Throughput figures) {

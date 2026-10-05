@@ -523,3 +523,36 @@ and the finished run says how long it is.
 
 - **WHEN** a run completes and its audit doubts 3 accepted segments
 - **THEN** the outcome card shows "3" under "suspicious"
+
+### Requirement: Show a finding's kind and the words it quotes where they stand
+
+The review panel SHALL show a kind badge (`name`, `wrong lang?` or `omission`) beside each finding whose kind maps to
+one, and SHALL show under the two panes a readable view of the source and the target in which every `⟦gN⟧` formatting
+token is a chip (`g0`, `g1`) and not raw text, and the words a finding quotes — the quoted opening of its note, or the
+replacement of an applied edit — are marked in the target at their first occurrence. The target view SHALL follow what
+is typed in the editor. A quote that is not in the target SHALL mark nothing, and a segment with no token and no found
+quote SHALL show no readable view. The chips and the mark SHALL take their colours from theme tokens only.
+
+**Source:** 08_UI_SCREENS_AND_STATES.md#screen-review, task 15d.13.
+In plain words: a person sees why a segment was flagged on the words themselves, and never has to read `⟦g0⟧` as if it
+were part of the book.
+
+#### Scenario: A quoted word is marked and the tokens are chips
+
+- **WHEN** the target `Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.` is open with the finding `"відчинив" — the name is not the locked rendering` of kind `glossary`
+- **THEN** the finding shows a `name` badge, the target view marks `відчинив`, and shows `g0` and `g1` as chips with no `⟦` in its text
+
+### Requirement: Refresh the flagged count when a run stops writing
+
+The review view model SHALL read the flagged count from the review desk again whenever the run state becomes
+`PAUSED`, `STOPPED`, `COMPLETED` or `FAILED`, because a run stores its decisions in its last flush, after its last
+event, and SHALL show only the newest read when two reads finish out of order.
+
+**Source:** task 15d.13 (a real run showed 169 flagged on the screen and 170 in the book).
+In plain words: the number on the Review flagged button at the end of a run is the number of flagged segments the book
+holds.
+
+#### Scenario: The final flush stored one more flagged segment
+
+- **WHEN** a run showing 169 flagged completes and the desk now counts 170
+- **THEN** the Review flagged count reads 170

@@ -37,6 +37,13 @@ public record AppPaths(Path dataDir, Path logDir, Path lockFile, Path databaseFi
      */
     public static final String TRACE_LOG_FILE_NAME = "bookloom-trace.log";
 
+    /**
+     * The evidence log's fixed name inside the log directory: the TRACE lines of flagged and repaired segments, kept
+     * apart from the rolling detailed log so a long run's rotation never drops them. It starts with
+     * {@link #TRACE_LOG_PREFIX}, so the diagnostic bundle collects it with the detailed log.
+     */
+    public static final String EVIDENCE_LOG_FILE_NAME = "bookloom-trace-evidence.log";
+
     /** The name every file of the detailed diagnostic log starts with: the active file and its rotated archives. */
     public static final String TRACE_LOG_PREFIX = "bookloom-trace";
 

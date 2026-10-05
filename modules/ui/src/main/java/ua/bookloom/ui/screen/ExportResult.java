@@ -138,6 +138,8 @@ final class ExportResult {
         }
         ExportReportLines.sourceFallbacks(messages, report)
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-source-fallbacks", line)));
+        ExportReportLines.noTargetFallbacks(messages, report)
+                .ifPresent(line -> checks.getChildren().add(warning("export-check-no-target", line)));
         final List<String> passLines = ExportReportLines.consistency(messages, report.consistency());
         for (int index = 0; index < passLines.size(); index++) {
             checks.getChildren()

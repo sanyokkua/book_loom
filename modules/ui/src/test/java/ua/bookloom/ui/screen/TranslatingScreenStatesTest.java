@@ -39,7 +39,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
     }
 
     private void publishRunning(final int auto, final int repaired, final int flagged, final int pending) {
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().publishProgress(ProgressFixtures.detailed(7, 11, auto, repaired, flagged, pending, 41, 66));
         WaitForAsyncUtils.waitForFxEvents();
     }
@@ -212,7 +212,7 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         bookReadyWithPending(0);
         desk.willAnswerCounts(new ReviewCounts(40, 0, 0, 0, 0, 0, 0, 0, 2));
         showTranslating();
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().publishProgress(new JobProgress(JobStage.TRANSLATE, 1, 1, 40, 0, 0, 1, 1, 38, 0, 2));
         mirror().live().publishSourceKept(1);
         mirror().publishOutcome(RunState.COMPLETED, completedReport(), null);

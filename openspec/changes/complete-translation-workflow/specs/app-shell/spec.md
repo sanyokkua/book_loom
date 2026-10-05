@@ -629,3 +629,17 @@ always live.
 
 - **WHEN** a book has been opened and the settings entry is activated directly from the navigation column
 - **THEN** the settings screen is shown, without the brief or the structure screen having been visited
+
+### Requirement: Show the quality dial and review mode in the title bar
+
+WHILE a run exists, the title bar SHALL show the run's quality dial and review mode, joined by ` · `, between the
+state text and the elapsed time (`Balanced · Unattended`), in English and Ukrainian, with a hover explanation, and SHALL
+show nothing for it when the run was started with none named.
+
+**Source:** 08_UI_SCREENS_AND_STATES.md#title-bar-run-status, task 15d.13.
+In plain words: from any screen a person sees how hard the run works and when it will stop to ask for them.
+
+#### Scenario: A run with the Balanced dial and Unattended mode
+
+- **WHEN** a run starts with the dial Balanced and the review mode Unattended
+- **THEN** the title bar reads `Balanced · Unattended` next to `Progress 0%`

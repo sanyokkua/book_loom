@@ -3,6 +3,7 @@ package ua.bookloom.pipeline;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,7 @@ final class StallWatchdog {
     static final Duration NO_DECISION_LIMIT = Duration.ofMinutes(20);
 
     /** The attempt being waited on, and when the watchdog gives up on it. */
-    private record Outstanding(CallKind kind, @Nullable String segmentId, Instant since, Duration ceiling) {}
+    private record Outstanding(CallKind kind, List<String> segmentIds, Instant since, Duration ceiling) {}
 
     /** What the watchdog last ended a call for, until the call's answer takes it. */
     record Stall(CallKind kind, Duration elapsed, Duration ceiling) {}
@@ -77,7 +78,7 @@ final class StallWatchdog {
         final Instant now = clock.instant();
         switch (event) {
             case ModelCallStarted started ->
-                outstanding.set(new Outstanding(started.kind(), started.segmentId(), now, ceilingOf(started)));
+                outstanding.set(new Outstanding(started.kind(), started.segmentIds(), now, ceilingOf(started)));
             case ModelCallFinished finished -> outstanding.set(null);
             case SegmentDecided decided -> lastProgress.set(now);
             case Resumed resumed -> lastProgress.set(now);
@@ -110,7 +111,7 @@ final class StallWatchdog {
         final Outstanding call = outstanding.get();
         if (call != null && Duration.between(call.since(), now).compareTo(call.ceiling()) > 0) {
             outstanding.compareAndSet(call, null);
-            fire(call.kind(), call.segmentId(), Duration.between(call.since(), now), call.ceiling());
+            fire(call.kind(), call.segmentIds(), Duration.between(call.since(), now), call.ceiling());
             return;
         }
         final Instant progressed = lastProgress.get();
@@ -119,7 +120,7 @@ final class StallWatchdog {
             log.warn("No segment decided for {} min while running; ending the call in flight", idle.toMinutes());
             if (call != null) {
                 outstanding.compareAndSet(call, null);
-                fire(call.kind(), call.segmentId(), Duration.between(call.since(), now), NO_DECISION_LIMIT);
+                fire(call.kind(), call.segmentIds(), Duration.between(call.since(), now), NO_DECISION_LIMIT);
             }
         }
     }
@@ -133,20 +134,21 @@ final class StallWatchdog {
         }
     }
 
+    // A batch call is about several segments and has no single one, so the line names every id it carries.
     private void fire(
-            final CallKind kind, @Nullable final String segmentId, final Duration elapsed, final Duration ceiling) {
+            final CallKind kind, final List<String> segmentIds, final Duration elapsed, final Duration ceiling) {
         final Stall stall = new Stall(kind, elapsed, ceiling);
         fired.set(stall);
         if (control.interruptStalledCall()) {
             log.warn(
-                    "Stall watchdog ended a {} call segmentId={} after {} s (ceiling {} s); it is retried as a timeout",
+                    "Stall watchdog ended a {} call segmentIds={} after {} s (ceiling {} s); it is retried as a timeout",
                     kind,
-                    segmentId,
+                    segmentIds,
                     elapsed.toSeconds(),
                     ceiling.toSeconds());
         } else {
             fired.compareAndSet(stall, null);
-            log.warn("Stall watchdog found no call in flight to end kind={} segmentId={}", kind, segmentId);
+            log.warn("Stall watchdog found no call in flight to end kind={} segmentIds={}", kind, segmentIds);
         }
     }
 

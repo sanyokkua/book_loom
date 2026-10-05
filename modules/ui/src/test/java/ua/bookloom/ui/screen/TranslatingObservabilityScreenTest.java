@@ -200,7 +200,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
     @Test
     void connectionChip_unsteady_countsTheFailuresAndOpensTheSettings() {
         showTranslating();
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().live().publishConnection(new ConnectionStatus(Duration.ofSeconds(200), 2, 3, 31.0, 48.0));
         WaitForAsyncUtils.waitForFxEvents();
 
@@ -220,7 +220,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
     @Test
     void connectionChip_steady_saysWhenTheModelLastAnswered() {
         showTranslating();
-        mirror().publishRunStarted("Frankenstein.epub");
+        mirror().publishRunStarted("Frankenstein.epub", null);
         mirror().live().publishConnection(new ConnectionStatus(Duration.ofSeconds(4), 0, 0, null, null));
         WaitForAsyncUtils.waitForFxEvents();
 
