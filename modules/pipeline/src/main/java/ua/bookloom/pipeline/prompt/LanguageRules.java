@@ -37,6 +37,7 @@ public final class LanguageRules implements LanguageSupport {
     private static final String TESTED = "tested";
     private static final String PITFALLS = "pitfalls";
     private static final String EXAMPLE = "example";
+    private static final String BATCH_EXAMPLE = "batchExample";
     private static final String NAME_EXAMPLE = "nameExample";
     private static final String REVIEWER_CHECKS = "reviewerChecks";
     private static final int MAX_SOURCE_NOTES = 3;
@@ -220,6 +221,14 @@ public final class LanguageRules implements LanguageSupport {
      */
     String examples(@Nullable final String sourceTag, final String targetTag) {
         return pick(sourceTag, targetTag, EXAMPLE, file -> String.join("\n\n", file.indexed(EXAMPLE)));
+    }
+
+    /**
+     * The batch draft's examples, chosen like {@link #examples}: protocol-neutral lines {@code source ⇒ target}, one
+     * example per blank-line block, which {@link BatchExamples} renders for a protocol.
+     */
+    String batchExamples(@Nullable final String sourceTag, final String targetTag) {
+        return pick(sourceTag, targetTag, BATCH_EXAMPLE, file -> String.join("\n\n", file.indexed(BATCH_EXAMPLE)));
     }
 
     /** The suggestion call's example, chosen like {@link #examples}. */

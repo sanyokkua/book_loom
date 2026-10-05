@@ -37,6 +37,7 @@ import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -173,7 +174,8 @@ final class SoakRun {
                 (period, ticking) -> {
                     tick.set(ticking);
                     return () -> tick.set(null);
-                });
+                },
+                BatchDrafter.DEFAULT_INITIAL_SIZE);
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

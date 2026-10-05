@@ -105,11 +105,7 @@ public final class PromptTemplates {
         final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
         values.putAll(extra);
         if (declares(name, EXAMPLES)) {
-            values.put(
-                    EXAMPLES,
-                    name.showsNameExamples()
-                            ? rules.nameExamples(frame.sourceLanguage(), frame.targetLanguage())
-                            : rules.examples(frame.sourceLanguage(), frame.targetLanguage()));
+            values.put(EXAMPLES, examplesFor(name, frame));
         }
         if (declares(name, LANGUAGE_RULES)) {
             values.put(
@@ -117,6 +113,17 @@ public final class PromptTemplates {
                     rules.section(frame.sourceLanguage(), frame.targetLanguage(), name.reviewsTranslation()));
         }
         return renderSystem(name, values);
+    }
+
+    private String examplesFor(final PromptName name, final CallFrame frame) {
+        final String source = frame.sourceLanguage();
+        final String target = frame.targetLanguage();
+        if (name.showsNameExamples()) {
+            return rules.nameExamples(source, target);
+        }
+        return name == PromptName.DRAFT_BATCH_JSON
+                ? BatchExamples.render(rules.batchExamples(source, target))
+                : rules.examples(source, target);
     }
 
     private static boolean declares(final PromptName name, final String slot) {

@@ -36,6 +36,22 @@ public enum PromptName {
                             "precedingTargets",
                             "extraInstruction"))),
 
+    /**
+     * A batch of consecutive segments drafted in one call, answered as one JSON object with an entry per id; the flat
+     * schema carries no length limits, because a bounded schema once stalled a structured call on one provider.
+     */
+    DRAFT_BATCH_JSON(
+            "draft-batch-json",
+            CallKind.DRAFT,
+            "draft-batch-json",
+            BatchSchema.SCHEMA,
+            0.2,
+            0.1,
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
+                    Set.of("examples", "languageRules")),
+            BatchSlots.USER),
+
     /** The correction call after a reply is not the required JSON object. */
     STRUCTURAL_REPAIR(
             "structural-repair",
@@ -272,6 +288,24 @@ public enum PromptName {
     /** The user template's slots. */
     public Slots userSlots() {
         return userSlots;
+    }
+
+    /** The user slots of the batch draft, kept out of the constant so the enum body stays readable. */
+    private static final class BatchSlots {
+
+        static final Slots USER = new Slots(
+                Set.of("items", "source", "target"),
+                Set.of(
+                        "summary",
+                        "glossaryTerms",
+                        "lockedNames",
+                        "suggestedTerms",
+                        "memoryHint",
+                        "characters",
+                        "precedingPairs",
+                        "nextSource",
+                        "itemTokens",
+                        "extraInstruction"));
     }
 
     /**

@@ -70,7 +70,9 @@ catalogue shape:
 - judge: `{"score":1.0,"verdict":"accept","findings":[],"deferrals":[]}`;
 - reflect: `{"issues":[]}`;
 - pre-scan: the capitalised words of the text as candidate terms of type `other` and gender `unknown`;
-- summary: an empty bilingual summary with no facts.
+- summary: an empty bilingual summary with no facts;
+- batch draft: `{"items":[{"id":"<id>","target":"<text>"}]}` with one entry per `<s id="…">…</s>` item of the last
+  `<Items>` block, each text upper-cased with its tokens kept, so an offline run drafts in batches too.
 
 The pseudo model SHALL report a normal finish and no token usage. The conversion SHALL follow the same rules whatever the
 machine's default locale. Every `⟦gN⟧` token and every character or entity reference SHALL be kept exactly as written.

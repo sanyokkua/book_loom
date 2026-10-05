@@ -21,6 +21,7 @@ import ua.bookloom.api.persistence.TmRepository;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
+import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -96,7 +97,8 @@ public final class TranslationEngineImpl implements TranslationEngine {
                     revision,
                     clock,
                     timer,
-                    RunTicks.DAEMON));
+                    RunTicks.DAEMON,
+                    BatchDrafter.DEFAULT_INITIAL_SIZE));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,

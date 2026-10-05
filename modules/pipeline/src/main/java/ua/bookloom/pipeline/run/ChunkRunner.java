@@ -16,7 +16,6 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
-import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.context.ContextBudget;
@@ -57,6 +56,7 @@ public final class ChunkRunner {
     private final DecisionFollowUp followUp;
     private final SegmentEvents events;
     private final DraftShortcuts shortcuts;
+    private final BatchStage batches;
 
     /**
      * Creates the runner of one run.
@@ -84,6 +84,7 @@ public final class ChunkRunner {
                 settings.projectId(), settings.frame().sourceLanguage(), steps.summary(), stores, sinks, calls);
         this.events = new SegmentEvents(sinks.emit(), locators);
         this.shortcuts = new DraftShortcuts(settings.frame().styleSheet().text());
+        this.batches = new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary);
     }
 
     /**
@@ -125,7 +126,7 @@ public final class ChunkRunner {
                 segments,
                 Objects.requireNonNull(glossary.data(), "glossary"),
                 followUp.summary(),
-                ContextBudget.DEFAULT_WINDOW);
+                settings.window());
         final int budget = window.chunkTokens();
         final int cap = settings.dial().chunkCap(settings.mode());
         final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);
@@ -164,7 +165,9 @@ public final class ChunkRunner {
         final ChunkContext context = Objects.requireNonNull(read.data(), "context");
         final Current current = new Current(
                 work,
+                items,
                 new ChunkDrafts(),
+                new ChunkBatches(),
                 context,
                 new LoopSettings(settings.mode(), settings.dial(), settings.frame(), settings.names(), context.terms()),
                 steps.translator().gatedBy(context.gate()),
@@ -268,19 +271,31 @@ public final class ChunkRunner {
             current.drafts().drafted(reused, context.snapshot());
             return new Step.Done<>(reused);
         }
-        return drafted(current, segment, context, mask);
+        return drafted(current, new Ready(item, mask, offer), context);
     }
 
-    private Step<DraftOutcome> drafted(
-            final Current current, final Segment segment, final ContextPackage context, final ProtectedMask mask) {
+    /** A segment that needs a call, with the mask it is shown and what the memory offered it. */
+    private record Ready(WorkItem item, ProtectedMask mask, MemoryReuse.Offer offer) {}
+
+    private Step<DraftOutcome> drafted(final Current current, final Ready ready, final ContextPackage context) {
+        final Segment segment = ready.item().segment();
+        final ProtectedMask mask = ready.mask();
+        final Optional<RunEnd> batchEnd = batches.ensure(current, ready.item(), mask, ready.offer());
+        if (batchEnd.isPresent()) {
+            return new Step.Stopped<>(batchEnd.get());
+        }
         events.contextAssembled(segment.id(), context.snapshot());
-        final Step<DraftOutcome> drafted = calls.untilAnsweredOrFlagged(
-                current.work(),
-                segment.id(),
-                new RoutedCalls.StepName("draft", segment.id()),
-                () -> current.translator()
-                        .translateSplit(segment, context.draftContext(), mask, steps.splitter(), current.budget()),
-                error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
+        final DraftOutcome batched = current.batches().take(segment.id());
+        final Step<DraftOutcome> drafted = batched != null
+                ? new Step.Done<>(batched)
+                : calls.untilAnsweredOrFlagged(
+                        current.work(),
+                        segment.id(),
+                        new RoutedCalls.StepName("draft", segment.id()),
+                        () -> current.translator()
+                                .translateSplit(
+                                        segment, context.draftContext(), mask, steps.splitter(), current.budget()),
+                        error -> new DraftOutcome.FlaggedAtOnce(segment, segment.masked(), List.of(), error));
         if (drafted instanceof Step.Done<DraftOutcome>(final DraftOutcome outcome)) {
             current.drafts().drafted(outcome, context.snapshot());
             events.drafted(outcome, current.loop());
@@ -369,16 +384,4 @@ public final class ChunkRunner {
                 ? Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(committed.error(), "error")))
                 : Optional.empty();
     }
-
-    /**
-     * The chunk being decided: the unit's work, its drafts, the glossary it read, its loop settings, the draft step
-     * gated through its protected spans, and the unit's budget an oversized segment is split against.
-     */
-    private record Current(
-            WorkList work,
-            ChunkDrafts drafts,
-            ChunkContext context,
-            LoopSettings loop,
-            SegmentTranslator translator,
-            int budget) {}
 }

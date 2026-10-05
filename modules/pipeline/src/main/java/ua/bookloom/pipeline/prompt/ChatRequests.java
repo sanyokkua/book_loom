@@ -25,7 +25,7 @@ public final class ChatRequests {
      * @param limit the expected completion length and its cap, or null when the call states no expected output
      * @param lowerTemperature whether a retry asks for the name's lower temperature
      * @return the request, with reasoning off, the effective context size, the output limit and the name's call kind,
-     *     which chooses the call's timeout
+     *     which chooses the call's timeout; no response format when the call's schema is empty
      */
     public static ChatRequest build(
             final PromptName name,
@@ -40,7 +40,9 @@ public final class ChatRequests {
         return new ChatRequest(
                 messages,
                 name.temperature(lowerTemperature),
-                new ResponseFormat(name.responseFormatName(), name.responseSchema()),
+                name.responseSchema().isEmpty()
+                        ? null
+                        : new ResponseFormat(name.responseFormatName(), name.responseSchema()),
                 false,
                 TokenBudget.EFFECTIVE_CONTEXT,
                 limit == null ? null : limit.expectedTokens(),

@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.RequestSummary;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
@@ -42,10 +43,30 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 @Slf4j
 public final class JobModelCalls implements ModelCalls {
 
+    // A reply may take at most this share of the window; the prompt and the safety margin keep the rest.
+    private static final int OUTPUT_WINDOW_DIVISOR = 2;
+
     private final Function<Runnable, ChatModel> guard;
     private final Consumer<JobEvent> announce;
     private final Clock clock;
     private final String targetLanguage;
+    private final int window;
+
+    /**
+     * Creates a seam for calls made against the default window, such as a glossary scan before any run.
+     *
+     * @param guard see the full constructor
+     * @param announce see the full constructor
+     * @param clock see the full constructor
+     * @param targetLanguage see the full constructor
+     */
+    public JobModelCalls(
+            final Function<Runnable, ChatModel> guard,
+            final Consumer<JobEvent> announce,
+            final Clock clock,
+            final String targetLanguage) {
+        this(guard, announce, clock, targetLanguage, ContextBudget.DEFAULT_WINDOW);
+    }
 
     /**
      * Creates the run's model-call seam.
@@ -55,16 +76,23 @@ public final class JobModelCalls implements ModelCalls {
      * @param announce the non-null receiver of each start and finish
      * @param clock the non-null clock an attempt is timed by
      * @param targetLanguage the non-null language tag a reply is written in, which a usage estimate counts by
+     * @param window the context window in tokens every sized request is sent with, and which bounds its reply cap;
+     *     positive
      */
     public JobModelCalls(
             final Function<Runnable, ChatModel> guard,
             final Consumer<JobEvent> announce,
             final Clock clock,
-            final String targetLanguage) {
+            final String targetLanguage,
+            final int window) {
         this.guard = Objects.requireNonNull(guard, "guard");
         this.announce = Objects.requireNonNull(announce, "announce");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
+        if (window <= 0) {
+            throw new IllegalArgumentException("window must be positive: " + window);
+        }
+        this.window = window;
     }
 
     @Override
@@ -73,11 +101,19 @@ public final class JobModelCalls implements ModelCalls {
     }
 
     @Override
-    public Result<ChatResponse> callAbout(
-            final CallKind kind, final List<String> segmentIds, final ChatRequest request) {
+    public Result<ChatResponse> callAbout(final CallKind kind, final List<String> segmentIds, final ChatRequest asked) {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(segmentIds, "segmentIds");
-        Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(asked, "request");
+        final ChatRequest request = asked.contextWindow() == null
+                ? asked
+                : asked.sizedTo(window, Math.max(1, window / OUTPUT_WINDOW_DIVISOR));
+        log.debug(
+                "Model call sized kind={} window={} asked={} cap={}",
+                kind,
+                request.contextWindow(),
+                asked.contextWindow(),
+                request.maxOutputTokens());
         final Attempts attempts = new Attempts(new Call(kind, List.copyOf(segmentIds), summaryOf(request)));
         final Result<ChatResponse> result = guard.apply(
                         () -> log.debug("Model call going out kind={} segmentIds={}", kind, segmentIds))

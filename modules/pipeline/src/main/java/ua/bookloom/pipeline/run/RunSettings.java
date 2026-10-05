@@ -14,8 +14,10 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param dial the quality dial's mechanics
  * @param frame the run's languages, style sheet and foreign-passage policy
  * @param names the brief's name policy
+ * @param window the context window in tokens the run's prompts and chunks are sized against; positive
  */
-public record RunSettings(String projectId, ReviewMode mode, DialParameters dial, CallFrame frame, NamePolicy names) {
+public record RunSettings(
+        String projectId, ReviewMode mode, DialParameters dial, CallFrame frame, NamePolicy names, int window) {
 
     /** Rejects a missing component. */
     public RunSettings {
@@ -24,5 +26,8 @@ public record RunSettings(String projectId, ReviewMode mode, DialParameters dial
         Objects.requireNonNull(dial, "dial");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(names, "names");
+        if (window <= 0) {
+            throw new IllegalArgumentException("window must be positive: " + window);
+        }
     }
 }

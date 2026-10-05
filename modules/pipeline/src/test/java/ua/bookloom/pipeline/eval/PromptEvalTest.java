@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
@@ -37,11 +38,13 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  *
  * <p>{@code BOOKLOOM_EVAL_LANGS} (a comma list of tags, or {@code all}) runs the per-language mini-corpora under
  * {@code eval/languages/} instead; {@code BOOKLOOM_EVAL_RULES=generic} forces every prompt to the generic language
- * rules, and the reports then end in {@code -generic}, so the two can be compared.
+ * rules, and the reports then end in {@code -generic}, so the two can be compared. With
+ * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead.
  */
 @Slf4j
 @Tag("promptEval")
 @EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_URL", matches = ".+")
+@DisabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "batch")
 class PromptEvalTest {
 
     private static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
@@ -116,7 +119,7 @@ class PromptEvalTest {
         return model.replaceAll("[^A-Za-z0-9._-]", "_");
     }
 
-    private static ModelCalls calls(final String modelId) {
+    static ModelCalls calls(final String modelId) {
         final Injector injector = Guice.createInjector(new LlmModule());
         final boolean lmStudio = "lmstudio".equalsIgnoreCase(System.getenv("BOOKLOOM_EVAL_PROVIDER"));
         final ProviderConfig config = new ProviderConfig(

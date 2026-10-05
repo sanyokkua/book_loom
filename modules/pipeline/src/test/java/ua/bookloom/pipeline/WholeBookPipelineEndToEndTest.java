@@ -13,6 +13,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -51,7 +52,8 @@ import ua.bookloom.pipeline.WholeBookRun.BookRun;
 
 /**
  * The one test that proves the parts of a run are connected at the real HTTP seam, in both provider dialects: a
- * five-paragraph Markdown book goes through preparation, drafting, the chunk judge, a directed fix and its one-pair
+ * five-paragraph Markdown book goes through preparation, drafting (the first chunk's four paragraphs in one batch
+ * call), the chunk judge, a directed fix and its one-pair
  * re-judge, a fix that keeps echoing the source and is flagged, the Assisted pause, the person's edit, the resume, the
  * unit's end and an export with every side file. Every stubbed Ukrainian target is Cyrillic with a length ratio inside
  * 0.81–1.69 of its source, so only the stubbed echo fails a deterministic check (the ratios are listed in
@@ -68,11 +70,13 @@ class WholeBookPipelineEndToEndTest {
     private static final String HOUSE_TARGET = "Вона рано вийшла з дому.";
     private static final int UNAVAILABLE = 503;
     private static final int PARAGRAPHS = 50;
+    private static final int SEA_CHUNK = 8;
+    private static final int SEA_BATCHES = 7;
     private static final String SEA_TARGET = "Том дивився на сіре море тієї ночі.";
-    // Measured: about 5,560 events at DEBUG or higher in each dialect once every attempt and context was announced (6
-    // of them at INFO or higher; the deterministic text checks added about 350 of them); the bound is the next multiple
-    // of 500 above that count.
-    private static final int DEBUG_OR_HIGHER_BOUND = 6_000;
+    // Measured: about 4,280 events at DEBUG or higher in each dialect once every attempt and context was announced, 14
+    // of them at INFO or higher (the seven batch drafts each log one INFO line); the bound is the next multiple of 500
+    // above the first count.
+    private static final int DEBUG_OR_HIGHER_BOUND = 4_500;
     private static final int INFO_OR_HIGHER_BOUND = 30;
 
     @TempDir
@@ -83,9 +87,9 @@ class WholeBookPipelineEndToEndTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // The chunk's four drafts and its judge come before any decision; the fixes and the re-judge follow, and the
-    // flagged fourth segment stops the run before the next chunk's draft. A judge call over one pair names its
-    // segment; the chunk's judge over four names none.
+    // The chunk's one batch draft and its judge come before any decision; the fixes and the re-judge follow, and the
+    // flagged fourth segment stops the run before the next chunk's draft. A call about several segments — the batch
+    // draft of four, the chunk's judge over four — names none; a call about one pair names its segment.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_assistedBalancedBook_callsInTheStubbedOrder(final ProviderKind kind) {
@@ -93,10 +97,7 @@ class WholeBookPipelineEndToEndTest {
 
         assertThat(run.calls())
                 .containsExactly(
-                        "DRAFT Book.md:0",
-                        "DRAFT Book.md:1",
-                        "DRAFT Book.md:2",
-                        "DRAFT Book.md:3",
+                        "DRAFT null",
                         "JUDGE null",
                         "DIRECTED_FIX Book.md:1",
                         "JUDGE Book.md:1",
@@ -106,16 +107,16 @@ class WholeBookPipelineEndToEndTest {
                         "JUDGE Book.md:4");
     }
 
-    // A pause on the flagged segment after exactly nine requests, with the whole first chunk already stored.
+    // A pause on the flagged segment after exactly six requests, with the whole first chunk already stored.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void run_assistedBalancedBook_pausesOnFlaggedAfterNineRequests(final ProviderKind kind) {
+    void run_assistedBalancedBook_pausesOnFlaggedAfterSixRequests(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
         assertThat(run.pause())
                 .extracting(Paused::reason, Paused::segmentId)
                 .containsExactly(PauseReason.ON_FLAGGED, "Book.md:3");
-        assertThat(run.requestsAtPause()).isEqualTo(9);
+        assertThat(run.requestsAtPause()).isEqualTo(6);
         assertThat(run.statusesAtPause())
                 .containsExactly(
                         SegmentStatus.ACCEPTED,
@@ -134,17 +135,17 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.segment("Book.md:1"))
                 .extracting(SegmentView::status, SegmentView::path, SegmentView::maskedMachineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, WholeBookRun.FIX_1);
-        assertThat(WholeBookRun.userMessage(run.bodies().get(6))).contains("s1", WholeBookRun.FIX_1);
+        assertThat(WholeBookRun.userMessage(run.bodies().get(3))).contains("s1", WholeBookRun.FIX_1);
     }
 
-    // The draft of a short paragraph with no token is capped at the floor; the judge of four pairs at 896 tokens.
+    // The batch of four short paragraphs is capped by its items' allowances; the judge of four pairs at 896 tokens.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void run_draftAndJudge_capTheDraftAtTheFloorAndTheJudgeByItsPairs(final ProviderKind kind) {
+    void run_batchAndJudge_capTheBatchByItsItemsAndTheJudgeByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
-        assertThat(run.bodies().get(0)).contains(capField(kind) + ":128");
-        assertThat(run.bodies().get(4)).contains(capField(kind) + ":896");
+        assertThat(run.bodies().get(0)).contains(capField(kind) + ":273");
+        assertThat(run.bodies().get(1)).contains(capField(kind) + ":896");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.
@@ -156,8 +157,8 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.edited())
                 .extracting(SegmentView::status, SegmentView::userTarget)
                 .containsExactly(SegmentStatus.REVISED, WholeBookRun.EDIT);
-        assertThat(WholeBookRun.precedingTargets(run.bodies().get(9))).contains(WholeBookRun.EDIT);
-        assertThat(run.bodies()).hasSize(11);
+        assertThat(WholeBookRun.precedingTargets(run.bodies().get(6))).contains(WholeBookRun.EDIT);
+        assertThat(run.bodies()).hasSize(8);
         assertThat(run.report().end()).isEqualTo(JobState.COMPLETED);
         assertThat(run.runState()).isEqualTo(JobState.COMPLETED);
         assertThat(run.segment("Book.md:4").status()).isEqualTo(SegmentStatus.ACCEPTED);
@@ -178,7 +179,8 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.calls()).noneMatch(call -> call.startsWith(CallKind.SUMMARY.name()));
     }
 
-    // The first draft's reply carries the dialect's own usage fields, which reach its finished-call event as reported.
+    // The batch draft's reply carries the dialect's own usage fields, which reach its finished-call event as reported;
+    // the call is about four segments, so it names none of them alone.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_replyWithUsage_finishesItsCallWithTheReportedTokens(final ProviderKind kind) {
@@ -193,7 +195,7 @@ class WholeBookPipelineEndToEndTest {
                         finished -> WholeBookRun.usage(finished).prompt(),
                         finished -> WholeBookRun.usage(finished).completion(),
                         ModelCallFinished::usageEstimated)
-                .containsExactly("Book.md:0", 120, 45, false);
+                .containsExactly(null, 120, 45, false);
     }
 
     // The exported book holds the accepted, repaired and edited targets with the emphasis restored.
@@ -245,11 +247,10 @@ class WholeBookPipelineEndToEndTest {
     void run_providerAnswers503UntilRetriesRunOut_pausesOnErrorAndCompletesAfterResume(final ProviderKind kind) {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
             provider.stubSequence(List.of(
-                    provider.target(DOOR_TARGET, Duration.ZERO),
                     provider.failure(UNAVAILABLE),
                     provider.failure(UNAVAILABLE),
                     provider.failure(UNAVAILABLE),
-                    provider.target(HOUSE_TARGET, Duration.ZERO)));
+                    provider.reply(WholeBookRun.batchReply(List.of(DOOR_TARGET, HOUSE_TARGET)), Duration.ZERO)));
             final WholeBookRun.Project project = WholeBookRun.project(
                     TestBooks.markdown(tempDir.resolve("Book.md"), DOOR + "\n\n" + HOUSE), QualityDial.FAST);
             final TranslationJob job =
@@ -264,10 +265,10 @@ class WholeBookPipelineEndToEndTest {
             job.resume();
             final JobReport ended = report(await(running));
 
-            assertPausedOnUpstreamAfterTheFirstSegment(pause);
-            assertThat(requestsAtPause).isEqualTo(4);
+            assertPausedOnUpstreamBeforeAnySegment(pause);
+            assertThat(requestsAtPause).isEqualTo(3);
             assertThat(ended).extracting(JobReport::end, JobReport::accepted).containsExactly(JobState.COMPLETED, 2);
-            assertThat(provider.chatRequests()).isEqualTo(5);
+            assertThat(provider.chatRequests()).isEqualTo(4);
         }
     }
 
@@ -285,17 +286,22 @@ class WholeBookPipelineEndToEndTest {
         assertThat(messages(logged, Level.INFO)).hasSizeLessThanOrEqualTo(INFO_OR_HIGHER_BOUND);
     }
 
-    private static void assertPausedOnUpstreamAfterTheFirstSegment(final Paused pause) {
+    private static void assertPausedOnUpstreamBeforeAnySegment(final Paused pause) {
         assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
         assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.upstream);
         assertThat(pause.progress())
                 .extracting(JobProgress::accepted, JobProgress::pending)
-                .containsExactly(1, 1);
+                .containsExactly(0, 2);
     }
 
     private void runSeaBook(final ProviderKind kind) {
         try (WireMockProvider provider = new WireMockProvider(kind)) {
-            provider.stubAlways(provider.target(SEA_TARGET, Duration.ZERO));
+            // Fifty paragraphs in Fast chunks of eight: six full batches and one of two, each answered whole.
+            provider.stubSequence(IntStream.range(0, SEA_BATCHES)
+                    .map(batch -> batch < SEA_BATCHES - 1 ? SEA_CHUNK : PARAGRAPHS % SEA_CHUNK)
+                    .mapToObj(size -> provider.reply(
+                            WholeBookRun.batchReply(Collections.nCopies(size, SEA_TARGET)), Duration.ZERO))
+                    .toList());
             final String book = IntStream.rangeClosed(1, PARAGRAPHS)
                     .mapToObj(night -> "Tom watched the grey sea on night " + night + ".")
                     .collect(Collectors.joining("\n\n"));

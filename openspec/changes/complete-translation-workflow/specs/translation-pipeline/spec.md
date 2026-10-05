@@ -1183,6 +1183,89 @@ instead of a prompt it silently truncates.
 - **WHEN** the dynamic allowance holds the glossary line and the two preceding texts but not the summary
 - **THEN** the prompt carries the glossary line and both preceding texts and no summary block
 
+### Requirement: Draft consecutive segments in token-budgeted batches
+
+The system SHALL draft the segments of a chunk that need a model call in batches: when a chunk reaches a segment that
+needs a call and no batch has dealt with it, that segment and the next ones that need a call, up to the batch size and
+within the chunk's source-token budget (never a fixed segment count), SHALL go in one call whose reply is the JSON
+object `{"items":[{"id","target"}]}` — ids `1…n` within the batch, answered by the flat batch schema. The prompt SHALL
+carry the items, the summary, glossary, memory and suggestions of every item once, the last two or three decided
+source and target pairs of the chapter, the source of the segment after the batch, the characters of the glossary the
+batch names with their genders, and, for each locked name, a line prefixed with its item's id (`3: ⟦g0⟧ → name`). A
+segment kept as it is, an auxiliary text, a translation-memory reuse and a segment larger than the chunk budget SHALL
+never join a batch, and Manual review, whose chunks hold one segment, SHALL draft every segment alone.
+
+The reply SHALL be validated per id: the id exactly once with text, the source's tokens in order, the length band and the
+document's placeholder gate. Only an id that fails SHALL be drafted again on its own, through the ordinary single-segment
+draft, with its own context package; a reply that is unreadable, or a call answered with an error the single draft
+would flag its segment for, SHALL send every segment to its own draft. Every segment keeps its own verdict: the quality
+loop, the repair path, the acceptance rule and the pause, resume and skip behaviour are per segment, so a pause after a
+segment of a batch keeps the answers of the rest and a resume makes no new batch call for them. A batch call that fails
+is routed as one step named by its first segment and counts one toward the step's failure budget.
+
+The batch size SHALL start at 8, halve when a reply loses an id, repeats one, merges two items or names an id the batch
+never held, and grow by one after three clean batches, never above 16. Dial budgets are the chunk caps: Fast 8, Balanced
+4, Max 2 segments per chunk, so a batch is never larger than its chunk.
+
+**Source:** `tasks.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book
+of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it
+loses one of them only that one is asked again.
+
+#### Scenario: Four paragraphs go in one call
+
+- **WHEN** a Fast chunk of four paragraphs is drafted and the reply answers ids 1 to 4 with their tokens
+- **THEN** one draft call about the four segments is made and each segment is decided from its own entry
+
+#### Scenario: A missing id falls back alone
+
+- **WHEN** the reply answers ids 1, 3 and 4 of four
+- **THEN** a single-segment draft is made for the second segment only, and the other three are taken from the batch
+
+#### Scenario: A merged pair falls back for both
+
+- **WHEN** the entry for id 2 holds the translation of items 2 and 3 and id 3 has no entry
+- **THEN** items 2 and 3 are each drafted alone and the batch size halves
+
+#### Scenario: A refusal sends every segment to its own draft
+
+- **WHEN** the batch reply is an apology in prose
+- **THEN** each of the four segments is drafted alone, one call each
+
+#### Scenario: A number-only paragraph is not in the batch
+
+- **WHEN** a chunk holds a paragraph `1881` between two sentences
+- **THEN** the batch carries the two sentences as ids 1 and 2 and `1881` is kept with no call
+
+#### Scenario: A pause keeps the answered batch
+
+- **WHEN** the run pauses after the first decided segment of a batch of four and is resumed
+- **THEN** no further model call is made for the other three, which are decided from the batch
+
+#### Scenario: The size adapts
+
+- **WHEN** the first batch of eight loses an id
+- **THEN** the next batches hold at most four items
+
+### Requirement: Size a run's calls from the detected window
+
+The system SHALL read the model's context length when a run is prepared, through the provider's own detection, and size
+the run's chunks, context and every request from the window `min(detected, 8192)`, or 8192 when nothing is detected or
+the detection fails; a failed detection SHALL never be an error. Every request of the run SHALL carry that window as
+its context size and SHALL cap its reply at half of it at most.
+
+**Source:** `tasks.md` 15d.5 (deferred to 15d.8). In plain words: a model loaded with 4k context is no longer sent
+prompts and `num_ctx` for 8k.
+
+#### Scenario: A 4096 window
+
+- **WHEN** the provider reports 4096 for the run's model
+- **THEN** every request of the run carries the context size 4096 and an output cap of at most 2048
+
+#### Scenario: Nothing detected
+
+- **WHEN** the provider reports no context length
+- **THEN** every request carries the context size 8192
+
 ### Requirement: Keep the prompt free of garbage and its prefix byte-identical
 
 The system SHALL leave out of every prompt an empty value, an empty heading, a placeholder line such as `(none)`, `n/a`

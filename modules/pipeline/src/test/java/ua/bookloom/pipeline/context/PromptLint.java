@@ -25,6 +25,9 @@ final class PromptLint {
     private static final Pattern BRACKET_HEADING = Pattern.compile("^\\[[^\\]]+]$");
     private static final Pattern COLON_HEADING = Pattern.compile("^[A-Z][^.]{0,90}:$");
     private static final Pattern PARAGRAPH_BREAK = Pattern.compile("\n\n");
+    /** A batch prompt writes a locked-name line as {@code 3: ⟦g0⟧ → name}, because tokens are numbered per item. */
+    private static final Pattern ITEM_PREFIX = Pattern.compile("^[A-Za-z0-9_.:-]+: (?=⟦g)");
+
     private static final int MIN_DUPLICATE_LENGTH = 15;
     private static final Set<String> GLOSSARY_HEADINGS = Set.of("[Glossary", "[Locked names", "[Suggested renderings");
 
@@ -90,7 +93,9 @@ final class PromptLint {
     }
 
     private static boolean termPresent(final String glossaryLine, final String chunkText) {
-        final String term = glossaryLine.substring(0, glossaryLine.indexOf(" → "));
+        final String term = ITEM_PREFIX
+                .matcher(glossaryLine.substring(0, glossaryLine.indexOf(" → ")))
+                .replaceFirst("");
         return term.startsWith("⟦g")
                 ? chunkText.contains(term)
                 : WholeWord.pattern(term).matcher(chunkText).find();

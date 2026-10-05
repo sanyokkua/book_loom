@@ -19,6 +19,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
@@ -64,6 +65,7 @@ public final class TranslateCommand {
     private final ExportService exports;
     private final ShutdownCancellation shutdown;
     private final Clock clock;
+    private final ModelCapabilities capabilities;
 
     /** Runs one parsed command and reports only its user-facing result to the supplied stream. */
     public int run(List<String> args, PrintStream out) {
@@ -157,8 +159,10 @@ public final class TranslateCommand {
         if (arguments.options().reviewNames()) {
             report.names(timed(report, "names", () -> names.review(projectId, dataOf(model), out)));
         }
+        final Integer detected = capabilities.detectedTokens(selection).orElse(null);
+        log.debug("translate command detectedContext={}", detected);
         final Result<TranslationJob> job =
-                engine.newJob(new RunRequest(projectId, ReviewMode.UNATTENDED), dataOf(model));
+                engine.newJob(new RunRequest(projectId, ReviewMode.UNATTENDED, detected), dataOf(model));
         if (job.isErr()) {
             return printError(errorOf(job), out);
         }

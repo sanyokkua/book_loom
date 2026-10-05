@@ -77,7 +77,12 @@ class PromptHygieneLintTest {
             Map.entry("terms", "Hale (3 uses) — Hale and Moreau opened the old door."),
             Map.entry("chapterSource", SOURCE),
             Map.entry("chapterTarget", TARGET),
-            Map.entry("previousSummary", "Hale searches for his brother."));
+            Map.entry("previousSummary", "Hale searches for his brother."),
+            Map.entry("items", "<s id=\"1\">" + SOURCE + " ⟦g0⟧ ⟦g1⟧</s>"),
+            Map.entry("itemTokens", "1: ⟦g0⟧ ⟦g1⟧"),
+            Map.entry("characters", "Hale — a man"),
+            Map.entry("precedingPairs", "Source: He left.\nTranslation: Він пішов."),
+            Map.entry("nextSource", "He came back."));
 
     @ParameterizedTest
     @EnumSource(PromptName.class)

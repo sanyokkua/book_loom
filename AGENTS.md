@@ -59,8 +59,9 @@ both light and dark, every operable control explains itself on hover, wheel scro
 row heights, and the time left is the average of the last 20 timed segments. Not built: saving (nothing survives a
 restart, no remembered settings, no SQLite), the other Settings tabs (Models, Generation, Automation, Storage) and the
 Projects screen. Measurements (15d.0, done): per-call-kind tokens and times in the run summary and the report, `scripts/segment-histogram.py`, `--stop-after`, and the "where the time goes" table in `docs/DEVELOPMENT.md`. Eval foundation (15d.1, done): a judge defect corpus, a draft case set, per-class thresholds and
-`scripts/eval-matrix.sh` over the models in `scripts/eval-models.txt`; gpt-oss now works on Ollama's native endpoint. Next: group 15d
-of `openspec/changes/complete-translation-workflow` in its revised order (measure first, language-rules map, batched drafting,
+`scripts/eval-matrix.sh` over the models in `scripts/eval-models.txt`; gpt-oss now works on Ollama's native endpoint. Batched drafting (15d.8) is built and awaits its real-run measurement: a chunk's segments that need a call go in one JSON call
+and only a failing id is drafted again alone; a run sizes its calls from the detected context window. Next: group 15d
+of `openspec/changes/complete-translation-workflow` in its revised order (measure batching, then
 a reviewer that fixes in place with edits verified in code), then group 16 (the gate).
 
 ## Commands

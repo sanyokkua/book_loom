@@ -43,8 +43,11 @@ class PromptShapeTest {
             "reflect", "issues",
             "prescan", "terms");
 
-    private static final Map<String, String> OTHER_REPLY_KEYS =
-            Map.of("review-terms", "verdicts", "suggest-targets", "suggestions", "summary", "summary");
+    private static final Map<String, String> OTHER_REPLY_KEYS = Map.of(
+            "review-terms", "verdicts",
+            "suggest-targets", "suggestions",
+            "summary", "summary",
+            "draft-batch-json", "items");
 
     // The draft system measured 698 before the language-rules map replaced the per-language example files.
     private static final int DRAFT_SYSTEM_BUDGET = 697;

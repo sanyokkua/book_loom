@@ -36,7 +36,7 @@ class LanguageFilesTest {
     private static final Pattern KEY = Pattern.compile(
             "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
-                    + "|example\\.\\d+(\\.pairs)?)");
+                    + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+)");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");
 
     static Properties file(final String resource) throws IOException {

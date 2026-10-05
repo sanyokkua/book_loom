@@ -6,7 +6,6 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.capturePaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.executor;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.targetReply;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -60,8 +60,8 @@ import ua.bookloom.persistence.PersistenceModule;
 
 /**
  * The whole-book scenario {@link WholeBookPipelineEndToEndTest} checks facet by facet: the real document, persistence
- * and pipeline modules wired as the app wires them, the WireMock-backed model passed to the run, and the eleven
- * provider answers stubbed in the order the engine asks for them.
+ * and pipeline modules wired as the app wires them, the WireMock-backed model passed to the run, and the eight
+ * provider answers stubbed in the order the engine asks for them: the first chunk's four drafts are one batch call.
  *
  * <p>Code-point lengths of each stubbed target against its source (D-3 needs 0.81–1.69 and Cyrillic):
  * {@code Book.md:0} 32/37 = 0.86; {@code Book.md:1} 35/40 = 0.88 and its fix 37/40 = 0.93; {@code Book.md:2} 45/47 =
@@ -216,13 +216,10 @@ final class WholeBookRun {
         return view(project, "Book.md:3");
     }
 
-    /** The eleven answers, in the order the engine is predicted to ask. */
+    /** The eight answers, in the order the engine is predicted to ask. */
     private static List<ResponseDefinitionBuilder> replies(final WireMockProvider provider) {
         return List.of(
-                provider.replyWithUsage(targetReply(DRAFT_0), PROMPT_TOKENS, COMPLETION_TOKENS, EVAL_NANOS),
-                provider.target(DRAFT_1, Duration.ZERO),
-                provider.target(DRAFT_2, Duration.ZERO),
-                provider.target(DRAFT_3, Duration.ZERO),
+                provider.replyWithUsage(firstBatch(), PROMPT_TOKENS, COMPLETION_TOKENS, EVAL_NANOS),
                 provider.reply(CHUNK_JUDGE, Duration.ZERO),
                 provider.target(FIX_1, Duration.ZERO),
                 provider.reply(RE_JUDGE, Duration.ZERO),
@@ -230,6 +227,23 @@ final class WholeBookRun {
                 provider.target(SOURCE_3, Duration.ZERO),
                 provider.target(DRAFT_4, Duration.ZERO),
                 provider.reply(LAST_JUDGE, Duration.ZERO));
+    }
+
+    /** The first chunk's four drafts as one batch reply, ids numbered within the batch. */
+    private static String firstBatch() {
+        return batchReply(List.of(DRAFT_0, DRAFT_1, DRAFT_2, DRAFT_3));
+    }
+
+    /** A batch reply answering {@code targets} under the ids 1, 2, … in order. */
+    static String batchReply(final List<String> drafts) {
+        final List<Map<String, String>> items = IntStream.range(0, drafts.size())
+                .mapToObj(index -> Map.of("id", Integer.toString(index + 1), "target", drafts.get(index)))
+                .toList();
+        try {
+            return MAPPER.writeValueAsString(Map.of("items", items));
+        } catch (JsonProcessingException cause) {
+            throw new AssertionError("could not encode the batch reply", cause);
+        }
     }
 
     private static ExportReport export(final Project project, final Path destination) {

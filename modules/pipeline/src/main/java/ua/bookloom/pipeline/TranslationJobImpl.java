@@ -29,6 +29,10 @@ import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.pipeline.Subscription;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.batch.BatchPromptBuilder;
+import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
@@ -85,6 +89,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final UnattendedRecovery recovery;
     private final StallWatchdog watchdog;
     private final RunTicks ticks;
+    private final int batchSize;
 
     TranslationJobImpl(
             final DocumentPort documents,
@@ -109,12 +114,14 @@ final class TranslationJobImpl implements TranslationJob {
                 revision,
                 clock,
                 RecoveryTimer.REAL,
-                RunTicks.DAEMON);
+                RunTicks.DAEMON,
+                BatchDrafter.NO_BATCHING);
     }
 
     /**
      * Creates a job whose recovery waits and watchdog cadence are the given ones, so a test replays hours of an outage
-     * or a stall on a scripted clock.
+     * or a stall on a scripted clock, and that drafts in batches from the given first size;
+     * {@link BatchDrafter#NO_BATCHING} drafts every segment on its own, as a test of the single-segment path wants.
      */
     TranslationJobImpl(
             final DocumentPort documents,
@@ -128,7 +135,9 @@ final class TranslationJobImpl implements TranslationJob {
             final ConsistencyPass revision,
             final Clock clock,
             final RecoveryTimer timer,
-            final RunTicks ticks) {
+            final RunTicks ticks,
+            final int batchSize) {
+        this.batchSize = batchSize;
         this.documents = Objects.requireNonNull(documents, "documents");
         this.request = Objects.requireNonNull(request, "request");
         this.model = Objects.requireNonNull(model, "model");
@@ -265,6 +274,8 @@ final class TranslationJobImpl implements TranslationJob {
 
     private StageRunner stages(final RunStart.Started run, final StyleSheet styleSheet) {
         final BookBrief brief = run.project().brief();
+        final int window = ContextBudget.windowFor(request.detectedContext(), null);
+        log.debug("Run window={} detected={}", window, request.detectedContext());
         final CallFrame frame = new CallFrame(
                 brief.sourceLanguage(),
                 Objects.requireNonNull(brief.targetLanguage(), "target language checked at the start"),
@@ -275,9 +286,10 @@ final class TranslationJobImpl implements TranslationJob {
                 onSent -> new CancellableChatModel(model, control, onSent, watchdog),
                 this::emit,
                 clock,
-                frame.targetLanguage());
+                frame.targetLanguage(),
+                window);
         final RunSettings settings = new RunSettings(
-                request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names());
+                request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names(), window);
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());
         return new StageRunner(chunkRunner(run, settings, sinks, calls), revision, settings, sinks, calls);
     }
@@ -293,8 +305,15 @@ final class TranslationJobImpl implements TranslationJob {
                 new DraftReplyParser(mapper));
         final RollingSummaryKeeper summary = new RollingSummaryKeeper(
                 stores.summaries(), stores.glossary(), templates, mapper, settings.frame(), settings.dial(), calls);
+        final BatchDrafter batch = new BatchDrafter(
+                new BatchPromptBuilder(templates, settings.frame()),
+                new BatchReplyParser(mapper),
+                calls,
+                settings.frame().sourceLanguage(),
+                settings.frame().targetLanguage(),
+                batchSize);
         return new ChunkRunner(
-                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary),
+                new RunSteps(translator, qualityLoop, gate, calls, splitter, summary, batch),
                 settings,
                 stores,
                 sinks,

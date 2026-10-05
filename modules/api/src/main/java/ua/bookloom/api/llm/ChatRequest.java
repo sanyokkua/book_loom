@@ -182,6 +182,27 @@ public record ChatRequest(
     }
 
     /**
+     * Copies this request sized to a run's window: the window is requested as the context and the output cap is
+     * limited to what the window leaves for a reply.
+     *
+     * @param window the context window to request; positive
+     * @param outputCapLimit the most tokens a reply may be capped at; positive
+     * @return a copy with {@code contextWindow} replaced and {@code maxOutputTokens} no larger than the limit
+     */
+    public ChatRequest sizedTo(int window, int outputCapLimit) {
+        return new ChatRequest(
+                messages,
+                temperature,
+                responseFormat,
+                reasoningEnabled,
+                window,
+                expectedOutputTokens,
+                maxOutputTokens == null ? null : Math.min(maxOutputTokens, outputCapLimit),
+                seed,
+                callKind);
+    }
+
+    /**
      * Copies this request for a retry after a timeout, so the retry is not the identical request that stalled.
      *
      * @param retrySeed the seed the retry samples with

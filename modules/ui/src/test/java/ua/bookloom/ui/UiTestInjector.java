@@ -13,7 +13,10 @@ import java.util.concurrent.Executors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ContextLength;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelCatalog;
 import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
@@ -41,6 +44,10 @@ import ua.bookloom.ui.theme.ThemeBlock;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UiTestInjector {
+
+    /** A provider that never says what window its model has, so a run sizes against its default. */
+    private static final ModelCapabilities UNKNOWN_CONTEXT =
+            (providerId, modelId) -> Result.ok(ContextLength.unknown());
 
     /** The version a build that carries no injected release version reports. */
     public static final String DEV_VERSION = "dev";
@@ -197,6 +204,7 @@ public final class UiTestInjector {
                             bind(ProviderConfigs.class).toInstance(configs);
                             bind(ProviderVerifier.class).toInstance(verifier);
                             bind(ModelCatalog.class).toInstance(catalog);
+                            bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
                             bind(ChatModelFactory.class).toInstance(models);
                             bind(TranslationEngine.class).toInstance(engine);
                             bind(ProjectService.class).toInstance(projects);

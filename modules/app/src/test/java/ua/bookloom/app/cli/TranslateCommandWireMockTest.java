@@ -35,6 +35,7 @@ class TranslateCommandWireMockTest {
 
     private static final String REFUSAL =
             "This destination already exists: " + "Choose a new destination or allow the existing file to be replaced.";
+    private static final String CONTEXT_LENGTH_URL = "/api/v0/models/qwen3";
     private static final String STATUS_REPLY = "{\"status\":\"ok\"}";
     private static final String TARGET_REPLY = "{\"target\":\"HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.\"}";
 
@@ -78,7 +79,8 @@ class TranslateCommandWireMockTest {
         assertThat(Files.readString(destination)).isEqualTo("KEEP THIS FILE\n");
     }
 
-    // A custom OpenAI-compatible endpoint receives every request on its own base URL and no credential header.
+    // A custom OpenAI-compatible endpoint receives every request on its own host and no credential header: the model
+    // list, the chat calls and the one read of the model's context length, which LM Studio serves beside /v1.
     @Test
     void run_openAiCompatibleProvider_sendsEveryRequestToTheBaseUrlWithoutAuthorization() throws IOException {
         server.stubFor(get(urlEqualTo("/v1/models"))
@@ -106,7 +108,7 @@ class TranslateCommandWireMockTest {
         assertThat(server.findAll(anyRequestedFor(anyUrl())))
                 .isNotEmpty()
                 .extracting(LoggedRequest::getUrl)
-                .allSatisfy(url -> assertThat(url).startsWith("/v1/"));
+                .allSatisfy(url -> assertThat(url).isIn(CONTEXT_LENGTH_URL, "/v1/models", "/v1/chat/completions"));
         assertThat(server.findAll(anyRequestedFor(anyUrl())))
                 .noneSatisfy(request ->
                         assertThat(request.containsHeader("Authorization")).isTrue());

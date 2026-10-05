@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -29,7 +31,7 @@ import ua.bookloom.llm.pseudo.PseudoChatModel;
  * would, with its capitals written in Cyrillic so a clean reply passes the target-script checks, or fails the way a
  * real client or a real small model fails — a timeout, a call that never returns until the watchdog ends it, a 5xx
  * burst, an unreachable server, one long outage, an unloaded model, an empty reply, a reply that drops, duplicates or
- * garbles its placeholders, a refusal, a judge reply that is no JSON or that asks for a fix, a hang on the re-judge
+ * garbles its placeholders (in one item of a batch reply, whose refusal is the whole reply), a refusal, a judge reply that is no JSON or that asks for a fix, a hang on the re-judge
  * that fix leads to, or a step that throws.
  *
  * <p>Used from the job thread only, apart from {@link #probe()}, which reads the outage's end.
@@ -67,6 +69,7 @@ final class FaultyModel implements ChatModel {
     private static final int PER_MILLE = 1_000;
     private static final int MAX_BURST = 4;
     private static final String DRAFT = "draft";
+    private static final String BATCH = "draft-batch-json";
     private static final String JUDGE = "judge";
     private static final String DIRECTED_FIX = "directed-fix";
     // A judge that wants the first pair fixed, so a directed fix and its re-judge follow.
@@ -160,7 +163,7 @@ final class FaultyModel implements ChatModel {
             return startBurst(any);
         }
         return switch (format) {
-            case DRAFT -> plan.draftCall(roll);
+            case DRAFT, BATCH -> plan.draftCall(roll);
             case JUDGE -> plan.judgeCall(roll);
             default -> Fault.NONE;
         };
@@ -239,10 +242,14 @@ final class FaultyModel implements ChatModel {
         return Result.ok(new ChatResponse(rewrite(fault, response.content()), FinishReason.STOP));
     }
 
-    // Only a reply with a target is rewritten; the judge's and the scans' JSON pass through.
+    // Only a reply with a target, or a batch of them, is rewritten; the judge's and the scans' JSON pass through.
     private String rewrite(final Fault fault, final String content) {
         try {
             final JsonNode node = mapper.readTree(content);
+            final JsonNode items = node == null ? null : node.get("items");
+            if (items != null && items.isArray()) {
+                return rewriteBatch(fault, items);
+            }
             final JsonNode target = node == null ? null : node.get("target");
             if (target == null || !target.isTextual()) {
                 return content;
@@ -252,6 +259,24 @@ final class FaultyModel implements ChatModel {
         } catch (JsonProcessingException notJson) {
             return content;
         }
+    }
+
+    // A batch reply is Cyrillic throughout; a content fault damages one random item, and a refusal is the whole reply.
+    private String rewriteBatch(final Fault fault, final JsonNode items) throws JsonProcessingException {
+        if (fault == Fault.REFUSAL) {
+            return FaultyText.damage(fault, "", random);
+        }
+        final int damaged = random.nextInt(items.size());
+        final List<Map<String, String>> entries = new ArrayList<>();
+        for (int index = 0; index < items.size(); index++) {
+            final String target = Cyrillic.of(items.get(index).path("target").asText());
+            entries.add(Map.of(
+                    "id",
+                    items.get(index).path("id").asText(),
+                    "target",
+                    index == damaged ? FaultyText.damage(fault, target, random) : target));
+        }
+        return mapper.writeValueAsString(Map.of("items", entries));
     }
 
     private static AppError unreachable() {

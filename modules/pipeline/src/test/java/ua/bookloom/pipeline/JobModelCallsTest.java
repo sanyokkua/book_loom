@@ -89,6 +89,32 @@ class JobModelCallsTest {
                 .containsExactly(new RequestSummary(12, 8192, 256));
     }
 
+    // A model whose window is 4096 must never be asked for the 8192 the prompt builders default to, nor for a reply
+    // that fills the window.
+    @Test
+    void call_windowOf4096_sendsItAsTheContextAndLimitsTheCap() {
+        final JobModelCalls small = new JobModelCalls(
+                onSent -> new CancellableChatModel(model, control, onSent), events::add, new StepClock(), "uk", 4096);
+        final ChatRequest asked =
+                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "Hello.")), null, null, null, 8192, null, 3900);
+
+        small.call(CallKind.DRAFT, "Book.md:0", asked);
+
+        assertThat(model.requests())
+                .singleElement()
+                .satisfies(sent -> assertThat(sent)
+                        .extracting(ChatRequest::contextWindow, ChatRequest::maxOutputTokens)
+                        .containsExactly(4096, 2048));
+    }
+
+    // A call that states no window (a verification probe) is the provider's own business and stays as built.
+    @Test
+    void call_requestWithoutAWindow_isSentAsBuilt() {
+        calls.call(CallKind.DRAFT, "Book.md:0", REQUEST);
+
+        assertThat(model.requests().getFirst().contextWindow()).isNull();
+    }
+
     // The start and the finish bracket one call, timed by the job's clock from the moment the request leaves.
     @Test
     void call_answered_announcesTheFinishAfterTheStartWithTheClocksElapsedTime() {

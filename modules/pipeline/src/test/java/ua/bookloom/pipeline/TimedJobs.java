@@ -10,6 +10,7 @@ import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Jobs whose recovery waits and watchdog cadence a test scripts. */
@@ -39,7 +40,8 @@ final class TimedJobs {
                 ConsistencyPassFixture.over(project),
                 clock,
                 timer,
-                ticks);
+                ticks,
+                BatchDrafter.NO_BATCHING);
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

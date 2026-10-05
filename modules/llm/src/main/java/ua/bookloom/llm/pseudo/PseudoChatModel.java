@@ -38,8 +38,11 @@ public final class PseudoChatModel implements ChatModel {
     private static final String FORMAT_REFLECT = "reflect";
     private static final String FORMAT_PRESCAN = "prescan";
     private static final String FORMAT_SUMMARY = "summary";
+    private static final String FORMAT_DRAFT_BATCH = "draft-batch-json";
     private static final String FORMAT_REVIEW_TERMS = "review-terms";
     private static final String FORMAT_SUGGEST_TARGETS = "suggest-targets";
+    // One numbered item of a batch draft: <s id="3">text</s>, inside the <Items> block of the user message.
+    private static final Pattern BATCH_ITEM = Pattern.compile("<s id=\"([^\"]+)\">(.*?)</s>", Pattern.DOTALL);
     // One listed term of a glossary review: "- <term> — <count>× — ...".
     private static final Pattern REVIEW_LINE = Pattern.compile("(?m)^- (.+?) — \\d+×");
     // One listed term of a suggestion request: "- <term> — <type>, <gender> ...".
@@ -117,8 +120,24 @@ public final class PseudoChatModel implements ChatModel {
             case FORMAT_SUMMARY -> SUMMARY_REPLY;
             case FORMAT_REVIEW_TERMS -> reviewReply(source);
             case FORMAT_SUGGEST_TARGETS -> suggestReply(source);
+            case FORMAT_DRAFT_BATCH -> batchReply(source);
             default -> targetReply(translation);
         };
+    }
+
+    // The offline model answers a batch by upper-casing each numbered item under its own id, tokens kept.
+    private String batchReply(String userMessage) {
+        final int block = userMessage.lastIndexOf("<Items>");
+        final Matcher matcher = BATCH_ITEM.matcher(block < 0 ? userMessage : userMessage.substring(block));
+        final List<Map<String, String>> items = new ArrayList<>();
+        while (matcher.find()) {
+            final Map<String, String> item = new LinkedHashMap<>();
+            item.put("id", matcher.group(1));
+            item.put("target", uppercasePreservingReferences(matcher.group(2)));
+            items.add(item);
+        }
+        log.debug("Pseudo batch draft answered {} items", items.size());
+        return writeValue(Map.of("items", items));
     }
 
     private String targetReply(String translation) {

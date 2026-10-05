@@ -37,14 +37,35 @@ final class PrecedingTargets {
      */
     Result<List<String>> earlierMaskedTargets(
             final List<Segment> unitSegments, final Segment segment, final int count, final ChunkDrafts drafts) {
-        final List<String> earlier = new ArrayList<>();
+        return earlier(unitSegments, segment, count, drafts)
+                .map(found -> found.stream().map(Earlier::target).toList());
+    }
+
+    /**
+     * The last {@code count} earlier segments of the unit that have a target, each with it, in document order: what a
+     * batch shows as its previous pairs.
+     *
+     * @return never null; empty at a unit's start, or the repository's error
+     */
+    Result<List<Earlier>> earlierPairs(
+            final List<Segment> unitSegments, final Segment segment, final int count, final ChunkDrafts drafts) {
+        return earlier(unitSegments, segment, count, drafts);
+    }
+
+    /** One earlier segment of the unit and the masked target it has. */
+    record Earlier(Segment segment, String target) {}
+
+    private Result<List<Earlier>> earlier(
+            final List<Segment> unitSegments, final Segment segment, final int count, final ChunkDrafts drafts) {
+        final List<Earlier> earlier = new ArrayList<>();
         for (int index = positionOf(unitSegments, segment) - 1; index >= 0 && earlier.size() < count; index--) {
-            final Result<Optional<String>> target =
-                    maskedTargetOf(unitSegments.get(index).id(), drafts);
+            final Segment before = unitSegments.get(index);
+            final Result<Optional<String>> target = maskedTargetOf(before.id(), drafts);
             if (target.isErr()) {
                 return Result.err(Objects.requireNonNull(target.error(), "error"));
             }
-            Objects.requireNonNull(target.data(), "target").ifPresent(found -> earlier.addFirst(found));
+            Objects.requireNonNull(target.data(), "target")
+                    .ifPresent(found -> earlier.addFirst(new Earlier(before, found)));
         }
         log.debug("Read preceding targets segmentId={} wanted={} found={}", segment.id(), count, earlier.size());
         return Result.ok(List.copyOf(earlier));

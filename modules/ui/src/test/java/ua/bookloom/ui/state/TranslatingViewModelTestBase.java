@@ -11,6 +11,7 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.FakeProviderConfigs;
@@ -99,7 +100,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 runner,
                 new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
                 prepExecutor,
-                ScriptedProviderVerifier.idle());
+                ScriptedProviderVerifier.idle(),
+                (providerId, modelId) -> Result.ok(ContextLength.unknown()));
         viewModel = onFx(() -> new TranslatingViewModel(
                 mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor(), activities));
         WaitForAsyncUtils.waitForFxEvents();

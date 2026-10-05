@@ -274,6 +274,35 @@ Malformed or wrong-shape output gets one repair with a delimited rejected reply 
 that fails the gate gets one distinct repair with the original source, rejected target, and exact required token order;
 every repair must parse strictly and pass unmasking.
 
+### batch-draft {#batch-draft}
+
+A batch carries consecutive segments of one unit in one call (15d.8): when a chunk reaches a segment that needs a call,
+that segment and the next ones that need one go together, up to the adaptive batch size (8 to start, halved on a lost,
+repeated, merged or foreign id, one more after three clean batches, at most 16) and the chunk's source-token budget. The
+system message (`draft-batch-json.system.prompt`; the draft's rules with the item rules, the style sheet,
+`{{languageRules}}` and the batch examples from the pair's, else the target's, else the generic `batchExample.N` keys; about
+850 tokens, within `ChunkBudget.SYSTEM_PROMPT_RESERVE`) is byte-identical across a run's batches, and the user message
+holds, each block omitted when empty, the summary, glossary, locked names (a line per locked token, prefixed with its item
+id — `3: ⟦g0⟧ → name` — because tokens are numbered per item), suggestions, earlier decisions, the characters present with
+the gender the glossary knows, the last two or three decided pairs of the chapter, the next segment's source for pronoun
+and gender look-ahead (all read-only context), the immutable tokens per item and the items as `<s id="1">…</s>`, the ids
+being 1…n within the batch.
+
+The reply is the JSON object `{"items":[{"id":"1","target":"…"}]}`, requested with the flat `BatchSchema` (no
+`maxItems`/`maxLength`); the optional `terms` field is reserved for the terminology lexicon. Decision (2026-10-05, the
+A/B on the e4b and 26b classes at 4, 8, 12 and 16 items): JSON answered every id exactly once and kept every token at every
+size on both models, while tagged blocks (`<t id="1">…</t>`) were never better and e4b fell to 92% of ids at 8 items, so
+the tagged protocol, its prompts and its parsing were removed.
+
+`BatchReplyParser` reads the reply tolerantly (prose or a fence around it, a bare array, a number for an id, a reply cut
+off in its last entry) and names each expected id `OK`, `MISSING` (absent or blank), `DUPLICATE`, `MERGED_SUSPECT` (the
+next id has no text of its own and the text holds both items' tokens, is far longer than one item, or ends as many
+sentences as the two items together) or `EXTRA` (an id the batch never held); an `OK` id also has its tokens (the source's,
+in order) and its length band checked, then the chunk's placeholder gate. A refusal or empty reply is unreadable and fails
+every id. Only a failing id falls back to a single-segment draft; every other segment is decided from its own entry
+through the same quality loop as a single draft. A segment kept as it is, an auxiliary text, a translation-memory reuse
+and a segment larger than the chunk budget are never in a batch.
+
 ## judge-quality-evaluation {#judge-quality-evaluation}
 
 LLM-as-judge, run only when the dial enables the judge, over the drafted pairs that passed their hard gates — a pair

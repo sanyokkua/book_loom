@@ -43,6 +43,19 @@ class PseudoChatModelTest {
         assertThat(response.content()).isEqualTo("{\"target\":\"HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.\"}");
     }
 
+    // A batch draft answers every numbered item under its own id, tokens kept, and ignores the context blocks.
+    @Test
+    void chat_batchDraftFormat_repliesWithAnUppercasedEntryPerItemId() {
+        final String message = "[Previous pairs]\nSource: Hi.\nTranslation: Привіт.\n\n<Items>\n"
+                + "<s id=\"1\">He opened the ⟦g0⟧old⟦g1⟧ door.</s>\n<s id=\"2\">1881</s>\n</Items>";
+
+        final ChatResponse response = send(message, "draft-batch-json");
+
+        assertThat(response.content())
+                .isEqualTo("{\"items\":[{\"id\":\"1\",\"target\":\"HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.\"},"
+                        + "{\"id\":\"2\",\"target\":\"1881\"}]}");
+    }
+
     // Every other repair-shaped format answers the same single-target object.
     @ParameterizedTest
     @ValueSource(strings = {"structural-repair", "placeholder-repair", "directed-fix", "improve", "polish", "revision"})

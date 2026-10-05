@@ -1,5 +1,6 @@
 package ua.bookloom.api.llm;
 
+import java.util.Optional;
 import ua.bookloom.api.Result;
 
 /**
@@ -21,4 +22,17 @@ public interface ModelCapabilities {
      *     unregistered provider id (no request is sent)
      */
     Result<ContextLength> contextLength(String providerId, String modelId);
+
+    /**
+     * The context length a run should size against, with any failure degraded to "unknown": a run never stops because
+     * its model's window could not be read.
+     *
+     * @param selection the provider and model a run will use; never {@code null}
+     * @return the reported tokens, or empty when the provider did not say or the detection failed
+     */
+    default Optional<Integer> detectedTokens(final ModelSelection selection) {
+        final Result<ContextLength> length = contextLength(selection.providerId(), selection.modelId());
+        final ContextLength data = length.data();
+        return length.isOk() && data != null ? data.detected() : Optional.empty();
+    }
 }

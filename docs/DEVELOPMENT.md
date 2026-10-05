@@ -475,6 +475,13 @@ the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands
 `ollama ls` and `lms ls` show: gemma-4 e4b in every quant first, then e2b, 12b, 26b, gpt-oss, the two qwen3.8-27b builds, muse-glimmer
 and the rest). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. 
 
+**Batch A/B (15d.8).** `scripts/eval-matrix.sh --suite batch [--batch-sizes 4,8,12,16] --models "ollama:<id> lmstudio:<id>"`
+sends batches of consecutive draft cases through the JSON batch protocol and prints, per model and size: `idValid` (items
+answered under their id exactly once), `tokGate` (also kept their tokens in order), `omit`, `merge` and output tokens per
+item. It measures only; the batch size is chosen by reading the table (the tagged-block protocol it once compared was
+dropped after the first A/B, see `12_PROMPT_CATALOG.md#batch-draft`). A run's own draft calls per segment are
+`modelCallsByKind.DRAFT.attempts` over `run.segments` in the report JSON (a batch call and a single-segment fallback each count one).
+
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
 prompt eval plus 19 labelled judge cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
 « », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints

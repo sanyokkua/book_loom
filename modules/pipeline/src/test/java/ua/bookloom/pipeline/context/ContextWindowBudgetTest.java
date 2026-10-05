@@ -14,6 +14,9 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.batch.BatchContext;
+import ua.bookloom.pipeline.batch.BatchItem;
+import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
@@ -78,6 +81,15 @@ class ContextWindowBudgetTest {
     @Test
     void staticPrefix_draftSystemMessage_fitsTheReservedPrefix() {
         final int actual = PromptBreakdown.of(new DraftPromptBuilder(TEMPLATES, FRAME).messagesFor(unit().getFirst()))
+                .systemTokens();
+
+        assertThat(ChunkBudget.staticPrefix(FRAME)).isGreaterThanOrEqualTo(actual);
+    }
+
+    @Test
+    void staticPrefix_batchSystemMessage_fitsTheReservedPrefix() {
+        final int actual = PromptBreakdown.of(new BatchPromptBuilder(TEMPLATES, FRAME)
+                        .messagesFor(BatchContext.empty(), List.of(new BatchItem("1", "He left."))))
                 .systemTokens();
 
         assertThat(ChunkBudget.staticPrefix(FRAME)).isGreaterThanOrEqualTo(actual);

@@ -12,6 +12,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.ContextLength;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderConfig;
@@ -55,7 +56,8 @@ final class TranslateCommandTestFakes {
                 core.getInstance(NameReview.class),
                 exports,
                 core.getInstance(ShutdownCancellation.class),
-                core.getInstance(Clock.class));
+                core.getInstance(Clock.class),
+                (providerId, modelId) -> Result.ok(ContextLength.unknown()));
     }
 
     static final class RecordingProviderConfigs implements ProviderConfigs {

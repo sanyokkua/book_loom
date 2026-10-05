@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.prompt;
 
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
@@ -23,6 +24,8 @@ public record OutputLimit(int expectedTokens, int capTokens) {
     // A one-word source under the estimator's 64-token floor came back as an empty target ("Model returned no
     // translated text"): the JSON envelope and any reasoning preamble share the cap with the word itself.
     private static final int SHORT_SOURCE_CAP_FLOOR = 128;
+    // Per item the reply spends tokens on the id and its wrapper: {"id":"12","target":""}.
+    private static final int BATCH_ITEM_ENVELOPE_TOKENS = 16;
     // A reflect reply is a short list of issues, each a note and a suggestion: the prompt asks for at most five. With
     // no
     // cap, gemma4:e4b once streamed 9,664 lines of it until the three-minute timeout.
@@ -99,6 +102,31 @@ public record OutputLimit(int expectedTokens, int capTokens) {
         }
         final int cap = SUGGEST_BASE_TOKENS + SUGGEST_TOKENS_PER_TERM * termCount;
         return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
+    }
+
+    /**
+     * The limit for one batch draft: every item's allowance plus what its id and wrapper cost, under one
+     * cap, so a reply that loops is cut off while a full batch is not.
+     *
+     * @param maskedSources the batch's masked sources; never empty
+     * @param sourceTag the source language tag, or null when unknown
+     * @param targetTag the target language tag; never null
+     * @return the limit, whose cap is never below 128 tokens
+     */
+    public static OutputLimit forBatch(
+            final List<String> maskedSources, @Nullable final String sourceTag, final String targetTag) {
+        if (maskedSources.isEmpty()) {
+            throw new IllegalArgumentException("a batch needs at least one item");
+        }
+        int allowance = 0;
+        int placeholders = 0;
+        for (final String masked : maskedSources) {
+            allowance += TokenEstimator.outputAllowance(DisplayText.of(masked), sourceTag, targetTag)
+                    + BATCH_ITEM_ENVELOPE_TOKENS;
+            placeholders += Tokens.inOrder(masked).size();
+        }
+        return new OutputLimit(
+                allowance, Math.max(SHORT_SOURCE_CAP_FLOOR, TokenEstimator.outputCap(allowance, placeholders)));
     }
 
     /**

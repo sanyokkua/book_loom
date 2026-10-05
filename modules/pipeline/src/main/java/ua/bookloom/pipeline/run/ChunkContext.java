@@ -16,7 +16,6 @@ import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextInputs;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
@@ -143,7 +142,7 @@ final class ChunkContext {
                 settings.dial().precedingTargets(),
                 glossary,
                 earlierMaskedTargets,
-                ChunkBudget.dynamicAllowance(settings.frame(), ContextBudget.DEFAULT_WINDOW));
+                ChunkBudget.dynamicAllowance(settings.frame(), settings.window()));
         return ContextPackageAssembler.assemble(chunk, segment, mask(segment), memory, inputs);
     }
 

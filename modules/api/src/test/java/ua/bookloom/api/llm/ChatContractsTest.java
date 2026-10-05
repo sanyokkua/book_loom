@@ -29,6 +29,32 @@ class ChatContractsTest {
     }
 
     @Test
+    void sizedTo_cappedRequest_takesTheWindowAndLimitsTheCap() {
+        final ChatRequest asked = new ChatRequest(
+                List.of(new ChatMessage(ChatRole.USER, "hello")), 0.2, null, false, 8192, 300, 3900, 7, null);
+
+        final ChatRequest sized = asked.sizedTo(4096, 2048);
+
+        assertThat(sized.contextWindow()).isEqualTo(4096);
+        assertThat(sized.maxOutputTokens()).isEqualTo(2048);
+        assertThat(sized.temperature()).isEqualTo(0.2);
+        assertThat(sized.expectedOutputTokens()).isEqualTo(300);
+        assertThat(sized.seed()).isEqualTo(7);
+    }
+
+    @Test
+    void sizedTo_smallerCapOrNone_isKept() {
+        final List<ChatMessage> messages = List.of(new ChatMessage(ChatRole.USER, "hello"));
+
+        assertThat(new ChatRequest(messages, null, null, null, 8192, null, 100)
+                        .sizedTo(4096, 2048)
+                        .maxOutputTokens())
+                .isEqualTo(100);
+        assertThat(new ChatRequest(messages).sizedTo(4096, 2048).maxOutputTokens())
+                .isNull();
+    }
+
+    @Test
     void request_messageOnlyConstructorDefaultsOptionalSettingsToNull() {
         final ChatRequest request = new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello")));
 

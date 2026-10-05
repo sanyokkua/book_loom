@@ -28,7 +28,7 @@ public final class ChunkBudget {
      * What the draft system message takes besides the style sheet: its rules, the foreign-passage rule and the
      * examples. A test holds it at or above the largest real system message.
      */
-    static final int SYSTEM_PROMPT_RESERVE = 700;
+    static final int SYSTEM_PROMPT_RESERVE = 900;
 
     /** The last few translated segments the dial may show; reserved even before the unit has any. */
     static final int PRECEDING_RESERVE = 300;

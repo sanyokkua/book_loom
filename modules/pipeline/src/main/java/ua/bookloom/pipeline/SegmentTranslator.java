@@ -2,6 +2,7 @@ package ua.bookloom.pipeline;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
@@ -128,6 +129,18 @@ public final class SegmentTranslator {
                 Objects.requireNonNull(reply.data()),
                 step != DraftStep.DRAFT,
                 step == DraftStep.PLACEHOLDER_REPAIR);
+    }
+
+    /**
+     * Takes one batch item's target as the segment's draft, with none of the repairs a single draft makes.
+     *
+     * @param segment the non-null segment the item stands for
+     * @param mask the non-null spans hidden in the segment
+     * @param maskedTarget the non-null target the batch reply gave, whose tokens are in place
+     * @return the draft's outcome, or empty when the gate refused the target, which is then drafted on its own
+     */
+    public Optional<DraftOutcome> adopt(final Segment segment, final ProtectedMask mask, final String maskedTarget) {
+        return BatchAdoption.adopt(gate, segment, mask, maskedTarget);
     }
 
     /** The run's draft of one segment, in pieces when it is alone above the budget: no note, the draft's temperature. */

@@ -16,6 +16,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
+import ua.bookloom.api.llm.ModelCapabilities;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.pipeline.PausePoint;
@@ -48,6 +49,7 @@ public final class RunStarter {
     private final SessionReporter reporter;
     private final ExecutorService executor;
     private final ProviderVerifier verifier;
+    private final ModelCapabilities capabilities;
 
     /**
      * Creates the starter.
@@ -60,6 +62,7 @@ public final class RunStarter {
      * @param reporter what tells the detailed log which provider, model and brief the run uses
      * @param executor the daemon executor a run is prepared on, never the FX thread
      * @param verifier the port a run paused on a provider error probes the provider with before resuming by itself
+     * @param capabilities the port the model's context length is read through when a run is prepared
      */
     @Inject
     public RunStarter(
@@ -70,7 +73,8 @@ public final class RunStarter {
             final TranslationRunner runner,
             final SessionReporter reporter,
             @BackgroundExecutor final ExecutorService executor,
-            final ProviderVerifier verifier) {
+            final ProviderVerifier verifier,
+            final ModelCapabilities capabilities) {
         this.current = Objects.requireNonNull(current, "current");
         this.models = Objects.requireNonNull(models, "models");
         this.engine = Objects.requireNonNull(engine, "engine");
@@ -79,6 +83,7 @@ public final class RunStarter {
         this.reporter = Objects.requireNonNull(reporter, "reporter");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.verifier = Objects.requireNonNull(verifier, "verifier");
+        this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
     }
 
     /**
@@ -132,8 +137,10 @@ public final class RunStarter {
             log.debug("no model was created: code {}", errorCode(model));
             return model.error();
         }
+        final Integer detected = capabilities.detectedTokens(selection).orElse(null);
+        log.debug("the model's detected context length: {}", detected);
         final Result<TranslationJob> created = engine.newJob(
-                new RunRequest(book.projectId(), reviewMode), Objects.requireNonNull(model.data(), "model"));
+                new RunRequest(book.projectId(), reviewMode, detected), Objects.requireNonNull(model.data(), "model"));
         if (created.isErr()) {
             log.debug("no job was created: code {}", errorCode(created));
             return created.error();
