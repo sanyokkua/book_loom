@@ -22,7 +22,7 @@ how to behave.
 
 - **WHEN** a book is translated with genre `Detective fiction`, voice/era `Victorian, first person`, audience `Adults`,
   register Formal, names Transliterate and units Metric
-- **THEN** the system message of every draft, repair and judge call contains `Detective fiction`, `Victorian, first
+- **THEN** the system message of every draft, repair and reviewer call contains `Detective fiction`, `Victorian, first
   person` and `Adults`, a rule to transliterate names, and a rule to convert measurements to metric
 
 #### Scenario: The same brief gives the same style sheet
@@ -38,7 +38,7 @@ how to behave.
 
 ### Requirement: Build every prompt from the catalogue's templates
 
-The system SHALL build each model call — draft, structural repair, placeholder repair, judge, directed fix, reflect,
+The system SHALL build each model call — draft, structural repair, placeholder repair, reviewer, directed fix, reflect,
 improve, polish, pre-scan, summary and revision — from that call's template in the prompt catalogue, held as data. Every
 generation call (draft, both repairs, directed fix, improve, polish, revision) SHALL ask for and accept exactly one
 `{"target":"…"}` object for exactly one segment. Every repair call — directed fix, reflect, improve, polish and
@@ -49,7 +49,7 @@ with a literal reply its parser accepts, SHALL declare the book text it embeds a
 SHALL state the placeholder rules wherever that text carries `⟦gN⟧` tokens; improve, polish and revision SHALL list the
 source's tokens under `[Immutable tokens]` when it has any. The draft and the rewriting calls SHALL show the bundled
 few-shot examples of the language pair — the `<source>-<target>` file, else the `<target>` file, else `neutral` — read
-from the classpath. The draft and repair, judge and directed-fix messages SHALL be pinned by golden files, so a prompt
+from the classpath. The draft and repair, reviewer and directed-fix messages SHALL be pinned by golden files, so a prompt
 changes only by a deliberate edit of them.
 
 **Source:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `#output-contract`,
@@ -144,7 +144,7 @@ the source. The window of earlier translations restarts at each chapter so the l
 WHEN a segment's source text and the source texts of both its neighbours in its unit match those of an entry the memory
 recorded — each compared as Unicode-normalized, unmasked source text, a unit's first or last segment matching its
 missing neighbour only against another unit edge — the system SHALL use that entry's target without a draft call and
-SHALL decide it by the memory-reuse exception of the `quality-gates` capability's acceptance rule, which asks no judge;
+SHALL decide it by the memory-reuse exception of the `quality-gates` capability's acceptance rule, which asks no reviewer;
 IF that decision fails, THEN the system SHALL discard the reused target and draft the segment as usual. WHEN only the
 source text matches, the system SHALL offer the stored target in the draft prompt as a hint. WHEN a stored source has a
 similarity of at least `0.85` to the segment's source — one minus their edit distance over the longer length, after
@@ -159,7 +159,7 @@ In plain words: the same sentence can need a different translation in a differen
 when its neighbours say the same thing too — compared by what they say, not by where they sit, so a dialogue repeated in
 chapter 3 matches its first appearance in chapter 1; otherwise the earlier translation only helps the model. A reused
 translation still has to pass every automatic check, so memory can never put a broken target into the book, but the
-judge never sees it, because it already passed once. The memory holds what the run accepted; an edit the person makes in
+reviewer never sees it, because it already passed once. The memory holds what the run accepted; an edit the person makes in
 review stays with that one segment.
 
 #### Scenario: A repeated passage in the same context is reused
@@ -167,9 +167,9 @@ review stays with that one segment.
 - **WHEN** `ch03.xhtml:12` reads `Yes.` between the same two sentences that surrounded `ch01.xhtml:4`, which was
   accepted as `Так.`
 - **THEN** no draft call is made for `ch03.xhtml:12`, and it is accepted as `Так.` after its hard gates and checks pass,
-  with no judge
+  with no reviewer
 - **AND** its path is recorded as reused from memory
-- **AND** the judge call of its chunk, when the dial enables one, does not show it
+- **AND** the reviewer call of its chunk, when the dial enables one, does not show it
 
 #### Scenario: The same sentence in a new context is only a hint
 
@@ -253,7 +253,7 @@ The system SHALL set the run's mechanics from the Book Brief's quality dial, and
 |---|---|---|---|
 | preceding targets | 1 | 2 | 3 |
 | repair rounds per failing segment | 1 | 2 | 3 |
-| judge | off | on | on |
+| reviewer passes | 0 | 1 | 2 |
 | backward revision | off | off | on |
 | segments per chunk, at most | 8 | 4 | 2 |
 
@@ -265,10 +265,10 @@ WHERE the review mode is Manual, a chunk SHALL hold exactly one segment. The dia
 In plain words: one control trades speed for care, and the table says exactly what it changes. The threshold that
 decides what gets flagged belongs to the review mode, so turning the dial never silently flags more or fewer segments.
 
-#### Scenario: Fast skips the judge
+#### Scenario: Fast skips the reviewer
 
 - **WHEN** a Fast run translates a chapter of 10 short segments that all pass their checks
-- **THEN** no judge call is made, and each draft carries at most 1 preceding target
+- **THEN** no reviewer call is made, and each draft carries at most 1 preceding target
 
 #### Scenario: Max revises after the last segment
 
@@ -312,7 +312,7 @@ translation still goes back into the one paragraph it came from.
 
 WHERE one of the Book Brief's four "Also translate" switches — `ToC / navigation labels`, `Image alt-text`,
 `Book metadata (title/author)` and `Frontmatter values` — is off, the system SHALL treat every auxiliary segment of that
-kind as kept as source by choice, judged by the brief at the time and whatever the segment's stored status: it SHALL make
+kind as kept as source by choice, decided by the brief at the time and whatever the segment's stored status: it SHALL make
 no model call for it, SHALL keep its source text, SHALL count it neither as pending nor as accepted or flagged, and SHALL
 leave it out of the progress, the time left and the place a new run starts. The navigation switch SHALL also govern the
 page titles of an EPUB's content documents, and the metadata switch the book's descriptions. A body segment SHALL never
@@ -356,7 +356,7 @@ NFC, with every Unicode separator, control and format character dropped — is e
 punctuation and symbols), is an upper-case Roman numeral with at most punctuation around it, is a single character, or
 is an equation of one-letter symbols (an equals sign and no run of two or more letters, as `F = G × (m₁ × m₂) / r²`),
 the system SHALL decide it ACCEPTED with its own text as the target, through the chunk's gate, with the path `verbatim`
-and no model call, no judge, no quality check and no finding. A segment whose only visible letters belong to a locked
+and no model call, no reviewer, no quality check and no finding. A segment whose only visible letters belong to a locked
 glossary name SHALL be decided the same way, written with the name's locked rendering. The system SHALL still announce
 the segment as started and as decided, SHALL count it among the decided segments in the progress, but in neither the
 auto-accepted nor the repaired count and never as kept as source by choice, SHALL write no translation-memory entry for
@@ -399,7 +399,7 @@ counted on their own line so nobody reads them as translations or as text someon
 
 WHEN a run reaches a PENDING auxiliary segment whose masked source equals that of an auxiliary segment already drafted in
 the same chunk or already ACCEPTED earlier in the run, the system SHALL make no model call for it: it SHALL take the
-undecided draft, which is then judged and decided on its own, or the accepted target, which SHALL pass the same checks a
+undecided draft, which is then reviewed and decided on its own, or the accepted target, which SHALL pass the same checks a
 translation-memory reuse passes ("Reuse the translation memory only where its context matches") before it is accepted
 with the path `tm-reuse`. A segment whose taken answer fails those checks SHALL be drafted as usual. Each segment SHALL
 keep its own record and decision.
@@ -418,7 +418,7 @@ each was a separate call. A text that is identical gets an identical answer, so 
 
 WHILE a run translates, the system SHALL announce, for each segment: when it starts, with its locator, its source
 display text and its position (section k of n among the body units, chunk k of n within its unit); when its draft is
-ready, with the draft display text; and when it is decided, with its status, its judge score when the judge ran, and its
+ready, with the draft display text; and when it is decided, with its status, and its
 path (drafted, reused from memory, repaired, edited by the person, or source kept). Display text SHALL be the masked text
 with its `⟦gN⟧` tokens removed and its whitespace collapsed. Book text SHALL travel only in these announcements in
 memory and SHALL NOT be written to the log above TRACE.
@@ -433,7 +433,7 @@ stays in memory; a log file written at the usual level never contains the book.
 #### Scenario: A segment's three announcements
 
 - **WHEN** segment `ch07.xhtml:41`, the 42nd segment of `ch07.xhtml`, the seventh of 11 body units, with the masked text
-  `He opened the ⟦g0⟧old⟦g1⟧ door.` is drafted as `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and accepted with judge score
+  `He opened the ⟦g0⟧old⟦g1⟧ door.` is drafted as `Він відчинив ⟦g0⟧старі⟦g1⟧ двері.` and accepted
   `0.91`
 - **THEN** its start announcement carries the locator `ch7 · p42`, `He opened the old door.` and section 7 of 11, its
   draft announcement carries `Він відчинив старі двері.`, and its decision carries ACCEPTED, `0.91` and the path drafted
@@ -453,7 +453,7 @@ SHALL use the call's wall-clock time.
 **Source:** `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`.
 In plain words: tokens per second tells a person how fast their model really is on this book, and it is taken from what
-the server says it generated, so it is not a guess. Only drafts count, because a judge call's short answer would make a
+the server says it generated, so it is not a guess. Only drafts count, because a reviewer call's short answer would make a
 slow model look fast.
 
 #### Scenario: Usage figures give the rate
@@ -505,7 +505,7 @@ count as translation time.
 The system SHALL give every model call a run makes a context size of 8192 tokens, and SHALL use 8192 as the effective
 context when it sizes chunks. Every draft, directed fix, improve, polish and revision call SHALL also state the output
 it expects: its segment's output allowance, estimated from the length of the source display text, the upper bound of
-the language pair's length band and the target language's script. A judge call SHALL state the judge limit the next
+the language pair's length band and the target language's script. A reviewer call SHALL state the reviewer limit the next
 requirement gives. A reflect, pre-scan or summary call SHALL state no expected output.
 
 **Source:** `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`,
@@ -525,17 +525,18 @@ expected output sets: a call that writes a long paragraph may wait longer than o
 - **WHEN** a Balanced run drafts `Book.md:0`, whose source display text `He opened the old door.` has 23 characters,
   from `en` to `uk`
 - **THEN** the draft request states 16 expected output tokens
-- **AND** the judge call for its one-pair chunk states 160 expected output tokens
+- **AND** the reviewer call for its one-pair chunk states 85 expected output tokens
 
 ### Requirement: Cap the output of every call that states an expected output
 
 The system SHALL give every call that states an expected output — draft, directed fix, improve, polish and revision —
 also an output cap of `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, and a draft, directed fix, improve,
 polish and revision call never less than `128`, where the allowance is the expected
-output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A judge
-call SHALL carry the cap `min(1024, 128 + 192 × pairs)` and state half of it as its expected output, and the judge's
-response schema SHALL bound its lists and its text fields (at most 12 findings, 8 deferrals, a 240-character note or
-reason). Every other call SHALL carry a cap too: a reflect call `600` (expecting `256`, its prompt asking for at most
+output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A reviewer
+call SHALL carry the cap `64 + Σ (96 + the candidate's estimated tokens)` over its pairs and state half of it as its
+expected output, because a rewrite may repeat a whole candidate; the reviewer's response schema SHALL be flat — no
+`maxItems`, `maxLength` or `additionalProperties` — since a bounded schema once stalled a structured call on one
+provider. Every other call SHALL carry a cap too: a reflect call `600` (expecting `256`, its prompt asking for at most
 five issues), a summary call `1024` (expecting `600`, its prompt asking for at most 150 words per language and five
 facts), a pre-scan batch `64 + 48 × candidates` (expecting half), and a glossary review batch `2048` (expecting
 `32 × terms`); no call kind goes out without a cap. IF a capped reply ends with a finish of cut off by length,
@@ -548,9 +549,9 @@ In plain words: a small model sometimes loops on one sentence and would otherwis
 three attempts in a row, for one paragraph. The cap is a generous multiple of the length the segment should need —
 half as much again, a fixed margin for the `{"target":…}` wrapper, and room for every placeholder token — so a normal
 reply never reaches it and a runaway one is cut off, flagged and left behind. A one-word source under a 64-token cap came
-back as an empty target in the Bartimaeus run, so a translation call's cap never drops below 128. The judge was once left unbounded and a
-looping re-judge then held a whole run for three minutes per attempt; its reply is a score and a few short findings per
-pair, so its cap grows with the pairs and stops at 1,024 tokens. A reflect call was left unbounded until gemma4:e4b
+back as an empty target in the Bartimaeus run, so a translation call's cap never drops below 128. The reviewer was once left unbounded and a
+looping re-judge then held a whole run for three minutes per attempt; the reviewer's reply is, per pair, an id, a status
+and a few short edits, so its cap grows with the pairs and holds room for the one case that is long, a rewrite. A reflect call was left unbounded until gemma4:e4b
 on the fixture book streamed 9,664 lines of critique into the three-minute timeout, and the run's ETA jumped from three to
 nineteen minutes; every call kind now has a cap. How each server receives the cap is the `llm-provider` capability's
 rule.
@@ -560,7 +561,7 @@ rule.
 - **WHEN** a Balanced run drafts `Book.md:0`, whose source display text `He opened the old door.` states 16 expected
   output tokens and holds no placeholder token
 - **THEN** the draft request carries an output cap of `128`
-- **AND** the judge call for its one-pair chunk carries an output cap of `320`
+- **AND** the reviewer call for its one-pair chunk carries an output cap of `170`
 
 #### Scenario: A reflect call is capped
 
@@ -581,11 +582,10 @@ rule.
 
 ### Requirement: Record deferrals and revise backwards on Max
 
-The system SHALL record a deferral for a segment when the judge reports one for it, and when the segment contains a
+The system SHALL record a deferral for a segment when the segment contains a
 glossary character whose gender is unknown. WHEN the person changes a glossary term's target, the system SHALL record,
 for each decided segment whose target contains the previous target as a whole word, one TERM deferral per changed
-term, only when the entry is locked after the change and had a non-empty target before it. The system SHALL record judge deferrals but SHALL NOT revise a segment for one in
-this change. WHERE the dial is Max, after the last segment the system SHALL run a backward
+term, only when the entry is locked after the change and had a non-empty target before it. WHERE the dial is Max, after the last segment the system SHALL run a backward
 revision bounded to segments that contain a swept term: it SHALL substitute each locked term's rendering deterministically,
 without a model call — replacing only the previous glossary target the person changed, never a rendering the model chose
 on its own for a term that had no glossary target — and SHALL call the model with the revision call only for a gender deferral whose character now has a
@@ -627,11 +627,6 @@ everywhere, and never overwrites what the person wrote by hand.
 
 - **WHEN** the person changes the target of the unlocked entry `Hale` and `ch01.xhtml:3` contains `Hale`
 - **THEN** no deferral is recorded for `ch01.xhtml:3`
-
-#### Scenario: A judge deferral is recorded and left alone
-
-- **WHEN** the judge reports a deferral for `ch01.xhtml:9` and a Max run reaches its revision stage
-- **THEN** the deferral is recorded and no revision call is made for it
 
 #### Scenario: A person's edit is protected
 
@@ -890,12 +885,12 @@ file name and an ordinal mean nothing to the person reading it.
 
 ### Requirement: Decide a chunk's segments in document order
 
-WHERE the quality dial enables the judge, the system SHALL take each chunk through three phases, each in document order:
+WHERE the quality dial enables the reviewer, the system SHALL take each chunk through three phases, each in document order:
 first it SHALL draft every segment of the chunk, checking a segment whose context matches the translation memory at once
-instead of drafting it; then it SHALL make the chunk's one judge call; then it SHALL decide the segments one at a time,
+instead of drafting it; then it SHALL make the chunk's one reviewer call; then it SHALL decide the segments one at a time,
 each through its self-heal rounds to ACCEPTED or FLAGGED before the next is decided. The preceding targets of each draft
 SHALL be the effective targets of the earlier segments, the chunk's own undecided drafts and reused targets included.
-WHERE the judge is off, the system SHALL draft and decide each segment before it drafts the next, so the preceding
+WHERE the reviewer is off, the system SHALL draft and decide each segment before it drafts the next, so the preceding
 targets of each draft are decided targets.
 
 WHEN a run pauses — on request, for review or on an error — the system SHALL first commit the segments decided since the
@@ -913,11 +908,11 @@ by the run.
 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#chunk-loop`), FR-ALGO-C13 (`#self-heal`), FR-RESUME-03,
 FR-RESUME-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0033, ADR-0034, ADR-0038.
-In plain words: the judge reads a whole chunk at once, so with the judge on (Balanced and Max) every segment of a chunk is
+In plain words: the reviewer reads a whole chunk at once, so with the reviewer on (Balanced and Max) every segment of a chunk is
 drafted before any is decided, and each draft still sees the translations just before it, even those not yet decided.
-That fixes what a pause in the middle of a chunk can change: the rest of the chunk is already drafted and judged, so an
+That fixes what a pause in the middle of a chunk can change: the rest of the chunk is already drafted and reviewed, so an
 edit made during the pause reaches the drafts made after it — from the next chunk on — while the drafts already paid for
-are kept. With the judge off (Fast) nothing needs the whole chunk, so each segment is drafted and decided in turn, and an
+are kept. With the reviewer off (Fast) nothing needs the whole chunk, so each segment is drafted and decided in turn, and an
 edit reaches the very next draft. A decision is never lost to a pause or a stop; a draft that was not yet decided is
 dropped by a stop and drafted again by the next run.
 
@@ -925,7 +920,7 @@ dropped by a stop and drafted again by the next run.
 
 - **WHEN** a Balanced run takes the chunk `ch07.xhtml:40` … `ch07.xhtml:43`
 - **THEN** its model calls begin with the drafts of `ch07.xhtml:40`, `ch07.xhtml:41`, `ch07.xhtml:42` and
-  `ch07.xhtml:43`, in that order, then one judge call for the four, and only then any self-heal call
+  `ch07.xhtml:43`, in that order, then one reviewer call for the four, and only then any self-heal call
 - **AND** the draft call for `ch07.xhtml:42` carries the drafts of `ch07.xhtml:40` and `ch07.xhtml:41` as its preceding
   targets, although neither is decided yet
 
@@ -933,7 +928,7 @@ dropped by a stop and drafted again by the next run.
 
 - **WHEN** an Assisted, Balanced run takes the chunk `ch07.xhtml:40` … `ch07.xhtml:43`, accepts `ch07.xhtml:40`, flags
   `ch07.xhtml:41` and pauses on it
-- **THEN** the drafts of `ch07.xhtml:42` and `ch07.xhtml:43` and the chunk's judge call were made before the pause
+- **THEN** the drafts of `ch07.xhtml:42` and `ch07.xhtml:43` and the chunk's reviewer call were made before the pause
 - **AND** `ch07.xhtml:40` and `ch07.xhtml:41` were committed before the run began to wait
 - **AND** after the person saves an edit of `ch07.xhtml:41` and resumes, `ch07.xhtml:42` and `ch07.xhtml:43` are decided
   from their existing drafts, with no new draft call for either
@@ -959,19 +954,19 @@ dropped by a stop and drafted again by the next run.
 - **THEN** no model call for `ch07.xhtml:42` was made before the pause
 - **AND** the draft call for `ch07.xhtml:42` carries `Він рвучко відчинив двері.` as a preceding target
 
-#### Scenario: A memory reuse is neither drafted nor judged
+#### Scenario: A memory reuse is neither drafted nor reviewed
 
 - **WHEN** a Balanced run takes the chunk `ch07.xhtml:40` … `ch07.xhtml:43`, and the context of `ch07.xhtml:42` matches a
   memory entry whose target passes its checks
 - **THEN** three draft calls are made for the chunk, none of them for `ch07.xhtml:42`
-- **AND** the chunk's judge call shows three pairs, labelled `s1`, `s2` and `s3`, for `ch07.xhtml:40`, `ch07.xhtml:41`
+- **AND** the chunk's reviewer call shows three pairs, labelled `s1`, `s2` and `s3`, for `ch07.xhtml:40`, `ch07.xhtml:41`
   and `ch07.xhtml:43`
 
-#### Scenario: A judge call interrupted by a pause is made again
+#### Scenario: A reviewer call interrupted by a pause is made again
 
-- **WHEN** a Balanced run has drafted `ch07.xhtml:40` … `ch07.xhtml:43`, a pause is requested while the chunk's judge
+- **WHEN** a Balanced run has drafted `ch07.xhtml:40` … `ch07.xhtml:43`, a pause is requested while the chunk's reviewer
   call is in flight, and the run is resumed
-- **THEN** the judge call for the chunk is sent again and no draft call of the chunk is repeated
+- **THEN** the reviewer call for the chunk is sent again and no draft call of the chunk is repeated
 - **AND** each of the four segments is decided exactly once
 
 #### Scenario: A stop drops the undecided drafts
@@ -1011,9 +1006,9 @@ word is a name.
 ### Requirement: Show the segment just decided and the one in progress in the live panel
 
 WHILE a run translates, the Translating screen's `Current chunk (live)` panel SHALL show two rows: the first holds the
-segment decided most recently — its source, its target, its judge score when the judge ran, and its path —; the second
+segment decided most recently — its source, its target, and its path —; the second
 holds the segment started most recently and not yet decided — its source, with `waiting for the model…` until its draft
-is ready and then its draft, marked `awaiting judge` while the judge is on. WHEN the second row's segment is decided, the
+is ready and then its draft, marked `awaiting review` while the reviewer is on. WHEN the second row's segment is decided, the
 screen SHALL move it to the first row and SHALL leave the second row empty until the next segment starts. Both rows SHALL
 show display text only, taken from the run's announcements (see "Announce each segment's text as it starts, is drafted
 and is decided").
@@ -1023,25 +1018,25 @@ and is decided").
 `docs/specification/mockups/ui-mockup.html`.
 In plain words: a book takes hours, and watching sentences go by is how a person judges whether the model is doing well
 before the run ends. The panel shows the last finished sentence beside the one the model is working on, so a slow model
-is visibly busy rather than stuck, and a draft waiting for the chunk's judge is marked as not yet decided.
+is visibly busy rather than stuck, and a draft waiting for the chunk's reviewer is marked as not yet decided.
 
 #### Scenario: The decided segment above the one in progress
 
 - **WHEN** a Fast run has accepted `ch7 · p41`, `She had lost her mother, and the poor girl wept as she followed the
   coffin.`, on its first draft as `Вона втратила матір, і бідолашна дівчина плакала, ідучи за труною.`, and has started
   `ch7 · p42`, whose draft has not arrived
-- **THEN** the first row shows that source and that target with the path `auto-accepted` and no judge score
+- **THEN** the first row shows that source and that target with the path `auto-accepted`
 - **AND** the second row shows the source of `ch7 · p42` and `waiting for the model…`
 
-#### Scenario: A draft waits for the judge
+#### Scenario: A draft waits for the reviewer
 
 - **WHEN** on a Balanced run the draft of `ch7 · p42` has arrived and no later segment has started
-- **THEN** the second row shows that draft marked `awaiting judge`
+- **THEN** the second row shows that draft marked `awaiting review`
 
 #### Scenario: A decision moves the segment up
 
-- **WHEN** `ch7 · p42`, shown in the second row, is accepted with the judge score `0.93`
-- **THEN** the first row shows `ch7 · p42` with `judge 0.93`, and the second row stays empty until `ch7 · p43` starts
+- **WHEN** `ch7 · p42`, shown in the second row, is accepted
+- **THEN** the first row shows `ch7 · p42` with its path, and the second row stays empty until `ch7 · p43` starts
 
 ### Requirement: Show the Translating screen's idle, completed and failed states
 
@@ -1293,8 +1288,8 @@ small model reads every token it is given and may echo it, so nothing is sent th
 The system SHALL build, for each source and target language of a run, one section `[Language rules: <Source> -> <Target>]`
 from bundled `prompt/languages/<tag>.properties` files — the target language's rules, at most three notes on reading the
 source language, and the pair's own rules from `prompt/languages/pairs/<source>-<target>.properties` — and SHALL inject it
-as `{{languageRules}}` into the draft, judge, summary, prescan and suggest-targets system messages, with the language's
-`reviewerChecks` added only in the judge. A language is matched by its primary subtag; a tag with no file SHALL get the
+as `{{languageRules}}` into the draft, reviewer, summary, prescan and suggest-targets system messages, with the language's
+`reviewerChecks` added only in the reviewer. A language is matched by its primary subtag; a tag with no file SHALL get the
 rules of `generic.properties`, so that any language the platform can name keeps working. The system SHALL open only the
 files of the target, the source, their pair and `generic.properties`, SHALL build the section once per pair so that every
 call of a run carries the same bytes, and SHALL keep a target's rules within 200 estimated tokens, a source's notes within
@@ -1319,10 +1314,10 @@ hand, and a language nobody has written rules for is translated with general adv
 - **WHEN** the target is a tag with no file, such as `ja`
 - **THEN** the section holds the generic rules and the translation runs
 
-#### Scenario: The judge also gets the reviewer checks
+#### Scenario: The reviewer also gets the reviewer checks
 
-- **WHEN** the draft and the judge system messages are built for English to Ukrainian
-- **THEN** only the judge's carries the `Check:` lines
+- **WHEN** the draft and the reviewer system messages are built for English to Ukrainian
+- **THEN** only the reviewer's carries the `Check:` lines
 
 #### Scenario: Rules forced to generic
 
@@ -1366,7 +1361,7 @@ it from its text)`.
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#draft-translation`, `#output-contract`,
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#chunk-packing`, ADR-0037, ADR-0038.
 In plain words: the model sees only text with numbered holes where the markup was, never the book's structure. Segments
-now travel in small chunks so the judge can read neighbours together, but each translation is still asked for one
+now travel in small chunks so the reviewer can read neighbours together, but each translation is still asked for one
 segment at a time, the shape small models get right. Starting at the first pending segment is what lets a second run in
 the same session carry on where the first stopped. The person's choice of source language wins, because a book's own
 declaration is often missing or wrong.
@@ -1428,7 +1423,7 @@ declaration is often missing or wrong.
 WHEN the model replies with a normal finish and the translation read from the reply is not empty after trimming, the
 system SHALL trim it and put back the leading and trailing whitespace of the segment's masked text. It SHALL then
 restore the segment's markup through the placeholder gate and Markdown restoration validation, and hand the restored
-text to the quality checks, the judge and self-heal (the `quality-gates` capability), which decide whether the segment is
+text to the quality checks, the reviewer and self-heal (the `quality-gates` capability), which decide whether the segment is
 ACCEPTED, repaired or FLAGGED. The restored text SHALL become the segment's machine translation once it passes every hard
 gate, and a later target SHALL replace it only when that target passes every hard gate too.
 
@@ -1885,10 +1880,10 @@ would sit spinning forever.
 
 WHEN a pause or a stop is requested while a model request is in flight, the engine SHALL abort that request without
 waiting for the provider to answer, and SHALL NOT send any further request to the provider — not a retry, not a
-repair and not a judge call — after the request was made.
+repair and not a reviewer call — after the request was made.
 
 WHEN a pause aborted a request, the engine SHALL report the run as paused with no error, and WHEN the run is
-resumed the engine SHALL make the interrupted call again — a draft, a repair or the chunk's judge call (see "Decide a
+resumed the engine SHALL make the interrupted call again — a draft, a repair or the chunk's reviewer call (see "Decide a
 chunk's segments in document order") — so every segment is decided once and the run continues from where it stood.
 
 WHEN a stop aborted a request, the engine SHALL end the run as cancelled, and SHALL NOT keep the interrupted
@@ -1902,7 +1897,7 @@ between calls are never interrupted by a pause or a stop; they take effect at th
 In plain words: a local model can take minutes to answer, and a request that times out is retried up to three
 times. So the button aborts the request that is waiting, and nothing further is sent. The call that was aborted has no
 answer yet, which is why resuming sends it again instead of skipping it — whether it was a segment's draft, one of its
-repairs or the judge call for its chunk. The run no longer writes the book, so there is no longer an export for a pause
+repairs or the reviewer call for its chunk. The run no longer writes the book, so there is no longer an export for a pause
 to stay out of; export is its own action.
 
 #### Scenario: A stop aborts a slow request
@@ -1944,7 +1939,7 @@ to stay out of; export is its own action.
 ### Requirement: Announce each model call as it starts
 
 WHEN the engine starts a model call, it SHALL emit one event naming the call's kind — draft, structural repair,
-placeholder repair, judge, directed fix, reflect, improve, polish, pre-scan, summary or revision — and the segment the
+placeholder repair, reviewer, directed fix, reflect, improve, polish, pre-scan, summary or revision — and the segment the
 call belongs to when it belongs to one, before waiting for the answer, and SHALL NOT emit it for a call that was refused
 because a pause or a stop was already requested. Each such call SHALL emit its own event. The client's own retries of
 one call — a timeout, a `Retry-After` wait — belong to that same call and SHALL NOT emit another event.
@@ -1952,7 +1947,7 @@ one call — a timeout, a `Retry-After` wait — belong to that same call and SH
 **Source:** FR-ALGO-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-translating`,
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`.
-In plain words: between two segment decisions the engine may now make several calls — a draft, a judge, a repair — and
+In plain words: between two segment decisions the engine may now make several calls — a draft, a reviewer call, a repair — and
 a local model can take minutes for each. Naming the kind lets the screen and the log say what the model is doing, and
 lets throughput count only drafts. A provider client that retries a timed-out request is still waiting on the same ask.
 
@@ -1969,10 +1964,10 @@ lets throughput count only drafts. A provider client that retries a timed-out re
 - **THEN** a draft event and a structural-repair event for `Book.md:0` are emitted, one before each call, before that
   segment's decision
 
-#### Scenario: The judge is announced by kind
+#### Scenario: The reviewer is announced by kind
 
-- **WHEN** a Balanced run judges the chunk holding `ch07.xhtml:40` and `ch07.xhtml:41`
-- **THEN** one model-call event of kind judge is emitted for that chunk
+- **WHEN** a Balanced run reviews the chunk holding `ch07.xhtml:40` and `ch07.xhtml:41`
+- **THEN** one model-call event of kind review is emitted for that chunk
 
 #### Scenario: The client's retry does not announce again
 
@@ -2000,9 +1995,9 @@ that stalls after its head), so the watchdog is the last resort behind them, not
 **Source:** the overnight plan, step 11 (a stalled call must never hold a night's run).
 In plain words: a provider that accepts a request and never finishes it would otherwise keep the run waiting forever.
 
-#### Scenario: A judge call that never returns is ended at 135 s
+#### Scenario: A reviewer call that never returns is ended at 135 s
 
-- **WHEN** a judge call with a 90 s timeout has been outstanding for 136 s
+- **WHEN** a reviewer call with a 90 s timeout has been outstanding for 136 s
 - **THEN** the watchdog ends it, the gate is released, and the call answers `ErrorCode.timeout`
 
 #### Scenario: A call that never returns is retried, then flagged
@@ -2038,7 +2033,7 @@ that grows; the soak harness (`./gradlew :pipeline:soak`) proves it.
 
 - **WHEN** a generated book of 3,700 paragraphs runs on the Balanced dial over a model that times out, hangs, answers
   5xx bursts, is unreachable for 25 minutes once, unloads its model, answers empty, damages placeholders, refuses,
-  answers the judge with no JSON and throws
+  answers the reviewer with no JSON and throws
 - **THEN** the run ends Completed with no segment pending, the export re-opens with every segment, the live threads
   are as many as before, and the retained heap grows by less than 16 KB per segment
 
@@ -2160,7 +2155,7 @@ never eats the rounds meant for the translation itself.
   pair and keep text outside it — to the draft, to its placeholder repair and to every directed fix
 - **THEN** the segment is not flagged after the placeholder repair; two directed fixes follow, each stating
   `⟦g0⟧ ⟦g1⟧`
-- **AND** the segment is FLAGGED with a high `markup` finding after exactly 4 model calls for it, and no judge call shows
+- **AND** the segment is FLAGGED with a high `markup` finding after exactly 4 model calls for it, and no reviewer call shows
   it
 
 ## REMOVED Requirements

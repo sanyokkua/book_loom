@@ -11,7 +11,7 @@ import ua.bookloom.util.lang.Languages;
 
 /**
  * The deterministic text checks that need no model, run on one segment's display texts — a defect found here is a
- * fact, not an opinion, so a blocking finding fails the segment before any judge is asked. Blocking: a word that
+ * fact, not an opinion, so a blocking finding fails the segment before any reviewer is asked. Blocking: a word that
  * mixes alphabets, a quote pair the source balanced and the target did not, a paragraph left in the source language.
  * Soft: a doubled word, a spacing artefact. The length check stays beside the other soft checks in
  * {@code qa}, where its band and its blend weight live.

@@ -28,10 +28,10 @@ import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
- * The self-heal path for a vague quality concern with no concrete finding — a low confidence, a judge score below
- * τ_judge with no finding, or an unreadable judge reply: a reflection critique read back as a tolerant issue list,
- * then a rewrite that consumes it (design D8; {@code specs/quality-gates/spec.md} "Repair a failing segment within
- * the dial's repair budget before flagging it" — "A low score with no finding goes to reflect and improve").
+ * The self-heal path for a vague quality concern with no concrete finding: a reflection critique read back as a
+ * tolerant issue list, then a rewrite that consumes it (design D8). The acceptance rule no longer produces such a
+ * concern — it accepts or names a blocker — so only a round with nothing concrete to repair reaches it; task 15d.7
+ * decides whether it stays.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})

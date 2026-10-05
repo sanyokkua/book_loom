@@ -6,9 +6,9 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_ECHO;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DOOR_TARGET;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
+import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
@@ -127,13 +127,12 @@ class TranslationJobQualityTest {
     @Test
     void run_cutOffDirectedFix_keepsEarlierTarget() {
         final ScriptedChatModel model = replies(DOOR_ECHO)
-                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("ВІН"), FinishReason.LENGTH)))
-                .answerTo(JUDGE, judged());
+                .answer(Result.ok(new ChatResponse(TranslationJobTestSupport.targetReply("ВІН"), FinishReason.LENGTH)));
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         final JobReport report = report(job(project, model).run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, JUDGE, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, FIX);
         assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.txt:0", ErrorCode.validation));
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
@@ -152,22 +151,22 @@ class TranslationJobQualityTest {
         report(translation.run());
 
         // The pseudo model's fix returns the echo unchanged, so the second round is not tried.
-        assertThat(model.formats()).containsExactly(DRAFT, JUDGE, FIX);
+        assertThat(model.formats()).containsExactly(DRAFT, FIX);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget, SegmentRecord::repairRounds)
                 .containsExactly(SegmentStatus.FLAGGED, DOOR_ECHO, 1);
     }
 
     @Test
-    void run_draftAndOnePairJudge_stateTheirOutputAllowanceAndCap() {
-        final ScriptedChatModel model = replies(DOOR_TARGET).answerTo(JUDGE, judged());
+    void run_draftAndOnePairReview_stateTheirOutputAllowanceAndCap() {
+        final ScriptedChatModel model = replies(DOOR_TARGET).answerTo(REVIEW, reviewed());
         final TestProject project = project(ChunkRunFixtures.door(tempDir), brief("en", "uk", QualityDial.BALANCED));
 
         report(job(project, model).run());
 
         assertThat(model.requests())
                 .extracting(ChatRequest::expectedOutputTokens, ChatRequest::maxOutputTokens)
-                .containsExactly(tuple(16, 128), tuple(160, 320));
+                .containsExactly(tuple(16, 128), tuple(85, 170));
     }
 
     @Test

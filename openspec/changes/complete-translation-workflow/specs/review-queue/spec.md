@@ -16,7 +16,8 @@ segment by its locator with a badge for its main finding, and four filter chips 
 an omission finding, and `foreign · kept` to segments marked foreign or holding a kept foreign run; the navigation SHALL
 have no separate review entry. The main finding SHALL be the finding of the highest severity, a tie going first to a
 glossary finding (badge `name`), then a language finding (`wrong lang?`), then an omission finding (`omission`), and
-any other finding, or a low judge score with no finding, showing `low score`.
+any other finding, or a stored score with no finding, showing `low score`; a `terminology` finding from the reviewer
+counts as a glossary finding.
 
 A segment's locator SHALL read `ch<n> · p<mm>`, where `n` is its unit's 1-based position among the book's body units
 and `mm` is the segment's 1-based position within its unit, zero-padded to two digits; a segment of the auxiliary unit
@@ -38,7 +39,7 @@ three ways. The mockup draws review as a separate step; keeping it inside Transl
 
 #### Scenario: Three flagged segments are listed
 
-- **WHEN** segments `ch5 · p12` (judge score 0.58, no finding), `ch7 · p40` (glossary finding) and `ch9 · p03` (script
+- **WHEN** segments `ch5 · p12` (a stored score of 0.58, no finding), `ch7 · p40` (glossary finding) and `ch9 · p03` (script
   check failed) are FLAGGED
 - **THEN** the control reads `Review flagged (3)`
 - **AND** the list shows `ch5 · p12` with `low score`, `ch7 · p40` with `name` and `ch9 · p03` with `wrong lang?`
@@ -46,7 +47,7 @@ three ways. The mockup draws review as a separate step; keeping it inside Transl
 #### Scenario: The worst finding decides the badge
 
 - **WHEN** FLAGGED `ch9 · p03` carries a medium `omission` finding from the length-ratio check and a medium `language`
-  finding from the script check, and FLAGGED `ch4 · p02` carries a high `omission` finding from the judge and a medium
+  finding from the script check, and FLAGGED `ch4 · p02` carries a high `omission` finding from the reviewer and a medium
   `glossary` finding
 - **THEN** `ch9 · p03` shows `wrong lang?` and `ch4 · p02` shows `omission`
 
@@ -112,8 +113,10 @@ target) under the note "No usable translation: the model's last reply is shown b
 else its source under the note "No translation kept — showing the source." — editable and marked EDITABLE, side by side
 with no
 inline diff, with each `⟦gN⟧` placeholder of the book's markup shown where it stands and each locked name shown as its
-rendering; and it SHALL show the segment's findings, a badge with its chunk's judge score when a judge ran, and a context
-line naming what the segment was translated with.
+rendering; and it SHALL show the segment's findings — each edit the reviewer applied as a highlighted diff, the words it removed
+in the error colour and the words it put there in the success colour, headed by its criterion, and every other finding
+as its kind, severity, note and the check or reviewer that raised it — a badge with a stored score when the record has
+one, and a context line naming what the segment was translated with.
 
 **Source:** FR-REVIEW-04 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`),
 `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#side-by-side-compare`,
@@ -134,10 +137,10 @@ paragraph.
 
 #### Scenario: A flagged segment in the compare
 
-- **WHEN** `ch5 · p12` is selected, flagged with a judge score of `0.58`, translated with the brief, two glossary
+- **WHEN** `ch5 · p12` is selected, flagged with a stored score of `0.58`, translated with the brief, two glossary
   terms, the previous paragraph and the summary
 - **THEN** the source pane is read-only, the target pane is editable and marked EDITABLE
-- **AND** a badge shows `judge 0.58` and the context line reads `brief · glossary(2) · previous paragraph · summary`
+- **AND** a badge shows the score `0.58` and the context line reads `brief · glossary(2) · previous paragraph · summary`
 
 #### Scenario: The target shows its placeholders and names
 
@@ -145,10 +148,18 @@ paragraph.
   as `Гейл`, and is selected
 - **THEN** the target pane shows `Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.`
 
-#### Scenario: No judge on Fast
+#### Scenario: An applied edit is shown as a diff
 
-- **WHEN** the selected segment was translated on the Fast dial
-- **THEN** no judge score badge is shown and its findings are listed
+- **WHEN** the selected segment's record carries a low `gender` finding raised by `reviewer-edit` for the quote
+  `Вона втомився` and the replacement `Вона втомилася`
+- **THEN** the findings list shows `Edit applied · gender`, then `− Вона втомився` in the error colour, then
+  `+ Вона втомилася` in the success colour, and no raw note and no `reviewer-edit` label
+- **AND** an edit that only deleted its quote shows `+ (removed)`; the Ukrainian bundle shows `Правку застосовано · рід`
+
+#### Scenario: No score badge without a stored score
+
+- **WHEN** the selected segment was translated on the Fast dial, or its decision gave no score
+- **THEN** no score badge is shown and its findings are listed
 
 ### Requirement: Move segments only through the segment status machine
 
@@ -306,8 +317,8 @@ WHEN the person chooses Retry or Retry with note on a FLAGGED or ACCEPTED segmen
 segment again with the same brief, glossary entries, preceding targets, memory and summary text it first saw — as they
 read then, not as they read now — adding the note as an extra instruction and lowering the draft's temperature when
 `Lower temperature for this retry` is checked; SHALL pass the result through the hard gates, the soft checks and, when
-the brief's quality dial enables the judge, a judge call over that one pair; and SHALL decide it by the acceptance rule
-with the review mode's τ, making no repair rounds. A passing result SHALL mark the segment ACCEPTED with the new machine
+the brief's quality dial enables the reviewer, a reviewer call over that one pair; and SHALL decide it by the acceptance
+rule, making no repair rounds. A passing result SHALL mark the segment ACCEPTED with the new machine
 target, recorded as drafted. A failing result SHALL leave a FLAGGED segment FLAGGED with the new findings, and SHALL
 leave an ACCEPTED segment ACCEPTED with its previous target, reporting the new findings.
 
@@ -315,7 +326,7 @@ leave an ACCEPTED segment ACCEPTED with its previous target, reporting the new f
 FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`),
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`, ADR-0038.
 In plain words: a retry must be a fair second attempt at the same problem, not a translation with different context;
-the note lets the person steer it ("keep it more formal"). The same gates, checks and judge decide it as decided the
+the note lets the person steer it ("keep it more formal"). The same gates, checks and reviewer decide it as decided the
 first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of
 automatic repairs — if it fails, the person sees why and chooses again. The temperature values are the inference
 capability's. When a retry may run at all is "Allow a retry whenever no run of the project is running".
@@ -324,10 +335,10 @@ capability's. When a retry may run at all is "Allow a retry whenever no run of t
 
 - **WHEN** the run is paused and the person retries `ch5 · p12` with the note `keep it more formal` and
   `Lower temperature for this retry` checked
-- **AND** the new target passes the hard gates, every soft check, the confidence threshold and the judge
+- **AND** the new target passes the hard gates and every soft check, and the reviewer leaves no verified blocker
 - **THEN** `ch5 · p12` becomes ACCEPTED with the new target, recorded as drafted and marked reviewed
 - **AND** exactly one draft call was made, carrying `keep it more formal` and the temperature `0.1`, plus the one-pair
-  judge call when the dial enables the judge
+  reviewer call when the dial enables the reviewer
 
 #### Scenario: A failing retry stays flagged with new findings
 

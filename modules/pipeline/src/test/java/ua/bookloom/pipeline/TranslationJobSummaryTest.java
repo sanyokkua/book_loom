@@ -2,13 +2,13 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
+import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
@@ -127,14 +127,16 @@ class TranslationJobSummaryTest {
     void run_maxUnitEnd_makesOneSummaryCall() {
         final TestProject project = project(
                 TestBooks.markdown(tempDir.resolve("Book.md"), S0 + "\n\n" + S1), brief("en", "uk", QualityDial.MAX));
-        final ScriptedChatModel model =
-                replies(T0, T1).answerTo(JUDGE, judged()).answerTo(SUMMARY, summaryReply(MODEL_SUMMARY));
+        final ScriptedChatModel model = replies(T0, T1)
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed())
+                .answerTo(SUMMARY, summaryReply(MODEL_SUMMARY));
         final TranslationJobImpl translation = job(project, model);
         final List<JobEvent> events = recorded(translation);
 
         report(translation.run());
 
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, JUDGE, SUMMARY);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, REVIEW, REVIEW, SUMMARY);
         assertThat(memoryEvents(events)).containsExactly(new MemoryUpdated(MemoryKind.SUMMARY, "1"));
         assertThat(latestSummary(project))
                 .hasValueSatisfying(summary -> assertThat(summary.target()).isEqualTo(MODEL_SUMMARY));
@@ -152,7 +154,8 @@ class TranslationJobSummaryTest {
                 .summaries()
                 .save(new RollingSummary(project.id(), null, "Earlier.", EARLIER_SUMMARY, 1, null, 0));
         final ScriptedChatModel model = replies(T0, T1)
-                .answerTo(JUDGE, judged())
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed())
                 .answerTo(SUMMARY, Result.err(AppError.of(code, "Unanswerable", "The summary call gave nothing.")));
         final TranslationJobImpl translation = job(project, model);
         final List<JobEvent> events = recorded(translation);
@@ -162,7 +165,7 @@ class TranslationJobSummaryTest {
         assertThat(report.end()).isEqualTo(JobState.COMPLETED);
         assertThat(report.error()).isNull();
         assertThat(report.accepted()).isEqualTo(2);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, JUDGE, SUMMARY);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, REVIEW, REVIEW, SUMMARY);
         assertThat(memoryEvents(events)).isEmpty();
         assertThat(events.getLast()).isInstanceOf(Finished.class);
         assertThat(latestSummary(project)).hasValueSatisfying(summary -> {

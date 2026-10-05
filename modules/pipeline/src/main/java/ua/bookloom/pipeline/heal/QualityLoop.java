@@ -11,23 +11,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
-import ua.bookloom.pipeline.judge.JudgeCall;
-import ua.bookloom.pipeline.judge.JudgeVerdict;
-import ua.bookloom.pipeline.judge.JudgedPair;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.qa.QaResult;
+import ua.bookloom.pipeline.reviewer.EditApplier;
+import ua.bookloom.pipeline.reviewer.ReviewPass;
+import ua.bookloom.pipeline.reviewer.ReviewVerdict;
+import ua.bookloom.pipeline.reviewer.ReviewedPair;
+import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /**
- * Starts one chunk's quality loop: evaluates every drafted outcome, makes the chunk's one judge call when the dial
- * enables it — over the drafted pairs only, never a memory reuse — and hands both to a {@link ChunkDecider} that
- * decides one segment per call ({@code specs/quality-gates/spec.md} "Judge each chunk once when the quality dial
- * enables the judge").
+ * Starts one chunk's quality loop: evaluates every drafted outcome, makes the chunk's reviewer pass or passes when the
+ * dial enables them — over the drafted pairs the checks do not already refuse, never a memory reuse — and hands both
+ * to a {@link ChunkDecider} that decides one segment per call ({@code specs/quality-gates/spec.md} "Review each chunk
+ * once per pass when the quality dial enables the reviewer").
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class QualityLoop {
 
-    private final JudgeCall judgeCall;
+    private final ReviewerCall reviewerCall;
+    private final EditApplier editApplier;
     private final DirectedFix directedFix;
     private final ReflectImprove reflectImprove;
     private final Polish polish;
@@ -40,7 +43,7 @@ public final class QualityLoop {
      * @param gate the placeholder-gate function every self-heal round's candidate goes through
      * @param calls the seam every model call of this loop is sent through
      * @return a decider that yields one {@link SegmentOutcome} per {@code nextDecision()} call, or the error the
-     *     chunk's judge call answered
+     *     chunk's reviewer call answered
      */
     public Result<ChunkDecider> start(
             final List<DraftOutcome> outcomes,
@@ -52,31 +55,29 @@ public final class QualityLoop {
         Objects.requireNonNull(gate, "gate");
         Objects.requireNonNull(calls, "calls");
         log.debug(
-                "Starting quality loop chunkSize={} judgeEnabled={}",
+                "Starting quality loop chunkSize={} reviewPasses={}",
                 outcomes.size(),
-                settings.dial().judge());
+                settings.dial().reviewPasses());
         final Map<Integer, QaResult> initialQa = evaluateDrafts(outcomes, settings);
-        final JudgeOutcome judgeOutcome = judgeChunk(outcomes, initialQa, settings, calls);
-        if (judgeOutcome.error() != null) {
-            return Result.err(judgeOutcome.error());
+        final ReviewOutcome reviewed = reviewChunk(outcomes, initialQa, settings, calls);
+        if (reviewed.error() != null) {
+            return Result.err(reviewed.error());
         }
-        final SegmentHealer healer =
-                new SegmentHealer(judgeCall, directedFix, reflectImprove, polish, settings, gate, calls);
-        return Result.ok(new ChunkDecider(outcomes, initialQa, judgeOutcome.verdict(), healer));
+        return Result.ok(new ChunkDecider(outcomes, initialQa, reviewed.verdict(), healer(settings, gate, calls)));
     }
 
     /**
-     * Starts the chunk's quality loop after its judge call kept failing and the run gave up on it: every judged pair
-     * is decided as if the judge were unavailable — by the quality checks alone, and flagged.
+     * Starts the chunk's quality loop after its reviewer call kept failing and the run gave up on it: every reviewed
+     * pair is decided as if the reviewer were unavailable — by the quality checks alone, and flagged.
      *
      * @param outcomes the chunk's draft outcomes, in document order
      * @param settings the chunk's review mode, dial, call frame, name policy and glossary terms
      * @param gate the placeholder-gate function every self-heal round's candidate goes through
      * @param calls the seam every model call of this loop is sent through
-     * @param reason the error the chunk's judge call last answered
-     * @return a decider over the chunk, with no judge call made
+     * @param reason the error the chunk's reviewer call last answered
+     * @return a decider over the chunk, with no reviewer call made
      */
-    public ChunkDecider startWithoutJudge(
+    public ChunkDecider startWithoutReviewer(
             final List<DraftOutcome> outcomes,
             final LoopSettings settings,
             final GateFunction gate,
@@ -85,10 +86,16 @@ public final class QualityLoop {
         Objects.requireNonNull(outcomes, "outcomes");
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(reason, "reason");
-        log.warn("Deciding a chunk without its judge chunkSize={} code={}", outcomes.size(), reason.code());
-        final SegmentHealer healer = new SegmentHealer(
-                judgeCall, directedFix, reflectImprove, polish, settings, Objects.requireNonNull(gate, "gate"), calls);
-        return new ChunkDecider(outcomes, evaluateDrafts(outcomes, settings), JudgeVerdict.unavailable(reason), healer);
+        log.warn("Deciding a chunk without its reviewer chunkSize={} code={}", outcomes.size(), reason.code());
+        return new ChunkDecider(
+                outcomes,
+                evaluateDrafts(outcomes, settings),
+                ReviewVerdict.unavailable(reason),
+                healer(settings, Objects.requireNonNull(gate, "gate"), calls));
+    }
+
+    private SegmentHealer healer(final LoopSettings settings, final GateFunction gate, final ModelCalls calls) {
+        return new SegmentHealer(editApplier, directedFix, reflectImprove, polish, settings, gate, calls);
     }
 
     private Map<Integer, QaResult> evaluateDrafts(final List<DraftOutcome> outcomes, final LoopSettings settings) {
@@ -101,27 +108,47 @@ public final class QualityLoop {
         return results;
     }
 
-    /** Makes the chunk's judge call when the dial enables it and at least one pair qualifies. */
-    private JudgeOutcome judgeChunk(
+    /**
+     * Makes the chunk's reviewer passes when the dial enables them and at least one pair qualifies. Both passes read
+     * the drafts; the second pass's edits are applied after the first's, each verified against the text the earlier
+     * ones left.
+     */
+    private ReviewOutcome reviewChunk(
             final List<DraftOutcome> outcomes,
             final Map<Integer, QaResult> initialQa,
             final LoopSettings settings,
             final ModelCalls calls) {
-        if (!settings.dial().judge()) {
-            return new JudgeOutcome(null, null);
+        if (!settings.dial().hasReviewer()) {
+            return new ReviewOutcome(null, null);
         }
-        final List<JudgedPair> pairs = qualifyingPairs(outcomes, initialQa);
-        logJudgeInput(outcomes, initialQa, pairs);
+        final List<ReviewedPair> pairs = qualifyingPairs(outcomes, initialQa);
+        logReviewInput(outcomes, initialQa, pairs);
         if (pairs.isEmpty()) {
-            return new JudgeOutcome(null, null);
+            return new ReviewOutcome(null, null);
         }
-        final Result<JudgeVerdict> judged = judgeCall.judge(pairs, settings.frame(), settings.glossaryTerms(), calls);
-        return judged.isErr() ? new JudgeOutcome(null, judged.error()) : new JudgeOutcome(judged.data(), null);
+        final Result<ReviewVerdict> first =
+                reviewerCall.review(pairs, settings.frame(), settings.glossaryPairs(), ReviewPass.FIRST, calls);
+        if (first.isErr() || settings.dial().reviewPasses() < 2) {
+            return outcomeOf(first);
+        }
+        final ReviewVerdict firstVerdict = Objects.requireNonNull(first.data());
+        if (!firstVerdict.readable()) {
+            return outcomeOf(first);
+        }
+        final Result<ReviewVerdict> second =
+                reviewerCall.review(pairs, settings.frame(), settings.glossaryPairs(), ReviewPass.SECOND, calls);
+        return second.isErr()
+                ? outcomeOf(second)
+                : new ReviewOutcome(firstVerdict.followedBy(Objects.requireNonNull(second.data())), null);
     }
 
-    private static List<JudgedPair> qualifyingPairs(
+    private static ReviewOutcome outcomeOf(final Result<ReviewVerdict> reviewed) {
+        return reviewed.isErr() ? new ReviewOutcome(null, reviewed.error()) : new ReviewOutcome(reviewed.data(), null);
+    }
+
+    private static List<ReviewedPair> qualifyingPairs(
             final List<DraftOutcome> outcomes, final Map<Integer, QaResult> initialQa) {
-        final List<JudgedPair> pairs = new ArrayList<>();
+        final List<ReviewedPair> pairs = new ArrayList<>();
         for (int index = 0; index < outcomes.size(); index++) {
             addQualifyingPair(pairs, outcomes.get(index), initialQa.get(index));
         }
@@ -129,33 +156,32 @@ public final class QualityLoop {
     }
 
     private static void addQualifyingPair(
-            final List<JudgedPair> pairs, final DraftOutcome outcome, @Nullable final QaResult qa) {
+            final List<ReviewedPair> pairs, final DraftOutcome outcome, @Nullable final QaResult qa) {
         switch (outcome) {
             case DraftOutcome.Drafted drafted -> {
-                if (Objects.requireNonNull(qa).hardGatesPass()) {
-                    // The judge reads names, not the tokens the draft was shown them as.
-                    pairs.add(new JudgedPair(
-                            drafted.segment().id(),
-                            drafted.segment().masked(),
-                            Objects.requireNonNullElse(drafted.maskedForm(), drafted.maskedReply())));
+                if (AcceptanceRule.readyForReview(Objects.requireNonNull(qa))) {
+                    // The reviewer reads and quotes the text as the model wrote it, protected tokens in place, because
+                    // that is the text its edits are applied to and checked on.
+                    pairs.add(new ReviewedPair(drafted.segment().id(), drafted.maskedSource(), drafted.maskedReply()));
                 }
             }
             case DraftOutcome.FlaggedAtOnce ignored -> {}
-            // Already accepted once between the same neighbours; the judge never sees a reuse.
+            // Already accepted once between the same neighbours; the reviewer never sees a reuse.
             case DraftOutcome.Reused ignored -> {}
-            // Nothing was translated, so there is nothing to judge.
+            // Nothing was translated, so there is nothing to review.
             case DraftOutcome.Verbatim ignored -> {}
         }
     }
 
-    private static void logJudgeInput(
-            final List<DraftOutcome> outcomes, final Map<Integer, QaResult> initialQa, final List<JudgedPair> pairs) {
-        final List<String> included = pairs.stream().map(JudgedPair::segmentId).toList();
-        final List<String> excluded = excludedFromJudge(outcomes, initialQa);
-        log.debug("Judge input included={} excluded={}", included, excluded);
+    private static void logReviewInput(
+            final List<DraftOutcome> outcomes, final Map<Integer, QaResult> initialQa, final List<ReviewedPair> pairs) {
+        final List<String> included =
+                pairs.stream().map(ReviewedPair::segmentId).toList();
+        final List<String> excluded = excludedFromReview(outcomes, initialQa);
+        log.debug("Review input included={} excluded={}", included, excluded);
     }
 
-    private static List<String> excludedFromJudge(
+    private static List<String> excludedFromReview(
             final List<DraftOutcome> outcomes, final Map<Integer, QaResult> initialQa) {
         final List<String> excluded = new ArrayList<>();
         for (int index = 0; index < outcomes.size(); index++) {
@@ -172,16 +198,16 @@ public final class QualityLoop {
             excluded.add(reused.segment().id() + ":reused");
         } else if (outcome instanceof DraftOutcome.Verbatim verbatim) {
             excluded.add(verbatim.segment().id() + ":verbatim");
-        } else if (qa != null && !qa.hardGatesPass()) {
-            excluded.add(outcome.segment().id() + ":hard-gate-failed");
+        } else if (qa != null && !AcceptanceRule.readyForReview(qa)) {
+            excluded.add(outcome.segment().id() + ":refused-by-checks");
         }
     }
 
     /**
-     * The chunk judge call's outcome: a verdict (possibly {@code null} when the judge did not run), or the error
-     * that ends {@link #start}. A plain local holder rather than {@link Result}, which never tolerates a
-     * {@code null} success value.
+     * The chunk's reviewer outcome: a verdict (possibly {@code null} when the reviewer did not run), or the error that
+     * ends {@link #start}. A plain local holder rather than {@link Result}, which never tolerates a {@code null}
+     * success value.
      */
-    private record JudgeOutcome(
-            @Nullable JudgeVerdict verdict, @Nullable AppError error) {}
+    private record ReviewOutcome(
+            @Nullable ReviewVerdict verdict, @Nullable AppError error) {}
 }

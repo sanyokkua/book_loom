@@ -310,9 +310,9 @@ more toggles it does not draw (see design).
 The book-brief screen SHALL offer, in its Quality vs speed card, a dial of `Fast`, `Balanced` or `Max`, defaulting
 to `Balanced`, and SHALL show beneath it a one-line hint naming what the chosen position turns on:
 
-- `Fast: chunks of up to 8 segments · LLM judge off · backward-consistency pass off`
-- `Balanced: chunks of up to 4 segments · LLM judge on · backward-consistency pass off`
-- `Max: chunks of up to 2 segments · LLM judge on · backward-consistency pass on`
+- `Fast: chunks of up to 8 segments · AI reviewer off · backward-consistency pass off`
+- `Balanced: chunks of up to 4 segments · AI reviewer on · backward-consistency pass off`
+- `Max: chunks of up to 2 segments · AI reviewer on · backward-consistency pass on`
 
 The card SHALL show a model row naming the provider and the model the run will use, with a `change` link that opens
 the Settings screen; that row SHALL NOT carry a readiness badge.
@@ -325,7 +325,7 @@ The screen SHALL NOT offer a review-mode choice; the review mode is decided when
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#screen-book-brief`, ADR-0036
 (`docs/adr/ADR-0036-review-modes-pause-the-run.md`).
 In plain words: the dial trades speed for care, and a person can only make that trade knowingly if the screen says
-what each position costs — a judge call per chunk, a whole-book consistency pass. The model row is shown because the
+what each position costs — a reviewer pass per chunk (two on Max), a whole-book consistency pass. The model row is shown because the
 model is the other half of the quality question, and the link keeps the one place it is changed in Settings, so this
 row cannot drift from that choice. It carries no readiness badge because that would mean keeping a verification
 result between checks, which this build does not do; `app-shell`'s "Match the reference rendering" states this as a
@@ -337,12 +337,12 @@ belong here.
 
 - **WHEN** a book is opened and the brief is shown
 - **THEN** the dial is at `Balanced` and the hint reads
-  `Balanced: chunks of up to 4 segments · LLM judge on · backward-consistency pass off`
+  `Balanced: chunks of up to 4 segments · AI reviewer on · backward-consistency pass off`
 
 #### Scenario: The hint follows the dial
 
 - **WHEN** the dial is moved to `Max`
-- **THEN** the hint reads `Max: chunks of up to 2 segments · LLM judge on · backward-consistency pass on`
+- **THEN** the hint reads `Max: chunks of up to 2 segments · AI reviewer on · backward-consistency pass on`
 
 #### Scenario: The model row names the configured model and links to Settings
 

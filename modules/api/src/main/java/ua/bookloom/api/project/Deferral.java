@@ -5,7 +5,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * A segment decision deferred for a later resolution — a name awaiting the person's decision, a gender awaiting
- * resolution, a judge-raised backward-revision candidate, or a locked rendering changed after decided segments used
+ * resolution, or a locked rendering changed after decided segments used
  * the old one ({@code specs/translation-pipeline/spec.md} "Record deferrals and revise backwards on Max").
  *
  * @param id the deferral's stable id

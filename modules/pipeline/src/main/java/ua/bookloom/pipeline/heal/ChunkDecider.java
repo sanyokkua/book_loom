@@ -4,16 +4,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.pipeline.judge.JudgeDeferral;
-import ua.bookloom.pipeline.judge.JudgeVerdict;
 import ua.bookloom.pipeline.qa.QaResult;
+import ua.bookloom.pipeline.reviewer.ReviewVerdict;
 
 /**
  * Decides a chunk's segments one at a time, in document order — a {@link DraftOutcome.FlaggedAtOnce} outcome
@@ -30,18 +28,18 @@ public final class ChunkDecider {
 
     private final List<DraftOutcome> outcomes;
     private final Map<Integer, QaResult> initialQa;
-    private final @Nullable JudgeVerdict chunkVerdict;
+    private final @Nullable ReviewVerdict verdict;
     private final SegmentHealer healer;
     private int index;
 
     ChunkDecider(
             final List<DraftOutcome> outcomes,
             final Map<Integer, QaResult> initialQa,
-            @Nullable final JudgeVerdict chunkVerdict,
+            @Nullable final ReviewVerdict verdict,
             final SegmentHealer healer) {
         this.outcomes = List.copyOf(Objects.requireNonNull(outcomes, "outcomes"));
         this.initialQa = Map.copyOf(Objects.requireNonNull(initialQa, "initialQa"));
-        this.chunkVerdict = chunkVerdict;
+        this.verdict = verdict;
         this.healer = Objects.requireNonNull(healer, "healer");
     }
 
@@ -75,7 +73,7 @@ public final class ChunkDecider {
                     case DraftOutcome.Reused reused -> Result.ok(reusedOutcome(reused));
                     case DraftOutcome.Verbatim verbatim -> Result.ok(verbatimOutcome(verbatim));
                     case DraftOutcome.Drafted drafted ->
-                        healer.decide(drafted, Objects.requireNonNull(initialQa.get(index)), chunkVerdict);
+                        healer.decide(drafted, Objects.requireNonNull(initialQa.get(index)), verdict);
                 };
         if (decision.isOk()) {
             index++;
@@ -102,26 +100,13 @@ public final class ChunkDecider {
                     case DraftOutcome.Reused reused -> reusedOutcome(reused);
                     case DraftOutcome.Verbatim verbatim -> verbatimOutcome(verbatim);
                     case DraftOutcome.Drafted drafted ->
-                        healer.giveUp(drafted, Objects.requireNonNull(initialQa.get(index)), chunkVerdict, reason);
+                        healer.giveUp(drafted, Objects.requireNonNull(initialQa.get(index)), reason);
                 };
         index++;
         return flagged;
     }
 
-    /**
-     * Every judge deferral of the chunk so far: the chunk judge's, then each re-judge's of a repaired segment, without
-     * a repeat.
-     *
-     * @return never null; empty when the judge is off or reported none
-     */
-    public List<JudgeDeferral> deferrals() {
-        final List<JudgeDeferral> chunk = chunkVerdict == null ? List.of() : chunkVerdict.deferrals();
-        return Stream.concat(chunk.stream(), healer.rejudgeDeferrals().stream())
-                .distinct()
-                .toList();
-    }
-
-    // Checked in full when the run found it, so it is accepted as it stands, with no judge score and no round.
+    // Checked in full when the run found it, so it is accepted as it stands, with no review and no round.
     private static SegmentOutcome reusedOutcome(final DraftOutcome.Reused reused) {
         log.debug(
                 "Segment {} accepted from memory confidence={}",

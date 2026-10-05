@@ -12,9 +12,6 @@ public enum DeferralReason {
     /** A name proposed by the pipeline is waiting on the person's decision; nothing in the current pipeline produces it. */
     NAME_UNRESOLVED,
 
-    /** A backward-revision candidate raised by the judge; it is recorded and shown, never resolved. */
-    JUDGE,
-
     /** A locked rendering the person changed after decided segments used the old one. */
     TERM
 }

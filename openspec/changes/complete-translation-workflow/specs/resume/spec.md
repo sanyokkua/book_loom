@@ -20,9 +20,9 @@ model call.
 In plain words: the default runs to the end and leaves review for afterwards; a careful translator can have the run stop
 on every problem, or on every segment, and fix it on the spot. A stopped server or an unloaded model pauses the run in
 every mode, so the person can fix it instead of starting over; the command line enables no pause point at all. A segment
-is decided only after its whole chunk has been drafted and, when the judge is on (Balanced, Max), judged — so with the
-judge on the later segments of the same chunk have already been drafted and judged when the pause comes, while with the
-judge off (Fast) or in Manual, which holds one segment per chunk, no call for the next segment precedes it (the
+is decided only after its whole chunk has been drafted and, when the reviewer is on (Balanced, Max), reviewed — so with the
+reviewer on the later segments of the same chunk have already been drafted and reviewed when the pause comes, while with the
+reviewer off (Fast) or in Manual, which holds one segment per chunk, no call for the next segment precedes it (the
 translation-pipeline capability's "Decide a chunk's segments in document order"). Naming the segment is what lets the
 review panel open on the right one (the review-queue capability's "Open the segment a review pause names").
 
@@ -41,12 +41,12 @@ review panel open on the right one (the review-queue capability's "Open the segm
 - **WHEN** an Assisted run on the Fast dial flags `ch07.xhtml:41`
 - **THEN** the run pauses with the reason on-flagged, naming `ch07.xhtml:41`, before any call for `ch07.xhtml:42`
 
-#### Scenario: Assisted on Balanced stops after its chunk was judged
+#### Scenario: Assisted on Balanced stops after its chunk was reviewed
 
 - **WHEN** an Assisted run on the Balanced dial packs `ch07.xhtml:40`–`ch07.xhtml:43` into one chunk and flags
   `ch07.xhtml:42`
 - **THEN** the run pauses with the reason on-flagged, naming `ch07.xhtml:42`, after the draft calls of all four
-  segments and the chunk's one judge call
+  segments and the chunk's reviewer call
 - **AND** no model call is made for `ch07.xhtml:43` until the run resumes
 
 #### Scenario: Manual stops after an accepted segment
@@ -65,8 +65,8 @@ person's edit, when they made one — as it stands.
 In plain words: what the person decided during the pause is final for the run — the segment is not drafted or
 repaired again — and the sentences translated after it follow the corrected one, not the model's rejected draft. Which
 sentences those are is the translation-pipeline capability's "Decide a chunk's segments in document order": with the
-judge off (Fast) or in Manual it is the very next segment; with the judge on, the rest of the paused chunk was already
-drafted and judged before the pause and is not drafted again, so the edit reaches the next chunk.
+reviewer off (Fast) or in Manual it is the very next segment; with the reviewer on, the rest of the paused chunk was already
+drafted and reviewed before the pause and is not drafted again, so the edit reaches the next chunk.
 
 #### Scenario: An edit feeds the next draft
 
@@ -75,7 +75,7 @@ drafted and judged before the pause and is not drafted again, so the edit reache
 - **THEN** the draft call for `ch07.xhtml:42` carries `Він рвучко відчинив двері.` as a preceding target
 - **AND** no further call is made for `ch07.xhtml:41`
 
-#### Scenario: An edit inside a judged chunk feeds the next chunk
+#### Scenario: An edit inside a reviewed chunk feeds the next chunk
 
 - **WHEN** an Assisted run on the Balanced dial is paused on the flagged `ch07.xhtml:42` inside the chunk
   `ch07.xhtml:40`–`ch07.xhtml:43`, the person saves the edit `Він рвучко відчинив двері.`, and the run is resumed
@@ -188,8 +188,8 @@ until the application closes, and the banners say exactly that.
 
 WHEN a self-heal call is aborted by a pause, or is answered with an error that pauses the run, the system SHALL keep the
 segment's rounds as they stood in memory and, on resume, SHALL continue at the call that failed: the round whose repair
-call failed is sent again from that call, and a round whose re-judge failed sends only the re-judge again, with the
-rewrite it already has. It SHALL keep the chunk's judge verdict, making no second judge call for the chunk. WHEN a run
+call failed is sent again from that call, and the directed fix for a refused reviewer edit that failed is sent again with
+the same verified edits. It SHALL keep the chunk's reviewer verdict, making no second reviewer call for the chunk. WHEN a run
 is stopped, the system SHALL drop the chunk's undecided drafts, as "Decide a chunk's segments in document order" says.
 
 **Source:** FR-RESUME-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-resume`),
@@ -198,32 +198,32 @@ is stopped, the system SHALL drop the chunk's undecided drafts, as "Decide a chu
 `openspec/changes/complete-translation-workflow/proposal.md#what-changes`; tasks 15b.
 In plain words: the rounds were once restarted from the first, which on the Bartimaeus hand test paid for the same
 directed fix again after every resume. The rounds already answered are kept while the application runs, so a resume
-costs only the call that failed. What the run already paid for at the chunk level — the judge's verdict — is kept too,
-so a pause never costs a second judge call for the chunk (a repaired segment is still judged once on its own, as the
+costs only the call that failed. What the run already paid for at the chunk level — the reviewer's verdict — is kept too,
+so a pause never costs a second reviewer call for the chunk (a repaired target is decided by the checks alone, as the
 quality gates say).
 
 #### Scenario: A pause during the second repair round
 
-- **WHEN** a Balanced run drafts `He opened the old door.` and gets the echo `HE OPENED THE OLD DOOR.`, the chunk's judge
-  call is made, the first directed fix is answered with `He opened the old door.`, a pause is requested while the
+- **WHEN** a Balanced run drafts `He opened the old door.` and gets the echo `HE OPENED THE OLD DOOR.`, which the checks refuse
+  so no reviewer call is made, the first directed fix is answered with `He opened the old door.`, a pause is requested while the
   second directed fix is in flight, and after resume the second directed fix is answered with
   `Він відчинив старі двері.`
-- **THEN** the provider has received 4 requests before the pause — draft, judge, first fix, second fix
-- **AND** it has received 6 in total — the second fix again and the repaired segment's own re-judge — and the segment
-  ends ACCEPTED after 2 rounds
+- **THEN** the provider has received 3 requests before the pause — draft, first fix, second fix
+- **AND** it has received 4 in total — the second fix again — and the segment ends ACCEPTED after 2 rounds
 
 #### Scenario: An unreachable provider during the second repair round
 
 - **WHEN** the same run's second directed fix is answered with `ErrorCode.unreachable` with pause on error enabled, and
   after resume it is answered with `Він відчинив старі двері.`
-- **THEN** the run pauses with `ErrorCode.unreachable` after 4 requests
-- **AND** it has received 6 in total
+- **THEN** the run pauses with `ErrorCode.unreachable` after 3 requests
+- **AND** it has received 4 in total
 
-#### Scenario: A failed re-judge is the only call sent again
+#### Scenario: A failed directed fix for a refused edit is the only call sent again
 
-- **WHEN** a directed fix was answered and the re-judge of its rewrite is answered with `ErrorCode.upstream` with pause
-  on error enabled, and after resume the re-judge accepts it
-- **THEN** the requests are draft, draft, judge, fix, judge and judge — the fix is not sent again — and the segment ends
+- **WHEN** the reviewer answered an edit whose result the checks refuse, the directed fix for it is answered with
+  `ErrorCode.upstream` with pause on error enabled, and after resume the fix is answered with a text that no longer
+  holds the quote
+- **THEN** the requests are draft, draft, reviewer, fix and fix — the reviewer is not asked again — and the segment ends
   ACCEPTED with the fixed target
 
 ## MODIFIED Requirements
@@ -233,11 +233,11 @@ quality gates say).
 WHEN a pause is requested while a job translates, the system SHALL:
 
 - abort the model request in flight, without waiting for the provider to answer, and send no further request — not a
-  retry, not a repair and not a judge call; a reply that had already arrived before the request was made is still
+  retry, not a repair and not a reviewer call; a reply that had already arrived before the request was made is still
   decided normally;
 - pause with the reason "requested", reporting no error;
 - make no model call while paused;
-- on resume, make the aborted call again from its first request — a segment's draft or repair, or its chunk's judge
+- on resume, make the aborted call again from its first request — a segment's draft or repair, or its chunk's reviewer
   call — and then continue where the run stood.
 
 WHEN a pause is requested while no model request is in flight, the system SHALL pause at the next boundary, which is
@@ -271,13 +271,13 @@ longer writes the book, so its last boundary is the end of the job.
 - **AND** after resume the second segment is requested again from its first request, and the job ends Completed with 3
   accepted and the provider having received `4` requests in total
 
-#### Scenario: A pause during the judge call
+#### Scenario: A pause during the reviewer call
 
 - **WHEN** a Balanced job over three segments packed into one chunk has drafted all three, and a pause is requested
-  while the chunk's judge call is in flight
+  while the chunk's reviewer call is in flight
 - **THEN** the job pauses with reason requested, with 0 accepted and 3 pending, and the provider has received `4`
   requests in total
-- **AND** after resume the judge call is made again and no draft call is repeated, and the job ends Completed with 3
+- **AND** after resume the reviewer call is made again and no draft call is repeated, and the job ends Completed with 3
   accepted and the provider having received `5` requests in total
 
 #### Scenario: A pause after the last decision
@@ -386,13 +386,13 @@ act on. "Resume and stop pausing" means clearing the pause points, then resuming
 WHERE pause on error is enabled, IF a model call fails with a provider error that survived the retry policy —
 `ErrorCode.unreachable`, `timeout`, `auth`, `rateLimited`, `upstream`, `modelNotFound`, `modelUnavailable` or
 `missingCredential` — or the model call itself answers `ErrorCode.validation` (a provider refusing the request), THEN the system SHALL pause with that error, keep every count as it stood, and on resume
-make the interrupted call again from its first request — except a judge call answered `timeout`, which does not pause
-the run: its segments are flagged as the `quality-gates` capability's "Flag a segment the judge could not judge" says.
-A judge call answered `unreachable`, `upstream` or `rateLimited` pauses and recovers like any other call.
+make the interrupted call again from its first request — except a reviewer call answered `timeout`, which does not pause
+the run: its segments are flagged as the `quality-gates` capability's "Flag a segment the reviewer could not review" says.
+A reviewer call answered `unreachable`, `upstream` or `rateLimited` pauses and recovers like any other call.
 
-The system SHALL count the pauses of each step — a segment's draft, a segment's decision, or a chunk's judge call — by
+The system SHALL count the pauses of each step — a segment's draft, a segment's decision, or a chunk's reviewer call — by
 the kind of recovery its error needs, and SHALL, on the failure past that kind's budget, flag the step's segment (for a
-chunk's judge call, decide the chunk as if the judge were unavailable) with the error and go on with the run: two
+chunk's reviewer call, decide the chunk as if the reviewer were unavailable) with the error and go on with the run: two
 pauses for `timeout` and for the codes only a person can fix (`auth`, `modelNotFound`, `missingCredential`,
 `validation`); three for `ErrorCode.internal`, which a step answers when it throws instead of answering; and ten for an
 outage (`unreachable`, `upstream`, `rateLimited`) and for an unloaded model (`modelUnavailable`), which are not the
@@ -414,7 +414,7 @@ naming the error — Retry now, which resumes the run; Open provider settings; a
 `docs/implementation_plan/CHANGE_BACKLOG.md` (D19).
 In plain words: a stopped local server or an unloaded model is often fixed in a minute. The window always pauses on such
 an error, whatever the review mode (see "Pause for review as the review mode says"), so the person fixes it and presses
-Retry now instead of translating the book again. The call that failed — a draft, a repair or a chunk's judge call — is
+Retry now instead of translating the book again. The call that failed — a draft, a repair or a chunk's reviewer call — is
 made again; nothing already decided is redone. A bug in the application is not fixed by waiting, so it ends the run; a
 prompt too long for the model belongs to one segment, so only that segment is flagged. A step that throws is retried
 three times and then flagged, so one bad segment cannot end a night's run.

@@ -30,15 +30,14 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 
 /**
- * A judge call the provider cannot answer waits for the provider like a draft call; flagging the chunk as judged by
- * nobody would hand an overnight outage's every segment to the person. Only a stalled judge (a timeout) degrades, as
- * {@code QualityLoopJudgeUnavailableTest} proves. Every wait is replayed on a scripted clock.
+ * A reviewer call the provider cannot answer waits for the provider like a draft call; flagging the chunk as reviewed
+ * by nobody would hand an overnight outage's every segment to the person. Only a stalled reviewer (a timeout) degrades,
+ * as {@code QualityLoopReviewerTest} proves. Every wait is replayed on a scripted clock.
  */
-class TranslationJobJudgeOutageTest {
+class TranslationJobReviewerOutageTest {
 
     private static final RunTicks NO_TICKS = (period, tick) -> () -> {};
-    private static final String JUDGE_ACCEPT =
-            "{\"score\":0.95,\"verdict\":\"accept\",\"findings\":[],\"deferrals\":[]}";
+    private static final String REVIEW_OK = "{\"results\":[]}";
 
     @TempDir
     private Path tempDir;
@@ -51,15 +50,15 @@ class TranslationJobJudgeOutageTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // Down for a minute: the wakes at 0:15 and 0:45 find it down, the one at 1:45 finds it back and judges again.
+    // Down for a minute: the wakes at 0:15 and 0:45 find it down, the one at 1:45 finds it back and reviews again.
     @ParameterizedTest
     @EnumSource(
             value = ErrorCode.class,
             names = {"unreachable", "upstream", "rateLimited"})
-    void run_judgeDuringAnOutage_waitsAndJudgesAgainInsteadOfFlagging(final ErrorCode code) {
+    void run_reviewDuringAnOutage_waitsAndReviewsAgainInsteadOfFlagging(final ErrorCode code) {
         final ScriptedChatModel model = replies("ОДИН.", "ДВА.", "ТРИ.")
                 .answer(Result.err(AppError.of(code, "Provider failure", "The scripted provider failed.")))
-                .answer(Result.ok(new ChatResponse(JUDGE_ACCEPT, FinishReason.STOP)));
+                .answer(Result.ok(new ChatResponse(REVIEW_OK, FinishReason.STOP)));
         final TranslationJobImpl job = balancedJob(model);
         job.recoverWith(downFor(Duration.ofMinutes(1)));
 
@@ -74,7 +73,7 @@ class TranslationJobJudgeOutageTest {
                 .containsExactly(1, 2, 3);
         assertThat(model.requests())
                 .extracting(ChatRequest::callKind)
-                .containsExactly(CallKind.DRAFT, CallKind.DRAFT, CallKind.DRAFT, CallKind.JUDGE, CallKind.JUDGE);
+                .containsExactly(CallKind.DRAFT, CallKind.DRAFT, CallKind.DRAFT, CallKind.REVIEW, CallKind.REVIEW);
     }
 
     private TranslationJobImpl balancedJob(final ScriptedChatModel model) {

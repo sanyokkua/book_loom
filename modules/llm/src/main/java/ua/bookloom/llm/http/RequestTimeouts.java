@@ -10,7 +10,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ProviderConfig;
 
 /**
- * Chooses a chat call's request timeout by what the call is for. The judge and the helper calls have a capped,
+ * Chooses a chat call's request timeout by what the call is for. The reviewer and the helper calls have a capped,
  * short reply, so their own bound ends a stuck call long before the provider's flat timeout would; every other call
  * scales with its expected output, never below the provider's configured timeout.
  */
@@ -21,7 +21,7 @@ public final class RequestTimeouts {
 
     private static final long MILLIS_PER_EXPECTED_TOKEN = 500;
     private static final Duration MAX_CHAT_TIMEOUT = Duration.ofMinutes(10);
-    private static final Duration JUDGE_TIMEOUT = Duration.ofSeconds(90);
+    private static final Duration REVIEW_TIMEOUT = Duration.ofSeconds(90);
     private static final Duration HELPER_TIMEOUT = Duration.ofMinutes(2);
     // A streaming reply that sends nothing for this long has stalled, however long the whole call may take.
     private static final Duration STREAM_IDLE_TIMEOUT = Duration.ofSeconds(60);
@@ -31,7 +31,7 @@ public final class RequestTimeouts {
      *
      * @param config the provider config a chat call is about to be sent with
      * @param request the call; its kind and expected output choose the timeout
-     * @return a copy whose timeout is 90 s for a judge call, 120 s for a prescan, glossary review or summary call, and otherwise
+     * @return a copy whose timeout is 90 s for a reviewer call, 120 s for a prescan, glossary review or summary call, and otherwise
      *     {@code max(config.requestTimeout(), min(600s, expectedOutputTokens * 500ms))}; {@code config} unchanged when
      *     the call has neither one of those kinds nor an expected output
      */
@@ -69,7 +69,7 @@ public final class RequestTimeouts {
             return null;
         }
         return switch (request.callKind()) {
-            case JUDGE -> JUDGE_TIMEOUT;
+            case REVIEW -> REVIEW_TIMEOUT;
             case PRESCAN, REVIEW_TERMS, SUGGEST_TARGETS, SUMMARY -> HELPER_TIMEOUT;
             case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REFLECT, IMPROVE, POLISH, REVISION -> null;
         };

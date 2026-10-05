@@ -71,8 +71,8 @@ if sys.argv[2] == "batch":
             print("%-36s %4d %5d %7.0f%% %7.0f%% %7.1f%% %7.1f%% %8.1f" % (r["model"], c["size"], c["calls"], 100 * c["idValidity"], 100 * c["tokenGate"], 100 * c["omission"], 100 * c["merge"], c["outputTokensPerItem"]))
     sys.exit(0)
 rows = [r for r in reports if r.get("suite") != "batch"]
-cols = ["parse", "gate", "script", "marker", "injection", "judgeSeparation", "judgeParse", "falseNegative", "falsePositive", "stability"]
-print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + "  ok")
+cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
+print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:
-    print("%-36s %-8s %-6s " % (r["model"], r.get("rules", "language"), r["class"]) + " ".join("%6.0f%%" % (100 * r[c]) for c in cols) + "  " + ("yes" if r["meetsThresholds"] else "NO"))
+    print("%-36s %-8s %-6s " % (r["model"], r.get("rules", "language"), r["class"]) + " ".join("%6.0f%%" % (100 * r[c]) for c in cols) + " %6d  " % r.get("tokenBreaks", 0) + ("yes" if r["meetsThresholds"] else "NO"))
 PY

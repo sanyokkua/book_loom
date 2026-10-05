@@ -175,7 +175,15 @@ class RunSummaryLoggerTest {
 
     private static ModelCallFinished timedOut(final Duration elapsed) {
         return new ModelCallFinished(
-                "ch12.xhtml:4", CallKind.JUDGE, elapsed, null, 0, false, List.of("ch12.xhtml:4"), 1, ErrorCode.timeout);
+                "ch12.xhtml:4",
+                CallKind.REVIEW,
+                elapsed,
+                null,
+                0,
+                false,
+                List.of("ch12.xhtml:4"),
+                1,
+                ErrorCode.timeout);
     }
 
     /** A clock the test moves by hand. */

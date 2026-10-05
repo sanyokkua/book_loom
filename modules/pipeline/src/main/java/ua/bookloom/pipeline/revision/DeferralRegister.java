@@ -15,7 +15,6 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.WholeWord;
-import ua.bookloom.pipeline.judge.JudgeDeferral;
 
 /**
  * Works out which deferrals a fact leaves behind, so backward revision fixes only what was recorded. Two changed
@@ -53,24 +52,6 @@ public final class DeferralRegister {
         final List<Deferral> deferrals = decided.stream()
                 .filter(record -> holdsWholeWord(record, previous))
                 .map(record -> termDeferral(after, record, previous))
-                .toList();
-        deferrals.forEach(DeferralRegister::logRecorded);
-        return deferrals;
-    }
-
-    /**
-     * The JUDGE deferrals the judge reported. They are recorded and shown, never resolved, so the judge's own words are
-     * all they wait on.
-     *
-     * @param projectId the owning project's id; never null
-     * @param judged the judge's deferrals, each on a segment id; never null
-     * @return one deferral per judge deferral, in order; never null, empty when the judge reported none
-     */
-    public static List<Deferral> fromJudge(final String projectId, final List<JudgeDeferral> judged) {
-        Objects.requireNonNull(projectId, "projectId");
-        Objects.requireNonNull(judged, "judged");
-        final List<Deferral> deferrals = judged.stream()
-                .map(judge -> deferral(projectId, judge.segmentId(), DeferralReason.JUDGE, judge.reason()))
                 .toList();
         deferrals.forEach(DeferralRegister::logRecorded);
         return deferrals;
@@ -120,7 +101,7 @@ public final class DeferralRegister {
                 null);
     }
 
-    // What a deferral waits on is the judge's own words or a name from the book, so it is TRACE-only (logging.md).
+    // What a deferral waits on is a name from the book, so it is TRACE-only (logging.md).
     private static void logRecorded(final Deferral deferral) {
         log.debug("Deferral recorded segmentId={} reason={}", deferral.segmentId(), deferral.reason());
         log.trace("Deferral recorded segmentId={} waitingOn={}", deferral.segmentId(), deferral.waitingOn());

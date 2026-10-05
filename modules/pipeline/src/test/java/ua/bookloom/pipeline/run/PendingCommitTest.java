@@ -128,19 +128,19 @@ class PendingCommitTest {
     // A deferral held twice under one id, as a round sent again after a pause reports it, is committed once.
     @Test
     void flush_deferralsAndProposals_committedWithTheDecisions() {
-        final Deferral judge =
-                new Deferral("p1:s0:JUDGE:why", PROJECT, "s0", DeferralReason.JUDGE, "why", null, null, null);
+        final Deferral gender = new Deferral(
+                "p1:s0:GENDER_UNKNOWN:Sam", PROJECT, "s0", DeferralReason.GENDER_UNKNOWN, "Sam", null, null, null);
         final GlossaryEntry moreau =
                 new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.OTHER, Gender.UNKNOWN, false);
         pending.decided(record("s0", SegmentStatus.ACCEPTED), null);
-        pending.deferred(List.of(judge));
-        pending.deferred(List.of(judge));
+        pending.deferred(List.of(gender));
+        pending.deferred(List.of(gender));
         pending.proposed(List.of(moreau));
 
         pending.flush();
 
         assertThat(commits).singleElement().satisfies(commit -> {
-            assertThat(commit.deferrals()).containsExactly(judge);
+            assertThat(commit.deferrals()).containsExactly(gender);
             assertThat(commit.glossaryAdditions()).containsExactly(moreau);
         });
     }

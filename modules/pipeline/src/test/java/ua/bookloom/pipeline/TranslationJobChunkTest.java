@@ -8,7 +8,7 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.ECHO1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.ECHO2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.EDIT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
@@ -16,9 +16,9 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
 import static ua.bookloom.pipeline.ChunkRunFixtures.pauses;
 import static ua.bookloom.pipeline.ChunkRunFixtures.preceding;
+import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.status;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
@@ -60,7 +60,7 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
-/** A run takes each chunk through its drafts, its one judge call and its decisions, and keeps them across a pause. */
+/** A run takes each chunk through its drafts, its one reviewer call and its decisions, and keeps them across a pause. */
 class TranslationJobChunkTest {
 
     private static final AppError UNREACHABLE =
@@ -94,28 +94,28 @@ class TranslationJobChunkTest {
         final ScriptedChatModel model = replies(IntStream.rangeClosed(1, 10)
                         .mapToObj(index -> "Короткий рядок " + index + ".")
                         .toArray(String[]::new))
-                .answerTo(JUDGE, judged())
-                .answerTo(JUDGE, judged())
-                .answerTo(JUDGE, judged());
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed());
         final TestProject project = balanced(TestBooks.markdown(tempDir.resolve("Book.md"), book));
 
         report(job(project, model).run());
 
         assertThat(formats(model))
                 .containsExactly(
-                        DRAFT, DRAFT, DRAFT, DRAFT, JUDGE, DRAFT, DRAFT, DRAFT, DRAFT, JUDGE, DRAFT, DRAFT, JUDGE);
+                        DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, DRAFT, DRAFT, REVIEW);
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 10, 0, 0, 0));
     }
 
     @Test
     void run_balancedChunk_draftsEveryPairBeforeDeciding() {
         final ScriptedChatModel model =
-                replies(T0, ECHO1, T2, T3, T1).answerTo(JUDGE, judged()).answerTo(JUDGE, judged());
+                replies(T0, ECHO1, T2, T3, T1).answerTo(REVIEW, reviewed()).answerTo(REVIEW, reviewed());
         final TestProject project = balanced(ChunkRunFixtures.fourParagraphs(tempDir));
 
         report(job(project, model).run());
 
-        assertThat(formats(model).subList(0, 6)).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, JUDGE, FIX);
+        assertThat(formats(model).subList(0, 6)).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, FIX);
         assertThat(userMessage(model.requests().get(2))).contains(preceding(T0, ECHO1));
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 4, 0, 0, 0));
     }
@@ -136,7 +136,7 @@ class TranslationJobChunkTest {
     }
 
     @Test
-    void run_stopDuringLastDraftOfChunk_sendsNoJudge() {
+    void run_stopDuringLastDraftOfChunk_sendsNoReviewer() {
         final ScriptedChatModel model = replies(T0, T1, T2, T3).blockNthRequest(4);
         final TestProject project = balanced(ChunkRunFixtures.fourParagraphs(tempDir));
         final TranslationJobImpl translation = job(project, model);
@@ -152,7 +152,7 @@ class TranslationJobChunkTest {
                 .allSatisfy(record -> assertThat(record)
                         .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                         .containsExactly(SegmentStatus.PENDING, null));
-        final ScriptedChatModel next = replies(T0, T1, T2, T3).answerTo(JUDGE, judged());
+        final ScriptedChatModel next = replies(T0, T1, T2, T3).answerTo(REVIEW, reviewed());
         report(job(project, next).run());
         assertThat(userMessage(next.requests().getFirst())).contains(shown(S0));
     }
@@ -160,7 +160,7 @@ class TranslationJobChunkTest {
     @Test
     void run_stopDuringDirectedFix_keepsTheDecidedPrefix() {
         final ScriptedChatModel model =
-                replies(T0, T1, ECHO2, T3).answerTo(JUDGE, judged()).blockNthRequest(6);
+                replies(T0, T1, ECHO2, T3).answerTo(REVIEW, reviewed()).blockNthRequest(6);
         final TestProject project = balanced(ChunkRunFixtures.fourParagraphs(tempDir));
         final TranslationJobImpl translation = job(project, model);
 
@@ -169,7 +169,7 @@ class TranslationJobChunkTest {
         translation.cancel();
 
         assertThat(report(await(run)).end()).isEqualTo(JobState.CANCELLED);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, JUDGE, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, FIX);
         assertThat(status(project, "Book.md:0")).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(status(project, "Book.md:1")).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(List.of("Book.md:2", "Book.md:3"))
@@ -177,15 +177,15 @@ class TranslationJobChunkTest {
                 .allSatisfy(record -> assertThat(record)
                         .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
                         .containsExactly(SegmentStatus.PENDING, null));
-        final ScriptedChatModel next = replies(T2, T3).answerTo(JUDGE, judged());
+        final ScriptedChatModel next = replies(T2, T3).answerTo(REVIEW, reviewed());
         report(job(project, next).run());
         assertThat(userMessage(next.requests().getFirst())).contains(shown(S2));
     }
 
     @Test
-    void run_pauseDuringJudge_redoesOnlyTheJudge() {
+    void run_pauseDuringReview_redoesOnlyTheReview() {
         final ScriptedChatModel model =
-                replies(T0, T1, T2).answerTo(JUDGE, judged()).blockNthRequest(4);
+                replies(T0, T1, T2).answerTo(REVIEW, reviewed()).blockNthRequest(4);
         final TestProject project = balanced(ChunkRunFixtures.threeParagraphs(tempDir));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -202,12 +202,12 @@ class TranslationJobChunkTest {
         assertThat(model.requests()).hasSize(4);
         translation.resume();
         assertThat(report(await(run)).accepted()).isEqualTo(3);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, JUDGE, JUDGE);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, REVIEW, REVIEW);
     }
 
     @Test
     void run_pauseAfterFirstDecisionOfChunk_commitsPrefixAndKeepsDrafts() {
-        final ScriptedChatModel model = replies(T0, T1, T2, T3).answerTo(JUDGE, judged());
+        final ScriptedChatModel model = replies(T0, T1, T2, T3).answerTo(REVIEW, reviewed());
         final TestProject project = balanced(ChunkRunFixtures.fourParagraphs(tempDir));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -223,12 +223,12 @@ class TranslationJobChunkTest {
         assertThat(model.requests()).hasSize(5);
         translation.resume();
         assertThat(report(await(run)).accepted()).isEqualTo(4);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, JUDGE);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, REVIEW);
     }
 
     @Test
     void run_editDuringMidChunkPause_survivesChunkEnd() {
-        final ScriptedChatModel model = replies(T0, T1, T2, T3).answerTo(JUDGE, judged());
+        final ScriptedChatModel model = replies(T0, T1, T2, T3).answerTo(REVIEW, reviewed());
         final TestProject project = balanced(ChunkRunFixtures.fourParagraphs(tempDir));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -251,24 +251,22 @@ class TranslationJobChunkTest {
                 .containsExactly(SegmentStatus.REVISED, EDIT);
     }
 
-    // The first round is kept: the second round's fix is sent again, and the repaired target is re-judged on its own.
+    // The first round is kept: the second round's fix is sent again, and the repaired target is decided by the checks.
     // The first fix answers the English source, a rewrite that still fails, so the second round is needed.
     @Test
     void run_pauseDuringSecondFixRound_continuesAtTheSecondRound() {
-        final ScriptedChatModel model = replies(DOOR_ECHO, ChunkRunFixtures.DOOR, DOOR_TARGET)
-                .answerTo(JUDGE, judged())
-                .answerTo(JUDGE, judged())
-                .blockNthRequest(4);
+        final ScriptedChatModel model =
+                replies(DOOR_ECHO, ChunkRunFixtures.DOOR, DOOR_TARGET).blockNthRequest(3);
         final TestProject project = balanced(ChunkRunFixtures.door(tempDir));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
 
         final Future<Result<JobReport>> run = executor().submit(translation::run);
-        model.awaitRequests(4);
+        model.awaitRequests(3);
         translation.pause();
         awaitPaused(pauses);
 
-        assertThat(formats(model)).containsExactly(DRAFT, JUDGE, FIX, FIX);
+        assertThat(formats(model)).containsExactly(DRAFT, FIX, FIX);
         translation.resume();
         report(await(run));
         assertSecondRoundContinued(project, model);
@@ -278,9 +276,7 @@ class TranslationJobChunkTest {
     void run_unreachableDuringSecondFixRound_pausesAndContinuesAtTheSecondRound() {
         final ScriptedChatModel model = replies(DOOR_ECHO, ChunkRunFixtures.DOOR)
                 .answer(Result.err(UNREACHABLE))
-                .answer(target(DOOR_TARGET))
-                .answerTo(JUDGE, judged())
-                .answerTo(JUDGE, judged());
+                .answer(target(DOOR_TARGET));
         final TestProject project = balanced(ChunkRunFixtures.door(tempDir));
         final TranslationJobImpl translation = job(project, model);
         translation.pauseAt(Set.of(PausePoint.ON_ERROR));
@@ -291,18 +287,19 @@ class TranslationJobChunkTest {
 
         assertThat(pause.reason()).isEqualTo(PauseReason.ON_ERROR);
         assertThat(pause.error()).extracting(AppError::code).isEqualTo(ErrorCode.unreachable);
-        assertThat(model.requests()).hasSize(4);
+        assertThat(model.requests()).hasSize(3);
         translation.resume();
         report(await(run));
         assertSecondRoundContinued(project, model);
     }
 
-    // A judge that times out or cannot be reached no longer pauses (it flags its segments); a refused key still does.
+    // A reviewer that times out or cannot be reached no longer pauses (it flags its segments); a refused key still
+    // does.
     @Test
-    void run_judgeUnauthorized_pausesAndRedoesJudgeOnly() {
+    void run_reviewerUnauthorized_pausesAndRedoesTheReviewerOnly() {
         final ScriptedChatModel model = replies(T0, T1, T2)
-                .answerTo(JUDGE, Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")))
-                .answerTo(JUDGE, judged());
+                .answerTo(REVIEW, Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")))
+                .answerTo(REVIEW, reviewed());
         final TestProject project = balanced(ChunkRunFixtures.threeParagraphs(tempDir));
         final TranslationJobImpl translation = job(project, model);
         translation.pauseAt(Set.of(PausePoint.ON_ERROR));
@@ -315,16 +312,12 @@ class TranslationJobChunkTest {
         assertThat(model.requests()).hasSize(4);
         translation.resume();
         assertThat(report(await(run)).accepted()).isEqualTo(3);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, JUDGE, JUDGE);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, DRAFT, REVIEW, REVIEW);
     }
 
-    // The second round's target reaches τ with the judge on, so it is judged again alone, one pair labelled s1
-    // (design D8) — which is not a second judge call for the chunk.
+    // The second round's target passes the checks, which alone decide a repaired target: no reviewer call follows.
     private static void assertSecondRoundContinued(final TestProject project, final ScriptedChatModel model) {
-        assertThat(formats(model)).containsExactly(DRAFT, JUDGE, FIX, FIX, FIX, JUDGE);
-        assertThat(userMessage(model.requests().getLast()))
-                .contains("<Pair id=\"s1\">\n<Source>" + ChunkRunFixtures.DOOR + "</Source>\n<Candidate>" + DOOR_TARGET)
-                .doesNotContain("<Pair id=\"s2\">");
+        assertThat(formats(model)).containsExactly(DRAFT, FIX, FIX, FIX);
         assertThat(stored(project, "Book.txt:0"))
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::repairRounds)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, 2);

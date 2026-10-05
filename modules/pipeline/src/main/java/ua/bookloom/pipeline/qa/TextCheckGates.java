@@ -12,7 +12,7 @@ import ua.bookloom.pipeline.checks.TextChecks;
 
 /**
  * Turns the deterministic text findings into gate results: a blocking finding fails like a hard gate, so the
- * segment is repaired or flagged before any judge reads it, and a soft finding passes with a low note for review.
+ * segment is repaired or flagged before any reviewer reads it, and a soft finding passes with a low note for review.
  * Skipped for a kept foreign passage, whose letters are meant to differ from the target's.
  */
 @Slf4j

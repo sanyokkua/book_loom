@@ -1,7 +1,6 @@
 package ua.bookloom.pipeline.heal;
 
 import java.util.Objects;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 
@@ -44,9 +43,8 @@ sealed interface RoundStep {
      * A step a model or gate call ended with an error; the round is kept, so the next decision continues at that call.
      *
      * @param error the error that ends this {@code nextDecision()} step
-     * @param evaluated the round's rewrite when only its re-judge failed, or null when the round's own call failed
      */
-    record Interrupted(AppError error, RoundOutcome.@Nullable Evaluated evaluated) implements RoundStep {
+    record Interrupted(AppError error) implements RoundStep {
 
         /** Rejects a missing error. */
         public Interrupted {

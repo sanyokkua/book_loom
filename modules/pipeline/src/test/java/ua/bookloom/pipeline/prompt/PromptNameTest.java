@@ -24,7 +24,7 @@ class PromptNameTest {
         "DRAFT,draft,DRAFT,draft,0.2",
         "STRUCTURAL_REPAIR,structural-repair,STRUCTURAL_REPAIR,structural-repair,0.2",
         "PLACEHOLDER_REPAIR,placeholder-repair,PLACEHOLDER_REPAIR,placeholder-repair,0.2",
-        "JUDGE,judge,JUDGE,judge,0.1",
+        "REVIEWER,reviewer,REVIEW,reviewer,0.0",
         "DIRECTED_FIX,directed-fix,DIRECTED_FIX,directed-fix,0.2",
         "REFLECT,reflect,REFLECT,reflect,0.35",
         "IMPROVE,improve,IMPROVE,improve,0.35",
@@ -56,7 +56,7 @@ class PromptNameTest {
     @CsvSource({
         "STRUCTURAL_REPAIR",
         "PLACEHOLDER_REPAIR",
-        "JUDGE",
+        "REVIEWER",
         "DIRECTED_FIX",
         "REFLECT",
         "IMPROVE",

@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
  * take and how large the request is.
  *
  * @param segmentId the segment the request belongs to, or null for a call not tied to one segment (a prescan or
- *     summary call, or a judge call over a chunk of several segments)
+ *     summary call, or a reviewer call over a chunk of several segments)
  * @param kind what the call is for
  * @param segmentIds every segment the call is about, in document order; empty for a call about none
  * @param attempt the attempt, counted from one

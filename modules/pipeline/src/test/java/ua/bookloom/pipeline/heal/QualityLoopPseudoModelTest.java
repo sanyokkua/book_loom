@@ -26,7 +26,8 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * {@link QualityLoop} driven by the real, deterministic {@link PseudoChatModel} on Balanced, over the three review
  * modes: an echo the pseudo model can never fix (D8's reference fixture) is FLAGGED after its repair budget, and a
  * short line the pseudo model translates correctly by chance ("Yes, sir." → "YES, SIR.") is ACCEPTED at confidence
- * 0.85 — both sharing the chunk's one judge call, which the pseudo model always answers perfectly
+ * 0.85 — the reviewer call reads only the short line, because the echo is refused by the checks, and the pseudo
+ * reviewer never asks for an edit
  * ({@code design.md} D8 "Reference fixtures").
  */
 class QualityLoopPseudoModelTest {
@@ -61,17 +62,15 @@ class QualityLoopPseudoModelTest {
         final SegmentOutcome accepted =
                 Objects.requireNonNull(decider.nextDecision().data());
 
-        // One judge call (shared by both segments) plus one directed fix for the echo; no re-judge because its
-        // confidence never reaches τ, and no second fix because the pseudo model's fix returns the echo unchanged.
+        // One reviewer call (for the short line only) plus one directed fix for the echo; no second fix because the
+        // pseudo model's fix returns the echo unchanged.
         assertThat(requests).hasSize(2);
-        assertThat(responseFormatNames(requests)).containsExactly("judge", "directed-fix");
+        assertThat(responseFormatNames(requests)).containsExactly("reviewer", "directed-fix");
 
         assertThat(flagged.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(flagged.machineTarget()).isEqualTo("HE OPENED THE *OLD* DOOR.");
         assertThat(flagged.maskedMachineTarget()).isEqualTo("HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR.");
-        // B2: the repair round was never re-judged, so the chunk verdict the pseudo model always answers
-        // perfectly is still the verdict that last decided this segment.
-        assertThat(flagged.judgeScore()).isEqualTo(1.0);
+        assertThat(flagged.judgeScore()).isNull();
         assertThat(accepted.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(accepted.path()).isEqualTo(SegmentPath.DRAFT);
         assertThat(accepted.confidence()).isEqualTo(0.85);

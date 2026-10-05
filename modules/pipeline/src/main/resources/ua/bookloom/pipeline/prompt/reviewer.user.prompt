@@ -1,0 +1,13 @@
+{{#glossaryTerms}}
+[Glossary the translation had to use: source → target]
+{{glossaryTerms}}
+{{/glossaryTerms}}
+
+{{#passFocus}}
+{{passFocus}}
+
+{{/passFocus}}
+{{pairs}}
+
+Answer every pair once. Return one JSON object in this schema:
+{"results":[{"id":"<pair id>","status":"ok"|"edits"|"rewrite","edits":[{"criterion":"<defect word>","quote":"<exact text of the candidate>","replacement":"<corrected text>"}],"rewrite":"<the whole corrected candidate>"}]}

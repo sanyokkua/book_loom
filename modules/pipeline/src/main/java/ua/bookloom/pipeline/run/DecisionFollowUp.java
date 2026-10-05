@@ -13,12 +13,10 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.persistence.SummaryRepository;
-import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
-import ua.bookloom.pipeline.judge.JudgeDeferral;
 import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
@@ -100,17 +98,15 @@ final class DecisionFollowUp {
      * @param item the decided item
      * @param record its decided record
      * @param chunkGlossary the glossary the chunk was drafted with
-     * @param judged every judge deferral of the chunk so far
      * @return empty to go on, or how the run ended
      */
     Optional<RunEnd> decided(
             final WorkList work,
             final WorkItem item,
             final SegmentRecord record,
-            final List<GlossaryEntry> chunkGlossary,
-            final List<JudgeDeferral> judged) {
+            final List<GlossaryEntry> chunkGlossary) {
         final Segment segment = item.segment();
-        sinks.pending().deferred(deferralsOf(segment, chunkGlossary, judged));
+        sinks.pending().deferred(DeferralRegister.unknownGender(projectId, segment, chunkGlossary));
         decidedInUnit.add(segment);
         final Result<Optional<RollingSummary>> counted = keeper.onDecided(segment, record);
         if (counted.isErr()) {
@@ -118,17 +114,6 @@ final class DecisionFollowUp {
         }
         announce(Objects.requireNonNull(counted.data(), "counted"), "count");
         return work.endsUnit(item) ? unitEnded(work, item) : Optional.empty();
-    }
-
-    private List<Deferral> deferralsOf(
-            final Segment segment, final List<GlossaryEntry> chunkGlossary, final List<JudgeDeferral> judged) {
-        final List<JudgeDeferral> own = judged.stream()
-                .filter(deferral -> deferral.segmentId().equals(segment.id()))
-                .toList();
-        return Stream.concat(
-                        DeferralRegister.fromJudge(projectId, own).stream(),
-                        DeferralRegister.unknownGender(projectId, segment, chunkGlossary).stream())
-                .toList();
     }
 
     // The names go first, so the refreshed summary can already list a name the unit introduced.

@@ -160,7 +160,7 @@ final class LiveRowView extends VBox {
         set(
                 judge,
                 row.judgeScore() == null ? null : messages.get(MessageKey.LIVE_JUDGE, score.format(row.judgeScore())));
-        set(awaiting, row.awaitingJudge() ? messages.get(MessageKey.LIVE_AWAITING_JUDGE) : null);
+        set(awaiting, row.awaitingReview() ? messages.get(MessageKey.LIVE_AWAITING_REVIEW) : null);
         set(path, row.path() == null ? null : messages.get(pathKey(row.path())));
         set(round, roundText(row.round()));
         context.show(row.context());

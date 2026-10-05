@@ -60,7 +60,7 @@ import ua.bookloom.persistence.PersistenceModule;
 
 /**
  * The whole-book scenario {@link WholeBookPipelineEndToEndTest} checks facet by facet: the real document, persistence
- * and pipeline modules wired as the app wires them, the WireMock-backed model passed to the run, and the eight
+ * and pipeline modules wired as the app wires them, the WireMock-backed model passed to the run, and the six
  * provider answers stubbed in the order the engine asks for them: the first chunk's four drafts are one batch call.
  *
  * <p>Code-point lengths of each stubbed target against its source (D-3 needs 0.81–1.69 and Cyrillic):
@@ -88,12 +88,17 @@ final class WholeBookRun {
             "They waited for *Hale* until the morning.",
             SOURCE_3,
             "The rain did not stop that evening.");
-    private static final String CHUNK_JUDGE = "{\"score\":0.9,\"verdict\":\"revise\",\"findings\":["
-            + "{\"segmentId\":\"s2\",\"type\":\"omission\",\"severity\":\"medium\",\"note\":\"drops a clause\"},"
-            + "{\"segmentId\":\"s4\",\"type\":\"meaning\",\"severity\":\"high\",\"note\":\"wrong time\"}],"
-            + "\"deferrals\":[]}";
-    private static final String RE_JUDGE = "{\"score\":0.9,\"verdict\":\"accept\"}";
-    private static final String LAST_JUDGE = "{\"score\":0.92,\"verdict\":\"accept\",\"findings\":[],\"deferrals\":[]}";
+    // Two edits whose results the checks refuse (a Latin letter inside a Cyrillic word), so each segment gets one
+    // directed
+    // fix naming the reviewer's quote; the first fix answers a text that no longer holds the quote, the second one
+    // echoes
+    // the English source, which the echo check blocks.
+    private static final String CHUNK_REVIEW = "{\"results\":["
+            + "{\"id\":\"s2\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"пішла\","
+            + "\"replacement\":\"пішлa\"}]},"
+            + "{\"id\":\"s4\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"Він пішов\","
+            + "\"replacement\":\"Він пішoв\"}]}]}";
+    private static final String LAST_REVIEW = "{\"results\":[]}";
     private static final int PROMPT_TOKENS = 120;
     private static final int COMPLETION_TOKENS = 45;
     private static final long EVAL_NANOS = 1_500_000_000L;
@@ -216,17 +221,15 @@ final class WholeBookRun {
         return view(project, "Book.md:3");
     }
 
-    /** The eight answers, in the order the engine is predicted to ask. */
+    /** The six answers, in the order the engine is predicted to ask. */
     private static List<ResponseDefinitionBuilder> replies(final WireMockProvider provider) {
         return List.of(
                 provider.replyWithUsage(firstBatch(), PROMPT_TOKENS, COMPLETION_TOKENS, EVAL_NANOS),
-                provider.reply(CHUNK_JUDGE, Duration.ZERO),
+                provider.reply(CHUNK_REVIEW, Duration.ZERO),
                 provider.target(FIX_1, Duration.ZERO),
-                provider.reply(RE_JUDGE, Duration.ZERO),
-                provider.target(SOURCE_3, Duration.ZERO),
                 provider.target(SOURCE_3, Duration.ZERO),
                 provider.target(DRAFT_4, Duration.ZERO),
-                provider.reply(LAST_JUDGE, Duration.ZERO));
+                provider.reply(LAST_REVIEW, Duration.ZERO));
     }
 
     /** The first chunk's four drafts as one batch reply, ids numbered within the batch. */

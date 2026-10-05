@@ -24,7 +24,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * {@link ChunkDecider}/{@link SegmentHealer}: every model or gate call a self-heal round makes can end the step
- * with an error other than one the design already routes to a flag — a self-heal call, a re-judge or a gate call
+ * with an error other than one the design already routes to a flag — a self-heal call or a gate call
  * answering something other than {@code emptyCompletion}/{@code contextWindow}/{@code validation} (I1, I3).
  */
 class QualityLoopModelErrorTest {
@@ -47,7 +47,7 @@ class QualityLoopModelErrorTest {
                 .answer(readable(targetReply(GOOD_TARGET)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(1, 1, false, false, false, 4),
+                new DialParameters(1, 1, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
@@ -67,32 +67,6 @@ class QualityLoopModelErrorTest {
         assertThat(decider.hasNext()).isFalse();
     }
 
-    // I3: a re-judge answering an error other than timeout/unreachable (which degrade the judge) ends the step.
-    @Test
-    void nextDecision_rejudgeAnswersAuth_endsTheStepWithThatError() {
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, GOOD_TARGET, null);
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"score\":0.60,\"verdict\":\"revise\",\"findings\":[],\"deferrals\":[]}"))
-                .answer(readable("{\"issues\":[]}"))
-                .answer(readable(targetReply(GOOD_TARGET)))
-                .answer(Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")));
-        final LoopSettings settings = new LoopSettings(
-                ReviewMode.ASSISTED,
-                new DialParameters(2, 1, true, false, false, 4),
-                QualityLoopFixtures.FRAME,
-                NamePolicy.TRANSLITERATE,
-                List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data());
-
-        final Result<SegmentOutcome> decision = decider.nextDecision();
-
-        assertThat(decision.isErr()).isTrue();
-        assertThat(Objects.requireNonNull(decision.error()).code()).isEqualTo(ErrorCode.auth);
-    }
-
     // I3: a gate failure that is not `validation` ends the step rather than wasting the round.
     @Test
     void nextDecision_gateAnswersANonValidationError_endsTheStepWithThatError() {
@@ -102,7 +76,7 @@ class QualityLoopModelErrorTest {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD_TARGET)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.UNATTENDED,
-                new DialParameters(1, 1, false, false, false, 4),
+                new DialParameters(1, 1, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
@@ -114,31 +88,6 @@ class QualityLoopModelErrorTest {
 
         assertThat(decision.isErr()).isTrue();
         assertThat(Objects.requireNonNull(decision.error()).code()).isEqualTo(ErrorCode.internal);
-    }
-
-    // I3: a reflect call answering unreachable ends the step before improve is ever attempted.
-    @Test
-    void nextDecision_reflectAnswersUnreachable_endsTheStepWithThatError() {
-        final DraftOutcome.Drafted outcome =
-                new DraftOutcome.Drafted(segment(), SOURCE, List.of(), GOOD_TARGET, GOOD_TARGET, GOOD_TARGET, null);
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"score\":0.60,\"verdict\":\"revise\",\"findings\":[],\"deferrals\":[]}"))
-                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Unreachable", "no route to host")));
-        final LoopSettings settings = new LoopSettings(
-                ReviewMode.ASSISTED,
-                new DialParameters(2, 1, true, false, false, 4),
-                QualityLoopFixtures.FRAME,
-                NamePolicy.TRANSLITERATE,
-                List.of());
-        final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data());
-
-        final Result<SegmentOutcome> decision = decider.nextDecision();
-
-        assertThat(decision.isErr()).isTrue();
-        assertThat(Objects.requireNonNull(decision.error()).code()).isEqualTo(ErrorCode.unreachable);
-        assertThat(model.requests()).hasSize(2);
     }
 
     private static Segment segment() {

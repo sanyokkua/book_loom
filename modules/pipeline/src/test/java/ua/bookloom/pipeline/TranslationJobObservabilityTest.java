@@ -54,8 +54,9 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
  */
 class TranslationJobObservabilityTest {
 
-    private static final String MEANING_ON_S1 = "{\"score\":0.9,\"verdict\":\"revise\",\"findings\":[{\"segmentId\":"
-            + "\"s1\",\"type\":\"meaning\",\"severity\":\"medium\",\"note\":\"drops a word\"}],\"deferrals\":[]}";
+    // The reviewer's edit for s1 would mix two alphabets in one word, which a hard check refuses.
+    private static final String REFUSED_EDIT_ON_S1 = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
+            + "{\"criterion\":\"meaning\",\"quote\":\"Старий\",\"replacement\":\"Стaрий\"}]}]}";
     private static final String FIXED_T0 = "Старий чоловік повільно пішов до гавані.";
     private static final long WAIT_SECONDS = 10;
 
@@ -85,14 +86,14 @@ class TranslationJobObservabilityTest {
                 .startsWith(tuple("Book.txt:0", List.of()), tuple("Book.txt:1", List.of("ONE.")));
     }
 
-    // A segment the judge did not accept enters round 1 of the dial's budget, naming the finding it repairs.
+    // A segment whose reviewer edit the code refused enters round 1 of the dial's budget, naming the finding it
+    // repairs.
     @Test
-    void run_judgeFindsAMeaningError_announcesRoundOneWithTheScoreAndTheFinding() {
+    void run_reviewerEditRefused_announcesRoundOneWithTheFinding() {
         final ScriptedChatModel model = replies(T0, T1, FIXED_T0)
                 .answerTo(
-                        ChunkRunFixtures.JUDGE,
-                        Result.ok(new ChatResponse(MEANING_ON_S1, ua.bookloom.api.llm.FinishReason.STOP)))
-                .answerTo(ChunkRunFixtures.JUDGE, ChunkRunFixtures.judged());
+                        ChunkRunFixtures.REVIEW,
+                        Result.ok(new ChatResponse(REFUSED_EDIT_ON_S1, ua.bookloom.api.llm.FinishReason.STOP)));
         final TranslationJobImpl translation =
                 job(project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED)), model);
         final List<JobEvent> events = new CopyOnWriteArrayList<>();
@@ -108,7 +109,7 @@ class TranslationJobObservabilityTest {
                         RoundStarted::round,
                         RoundStarted::judgeScore,
                         RoundStarted::blockingFinding)
-                .containsExactly(tuple("Book.md:0", 1, 0.9, "meaning"));
+                .containsExactly(tuple("Book.md:0", 1, null, "meaning"));
     }
 
     // A pause on an error names the segment whose step failed and how many of its pauses are spent.

@@ -93,17 +93,20 @@ fix, reflect, improve, polish) returns exactly one segment's target, never a chu
 2. **Unmask + validate** — restore placeholders; **tag-multiset hard gate**
    (`03_DOCUMENT_MODEL.md#unmask-and-validate`). Failure → self-heal with a concrete finding.
 3. **Deterministic QA gate** — run the checks in `#qa-checks`; compute `confidence`.
-4. **Judge (dial-gated)** — when the dial enables it, one LLM-as-judge call per chunk over the drafted pairs that
-   passed their hard gates (a soft-check failure does not keep a pair from the judge); `score` decides, `verdict` is
-   advisory. A reply that cannot be read, or a judge call answered with an empty completion or a context-window
-   refusal, accepts nothing and sends every judged pair to self-heal.
-5. **Accept**, per segment — `accept = hardGatesPass ∧ noSoftCheckFailed ∧ confidence ≥ τ ∧ (judgeOff ∨ (judgeScore ≥
-   τ_judge ∧ no medium or high judge finding on the segment))`; a failed untranslated-echo check on a source under 20
-   code points of display text does not count as a failed soft check (`#qa-thresholds`). `τ` is owned by the
-   **review-mode dial** (not this engine's quality dial); `τ_judge` defaults to `τ` (ADR-0038; a model-call error
-   instead of a quality failure is routed by `design.md` D3's failure-routing table, not this rule). → `ACCEPTED`.
+4. **Reviewer (dial-gated)** — when the dial enables it, one reviewer call per chunk and pass (Balanced one, Max two)
+   over the drafted pairs whose checks passed; it answers per segment `ok`, edits or a rewrite. The code verifies each
+   edit (the quote occurs exactly once after normalisation, the replacement keeps the `⟦gN⟧` tokens in order, the
+   deterministic checks pass on the edited text, the set of blocking checks does not grow) and applies the verified
+   ones; an edit whose quote was found but that was refused gets one directed fix naming the quote; a rewrite is taken
+   only when every check passes. A reply that cannot be read, or a call that times out twice, flags its segments
+   `reviewer-unavailable` instead of pausing the run.
+5. **Accept**, per segment — `accept = hardGatesPass ∧ noSoftCheckFailed ∧ noVerifiedBlockerLeft`; a failed
+   untranslated-echo check on a source under 20 code points of display text does not count as a failed soft check
+   (`#qa-thresholds`). There is no score and no threshold: confidence only orders segments for review, and the review
+   mode decides when the run pauses (ADR-0038; a model-call error instead of a quality failure is routed by
+   `design.md` D3's failure-routing table, not this rule). → `ACCEPTED`.
 6. **Self-heal** — otherwise, over up to **N QA re-entry rounds** (the repair budget: 1 / 2 / 3 by dial):
-    - **Directed fix (1 call)** when QA/the judge produced *concrete* findings (tag mismatch, wrong script, dropped
+    - **Directed fix (1 call)** when QA or a refused reviewer edit produced *concrete* findings (tag mismatch, wrong script, dropped
       content, glossary miss) — inject the exact findings and ask for a targeted correction of this one segment; on a
       **tag-multiset mismatch** inject the expected placeholder multiset ("restore exactly: …").
     - **Reflect → improve (2 calls)** when the failure is *vague* quality (judge score low, no concrete finding) —

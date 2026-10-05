@@ -12,7 +12,7 @@ import ua.bookloom.pipeline.eval.EvalRow.Check;
  *
  * @param model the model the run measured
  * @param rows every case's outcome, in case order
- * @param defectRows the corpus judge outcomes
+ * @param defectRows the corpus reviewer outcomes
  * @param rules {@code language} for a run with the language-rules map, {@code generic} for one forced to the generic
  *     rules, so a matrix can set the two side by side
  */
@@ -20,7 +20,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
 
     static final double PARSE_FLOOR = 0.95;
     static final double GATE_FLOOR = 0.90;
-    static final double JUDGE_FLOOR = 0.80;
+    static final double REVIEW_FLOOR = 0.80;
 
     private static final int DETAIL_WIDTH = 90;
     private static final String ROW = "%-22s %-5s %-5s %-5s %-6s %-6s %-6s %-5s %s";
@@ -57,19 +57,20 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         return rate(EvalRow::injection);
     }
 
-    double judgeRate() {
-        return rate(EvalRow::judged);
+    double reviewRate() {
+        return rate(EvalRow::reviewed);
     }
 
-    /** Whether the parse, gate and judge-separation rates reach their floors. */
+    /** Whether the parse, gate and review-separation rates reach their floors. */
     boolean meetsThresholds() {
         return parseRate() >= PARSE_FLOOR
                 && gateRate() >= GATE_FLOOR
-                && judgeRate() >= JUDGE_FLOOR
+                && reviewRate() >= REVIEW_FLOOR
                 && meetsDefectThresholds();
     }
 
-    /** Whether the corpus judge rates reach the model class's thresholds; true when no corpus was run. */
+    /** Whether the corpus reviewer rates reach the model class's thresholds and no applied edit broke a token; true when no
+     * corpus was run. */
     boolean meetsDefectThresholds() {
         if (defectRows.isEmpty()) {
             return true;
@@ -77,7 +78,8 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         final EvalThresholds limits = EvalThresholds.forModel(model);
         return EvalMetrics.falseNegativeRate(defectRows) <= limits.falseNegativeMax()
                 && EvalMetrics.falsePositiveRate(defectRows) <= limits.falsePositiveMax()
-                && EvalMetrics.stability(defectRows) >= limits.stabilityMin();
+                && EvalMetrics.stability(defectRows) >= limits.stabilityMin()
+                && EvalMetrics.tokenBreaks(defectRows) == 0;
     }
 
     /** One line of the corpus rates, empty when no corpus was run. */
@@ -87,13 +89,15 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         }
         return String.format(
                 Locale.ROOT,
-                "corpus n=%d runs=%d  judgeParse %.0f%%  falseNegative %.0f%%  falsePositive %.0f%%  stability %.0f%%",
+                "corpus n=%d runs=%d  reviewParse %.0f%%  catch %.0f%%  falseAlarmEdits %.0f%%  stability %.0f%%"
+                        + "  tokenBreaks %d",
                 defectRows.size(),
                 defectRows.get(0).runs(),
                 percent(EvalMetrics.parseRate(defectRows)),
-                percent(EvalMetrics.falseNegativeRate(defectRows)),
+                percent(EvalMetrics.catchRate(defectRows)),
                 percent(EvalMetrics.falsePositiveRate(defectRows)),
-                percent(EvalMetrics.stability(defectRows)));
+                percent(EvalMetrics.stability(defectRows)),
+                EvalMetrics.tokenBreaks(defectRows));
     }
 
     /** The report as one JSON object: the rates a matrix compares. */
@@ -101,9 +105,9 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         return String.format(
                 Locale.ROOT,
                 "{\"model\":\"%s\",\"rules\":\"%s\",\"class\":\"%s\",\"parse\":%.3f,\"gate\":%.3f,\"script\":%.3f,"
-                        + "\"marker\":%.3f,\"injection\":%.3f,\"judgeSeparation\":%.3f,"
-                        + "\"judgeParse\":%.3f,\"falseNegative\":%.3f,\"falsePositive\":%.3f,"
-                        + "\"stability\":%.3f,\"meetsThresholds\":%b}",
+                        + "\"marker\":%.3f,\"injection\":%.3f,\"reviewSeparation\":%.3f,"
+                        + "\"reviewParse\":%.3f,\"falseNegative\":%.3f,\"falsePositive\":%.3f,"
+                        + "\"stability\":%.3f,\"tokenBreaks\":%d,\"meetsThresholds\":%b}",
                 model,
                 rules,
                 EvalThresholds.classOf(model),
@@ -112,11 +116,12 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 scriptRate(),
                 markerRate(),
                 injectionRate(),
-                judgeRate(),
+                reviewRate(),
                 EvalMetrics.parseRate(defectRows),
                 EvalMetrics.falseNegativeRate(defectRows),
                 EvalMetrics.falsePositiveRate(defectRows),
                 EvalMetrics.stability(defectRows),
+                EvalMetrics.tokenBreaks(defectRows),
                 meetsThresholds());
     }
 
@@ -125,18 +130,18 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
         final List<String> lines = new ArrayList<>();
         lines.add("promptEval model=" + model + " rules=" + rules);
         lines.add(String.format(
-                Locale.ROOT, ROW, "case", "kind", "parse", "gate", "script", "marker", "inject", "judge", "reply"));
+                Locale.ROOT, ROW, "case", "kind", "parse", "gate", "script", "marker", "inject", "review", "reply"));
         rows.forEach(row -> lines.add(line(row)));
         lines.add(String.format(
                 Locale.ROOT,
-                "parse %.0f%% (>= %.0f%%)  gate %.0f%% (>= %.0f%%)  judge %.0f%% (>= %.0f%%)  script %.0f%%  marker"
+                "parse %.0f%% (>= %.0f%%)  gate %.0f%% (>= %.0f%%)  review %.0f%% (>= %.0f%%)  script %.0f%%  marker"
                         + " %.0f%%  injection %.0f%%",
                 percent(parseRate()),
                 percent(PARSE_FLOOR),
                 percent(gateRate()),
                 percent(GATE_FLOOR),
-                percent(judgeRate()),
-                percent(JUDGE_FLOOR),
+                percent(reviewRate()),
+                percent(REVIEW_FLOOR),
                 percent(scriptRate()),
                 percent(markerRate()),
                 percent(injectionRate())));
@@ -148,11 +153,12 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
     private static String defectLine(final DefectRow row) {
         return String.format(
                 Locale.ROOT,
-                "corpus %-22s %-12s defective=%-5b refused=%-5b readable=%-5b stable=%b",
+                "corpus %-22s %-12s defective=%-5b flagged=%-5b byReviewer=%-5b readable=%-5b stable=%b",
                 row.id(),
                 row.kind(),
                 row.defective(),
-                row.refused(),
+                row.flagged(),
+                row.reviewerFlagged(),
                 row.readable(),
                 row.stable());
     }
@@ -169,7 +175,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 row.script().label(),
                 row.marker().label(),
                 row.injection().label(),
-                row.judged().label(),
+                row.reviewed().label(),
                 detail.length() > DETAIL_WIDTH ? detail.substring(0, DETAIL_WIDTH) + "…" : detail);
     }
 

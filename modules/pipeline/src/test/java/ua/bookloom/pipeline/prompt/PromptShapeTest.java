@@ -39,7 +39,7 @@ class PromptShapeTest {
             "improve", "target",
             "polish", "target",
             "revision", "target",
-            "judge", "score",
+            "reviewer", "results",
             "reflect", "issues",
             "prescan", "terms");
 
@@ -52,7 +52,7 @@ class PromptShapeTest {
     // The draft system measured 698 before the language-rules map replaced the per-language example files.
     private static final int DRAFT_SYSTEM_BUDGET = 697;
     private static final int SYSTEM_BUDGET = 900;
-    // The judge also carries the languages' reviewer checks; the suggestion call carries its name examples.
+    // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples.
     private static final int LARGE_SYSTEM_BUDGET = 1200;
 
     @ParameterizedTest
@@ -88,7 +88,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(PromptName.class)
     void render_everyCall_keepsItsSystemMessageWithinBudget(final PromptName name) {
-        final boolean large = name == PromptName.JUDGE || name == PromptName.SUGGEST_TARGETS;
+        final boolean large = name == PromptName.REVIEWER || name == PromptName.SUGGEST_TARGETS;
 
         assertThat(TokenEstimator.estimate(system(name), "en"))
                 .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : SYSTEM_BUDGET);
@@ -106,7 +106,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"DRAFT", "JUDGE", "SUMMARY", "PRESCAN", "SUGGEST_TARGETS"})
+            names = {"DRAFT", "REVIEWER", "SUMMARY", "PRESCAN", "SUGGEST_TARGETS"})
     void render_callWithTheLanguageRulesSlot_carriesOneSectionForThePair(final PromptName name) {
         assertThat(system(name))
                 .containsOnlyOnce("[Language rules: English -> Ukrainian]\nTarget — Ukrainian")
@@ -115,8 +115,8 @@ class PromptShapeTest {
     }
 
     @Test
-    void render_judge_addsTheReviewerChecksTheDraftDoesNotCarry() {
-        assertThat(system(PromptName.JUDGE)).contains("Check: Quotes are «…» and balanced");
+    void render_reviewer_addsTheReviewerChecksTheDraftDoesNotCarry() {
+        assertThat(system(PromptName.REVIEWER)).contains("Check: Quotes are «…» and balanced");
         assertThat(system(PromptName.DRAFT)).doesNotContain("Check: ");
     }
 

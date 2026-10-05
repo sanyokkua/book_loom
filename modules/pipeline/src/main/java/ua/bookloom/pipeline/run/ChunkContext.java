@@ -121,6 +121,14 @@ final class ChunkContext {
         return terms;
     }
 
+    /** The unlocked glossary renderings of the chunk's terms as {@code source → target} lines, for the reviewer. */
+    List<String> termPairs() {
+        return occurringIn(chunk.segments(), glossary).stream()
+                .filter(entry -> entry.target() != null && !entry.target().isBlank() && !entry.locked())
+                .map(entry -> entry.term() + " → " + entry.target())
+                .toList();
+    }
+
     /**
      * Assembles what one draft is shown besides its source, and the snapshot of it its record stores — a memory
      * reuse's too, though no draft is made for it.

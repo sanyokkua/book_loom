@@ -15,7 +15,7 @@ public sealed interface GateResult {
      * The candidate passed every gate.
      *
      * @param maskedForm the candidate with every protected span restored and the document's own {@code ⟦gN⟧} tokens
-     *     still in place — what is evaluated, judged and recorded as the masked target
+     *     still in place — what is evaluated, reviewed and recorded as the masked target
      * @param restored {@code maskedForm} restored into the segment's markup
      * @param autoRepair the low {@code markup} finding saying the placeholders were put back without a model, or
      *     {@code null} when the candidate passed as the model wrote it

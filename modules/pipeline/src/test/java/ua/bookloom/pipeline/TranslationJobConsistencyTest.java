@@ -3,15 +3,15 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
 import static ua.bookloom.pipeline.ChunkRunFixtures.pauses;
+import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
@@ -66,10 +66,10 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
 class TranslationJobConsistencyTest {
 
     /** The second chunk's judge sees the three drafted pairs and not the reused one. */
-    private static final String[] JUDGED_THREE = {
-        "<Pair id=\"s1\">\n<Source>It was late.",
-        "<Pair id=\"s2\">\n<Source>He paused.",
-        "<Pair id=\"s3\">\n<Source>She smiled."
+    private static final String[] REVIEWED_THREE = {
+        "<Pair id=\"s1\"><Source>It was late.",
+        "<Pair id=\"s2\"><Source>He paused.",
+        "<Pair id=\"s3\"><Source>She smiled."
     };
 
     private static final String CHAPTER_ONE = "OEBPS/ch0.xhtml:0";
@@ -189,9 +189,9 @@ class TranslationJobConsistencyTest {
     void run_repeatedPassageInSameContext_isReused() {
         final TestProject project = project(twoChapters(tempDir, "Yes."), epubBriefOn(QualityDial.BALANCED));
         final ScriptedChatModel model = replies(PAUSED, "Так.", SMILED, LATE, PAUSED, SMILED, LEFT)
-                .answerTo(JUDGE, judged())
-                .answerTo(JUDGE, judged())
-                .answerTo(JUDGE, judged());
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed());
         final TranslationJobImpl translation = job(project, model);
         final List<MemoryUpdated> memory = memoryEvents(translation);
 
@@ -214,7 +214,9 @@ class TranslationJobConsistencyTest {
         assertThat(memory).containsExactlyElementsOf(reuseBetweenSummaries());
         assertThat(drafts.get(4)).contains("He paused. → " + PAUSED);
         assertThat(drafts.get(5)).contains("She smiled. → " + SMILED);
-        assertThat(messagesOf(model, JUDGE).get(1)).contains(JUDGED_THREE).doesNotContain("Yes.", "<Pair id=\"s4\">");
+        assertThat(messagesOf(model, REVIEW).get(1))
+                .contains(REVIEWED_THREE)
+                .doesNotContain("Yes.", "<Pair id=\"s4\">");
     }
 
     @Test

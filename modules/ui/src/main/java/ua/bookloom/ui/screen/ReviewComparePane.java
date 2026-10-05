@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.ui.control.ComparePanes;
@@ -327,6 +328,40 @@ final class ReviewComparePane extends VBox {
     }
 
     private VBox findingRow(final QaFinding finding) {
+        return AppliedEdit.from(finding).map(this::editRow).orElseGet(() -> plainRow(finding));
+    }
+
+    // An edit the reviewer made and the app verified, as the words it removed beside the words it put there.
+    private VBox editRow(final AppliedEdit edit) {
+        final Label heading = new Label(messages.get(
+                MessageKey.REVIEW_EDIT_APPLIED,
+                messages.get(MessageKey.REVIEW_EDIT_CRITERION, edit.criterion().replace('-', '_'))));
+        heading.setId("review-edit-criterion");
+        heading.getStyleClass().add("finding-kind");
+        final Label removed = diffLine("review-edit-removed", "diff-removed", "− " + edit.quote());
+        final Label added = diffLine(
+                "review-edit-added",
+                "diff-added",
+                "+ "
+                        + (edit.replacement().isEmpty()
+                                ? messages.get(MessageKey.REVIEW_EDIT_DELETED)
+                                : edit.replacement()));
+        final VBox row = new VBox(2, heading, removed, added);
+        Tips.install(messages, removed, MessageKey.REVIEW_EDIT_TIP);
+        Tips.install(messages, added, MessageKey.REVIEW_EDIT_TIP);
+        return row;
+    }
+
+    private static Label diffLine(final String id, final String style, final String text) {
+        final Label line = new Label(text);
+        line.setId(id);
+        line.getStyleClass().add(style);
+        line.setWrapText(true);
+        line.setMinHeight(Region.USE_PREF_SIZE);
+        return line;
+    }
+
+    private VBox plainRow(final QaFinding finding) {
         final Label kind = new Label(messages.get(
                 MessageKey.REVIEW_FINDING_KIND,
                 finding.kind(),

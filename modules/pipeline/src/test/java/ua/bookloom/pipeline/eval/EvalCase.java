@@ -7,7 +7,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.TermType;
 
 /**
- * One prompt-eval case: a draft, a directed fix, a judge pair or a batch of glossary names, each sent through its
+ * One prompt-eval case: a draft, a directed fix, a review pair or a batch of glossary names, each sent through its
  * production prompt builder.
  */
 sealed interface EvalCase {
@@ -82,14 +82,14 @@ sealed interface EvalCase {
     }
 
     /**
-     * A judge case: the same source judged once with a good and once with a bad candidate, in separate calls.
+     * A review case: the same source reviewed once with a good and once with a bad candidate, in separate calls.
      *
      * @param name the case name
      * @param masked the masked source
      * @param good a faithful, fluent candidate
      * @param bad a candidate with a meaning error, an omission or text left untranslated
      */
-    record Judge(String name, String masked, String good, String bad) implements EvalCase {}
+    record Review(String name, String masked, String good, String bad) implements EvalCase {}
 
     /**
      * A batch of glossary names given suggested targets under one name policy; each name becomes its own report row.

@@ -70,11 +70,11 @@ final class FaultyModel implements ChatModel {
     private static final int MAX_BURST = 4;
     private static final String DRAFT = "draft";
     private static final String BATCH = "draft-batch-json";
-    private static final String JUDGE = "judge";
+    private static final String REVIEW = "reviewer";
     private static final String DIRECTED_FIX = "directed-fix";
-    // A judge that wants the first pair fixed, so a directed fix and its re-judge follow.
-    private static final String REVISE = "{\"score\":0.6,\"verdict\":\"revise\",\"findings\":[{\"segmentId\":\"s1\","
-            + "\"type\":\"meaning\",\"severity\":\"high\",\"note\":\"wrong sense\"}],\"deferrals\":[]}";
+    // A reviewer that asks to rewrite the first pair with text the checks refuse, so the draft stays and is flagged.
+    private static final String REVISE =
+            "{\"results\":[{\"id\":\"s1\",\"status\":\"rewrite\",\"rewrite\":\"THE WRONG SENSE\"}]}";
 
     private final PseudoChatModel pseudo;
     private final ObjectMapper mapper;
@@ -128,7 +128,7 @@ final class FaultyModel implements ChatModel {
         final String format = request.responseFormat() == null
                 ? "plain"
                 : Objects.requireNonNull(request.responseFormat()).name();
-        final boolean rejudge = JUDGE.equals(format) && DIRECTED_FIX.equals(previousFormat);
+        final boolean rejudge = REVIEW.equals(format) && DIRECTED_FIX.equals(previousFormat);
         previousFormat = format;
         final Fault fault = choose(format, rejudge);
         injected.merge(fault, 1, Integer::sum);
@@ -164,7 +164,7 @@ final class FaultyModel implements ChatModel {
         }
         return switch (format) {
             case DRAFT, BATCH -> plan.draftCall(roll);
-            case JUDGE -> plan.judgeCall(roll);
+            case REVIEW -> plan.judgeCall(roll);
             default -> Fault.NONE;
         };
     }

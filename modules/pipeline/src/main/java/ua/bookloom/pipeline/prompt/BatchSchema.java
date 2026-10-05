@@ -10,7 +10,7 @@ public final class BatchSchema {
 
     /**
      * One entry per item with its id and target. Deliberately flat — no {@code maxItems}, {@code maxLength} or
-     * {@code additionalProperties} — because LM Studio never answered a structured judge call that carried such limits
+     * {@code additionalProperties} — because LM Studio never answered a structured reviewer call that carried such limits
      * on one model; the reply parser enforces the ids, so the schema need not. The optional {@code terms} field of the
      * terminology task is not declared yet; a reply that carries it is read and the field ignored.
      */

@@ -4,7 +4,7 @@ flowchart TD
     S2["2 · Read structure into a tree<br/>pull out text segments, protect tags/code/images/links"] --> S3
     S3["3 · Glossary pre-scan (Prep)<br/>LLM proposes names/terms + gender<br/>(offline fallback: frequency + casing)"] --> S4
     S4["4 · Translate loop<br/>chunk by chunk, with context"] --> S5
-    S5["5 · Auto-check + LLM judge<br/>accept if confidence ≥ τ and judge score ≥ τ_judge<br/>repair only what fails"] --> S6
+    S5["5 · Auto-check + LLM reviewer<br/>accept if no check blocks and no verified blocker is left<br/>repair only what fails"] --> S6
     S6{"More chunks / chapters?"}
     S6 -- yes --> S4
     S6 -- no --> BR["6 · Optional backward revision<br/>resolve deferred gender/terms with full-book facts"]

@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The one place a BCP-47 language tag becomes the English phrase a prompt names it by, so the draft call and the
- * judge call never describe the same language pair two different ways.
+ * reviewer call never describe the same language pair two different ways.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

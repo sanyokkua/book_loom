@@ -1,7 +1,9 @@
 package ua.bookloom.pipeline.prompt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /** The expected length and the hard cap a call states for one masked source. */
@@ -33,18 +35,25 @@ class OutputLimitTest {
     }
 
     @Test
-    void forJudge_onePair_expectsOneHundredSixtyAndCapsAtThreeHundredTwenty() {
-        assertThat(OutputLimit.forJudge(1)).isEqualTo(new OutputLimit(160, 320));
+    void forReview_onePair_capsAtTheBaseAndOneEnvelopeAndTheCandidateItself() {
+        // 64 base + 96 per pair + the candidate's own tokens, because a rewrite may repeat it whole.
+        assertThat(OutputLimit.forReview(List.of("a".repeat(400)), "en").capTokens())
+                .isEqualTo(275);
     }
 
     @Test
-    void forJudge_threePairs_expectsThreeHundredFiftyTwoAndCapsAtSevenHundredFour() {
-        assertThat(OutputLimit.forJudge(3)).isEqualTo(new OutputLimit(352, 704));
+    void forReview_threePairs_growsWithEachPairAndExpectsHalfTheCap() {
+        final OutputLimit one = OutputLimit.forReview(List.of("Він відчинив двері."), "uk");
+        final OutputLimit three =
+                OutputLimit.forReview(List.of("Він відчинив двері.", "Вона усміхнулася.", "Було тихо."), "uk");
+
+        assertThat(three.capTokens()).isGreaterThan(one.capTokens() * 2);
+        assertThat(three.expectedTokens()).isEqualTo(three.capTokens() / 2);
     }
 
     @Test
-    void forJudge_tenPairs_capsAtTenTwentyFour() {
-        assertThat(OutputLimit.forJudge(10)).isEqualTo(new OutputLimit(512, 1024));
+    void forReview_noCandidate_isRejected() {
+        assertThatThrownBy(() -> OutputLimit.forReview(List.of(), "uk")).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

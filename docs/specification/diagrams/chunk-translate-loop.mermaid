@@ -8,9 +8,9 @@ flowchart TD
     PS --> D
     IDM -- yes --> D["Restore tags & locked names<br/>check placeholders are intact"]
     D --> E["Automatic checks<br/>language? nothing dropped? names right? tags ok?<br/>→ confidence score"]
-    E --> F{"Hard gates pass and<br/>confidence ≥ τ?"}
-    F -- yes --> G["LLM judge score<br/>(dial-gated; skipped for TM reuse)"]
-    G --> H{"Judge off or<br/>score ≥ τ_judge?"}
+    E --> F{"Hard gates pass and<br/>no check blocks?"}
+    F -- yes --> G["LLM reviewer: ok / edits / rewrite<br/>(dial-gated; skipped for TM reuse)"]
+    G --> H{"Reviewer off or<br/>no verified blocker left?"}
     H -- yes --> ACC["Accept"]
     H -- no --> R
     F -- no --> R["Repair"]

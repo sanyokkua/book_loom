@@ -41,9 +41,9 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
         assertThat(rows().lastDecided()).isNull();
     }
 
-    // IF a Balanced draft did not wait for the judge, THEN the row would show a draft as if it were final.
+    // IF a Balanced draft did not wait for the reviewer, THEN the row would show a draft as if it were final.
     @Test
-    void segmentDrafted_balanced_isMarkedAwaitingJudge() {
+    void segmentDrafted_balanced_isMarkedAwaitingReview() {
         final RunSession session = session(QualityDial.BALANCED);
         session.onEvent(started("s-42", "ch7 · p42", SOURCE));
 
@@ -54,12 +54,12 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
         assertThat(current).isNotNull();
         assertThat(current.targetText()).isEqualTo(DRAFT);
         assertThat(current.awaitingDraft()).isFalse();
-        assertThat(current.awaitingJudge()).isTrue();
+        assertThat(current.awaitingReview()).isTrue();
     }
 
-    // IF Fast marked a draft as awaiting a judge that never runs, THEN the row would wait for nothing.
+    // IF Fast marked a draft as awaiting a reviewer that never runs, THEN the row would wait for nothing.
     @Test
-    void segmentDrafted_fast_isNotMarkedAwaitingJudge() {
+    void segmentDrafted_fast_isNotMarkedAwaitingReview() {
         final RunSession session = session(QualityDial.FAST);
         session.onEvent(started("s-42", "ch7 · p42", SOURCE));
 
@@ -68,7 +68,7 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
 
         final LiveRow current = rows().current();
         assertThat(current).isNotNull();
-        assertThat(current.awaitingJudge()).isFalse();
+        assertThat(current.awaitingReview()).isFalse();
     }
 
     // IF a decision left the segment in the second row, THEN the finished sentence would never reach the first.

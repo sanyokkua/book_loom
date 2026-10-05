@@ -176,12 +176,12 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     void qualityHint_dialMovedToMax_followsTheDial() throws TimeoutException {
         openFrankensteinThenShowBrief();
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Balanced: chunks of up to 4 segments · LLM judge on · backward-consistency pass off");
+                .isEqualTo("Balanced: chunks of up to 4 segments · AI reviewer on · backward-consistency pass off");
 
         onFx(() -> segmented("brief-quality").getButtons().get(2).setSelected(true));
 
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Max: chunks of up to 2 segments · LLM judge on · backward-consistency pass on");
+                .isEqualTo("Max: chunks of up to 2 segments · AI reviewer on · backward-consistency pass on");
     }
 
     // IF the model row named another model than the run uses, THEN the person would trust the wrong one; and

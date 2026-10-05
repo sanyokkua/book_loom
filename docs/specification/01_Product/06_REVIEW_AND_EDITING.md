@@ -17,7 +17,7 @@ Every segment moves through a deterministic state machine (FR-REVIEW-06):
 | From                  | Event                                                                                     | To       |
 |-----------------------|---------------------------------------------------------------------------------------------|----------|
 | —                     | Imported                                                                                  | PENDING  |
-| PENDING               | `hardGatesPass ∧ confidence ≥ τ ∧ (judgeOff ∨ judgeScore ≥ τ_judge)`                      | ACCEPTED |
+| PENDING               | `hardGatesPass ∧ noSoftCheckFailed ∧ noVerifiedBlockerLeft` (15d.6)                          | ACCEPTED |
 | PENDING               | Still failing after repair budget N (QA re-entry rounds), or below τ with review required | FLAGGED  |
 | FLAGGED               | User accepts as-is                                                                        | ACCEPTED |
 | FLAGGED               | User edits and confirms                                                                   | REVISED  |
@@ -28,7 +28,7 @@ Every segment moves through a deterministic state machine (FR-REVIEW-06):
 | REVISED               | User edits again                                                                          | REVISED  |
 
 `τ` is owned by the **review-mode dial** (Unattended 0.60 / Assisted 0.75 / Manual 0.85); a manual Settings override
-is not offered in this build. The quality dial does not set τ, and `τ_judge` defaults to `τ` (DD-45).
+is not offered in this build. Neither the quality dial nor the review mode sets a confidence bar any more (15d.6): the review mode decides when the run pauses.
 
 Rules: PENDING is the only initial state; ACCEPTED, FLAGGED, and REVISED are the terminal working states; a segment
 never returns to PENDING once processed. Resume picks up at the **first PENDING** segment; FLAGGED is

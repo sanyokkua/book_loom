@@ -41,7 +41,7 @@ final class ConnectionHealth {
 
     private record Failure(Instant at, boolean timedOut, CallKey call) {}
 
-    private final ThroughputMeter judging = new ThroughputMeter(CallKind.JUDGE);
+    private final ThroughputMeter judging = new ThroughputMeter(CallKind.REVIEW);
     private final Deque<Failure> failures = new ArrayDeque<>();
     private @Nullable Instant lastAnswerAt;
 

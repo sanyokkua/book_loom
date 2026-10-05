@@ -66,7 +66,7 @@ class QualityLoopDirectedFixTest {
                 model);
         decider.nextDecision();
 
-        // The initial gate failure excludes this outcome from the chunk's judge call, so both calls are the
+        // The initial gate failure excludes this outcome from the chunk's reviewer call, so both calls are the
         // directed fix's own rounds.
         assertThat(model.requests()).hasSize(2);
         assertThat(Objects.requireNonNull(model.requests().getFirst().responseFormat())
@@ -128,15 +128,14 @@ class QualityLoopDirectedFixTest {
         assertThat(Objects.requireNonNull(outcomeResult.flagReason()).code()).isEqualTo(ErrorCode.validation);
     }
 
-    // Balanced (N=2), judge on: the chunk judges the draft 0.9, and the one directed fix it takes is cut off by
-    // length — FLAGGED at once, no second fix, keeping the draft's own target as machine target.
+    // Balanced (N=2), reviewer on: the echo is refused by the checks, so the reviewer never reads it, and the one
+    // directed fix it takes is cut off by length — FLAGGED at once, no second fix, keeping the draft's own target.
     @Test
     void nextDecision_balancedCutOffByLength_flagsAtOnceWithNoSecondFix() {
         final Segment segment =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("echo3.md"), "He opened the old door.");
         final DraftOutcome.Drafted outcome = QualityLoopFixtures.drafted(segment, documents, "HE OPENED THE OLD DOOR.");
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"score\":0.9,\"verdict\":\"accept\"}"))
                 .answer(Result.ok(new ChatResponse("{\"target\":\"HE OPEN", FinishReason.LENGTH)));
 
         final ChunkDecider decider = start(
@@ -147,12 +146,12 @@ class QualityLoopDirectedFixTest {
                 model);
         final Result<SegmentOutcome> decision = decider.nextDecision();
 
-        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests()).hasSize(1);
         assertThat(model.requests().stream()
                         .map(request ->
                                 Objects.requireNonNull(request.responseFormat()).name())
                         .toList())
-                .containsExactly("judge", "directed-fix");
+                .containsExactly("directed-fix");
         final SegmentOutcome outcomeResult = Objects.requireNonNull(decision.data());
         assertThat(outcomeResult.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(outcomeResult.machineTarget()).isEqualTo("HE OPENED THE OLD DOOR.");
@@ -169,10 +168,10 @@ class QualityLoopDirectedFixTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable("{\"segments\":[]}"))
                 .answer(readable("{\"target\":\"Він відчинив старі двері.\"}"));
-        // Judge off, repair budget 2, so the round wasted by the malformed reply still leaves one more to try.
+        // Reviewer off, repair budget 2, so the round wasted by the malformed reply still leaves one more to try.
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, 2, false, false, false, 4),
+                new DialParameters(1, 2, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
@@ -230,7 +229,7 @@ class QualityLoopDirectedFixTest {
 
         final ChunkDecider decider = start(
                 List.of(inPieces("HE OPENED THE OLD DOOR.", redraft)),
-                twoRoundsJudgeOff(),
+                twoRoundsReviewerOff(),
                 QualityLoopFixtures.PASSTHROUGH_GATE,
                 model);
         final SegmentOutcome decision =
@@ -243,43 +242,15 @@ class QualityLoopDirectedFixTest {
         assertThat(decision.repairRounds()).isEqualTo(2);
     }
 
-    // With no concrete finding a reflect round would have run; on a segment drafted in pieces it is a plain redraft.
-    @Test
-    void nextDecision_lowJudgeScoreOnASegmentDraftedInPieces_redraftsWithNoFindings() {
-        final String target = "Він відчинив старі двері.";
-        final ScriptedRedraft redraft = new ScriptedRedraft(new RepairReply.Rewritten(target));
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable("{\"score\":0.5,\"verdict\":\"revise\"}"))
-                .answer(readable("{\"score\":0.9,\"verdict\":\"accept\"}"));
-        final LoopSettings settings = new LoopSettings(
-                ReviewMode.ASSISTED,
-                new DialParameters(2, 1, true, false, false, 4),
-                QualityLoopFixtures.FRAME,
-                NamePolicy.TRANSLITERATE,
-                List.of());
-
-        final ChunkDecider decider =
-                start(List.of(inPieces(target, redraft)), settings, QualityLoopFixtures.PASSTHROUGH_GATE, model);
-        final SegmentOutcome decision =
-                Objects.requireNonNull(decider.nextDecision().data());
-
-        assertThat(model.requests())
-                .extracting(request ->
-                        Objects.requireNonNull(request.responseFormat()).name())
-                .containsExactly("judge", "judge");
-        assertThat(redraft.findingKinds()).containsExactly(List.of());
-        assertThat(decision.status()).isEqualTo(SegmentStatus.ACCEPTED);
-    }
-
     private static DraftOutcome.Drafted inPieces(final String reply, final PieceRedraft redraft) {
         final String source = "He opened the old door.";
         return new DraftOutcome.Drafted(segmentFor(source), source, List.of(), reply, reply, reply, null, redraft);
     }
 
-    private static LoopSettings twoRoundsJudgeOff() {
+    private static LoopSettings twoRoundsReviewerOff() {
         return new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(1, 2, false, false, false, 4),
+                new DialParameters(1, 2, 0, false, false, 4),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());

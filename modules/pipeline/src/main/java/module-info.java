@@ -1,5 +1,5 @@
 /**
- * The translation engine: chunking, context assembly, the tiered translate/QA/judge/self-heal loop. FX-free.
+ * The translation engine: chunking, context assembly, the tiered translate/QA/review/self-heal loop. FX-free.
  * Implements {@code TranslationEngine}.
  *
  * <p>The single orchestration seam {@code :ui} talks to, which is why it is the only core module allowed to depend
@@ -30,7 +30,7 @@ module ua.bookloom.pipeline {
             com.google.guice;
     opens ua.bookloom.pipeline.project to
             com.google.guice;
-    opens ua.bookloom.pipeline.judge to
+    opens ua.bookloom.pipeline.reviewer to
             com.google.guice;
     opens ua.bookloom.pipeline.heal to
             com.google.guice;

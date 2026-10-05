@@ -24,11 +24,11 @@ import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
- * {@link QualityLoop#start}: which pairs the chunk's one judge call shows — only {@link DraftOutcome.Drafted}
- * outcomes whose hard gates passed, never a {@link DraftOutcome.Reused} one — and how a judge-call failure ends the step
- * ({@code specs/quality-gates/spec.md} "Judge each chunk once when the quality dial enables the judge").
+ * {@link QualityLoop#start}: which pairs the chunk's reviewer call shows — only {@link DraftOutcome.Drafted}
+ * outcomes whose checks passed, never a {@link DraftOutcome.Reused} one — and how a reviewer-call failure ends the step
+ * ({@code specs/quality-gates/spec.md} "Review each chunk once per pass when the quality dial enables the reviewer").
  */
-class QualityLoopJudgeInputTest {
+class QualityLoopReviewInputTest {
 
     @TempDir
     private Path tempDir;
@@ -37,9 +37,9 @@ class QualityLoopJudgeInputTest {
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
     // A chunk of four: the first still fails its placeholder gate (crossed pair) after the draft's own repair, the
-    // third is flagged at once; only the second and fourth passed their hard gates, so the judge call shows them.
+    // third is flagged at once; only the second and fourth passed their hard gates, so the reviewer call shows them.
     @Test
-    void start_balancedChunkWithGateFailureAndFlagAtOnce_judgesOnlyTheQualifyingPairsInOrder() {
+    void start_balancedChunkWithGateFailureAndFlagAtOnce_reviewsOnlyTheQualifyingPairsInOrder() {
         final Segment first =
                 QualityLoopFixtures.markdownSegment(tempDir.resolve("s1.md"), "He opened the *old* door.");
         final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("s2.md"), "She smiled softly.");
@@ -50,7 +50,7 @@ class QualityLoopJudgeInputTest {
                 QualityLoopFixtures.drafted(second, documents, "Вона тихо усміхнулася."),
                 QualityLoopFixtures.flaggedAtOnce(third, emptyCompletion()),
                 QualityLoopFixtures.drafted(fourth, documents, "Йшов дощ."));
-        final ScriptedChatModel model = new ScriptedChatModel().answer(judgeReply());
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reviewerReply());
 
         final Result<ChunkDecider> started = loop.start(
                 outcomes,
@@ -63,13 +63,13 @@ class QualityLoopJudgeInputTest {
         final String userMessage =
                 model.requests().getFirst().messages().getLast().content();
         assertThat(userMessage)
-                .contains("<Pair id=\"s1\">\n<Source>She smiled softly.")
-                .contains("<Pair id=\"s2\">\n<Source>The rain fell.")
+                .contains("<Pair id=\"s1\"><Source>She smiled softly.")
+                .contains("<Pair id=\"s2\"><Source>The rain fell.")
                 .doesNotContain("s3", "s4");
     }
 
     @Test
-    void start_bothOutcomesFlaggedAtOnce_makesNoJudgeCall() {
+    void start_bothOutcomesFlaggedAtOnce_makesNoReviewerCall() {
         final Segment first = QualityLoopFixtures.markdownSegment(tempDir.resolve("a.md"), "One.");
         final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("b.md"), "Two.");
         final List<DraftOutcome> outcomes = List.of(
@@ -88,7 +88,7 @@ class QualityLoopJudgeInputTest {
     }
 
     @Test
-    void start_fastDial_makesNoJudgeCallEvenWithEightDraftedSegments() {
+    void start_fastDial_makesNoReviewerCallEvenWithEightDraftedSegments() {
         final List<DraftOutcome> outcomes = eightShortDraftedOutcomes();
         final ScriptedChatModel model = new ScriptedChatModel();
 
@@ -114,7 +114,7 @@ class QualityLoopJudgeInputTest {
     }
 
     @Test
-    void start_judgeAnswersAuth_endsTheStepWithThatErrorAndNoDecider() {
+    void start_reviewerAnswersAuth_endsTheStepWithThatErrorAndNoDecider() {
         final Segment segment = QualityLoopFixtures.markdownSegment(tempDir.resolve("u.md"), "She left quickly.");
         final List<DraftOutcome> outcomes =
                 List.of(QualityLoopFixtures.drafted(segment, documents, "Вона швидко пішла."));
@@ -132,7 +132,7 @@ class QualityLoopJudgeInputTest {
     }
 
     @Test
-    void start_balancedChunkWithAReusedThirdOutcome_judgesTheOtherThreeOnly() {
+    void start_balancedChunkWithAReusedThirdOutcome_reviewsTheOtherThreeOnly() {
         final Segment first = QualityLoopFixtures.markdownSegment(tempDir.resolve("r1.md"), "It was late.");
         final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("r2.md"), "He paused.");
         final Segment third = QualityLoopFixtures.markdownSegment(tempDir.resolve("r3.md"), "Yes.");
@@ -142,7 +142,7 @@ class QualityLoopJudgeInputTest {
                 QualityLoopFixtures.drafted(second, documents, "Він зупинився."),
                 QualityLoopFixtures.reused(third, "Так."),
                 QualityLoopFixtures.drafted(fourth, documents, "Вона всміхнулася."));
-        final ScriptedChatModel model = new ScriptedChatModel().answer(judgeReply());
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reviewerReply());
 
         final Result<ChunkDecider> started = loop.start(
                 outcomes,
@@ -154,14 +154,14 @@ class QualityLoopJudgeInputTest {
         assertThat(model.requests()).hasSize(1);
         assertThat(model.requests().getFirst().messages().getLast().content())
                 .contains(
-                        "<Pair id=\"s1\">\n<Source>It was late.",
-                        "<Pair id=\"s2\">\n<Source>He paused.",
-                        "<Pair id=\"s3\">\n<Source>She smiled.")
+                        "<Pair id=\"s1\"><Source>It was late.",
+                        "<Pair id=\"s2\"><Source>He paused.",
+                        "<Pair id=\"s3\"><Source>She smiled.")
                 .doesNotContain("Yes.", "Так.", "<Pair id=\"s4\">");
     }
 
     @Test
-    void start_everyOutcomeReused_makesNoJudgeCall() {
+    void start_everyOutcomeReused_makesNoReviewerCall() {
         final Segment first = QualityLoopFixtures.markdownSegment(tempDir.resolve("y1.md"), "Yes.");
         final Segment second = QualityLoopFixtures.markdownSegment(tempDir.resolve("y2.md"), "No.");
         final ScriptedChatModel model = new ScriptedChatModel();
@@ -213,7 +213,7 @@ class QualityLoopJudgeInputTest {
         return (kind, segmentId, request) -> model.chat(request);
     }
 
-    private static Result<ChatResponse> judgeReply() {
-        return Result.ok(new ChatResponse("{\"score\":0.9,\"verdict\":\"accept\"}", FinishReason.STOP));
+    private static Result<ChatResponse> reviewerReply() {
+        return Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP));
     }
 }

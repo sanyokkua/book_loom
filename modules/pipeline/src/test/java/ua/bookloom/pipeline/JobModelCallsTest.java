@@ -60,7 +60,7 @@ class JobModelCallsTest {
     // A judge call scores a whole chunk, so it names no single segment but lists every segment it judges.
     @Test
     void callAbout_judgeOfTwoSegments_announcesBothSegmentsAndNoSoleSegment() {
-        calls.callAbout(CallKind.JUDGE, List.of("Book.md:0", "Book.md:1"), REQUEST);
+        calls.callAbout(CallKind.REVIEW, List.of("Book.md:0", "Book.md:1"), REQUEST);
 
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)

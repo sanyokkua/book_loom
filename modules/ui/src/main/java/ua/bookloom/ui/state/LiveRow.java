@@ -15,7 +15,7 @@ import ua.bookloom.api.project.SegmentPath;
  * @param judgeScore the judge's score, or {@code null} when the judge did not run
  * @param path how the segment reached its target, or {@code null} while it is undecided
  * @param awaitingDraft {@code true} while the model has not answered yet
- * @param awaitingJudge {@code true} when the draft has arrived and the chunk's judge has not decided it yet
+ * @param awaitingReview {@code true} when the draft has arrived and the chunk's judge has not decided it yet
  * @param round the repair round the segment is in, or {@code null} while it is in none
  * @param context what the draft was sent with besides its source, or {@code null} when it was not announced
  */
@@ -27,7 +27,7 @@ public record LiveRow(
         @Nullable Double judgeScore,
         @Nullable SegmentPath path,
         boolean awaitingDraft,
-        boolean awaitingJudge,
+        boolean awaitingReview,
         @Nullable RoundTrack round,
         @Nullable ContextSnapshot context) {
 
@@ -48,7 +48,7 @@ public record LiveRow(
      * @param judgeScore the judge's score, or {@code null}
      * @param path how the segment reached its target, or {@code null}
      * @param awaitingDraft {@code true} while the model has not answered yet
-     * @param awaitingJudge {@code true} while the chunk's judge has not decided the draft
+     * @param awaitingReview {@code true} while the chunk's judge has not decided the draft
      */
     public LiveRow(
             final String segmentId,
@@ -58,8 +58,8 @@ public record LiveRow(
             @Nullable final Double judgeScore,
             @Nullable final SegmentPath path,
             final boolean awaitingDraft,
-            final boolean awaitingJudge) {
-        this(segmentId, locator, sourceText, targetText, judgeScore, path, awaitingDraft, awaitingJudge, null, null);
+            final boolean awaitingReview) {
+        this(segmentId, locator, sourceText, targetText, judgeScore, path, awaitingDraft, awaitingReview, null, null);
     }
 
     /**
@@ -77,7 +77,7 @@ public record LiveRow(
                 judgeScore,
                 path,
                 awaitingDraft,
-                awaitingJudge,
+                awaitingReview,
                 round,
                 sent);
     }

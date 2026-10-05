@@ -9,7 +9,7 @@ import ua.bookloom.api.project.QaFinding;
 
 /**
  * Runs every quality-gate check for one segment's restored candidate: the refusal gate this package owns, the
- * deterministic text checks (blocking ones fail like a hard gate, before any judge), the five soft checks, and the placeholder/protected-span hard-gate results a caller computed elsewhere.
+ * deterministic text checks (blocking ones fail like a hard gate, before any reviewer), the five soft checks, and the placeholder/protected-span hard-gate results a caller computed elsewhere.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

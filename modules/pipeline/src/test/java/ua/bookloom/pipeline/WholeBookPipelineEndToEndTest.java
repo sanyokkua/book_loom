@@ -53,8 +53,8 @@ import ua.bookloom.pipeline.WholeBookRun.BookRun;
 /**
  * The one test that proves the parts of a run are connected at the real HTTP seam, in both provider dialects: a
  * five-paragraph Markdown book goes through preparation, drafting (the first chunk's four paragraphs in one batch
- * call), the chunk judge, a directed fix and its one-pair
- * re-judge, a fix that keeps echoing the source and is flagged, the Assisted pause, the person's edit, the resume, the
+ * call), the chunk's reviewer, a directed fix for a refused edit that resolves it, a fix that answers the source
+ * and leaves the issue open so the segment is flagged, the Assisted pause, the person's edit, the resume, the
  * unit's end and an export with every side file. Every stubbed Ukrainian target is Cyrillic with a length ratio inside
  * 0.81–1.69 of its source, so only the stubbed echo fails a deterministic check (the ratios are listed in
  * {@link WholeBookRun}).
@@ -87,9 +87,9 @@ class WholeBookPipelineEndToEndTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // The chunk's one batch draft and its judge come before any decision; the fixes and the re-judge follow, and the
-    // flagged fourth segment stops the run before the next chunk's draft. A call about several segments — the batch
-    // draft of four, the chunk's judge over four — names none; a call about one pair names its segment.
+    // The chunk's one batch draft and its reviewer come before any decision; the two fixes follow, and the flagged
+    // fourth segment stops the run before the next chunk's draft. A call about several segments — the batch draft of
+    // four, the chunk's reviewer over four — names none; a call about one segment names it.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_assistedBalancedBook_callsInTheStubbedOrder(final ProviderKind kind) {
@@ -98,25 +98,23 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.calls())
                 .containsExactly(
                         "DRAFT null",
-                        "JUDGE null",
+                        "REVIEW null",
                         "DIRECTED_FIX Book.md:1",
-                        "JUDGE Book.md:1",
-                        "DIRECTED_FIX Book.md:3",
                         "DIRECTED_FIX Book.md:3",
                         "DRAFT Book.md:4",
-                        "JUDGE Book.md:4");
+                        "REVIEW Book.md:4");
     }
 
-    // A pause on the flagged segment after exactly six requests, with the whole first chunk already stored.
+    // A pause on the flagged segment after exactly four requests, with the whole first chunk already stored.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void run_assistedBalancedBook_pausesOnFlaggedAfterSixRequests(final ProviderKind kind) {
+    void run_assistedBalancedBook_pausesOnFlaggedAfterFourRequests(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
         assertThat(run.pause())
                 .extracting(Paused::reason, Paused::segmentId)
                 .containsExactly(PauseReason.ON_FLAGGED, "Book.md:3");
-        assertThat(run.requestsAtPause()).isEqualTo(6);
+        assertThat(run.requestsAtPause()).isEqualTo(4);
         assertThat(run.statusesAtPause())
                 .containsExactly(
                         SegmentStatus.ACCEPTED,
@@ -126,26 +124,27 @@ class WholeBookPipelineEndToEndTest {
                         SegmentStatus.PENDING);
     }
 
-    // The repaired segment passed its own one-pair re-judge, which names it s1 and shows the fixed target.
+    // The refused edit's directed fix names the reviewer's quote, and its result — which no longer holds it — is
+    // accepted.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void run_directedFixPassesItsReJudge_acceptsTheSegmentAsRepaired(final ProviderKind kind) {
+    void run_directedFixForARefusedEdit_namesTheQuoteAndAcceptsTheSegmentAsRepaired(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
         assertThat(run.segment("Book.md:1"))
                 .extracting(SegmentView::status, SegmentView::path, SegmentView::maskedMachineTarget)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.REPAIRED, WholeBookRun.FIX_1);
-        assertThat(WholeBookRun.userMessage(run.bodies().get(3))).contains("s1", WholeBookRun.FIX_1);
+        assertThat(WholeBookRun.userMessage(run.bodies().get(2))).contains("пішла", "meaning");
     }
 
-    // The batch of four short paragraphs is capped by its items' allowances; the judge of four pairs at 896 tokens.
+    // The batch of four short paragraphs is capped by its items' allowances; the reviewer of four pairs by its pairs.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
-    void run_batchAndJudge_capTheBatchByItsItemsAndTheJudgeByItsPairs(final ProviderKind kind) {
+    void run_batchAndReview_capTheBatchByItsItemsAndTheReviewerByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
         assertThat(run.bodies().get(0)).contains(capField(kind) + ":273");
-        assertThat(run.bodies().get(1)).contains(capField(kind) + ":896");
+        assertThat(run.bodies().get(1)).contains(capField(kind) + ":503");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.
@@ -157,8 +156,8 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.edited())
                 .extracting(SegmentView::status, SegmentView::userTarget)
                 .containsExactly(SegmentStatus.REVISED, WholeBookRun.EDIT);
-        assertThat(WholeBookRun.precedingTargets(run.bodies().get(6))).contains(WholeBookRun.EDIT);
-        assertThat(run.bodies()).hasSize(8);
+        assertThat(WholeBookRun.precedingTargets(run.bodies().get(4))).contains(WholeBookRun.EDIT);
+        assertThat(run.bodies()).hasSize(6);
         assertThat(run.report().end()).isEqualTo(JobState.COMPLETED);
         assertThat(run.runState()).isEqualTo(JobState.COMPLETED);
         assertThat(run.segment("Book.md:4").status()).isEqualTo(SegmentStatus.ACCEPTED);

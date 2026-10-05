@@ -60,7 +60,7 @@ import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * Retry and Retry with note: one fair second attempt at a FLAGGED or ACCEPTED segment. It replays the context its first
- * draft saw, from the stored snapshot's texts alone, and is decided by the run's own draft step, checks, judge and
+ * draft saw, from the stored snapshot's texts alone, and is decided by the run's own draft step, checks, reviewer and
  * acceptance rule — the quality loop with no repair round. A segment the run drafted in pieces is drafted in the same
  * pieces, each carrying the note. It never queues behind a running book: while the project's
  * latest run is RUNNING it answers {@code busy} before any call. A failure never downgrades an ACCEPTED segment.
@@ -234,8 +234,9 @@ public final class RetryDraft {
         return budget;
     }
 
-    // The run's own quality loop with no repair round: the same evaluation, the same one-pair judge (labelled s1) when
-    // the brief's dial enables it, and the same acceptance rule at this review mode's threshold.
+    // The run's own quality loop with no repair round: the same evaluation, the same one-pair reviewer (labelled s1)
+    // when
+    // the brief's dial enables it, and the same acceptance rule.
     private Result<SegmentOutcome> decide(
             final RetryPlan plan, final DraftOutcome drafted, final GateFunction gate, final ModelCalls calls) {
         final BookBrief brief = plan.brief();
@@ -244,13 +245,16 @@ public final class RetryDraft {
                 DialParameters.of(brief.dial()).withoutRepairRounds(),
                 plan.frame(),
                 brief.names(),
-                plan.snapshot().glossary().stream().map(SnapshotTerm::term).toList());
+                plan.snapshot().glossary().stream().map(SnapshotTerm::term).toList(),
+                plan.snapshot().glossary().stream()
+                        .filter(term -> term.target() != null && !term.locked())
+                        .map(term -> term.term() + " → " + term.target())
+                        .toList());
         log.debug(
-                "retry: deciding segment={} dial={} judge={} threshold={}",
+                "retry: deciding segment={} dial={} reviewPasses={}",
                 plan.segment().id(),
                 brief.dial(),
-                settings.dial().judge(),
-                mode.threshold());
+                settings.dial().reviewPasses());
         return qualityLoop.start(List.of(drafted), settings, gate, calls).flatMap(ChunkDecider::nextDecision);
     }
 

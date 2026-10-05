@@ -1,10 +1,10 @@
 package ua.bookloom.pipeline.heal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.heal.QualityLoopJudgeUnavailableTest.calls;
-import static ua.bookloom.pipeline.heal.QualityLoopJudgeUnavailableTest.readable;
-import static ua.bookloom.pipeline.heal.QualityLoopJudgeUnavailableTest.segment;
-import static ua.bookloom.pipeline.heal.QualityLoopJudgeUnavailableTest.targetReply;
+import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.calls;
+import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.readable;
+import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.segment;
+import static ua.bookloom.pipeline.heal.QualityLoopTestSupport.targetReply;
 
 import java.util.List;
 import java.util.Objects;
@@ -27,12 +27,8 @@ class QualityLoopProgressTest {
 
     private static final String SOURCE = "He opened the old door.";
     private static final String GOOD_TARGET = "Він відчинив старі двері.";
-    private static final String FIXED_TARGET = "Він відчинив старі дубові двері.";
     private static final String ECHO = "HE OPENED THE OLD DOOR.";
     private static final String STILL_ECHO = "HE OPENED THE OLD DOOR!";
-    private static final String MEANING_AT_085 = "{\"score\":0.85,\"verdict\":\"revise\",\"findings\":[{\"segmentId\":"
-            + "\"s1\",\"type\":\"meaning\",\"severity\":\"medium\",\"note\":\"drops a word\"}],\"deferrals\":[]}";
-    private static final String ACCEPT = "{\"score\":0.95,\"verdict\":\"accept\",\"findings\":[],\"deferrals\":[]}";
 
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
@@ -44,40 +40,20 @@ class QualityLoopProgressTest {
                 .answer(readable(targetReply(STILL_ECHO)))
                 .answer(readable(targetReply(GOOD_TARGET)));
 
-        final SegmentOutcome decided = first(decider(ECHO, model, new DialParameters(1, 3, false, false, false, 4)));
+        final SegmentOutcome decided = first(decider(ECHO, model, new DialParameters(1, 3, 0, false, false, 4)));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(decided.repairRounds()).isEqualTo(2);
         assertThat(model.requests()).hasSize(2);
     }
 
-    // The re-judge repeats the chunk judge's medium "meaning" finding at the same 0.85: another fix is not tried.
+    // The fix call failed; the next decision sends that same round again and the repaired target is then accepted.
     @Test
-    void nextDecision_sameBlockingFindingAtAnUnchangedScore_flagsAfterTheFirstRound() {
+    void nextDecision_afterTheFixCallFailed_continuesAtThatRound() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(MEANING_AT_085))
-                .answer(readable(targetReply(FIXED_TARGET)))
-                .answer(readable(MEANING_AT_085))
-                .answer(readable(targetReply(GOOD_TARGET)));
-
-        final SegmentOutcome decided =
-                first(decider(GOOD_TARGET, model, new DialParameters(2, 3, true, false, false, 4)));
-
-        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decided.repairRounds()).isEqualTo(1);
-        assertThat(decided.machineTarget()).isEqualTo(FIXED_TARGET);
-        assertThat(model.requests()).hasSize(3);
-    }
-
-    // The fix already answered; only the re-judge that failed is sent again.
-    @Test
-    void nextDecision_afterTheRejudgeFailed_continuesAtTheRejudge() {
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(MEANING_AT_085))
-                .answer(readable(targetReply(FIXED_TARGET)))
                 .answer(Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")))
-                .answer(readable(ACCEPT));
-        final ChunkDecider decider = decider(GOOD_TARGET, model, new DialParameters(2, 2, true, false, false, 4));
+                .answer(readable(targetReply(GOOD_TARGET)));
+        final ChunkDecider decider = decider(ECHO, model, new DialParameters(2, 2, 0, false, false, 4));
 
         final Result<SegmentOutcome> failed = decider.nextDecision();
         final SegmentOutcome decided = first(decider);
@@ -86,11 +62,26 @@ class QualityLoopProgressTest {
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.path()).isEqualTo(SegmentPath.REPAIRED);
         assertThat(decided.repairRounds()).isEqualTo(1);
-        assertThat(decided.machineTarget()).isEqualTo(FIXED_TARGET);
+        assertThat(decided.machineTarget()).isEqualTo(GOOD_TARGET);
         assertThat(model.requests())
                 .extracting(request ->
                         Objects.requireNonNull(request.responseFormat()).name())
-                .containsExactly("judge", "directed-fix", "judge", "judge");
+                .containsExactly("directed-fix", "directed-fix");
+    }
+
+    // A repaired target is decided by the checks alone: no reviewer call follows the fix.
+    @Test
+    void nextDecision_repairedTargetPassingTheChecks_isAcceptedWithoutAReviewerCall() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(GOOD_TARGET)));
+
+        final SegmentOutcome decided = first(decider(ECHO, model, new DialParameters(2, 2, 1, false, false, 4)));
+
+        assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(model.requests()).hasSize(1);
+        assertThat(model.requests().getFirst().responseFormat()).isNotNull();
+        assertThat(Objects.requireNonNull(model.requests().getFirst().responseFormat())
+                        .name())
+                .isEqualTo("directed-fix");
     }
 
     private ChunkDecider decider(final String draft, final ScriptedChatModel model, final DialParameters dial) {

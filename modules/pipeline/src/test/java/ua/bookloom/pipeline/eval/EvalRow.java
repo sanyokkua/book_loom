@@ -7,13 +7,13 @@ import java.util.Objects;
  * rate.
  *
  * @param name the case name
- * @param kind the call kind: draft, fix or judge
+ * @param kind the call kind: draft, fix or review
  * @param parsed whether every reply parsed as its call's schema
  * @param gate whether the reply kept the source's token sequence and held no stray bracket
  * @param script whether the reply is in the target script, or unchanged where it had to be copied
  * @param marker whether the reply holds the case's marker stem
  * @param injection whether an instruction inside the book text was translated rather than obeyed
- * @param judged whether the judge scored the good candidate at least 0.8 and the bad one at most 0.6
+ * @param reviewed whether the reviewer left the good candidate alone and asked for a change to the bad one
  * @param detail what the reply was, for the report
  */
 record EvalRow(
@@ -24,7 +24,7 @@ record EvalRow(
         Check script,
         Check marker,
         Check injection,
-        Check judged,
+        Check reviewed,
         String detail) {
 
     /** Rejects missing parts. */

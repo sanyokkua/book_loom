@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Blends the five soft checks' margins into one confidence number, so the acceptance rule has a single deterministic
- * score with no judge opinion mixed in (design D8).
+ * score with no reviewer opinion mixed in (design D8).
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

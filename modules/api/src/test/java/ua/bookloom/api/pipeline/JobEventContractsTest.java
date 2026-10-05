@@ -108,7 +108,7 @@ class JobEventContractsTest {
 
     @Test
     void modelCallStarted_twoArgConstructor_isAFirstAttemptAboutItsSegment() {
-        final ModelCallStarted started = new ModelCallStarted("s-1", CallKind.JUDGE);
+        final ModelCallStarted started = new ModelCallStarted("s-1", CallKind.REVIEW);
 
         assertThat(started.segmentIds()).containsExactly("s-1");
         assertThat(started.attempt()).isEqualTo(1);
@@ -119,7 +119,7 @@ class JobEventContractsTest {
 
     @Test
     void modelCallStarted_attemptBeyondItsMaximum_isRejected() {
-        assertThatThrownBy(() -> new ModelCallStarted(null, CallKind.JUDGE, List.of(), 3, 2, null, null))
+        assertThatThrownBy(() -> new ModelCallStarted(null, CallKind.REVIEW, List.of(), 3, 2, null, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -127,7 +127,7 @@ class JobEventContractsTest {
     void modelCallStarted_segmentIds_areCopied() {
         final List<String> ids = new ArrayList<>(List.of("s-1", "s-2"));
         final ModelCallStarted started = new ModelCallStarted(
-                null, CallKind.JUDGE, ids, 2, 2, Duration.ofSeconds(90), new RequestSummary(4_600, 8192, 1024));
+                null, CallKind.REVIEW, ids, 2, 2, Duration.ofSeconds(90), new RequestSummary(4_600, 8192, 1024));
         ids.clear();
 
         assertThat(started.segmentIds()).containsExactly("s-1", "s-2");
@@ -137,7 +137,7 @@ class JobEventContractsTest {
     @Test
     void modelCallFinished_failedAttempt_isNotAnswered() {
         final ModelCallFinished failed = new ModelCallFinished(
-                "s-1", CallKind.JUDGE, Duration.ofSeconds(90), null, 0, false, List.of("s-1"), 2, ErrorCode.timeout);
+                "s-1", CallKind.REVIEW, Duration.ofSeconds(90), null, 0, false, List.of("s-1"), 2, ErrorCode.timeout);
 
         assertThat(failed.isAnswered()).isFalse();
         assertThat(failed.attempt()).isEqualTo(2);

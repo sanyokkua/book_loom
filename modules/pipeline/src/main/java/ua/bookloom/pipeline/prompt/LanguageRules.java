@@ -141,7 +141,7 @@ public final class LanguageRules implements LanguageSupport {
      * @param sourceTag the source language tag, or null when it is inferred from the text, which leaves out the
      *     source notes and the pair's rules
      * @param targetTag the non-null target language tag
-     * @param reviewing {@code true} when the prompt judges a translation, which adds the languages' reviewer checks
+     * @param reviewing {@code true} when the prompt reviews a translation, which adds the languages' reviewer checks
      * @return the section starting {@code [Language rules: <Source> -> <Target>]}; never null, built once per pair
      */
     public String section(@Nullable final String sourceTag, final String targetTag, final boolean reviewing) {

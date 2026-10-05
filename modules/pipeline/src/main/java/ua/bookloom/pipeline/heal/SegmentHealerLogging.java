@@ -6,9 +6,7 @@ import java.util.Map;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.pipeline.judge.JudgeVerdict;
 import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.QaResult;
 
@@ -47,35 +45,24 @@ final class SegmentHealerLogging {
     }
 
     static void logAcceptanceDecision(
-            final String segmentId,
-            final double tau,
-            final QaResult qa,
-            @Nullable final JudgeVerdict verdict,
-            final boolean accepted) {
-        final List<String> blocking = SegmentFindings.kindsOf(SegmentFindings.concrete(qa, verdict, segmentId));
+            final String segmentId, final QaResult qa, final int verifiedBlockersLeft, final boolean accepted) {
         log.debug(
-                "Acceptance decision segment={} tau={} confidence={} judgeScore={} accepted={} blockingFindings={}",
+                "Acceptance decision segment={} confidence={} accepted={} blockingFindings={} verifiedBlockersLeft={}",
                 segmentId,
-                tau,
                 qa.confidence(),
-                verdict == null ? null : verdict.score(),
                 accepted,
-                blocking);
+                SegmentFindings.kindsOf(SegmentFindings.concrete(qa)),
+                verifiedBlockersLeft);
     }
 
     static void logRoundChoice(
-            final String segmentId,
-            final int round,
-            final List<QaFinding> concreteFindings,
-            final QaResult qa,
-            @Nullable final JudgeVerdict verdict,
-            final double tau) {
+            final String segmentId, final int round, final List<QaFinding> concreteFindings, final QaResult qa) {
         if (concreteFindings.isEmpty()) {
             log.debug(
-                    "Round choice segment={} round={} kind=reflect-improve reason={}",
+                    "Round choice segment={} round={} kind=reflect-improve confidence={}",
                     segmentId,
                     round,
-                    reflectImproveReason(qa, verdict, tau));
+                    qa.confidence());
             return;
         }
         log.debug(
@@ -83,20 +70,6 @@ final class SegmentHealerLogging {
                 segmentId,
                 round,
                 SegmentFindings.kindsOf(concreteFindings));
-    }
-
-    private static String reflectImproveReason(
-            final QaResult qa, @Nullable final JudgeVerdict verdict, final double tau) {
-        if (qa.confidence() < tau - AcceptanceRule.ACCEPTANCE_TOLERANCE) {
-            return "confidence below τ";
-        }
-        if (verdict != null && !verdict.readable()) {
-            return "unreadable verdict";
-        }
-        if (verdict != null && verdict.score() < tau - AcceptanceRule.ACCEPTANCE_TOLERANCE) {
-            return "judge score below τ_judge";
-        }
-        return "no concrete finding";
     }
 
     static void logBorderlineDecision(

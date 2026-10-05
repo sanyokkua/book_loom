@@ -39,8 +39,7 @@ import ua.bookloom.pipeline.typography.TypographyGate;
 /**
  * Backward revision, shared by the Max run's last stage and by Export: first the deterministic sweep of every renamed
  * locked term, then one revision call per segment whose characters' gender became known. A machine target is replaced
- * and the segment becomes REVISED; the person's own edit is never overwritten — it gets a proposal instead. Judge
- * deferrals are recorded only and never resolved here. The sweep makes no model call, so a pause asked for during it
+ * and the segment becomes REVISED; the person's own edit is never overwritten — it gets a proposal instead. The sweep makes no model call, so a pause asked for during it
  * waits for the first revision call, where the caller's model seam answers it.
  */
 @Slf4j

@@ -32,7 +32,7 @@ public interface RunBoundaries {
     /**
      * Which step a provider error stopped, as a pause on it names it to the person.
      *
-     * @param segmentId the segment the failing step is for — the first of a chunk for a chunk's judge call — or null
+     * @param segmentId the segment the failing step is for — the first of a chunk for a chunk's reviewer call — or null
      *     for a step of no segment
      * @param pauses how many times this step has paused the run, the pause about to happen included; zero when the
      *     step is never flagged for failing

@@ -27,7 +27,8 @@ class TextChecksCorpusTest {
                                 .isEmpty(),
                         true,
                         true,
-                        1))
+                        1,
+                        0))
                 .toList();
     }
 

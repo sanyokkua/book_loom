@@ -182,6 +182,25 @@ public record ChatRequest(
     }
 
     /**
+     * Copies this request with a fixed sampling seed, so a call that must repeat its answer does.
+     *
+     * @param fixedSeed the seed to sample with
+     * @return a copy with {@code seed} replaced and every other field unchanged
+     */
+    public ChatRequest withSeed(int fixedSeed) {
+        return new ChatRequest(
+                messages,
+                temperature,
+                responseFormat,
+                reasoningEnabled,
+                contextWindow,
+                expectedOutputTokens,
+                maxOutputTokens,
+                fixedSeed,
+                callKind);
+    }
+
+    /**
      * Copies this request sized to a run's window: the window is requested as the context and the output cap is
      * limited to what the window leaves for a reply.
      *

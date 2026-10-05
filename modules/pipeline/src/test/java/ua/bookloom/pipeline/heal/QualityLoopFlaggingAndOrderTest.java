@@ -27,7 +27,7 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 /**
  * {@link ChunkDecider}: a {@link DraftOutcome.FlaggedAtOnce} outcome becomes FLAGGED with its error and no machine
  * target; decisions arrive one per {@code nextDecision()} call, in document order; a FLAGGED segment records its
- * last evaluation's findings and its deciding verdict's findings of any severity, de-duplicated
+ * last evaluation's findings and the reviewer's findings of any severity, de-duplicated
  * ({@code specs/quality-gates/spec.md} "Record each segment's findings for review and repair", "Flag a segment
  * whose reply cannot be used, and continue").
  */
@@ -55,14 +55,11 @@ class QualityLoopFlaggingAndOrderTest {
     }
 
     // ch05.xhtml:11 (specs/quality-gates/spec.md "A flagged segment keeps its reasons"): a draft with length ratio
-    // 0.41 (a 100-character source, a 41-character Cyrillic target) is judged 0.58 with a high omission finding;
-    // Balanced's two directed fixes both return targets that still fail length, so neither round is ever re-judged
-    // (failedOutright blocks eligibility both times) — the chunk's verdict, which is never replaced, is still the
-    // verdict that decides this segment (B2). The FLAGGED record carries the last evaluation's confidence, that
-    // verdict's score, a medium omission from the length check AND a high omission from the judge — asserted
-    // separately, not with one shared match.
+    // 0.41 (a 100-character source, a 41-character Cyrillic target) is refused by the length check, so the reviewer
+    // never reads it; Balanced's two directed fixes both return targets that still fail length. The FLAGGED record
+    // carries the last evaluation's confidence and the medium omission from the length check.
     @Test
-    void nextDecision_bothDirectedFixesStillFailLength_recordsTheChunkVerdictThroughout() {
+    void nextDecision_bothDirectedFixesStillFailLength_flagsWithTheLengthFindingAndNoReviewerCall() {
         final String source =
                 "He left the small house at dawn and never once looked back at the old road far from the sleepy"
                         + " town.";
@@ -73,10 +70,12 @@ class QualityLoopFlaggingAndOrderTest {
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment, source, List.of(), shortTarget, shortTarget, shortTarget, null);
         // Each fix rewrites the draft but stays as short, so the second round still runs and still fails length.
-        final ScriptedChatModel model = stillFailingLengthTwiceModel("Він покинув дах на світанку і жодного раз");
+        final String shortFix = "Він покинув дах на світанку і жодного раз";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(targetReply(shortFix))).answer(readable(targetReply(shortFix)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(2, 2, true, false, false, 4),
+                DialParameters.of(ua.bookloom.api.pipeline.QualityDial.BALANCED),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
@@ -86,23 +85,12 @@ class QualityLoopFlaggingAndOrderTest {
         final Result<SegmentOutcome> decision =
                 Objects.requireNonNull(started.data()).nextDecision();
 
-        assertThat(model.requests()).hasSize(3);
+        assertThat(model.requests()).hasSize(2);
         final SegmentOutcome result = Objects.requireNonNull(decision.data());
         assertThat(result.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(result.confidence()).isCloseTo(0.75, within(1e-9));
-        assertThat(result.judgeScore()).isEqualTo(0.58);
+        assertThat(result.judgeScore()).isNull();
         assertSoleFindingOf(result, "length", "omission", Severity.MEDIUM);
-        assertSoleFindingOf(result, "judge", "omission", Severity.HIGH);
-    }
-
-    private static ScriptedChatModel stillFailingLengthTwiceModel(final String shortFix) {
-        return new ScriptedChatModel()
-                .answer(
-                        readable(
-                                "{\"score\":0.58,\"verdict\":\"revise\",\"findings\":"
-                                        + "[{\"segmentId\":\"s1\",\"type\":\"omission\",\"severity\":\"high\",\"note\":\"drops most of the sentence\"}]}"))
-                .answer(readable(targetReply(shortFix)))
-                .answer(readable(targetReply(shortFix)));
     }
 
     private static void assertSoleFindingOf(
@@ -116,21 +104,19 @@ class QualityLoopFlaggingAndOrderTest {
                 });
     }
 
-    // An accepted segment keeps a low finding the judge raised against it.
+    // An accepted segment keeps the low note the reviewer left on it; a style remark is never applied.
     @Test
-    void nextDecision_acceptedSegment_keepsItsLowJudgeFinding() {
+    void nextDecision_acceptedSegment_keepsTheReviewersStyleNoteAsALowFinding() {
         final Segment segment = segment("Book.md:0");
         final String good = "Він покинув дім на світанку і жодного разу не озирнувся на стару дорогу.";
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment, SOURCE, List.of(), good, good, good, null);
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(
-                        readable(
-                                "{\"score\":0.95,\"verdict\":\"accept\","
-                                        + "\"findings\":[{\"segmentId\":\"s1\",\"type\":\"fluency\",\"severity\":\"low\",\"note\":\"a bit stiff\"}]}"));
+                .answer(readable("{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":[{\"criterion\":"
+                        + "\"style\",\"quote\":\"стару дорогу\",\"replacement\":\"давню дорогу\"}]}]}"));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
-                new DialParameters(2, 2, true, false, false, 4),
+                DialParameters.of(ua.bookloom.api.pipeline.QualityDial.BALANCED),
                 QualityLoopFixtures.FRAME,
                 NamePolicy.TRANSLITERATE,
                 List.of());
@@ -143,8 +129,12 @@ class QualityLoopFlaggingAndOrderTest {
         final SegmentOutcome result = Objects.requireNonNull(decision.data());
         assertThat(result.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(result.path()).isEqualTo(SegmentPath.DRAFT);
-        assertThat(result.findings())
-                .anySatisfy(finding -> assertThat(finding.severity()).isEqualTo(Severity.LOW));
+        assertThat(result.machineTarget()).isEqualTo(good);
+        assertThat(result.findings()).anySatisfy(finding -> {
+            assertThat(finding.severity()).isEqualTo(Severity.LOW);
+            assertThat(finding.raisedBy()).isEqualTo("reviewer");
+            assertThat(finding.kind()).isEqualTo("style");
+        });
     }
 
     @Test

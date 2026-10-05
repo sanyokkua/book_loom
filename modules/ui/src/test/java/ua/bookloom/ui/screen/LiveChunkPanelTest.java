@@ -53,19 +53,19 @@ class LiveChunkPanelTest extends TranslatingScreenTestBase {
         assertThat(labelText("live-last-source")).isEmpty();
     }
 
-    // IF the draft did not replace the wait, or were not marked, THEN the person would not know it is unjudged.
+    // IF the draft did not replace the wait, or were not marked, THEN the person would not know it is unreviewed.
     @Test
-    void rows_draftOnAJudgedRun_replacesTheWaitAndIsMarkedAwaitingJudge() throws TimeoutException {
+    void rows_draftOnAReviewedRun_replacesTheWaitAndIsMarkedAwaitingReview() throws TimeoutException {
         showRows(null, drafted(true));
 
         assertThat(labelText("live-current-target")).isEqualTo(DRAFT);
-        assertThat(labelText("live-current-awaiting")).isEqualTo("awaiting judge");
+        assertThat(labelText("live-current-awaiting")).isEqualTo("awaiting review");
         assertThat(isShown("live-current-awaiting")).isTrue();
     }
 
-    // IF a Fast draft were marked, THEN the panel would promise a judge that is not there.
+    // IF a Fast draft were marked, THEN the panel would promise a reviewer that is not there.
     @Test
-    void rows_draftOnAFastRun_isNotMarkedAwaitingJudge() throws TimeoutException {
+    void rows_draftOnAFastRun_isNotMarkedAwaitingReview() throws TimeoutException {
         showRows(null, drafted(false));
 
         assertThat(isShown("live-current-awaiting")).isFalse();

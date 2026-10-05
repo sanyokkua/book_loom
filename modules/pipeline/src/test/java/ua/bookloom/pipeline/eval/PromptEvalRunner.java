@@ -15,18 +15,21 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.checks.CheckFinding;
+import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Fix;
-import ua.bookloom.pipeline.eval.EvalCase.Judge;
+import ua.bookloom.pipeline.eval.EvalCase.Review;
 import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
 import ua.bookloom.pipeline.heal.DirectedFix;
+import ua.bookloom.pipeline.heal.DraftOutcome;
+import ua.bookloom.pipeline.heal.QaEvaluation;
 import ua.bookloom.pipeline.heal.RepairReply;
-import ua.bookloom.pipeline.judge.JudgeCall;
-import ua.bookloom.pipeline.judge.JudgeReplyParser;
-import ua.bookloom.pipeline.judge.JudgeVerdict;
-import ua.bookloom.pipeline.judge.JudgedPair;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -39,16 +42,23 @@ import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.reviewer.EditApplier;
+import ua.bookloom.pipeline.reviewer.EditOutcome;
+import ua.bookloom.pipeline.reviewer.EditVerifier;
+import ua.bookloom.pipeline.reviewer.ReviewItem;
+import ua.bookloom.pipeline.reviewer.ReviewPass;
+import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
+import ua.bookloom.pipeline.reviewer.ReviewVerdict;
+import ua.bookloom.pipeline.reviewer.ReviewedPair;
+import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /**
  * Sends every case through the production prompt builders — {@link DraftPromptBuilder}, {@link DirectedFix} and
- * {@link JudgeCall} — to a real model, and measures each reply before any repair the run would make.
+ * {@link ReviewerCall} — to a real model, and measures each reply before any repair the run would make. A reviewer
+ * reply is measured the way the run uses it: its edits go through the production {@link EditApplier}.
  */
 @Slf4j
 final class PromptEvalRunner {
-
-    private static final double GOOD_FLOOR = 0.8;
-    private static final double BAD_CEILING = 0.6;
 
     private final ModelCalls calls;
     private final CallFrame frame;
@@ -56,7 +66,8 @@ final class PromptEvalRunner {
     private final DraftReplyParser parser = new DraftReplyParser(new ObjectMapper());
     private final DraftPromptBuilder builder;
     private final DirectedFix directedFix = new DirectedFix(templates, parser);
-    private final JudgeCall judgeCall = new JudgeCall(templates, new JudgeReplyParser(new ObjectMapper()));
+    private final ReviewerCall reviewerCall = new ReviewerCall(templates, new ReviewReplyParser(new ObjectMapper()));
+    private final EditApplier editApplier = new EditApplier(new EditVerifier());
 
     PromptEvalRunner(final ModelCalls calls) {
         this(calls, PromptEvalCases.SOURCE_LANGUAGE, PromptEvalCases.TARGET_LANGUAGE);
@@ -93,38 +104,86 @@ final class PromptEvalRunner {
         }
     }
 
-    /** Judges every corpus case {@code repeats} times and records whether the verdicts agree. */
+    /** Reviews every corpus case {@code repeats} times and records whether the replies agree. */
     List<DefectRow> runDefects(final List<DefectCase> corpus, final int repeats) {
         return corpus.stream().map(defect -> defect(defect, repeats)).toList();
     }
 
     private DefectRow defect(final DefectCase defect, final int repeats) {
         log.info("Corpus case {} x{}", defect.id(), repeats);
-        final List<JudgeVerdict> verdicts = java.util.stream.IntStream.range(0, Math.max(1, repeats))
-                .mapToObj(run -> judgeOne(defect.source(), defect.candidate()))
+        final Checked checked = checkedBy(defect);
+        if (checked.refused()) {
+            // The run never shows a candidate a check refuses to the reviewer, so asking would measure nothing.
+            return new DefectRow(
+                    defect.id(), defect.kind(), defect.defective(), true, true, true, Math.max(1, repeats), 0, false);
+        }
+        final List<Reviewed> reviews = java.util.stream.IntStream.range(0, Math.max(1, repeats))
+                .mapToObj(run -> reviewOne(defect.source(), defect.candidate()))
                 .toList();
-        final boolean first = refused(verdicts.get(0), defect.defective());
+        final boolean byReviewer = reviews.get(0).flagged();
         return new DefectRow(
                 defect.id(),
                 defect.kind(),
                 defect.defective(),
-                first,
-                verdicts.stream().allMatch(JudgeVerdict::readable),
-                verdicts.stream().allMatch(verdict -> refused(verdict, defect.defective()) == first),
-                verdicts.size());
+                byReviewer || checked.noted(),
+                reviews.stream().allMatch(Reviewed::readable),
+                reviews.stream()
+                        .allMatch(review ->
+                                review.signature().equals(reviews.get(0).signature())),
+                reviews.size(),
+                reviews.stream().mapToInt(Reviewed::tokenBreaks).sum(),
+                byReviewer);
     }
 
-    /** An unreadable verdict is always wrong: a defect not caught, a clean text refused. */
-    private static boolean refused(final JudgeVerdict verdict, final boolean defective) {
-        return verdict.readable() ? verdict.score() < GOOD_FLOOR : !defective;
+    /** What the run's own checks say about a candidate before any reviewer sees it. */
+    private record Checked(boolean refused, boolean noted) {}
+
+    private Checked checkedBy(final DefectCase defect) {
+        final var drafted = new DraftOutcome.Drafted(
+                segment(defect.source()),
+                defect.source(),
+                List.of(),
+                defect.candidate(),
+                defect.candidate(),
+                defect.candidate(),
+                null);
+        final var qa = QaEvaluation.evaluate(
+                List.of(),
+                drafted.segment(),
+                defect.source(),
+                defect.candidate(),
+                defect.candidate(),
+                frame,
+                NamePolicy.TRANSLITERATE,
+                List.of(),
+                List.of());
+        final boolean noted = !TextChecks.run(
+                        DisplayText.of(defect.source()),
+                        DisplayText.of(defect.candidate()),
+                        frame.sourceLanguage(),
+                        frame.targetLanguage())
+                .isEmpty();
+        return new Checked(!qa.hardGatesPass() || qa.failedOutright(), noted);
     }
+
+    /**
+     * What one reviewer call came to once its edits went through the verifier.
+     *
+     * @param readable whether the reply parsed
+     * @param flagged whether the reviewer asked for a change the app would act on: an applied edit, an edit whose quote
+     *     is in the text but was refused, or a rewrite
+     * @param tokenBreaks how many applied changes altered the candidate's placeholder tokens
+     * @param signature the change asked for, so a repeated run can be compared with it
+     * @param detail what the reviewer asked for, for the report
+     */
+    private record Reviewed(boolean readable, boolean flagged, int tokenBreaks, String signature, String detail) {}
 
     private List<EvalRow> run(final EvalCase evalCase) {
         log.info("Prompt eval case {}", evalCase.name());
         return switch (evalCase) {
             case Draft draft -> List.of(draft(draft));
             case Fix fix -> List.of(fix(fix));
-            case Judge judge -> List.of(judge(judge));
+            case Review review -> List.of(review(review));
             case Suggest suggest -> SuggestEval.rows(suggest, frame, calls);
         };
     }
@@ -172,29 +231,86 @@ final class PromptEvalRunner {
         };
     }
 
-    private EvalRow judge(final Judge judge) {
-        final JudgeVerdict good = judgeOne(judge.masked(), judge.good());
-        final JudgeVerdict bad = judgeOne(judge.masked(), judge.bad());
+    private EvalRow review(final Review review) {
+        final Reviewed good = reviewOne(review.masked(), review.good());
+        final Reviewed bad = reviewOne(review.masked(), review.bad());
         final boolean readable = good.readable() && bad.readable();
-        final boolean separated = readable && good.score() >= GOOD_FLOOR && bad.score() <= BAD_CEILING;
-        final String detail = "good=" + good.score() + " " + good.findings().size() + "f, bad=" + bad.score() + " "
-                + bad.findings().size() + "f";
+        final boolean separated = readable && !good.flagged() && bad.flagged();
         return new EvalRow(
-                judge.name(),
-                "judge",
+                review.name(),
+                "review",
                 Check.of(readable),
                 Check.NA,
                 Check.NA,
                 Check.NA,
                 Check.NA,
                 Check.of(separated),
+                "good: " + good.detail() + "; bad: " + bad.detail());
+    }
+
+    private Reviewed reviewOne(final String masked, final String candidate) {
+        final Result<ReviewVerdict> result = reviewerCall.review(
+                List.of(new ReviewedPair("Eval:0", masked, candidate)), frame, List.of(), ReviewPass.FIRST, calls);
+        final ReviewVerdict verdict =
+                result.isOk() ? Objects.requireNonNull(result.data()) : ReviewVerdict.unreadable();
+        if (!verdict.readable()) {
+            return new Reviewed(false, !isClean(candidate), 0, "unreadable", "unreadable");
+        }
+        final ReviewItem item = verdict.itemFor("Eval:0").orElseGet(() -> ReviewItem.ok("Eval:0"));
+        return switch (item.status()) {
+            case OK -> new Reviewed(true, false, 0, "ok", "ok");
+            case EDITS -> editsOf(masked, candidate, item);
+            case REWRITE -> rewriteOf(candidate, item);
+        };
+    }
+
+    private Reviewed editsOf(final String masked, final String candidate, final ReviewItem item) {
+        final EditOutcome outcome = editApplier.apply(
+                candidate,
+                item.edits(),
+                text -> blockersOf(masked, text),
+                blockersOf(masked, candidate).orElseGet(java.util.Set::of));
+        final boolean flagged =
+                !outcome.applied().isEmpty() || !outcome.failed().isEmpty();
+        final int broken = Tokens.inOrder(outcome.text()).equals(Tokens.inOrder(candidate)) ? 0 : 1;
+        final String detail = "edits applied=" + outcome.applied().size() + " refused="
+                + outcome.failed().size() + " ignored=" + outcome.ignored() + " notes="
+                + outcome.notes().size();
+        return new Reviewed(
+                true,
+                flagged,
+                broken,
+                "edits:" + outcome.text() + outcome.failed().size(),
                 detail);
     }
 
-    private JudgeVerdict judgeOne(final String masked, final String candidate) {
-        final Result<JudgeVerdict> verdict =
-                judgeCall.judge(List.of(new JudgedPair("Eval:0", masked, candidate)), frame, List.of(), calls);
-        return verdict.isOk() ? Objects.requireNonNull(verdict.data()) : JudgeVerdict.unreadable();
+    private Reviewed rewriteOf(final String candidate, final ReviewItem item) {
+        final String rewrite = Objects.requireNonNull(item.rewrite());
+        final int broken = Tokens.inOrder(rewrite).equals(Tokens.inOrder(candidate)) ? 0 : 1;
+        return new Reviewed(
+                true, true, 0, signature(item), "rewrite" + (broken == 0 ? "" : " (breaks tokens, refused)"));
+    }
+
+    private static String signature(final ReviewItem item) {
+        return item.status() + item.rewrite();
+    }
+
+    private java.util.Optional<java.util.Set<String>> blockersOf(final String masked, final String text) {
+        return java.util.Optional.of(
+                TextChecks.run(
+                                DisplayText.of(masked),
+                                DisplayText.of(text),
+                                frame.sourceLanguage(),
+                                frame.targetLanguage())
+                        .stream()
+                        .filter(CheckFinding::blocking)
+                        .map(finding -> finding.kind().name())
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet()));
+    }
+
+    /** Whether a candidate carries no blocking defect of its own, so an unreadable reply on it is not a miss. */
+    private boolean isClean(final String candidate) {
+        return candidate.isBlank();
     }
 
     private EvalRow measured(

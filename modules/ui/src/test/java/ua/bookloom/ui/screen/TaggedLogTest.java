@@ -22,8 +22,8 @@ class TaggedLogTest extends TranslatingScreenTestBase {
                 Arguments.of(LogKind.ACCEPTED, List.of(LOCATOR), "ok    ✓ Segment ch7 · p42 was accepted."),
                 Arguments.of(
                         LogKind.MODEL_CALL,
-                        List.of("judge", " · " + LOCATOR, "2", "1", "0:06"),
-                        "call  ⇄ Judge · ch7 · p42 · round 2 · attempt 1 · 0:06"),
+                        List.of("review", " · " + LOCATOR, "2", "1", "0:06"),
+                        "call  ⇄ Review · ch7 · p42 · round 2 · attempt 1 · 0:06"),
                 Arguments.of(
                         LogKind.CALL_FAILED,
                         List.of("directed_fix", " · " + LOCATOR, "0", "2", "1:30", "timeout"),

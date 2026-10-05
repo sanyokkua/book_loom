@@ -12,7 +12,7 @@ import ua.bookloom.api.pipeline.PauseReason;
 
 /**
  * Decides what an error a model call answered does to the run, and where a decision boundary pauses. Both are pure
- * functions, kept apart from the job so that a call which names no single segment — a chunk's judge — is routed by the
+ * functions, kept apart from the job so that a call which names no single segment — a chunk's reviewer — is routed by the
  * same table, and so that the lock-held control only asks and records.
  *
  * <p>Each switch lists all fifteen codes without a {@code default}, so a sixteenth code cannot compile until

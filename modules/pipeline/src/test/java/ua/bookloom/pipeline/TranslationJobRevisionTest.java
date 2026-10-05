@@ -1,12 +1,12 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
 import static ua.bookloom.pipeline.ChunkRunFixtures.pauses;
+import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.stages;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
@@ -155,7 +155,8 @@ class TranslationJobRevisionTest {
     private static ScriptedChatModel model() {
         return new ScriptedChatModel()
                 .answer(target(T3))
-                .answerTo(JUDGE, judged())
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed())
                 .answerTo(SUMMARY, summaryReply())
                 .answerTo(REVISION, target("Сем пішла."));
     }

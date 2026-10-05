@@ -31,8 +31,8 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 /**
  * The prompt eval: the fixed case set through the production prompt builders against a real local Ollama model,
  * measured before any repair a run would make. Local-only — {@code ./gradlew :pipeline:promptEval} with
- * {@code BOOKLOOM_EVAL_URL} (for example {@code http://localhost:11434}; with {@code BOOKLOOM_EVAL_PROVIDER=lmstudio} the OpenAI-compatible {@code http://localhost:1234/v1}), {@code BOOKLOOM_EVAL_STABILITY} (judge each corpus case this many times) and optionally
- * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_SKIP_JUDGE=1} (draft, fix and suggest cases only, for a model whose judge call stalls) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
+ * {@code BOOKLOOM_EVAL_URL} (for example {@code http://localhost:11434}; with {@code BOOKLOOM_EVAL_PROVIDER=lmstudio} the OpenAI-compatible {@code http://localhost:1234/v1}), {@code BOOKLOOM_EVAL_STABILITY} (review each corpus case this many times) and optionally
+ * {@code BOOKLOOM_EVAL_MODEL} (default {@code gemma4:e4b-mlx}) and {@code BOOKLOOM_EVAL_SKIP_REVIEW=1} (draft, fix and suggest cases only, for a model whose reviewer call stalls) and {@code BOOKLOOM_EVAL_ONLY} (a case-name prefix, such
  * as {@code suggest}, to run only those cases); skipped when the URL is unset. The table is written to
  * {@code build/reports/promptEval/<model>.txt}.
  *
@@ -52,7 +52,7 @@ class PromptEvalTest {
             List.of("en", "ru", "uk", "fr", "hr", "pl", "cs", "sl", "sk", "es", "pt", "de");
 
     @Test
-    void promptEval_realModel_meetsTheParseGateAndJudgeFloors() throws IOException {
+    void promptEval_realModel_meetsTheParseGateAndReviewerFloors() throws IOException {
         final String model = System.getenv().getOrDefault("BOOKLOOM_EVAL_MODEL", DEFAULT_MODEL);
         final ModelCalls calls = calls(model);
         final int repeats = Integer.parseInt(System.getenv().getOrDefault("BOOKLOOM_EVAL_STABILITY", "1"));
@@ -77,7 +77,7 @@ class PromptEvalTest {
     private static EvalReport englishToUkrainian(final ModelCalls calls, final String model, final int repeats) {
         final PromptEvalRunner runner = new PromptEvalRunner(calls);
         final String only = System.getenv().getOrDefault("BOOKLOOM_EVAL_ONLY", "");
-        final boolean skipJudge = "1".equals(System.getenv("BOOKLOOM_EVAL_SKIP_JUDGE"));
+        final boolean skipReview = "1".equals(System.getenv("BOOKLOOM_EVAL_SKIP_REVIEW"));
         final boolean corpusOnly = "corpus".equals(only);
         return new EvalReport(
                 model,
@@ -85,9 +85,9 @@ class PromptEvalTest {
                         ? List.of()
                         : runner.runAll(PromptEvalCases.ALL.stream()
                                 .filter(evalCase -> evalCase.name().startsWith(only))
-                                .filter(evalCase -> !skipJudge || !(evalCase instanceof EvalCase.Judge))
+                                .filter(evalCase -> !skipReview || !(evalCase instanceof EvalCase.Review))
                                 .toList()),
-                skipJudge ? List.of() : runner.runDefects(EvalCorpus.defects(), repeats),
+                skipReview ? List.of() : runner.runDefects(EvalCorpus.defects(), repeats),
                 rulesLabel());
     }
 

@@ -30,11 +30,9 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.judge.JudgeDeferral;
 
 /**
- * Which deferrals a fact leaves behind: a changed locked term on the decided segments holding its previous rendering, a
- * judge's deferral on its segment, and a character of unknown gender on each segment naming it.
+ * Which deferrals a fact leaves behind: a changed locked term on the decided segments holding its previous rendering, and a character of unknown gender on each segment naming it.
  */
 class DeferralRegisterTest {
 
@@ -123,23 +121,6 @@ class DeferralRegisterTest {
     }
 
     @Test
-    void fromJudge_deferralOnASegment_becomesAJudgeDeferralWaitingOnTheReason() {
-        final List<Deferral> deferrals = DeferralRegister.fromJudge(
-                PROJECT, List.of(new JudgeDeferral("ch01.xhtml:9", "whether Sam is a woman")));
-
-        assertThat(deferrals)
-                .containsExactly(new Deferral(
-                        "p1:ch01.xhtml:9:JUDGE:whether Sam is a woman",
-                        PROJECT,
-                        "ch01.xhtml:9",
-                        DeferralReason.JUDGE,
-                        "whether Sam is a woman",
-                        null,
-                        null,
-                        null));
-    }
-
-    @Test
     void unknownGender_characterOfUnknownGenderNamed_recordsOneGenderDeferralWaitingOnTheTerm() {
         final List<Deferral> deferrals = DeferralRegister.unknownGender(
                 PROJECT, sam(), List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN)));
@@ -157,22 +138,15 @@ class DeferralRegisterTest {
     }
 
     static Stream<Arguments> deferralsWaitingOnBookOrModelText() {
-        return Stream.of(
-                Arguments.of(
-                        "a judge deferral",
-                        (Supplier<List<Deferral>>) () -> DeferralRegister.fromJudge(
-                                PROJECT, List.of(new JudgeDeferral("ch01.xhtml:9", "whether Sam is a woman"))),
-                        "whether Sam is a woman",
-                        "reason=JUDGE"),
-                Arguments.of(
-                        "an unknown-gender deferral",
-                        (Supplier<List<Deferral>>) () -> DeferralRegister.unknownGender(
-                                PROJECT, sam(), List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN))),
-                        "Sam",
-                        "reason=GENDER_UNKNOWN"));
+        return Stream.of(Arguments.of(
+                "an unknown-gender deferral",
+                (Supplier<List<Deferral>>) () -> DeferralRegister.unknownGender(
+                        PROJECT, sam(), List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN))),
+                "Sam",
+                "reason=GENDER_UNKNOWN"));
     }
 
-    // The judge's words and a character's name are model and book text, which the log holds at TRACE only.
+    // A character's name is book text, which the log holds at TRACE only.
     @ParameterizedTest(name = "{0}")
     @MethodSource("deferralsWaitingOnBookOrModelText")
     void deferralRecorded_textWaitedOn_isLoggedAtTraceOnly(

@@ -26,7 +26,7 @@ import ua.bookloom.pipeline.memory.ProtectedSpans;
  * The ways a segment is decided without a draft call of its own, tried before the memory and the draft. A segment
  * with nothing to translate is kept as it is ({@link VerbatimCheck}). An auxiliary text identical to one drafted or
  * accepted earlier in the run takes that answer: one book's 58 {@code image} alt texts and 80 identical page titles
- * each cost a call before. A copied draft is still judged and decided on its own, and an earlier acceptance is reused
+ * each cost a call before. A copied draft is still reviewed and decided on its own, and an earlier acceptance is reused
  * only after the memory's own checks pass, so every slot keeps its own record and decision.
  *
  * <p>Used from the job thread only, which is why the state is a plain map.

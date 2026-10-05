@@ -74,18 +74,21 @@ public enum PromptName {
             null,
             new Slots(Set.of("rejectedTarget", "tokens"), Set.of("gateNote"))),
 
-    /** Scores a chunk's drafted pairs once per chunk; its output limit grows with the number of pairs. */
-    JUDGE(
-            "judge",
-            CallKind.JUDGE,
-            "judge",
-            JudgeSchema.SCHEMA,
-            0.1,
+    /**
+     * Reviews a chunk's drafted pairs once per chunk and answers per pair {@code ok}, find-and-replace edits or a
+     * rewrite; its temperature is zero, because the answer must repeat, and its output limit grows with the pairs.
+     */
+    REVIEWER(
+            "reviewer",
+            CallKind.REVIEW,
+            "reviewer",
+            ReviewerSchema.SCHEMA,
+            0.0,
             null,
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
                     Set.of("languageRules")),
-            new Slots(Set.of("pairs", "targetLanguage"), Set.of("glossaryTerms"))),
+            new Slots(Set.of("pairs"), Set.of("glossaryTerms", "passFocus"))),
 
     /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
     DIRECTED_FIX(
@@ -275,9 +278,9 @@ public enum PromptName {
         return this == SUGGEST_TARGETS;
     }
 
-    /** Whether the call judges a translation, so its language rules include the reviewer checks. */
+    /** Whether the call reviews a translation, so its language rules include the reviewer checks. */
     boolean reviewsTranslation() {
-        return this == JUDGE;
+        return this == REVIEWER;
     }
 
     /** The system template's slots, or empty when the call reuses another call's system message. */

@@ -30,13 +30,11 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.Severity;
-import ua.bookloom.pipeline.judge.JudgeDeferral;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 
 /**
  * The consistency pass's revision calls over a real opened EPUB: a character whose gender became known is re-rendered
- * through one call per segment, a reply that breaks the markup or cannot be read changes nothing, a judge deferral is
- * left alone, and a segment the person edited only gets a proposal that the real review desk applies on acceptance.
+ * through one call per segment, a reply that breaks the markup or cannot be read changes nothing, and a segment the person edited only gets a proposal that the real review desk applies on acceptance.
  */
 class ConsistencyPassGenderTest {
 
@@ -180,20 +178,6 @@ class ConsistencyPassGenderTest {
 
         assertThat(book.model().requests()).isEmpty();
         assertThat(book.openDeferrals()).hasSize(1);
-    }
-
-    // A judge deferral is recorded only: the pass neither calls the model for it nor resolves it.
-    @Test
-    void run_judgeDeferral_untouchedAndNoCall() {
-        book.decide(SAM_DOOR, DOOR_PLAIN, DOOR_MASKED);
-        DeferralRegister.fromJudge(book.desk().projectId(), List.of(new JudgeDeferral(SAM_DOOR, "who keeps the light")))
-                .forEach(book::recordDeferral);
-
-        ok(book.run(true));
-
-        assertThat(book.model().requests()).isEmpty();
-        assertThat(book.stored(SAM_DOOR).status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(book.openDeferrals()).extracting(Deferral::reason).containsExactly(DeferralReason.JUDGE);
     }
 
     // The person's edit is never overwritten: the re-render waits as a proposal until the desk applies it.

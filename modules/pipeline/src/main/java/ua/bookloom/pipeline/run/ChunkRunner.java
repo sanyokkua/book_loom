@@ -28,15 +28,15 @@ import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
 
 /**
- * Takes each unit's pending segments through chunks, in document order (design D4a). With the judge on, a chunk's
- * segments are all drafted before its one judge call and only then decided one at a time, because the judge reads the
- * whole chunk; with it off each segment is drafted and decided before the next is drafted. The judge on or off is this
- * one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
- * place and is decided in its turn with neither a draft nor the judge. What follows each decision — its deferrals, the
+ * Takes each unit's pending segments through chunks, in document order (design D4a). With the reviewer on, a chunk's
+ * segments are all drafted before its reviewer call and only then decided one at a time, because the reviewer reads the
+ * whole chunk; with it off each segment is drafted and decided before the next is drafted. The reviewer on or off is
+ * this one branch, not a strategy. A segment whose context matches a memory entry that passes its checks takes the draft's
+ * place and is decided in its turn with neither a draft nor the reviewer. What follows each decision — its deferrals, the
  * rolling summary and a unit's new names — is {@link DecisionFollowUp}'s, before the decision's pause boundary.
  *
  * <p>A chunk's drafts and its decider stay in memory across a pause, so resuming redoes only the call the pause
- * aborted — a draft, the judge, or the call inside a segment's rounds that failed. A step that pauses the run twice
+ * aborted — a draft, the reviewer, or the call inside a segment's rounds that failed. A step that pauses the run twice
  * for a provider error, or that the person skips from the pause, is flagged and the run goes on. A stop drops the
  * undecided drafts: those segments stay PENDING with no target, and the next run drafts them from the first pending
  * one.
@@ -169,11 +169,11 @@ public final class ChunkRunner {
                 new ChunkDrafts(),
                 new ChunkBatches(),
                 context,
-                new LoopSettings(settings.mode(), settings.dial(), settings.frame(), settings.names(), context.terms()),
+                loopSettings(context),
                 steps.translator().gatedBy(context.gate()),
                 budget);
         final Optional<RunEnd> end =
-                settings.dial().judge() ? judgedChunk(current, items) : unjudgedChunk(current, items);
+                settings.dial().hasReviewer() ? reviewedChunk(current, items) : unreviewedChunk(current, items);
         if (end.isPresent()) {
             final List<String> dropped = current.drafts().undecidedIds();
             log.debug("Stopped inside chunk={} droppedDrafts={} ids={}", index, dropped.size(), dropped);
@@ -183,8 +183,18 @@ public final class ChunkRunner {
         return commitChunk(index, items.size());
     }
 
-    // The judge call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.
-    private Optional<RunEnd> judgedChunk(final Current current, final List<WorkItem> items) {
+    private LoopSettings loopSettings(final ChunkContext context) {
+        return new LoopSettings(
+                settings.mode(),
+                settings.dial(),
+                settings.frame(),
+                settings.names(),
+                context.terms(),
+                context.termPairs());
+    }
+
+    // The reviewer call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.
+    private Optional<RunEnd> reviewedChunk(final Current current, final List<WorkItem> items) {
         for (final WorkItem item : items) {
             final Step<DraftOutcome> drafted =
                     SegmentLogContext.within(item.segment().id(), () -> draft(current, item));
@@ -192,12 +202,12 @@ public final class ChunkRunner {
                 return Optional.of(end);
             }
         }
-        log.debug("Chunk drafted segments={}; judging it once", items.size());
+        log.debug("Chunk drafted segments={}; reviewing it", items.size());
         return decideWith(current, null, items, current.drafts().all());
     }
 
-    private Optional<RunEnd> unjudgedChunk(final Current current, final List<WorkItem> items) {
-        log.debug("Chunk not judged segments={}: the dial turns the judge off", items.size());
+    private Optional<RunEnd> unreviewedChunk(final Current current, final List<WorkItem> items) {
+        log.debug("Chunk not reviewed segments={}: the dial turns the reviewer off", items.size());
         for (final WorkItem item : items) {
             final Optional<RunEnd> end =
                     SegmentLogContext.within(item.segment().id(), () -> draftAndDecide(current, item));
@@ -217,8 +227,8 @@ public final class ChunkRunner {
     }
 
     /**
-     * Starts the quality loop over the outcomes — the judge call, when the dial enables it — then decides them.
-     * {@code segmentId} is the one segment an unjudged loop starts for, or {@code null} for a judged chunk.
+     * Starts the quality loop over the outcomes — the reviewer call, when the dial enables it — then decides them.
+     * {@code segmentId} is the one segment an unreviewed loop starts for, or {@code null} for a reviewed chunk.
      */
     private Optional<RunEnd> decideWith(
             final Current current,
@@ -228,11 +238,11 @@ public final class ChunkRunner {
         final Step<ChunkDecider> decider = calls.untilAnsweredOrFlagged(
                 current.work(),
                 segmentId,
-                new RoutedCalls.StepName("judge", items.getFirst().segment().id()),
+                new RoutedCalls.StepName("review", items.getFirst().segment().id()),
                 () -> steps.loop()
                         .start(outcomes, current.loop(), current.context().gate(), steps.calls()),
                 error -> steps.loop()
-                        .startWithoutJudge(
+                        .startWithoutReviewer(
                                 outcomes, current.loop(), current.context().gate(), steps.calls(), error));
         return switch (decider) {
             case Step.Stopped<ChunkDecider>(final RunEnd end) -> Optional.of(end);
@@ -336,12 +346,11 @@ public final class ChunkRunner {
                 decider::nextDecision,
                 decider::flagCurrent)) {
             case Step.Stopped<SegmentOutcome>(final RunEnd stopped) -> Optional.of(stopped);
-            case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome, decider);
+            case Step.Done<SegmentOutcome>(final SegmentOutcome outcome) -> record(current, item, outcome);
         };
     }
 
-    private Optional<RunEnd> record(
-            final Current current, final WorkItem item, final SegmentOutcome outcome, final ChunkDecider decider) {
+    private Optional<RunEnd> record(final Current current, final WorkItem item, final SegmentOutcome outcome) {
         final SegmentRecord record = OutcomeRecords.decided(
                 item.record(), outcome, current.drafts().snapshot(item.segment().id()));
         sinks.pending()
@@ -364,7 +373,7 @@ public final class ChunkRunner {
         if (record.path() == SegmentPath.TM_REUSE) {
             sinks.emit().accept(memory.announced(record.segmentId()));
         }
-        return followUp.decided(current.work(), item, record, current.context().glossary(), decider.deferrals())
+        return followUp.decided(current.work(), item, record, current.context().glossary())
                 .or(() -> sinks.boundaries().afterDecision(boundaryOf(current.work(), item, record), progress));
     }
 

@@ -3,13 +3,12 @@ package ua.bookloom.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
 import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
@@ -41,8 +40,6 @@ import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.api.pipeline.QualityDial;
-import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 
 /**
@@ -53,8 +50,10 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class TranslationJobStallTest {
 
     private static final String FIXED_T0 = "Старий чоловік повільно пішов до гавані.";
-    private static final String MEANING_ON_S1 = "{\"score\":0.9,\"verdict\":\"revise\",\"findings\":[{\"segmentId\":"
-            + "\"s1\",\"type\":\"meaning\",\"severity\":\"medium\",\"note\":\"drops a word\"}],\"deferrals\":[]}";
+    // The reviewer's edit for s1 would mix two alphabets in one word, which a hard check refuses: a directed fix
+    // follows.
+    private static final String REFUSED_EDIT_ON_S1 = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
+            + "{\"criterion\":\"meaning\",\"quote\":\"чоловік пішов\",\"replacement\":\"чоловік пішoв\"}]}]}";
 
     @TempDir
     private Path tempDir;
@@ -64,35 +63,13 @@ class TranslationJobStallTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // The re-judge after a directed fix times out (the provider already retried it): the fixed target is kept and
-    // flagged, the next segment is decided, and the run never pauses although it pauses on errors.
+    // Only a stall degrades the reviewer; a provider outage pauses, as TranslationJobUnattendedRecoveryTest proves. The
+    // second request is the same call sent again without its response format.
     @Test
-    void run_rejudgeTimesOutAfterAFix_flagsThatSegmentAndFinishesWithoutAPause() {
-        final ScriptedChatModel model = replies(T0, T1, FIXED_T0)
-                .answerTo(JUDGE, ok(MEANING_ON_S1))
-                .answerTo(JUDGE, Result.err(error(ErrorCode.timeout)));
-        final TestProject project = project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED));
-        final TranslationJobImpl translation = job(project, model);
-        final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
-        translation.pauseAt(Set.of(PausePoint.ON_ERROR));
-
-        final JobReport report = report(await(executor().submit(translation::run)));
-
-        assertThat(pauses).isEmpty();
-        assertThat(report.end()).isEqualTo(JobState.COMPLETED);
-        assertThat(report.flaggedSegments()).containsExactly(new FlaggedSegment("Book.md:0", ErrorCode.timeout));
-        final SegmentRecord flagged = stored(project, "Book.md:0");
-        assertThat(flagged.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(flagged.machineTarget()).isEqualTo(FIXED_T0);
-        assertThat(flagged.findings()).extracting(QaFinding::kind).contains("judge-unavailable");
-        assertThat(stored(project, "Book.md:1").status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, JUDGE, FIX, JUDGE);
-    }
-
-    // Only a stall degrades the judge; a provider outage pauses, as TranslationJobUnattendedRecoveryTest proves.
-    @Test
-    void run_chunkJudgeTimesOut_flagsTheChunkAndFinishesWithoutAPause() {
-        final ScriptedChatModel model = replies(T0, T1).answerTo(JUDGE, Result.err(error(ErrorCode.timeout)));
+    void run_chunkReviewTimesOutTwice_flagsTheChunkAndFinishesWithoutAPause() {
+        final ScriptedChatModel model = replies(T0, T1)
+                .answerTo(REVIEW, Result.err(error(ErrorCode.timeout)))
+                .answer(Result.err(error(ErrorCode.timeout)));
         final TestProject project = project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
@@ -151,13 +128,15 @@ class TranslationJobStallTest {
         assertThat(model.requests()).hasSize(3);
     }
 
-    // The fix had already answered when the re-judge failed: resuming sends the re-judge again, not the fix.
+    // The reviewer had already answered when the directed fix for its refused edit failed: resuming sends the fix
+    // again,
+    // not the reviewer.
     @Test
-    void run_resumedAfterTheRejudgeFailed_continuesAtTheRejudge() {
-        final ScriptedChatModel model = replies(T0, T1, FIXED_T0)
-                .answerTo(JUDGE, ok(MEANING_ON_S1))
-                .answerTo(JUDGE, Result.err(error(ErrorCode.upstream)))
-                .answerTo(JUDGE, judged());
+    void run_resumedAfterTheFixForARefusedEditFailed_continuesAtTheFix() {
+        final ScriptedChatModel model = replies(T0, T1)
+                .answer(Result.err(error(ErrorCode.upstream)))
+                .answer(target(FIXED_T0))
+                .answerTo(REVIEW, ok(REFUSED_EDIT_ON_S1));
         final TestProject project = project(twoParagraphs(), brief("en", "uk", QualityDial.BALANCED));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pausesOf(translation);
@@ -170,7 +149,7 @@ class TranslationJobStallTest {
 
         assertThat(report.accepted()).isEqualTo(2);
         assertThat(stored(project, "Book.md:0").machineTarget()).isEqualTo(FIXED_T0);
-        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, JUDGE, FIX, JUDGE, JUDGE);
+        assertThat(formats(model)).containsExactly(DRAFT, DRAFT, REVIEW, FIX, FIX);
     }
 
     private Path twoParagraphs() {

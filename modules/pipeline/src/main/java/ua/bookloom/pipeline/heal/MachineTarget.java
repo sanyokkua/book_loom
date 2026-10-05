@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.heal;
 
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * The last target that passed every hard gate, in both its restored and masked forms, or neither when none ever
@@ -21,5 +22,18 @@ record MachineTarget(@Nullable String restored, @Nullable String masked) {
      */
     static MachineTarget none() {
         return NONE;
+    }
+
+    /**
+     * The target a draft stands on: its own when it passed every hard gate, else none.
+     *
+     * @param outcome the drafted segment
+     * @param qa the draft's evaluation
+     * @return the draft's restored and masked forms, or none when a hard gate failed
+     */
+    static MachineTarget of(final DraftOutcome.Drafted outcome, final QaResult qa) {
+        return outcome.restoredTarget() != null && qa.hardGatesPass()
+                ? new MachineTarget(outcome.restoredTarget(), outcome.maskedForm())
+                : NONE;
     }
 }

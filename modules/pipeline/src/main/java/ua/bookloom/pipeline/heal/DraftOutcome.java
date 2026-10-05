@@ -13,7 +13,7 @@ import ua.bookloom.pipeline.qa.QaResult;
  * One chunk segment's outcome from the draft phase: a reply the quality loop can evaluate, content design D3's rules
  * 2-4 (or a model {@code emptyCompletion}/{@code contextWindow} reply) already flagged without a self-heal round
  * ({@code specs/translation-pipeline/spec.md} "Flag a segment whose reply cannot be used, and continue"), a
- * context-matched memory reuse that already passed its checks and is neither drafted nor judged, or a segment with
+ * context-matched memory reuse that already passed its checks and is neither drafted nor reviewed, or a segment with
  * nothing to translate, kept as it is with no call ({@link VerbatimRule}).
  */
 public sealed interface DraftOutcome {
@@ -24,7 +24,7 @@ public sealed interface DraftOutcome {
     /**
      * The text the draft was shown — the segment's masked source with its protected spans behind tokens — which every
      * self-heal rewrite shows under {@code [Source]}, because the span gate needs each token back exactly once. The
-     * judge reads {@link Segment#masked()} instead, beside a candidate whose names are back in place.
+     * reviewer reads this text too, and quotes the draft's {@link Drafted#maskedReply()}, because its edits are applied to that.
      */
     String maskedSource();
 
@@ -182,8 +182,8 @@ public sealed interface DraftOutcome {
 
     /**
      * A translation-memory target reused because the segment's source and both neighbours match the entry's; it
-     * already passed its hard gates, checks and τ when the run found it, so it is accepted in its turn with no call
-     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the judge").
+     * already passed its hard gates and checks when the run found it, so it is accepted in its turn with no call
+     * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the reviewer").
      *
      * @param segment the segment this outcome is about
      * @param maskedSource the text a draft would have been shown, protected spans behind tokens
@@ -214,7 +214,7 @@ public sealed interface DraftOutcome {
     }
 
     /**
-     * A segment with nothing to translate, kept as its own source with no model call and no judge
+     * A segment with nothing to translate, kept as its own source with no model call and no reviewer
      * ({@code specs/translation-pipeline/spec.md} "Keep a segment with nothing to translate as it is").
      *
      * @param segment the segment this outcome is about

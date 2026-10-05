@@ -51,7 +51,7 @@ import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
 
 /**
- * A retry is one fair second attempt: it replays the context the first draft saw, is decided by the same checks, judge
+ * A retry is one fair second attempt: it replays the context the first draft saw, is decided by the same checks, reviewer
  * and acceptance rule with no repair round, never downgrades an accepted segment and never queues behind a running book.
  */
 class RetryDraftTest {
@@ -91,8 +91,8 @@ class RetryDraftTest {
     }
 
     @Test
-    void retry_noteAndLowerTemperature_makesOneDraftAtTheLowerTemperatureThenOneJudgeOverThePair() {
-        // one draft call at 0.1 carrying the note as its extra instruction, then the judge over that one pair as s1
+    void retry_noteAndLowerTemperature_makesOneDraftAtTheLowerTemperatureThenOneReviewerOverThePair() {
+        // one draft call at 0.1 carrying the note as its extra instruction, then the reviewer over that one pair as s1
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
         final ScriptedChatModel model = passing();
 
@@ -100,11 +100,11 @@ class RetryDraftTest {
 
         assertThat(model.requests())
                 .extracting(request -> formatOf(request), ChatRequest::temperature)
-                .containsExactly(tuple("draft", 0.1), tuple("judge", 0.1));
+                .containsExactly(tuple("draft", 0.1), tuple("reviewer", 0.0));
         assertThat(userMessage(model.requests().getFirst())).contains("[Extra instruction]\n" + NOTE);
         assertThat(userMessage(model.requests().get(1)))
-                .contains("<Pair id=\"s1\">\n<Source>The monster met me at midnight.</Source>\n<Candidate>"
-                        + MONSTER_TARGET);
+                .contains(
+                        "<Pair id=\"s1\"><Source>The monster met me at midnight.</Source><Candidate>" + MONSTER_TARGET);
     }
 
     @Test
@@ -196,7 +196,7 @@ class RetryDraftTest {
         assertThat(record.findings())
                 .extracting(QaFinding::kind, QaFinding::severity, QaFinding::raisedBy)
                 .contains(tuple("omission", Severity.MEDIUM, "length"));
-        assertThat(model.requests()).extracting(RetryDraftTest::formatOf).containsExactly("draft", "judge");
+        assertThat(model.requests()).extracting(RetryDraftTest::formatOf).containsExactly("draft");
         assertThat(stored(desk, FLAGGED_ID)).isEqualTo(record);
     }
 
@@ -281,7 +281,7 @@ class RetryDraftTest {
     @Test
     void retry_segmentTheRunDraftsInPieces_draftsEachPieceWithTheNoteAndJoinsThem() {
         // 200 sentences are above the run.s 1,200-token chunk budget: two piece drafts,
-        // each at the lower temperature with the note, joined into one target that the judge then accepts
+        // each at the lower temperature with the note, joined into one target that the reviewer then lets stand
         final String source = IntStream.range(100, 300)
                 .mapToObj(number -> "The night number " + number + " was calm.")
                 .collect(Collectors.joining(" "));
@@ -296,7 +296,7 @@ class RetryDraftTest {
 
         assertThat(model.requests)
                 .extracting(RetryDraftTest::formatOf, ChatRequest::temperature)
-                .containsExactly(tuple("draft", 0.1), tuple("draft", 0.1), tuple("judge", 0.1));
+                .containsExactly(tuple("draft", 0.1), tuple("draft", 0.1), tuple("reviewer", 0.0));
         assertThat(model.requests.subList(0, 2))
                 .allSatisfy(draft -> assertThat(userMessage(draft)).contains("[Extra instruction]\n" + NOTE));
         assertThat(userMessage(model.requests.getFirst())).contains("The night number 100 was calm.");
@@ -329,9 +329,7 @@ class RetryDraftTest {
     static ScriptedChatModel answering(final String target) {
         return new ScriptedChatModel()
                 .answerTo("draft", reply(target))
-                .answerTo(
-                        "judge",
-                        Result.ok(new ChatResponse("{\"score\":0.9,\"verdict\":\"accept\"}", FinishReason.STOP)));
+                .answerTo("reviewer", Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP)));
     }
 
     private static Result<ChatResponse> reply(final String target) {
@@ -358,7 +356,7 @@ class RetryDraftTest {
         return Objects.requireNonNull(result.error(), () -> "expected an error but got " + result.data());
     }
 
-    /** Translates each night sentence of whatever text a draft shows it, and accepts whatever the judge is shown. */
+    /** Translates each night sentence of whatever text a draft shows it, and accepts whatever the reviewer is shown. */
     private static final class PieceTranslatingModel implements ChatModel {
 
         private static final Pattern TEXT = Pattern.compile("<Text>\n(.*)\n</Text>", Pattern.DOTALL);
@@ -369,8 +367,8 @@ class RetryDraftTest {
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final Matcher body = TEXT.matcher(userMessage(request));
-            return "judge".equals(formatOf(request)) || !body.find()
-                    ? Result.ok(new ChatResponse("{\"score\":0.9,\"verdict\":\"accept\"}", FinishReason.STOP))
+            return "reviewer".equals(formatOf(request)) || !body.find()
+                    ? Result.ok(new ChatResponse("{\"results\":[]}", FinishReason.STOP))
                     : reply(NIGHT.matcher(body.group(1)).replaceAll("Ніч номер $1 була дуже тихою."));
         }
     }

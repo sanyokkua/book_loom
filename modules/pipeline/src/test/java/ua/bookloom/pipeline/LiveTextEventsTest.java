@@ -81,18 +81,18 @@ class LiveTextEventsTest {
         assertThat(door.detail())
                 .isNotNull()
                 .extracting(SegmentDetail::judgeScore, SegmentDetail::path)
-                .containsExactly(0.91, SegmentPath.DRAFT);
+                .containsExactly(null, SegmentPath.DRAFT);
     }
 
-    // The judge scores the whole chunk, so its call belongs to no one segment but names every segment it judges.
+    // The reviewer reads the whole chunk, so its call belongs to no one segment but names every segment it reviews.
     @Test
-    void run_judgedChunkOfFortyAndFortyOne_announcesOneJudgeCallNamingBothSegments() {
+    void run_reviewedChunkOfFortyAndFortyOne_announcesOneReviewerCallNamingBothSegments() {
         final List<JobEvent> events = runDoor();
 
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
                 .map(ModelCallStarted.class::cast)
-                .filteredOn(started -> started.kind() == CallKind.JUDGE)
+                .filteredOn(started -> started.kind() == CallKind.REVIEW)
                 .extracting(ModelCallStarted::segmentId, ModelCallStarted::segmentIds)
                 .containsExactly(tuple(null, List.of("ch07.xhtml:40", "ch07.xhtml:41")));
     }

@@ -65,13 +65,12 @@ class PseudoChatModelTest {
         assertThat(response.content()).isEqualTo("{\"target\":\"HI\"}");
     }
 
-    // The judge always accepts, so a whole pseudo run never flags a segment on the judge's say-so.
+    // The reviewer never asks for an edit, so a whole pseudo run never changes or flags a segment on its say-so.
     @Test
-    void chat_judgeFormat_repliesWithAcceptingVerdict() {
-        final ChatResponse response = send("anything", "judge");
+    void chat_reviewerFormat_repliesWithNoResults() {
+        final ChatResponse response = send("anything", "reviewer");
 
-        assertThat(response.content())
-                .isEqualTo("{\"score\":1.0,\"verdict\":\"accept\",\"findings\":[],\"deferrals\":[]}");
+        assertThat(response.content()).isEqualTo("{\"results\":[]}");
     }
 
     // Reflect never raises a critique of its own.

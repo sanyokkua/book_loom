@@ -20,14 +20,14 @@ sweep), `:llm` (chat-model contract, factory, pseudo model, gated/retried Ollama
 token usage, verification, model discovery), `:persistence` (in-memory adapters behind the storage ports), `:pipeline`
 (translation engine, pausable and interruptible job, checked export; prompt templates, style sheet, quality dial, chunk
 packing, oversized-segment splitting, the stored-project service; the quality gates — deterministic checks, refusal
-gate, confidence, per-chunk judge, directed fix, reflect → improve, polish, acceptance rule and quality loop; open language tags, the deterministic and model name scans, protected spans,
+gate, confidence, the per-chunk reviewer with verified edits, directed fix, reflect → improve, polish, acceptance rule and quality loop; open language tags, the deterministic and model name scans, protected spans,
 translation memory, rolling summary, context assembly, the deferral register, the glossary service with CSV), `:ui`
 (the shell, six screens, the state mirror, English and Ukrainian bundles chosen by the OS, light/dark theme) and `:app`
 (boot, logging, single-instance lock, DI, the window). A book of any of the four formats goes through the whole
 pipeline from the window or the command line, with the pseudo model or a configured real provider — as a run on the
 stored project that starts at its first pending segment and stores each decision there: preparation derives the brief's
 style sheet and scans an empty glossary for names, each unit is packed into chunks, and every segment is drafted,
-judged when the dial enables the judge, and decided by the acceptance rule and the quality loop, so an untranslated
+reviewed when the dial enables the reviewer (it fixes in place, and the code verifies every edit), and decided by the acceptance rule and the quality loop, so an untranslated
 echo is repaired or flagged. The "Also translate" switches decide what is translated, a segment drafted in pieces is repaired by redrafting
 its pieces, locked names and kept foreign runs are protected behind tokens, each draft carries its context package
 and every record its snapshot, repeated passages reuse the translation memory, the rolling summary, new names and
@@ -37,9 +37,9 @@ context the first draft saw), Max revises backwards after the last segment, expo
 the chosen side files, the command line refuses an existing destination before any model call, runs a book unattended with the window's outage recovery, writes what a stopped run translated and is the headless proof tool (`scripts/e2e-fixture.sh`), the
 review mode is a launch flag, and one whole-book test runs the parts together at the HTTP seam.
 
-Real-book hardening (group 15b, after a 3,700-segment Ollama run): every model call is bounded — the judge capped by its
+Real-book hardening (group 15b, after a 3,700-segment Ollama run): every model call is bounded — the reviewer capped by its
 pairs, per-kind timeouts, a timed-out call retried once with a new seed and a lower cap, the Ollama reply read as a
-stream with an idle gap — and a judge that cannot answer flags its segments (`judge-unavailable`) instead of pausing; a
+stream with an idle gap — and a reviewer that cannot answer flags its segments (`reviewer-unavailable`) instead of pausing; a
 step that pauses twice is flagged and the run goes on, a paused run can skip the failing segment, rounds that make no
 progress stop early, and a resume continues at the call that failed. Invisible text is no segment, and a segment with no
 letter, a Roman numeral, one character or only a locked name is kept verbatim with no call. The glossary scan drops
@@ -58,7 +58,7 @@ dialog), and the Settings Providers tab tests a provider three ways with measure
 both light and dark, every operable control explains itself on hover, wheel scrolling glides, the long lists have fixed
 row heights, and the time left is the average of the last 20 timed segments. Not built: saving (nothing survives a
 restart, no remembered settings, no SQLite), the other Settings tabs (Models, Generation, Automation, Storage) and the
-Projects screen. Measurements (15d.0, done): per-call-kind tokens and times in the run summary and the report, `scripts/segment-histogram.py`, `--stop-after`, and the "where the time goes" table in `docs/DEVELOPMENT.md`. Eval foundation (15d.1, done): a judge defect corpus, a draft case set, per-class thresholds and
+Projects screen. Measurements (15d.0, done): per-call-kind tokens and times in the run summary and the report, `scripts/segment-histogram.py`, `--stop-after`, and the "where the time goes" table in `docs/DEVELOPMENT.md`. Eval foundation (15d.1, done): a defect corpus, a draft case set, per-class thresholds and
 `scripts/eval-matrix.sh` over the models in `scripts/eval-models.txt`; gpt-oss now works on Ollama's native endpoint. Batched drafting (15d.8) is built and awaits its real-run measurement: a chunk's segments that need a call go in one JSON call
 and only a failing id is drafted again alone; a run sizes its calls from the detected context window. Next: group 15d
 of `openspec/changes/complete-translation-workflow` in its revised order (measure batching, then
@@ -98,7 +98,7 @@ diagnose; never run two gates at once.
 | `:document` | parse / mask / unmask / reassemble, per format | service |
 | `:llm` | provider port + Ollama-native and OpenAI-compatible clients | service |
 | `:persistence` | in-memory adapters behind the `:api` storage ports (ADR-0034); SQLite + Flyway + JDBI planned | service |
-| `:pipeline` | translation engine: prompts, chunking, QA, judge, self-heal | orchestration |
+| `:pipeline` | translation engine: prompts, chunking, QA, reviewer, self-heal | orchestration |
 | `:ui` | JavaFX views, theming | presentation |
 | `:app` | launcher, composition root, the `archTest` suite | presentation |
 

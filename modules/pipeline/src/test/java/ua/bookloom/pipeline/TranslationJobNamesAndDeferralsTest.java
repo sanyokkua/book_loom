@@ -1,15 +1,11 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
-import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.pauses;
-import static ua.bookloom.pipeline.ChunkRunFixtures.target;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.await;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.awaitPaused;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.brief;
@@ -19,7 +15,6 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.project;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.replies;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.report;
-import static ua.bookloom.pipeline.TranslationJobTestSupport.stored;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -34,29 +29,25 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatResponse;
-import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.MemoryUpdated;
 import ua.bookloom.api.pipeline.PausePoint;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.StageStarted;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 
 /**
  * A run proposes the names a unit introduces into the unit's last commit and announces each glossary update, and
- * stores with each chunk the judge's deferrals and those a character of unknown gender leaves.
+ * stores with each chunk the deferrals a character of unknown gender leaves.
  */
 class TranslationJobNamesAndDeferralsTest {
 
@@ -148,50 +139,6 @@ class TranslationJobNamesAndDeferralsTest {
     }
 
     @Test
-    void run_judgeDeferral_storedWithCommit() {
-        final TestProject project =
-                project(ChunkRunFixtures.fourParagraphs(tempDir), brief("en", "uk", QualityDial.BALANCED));
-        final ScriptedChatModel model = replies(T0, T1, T2, T3)
-                .answerTo(
-                        JUDGE,
-                        reply("{\"score\":0.9,\"verdict\":\"accept\",\"findings\":[],"
-                                + "\"deferrals\":[{\"segmentId\":\"s2\",\"reason\":\"who keeps the light\"}]}"));
-
-        report(job(project, model).run());
-
-        assertThat(openDeferrals(project))
-                .containsExactly(new Deferral(
-                        project.id() + ":Book.md:1:JUDGE:who keeps the light",
-                        project.id(),
-                        "Book.md:1",
-                        DeferralReason.JUDGE,
-                        "who keeps the light",
-                        null,
-                        null,
-                        null));
-    }
-
-    @Test
-    void run_rejudgeDeferral_isStored() {
-        final TestProject project =
-                project(TestBooks.markdown(tempDir.resolve("Book.md"), S0), brief("en", "uk", QualityDial.BALANCED));
-        final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(target(T0))
-                .answer(reply("{\"score\":0.5,\"verdict\":\"revise\",\"findings\":[],\"deferrals\":[]}"))
-                .answer(reply("{\"issues\":[]}"))
-                .answer(target(T0))
-                .answer(reply("{\"score\":0.9,\"verdict\":\"accept\","
-                        + "\"deferrals\":[{\"segmentId\":\"s1\",\"reason\":\"which harbour\"}]}"));
-
-        report(job(project, model).run());
-
-        assertThat(stored(project, "Book.md:0").path()).isEqualTo(SegmentPath.REPAIRED);
-        assertThat(openDeferrals(project))
-                .extracting(Deferral::segmentId, Deferral::reason, Deferral::waitingOn)
-                .containsExactly(tuple("Book.md:0", DeferralReason.JUDGE, "which harbour"));
-    }
-
-    @Test
     void run_unknownGender_recordsDeferral() {
         final TestProject project = project(
                 TestBooks.markdown(
@@ -259,10 +206,6 @@ class TranslationJobNamesAndDeferralsTest {
 
     private static List<Deferral> openDeferrals(final TestProject project) {
         return Objects.requireNonNull(project.deferrals().open(project.id()).data(), "open deferrals");
-    }
-
-    private static Result<ChatResponse> reply(final String content) {
-        return Result.ok(new ChatResponse(content, FinishReason.STOP));
     }
 
     private static GlossaryEntry add(

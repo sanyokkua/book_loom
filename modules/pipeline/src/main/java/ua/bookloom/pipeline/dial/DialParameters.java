@@ -9,7 +9,8 @@ import ua.bookloom.api.pipeline.ReviewMode;
  *
  * @param precedingTargets how many accepted preceding targets accompany a draft
  * @param repairRounds how many directed-fix rounds a flagged segment gets
- * @param judge whether the judge reads each chunk
+ * @param reviewPasses how many times the reviewer reads each chunk: none for Fast, one for Balanced, two for Max, the
+ *     second with a narrower checklist
  * @param backwardRevision whether the backward-revision pass runs after the last segment of the book
  * @param llmSummary whether the rolling summary is written by the model
  * @param chunkCap the most segments in one chunk
@@ -17,7 +18,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 public record DialParameters(
         int precedingTargets,
         int repairRounds,
-        boolean judge,
+        int reviewPasses,
         boolean backwardRevision,
         boolean llmSummary,
         int chunkCap) {
@@ -32,20 +33,29 @@ public record DialParameters(
      */
     public static DialParameters of(final QualityDial dial) {
         return switch (Objects.requireNonNull(dial, "dial")) {
-            case FAST -> new DialParameters(1, 1, false, false, false, 8);
-            case BALANCED -> new DialParameters(2, 2, true, false, false, 4);
-            case MAX -> new DialParameters(3, 3, true, true, true, 2);
+            case FAST -> new DialParameters(1, 1, 0, false, false, 8);
+            case BALANCED -> new DialParameters(2, 2, 1, false, false, 4);
+            case MAX -> new DialParameters(3, 3, 2, true, true, 2);
         };
     }
 
     /**
      * This row with no repair round: a review retry is one attempt the person asked for, decided by the same checks
-     * and judge, never followed by an automatic repair.
+     * and reviewer, never followed by an automatic repair.
      *
      * @return the same row with {@code repairRounds} 0
      */
     public DialParameters withoutRepairRounds() {
-        return new DialParameters(precedingTargets, 0, judge, backwardRevision, llmSummary, chunkCap);
+        return new DialParameters(precedingTargets, 0, reviewPasses, backwardRevision, llmSummary, chunkCap);
+    }
+
+    /**
+     * Whether the reviewer reads each chunk.
+     *
+     * @return {@code true} for every dial but Fast
+     */
+    public boolean hasReviewer() {
+        return reviewPasses > 0;
     }
 
     /**

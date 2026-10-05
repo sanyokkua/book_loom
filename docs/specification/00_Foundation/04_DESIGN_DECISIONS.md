@@ -510,10 +510,10 @@ count, repair budget N, judge on/off, backward-revision on/off) and never sets �
 **not offered in this build**. The judge scores a **chunk** once; a **segment** — not a chunk — is accepted only when
 its hard gates pass, no soft check failed outright (a failed check raises at least a medium finding and sends the
 segment to a directed fix, except that a failed untranslated-echo check on a source under 20 code points only lowers
-confidence), its confidence reaches τ, and either the judge is off or the chunk's score reaches τ_judge with no medium
-or high finding against that segment; a context-matched translation-memory reuse is accepted without the judge.
+confidence), and no verified reviewer blocker is left — 15d.6 retired the confidence threshold and the judge score; a
+context-matched translation-memory reuse is accepted without the reviewer.
 `confidence` is a documented weighted blend of the soft deterministic-QA check margins (hard gates excluded; the judge
-score is not folded into it). The judge returns `{score, verdict}`; `score ≥ τ_judge` decides, `verdict` is advisory.
+score is not folded into it, and it only orders segments). The reviewer returns per segment `ok`, verified edits or a rewrite.
 **Why:** τ had three owners and three meanings; the accept gate must be single-sourced and testable, including when the
 judge is off, and a soft-check failure must never be outvoted by a high confidence score. **Consequences:**
 Quality-dial mapping loses its τ row; τ_judge defaults to τ; acceptance is per-segment even though scoring is per-chunk.

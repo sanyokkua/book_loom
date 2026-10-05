@@ -60,6 +60,7 @@ class PromptHygieneLintTest {
             Map.entry("memoryHint", "He left. → Він пішов."),
             Map.entry("precedingTargets", "Один."),
             Map.entry("extraInstruction", "Keep the dialogue tone."),
+            Map.entry("passFocus", "This is a second pass over text already reviewed once."),
             Map.entry("rejectedReply", "not json"),
             Map.entry("diagnostic", "the reply is not a JSON object"),
             Map.entry("rejectedTarget", "Гейл і Моро відчинили двері."),
@@ -123,9 +124,9 @@ class PromptHygieneLintTest {
 
         assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.DRAFT, asTarget), SAMPLE_FACTS))
                 .isEmpty();
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.JUDGE, asTarget), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, asTarget), SAMPLE_FACTS))
                 .isEmpty();
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.JUDGE, asSource), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, asSource), SAMPLE_FACTS))
                 .isEmpty();
     }
 
@@ -139,7 +140,7 @@ class PromptHygieneLintTest {
                 StyleSheet.from(BookBrief.defaults(pair.substring(0, dash))),
                 ForeignPassagePolicy.KEEP);
 
-        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.JUDGE, frame), SAMPLE_FACTS))
+        assertThat(PromptLint.violations(TEMPLATES.renderSystem(PromptName.REVIEWER, frame), SAMPLE_FACTS))
                 .isEmpty();
     }
 

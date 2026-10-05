@@ -17,8 +17,8 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * Checks a context-matched memory target before any draft is made: through the chunk's gate, every check and τ, but
- * never the judge, so a memory entry can never put a broken or since-forbidden target into the book
- * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the judge"). A refusal only
+ * never the reviewer, so a memory entry can never put a broken or since-forbidden target into the book
+ * ({@code specs/quality-gates/spec.md} "Accept a context-matched memory reuse without the reviewer"). A refusal only
  * means the segment is drafted instead, so the caller logs it and moves on; it is never routed like a model error.
  */
 @Slf4j
@@ -78,15 +78,13 @@ public final class ReuseCheck {
                 restored.maskedForm(),
                 settings,
                 candidate.lockedRenderings());
-        final double tau = settings.reviewMode().threshold();
-        final boolean accepted = AcceptanceRule.acceptsReuse(qa, tau);
+        final boolean accepted = AcceptanceRule.accepts(qa, 0);
         log.debug(
-                "Memory reuse evaluated segmentId={} hardGatesPass={} failedOutright={} confidence={} tau={} accepted={}",
+                "Memory reuse evaluated segmentId={} hardGatesPass={} failedOutright={} confidence={} accepted={}",
                 candidate.segment().id(),
                 qa.hardGatesPass(),
                 qa.failedOutright(),
                 qa.confidence(),
-                tau,
                 accepted);
         if (!accepted) {
             return refused(candidate.segment().id(), qa.hardGatesPass() ? "checks" : "hard-gate", qa.findings());

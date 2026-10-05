@@ -14,10 +14,10 @@ public enum CallKind {
     /** A repair call fixing a placeholder-multiset hard-gate failure. */
     PLACEHOLDER_REPAIR,
 
-    /** A judge scoring call. */
-    JUDGE,
+    /** A reviewer call: reads a batch of candidates and answers with find-and-replace edits. */
+    REVIEW,
 
-    /** A directed-fix call applying the judge's feedback. */
+    /** A directed-fix call repairing the findings a check or the reviewer named. */
     DIRECTED_FIX,
 
     /** A reflection call over the draft before repair. */

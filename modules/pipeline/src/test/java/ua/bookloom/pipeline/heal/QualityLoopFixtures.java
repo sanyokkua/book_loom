@@ -23,13 +23,15 @@ import ua.bookloom.pipeline.TestBooks;
 import ua.bookloom.pipeline.TestDocuments;
 import ua.bookloom.pipeline.WhitespaceRestoration;
 import ua.bookloom.pipeline.dial.DialParameters;
-import ua.bookloom.pipeline.judge.JudgeCall;
-import ua.bookloom.pipeline.judge.JudgeReplyParser;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 import ua.bookloom.pipeline.qa.QaResult;
+import ua.bookloom.pipeline.reviewer.EditApplier;
+import ua.bookloom.pipeline.reviewer.EditVerifier;
+import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
+import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
 /**
  * Real collaborators and small builders shared by the {@code QualityLoopTest} theme classes: a real
@@ -62,7 +64,8 @@ final class QualityLoopFixtures {
         final PromptTemplates templates = new PromptTemplates();
         final DraftReplyParser draftReplyParser = new DraftReplyParser(mapper);
         return new QualityLoop(
-                new JudgeCall(templates, new JudgeReplyParser(mapper)),
+                new ReviewerCall(templates, new ReviewReplyParser(mapper)),
+                new EditApplier(new EditVerifier()),
                 new DirectedFix(templates, draftReplyParser),
                 new ReflectImprove(templates, draftReplyParser, mapper),
                 new Polish(templates, draftReplyParser));

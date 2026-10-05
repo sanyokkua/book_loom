@@ -23,7 +23,7 @@ import ua.bookloom.pipeline.review.ReviewDeskImpl;
  * clock a run times itself with, and the prompt
  * templates, loaded and slot-checked once at injector creation so a broken template fails the start, not a run.
  *
- * <p>The quality loop, the judge and the self-heal calls ({@code heal}, {@code judge}) need no binding: each carries
+ * <p>The quality loop, the reviewer and the self-heal calls ({@code heal}, {@code reviewer}) need no binding: each carries
  * an {@code @Inject} constructor, so Guice builds them for the engine, which hands the quality loop to every run. The
  * deterministic checks in {@code qa} are static functions.
  *

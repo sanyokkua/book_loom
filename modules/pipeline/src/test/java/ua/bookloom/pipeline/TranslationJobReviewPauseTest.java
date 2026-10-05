@@ -6,7 +6,7 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.ECHO1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.ECHO2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.EDIT;
 import static ua.bookloom.pipeline.ChunkRunFixtures.FIX;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S0;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.S2;
@@ -16,9 +16,9 @@ import static ua.bookloom.pipeline.ChunkRunFixtures.T1;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T2;
 import static ua.bookloom.pipeline.ChunkRunFixtures.T3;
 import static ua.bookloom.pipeline.ChunkRunFixtures.formats;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
 import static ua.bookloom.pipeline.ChunkRunFixtures.pauses;
 import static ua.bookloom.pipeline.ChunkRunFixtures.preceding;
+import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.shown;
 import static ua.bookloom.pipeline.ChunkRunFixtures.status;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
@@ -162,8 +162,9 @@ class TranslationJobReviewPauseTest {
     @Test
     void run_assistedBalancedFlagged_pausesAfterTheJudgeAndFeedsTheEditToTheNextChunk() {
         // The fix returns the echo unchanged, so its segment is flagged after one round.
-        final ScriptedChatModel model =
-                replies(T0, T1, ECHO2, T3, ECHO2, T4).answerTo(JUDGE, judged()).answerTo(JUDGE, judged());
+        final ScriptedChatModel model = replies(T0, T1, ECHO2, T3, ECHO2, T4)
+                .answerTo(REVIEW, reviewed())
+                .answerTo(REVIEW, reviewed());
         final TestProject project = project(fiveParagraphs(), brief("en", "uk", QualityDial.BALANCED));
         final TranslationJobImpl translation = job(project, model, ReviewMode.ASSISTED);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -179,11 +180,11 @@ class TranslationJobReviewPauseTest {
         assertThat(pause)
                 .extracting(Paused::reason, Paused::segmentId)
                 .containsExactly(PauseReason.ON_FLAGGED, "Book.md:2");
-        assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, JUDGE, FIX);
+        assertThat(atPause).containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, FIX);
         assertThat(storedAtPause)
                 .containsExactly(
                         SegmentStatus.ACCEPTED, SegmentStatus.ACCEPTED, SegmentStatus.FLAGGED, SegmentStatus.PENDING);
-        assertThat(formats(model)).hasSize(8).endsWith(DRAFT, JUDGE);
+        assertThat(formats(model)).hasSize(8).endsWith(DRAFT, REVIEW);
         assertThat(userMessage(model.requests().get(6))).contains(shown(S4), preceding(EDIT, T3));
         assertThat(stored(project, "Book.md:3"))
                 .extracting(SegmentRecord::status, SegmentRecord::machineTarget)

@@ -2,8 +2,8 @@ package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.pipeline.ChunkRunFixtures.DRAFT;
-import static ua.bookloom.pipeline.ChunkRunFixtures.JUDGE;
-import static ua.bookloom.pipeline.ChunkRunFixtures.judged;
+import static ua.bookloom.pipeline.ChunkRunFixtures.REVIEW;
+import static ua.bookloom.pipeline.ChunkRunFixtures.reviewed;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.epubBrief;
 import static ua.bookloom.pipeline.TranslationJobTestSupport.job;
@@ -52,7 +52,7 @@ class TranslationJobForeignBlockTest {
     @Test
     void run_latinBlockUnderKeep_isKeptAsItIsWithoutAModelCall() {
         final TestProject project = project(book(), withForeign(ForeignPassagePolicy.KEEP));
-        final ScriptedChatModel model = replies("Він заговорив.", "Вона пішла.").answerTo(JUDGE, judged());
+        final ScriptedChatModel model = replies("Він заговорив.", "Вона пішла.").answerTo(REVIEW, reviewed());
 
         final JobReport report = report(job(project, model).run());
 
@@ -72,7 +72,7 @@ class TranslationJobForeignBlockTest {
     void run_latinBlockUnderATranslatePolicy_isDrafted(final ForeignPassagePolicy policy) {
         final TestProject project = project(book(), withForeign(policy));
         final ScriptedChatModel model = replies("Він заговорив.", "Гравітація тягне все.", "Вона пішла.")
-                .answerTo(JUDGE, judged());
+                .answerTo(REVIEW, reviewed());
 
         report(job(project, model).run());
 
@@ -86,7 +86,7 @@ class TranslationJobForeignBlockTest {
     void run_latinBlockUnderTranslateWithNote_asksForTheOriginalInParentheses() {
         final TestProject project = project(book(), withForeign(ForeignPassagePolicy.TRANSLATE_WITH_NOTE));
         final ScriptedChatModel model = replies("Він заговорив.", "Гравітація тягне все.", "Вона пішла.")
-                .answerTo(JUDGE, judged());
+                .answerTo(REVIEW, reviewed());
 
         report(job(project, model).run());
 

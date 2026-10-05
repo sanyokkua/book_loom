@@ -169,7 +169,7 @@ public enum MessageKey {
     LOG_CALL_PAUSED("log.callPaused"),
     /** Activity-log entry for a segment entering a repair round; arguments: 0 the locator, 1 the round, 2 the rounds allowed, 3 the finding it repairs or {@code none}; all Strings. */
     LOG_ROUND("log.round"),
-    /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code judge} or {@code directed_fix}. */
+    /** The name of a model call's kind; argument 0 is the kind's lower-case token, such as {@code review} or {@code directed_fix}. */
     RUN_CALL_KIND("run.callKind"),
     /** Activity-log entry for an applied glossary; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_GLOSSARY_APPLIED("log.glossaryApplied"),
@@ -925,8 +925,8 @@ public enum MessageKey {
     LIVE_CONTEXT_NO_RENDERING("live.context.noRendering"),
     /** Hover explanation and spoken name of the lock mark beside a locked glossary name in the context section. */
     LIVE_CONTEXT_LOCKED("live.context.locked"),
-    /** Badge on a draft the judge has not decided yet. */
-    LIVE_AWAITING_JUDGE("live.awaitingJudge"),
+    /** Badge on a draft the reviewer has not read yet. */
+    LIVE_AWAITING_REVIEW("live.awaitingReview"),
     /** Badge with the judge's score; argument 0 is the formatted score. */
     LIVE_JUDGE("live.judge"),
     /** Badge of a segment accepted as drafted. */
@@ -1391,8 +1391,16 @@ public enum MessageKey {
     REVIEW_FINDINGS_NONE("review.findings.none"),
     /** Kind and severity of one finding; argument 0 is the kind, argument 1 the severity in lower case. */
     REVIEW_FINDING_KIND("review.finding.kind"),
-    /** Muted label naming the check or the judge that raised a finding; argument 0 is its name. */
+    /** Muted label naming the check or the reviewer that raised a finding; argument 0 is its name. */
     REVIEW_RAISED_BY("review.raisedBy"),
+    /** Heading of an edit the reviewer made and the app verified; argument 0 is the criterion's name. */
+    REVIEW_EDIT_APPLIED("review.edit.applied"),
+    /** The name of an edit criterion; argument 0 is its token with underscores for hyphens, such as {@code gender} or {@code invented_word}, because an ICU selector holds no hyphen. */
+    REVIEW_EDIT_CRITERION("review.edit.criterion"),
+    /** The replacement line of an edit that only deleted its quote. */
+    REVIEW_EDIT_DELETED("review.edit.deleted"),
+    /** Hover explanation of the diff of an applied edit: red is what the reviewer removed, green what it put there. */
+    REVIEW_EDIT_TIP("review.edit.applied.tip"),
     /** Button that accepts the selected segment as it stands. */
     REVIEW_ACCEPT("review.accept"),
     /** Hover explanation of the control labelled by {@link #REVIEW_ACCEPT}. */

@@ -4,7 +4,7 @@
 
 The gate between a draft and an accepted translation: the hard gates a translated segment can never be accepted
 without, the soft checks that blend into a deterministic confidence, the trust threshold each review mode sets, the
-per-chunk model judge, and the self-heal rounds that repair a failing segment before it is flagged for review.
+per-chunk model reviewer that fixes in place with edits the code verifies, and the self-heal rounds that repair a failing segment before it is flagged for review.
 
 ## ADDED Requirements
 
@@ -13,7 +13,7 @@ per-chunk model judge, and the self-heal rounds that repair a failing segment be
 IF a translated segment's markup does not restore — its placeholder tokens differ from its source's as a multiset, a
 paired placeholder comes back closing-before-opening or improperly nested with another pair, or the target breaks one
 of the pair rules the document round trip checks — THEN the application SHALL fail that segment's placeholder hard
-gate, record a high `markup` finding, and SHALL NOT accept the segment, whatever its confidence or judge score.
+gate, record a high `markup` finding, and SHALL NOT accept the segment, whatever its confidence or the reviewer's answer.
 
 **Source:** FR-QA-04, FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-checks`, ADR-0040, ADR-0038.
@@ -108,7 +108,7 @@ passages, and the surest way is to never show it to the model. Only a run the bo
 is kept: the application does not detect languages from text (ADR-0037), and a region variant of the source language
 is not foreign. Under the other two policies the run is translated like the rest of the sentence. The same holds for a
 whole paragraph the book marks: the fixture book's `<p xml:lang="la">Gravitas omnia trahit, sed nemo videt.</p>` was
-sent to the model under Keep as-is, translated and judged 0.95, because only inline runs were hidden and the prompt's
+sent to the model under Keep as-is, translated and reviewed with nothing to edit, because only inline runs were hidden and the prompt's
 "keep it verbatim" line was not enough for a small model. A marked block is now never sent at all. Comparing with the
 book's own declared language too keeps a brief whose source was set to another language from leaving every paragraph
 under a `<body xml:lang="en">` untranslated.
@@ -245,7 +245,7 @@ and under the `Keep original` name policy neither SHALL any whole-word occurrenc
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`, ADR-0037.
 In plain words: with no language detector, the only reliable signal is the alphabet — a Ukrainian translation
 written in Latin letters is plainly wrong. The check cannot tell Polish from Czech, so a same-script pair skips it and
-a wrong language in the same script is left to the judge and to review; short fragments skip it so a name or an
+a wrong language in the same script is left to the reviewer and to review; short fragments skip it so a name or an
 exclamation is not misjudged. Names the person chose to keep in their original spelling are Latin by design, so they
 are not held against a Cyrillic line. Serbian is catalogued as Cyrillic, so Latin-script Serbian output fails.
 
@@ -327,7 +327,7 @@ outright").
 - **WHEN** English → Ukrainian, the name policy is `Keep original`, the glossary holds `Margaret Hale` and
   `Milton Northern`, and `Margaret Hale, Milton Northern.` comes back unchanged
 - **THEN** what remains after removing the names holds no letter, so the untranslated-echo check is skipped
-- **AND** with the judge off the segment is accepted in Assisted with confidence 1.0
+- **AND** with the reviewer off the segment is accepted in Assisted with confidence 1.0
 
 #### Scenario: A short glossary name is explained by the glossary
 
@@ -506,13 +506,13 @@ the wrong language does not have every paragraph marked foreign.
 
 The application SHALL compute each segment's confidence as 0.30 × glossary + 0.25 × length ratio + 0.20 × target
 script + 0.15 × untranslated echo + 0.10 × repetition, each term the check's margin between 0 and 1, a failed check
-counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates or the judge score into it.
+counting 0.0 and a skipped check 1.0, and SHALL NOT fold the hard gates or the reviewer's answer into it; the confidence only orders segments for review and never decides acceptance.
 
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#confidence`.
 In plain words: one number says how comfortably a segment clears the deterministic checks; hard gates stay
-pass/fail because no score can excuse broken markup, and the judge stays separate so a strong judge cannot hide a
-failed check, nor a weak one a clean segment. Each check's margin is stated in its own requirement above.
+pass/fail because no score can excuse broken markup, and the reviewer stays separate so a confident reviewer cannot hide a
+failed check; the number is a sort key for the review list, not a bar. Each check's margin is stated in its own requirement above.
 
 #### Scenario: A worked confidence
 
@@ -532,10 +532,10 @@ failed check, nor a weak one a clean segment. Each check's margin is stated in i
   echo and script checks, with no locked term and length and repetition margins of 1.0
 - **THEN** confidence is 0.30 × 1.0 + 0.25 × 1.0 + 0.20 × 0.0 + 0.15 × 0.0 + 0.10 × 1.0 = `0.65`
 
-#### Scenario: The judge score does not move confidence
+#### Scenario: The reviewer's answer does not move confidence
 
-- **WHEN** the English → Polish segment above receives a chunk judge score of `0.40`
-- **THEN** its confidence stays `1.0`
+- **WHEN** the English → Polish segment above receives a reviewer edit that is applied
+- **THEN** its confidence is computed from the checks on the edited text alone, and the answer adds nothing to it
 
 ### Requirement: Block acceptance when a soft check fails outright
 
@@ -550,26 +550,26 @@ finding.
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, `#qa-thresholds`, ADR-0038.
 In plain words: a check that fails is a concrete defect — a copied source, the wrong alphabet, half a sentence
 missing — and a high score on the other checks must not carry it into the book; confidence decides only the close
-calls, where every check passed. Short lines are the exception for the echo check alone: a name, a Roman numeral or
+calls no more: confidence orders segments for review. Short lines are the exception for the echo check alone: a name, a Roman numeral or
 `OK` legitimately reads the same in both languages, so below 20 code points an echo lowers confidence instead of
-blocking. The reference clauses that accepted on confidence alone are edited in this change.
+blocking. The reference clauses that accepted on confidence or on a judge score are edited in this change.
 
-#### Scenario: A copied source is repaired, then flagged, even above τ
+#### Scenario: A copied source is repaired, then flagged, whatever its confidence
 
-- **WHEN** Unattended (τ = 0.60), Fast (N = 1), English → Ukrainian, and the draft for `He opened the old door.` is
+- **WHEN** Fast (N = 1), English → Ukrainian, and the draft for `He opened the old door.` is
   `He opened the old door.`, with confidence 0.65
 - **THEN** the segment is not accepted and carries medium `language` findings for the echo and the script checks
 - **AND** its one round is a directed fix, which returns `He opened the old door.` again, and the segment is FLAGGED
 
 #### Scenario: A Latin-letter translation is flagged
 
-- **WHEN** Assisted (τ = 0.75), Fast (N = 1), and both the draft and the directed fix for `He opened the old door.`
+- **WHEN** Fast (N = 1), and both the draft and the directed fix for `He opened the old door.`
   return `Vin vidchynyv stari dveri.`, with confidence 0.80
 - **THEN** the segment is FLAGGED with a medium `language` finding from the script check
 
 #### Scenario: A half-sentence omission is flagged
 
-- **WHEN** Assisted (τ = 0.75), Fast (N = 1), and both the draft and the directed fix for
+- **WHEN** Fast (N = 1), and both the draft and the directed fix for
   `He opened the old door and walked into the dark hall.` return `Він відчинив старі двері.` (ratio 0.47), with
   confidence 0.75
 - **THEN** the segment is FLAGGED with a medium `omission` finding from the length-ratio check
@@ -579,7 +579,7 @@ blocking. The reference clauses that accepted on confidence alone are edited in 
 - **WHEN** English → Ukrainian and the target for `Yes, sir.` (9 code points) is `YES, SIR.`
 - **THEN** the echo check fails with a low `language` finding, the script check is skipped, and confidence is
   0.30 + 0.25 + 0.20 + 0.0 + 0.10 = `0.85`
-- **AND** with the judge off the segment is accepted in Unattended, Assisted and Manual
+- **AND** with the reviewer off the segment is accepted in Unattended, Assisted and Manual
 
 #### Scenario: The echo floor is 20 code points
 
@@ -594,142 +594,258 @@ blocking. The reference clauses that accepted on confidence alone are edited in 
   the same text, and the segment is FLAGGED
 - **AND** this holds in Unattended, Assisted and Manual alike
 
-### Requirement: Take the trust threshold from the review mode alone
+### Requirement: Let the review mode decide when the run pauses, never what is accepted
 
-The application SHALL set the trust threshold τ to 0.60 in Unattended, 0.75 in Assisted and 0.85 in Manual review
-mode, SHALL use the same value as the judge threshold τ_judge, and SHALL NOT let the quality dial change either.
+The application SHALL accept or flag a segment by the acceptance rule alone — hard gates, deterministic checks and
+verified blockers — and SHALL NOT let the review mode, the quality dial or any confidence threshold move that decision;
+the review mode SHALL decide only when the run pauses for the person.
 
 **Source:** FR-REVIEW-02, FR-QA-07 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`,
-`#fr-qa`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`,
-`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`, ADR-0036.
-In plain words: how much a person wants to check is a single choice — the review mode — and it alone decides how
-confident a segment must be; the quality dial buys more careful mechanics but never lowers or raises the bar.
+`#fr-qa`), `docs/specification/01_Product/02_TRANSLATION_WORKFLOW.md#review-modes`, ADR-0036.
+In plain words: the earlier rule asked a segment to reach a confidence of 0.60, 0.75 or 0.85 by review mode, and a judge
+score besides. A score cannot tell a coined word from a rare one, so on a real book it flagged 170 decisions that a
+person found correct. What a person wants to check is one choice — the review mode — and it now alone decides when the
+run stops; whether a segment is accepted depends on facts the code can verify.
 
-#### Scenario: One confidence, three modes
+#### Scenario: A low confidence alone does not flag a segment
 
-- **WHEN** a segment passes its hard gates and every soft check, with a script margin of 0.5, a length margin of 0.2
-  and a confidence of `0.70`, and the judge is off
-- **THEN** it is accepted in Unattended (τ = 0.60)
-- **AND** it is not accepted in Assisted (τ = 0.75) or Manual (τ = 0.85)
+- **WHEN** a segment passes its hard gates and every soft check with a script margin of 0.5, a length margin of 0.2 and
+  a confidence of `0.70`, and the reviewer answers `ok`
+- **THEN** it is accepted in Unattended, Assisted and Manual alike
 
-#### Scenario: The quality dial leaves τ alone
+#### Scenario: The quality dial leaves acceptance alone
 
 - **WHEN** the review mode is Unattended and the quality dial is Max
-- **THEN** τ is `0.60` and τ_judge is `0.60`
+- **THEN** the same segment is accepted or flagged as it would be on Fast, by the checks and the verified edits
 
-### Requirement: Judge each chunk once when the quality dial enables the judge
+### Requirement: Review each chunk once per pass when the quality dial enables the reviewer
 
-WHERE the quality dial is Balanced or Max, the application SHALL send the model, in one call per chunk, the source and
-target of each segment of the chunk that passed its hard gates and was not reused from memory, labelled `s1` to `sk` in
-document order, and SHALL read back an overall score between 0 and 1, an advisory verdict, findings naming a label
-with a type of meaning, omission, fluency, glossary, language or tag and a severity of low, medium or high, and
-deferrals; it SHALL make no judge call for a chunk with no such segment; WHERE the dial is Fast, it SHALL make no judge
-call.
+WHERE the quality dial is Balanced or Max, the application SHALL send the model, in one call per chunk and pass, the
+source and the candidate of each segment of the chunk that passed its hard gates, failed no soft check outright and was
+not reused from memory, labelled `s1` to `sk` in document order, together with the glossary renderings of the names in
+the chunk (one `source → target` line each) and the language's reviewer checks, at temperature 0 with a fixed seed, and
+SHALL read back per label `{"id","status","edits","rewrite"}` where `status` is `ok`, `edits` — a list of
+`{"criterion","quote","replacement"}` find-and-replace edits, the default for a defect — or `rewrite`, allowed when more
+than about 40% of the text must change or the structure or meaning is wrong throughout; the criterion SHALL be one of
+meaning, omission, addition, terminology, gender, agreement, invented-word, quotes, language, fluency or style. The
+schema sent SHALL be flat — no `maxItems`, `maxLength` or `additionalProperties` — and a structured call that ends with
+`ErrorCode.timeout` SHALL be sent once more without its response format. A label the reply leaves out SHALL be read as
+`ok`; a status that names nothing drops that answer; an edit with no quote, or whose replacement equals its quote, is
+dropped; a criterion that names nothing reads as `style`. The application SHALL make no reviewer call for a chunk with no
+such segment; WHERE the dial is Fast it SHALL make none and decide by the deterministic checks alone; WHERE the dial is
+Max it SHALL make a second pass over the same drafts with a narrower checklist (gender, terminology, agreement) and
+SHALL apply that pass's edits after the first pass's.
 
 **Source:** FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#judge-quality-evaluation`,
-`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038.
-In plain words: one judge call per chunk keeps the cost of Balanced tolerable and lets the judge see neighbouring
-sentences; short local labels are easier for a small model to keep straight than segment ids. A segment whose markup
-already failed is going to repair anyway, and a reuse from memory is decided without the judge (see "Accept a
-context-matched memory reuse without the judge"), so neither is shown to it. Fast trades the judge away for speed.
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`,
+`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`, ADR-0038; tasks 15d.6.
+In plain words: a judge that scores a chunk cannot say which word is wrong, so a good sentence and a bad one fell
+below the same bar and the book filled with false alarms. A reviewer that quotes the word and offers the replacement
+can be checked by the code, which is the only reason to trust it. One call per chunk keeps the cost tolerable; short
+local labels are easier for a small model to keep straight than segment ids; fluency and style edits are notes for the
+person and are never applied. Fast trades the reviewer away for speed.
 
-#### Scenario: A Balanced chunk of three segments is judged once
+#### Scenario: A Balanced chunk of three segments is reviewed once
 
-- **WHEN** the dial is Balanced and a chunk holds three drafted segments that all passed their hard gates
-- **THEN** one judge call is made, showing the pairs labelled `s1`, `s2`, `s3`
-- **AND** a reply `{"score":0.82,"verdict":"accept","findings":[{"segmentId":"s2","type":"omission","severity":"medium","note":"drops the second clause"}],"deferrals":[]}`
-  is read as a score of 0.82 with one medium omission finding on the second segment
+- **WHEN** the dial is Balanced and a chunk holds three drafted segments that all passed their checks
+- **THEN** one reviewer call is made at temperature 0, showing the pairs labelled `s1`, `s2`, `s3` and carrying the
+  seed `15`
+- **AND** a reply `{"results":[{"id":"s2","status":"edits","edits":[{"criterion":"omission","quote":"Він відчинив двері.","replacement":"Він відчинив двері й пішов."}]}]}`
+  is read as one edit on the second segment and `ok` for the first and third
 
-#### Scenario: Only pairs that passed their hard gates and were not reused are judged
+#### Scenario: Only pairs the checks do not already refuse are reviewed
 
 - **WHEN** the dial is Balanced and the chunk `ch03.xhtml:10`–`ch03.xhtml:13` holds `ch03.xhtml:10`, whose placeholder
   gate still failed after its placeholder repair, and `ch03.xhtml:12`, reused from memory
-- **THEN** the judge call shows `ch03.xhtml:11` as `s1` and `ch03.xhtml:13` as `s2`, and nothing else
+- **THEN** the reviewer call shows `ch03.xhtml:11` as `s1` and `ch03.xhtml:13` as `s2`, and nothing else
 
-#### Scenario: No judge call when no pair qualifies
+#### Scenario: No reviewer call when no pair qualifies
 
 - **WHEN** the dial is Balanced and both segments of a chunk are reused from memory
-- **THEN** no judge call is made for that chunk
+- **THEN** no reviewer call is made for that chunk
 
-#### Scenario: Fast makes no judge call
+#### Scenario: Fast makes no reviewer call
 
 - **WHEN** the dial is Fast and a chunk of eight segments is drafted
-- **THEN** no judge call is made
+- **THEN** no reviewer call is made and each segment is decided by the checks alone
 
-#### Scenario: A reply without findings or deferrals is read
+#### Scenario: A structured call that times out is sent again without its schema
 
-- **WHEN** the judge replies `{"score":0.91,"verdict":"accept"}`
-- **THEN** it is read as a score of 0.91 with no findings and no deferrals
+- **WHEN** a reviewer call ends with `ErrorCode.timeout`
+- **THEN** the same request is sent once more with no `response_format` (OpenAI-compatible) or `format` (Ollama) and the
+  same temperature and seed, and a readable reply to it is used
 
-### Requirement: Flag a segment the judge could not judge
+#### Scenario: Max reviews the chunk twice
 
-IF a judge call — a chunk's, or a repaired segment's re-judge — ends with `ErrorCode.timeout` after the provider's
-own retries, THEN the system SHALL NOT pause the run for it: it SHALL decide every segment the call was for by its
-quality checks alone, keep the segment's latest target that passed every hard gate (the draft, or the last repair), add
-the finding `judge-unavailable` (severity medium, raised by `judge`), and flag the segment with that error, never accept
-it; it SHALL make no further repair round for it, and the run SHALL go on with the next segment. A judge call answered
-with any other provider error — a provider outage (`unreachable`, `upstream`, `rateLimited`) included — still pauses
-the run as the `resume` capability says, so an outage is waited out and the judge call made again, exactly as for a
-draft call.
+- **WHEN** the dial is Max and a chunk holds a draft whose first pass edit fixes a coined word and whose second pass
+  edit fixes an agreement
+- **THEN** two reviewer calls are made, the second saying it is a second pass, and both edits are applied in that order
+
+#### Scenario: A reply that names no segment reads as ok
+
+- **WHEN** the reviewer replies `{"results":[]}`
+- **THEN** every segment of the chunk is read as `ok`
+
+#### Scenario: An unreadable reply is read as unreadable
+
+- **WHEN** the reviewer replies `Looks good to me!`
+- **THEN** the reply is unreadable and each segment it was for is handled as in "Flag a segment the reviewer could not
+  review"
+
+### Requirement: Verify every reviewer edit in code before applying it
+
+The application SHALL apply a reviewer edit only when its quote is a substring of the candidate that occurs exactly once
+after normalisation (white space runs and typographic apostrophes), the replacement keeps the `⟦gN⟧` tokens of the whole
+candidate in the same multiset and order, the deterministic checks and the placeholder gates pass on the edited text,
+and the set of blocking checks does not grow; it SHALL ignore an edit whose quote the candidate does not hold, and an edit whose change does not fit its criterion — an omission fix that does not add words, an addition fix that does not remove them, a quotes fix that touches no quote mark or bracket, a language fix that touches no letter of another script than the candidate's, a terminology fix that uses no word the candidate or the glossary already has, or a meaning, terminology, gender or agreement fix that deletes more than half of its quote; it SHALL
+apply edits one after another, each verified against the text the earlier ones left; and it SHALL treat an edit whose
+quote was found but whose application was refused as evidence, never as an applied change.
+
+**Source:** FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6.
+In plain words: a model may quote words that are not there, offer a replacement that breaks a placeholder, or "fix" one
+thing and break another. Because the code checks all of that, a wrong edit costs nothing and a right one is applied
+without asking the model again. A small model that finds nothing still fills a slot with a paraphrase under one of the
+criterion names, so an edit that does not do what its criterion says is dropped like a quote that is not there.
+
+#### Scenario: A coined word with a quote is fixed
+
+- **WHEN** the draft is `Він відчинив старі дверзі.` and the reviewer answers an `invented-word` edit with quote
+  `дверзі` and replacement `двері`
+- **THEN** the segment is ACCEPTED as `Він відчинив старі двері.` with one repair round and the edit kept on the record
+  as a low finding raised by `reviewer-edit`
+
+#### Scenario: A hallucinated quote is ignored
+
+- **WHEN** the reviewer answers an edit whose quote `відімкнув ключем` is not in the candidate
+- **THEN** the candidate is unchanged, no edit is recorded, no further call is made and the segment is accepted
+
+#### Scenario: A quote that occurs twice is refused
+
+- **WHEN** an edit's quote occurs twice in the candidate
+- **THEN** it is not applied and counts as refused
+
+#### Scenario: A replacement that changes a token is refused
+
+- **WHEN** an edit's quote holds `⟦g0⟧він⟦g1⟧` and its replacement is `вона`
+- **THEN** it is not applied and counts as refused
+
+#### Scenario: An edit that makes a check block is refused
+
+- **WHEN** an edit's replacement mixes Latin and Cyrillic letters inside one word
+- **THEN** the text fails `script-purity` and the edit counts as refused
+
+#### Scenario: A gender pair of edits is applied in order
+
+- **WHEN** the reviewer answers two `gender` edits, `Вона втомився` → `Вона втомилася` and `йшов далі` → `йшла далі`
+- **THEN** both are applied and the target is `Вона втомилася, але йшла далі.`
+
+#### Scenario: A style remark is a note
+
+- **WHEN** the reviewer answers an edit with the criterion `style` for an idiom
+- **THEN** it is not applied, the segment is accepted with the draft's text and a low finding raised by `reviewer` keeps
+  the remark
+
+### Requirement: Fix a refused edit with one directed fix, and a bad rewrite not at all
+
+WHEN every edit that was applied leaves an edit whose quote was found but whose application was refused, the application
+SHALL send one directed fix for that segment naming the criterion, the quote and the reviewer's replacement, and SHALL
+count the issue as resolved only when the fixed text passes the hard gates and checks, adds no blocking check and no
+longer holds the quote; an issue not resolved is a verified blocker and the segment SHALL be FLAGGED with it recorded as
+a medium finding raised by `reviewer`, keeping the text the applied edits left. A `rewrite` SHALL replace the draft only
+when the whole text passes the placeholder gates and every deterministic check; otherwise the draft SHALL stay, the
+segment SHALL be FLAGGED and a medium `rewrite` finding SHALL say the draft was kept.
+
+**Source:** FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6.
+In plain words: when the reviewer is right that something is wrong but the code cannot apply its words, the model that
+wrote the draft gets one precise chance, with the exact quote; a model that rewrites a whole sentence may break more than
+it fixes, so a rewrite is taken only when nothing breaks. A call that fails during that one fix pauses and is sent
+again like any other call; the reviewer is not asked again.
+
+#### Scenario: A refused edit gets one directed fix that names its quote
+
+- **WHEN** the reviewer's `invented-word` edit for the quote `дверзі` mixes two alphabets and the directed fix answers
+  `Він відчинив старі двері.`
+- **THEN** exactly one directed fix is made, whose request names `дверзі` and `invented-word`
+- **AND** the segment is ACCEPTED as `Він відчинив старі двері.`
+
+#### Scenario: A directed fix that leaves the quote flags the segment
+
+- **WHEN** the directed fix answers a text that still holds `дверзі`
+- **THEN** the segment is FLAGGED with the draft as its target and a medium `invented-word` finding raised by
+  `reviewer` that quotes `дверзі`
+
+#### Scenario: A rewrite that passes every check is taken
+
+- **WHEN** the reviewer answers `rewrite` with `Він відчинив старі дубові двері.`
+- **THEN** the segment is ACCEPTED with that target
+
+#### Scenario: A rewrite that breaks a check leaves the draft
+
+- **WHEN** the reviewer answers `rewrite` with a text that mixes Latin and Cyrillic letters inside one word
+- **THEN** the draft stays as the target, the segment is FLAGGED, and a medium `rewrite` finding says the draft was kept
+
+#### Scenario: The directed fix fails with an error
+
+- **WHEN** the directed fix call answers `ErrorCode.auth`
+- **THEN** the step ends with that error, and the next decision for the segment repeats the fix without a new reviewer
+  call
+
+### Requirement: Flag a segment the reviewer could not review
+
+IF a reviewer call ends with `ErrorCode.timeout` after the provider's own retries and the one resend without a response
+format, or its reply cannot be read, THEN the system SHALL NOT pause the run for it: it SHALL keep the draft of every
+segment the call was for, add the finding `reviewer-unavailable` (severity medium, raised by `reviewer`), and flag the
+segment — with the timeout as its reason when the call timed out — never accept it; it SHALL make no repair round for it,
+and the run SHALL go on with the next segment. A reviewer call answered with any other provider error — a provider outage
+(`unreachable`, `upstream`, `rateLimited`) included — still pauses the run as the `resume` capability says, so an outage
+is waited out and the reviewer call made again, exactly as for a draft call. On Max a second pass that cannot be read
+leaves the first pass's answers in force.
 
 **Source:** FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
-`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b.
-In plain words: on the Bartimaeus hand test a re-judge after a directed fix hung seven times for the full timeout, and
-each time the run paused, was resumed, and paid the same calls again. A judge that does not answer says nothing about
-the translation, so the translation is kept and handed to the person for review instead of holding the whole book. A
-provider that is down is another matter: overnight it would flag every segment judged while it was down, so the run
-waits for it and judges again.
+`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6.
+In plain words: a reviewer that does not answer says nothing about the translation, so the translation is kept and handed
+to the person for review instead of holding the whole book. A provider that is down is another matter: overnight it would
+flag every segment reviewed while it was down, so the run waits for it and reviews again.
 
-#### Scenario: A re-judge times out after a directed fix
+#### Scenario: A chunk's reviewer stalls
 
-- **WHEN** a Balanced run's chunk judge finds a medium `meaning` finding on `Book.md:0`, the directed fix answers
-  `Старий чоловік повільно пішов до гавані.`, and the re-judge ends with `ErrorCode.timeout`, with pause on error
-  enabled
-- **THEN** the run does not pause, `Book.md:0` is FLAGGED with that fixed target and a `judge-unavailable` finding, and
-  the run report lists it with `ErrorCode.timeout`
-- **AND** `Book.md:1` is decided by the chunk's verdict and the run ends Completed
+- **WHEN** a Balanced chunk of two drafted segments is reviewed and the call and its resend both end with
+  `ErrorCode.timeout`, with pause on error enabled
+- **THEN** the run does not pause, both segments are FLAGGED with their drafts as targets and a `reviewer-unavailable`
+  finding, and the run report lists them with `ErrorCode.timeout`
 
-#### Scenario: A chunk's judge stalls
+#### Scenario: A reply that cannot be read flags the segment
 
-- **WHEN** a Balanced chunk of two drafted segments is judged and the judge call ends with `ErrorCode.timeout`
-- **THEN** both segments are FLAGGED with their drafts as targets and no further call is made for them
+- **WHEN** the reviewer replies `Looks good to me!`
+- **THEN** the segment is FLAGGED with a `reviewer-unavailable` finding and no flag reason
 
-#### Scenario: A provider outage during judging is waited out
+#### Scenario: A provider outage during review is waited out
 
-- **WHEN** an Unattended Balanced run drafts `One.`, `Two.` and `Three.` and the chunk's judge call ends with
+- **WHEN** an Unattended Balanced run drafts `One.`, `Two.` and `Three.` and the chunk's reviewer call ends with
   `ErrorCode.unreachable` (or `upstream`, or `rateLimited`) while the provider is down for a minute
-- **THEN** the run waits, probes at 0:15, 0:45 and 1:45, judges the chunk again once a probe passes, and ends Completed
+- **THEN** the run waits, probes at 0:15, 0:45 and 1:45, reviews the chunk again once a probe passes, and ends Completed
   with all three ACCEPTED and none flagged
 
 ### Requirement: Stop repairing a segment that does not change
 
-WHEN a self-heal round's rewrite is identical to the text it was asked to repair, or its re-judge repeats the
-previous verdict's score and the same medium or high finding kinds for the segment, and the segment is not accepted,
+WHEN a self-heal round's rewrite is identical to the text it was asked to repair and the segment is not accepted,
 THEN the system SHALL flag the segment at once with that round counted, and SHALL NOT spend the rest of the repair
 budget on it.
 
 **Source:** `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`; tasks 15b.
-In plain words: on the hand test a directed fix returned the same 289-token rewrite three times and the judge repeated
-the same `meaning` finding at 0.85 each time. A round that changes nothing will not be changed by the next one, so the
+In plain words: on the hand test a directed fix returned the same 289-token rewrite three times. A round that changes nothing will not be changed by the next one, so the
 budget is not spent on it.
 
 #### Scenario: Two fixes return the same text
 
 - **WHEN** an echoed draft gets a first directed fix answering `HE OPENED THE OLD DOOR!`, a second answering the same,
-  with three rounds allowed and the judge off
+  with three rounds allowed
 - **THEN** the segment is FLAGGED after 2 rounds and no third fix is sent
 
-#### Scenario: The re-judge repeats the same finding at the same score
-
-- **WHEN** the chunk judge scores 0.85 with a medium `meaning` finding, the directed fix answers a new target, and the
-  re-judge again scores 0.85 with a medium `meaning` finding, with three rounds allowed
-- **THEN** the segment is FLAGGED after 1 round with that fixed target, after 3 requests
-
-### Requirement: Fail a segment on a deterministic text defect before any judge reads it
+### Requirement: Fail a segment on a deterministic text defect before the reviewer reads it
 
 The application SHALL run the deterministic text checks on every restored candidate, after the refusal gate and before
-any model judge, and SHALL treat a blocking finding as a failed hard gate: a word that holds a letter of the target's
+any reviewer call, and SHALL treat a blocking finding as a failed hard gate: a word that holds a letter of the target's
 script beside a letter of another script or a digit (`навчg3вся`, `імпoву`) raises a medium-or-higher `language`
 finding from `script-purity`; a quote pair of the target language's convention table that the target leaves open,
 closes without opening or closes with the wrong mark, while the source's own pairs balance, raises a `fluency` finding
@@ -746,13 +862,13 @@ In plain words: a mixed-alphabet word, a quote left open and a whole English par
 code can see, so the segment is repaired or flagged before a model is asked to opine on it; a short English line is
 left to the echo check, because a name or an exclamation can read the same in both languages. A word wholly in another
 script (a name) and a number's suffix (`90х`) are not mixed words, and a coined word in the right alphabet
-(`розлізяв`) cannot be seen by code and stays with the judge.
+(`розлізяв`) cannot be seen by code and stays with the reviewer.
 
 #### Scenario: A mixed-script word blocks acceptance
 
 - **WHEN** English → Ukrainian and the draft for `He studied hard all year.` is `Він наполегливо навчg3вся цілий рік.`
 - **THEN** the segment fails a hard gate with a `language` finding from `script-purity` whose note quotes `навчg3вся`
-- **AND** the chunk judge is not asked about that segment
+- **AND** the reviewer is not asked about that segment
 
 #### Scenario: A quote left open blocks acceptance
 
@@ -770,11 +886,11 @@ script (a name) and a number's suffix (`90х`) are not mixed words, and a coined
 - **WHEN** the target is `Мені одно одно таки.` and the source has no doubled word
 - **THEN** the segment still passes its hard gates and carries a low `duplicate-word` finding
 
-### Requirement: Normalise a candidate's typography before it is judged
+### Requirement: Normalise a candidate's typography before it is reviewed
 
 The application SHALL, with no setting, put every candidate target — a draft, a repair round's rewrite, a review retry,
 a reused memory entry, a consistency-pass revision — through a deterministic typography pass before the placeholder
-gates restore it, so that the checks, the judge and the stored masked target all read the normalised text: a straight
+gates restore it, so that the checks, the reviewer and the stored masked target all read the normalised text: a straight
 apostrophe between two letters becomes `’`; three dots become `…`; a space before `,` `.` `;` `!` `?` or `…` is
 removed (French keeps the space before `?` `!` `;`); and, for a target language that has a line in the quote table, a
 straight `"` becomes that language's primary pair at the top level and its nested pair inside it (`«…„…“…»` in
@@ -810,80 +926,76 @@ the book is written.
 
 ### Requirement: Accept a segment only by the acceptance rule
 
-The application SHALL accept a drafted segment only when its hard gates pass, no soft check failed outright (see
-"Block acceptance when a soft check fails outright"), its confidence is at least τ, and either the judge is off or its
-chunk's score is at least τ_judge with no medium or high finding against that segment; the verdict SHALL NOT decide,
-and an unreadable judge reply SHALL leave every segment it judged unaccepted and routed to self-heal.
+The application SHALL accept a drafted, edited or repaired segment only when its hard gates pass, no soft check failed
+outright (see "Block acceptance when a soft check fails outright"), no deterministic check blocks, and no verified
+blocker is left — an issue the reviewer evidenced with a quote the code found and that no edit or fix resolved; the
+confidence the checks derive SHALL NOT be compared with any threshold and the reviewer's fluency and style remarks SHALL
+NOT block.
 
 **Source:** FR-QA-07, FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`,
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#judge-quality-evaluation`, ADR-0038.
-In plain words: every condition must hold at once, so no single strong signal can carry a weak segment; a chunk's
-score is shared, so a finding against one segment keeps that one out without dragging its clean neighbours with it. A
-reuse from memory follows the same rule without the judge (see "Accept a context-matched memory reuse without the
-judge").
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, ADR-0038; tasks 15d.6.
+In plain words: a segment is accepted unless the code can point at something wrong with it. A repaired target is decided
+by the checks alone: the reviewer read the draft, not the repair. A reuse from memory follows the same rule with no
+reviewer (see "Accept a context-matched memory reuse without the reviewer").
 
-#### Scenario: A finding on one segment keeps only that segment out
+#### Scenario: A low-confidence segment whose checks all pass is accepted
 
-- **WHEN** Assisted (τ = 0.75), all three segments of a chunk pass their hard gates and every soft check with
-  confidence `0.95`
-- **AND** the chunk's judge score is `0.82` with a medium omission finding on `s2`
-- **THEN** the first and third segments are accepted and the second goes to self-heal
-
-#### Scenario: The score decides, not the verdict
-
-- **WHEN** Assisted, a segment passes every check with confidence `0.95` and its chunk's reply is
-  `{"score":0.70,"verdict":"accept"}`
-- **THEN** the segment is not accepted
-- **AND** a reply `{"score":0.80,"verdict":"revise"}` with no findings would accept it
-
-#### Scenario: A low-severity finding does not block
-
-- **WHEN** Assisted, the chunk score is `0.80` and the only finding on a segment is a low fluency finding
-- **THEN** that segment is accepted
-
-#### Scenario: An unreadable judge reply accepts nothing
-
-- **WHEN** the dial is Balanced and the judge replies `Looks good to me!`
-- **THEN** no judged segment of that chunk is accepted and each goes to self-heal
+- **WHEN** Balanced and the segment passes every check with a length margin of 0.2 and confidence `0.70`, and the
+  reviewer answers `ok`
+- **THEN** it is accepted in Unattended, Assisted and Manual alike
 
 #### Scenario: A hard-gate failure is never accepted
 
-- **WHEN** a segment's placeholder hard gate failed, so it was not shown to the judge
-- **AND** the chunk's other segments were judged `0.95` with no finding
-- **THEN** the segment is not accepted
+- **WHEN** a segment's placeholder hard gate failed, so it was not shown to the reviewer
+- **THEN** the segment is not accepted and goes to a directed fix
 
-#### Scenario: A failed soft check blocks a well-judged segment
+#### Scenario: A failed soft check blocks a segment the reviewer likes
 
-- **WHEN** Assisted, Balanced, a chunk is judged `0.95` with no finding, and one of its segments failed its
-  length-ratio check with confidence `0.75`
-- **THEN** that segment is not accepted and goes to a directed fix
+- **WHEN** a chunk is reviewed and one of its segments failed its length-ratio check outright
+- **THEN** that segment is not reviewed, is not accepted and goes to a directed fix
+
+#### Scenario: A repaired target is accepted by the checks alone
+
+- **WHEN** a directed fix returns a target that passes every check
+- **THEN** it is accepted as repaired and no reviewer call follows
 
 #### Scenario: A good but short translation is accepted
 
-- **WHEN** the judge is off and a segment passes every check with a length margin of 0.5 and confidence `0.875`
+- **WHEN** the reviewer is off and a segment passes every check with a length margin of 0.5 and confidence `0.875`
 - **THEN** it is accepted in Unattended, Assisted and Manual alike
 
-### Requirement: Accept a context-matched memory reuse without the judge
+#### Scenario: A verified blocker left unresolved flags the segment
+
+- **WHEN** a refused edit's quote is still in the target after its one directed fix
+- **THEN** the segment is FLAGGED although every check passes
+
+#### Scenario: The 15d.1 corpus replays through the rule
+
+- **WHEN** the clean candidates of the defect corpus that the old judge refused are replayed with a reviewer that finds
+  nothing, and the defects only a model can see are replayed with the edits a reviewer would ask for
+- **THEN** every clean candidate is accepted unchanged, every defect the checks decide is refused, and every other
+  defect ends as the corrected text
+
+### Requirement: Accept a context-matched memory reuse without the reviewer
 
 WHEN a segment's target is reused from memory because its source and both neighbours match, the application SHALL
-accept that target only when its hard gates pass, no soft check failed outright and its confidence is at least τ, and
-SHALL make no judge call for it nor show it to its chunk's judge.
+accept that target only when its hard gates pass and no soft check failed outright, and SHALL make no reviewer call for
+it nor show it to its chunk's reviewer.
 
 **Source:** FR-ALGO-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-algo`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#context-aware-tm`, `#tiered-loop`, ADR-0038.
-In plain words: a sentence already accepted in the very same surroundings needs no second opinion from the judge — it
-is the one exception to the judge term of the acceptance rule — but it must still clear every deterministic check, so
-a memory entry can never put a broken or since-forbidden target into the book. When the memory is looked up, and that a
-reuse which is not accepted is discarded and the segment drafted instead, is the translation-pipeline capability's
-"Reuse the translation memory only where its context matches"; a segment is recorded as reused from memory only when
-its reuse is accepted.
+In plain words: a sentence already accepted in the very same surroundings needs no second opinion from the reviewer, but
+it must still clear every deterministic check, so a memory entry can never put a broken or since-forbidden target into
+the book. When the memory is looked up, and that a reuse which is not accepted is discarded and the segment drafted
+instead, is the translation-pipeline capability's "Reuse the translation memory only where its context matches"; a
+segment is recorded as reused from memory only when its reuse is accepted.
 
-#### Scenario: A context match is accepted without the judge
+#### Scenario: A context match is accepted without the reviewer
 
 - **WHEN** Balanced, `ch03.xhtml:12` reads `Yes.` between the same two sentences that surrounded `ch01.xhtml:4`, which
   was accepted as `Так.`
-- **THEN** `ch03.xhtml:12` is accepted as `Так.` with confidence 1.0, no draft or judge call is made for it, and it is
+- **THEN** `ch03.xhtml:12` is accepted as `Так.` with confidence 1.0, no draft or reviewer call is made for it, and it is
   recorded as reused from memory
 
 #### Scenario: A reuse that fails a hard gate is drafted instead
@@ -895,33 +1007,24 @@ its reuse is accepted.
 
 ### Requirement: Repair a failing segment within the dial's repair budget before flagging it
 
-WHEN a drafted segment is not accepted, the application SHALL run up to N self-heal rounds — N being 1 on Fast, 2 on
-Balanced and 3 on Max, counted only after the draft's one structural repair and one placeholder repair, which are not
-rounds — each returning one target for that one segment: a directed fix when the segment has a concrete finding — a
-failed hard gate, with the expected placeholder sequence stated when the placeholder or protected-span gate failed; a
-soft check failed outright; or a medium or high judge finding — otherwise a reflect call then an improve call,
-followed by a polish call only when the improved target passes its hard gates, fails no soft check and has a
-confidence within 0.05 below τ; after N rounds without acceptance it SHALL mark the segment FLAGGED with every finding,
-and a segment accepted after at least one round SHALL count as repaired and accepted.
-
-WHERE the judge is on, WHEN a round's target passes its hard gates, fails no soft check and reaches τ, the application
-SHALL judge that segment again on its own — one judge call holding only that source/target pair, labelled `s1` — and
-SHALL decide it with that call's score and findings instead of its chunk's; a target short of any of these SHALL go to
-the next round without a judge call.
+WHEN a drafted segment is not accepted because a check refuses it, the application SHALL run up to N self-heal rounds — N
+being 1 on Fast, 2 on Balanced and 3 on Max, counted only after the draft's one structural repair and one placeholder
+repair, which are not rounds — each returning one target for that one segment, by a directed fix naming the concrete
+finding: a failed hard gate, with the expected placeholder sequence stated when the placeholder or protected-span gate
+failed, or a soft check failed outright; a round with no concrete finding is a reflect call then an improve call, which
+the acceptance rule no longer produces and task 15d.7 revisits; after N rounds without acceptance it SHALL mark the
+segment FLAGGED with every finding, and a segment accepted after at least one round SHALL count as repaired and
+accepted. A target a round returns SHALL be decided by the checks alone, with no reviewer call.
 
 **Source:** FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`),
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`,
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, `#reflect-improve`, `#monolingual-polish`,
-ADR-0038.
-In plain words: most failures can be fixed by asking the model again with the problem named; a named problem gets a
-targeted fix, a vague one gets a critique and a rewrite, and a near miss gets a final polish. The budget keeps a
-stubborn segment from eating the run, and the repaired count shows how much the repairs are doing. The draft's own
-two format repairs come first and never use up the budget — their order, and the replies that flag a segment at once,
-are the translation-pipeline capability's "Repair invalid structured draft replies once" and "Flag a segment whose reply
-cannot be used, and continue". A repaired target is new
-text the chunk's judge never saw, so accepting it on the old score would skip the judge exactly where it matters;
-judging it alone costs one short call and leaves the chunk's other decisions alone, and a target that already fails a
-check is not worth that call.
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`, ADR-0038.
+In plain words: most failures can be fixed by asking the model again with the problem named. The budget keeps a stubborn
+segment from eating the run, and the repaired count shows how much the repairs are doing. The draft's own two format
+repairs come first and never use up the budget — their order, and the replies that flag a segment at once, are the
+translation-pipeline capability's "Repair invalid structured draft replies once" and "Flag a segment whose reply cannot
+be used, and continue". A segment the checks accept goes to the reviewer instead (see "Verify every reviewer edit in
+code before applying it").
 
 #### Scenario: A placeholder failure gets a directed fix with the expected tokens
 
@@ -936,36 +1039,10 @@ check is not worth that call.
 - **THEN** the segment is FLAGGED with a high `markup` finding and no machine translation, after exactly 3 model calls
 - **AND** the directed fix was made although the placeholder repair had already been used
 
-#### Scenario: A low score with no finding goes to reflect and improve
-
-- **WHEN** Assisted, Balanced, a segment passed every check and its chunk scored `0.60` with no finding on it
-- **THEN** the round is a reflect call followed by an improve call
-
-#### Scenario: A near miss is polished
-
-- **WHEN** Assisted (τ = 0.75) and after improve the segment passes its hard gates and every soft check with
-  confidence `0.72`
-- **THEN** a polish call is made
-- **AND** with confidence `0.68`, or with confidence `0.72` and a failed length-ratio check, no polish call is made
-
 #### Scenario: The budget runs out
 
 - **WHEN** Fast (N = 1) and the segment still fails after its one round
 - **THEN** it is marked FLAGGED
-
-#### Scenario: A repaired segment is judged again on its own
-
-- **WHEN** Assisted (τ = 0.75), Balanced, the chunk `Book.md:0`–`Book.md:3` scored `0.90` with a medium `omission`
-  finding on `s2`, and the directed fix for `Book.md:1` returns `Вона пройшла з Гейлом до темної зали.`, passing every
-  check at full margin (confidence `1.0`)
-- **THEN** one judge call is made holding only that pair, labelled `s1`
-- **AND** when it answers `{"score":0.9,"verdict":"accept"}` with no finding, `Book.md:1` is accepted as repaired
-
-#### Scenario: A repair that still fails is not judged
-
-- **WHEN** Unattended (τ = 0.60), Balanced, and the directed fix for `Book.md:3` returns its English source
-  `He left the house at dawn.` (26 code points), which fails the untranslated-echo check outright with confidence 0.65
-- **THEN** no judge call is made for it and the next round begins
 
 #### Scenario: A repaired segment is counted
 
@@ -974,23 +1051,28 @@ check is not worth that call.
 
 ### Requirement: Record each segment's findings for review and repair
 
-The application SHALL record for every decided segment its confidence, its chunk's judge score when a judge ran, and
-each finding with the check or judge that raised it, its type, its severity and a short note, and SHALL keep the
-findings of a FLAGGED segment for the review panel and for any later retry.
+The application SHALL record for every decided segment its confidence and each finding with the check or the reviewer
+that raised it, its type, its severity and a short note, SHALL record every edit it applied as a low finding raised by
+`reviewer-edit` that carries the quote and its replacement, and SHALL keep the findings of a FLAGGED segment for the
+review panel and for any later retry.
 
 **Source:** FR-QA-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/01_Product/06_REVIEW_AND_EDITING.md#flagged-queue`.
 In plain words: a directed fix needs to know exactly what was wrong, and so does the person reviewing a flagged
-segment; a flag with no reason would leave them guessing.
+segment; a flag with no reason would leave them guessing, and an edit made for them should be shown as what it removed
+and what it put there.
 
 #### Scenario: A flagged segment keeps its reasons
 
-- **WHEN** segment `ch5 · p12` is flagged after its length ratio of `0.41` fell outside `0.7–1.8` and the judge
-  reported a high omission finding with score `0.58`
-- **THEN** its record carries confidence, the judge score `0.58`, a medium `omission` finding from the length-ratio
-  check and a high `omission` finding from the judge
+- **WHEN** segment `ch5 · p12` is flagged after its length ratio of `0.41` fell outside `0.7–1.8`
+- **THEN** its record carries confidence and a medium `omission` finding from the length-ratio check
 
-#### Scenario: An accepted segment keeps a low finding
+#### Scenario: An accepted segment keeps the edits made to it
 
-- **WHEN** a segment is accepted with a low fluency finding from the judge
-- **THEN** its record carries that low fluency finding
+- **WHEN** a segment is accepted after the reviewer's `gender` edit `Вона втомився` → `Вона втомилася` was applied
+- **THEN** its record carries a low `gender` finding raised by `reviewer-edit` holding both texts
+
+#### Scenario: An accepted segment keeps a low note
+
+- **WHEN** a segment is accepted with a `style` remark from the reviewer
+- **THEN** its record carries that remark as a low finding raised by `reviewer`

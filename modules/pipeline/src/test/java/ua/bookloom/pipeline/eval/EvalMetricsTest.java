@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 
 class EvalMetricsTest {
 
-    private static DefectRow row(final boolean defective, final boolean refused, final boolean stable, final int runs) {
-        return new DefectRow("c", "k", defective, refused, true, stable, runs);
+    private static DefectRow row(final boolean defective, final boolean flagged, final boolean stable, final int runs) {
+        return new DefectRow("c", "k", defective, flagged, true, stable, runs, 0);
     }
 
     private static final List<DefectRow> ROWS = List.of(
@@ -21,13 +21,26 @@ class EvalMetricsTest {
             row(false, false, true, 5));
 
     @Test
-    void falseNegativeRate_oneOfTwoDefectsAccepted_isHalf() {
+    void falseNegativeRate_oneOfTwoDefectsLeftAlone_isHalf() {
         assertThat(EvalMetrics.falseNegativeRate(ROWS)).isCloseTo(0.5, within(1e-9));
     }
 
     @Test
-    void falsePositiveRate_oneOfFourCleanRefused_isQuarter() {
+    void falsePositiveRate_oneOfFourCleanChanged_isQuarter() {
         assertThat(EvalMetrics.falsePositiveRate(ROWS)).isCloseTo(0.25, within(1e-9));
+    }
+
+    @Test
+    void catchRate_oneOfTwoDefectsFlagged_isHalf() {
+        assertThat(EvalMetrics.catchRate(ROWS)).isCloseTo(0.5, within(1e-9));
+    }
+
+    @Test
+    void tokenBreaks_rowsThatBrokeTokens_areSummed() {
+        assertThat(EvalMetrics.tokenBreaks(List.of(
+                        new DefectRow("a", "k", true, true, true, true, 1, 2),
+                        new DefectRow("b", "k", false, false, true, true, 1, 1))))
+                .isEqualTo(3);
     }
 
     @Test

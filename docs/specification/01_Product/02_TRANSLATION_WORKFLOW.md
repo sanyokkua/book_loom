@@ -62,7 +62,7 @@ A single trust-threshold dial (FR-REVIEW-02) is the one control the user turns t
 sets τ, the minimum deterministic confidence for automatic acceptance (DD-45):
 
 - A segment is ACCEPTED automatically when the hard gates pass **and** no soft check failed outright **and** its
-  deterministic confidence ≥ τ **and** (the judge is off **or** the judge score ≥ τ_judge, which defaults to τ).
+  no verified reviewer blocker is left (15d.6: there is no confidence threshold and no judge score).
 - A segment that misses the accept rule enters self-heal; if it still fails after N attempts, it is FLAGGED.
 - The three review modes are named positions of this dial (τ 0.60 / 0.75 / 0.85), and the dial is the **exclusive
   owner of τ** (DD-45). The quality dial (Fast/Balanced/Max) owns only mechanics — chunk size, preceding-target count,

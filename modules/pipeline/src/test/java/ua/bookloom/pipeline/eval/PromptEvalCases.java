@@ -10,14 +10,14 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.eval.EvalCase.Expect;
 import ua.bookloom.pipeline.eval.EvalCase.Fix;
-import ua.bookloom.pipeline.eval.EvalCase.Judge;
+import ua.bookloom.pipeline.eval.EvalCase.Review;
 import ua.bookloom.pipeline.eval.EvalCase.Suggest;
 import ua.bookloom.pipeline.eval.EvalCase.SuggestedName;
 
 /**
  * The fixed English → Ukrainian case set: the shapes a real book sends a small model — dialogue with a locked name,
  * headings, number- and symbol-only paragraphs, drop caps, nested emphasis, footnote references, a kept foreign run,
- * glossary names, a long sentence and text that reads like an instruction to the model — plus judge and directed-fix
+ * glossary names, a long sentence and text that reads like an instruction to the model — plus review and directed-fix
  * cases, and one batch of the fixture book's names given suggested targets. A locked name or a kept run reaches the
  * model as one standalone token, as it does in a run.
  */
@@ -162,7 +162,7 @@ final class PromptEvalCases {
                     "fix-omission",
                     "He left the house at dawn and walked to the river.",
                     "Він вийшов з дому на світанку.",
-                    List.of(new QaFinding("omission", Severity.MEDIUM, "drops 'and walked to the river'", "judge")),
+                    List.of(new QaFinding("omission", Severity.MEDIUM, "drops 'and walked to the river'", "reviewer")),
                     Expect.containing("(?iu)річ")),
             new Fix(
                     "fix-refusal",
@@ -170,23 +170,23 @@ final class PromptEvalCases {
                     "He opened the old door.",
                     List.of(new QaFinding("meaning", Severity.HIGH, "the reply refused the task", "refusal")),
                     Expect.containing("(?iu)відчин")),
-            new Judge(
-                    "judge-door",
+            new Review(
+                    "review-door",
                     "He opened the ⟦g0⟧old⟦g1⟧ door.",
                     "Він відчинив ⟦g0⟧старі⟦g1⟧ двері.",
                     "Він зачинив ⟦g0⟧нові⟦g1⟧ вікна."),
-            new Judge(
-                    "judge-omission",
+            new Review(
+                    "review-omission",
                     "She walked slowly to the harbour, where the ships were waiting in the fog.",
                     "Вона повільно пішла до гавані, де в тумані чекали кораблі.",
                     "Вона пішла."),
-            new Judge(
-                    "judge-untranslated",
+            new Review(
+                    "review-untranslated",
                     "The magician raised his staff and spoke a single word.",
                     "Чарівник підняв свій посох і промовив одне-єдине слово.",
                     "The magician raised his staff and spoke a single word."),
-            new Judge(
-                    "judge-meaning",
+            new Review(
+                    "review-meaning",
                     "Nobody in the city had ever seen the djinni smile.",
                     "Ніхто в місті ніколи не бачив, щоб джин усміхався.",
                     "Усі в місті щодня бачили, як джин плаче."),

@@ -1951,6 +1951,20 @@
     -fx-text-fill: -color-text;
 }
 
+.diff-removed {
+    -fx-background-color: -color-err-bg;
+    -fx-text-fill: -color-err;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 6px 2px 6px;
+}
+
+.diff-added {
+    -fx-background-color: -color-ok-bg;
+    -fx-text-fill: -color-ok;
+    -fx-background-radius: 4px;
+    -fx-padding: 2px 6px 2px 6px;
+}
+
 .review-locator {
     -fx-text-fill: -color-text-strong;
 }

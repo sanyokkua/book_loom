@@ -5,7 +5,7 @@
 ### Requirement: Send each call kind at its own temperature with reasoning off
 
 The system SHALL send each model call at the temperature of its kind: draft `0.2`, and the draft a review retry makes
-`0.1` when the person asks for a lower temperature; judge `0.1`; directed fix `0.2`; reflect and improve `0.35`; polish,
+`0.1` when the person asks for a lower temperature; reviewer `0` with a fixed seed; directed fix `0.2`; reflect and improve `0.35`; polish,
 pre-scan, summary and revision `0.2`. Every call SHALL carry reasoning control set to disabled.
 
 **Source:** FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
@@ -19,10 +19,10 @@ person who retries a segment and asks for a lower temperature gets a steadier dr
 because it only costs time and can leave the answer empty; how each server is told so is the `llm-provider`
 capability's rule.
 
-#### Scenario: A judge call is steadier than a draft
+#### Scenario: A reviewer call is steadier than a draft
 
-- **WHEN** a Balanced run drafts `ch07.xhtml:41` and then judges its chunk through the provider `lmstudio`
-- **THEN** the draft request body has `"temperature":0.2` and the judge request body has `"temperature":0.1`
+- **WHEN** a Balanced run drafts `ch07.xhtml:41` and then reviews its chunk through the provider `lmstudio`
+- **THEN** the draft request body has `"temperature":0.2` and the reviewer request body has `"temperature":0.0` and `"seed":15`
 
 #### Scenario: A lower-temperature retry
 
@@ -67,7 +67,7 @@ format, the reply SHALL be that text. WHEN it carries one, the reply SHALL be a 
 catalogue shape:
 
 - draft, structural repair, placeholder repair, directed fix, improve, polish and revision: `{"target":"<text>"}`;
-- judge: `{"score":1.0,"verdict":"accept","findings":[],"deferrals":[]}`;
+- reviewer: `{"results":[]}`;
 - reflect: `{"issues":[]}`;
 - pre-scan: the capitalised words of the text as candidate terms of type `other` and gender `unknown`;
 - summary: an empty bilingual summary with no facts;
@@ -81,11 +81,11 @@ The pseudo model SHALL never return an error and SHALL never open a network conn
 **Source:** FR-INFER-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
 `docs/specification/03_NonFunctional/03_PRIVACY_AND_OFFLINE.md#offline-invariant`,
 `docs/specification/02_Architecture/03_DOCUMENT_MODEL.md#unmask-and-validate`,
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#judge-quality-evaluation`, `#name-term-pre-scan`,
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `#name-term-pre-scan`,
 `#rolling-summary-update`.
 In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals,
-with its formatting intact. Now that a run also judges, reflects, scans and summarises, the pseudo model answers each of
-those in its expected shape, and its judge always accepts, so a whole run — review, memory and export included — works
+with its formatting intact. Now that a run also reviews, reflects, scans and summarises, the pseudo model answers each of
+those in its expected shape, and its reviewer never asks for an edit, so a whole run — review, memory and export included — works
 without any server. Its answer to a draft or a repair is the source, or the rejected target, in capitals, which the
 quality checks rightly call an untranslated echo: a segment whose source has at least 20 characters is flagged in every
 review mode, and a short one such as `Yes, sir.` is accepted (the `quality-gates` capability). It reports no usage, which
@@ -124,10 +124,10 @@ exercises the path that estimates throughput.
   `he opened the ⟦g0⟧old⟦g1⟧ door.`
 - **THEN** the reply is `{"target":"HE OPENED THE ⟦g0⟧OLD⟦g1⟧ DOOR."}`
 
-#### Scenario: The judge always accepts
+#### Scenario: The reviewer never asks for an edit
 
-- **WHEN** a request with the judge response format is sent to the pseudo model
-- **THEN** the reply is `{"score":1.0,"verdict":"accept","findings":[],"deferrals":[]}`
+- **WHEN** a request with the reviewer response format is sent to the pseudo model
+- **THEN** the reply is `{"results":[]}`
 
 ### Requirement: Carry a temperature and a response format per call
 

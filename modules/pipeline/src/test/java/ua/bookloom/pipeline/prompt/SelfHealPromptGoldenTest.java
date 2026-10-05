@@ -20,11 +20,12 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.heal.DirectedFix;
-import ua.bookloom.pipeline.judge.JudgeCall;
-import ua.bookloom.pipeline.judge.JudgeReplyParser;
-import ua.bookloom.pipeline.judge.JudgedPair;
+import ua.bookloom.pipeline.reviewer.ReviewPass;
+import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
+import ua.bookloom.pipeline.reviewer.ReviewedPair;
+import ua.bookloom.pipeline.reviewer.ReviewerCall;
 
-/** Pins the judge and directed-fix messages, so a prompt change is always a deliberate edit of a golden file. */
+/** Pins the reviewer and directed-fix messages, so a prompt change is always a deliberate edit of a golden file. */
 class SelfHealPromptGoldenTest {
 
     private static final PromptTemplates TEMPLATES = new PromptTemplates();
@@ -32,7 +33,7 @@ class SelfHealPromptGoldenTest {
             new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
 
     @ParameterizedTest
-    @ValueSource(strings = {"judge-en-uk", "directed-fix-en-uk"})
+    @ValueSource(strings = {"reviewer-en-uk", "directed-fix-en-uk"})
     void messages_pinnedScenario_areByteEqualToGolden(final String name) throws IOException {
         final List<ChatMessage> messages = render(name);
 
@@ -40,7 +41,7 @@ class SelfHealPromptGoldenTest {
         assertThat(messages.get(1).content()).isEqualTo(golden(name + ".user.txt"));
     }
 
-    /** The messages a pinned scenario sends: a two-pair judge call with a glossary, or an echo's directed fix. */
+    /** The messages a pinned scenario sends: a two-pair reviewer call with a glossary, or an echo's directed fix. */
     static List<ChatMessage> render(final String name) {
         final AtomicReference<ChatRequest> sent = new AtomicReference<>();
         final ModelCalls calls = (kind, segmentId, request) -> {
@@ -48,16 +49,7 @@ class SelfHealPromptGoldenTest {
             return Result.ok(new ChatResponse("{\"target\":\"x\"}", FinishReason.STOP));
         };
         switch (name) {
-            case "judge-en-uk" ->
-                new JudgeCall(TEMPLATES, new JudgeReplyParser(new ObjectMapper()))
-                        .judge(
-                                List.of(
-                                        new JudgedPair(
-                                                "Book.md:0", GoldenCases.SOURCE, "Він відчинив ⟦g0⟧старі⟦g1⟧ двері."),
-                                        new JudgedPair("Book.md:1", "Hale smiled.", "Гейл усміхнувся.")),
-                                FRAME,
-                                List.of("Hale → Гейл (person, male)"),
-                                calls);
+            case "reviewer-en-uk" -> reviewTwoPairs(calls);
             case "directed-fix-en-uk" ->
                 new DirectedFix(TEMPLATES, new DraftReplyParser(new ObjectMapper()))
                         .fix(
@@ -70,6 +62,18 @@ class SelfHealPromptGoldenTest {
             default -> throw new IllegalArgumentException(name);
         }
         return Objects.requireNonNull(sent.get(), "request").messages();
+    }
+
+    private static void reviewTwoPairs(final ModelCalls calls) {
+        new ReviewerCall(TEMPLATES, new ReviewReplyParser(new ObjectMapper()))
+                .review(
+                        List.of(
+                                new ReviewedPair("Book.md:0", GoldenCases.SOURCE, "Він відчинив ⟦g0⟧старі⟦g1⟧ двері."),
+                                new ReviewedPair("Book.md:1", "Hale smiled.", "Гейл усміхнувся.")),
+                        FRAME,
+                        List.of("Hale → Гейл"),
+                        ReviewPass.FIRST,
+                        calls);
     }
 
     private static String golden(final String file) throws IOException {

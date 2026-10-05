@@ -7,21 +7,21 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 
-/** The dial's parameter table is the one place chunking, repairs and the judge read the dial from. */
+/** The dial's parameter table is the one place chunking, repairs and the reviewer read the dial from. */
 class DialParametersTest {
 
     @ParameterizedTest
-    @CsvSource({"FAST,1,1,false,false,false,8", "BALANCED,2,2,true,false,false,4", "MAX,3,3,true,true,true,2"})
+    @CsvSource({"FAST,1,1,0,false,false,8", "BALANCED,2,2,1,false,false,4", "MAX,3,3,2,true,true,2"})
     void of_eachDial_holdsItsRow(
             final QualityDial dial,
             final int preceding,
             final int repairs,
-            final boolean judge,
+            final int reviewPasses,
             final boolean backward,
             final boolean summary,
             final int cap) {
         assertThat(DialParameters.of(dial))
-                .isEqualTo(new DialParameters(preceding, repairs, judge, backward, summary, cap));
+                .isEqualTo(new DialParameters(preceding, repairs, reviewPasses, backward, summary, cap));
     }
 
     @ParameterizedTest

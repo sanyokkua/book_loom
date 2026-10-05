@@ -16,6 +16,9 @@ public final class Borderline {
     /** The width of the polish window below τ ("Tuning constants": polish window ε 0.05). */
     public static final double POLISH_WINDOW = 0.05;
 
+    /** The floating-point tolerance a comparison with τ is read with, so a sum a hair below the bound still meets it. */
+    public static final double TOLERANCE = 1e-9;
+
     /**
      * Decides whether an improved target is borderline.
      *
@@ -25,15 +28,14 @@ public final class Borderline {
      * @param confidence the segment's blended confidence, in {@code [0,1]}
      * @param tau the review mode's acceptance threshold
      * @return {@code true} when hard gates pass, no check failed outright, and confidence lies in
-     *     {@code [tau - POLISH_WINDOW, tau - }{@link AcceptanceRule#ACCEPTANCE_TOLERANCE}{@code )} — the upper bound
-     *     reads with the same tolerance {@link AcceptanceRule#accepts} does, so a target the rule would already
-     *     accept is never sent to polish
+     *     {@code [tau - POLISH_WINDOW, tau - }{@link #TOLERANCE}{@code )} — the upper bound
+     *     reads with the same tolerance, so a target at τ is never sent to polish
      */
     public static boolean isBorderline(
             final boolean hardGatesPass, final boolean failedOutright, final double confidence, final double tau) {
         return hardGatesPass
                 && !failedOutright
-                && confidence >= tau - POLISH_WINDOW - AcceptanceRule.ACCEPTANCE_TOLERANCE
-                && confidence < tau - AcceptanceRule.ACCEPTANCE_TOLERANCE;
+                && confidence >= tau - POLISH_WINDOW - TOLERANCE
+                && confidence < tau - TOLERANCE;
     }
 }

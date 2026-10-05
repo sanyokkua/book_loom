@@ -26,7 +26,7 @@ class CallKindTotalsTest {
                 CallKind.DRAFT, 3000, new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)));
         totals.record(answered(
                 CallKind.DRAFT, 2000, new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)));
-        totals.record(answered(CallKind.JUDGE, 1000, new TokenUsage(500, 20, Duration.ofMillis(800))));
+        totals.record(answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800))));
 
         assertThat(totals.totals().get(CallKind.DRAFT))
                 .isEqualTo(new CallKindTotals.Totals(
@@ -38,7 +38,7 @@ class CallKindTotalsTest {
                         Duration.ofMillis(700),
                         Duration.ofMillis(4000),
                         1100));
-        assertThat(totals.totals().get(CallKind.JUDGE))
+        assertThat(totals.totals().get(CallKind.REVIEW))
                 .isEqualTo(new CallKindTotals.Totals(
                         1, 0, 500, 20, Duration.ofMillis(1000), Duration.ZERO, Duration.ofMillis(800), 0));
     }

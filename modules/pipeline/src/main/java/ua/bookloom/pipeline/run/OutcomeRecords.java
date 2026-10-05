@@ -37,7 +37,7 @@ public final class OutcomeRecords {
      * @param stored the non-null pending record
      * @param outcome the non-null outcome decided for it
      * @param context the non-null snapshot of what the segment's draft saw, which a retry replays
-     * @return the record with its status, both machine forms, confidence, judge score, findings, path, repair rounds
+     * @return the record with its status, both machine forms, confidence, findings, path, repair rounds
      *     and context set; a segment flagged at once also carries its reason as the {@code reply} finding
      */
     public static SegmentRecord decided(

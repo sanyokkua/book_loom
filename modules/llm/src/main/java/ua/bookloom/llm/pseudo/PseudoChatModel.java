@@ -34,7 +34,7 @@ public final class PseudoChatModel implements ChatModel {
             Pattern.compile("⟦g\\d+⟧|&(?:#(?:x|X)[0-9A-Fa-f]+|#\\d+|[A-Za-z][A-Za-z0-9]+);");
     private static final Pattern CAPITALIZED_WORD = Pattern.compile("\\p{Lu}\\p{L}*");
 
-    private static final String FORMAT_JUDGE = "judge";
+    private static final String FORMAT_REVIEWER = "reviewer";
     private static final String FORMAT_REFLECT = "reflect";
     private static final String FORMAT_PRESCAN = "prescan";
     private static final String FORMAT_SUMMARY = "summary";
@@ -48,7 +48,7 @@ public final class PseudoChatModel implements ChatModel {
     // One listed term of a suggestion request: "- <term> — <type>, <gender> ...".
     private static final Pattern SUGGEST_LINE = Pattern.compile("(?m)^- (.+?) — ");
 
-    private static final String JUDGE_REPLY = "{\"score\":1.0,\"verdict\":\"accept\",\"findings\":[],\"deferrals\":[]}";
+    private static final String REVIEWER_REPLY = "{\"results\":[]}";
     private static final String REFLECT_REPLY = "{\"issues\":[]}";
     private static final String SUMMARY_REPLY = "{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}";
 
@@ -114,7 +114,7 @@ public final class PseudoChatModel implements ChatModel {
         }
         final String formatName = request.responseFormat().name();
         return switch (formatName) {
-            case FORMAT_JUDGE -> JUDGE_REPLY;
+            case FORMAT_REVIEWER -> REVIEWER_REPLY;
             case FORMAT_REFLECT -> REFLECT_REPLY;
             case FORMAT_PRESCAN -> prescanReply(source);
             case FORMAT_SUMMARY -> SUMMARY_REPLY;

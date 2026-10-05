@@ -62,9 +62,9 @@ class ConnectionHealthTest {
     @Test
     void finished_twoFailuresThenTheAnswer_forgetsBoth() {
         final ConnectionHealth health = new ConnectionHealth();
-        health.finished(attempt(CallKind.JUDGE, "s-2", 1, ErrorCode.unreachable), START);
-        health.finished(attempt(CallKind.JUDGE, "s-2", 2, ErrorCode.timeout), START.plusSeconds(90));
-        health.finished(attempt(CallKind.JUDGE, "s-2", 1, null), START.plusSeconds(200));
+        health.finished(attempt(CallKind.REVIEW, "s-2", 1, ErrorCode.unreachable), START);
+        health.finished(attempt(CallKind.REVIEW, "s-2", 2, ErrorCode.timeout), START.plusSeconds(90));
+        health.finished(attempt(CallKind.REVIEW, "s-2", 1, null), START.plusSeconds(200));
 
         assertThat(after(health, 5).failuresRecently()).isZero();
     }

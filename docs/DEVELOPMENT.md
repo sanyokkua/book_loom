@@ -460,11 +460,11 @@ real Ollama model (`BOOKLOOM_EVAL_MODEL`, default `gemma4:e4b-mlx`; `BOOKLOOM_EV
 `suggest`, runs only those cases; skipped when `BOOKLOOM_EVAL_OLLAMA_URL` is unset) and measures each reply before any
 repair: it parses, its tokens are intact with every pair around words (gate), it is in Cyrillic, it holds the case's
 marker (a glossary rendering, a correct drop cap, a translated instruction, a name's uninflected dictionary form), and
-the judge scores a good candidate ≥ 0.8 and a bad one ≤ 0.6. The table lands in
-`modules/pipeline/build/reports/promptEval/<model>.txt`; the task fails below parse 95%, gate 90% or judge separation
+the reviewer leaves a good candidate alone and asks for a change to a bad one (an edit whose quote is in the text, or a rewrite; an edit that quotes nothing is a harmless hallucination). The table lands in
+`modules/pipeline/build/reports/promptEval/<model>.txt`; the task fails below parse 95%, gate 90% or review separation
 80%. Calibration on 2026-10-02 (one sample per case, temperature as in production):
 
-| Prompts | Model | parse | gate | judge separation | script | marker | injection |
+| Prompts | Model | parse | gate | review separation | script | marker | injection |
 |---|---|---|---|---|---|---|---|
 | before (step 8g) | gemma4:e4b-mlx | 100% | 91% | 50% | 100% | 67% | 100% |
 | after (step 9) | gemma4:e4b-mlx | 100% | 100% | 100% | 100% | 89% | 100% |
@@ -482,11 +482,28 @@ item. It measures only; the batch size is chosen by reading the table (the tagge
 dropped after the first A/B, see `12_PROMPT_CATALOG.md#batch-draft`). A run's own draft calls per segment are
 `modelCallsByKind.DRAFT.attempts` over `run.segments` in the report JSON (a batch call and a single-segment fallback each count one).
 
+**Reviewer eval (15d.6).** The same suite measures the reviewer that replaced the judge: each corpus case is sent through
+`ReviewerCall` and its edits go through the production `EditApplier`. The table's `catch` is the share of defective
+candidates the reviewer asked to change (thresholds: at least 90% on the e4b class, 95% on the 26b class), `falseAlarmEdits`
+the share of clean ones it would have changed (at most 10%), `stability` the share of cases whose repeats ask for the same
+change, and `tokenBreaks` the applied edits that changed a placeholder token (must be 0). One model, five repeats:
+
+```bash
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx BOOKLOOM_EVAL_STABILITY=5 \
+  BOOKLOOM_EVAL_ONLY=corpus ./gradlew :pipeline:promptEval          # e4b: the 19 corpus cases only
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:26b-mlx BOOKLOOM_EVAL_STABILITY=5 \
+  BOOKLOOM_EVAL_ONLY=corpus ./gradlew :pipeline:promptEval          # the 26b class
+scripts/eval-matrix.sh --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx" --stability 5 --only corpus   # both, one table
+```
+
+Leave `BOOKLOOM_EVAL_ONLY` out to run the draft, fix and `review-*` pair cases as well; `--langs all` runs each language's
+mini-corpus. Reports land in `modules/pipeline/build/reports/promptEval/<model>.txt` and `.json`.
+
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
-prompt eval plus 19 labelled judge cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
+prompt eval plus 19 labelled reviewer cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
 « », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints
-one table. `falseNegative` is the share of defective candidates the judge accepted, `falsePositive` the share of clean ones
-it refused, `stability` the share of cases whose `BOOKLOOM_EVAL_STABILITY` repeats agree. Thresholds per model class are in
+one table. `falseNegative` is the share of defective candidates the reviewer left alone (one minus the defect catch rate), `falsePositive` the share of clean ones
+it would have changed (false-alarm edits), `tokenBreaks` the applied edits that changed a placeholder token (always 0), `stability` the share of cases whose `BOOKLOOM_EVAL_STABILITY` repeats agree. Thresholds per model class are in
 `eval/thresholds.json`. Env: `BOOKLOOM_EVAL_URL`, `BOOKLOOM_EVAL_PROVIDER=lmstudio`. 2026-10-03, one sample, stability 1:
 
 | Model | judge FN before → after | FP before → after | other |

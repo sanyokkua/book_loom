@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * What a judge run on the corpus must reach, by model class (one file, {@code eval/thresholds.json}).
+ * What a reviewer run on the corpus must reach, by model class (one file, {@code eval/thresholds.json}).
  *
- * @param falseNegativeMax the share of defective candidates the judge may accept
- * @param falsePositiveMax the share of clean candidates the judge may refuse
+ * @param falseNegativeMax the share of defective candidates the reviewer may leave alone (one minus the catch rate)
+ * @param falsePositiveMax the share of clean candidates the reviewer may ask to change
  * @param stabilityMin the share of cases whose repeated runs must agree
  */
 record EvalThresholds(double falseNegativeMax, double falsePositiveMax, double stabilityMin) {

@@ -73,7 +73,8 @@ class OversizedSegmentTest {
         TranslationJobTestSupport.shutdownAll();
     }
 
-    // Two sentence-aligned pieces, both echoed: the English paragraph is a blocking text finding, so no judge is asked
+    // Two sentence-aligned pieces, both echoed: the English paragraph is a blocking text finding, so no reviewer is
+    // asked
     // about it; the round repairs by drafting each piece again, naming the echo finding in the piece's own request,
     // and never sends the whole oversized segment to a directed fix.
     @Test
@@ -89,7 +90,7 @@ class OversizedSegmentTest {
         TranslationJobTestSupport.report(
                 TranslationJobTestSupport.job(project, model).run());
 
-        assertThat(model.formats()).containsExactly("draft", "draft", "draft", "draft", "judge");
+        assertThat(model.formats()).containsExactly("draft", "draft", "draft", "draft");
         assertThat(model.userMessages().subList(0, 2))
                 .allSatisfy(user -> assertThat(user).doesNotContain("[Extra instruction]"));
         assertThat(model.userMessages().subList(2, 4))
@@ -204,7 +205,7 @@ class OversizedSegmentTest {
 
     /**
      * Echoes each piece of the first draft, translates it once the request carries an extra instruction, and accepts
-     * whatever the judge is shown.
+     * whatever the reviewer is shown.
      */
     private static final class RedraftingModel implements ChatModel {
 
@@ -216,8 +217,7 @@ class OversizedSegmentTest {
         public Result<ChatResponse> chat(final ChatRequest request) {
             requests.add(request);
             final String format = format(request);
-            final String content =
-                    "judge".equals(format) ? "{\"score\":0.9,\"verdict\":\"accept\"}" : draftReply(request);
+            final String content = "reviewer".equals(format) ? "{\"results\":[]}" : draftReply(request);
             return Result.ok(new ChatResponse(content, FinishReason.STOP));
         }
 

@@ -57,7 +57,7 @@ class RequestTimeoutsTest {
     void forChat_judge_isNinetySecondsWhateverTheConfigAndExpectedOutput(
             long configuredSeconds, @Nullable Integer expectedOutputTokens) {
         final ProviderConfig judged = RequestTimeouts.forChat(
-                config(Duration.ofSeconds(configuredSeconds)), request(CallKind.JUDGE, expectedOutputTokens));
+                config(Duration.ofSeconds(configuredSeconds)), request(CallKind.REVIEW, expectedOutputTokens));
 
         assertThat(judged.requestTimeout()).isEqualTo(Duration.ofSeconds(90));
     }

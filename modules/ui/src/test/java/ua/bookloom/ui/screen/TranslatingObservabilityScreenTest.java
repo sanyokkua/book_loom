@@ -47,9 +47,9 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    private static WaitingCall judgeCall(final int attempt, final long waited, final long total, final boolean stuck) {
+    private static WaitingCall reviewCall(final int attempt, final long waited, final long total, final boolean stuck) {
         return new WaitingCall(
-                CallKind.JUDGE,
+                CallKind.REVIEW,
                 "ch9 · p02",
                 0,
                 attempt,
@@ -72,10 +72,10 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         showTranslating();
         publish(RunState.RUNNING);
 
-        waitOn(judgeCall(2, 12, 102, false));
+        waitOn(reviewCall(2, 12, 102, false));
 
         assertThat(labelText("translating-banner-text"))
-                .isEqualTo("Judge · ch9 · p02 · attempt 2 of 2 · 0:12 of 1:30 · 1:42 in all");
+                .isEqualTo("Review · ch9 · p02 · attempt 2 of 2 · 0:12 of 1:30 · 1:42 in all");
         assertThat(shownActions()).isEmpty();
     }
 
@@ -85,11 +85,11 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         showTranslating();
         publish(RunState.RUNNING);
 
-        waitOn(judgeCall(1, 61, 61, true));
+        waitOn(reviewCall(1, 61, 61, true));
 
         assertThat(labelText("translating-banner-title")).isEqualTo("The model is slow to answer");
         assertThat(labelText("translating-banner-text"))
-                .startsWith("Judge · ch9 · p02 · attempt 1 of 2 · 1:01 of 1:30\n")
+                .startsWith("Review · ch9 · p02 · attempt 1 of 2 · 1:01 of 1:30\n")
                 .contains("Skip the segment");
         assertThat(required("translating-banner").getStyleClass()).contains("banner-warn");
         assertThat(shownActions()).containsExactly(SKIP, AGAIN, PAUSE_STUCK);
@@ -103,7 +103,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         onFx(() -> button("translating-start").fire());
         job.awaitRunStarted();
         awaitFx(() -> isShown("translating-pause"));
-        waitOn(judgeCall(1, 61, 61, true));
+        waitOn(reviewCall(1, 61, 61, true));
 
         onFx(() -> button(SKIP).fire());
 
@@ -119,7 +119,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         job.awaitRunStarted();
         job.emit(new SegmentStarted("s-2", "ch9 · p02", "Text.", new ChunkPosition(9, 81, 1, 7)));
         job.emit(new ModelCallFinished(
-                "s-2", CallKind.JUDGE, TIMEOUT, null, 0, false, List.of("s-2"), 2, ErrorCode.timeout));
+                "s-2", CallKind.REVIEW, TIMEOUT, null, 0, false, List.of("s-2"), 2, ErrorCode.timeout));
         job.emit(new Paused(
                 PauseReason.ON_ERROR,
                 AppError.of(ErrorCode.timeout, "Model server timed out", "The server did not answer."),
@@ -130,7 +130,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         awaitFx(() -> isShown(RETRY));
 
         assertThat(labelText("translating-banner-text"))
-                .contains("Judge · ch9 · p02 failed: timeout — pause 2 of 2.")
+                .contains("Review · ch9 · p02 failed: timeout — pause 2 of 2.")
                 .contains("if it fails again, the segment is flagged")
                 .contains("kept in memory until the application closes")
                 .doesNotContain("no work was lost");
@@ -160,7 +160,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         publish(RunState.RUNNING);
         publishLog(
                 new LogEntry(LogKind.ACCEPTED, List.of("ch9 · p01")),
-                new LogEntry(LogKind.CALL_FAILED, List.of("judge", " · ch9 · p02", "0", "1", "1:30", "timeout")),
+                new LogEntry(LogKind.CALL_FAILED, List.of("review", " · ch9 · p02", "0", "1", "1:30", "timeout")),
                 new LogEntry(LogKind.MILESTONE, List.of("paused")));
 
         onFx(() -> ((ToggleButton) required("translating-log-errors-only")).fire());
@@ -177,7 +177,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
         publish(RunState.RUNNING);
         final LogEntry failed = new LogEntry(
                 LogKind.CALL_FAILED,
-                List.of("judge", " · ch9 · p02", "0", "1", "1:30", "timeout"),
+                List.of("review", " · ch9 · p02", "0", "1", "1:30", "timeout"),
                 LocalTime.of(8, 43, 0),
                 1);
 

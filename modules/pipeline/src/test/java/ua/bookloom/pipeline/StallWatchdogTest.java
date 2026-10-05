@@ -42,7 +42,7 @@ class StallWatchdogTest {
     void check_judgeCallEnded_endsNothing() {
         inJudgeCall();
         watchdog.onEvent(new ModelCallFinished(
-                null, CallKind.JUDGE, Duration.ofSeconds(3), null, 0, false, List.of("s1"), 1, null));
+                null, CallKind.REVIEW, Duration.ofSeconds(3), null, 0, false, List.of("s1"), 1, null));
 
         clock.advance(Duration.ofMinutes(5));
         watchdog.check();
@@ -80,6 +80,7 @@ class StallWatchdogTest {
     private void inJudgeCall() {
         control.claimRun();
         control.enterModelCall();
-        watchdog.onEvent(new ModelCallStarted(null, CallKind.JUDGE, List.of("s1"), 1, 1, Duration.ofSeconds(90), null));
+        watchdog.onEvent(
+                new ModelCallStarted(null, CallKind.REVIEW, List.of("s1"), 1, 1, Duration.ofSeconds(90), null));
     }
 }

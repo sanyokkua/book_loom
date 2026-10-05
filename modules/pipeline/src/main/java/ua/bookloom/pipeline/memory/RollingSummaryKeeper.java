@@ -239,7 +239,7 @@ public final class RollingSummaryKeeper {
     }
 
     // Design D3: an empty or over-long reply never fails a run, so the summary keeps its previous version, as the
-    // judge keeps its verdict unread. Every other error is the run's to route — a pause, a stop or a failure.
+    // reviewer keeps its answer unread. Every other error is the run's to route — a pause, a stop or a failure.
     private static Result<Optional<String>> unanswered(final AppError error) {
         if (error.code() == ErrorCode.emptyCompletion || error.code() == ErrorCode.contextWindow) {
             log.warn("Summary call gave no summary, previous version kept code={}", error.code());

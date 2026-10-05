@@ -5,6 +5,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.QaFinding;
@@ -88,6 +89,19 @@ public final class ReviewFixtures {
                 "ch9 · p03",
                 SegmentStatus.FLAGGED,
                 List.of(new QaFinding("language", Severity.MEDIUM, "Looks Russian", "script")),
+                null,
+                null);
+    }
+
+    /** A flagged segment the reviewer fixed in place with one gender edit and could not fix in another place. */
+    public static SegmentView withAppliedEdit() {
+        return view(
+                "ch11.xhtml:8",
+                "ch11 · p09",
+                SegmentStatus.FLAGGED,
+                List.of(
+                        new AppliedEdit("gender", "Вона втомився", "Вона втомилася").toFinding(),
+                        new AppliedEdit("invented-word", "абракадабра ", "").toFinding()),
                 null,
                 null);
     }
