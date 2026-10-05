@@ -10,7 +10,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
 /**
  * One chunk's quality-loop settings.
  *
- * @param reviewMode the run's review mode, whose threshold only the polish pass of a near miss still reads
+ * @param reviewMode the run's review mode; the repair path no longer reads it (it carried the polish window)
  * @param dial the quality dial's mechanics — the repair budget and how many reviewer passes run
  * @param frame the run's language pair, style sheet and foreign-passage policy
  * @param namePolicy the Book Brief's name policy, read by the script and echo checks' name removal

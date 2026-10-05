@@ -35,8 +35,8 @@ class ConnectionHealthTest {
     @Test
     void finished_failedThenAnsweredOnRetry_countsNoFailure() {
         final ConnectionHealth health = new ConnectionHealth();
-        health.finished(attempt(CallKind.REFLECT, "s-17", 1, ErrorCode.timeout), START);
-        health.finished(attempt(CallKind.REFLECT, "s-17", 2, null), START.plusSeconds(100));
+        health.finished(attempt(CallKind.DIRECTED_FIX, "s-17", 1, ErrorCode.timeout), START);
+        health.finished(attempt(CallKind.DIRECTED_FIX, "s-17", 2, null), START.plusSeconds(100));
 
         final ConnectionStatus status = after(health, 3);
 
@@ -48,9 +48,9 @@ class ConnectionHealthTest {
     @Test
     void finished_failedThenAnotherCallAnswered_keepsTheFailure() {
         final ConnectionHealth health = new ConnectionHealth();
-        health.finished(attempt(CallKind.REFLECT, "s-17", 2, ErrorCode.timeout), START);
+        health.finished(attempt(CallKind.DIRECTED_FIX, "s-17", 2, ErrorCode.timeout), START);
         health.finished(attempt(CallKind.DRAFT, "s-17", 1, null), START.plusSeconds(5));
-        health.finished(attempt(CallKind.REFLECT, "s-18", 1, null), START.plusSeconds(10));
+        health.finished(attempt(CallKind.DIRECTED_FIX, "s-18", 1, null), START.plusSeconds(10));
 
         final ConnectionStatus status = after(health, 3);
 

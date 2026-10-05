@@ -475,12 +475,11 @@ removed and whitespace collapsed. So locked terms and kept foreign runs never co
 - **Self-heal** (`heal.QualityLoop`), up to N rounds (the dial's repair budget), per failing segment:
   - a **directed fix** when the segment has a concrete finding — a failed hard gate (a `markup` failure carries the
     expected token sequence), a check failed outright, or a medium or high judge finding;
-  - otherwise **reflect → improve** (confidence below τ, or a judge score below τ_judge, with no concrete finding, or an
-    unreadable judge reply), then **polish** only when the improved target passes its hard gates, no check failed and
-    confidence ∈ [τ − 0.05, τ);
-  - when the judge is on, a repaired target that passes its hard gates, has no failed check and reaches τ is judged
-    again on its own — a one-pair call labelled `s1` — whose score and findings replace the chunk's for that segment; a
-    target short of any of these goes to the next round with no judge call;
+  - otherwise **nothing**: reflect → improve → polish and the near-miss polish window were removed in 15d.7 (the
+    acceptance rule no longer reaches them and no measurement showed they help); a segment with no finding to name is
+    flagged without a call. The path carries a **best candidate** (`heal.BestCandidate`: fewest failed hard gates, then
+    fewest blockers); a step replaces it only when `heal.RoundProgress` finds fewer blockers, otherwise the step is
+    discarded and the path stops; the judge is gone (15d.6), so a repaired target is decided by the checks alone;
   - after N rounds the segment is FLAGGED with every finding; accepted after ≥ 1 round, its path is `REPAIRED`.
 - **Reference fixtures:** en→uk `He opened the old door.` (23 code points) → the pseudo model's `HE OPENED THE OLD
   DOOR.` fails echo and script outright, is repaired N times with the same answer and is FLAGGED in every mode;
@@ -968,7 +967,6 @@ starting points, each in one place.
 | script share | fail < 0.60; margin window 0.20 | chosen here (0.60 re-purposed from the reference's detector confidence) | `qa.ScriptCheck` |
 | repetition | m = 3, k = 3; margin 0.5 at a run of 2 | reference `05_PIPELINE_ENGINE.md#qa-thresholds`; 0.5 chosen here | `qa.RepetitionCheck` |
 | length bands | per pair class; short < 25 chars widened ×0.5 / ×2; margin window 0.10 × band width | reference `05_PIPELINE_ENGINE.md#qa-thresholds`; window chosen here | `qa.LengthBand` (read by the length check and the output allowance) |
-| polish window ε | 0.05 | chosen here (the reference names ε without a value, `05_PIPELINE_ENGINE.md#tiered-loop`) | `heal.Borderline` |
 | fuzzy TM suggestion | similarity ≥ 0.85 | chosen here | `memory.TranslationMemory` |
 | summary refresh | every 20 ACCEPTED segments and at unit end | reference `05_PIPELINE_ENGINE.md#rolling-summary` (K = 20) | `memory.RollingSummaryKeeper` |
 | summary size | ≤ 300 estimated tokens | chosen here | `memory.RollingSummaryKeeper` |
@@ -978,8 +976,8 @@ starting points, each in one place.
 | temperature: draft | 0.2 | reference `12_PROMPT_CATALOG.md#draft-translation` | `prompt.PromptName` |
 | temperature: judge | 0.1 | chosen within the reference's 0.0–0.2 | `prompt.PromptName` |
 | temperature: directed fix | 0.2 (no caller asks for a lower one: a review retry runs no self-heal rounds, D9) | reference ~0.2 | `prompt.PromptName` |
-| temperature: reflect, improve | 0.35 | reference ≤ ~0.4 (`05_PIPELINE_ENGINE.md#generation-parameters`); the catalogue's reflect "~0.2" (`12_PROMPT_CATALOG.md#reflect-critique`) is edited in task group 0 | `prompt.PromptName` |
-| temperature: polish, pre-scan, summary, revision | 0.2 | reference ~0.2 in `12_PROMPT_CATALOG.md` | `prompt.PromptName` |
+| temperature: reflect, improve (removed in 15d.7) | 0.35 | reference ≤ ~0.4 (`05_PIPELINE_ENGINE.md#generation-parameters`); the catalogue's reflect "~0.2" (`12_PROMPT_CATALOG.md#reflect-critique`) is edited in task group 0 | `prompt.PromptName` |
+| temperature: pre-scan, summary, revision (polish removed in 15d.7) | 0.2 | reference ~0.2 in `12_PROMPT_CATALOG.md` | `prompt.PromptName` |
 | temperature: retried draft | 0.2, or 0.1 when asked | chosen here | `prompt.PromptName` |
 | chat timeout | `max(configured, min(600 s, expectedOutputTokens × 0.5 s))`; configured default 3 min | chosen here; default from `ProviderConfig.DEFAULT_REQUEST_TIMEOUT` | `:llm` request timeout rule |
 | output allowance | `ceil(chars(source) × band hi / K(target) × 1.15)` | chosen here | `chunk.TokenEstimator` |

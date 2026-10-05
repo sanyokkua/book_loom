@@ -58,24 +58,6 @@ sealed interface RoundOutcome {
     }
 
     /**
-     * Content that flags the segment at once <em>after</em> an improved target already passed every hard gate — a
-     * polish call that answers {@code FlagNow} must not discard that improved target: it becomes the machine
-     * target and its QA the last evaluation, not whatever the round started from
-     * ({@code specs/quality-gates/spec.md} "A near miss is polished").
-     *
-     * @param error the error to record against the segment
-     * @param evaluated the improved target that passed every hard gate before the polish call was made
-     */
-    record FlagNowAfterEvaluation(AppError error, Evaluated evaluated) implements RoundOutcome {
-
-        /** Rejects a missing component. */
-        public FlagNowAfterEvaluation {
-            Objects.requireNonNull(error, "error");
-            Objects.requireNonNull(evaluated, "evaluated");
-        }
-    }
-
-    /**
      * A call failure — the self-heal call's own, or the gate's — that ends the whole {@code nextDecision()} step.
      *
      * @param error the failure to return from the step

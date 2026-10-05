@@ -81,7 +81,7 @@ N (preceding blocks), whether TM/summary are included, and budget are dial-drive
 
 Scoring is **per chunk** when the judge runs, but each check and each repair act on **one segment**: a failure — a
 hard gate, a soft check, or a judge finding — repairs only the **offending segment**, and every repair call (directed
-fix, reflect, improve, polish) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see
+fix) returns exactly one segment's target, never a chunk-mate's (ADR-0038). Per chunk (see
 `chunk-translate-loop.mermaid`):
 
 1. **Draft** — one `chat` call for exactly one source segment; the response is exactly `{"target":"…"}`. The last
@@ -109,10 +109,9 @@ fix, reflect, improve, polish) returns exactly one segment's target, never a chu
     - **Directed fix (1 call)** when QA or a refused reviewer edit produced *concrete* findings (tag mismatch, wrong script, dropped
       content, glossary miss) — inject the exact findings and ask for a targeted correction of this one segment; on a
       **tag-multiset mismatch** inject the expected placeholder multiset ("restore exactly: …").
-    - **Reflect → improve (2 calls)** when the failure is *vague* quality (judge score low, no concrete finding) —
-      reflect, then rewrite, each returning exactly one segment's target; an **optional monolingual polish** fires only
-      when the improved target passes its hard gates, **no soft check failed**, and `confidence ∈ [τ − 0.05, τ)`
-      (borderline).
+    - **Nothing** when there is no concrete finding to name: the reflect → improve → polish chain was removed in 15d.7, and
+      the segment is flagged without a call. The repair path keeps a **best candidate** and stops when a step does not
+      lower the blocker set.
     - Loop back through QA up to `N` rounds. With the judge on, a repaired target that passes its hard gates, fails
       no soft check and reaches `τ` is **judged again on its own** — a one-pair call labelled `s1` whose score and
       findings replace the chunk's for that segment; a target short of any of these goes to the next round with no
@@ -301,18 +300,17 @@ deferrals.
 ## prompt-builder {#prompt-builder}
 
 Prompts are built from a **template + slots**: fixed instruction scaffolding with named slots (`{brief}`, `{summary}`,
-`{glossary}`, `{precedingTarget}`, `{tmHits}`, `{sourceSegments}`, `{findings}`). Directed-fix and reflect→improve use
-dedicated templates that add a `{findings}` or `{reflection}` slot. Templates are data, so the quality dial and policies
+`{glossary}`, `{precedingTarget}`, `{tmHits}`, `{sourceSegments}`, `{findings}`). The directed-fix template adds a `{findings}` slot. Templates are data, so the quality dial and policies
 parameterize the prompt without code changes. The concrete system/user templates for every pipeline call — draft, judge,
-directed fix, reflect→improve, backward revision, book-brief/tone setup, and rolling-summary update — with their
+directed fix, backward revision, book-brief/tone setup, and rolling-summary update — with their
 injected variables, required-vs-optional fields, parameters, and expected JSON shapes, are the normative catalogue in
 `01_Product/12_PROMPT_CATALOG.md`.
 
 ## generation-parameters {#generation-parameters}
 
 Inference runs at **low temperature** for fidelity (fewer hallucinations, less drift off the glossary, more reproducible
-output): draft 0.2 (the default), judge 0.1, directed fix 0.2, reflect→improve 0.35 to escape a bad phrasing, backward
-revision 0.2, polish/pre-scan/summary 0.2. The default 0.2 is user-adjustable 0.0–2.0 in Generation settings
+output): draft 0.2 (the default), judge 0.1, directed fix 0.2, backward
+revision 0.2, pre-scan/summary 0.2. The default 0.2 is user-adjustable 0.0–2.0 in Generation settings
 (`01_Product/07_SETTINGS.md#generation-tab`), and a review-desk retry can opt into 0.1 for its draft call when a lower
 temperature is asked. Where a **reasoning level** is controllable (Ollama `think`, OpenAI reasoning params) every call
 sets it low/off; the response handler strips any reasoning/thinking channel before parsing (`04_LLM_INTEGRATION.md`).

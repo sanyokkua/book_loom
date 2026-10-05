@@ -58,7 +58,7 @@ class PseudoChatModelTest {
 
     // Every other repair-shaped format answers the same single-target object.
     @ParameterizedTest
-    @ValueSource(strings = {"structural-repair", "placeholder-repair", "directed-fix", "improve", "polish", "revision"})
+    @ValueSource(strings = {"structural-repair", "placeholder-repair", "directed-fix", "revision"})
     void chat_repairFormats_repliesWithUppercasedTargetObject(String formatName) {
         final ChatResponse response = send("<Text>\nhi\n</Text>", formatName);
 
@@ -71,14 +71,6 @@ class PseudoChatModelTest {
         final ChatResponse response = send("anything", "reviewer");
 
         assertThat(response.content()).isEqualTo("{\"results\":[]}");
-    }
-
-    // Reflect never raises a critique of its own.
-    @Test
-    void chat_reflectFormat_repliesWithEmptyIssues() {
-        final ChatResponse response = send("anything", "reflect");
-
-        assertThat(response.content()).isEqualTo("{\"issues\":[]}");
     }
 
     // The pre-scan reports each distinct capitalised word, in order of first appearance, as an unlocked other term.

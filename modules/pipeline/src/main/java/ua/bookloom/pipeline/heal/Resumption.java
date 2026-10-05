@@ -10,7 +10,7 @@ import java.util.Objects;
  * @param round the round to continue, counted from one
  * @param state the state that round started from
  */
-record Resumption(int round, RoundState state) {
+record Resumption(int round, BestCandidate state) {
 
     /** Rejects a missing state or a round before the first. */
     Resumption {
@@ -26,7 +26,7 @@ record Resumption(int round, RoundState state) {
      * @param state the draft's state
      * @return round one
      */
-    static Resumption first(final RoundState state) {
+    static Resumption first(final BestCandidate state) {
         return new Resumption(1, state);
     }
 }

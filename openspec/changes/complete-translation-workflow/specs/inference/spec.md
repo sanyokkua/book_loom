@@ -5,16 +5,15 @@
 ### Requirement: Send each call kind at its own temperature with reasoning off
 
 The system SHALL send each model call at the temperature of its kind: draft `0.2`, and the draft a review retry makes
-`0.1` when the person asks for a lower temperature; reviewer `0` with a fixed seed; directed fix `0.2`; reflect and improve `0.35`; polish,
-pre-scan, summary and revision `0.2`. Every call SHALL carry reasoning control set to disabled.
+`0.1` when the person asks for a lower temperature; reviewer `0` with a fixed seed; directed fix `0.2`; pre-scan, summary and revision `0.2`. Every call SHALL carry reasoning control set to disabled.
 
 **Source:** FR-INFER-03 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-infer`),
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#generation-parameters`,
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#generation-parameters`,
-`docs/specification/01_Product/12_PROMPT_CATALOG.md#reflect-rewrite`,
+`docs/specification/01_Product/12_PROMPT_CATALOG.md#directed-fix-repair`,
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`.
 In plain words: every call stays low and near-deterministic for fidelity; a scorer is the steadiest, so the same draft
-gets the same verdict, and only the rewrite after a vague critique gets a little more room to escape a bad phrasing. A
+gets the same verdict, and a repair is as steady as a draft. A
 person who retries a segment and asks for a lower temperature gets a steadier draft of it. Reasoning is turned off
 because it only costs time and can leave the answer empty; how each server is told so is the `llm-provider`
 capability's rule.
@@ -30,10 +29,10 @@ capability's rule.
 - **THEN** the retry's draft request carries the temperature `0.1`
 - **AND** a retry of the same segment without that request carries `0.2`
 
-#### Scenario: Improve gets more room
+#### Scenario: A directed fix stays low and reasoning is off
 
-- **WHEN** an improve call is sent to the provider `ollama`
-- **THEN** its body's `options` holds `"temperature":0.35` and the body has `"think":false`
+- **WHEN** a directed fix is sent to the provider `ollama`
+- **THEN** its body's `options` holds `"temperature":0.2` and the body has `"think":false`
 
 ### Requirement: Carry the provider's token usage on a reply
 
@@ -66,9 +65,8 @@ block, or the whole last user message when it has none, and SHALL upper-case it.
 format, the reply SHALL be that text. WHEN it carries one, the reply SHALL be a well-formed answer of that format's
 catalogue shape:
 
-- draft, structural repair, placeholder repair, directed fix, improve, polish and revision: `{"target":"<text>"}`;
+- draft, structural repair, placeholder repair, directed fix and revision: `{"target":"<text>"}`;
 - reviewer: `{"results":[]}`;
-- reflect: `{"issues":[]}`;
 - pre-scan: the capitalised words of the text as candidate terms of type `other` and gender `unknown`;
 - summary: an empty bilingual summary with no facts;
 - batch draft: `{"items":[{"id":"<id>","target":"<text>"}]}` with one entry per `<s id="…">…</s>` item of the last
@@ -84,7 +82,7 @@ The pseudo model SHALL never return an error and SHALL never open a network conn
 `docs/specification/01_Product/12_PROMPT_CATALOG.md#reviewer-in-place-fixes`, `#name-term-pre-scan`,
 `#rolling-summary-update`.
 In plain words: a book translated by the pseudo model is easy to recognise: it shows the original text in capitals,
-with its formatting intact. Now that a run also reviews, reflects, scans and summarises, the pseudo model answers each of
+with its formatting intact. Now that a run also reviews, scans and summarises, the pseudo model answers each of
 those in its expected shape, and its reviewer never asks for an edit, so a whole run — review, memory and export included — works
 without any server. Its answer to a draft or a repair is the source, or the rejected target, in capitals, which the
 quality checks rightly call an untranslated echo: a segment whose source has at least 20 characters is flagged in every

@@ -257,7 +257,7 @@ Embeddings appear **only here**, in the test harness — never in the app runtim
 - **Layer 1 — field assertions on structured output.** For judge/directed-fix steps: verdict/enum in the allowed set,
   score in `[0,1]`, arrays present. Assert on fields, not prose.
 - **Layer 2 — embedding cosine similarity vs a reference answer.** Advisory-by-default, for free-text steps (draft,
-  reflect-rewrite). Embed output and reference (L2-normalize → dot product), calibrate a per-model threshold from a
+  directed fix). Embed output and reference (L2-normalize → dot product), calibrate a per-model threshold from a
   small labelled good/bad set, and assert against `threshold − margin`. Cosine is a **drift/aboutness** signal, not a
   correctness oracle.
 - **Layer 3 — local LLM-as-judge tie-breaker.** Only in the ambiguous cosine band: reference-guided binary PASS/FAIL

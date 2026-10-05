@@ -32,7 +32,6 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.pipeline.heal.DirectedFix;
-import ua.bookloom.pipeline.heal.ReflectImprove;
 import ua.bookloom.pipeline.heal.RepairReply;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -48,7 +47,7 @@ import ua.bookloom.pipeline.reviewer.ReviewerCall;
 /**
  * Proves the reviewer and self-heal calls against a REAL local model, in both provider dialects — the unit
  * tests (WireMock/{@link ScriptedChatModel}) only prove our side of the wire; this proves the real model's reply
- * still fits the shapes {@link ReviewerCall}/{@link DirectedFix}/{@link ReflectImprove} read
+ * still fits the shapes {@link ReviewerCall}/{@link DirectedFix} read
  * ({@code .claude/rules/testing.md} "SHOULD add a liveLocal-tagged case per provider-related feature"). A real
  * model's wording is non-deterministic, so every assertion here is structural only.
  */
@@ -62,7 +61,7 @@ class QualityCallsLiveTest {
 
     @ParameterizedTest
     @EnumSource(Provider.class)
-    void reviewerDirectedFixReflectImprove_realModel_matchStructure(final Provider provider) {
+    void reviewerAndDirectedFix_realModel_matchStructure(final Provider provider) {
         Assumptions.assumeTrue(provider.urlConfigured(), provider.name() + ": " + provider.urlEnv + " is not set");
 
         final ModelCalls calls = provider.calls();
@@ -73,11 +72,9 @@ class QualityCallsLiveTest {
         final DraftReplyParser replyParser = new DraftReplyParser(mapper);
         final ReviewerCall reviewerCall = new ReviewerCall(templates, new ReviewReplyParser(mapper));
         final DirectedFix directedFix = new DirectedFix(templates, replyParser);
-        final ReflectImprove reflectImprove = new ReflectImprove(templates, replyParser, mapper);
 
         assertReviewer(reviewerCall, frame, calls);
         assertDirectedFix(directedFix, frame, calls);
-        assertReflectImprove(reflectImprove, frame, calls);
     }
 
     private static void assertReviewer(final ReviewerCall reviewerCall, final CallFrame frame, final ModelCalls calls) {
@@ -106,22 +103,6 @@ class QualityCallsLiveTest {
         assertThat(result.isOk()).as("directed fix result: " + result.error()).isTrue();
         assertThat(result.data())
                 .as("directed fix reply: " + result.data())
-                .isInstanceOfSatisfying(
-                        RepairReply.Rewritten.class,
-                        rewritten -> assertThat(rewritten.maskedTarget()).isNotBlank());
-    }
-
-    private static void assertReflectImprove(
-            final ReflectImprove reflectImprove, final CallFrame frame, final ModelCalls calls) {
-        final Result<List<String>> reflected = reflectImprove.reflect(segment(), frame, SOURCE, GOOD_TARGET, calls);
-        assertThat(reflected.isOk()).as("reflect result: " + reflected.error()).isTrue();
-
-        final Result<RepairReply> improved = reflectImprove.improve(
-                segment(), frame, SOURCE, GOOD_TARGET, Objects.requireNonNull(reflected.data()), calls);
-
-        assertThat(improved.isOk()).as("improve result: " + improved.error()).isTrue();
-        assertThat(improved.data())
-                .as("improve reply: " + improved.data())
                 .isInstanceOfSatisfying(
                         RepairReply.Rewritten.class,
                         rewritten -> assertThat(rewritten.maskedTarget()).isNotBlank());

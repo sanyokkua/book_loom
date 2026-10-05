@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * What {@code DirectedFixTest}, {@code ReflectImproveTest} and {@code PolishTest} otherwise each repeated: reading a
+ * What {@code DirectedFixTest} and the revision tests otherwise each repeated: reading a
  * rendered user message's {@code <Translation>} block(s) — the text a rewrite returns — back out for assertions.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

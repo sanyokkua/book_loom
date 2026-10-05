@@ -1,9 +1,0 @@
-<Source>
-{{source}}
-</Source>
-
-<Translation>
-{{text}}
-</Translation>
-
-Return one JSON object: {"issues":[{"note":"<what is wrong>","suggestion":"<what to write instead>"}]}, or {"issues":[]}

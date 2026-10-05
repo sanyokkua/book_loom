@@ -56,10 +56,12 @@ class QualityLoopFlaggingAndOrderTest {
 
     // ch05.xhtml:11 (specs/quality-gates/spec.md "A flagged segment keeps its reasons"): a draft with length ratio
     // 0.41 (a 100-character source, a 41-character Cyrillic target) is refused by the length check, so the reviewer
-    // never reads it; Balanced's two directed fixes both return targets that still fail length. The FLAGGED record
+    // never reads it; Balanced's directed fix returns a target that still fails length, which is no progress, so no
+    // second
+    // round is spent. The FLAGGED record
     // carries the last evaluation's confidence and the medium omission from the length check.
     @Test
-    void nextDecision_bothDirectedFixesStillFailLength_flagsWithTheLengthFindingAndNoReviewerCall() {
+    void nextDecision_directedFixStillFailsLength_flagsAfterOneRoundWithTheLengthFindingAndNoReviewerCall() {
         final String source =
                 "He left the small house at dawn and never once looked back at the old road far from the sleepy"
                         + " town.";
@@ -69,10 +71,9 @@ class QualityLoopFlaggingAndOrderTest {
         assertThat(shortTarget).hasSize(41);
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment, source, List.of(), shortTarget, shortTarget, shortTarget, null);
-        // Each fix rewrites the draft but stays as short, so the second round still runs and still fails length.
+        // The fix rewrites the draft but stays as short, so it still fails length and the loop stops there.
         final String shortFix = "Він покинув дах на світанку і жодного раз";
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable(targetReply(shortFix))).answer(readable(targetReply(shortFix)));
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(shortFix)));
         final LoopSettings settings = new LoopSettings(
                 ReviewMode.ASSISTED,
                 DialParameters.of(ua.bookloom.api.pipeline.QualityDial.BALANCED),
@@ -85,7 +86,7 @@ class QualityLoopFlaggingAndOrderTest {
         final Result<SegmentOutcome> decision =
                 Objects.requireNonNull(started.data()).nextDecision();
 
-        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests()).hasSize(1);
         final SegmentOutcome result = Objects.requireNonNull(decision.data());
         assertThat(result.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(result.confidence()).isCloseTo(0.75, within(1e-9));

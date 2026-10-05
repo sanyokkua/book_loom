@@ -6,36 +6,38 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * One segment's state carried from one self-heal round attempt into the next: the last evaluation, the last target
- * that passed every hard gate, and the text the next round rewrites.
+ * The best candidate a segment's repair path has reached, carried from one round attempt into the next. A round's
+ * result replaces it only when it has fewer blockers ({@link RoundProgress}), so a step can never leave the segment
+ * worse than it was; the final target is always this one.
  *
- * @param qa the last evaluated candidate's hard-gate and soft outcome
- * @param machine the last target that passed every hard gate, or neither form
- * @param rewriteBase the latest target that passed the placeholder gate, or the original rejected masked reply
+ * @param qa the best candidate's hard-gate and soft outcome
+ * @param machine the target the best candidate stands on, or neither form while no target passed every hard gate
+ * @param rewriteBase the best candidate's masked text, or the original rejected masked reply; the next round
+ *     rewrites it
  * @param lastGateFinding the finding a gate raised against the latest round's reply, which the next round repairs
  *     in place of the same gate's older finding; {@code null} after any evaluated round, since a reply that passed
  *     the gate leaves nothing to repair
  */
-record RoundState(
+record BestCandidate(
         QaResult qa,
         MachineTarget machine,
         String rewriteBase,
         @Nullable QaFinding lastGateFinding) {
 
     /** Rejects a missing non-nullable component. */
-    RoundState {
+    BestCandidate {
         Objects.requireNonNull(qa, "qa");
         Objects.requireNonNull(machine, "machine");
         Objects.requireNonNull(rewriteBase, "rewriteBase");
     }
 
     /**
-     * The same state after a round whose reply a gate refused.
+     * The same best candidate after a round whose reply a gate refused.
      *
      * @param gateFinding the finding the gate raised
      * @return this state carrying {@code gateFinding} into the next round
      */
-    RoundState withLastGateFinding(final QaFinding gateFinding) {
-        return new RoundState(qa, machine, rewriteBase, gateFinding);
+    BestCandidate withLastGateFinding(final QaFinding gateFinding) {
+        return new BestCandidate(qa, machine, rewriteBase, gateFinding);
     }
 }

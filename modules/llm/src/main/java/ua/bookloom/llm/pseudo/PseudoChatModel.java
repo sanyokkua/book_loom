@@ -35,7 +35,6 @@ public final class PseudoChatModel implements ChatModel {
     private static final Pattern CAPITALIZED_WORD = Pattern.compile("\\p{Lu}\\p{L}*");
 
     private static final String FORMAT_REVIEWER = "reviewer";
-    private static final String FORMAT_REFLECT = "reflect";
     private static final String FORMAT_PRESCAN = "prescan";
     private static final String FORMAT_SUMMARY = "summary";
     private static final String FORMAT_DRAFT_BATCH = "draft-batch-json";
@@ -49,7 +48,6 @@ public final class PseudoChatModel implements ChatModel {
     private static final Pattern SUGGEST_LINE = Pattern.compile("(?m)^- (.+?) — ");
 
     private static final String REVIEWER_REPLY = "{\"results\":[]}";
-    private static final String REFLECT_REPLY = "{\"issues\":[]}";
     private static final String SUMMARY_REPLY = "{\"summary\":{\"source\":\"\",\"target\":\"\"},\"facts\":[]}";
 
     private final ObjectMapper mapper;
@@ -115,7 +113,6 @@ public final class PseudoChatModel implements ChatModel {
         final String formatName = request.responseFormat().name();
         return switch (formatName) {
             case FORMAT_REVIEWER -> REVIEWER_REPLY;
-            case FORMAT_REFLECT -> REFLECT_REPLY;
             case FORMAT_PRESCAN -> prescanReply(source);
             case FORMAT_SUMMARY -> SUMMARY_REPLY;
             case FORMAT_REVIEW_TERMS -> reviewReply(source);

@@ -111,6 +111,8 @@ final class ReviewResolver {
         return new Edited(draft, initialQa, outcome.maskedReply());
     }
 
+    // A directed fix is spent only on an issue the reviewer evidenced with a quote the app found, only when the dial
+    // has a repair round, and its text replaces the edited one only when it is no worse and clears at least one quote.
     private Result<Resolution> fixRefused(
             final DraftOutcome.Drafted outcome,
             final Edited edited,
@@ -119,6 +121,13 @@ final class ReviewResolver {
             final List<QaFinding> findings) {
         final List<QaFinding> evidence =
                 refused.stream().map(ReviewResolver::evidenceOf).toList();
+        if (settings.dial().repairRounds() < 1) {
+            log.debug(
+                    "No repair round in the dial; refused edits stay segment={} count={}",
+                    outcome.segment().id(),
+                    refused.size());
+            return Result.ok(unresolved(edited, findings, evidence, 0, refused.size()));
+        }
         announceFix(outcome, evidence);
         final RoundOutcome result = evaluator.classify(
                 outcome,
@@ -127,19 +136,42 @@ final class ReviewResolver {
         if (result instanceof RoundOutcome.StepError stepError) {
             return Result.err(stepError.error());
         }
-        if (result instanceof RoundOutcome.Evaluated fixed && resolved(fixed, refused, baseline)) {
-            log.debug(
-                    "Refused edits resolved by the directed fix segment={}",
-                    outcome.segment().id());
-            return Result.ok(new Resolution(machineOf(fixed), fixed.qa(), findings, 1, 0, null));
+        if (result instanceof RoundOutcome.Evaluated fixed && notWorse(fixed, baseline)) {
+            final List<EditOutcome.FailedEdit> remaining = stillQuoted(fixed, refused);
+            if (remaining.size() < refused.size()) {
+                return Result.ok(adopted(outcome, fixed, findings, remaining));
+            }
         }
         log.debug(
-                "Refused edits left unresolved segment={} count={}",
+                "Directed fix discarded, the edited text stays segment={} count={}",
                 outcome.segment().id(),
                 refused.size());
+        return Result.ok(unresolved(edited, findings, evidence, 1, refused.size()));
+    }
+
+    private static Resolution adopted(
+            final DraftOutcome.Drafted outcome,
+            final RoundOutcome.Evaluated fixed,
+            final List<QaFinding> findings,
+            final List<EditOutcome.FailedEdit> remaining) {
+        log.debug(
+                "Directed fix adopted segment={} quotesLeft={}",
+                outcome.segment().id(),
+                remaining.size());
+        final List<QaFinding> all = new ArrayList<>(findings);
+        remaining.stream().map(ReviewResolver::evidenceOf).forEach(all::add);
+        return new Resolution(machineOf(fixed), fixed.qa(), all, 1, remaining.size(), null);
+    }
+
+    private static Resolution unresolved(
+            final Edited edited,
+            final List<QaFinding> findings,
+            final List<QaFinding> evidence,
+            final int rounds,
+            final int blockersLeft) {
         final List<QaFinding> all = new ArrayList<>(findings);
         all.addAll(evidence);
-        return Result.ok(new Resolution(edited.machine(), edited.qa(), all, 1, refused.size(), null));
+        return new Resolution(edited.machine(), edited.qa(), all, rounds, blockersLeft, null);
     }
 
     private void announceFix(final DraftOutcome.Drafted outcome, final List<QaFinding> evidence) {
@@ -155,15 +187,17 @@ final class ReviewResolver {
                 evidence.getFirst().kind()));
     }
 
-    private static boolean resolved(
-            final RoundOutcome.Evaluated fixed,
-            final List<EditOutcome.FailedEdit> refused,
-            final Set<String> baseline) {
-        return fixed.qa().hardGatesPass()
-                && baseline.containsAll(Blockers.of(fixed.qa()))
-                && refused.stream()
-                        .noneMatch(edit -> EditVerifier.occursIn(
-                                fixed.maskedCandidate(), edit.edit().quote()));
+    // Hard gates hold and no blocker is new: a fix that trades one defect for another is never taken.
+    private static boolean notWorse(final RoundOutcome.Evaluated fixed, final Set<String> baseline) {
+        return fixed.qa().hardGatesPass() && baseline.containsAll(Blockers.of(fixed.qa()));
+    }
+
+    private static List<EditOutcome.FailedEdit> stillQuoted(
+            final RoundOutcome.Evaluated fixed, final List<EditOutcome.FailedEdit> refused) {
+        return refused.stream()
+                .filter(edit -> EditVerifier.occursIn(
+                        fixed.maskedCandidate(), edit.edit().quote()))
+                .toList();
     }
 
     private Result<Resolution> tryRewrite(

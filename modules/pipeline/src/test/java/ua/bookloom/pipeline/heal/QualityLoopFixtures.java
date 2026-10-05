@@ -66,9 +66,7 @@ final class QualityLoopFixtures {
         return new QualityLoop(
                 new ReviewerCall(templates, new ReviewReplyParser(mapper)),
                 new EditApplier(new EditVerifier()),
-                new DirectedFix(templates, draftReplyParser),
-                new ReflectImprove(templates, draftReplyParser, mapper),
-                new Polish(templates, draftReplyParser));
+                new DirectedFix(templates, draftReplyParser));
     }
 
     static LoopSettings settings(final ReviewMode mode, final QualityDial dial) {

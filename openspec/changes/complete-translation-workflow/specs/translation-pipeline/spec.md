@@ -38,22 +38,22 @@ how to behave.
 
 ### Requirement: Build every prompt from the catalogue's templates
 
-The system SHALL build each model call — draft, structural repair, placeholder repair, reviewer, directed fix, reflect,
-improve, polish, pre-scan, summary and revision — from that call's template in the prompt catalogue, held as data. Every
-generation call (draft, both repairs, directed fix, improve, polish, revision) SHALL ask for and accept exactly one
-`{"target":"…"}` object for exactly one segment. Every repair call — directed fix, reflect, improve, polish and
+The system SHALL build each model call — draft, structural repair, placeholder repair, reviewer, directed fix,
+pre-scan, summary and revision — from that call's template in the prompt catalogue, held as data. Every
+generation call (draft, both repairs, directed fix, revision) SHALL ask for and accept exactly one
+`{"target":"…"}` object for exactly one segment. Every repair call — directed fix and
 revision — SHALL carry exactly one `<Translation>…</Translation>` block, holding only the masked text to rewrite: the
 rejected target, or the masked source when the finding is a refusal or an empty target; the source SHALL appear in its
 own `<Source>` block; only the draft's text to translate is `<Text>`. Every prompt SHALL state its JSON schema together
 with a literal reply its parser accepts, SHALL declare the book text it embeds as data rather than instructions, and
-SHALL state the placeholder rules wherever that text carries `⟦gN⟧` tokens; improve, polish and revision SHALL list the
+SHALL state the placeholder rules wherever that text carries `⟦gN⟧` tokens; revision SHALL list the
 source's tokens under `[Immutable tokens]` when it has any. The draft and the rewriting calls SHALL show the bundled
 few-shot examples of the language pair — the `<source>-<target>` file, else the `<target>` file, else `neutral` — read
 from the classpath. The draft and repair, reviewer and directed-fix messages SHALL be pinned by golden files, so a prompt
 changes only by a deliberate edit of them.
 
 **Source:** `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-construction`, `#output-contract`,
-`#directed-fix-repair`, `#reflect-improve`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#prompt-builder`,
+`#directed-fix-repair`, `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#prompt-builder`,
 ADR-0038, `docs/specification/01_Product/12_PROMPT_CATALOG.md#prompt-design`, `#few-shot-examples`.
 In plain words: prompts are text files, not code, so they can be read and tuned without touching the engine. Small local
 models reliably answer one segment with one small object and break on arrays keyed by id, so every call that produces
@@ -503,10 +503,10 @@ count as translation time.
 ### Requirement: Give every call of a run its context size and expected output
 
 The system SHALL give every model call a run makes a context size of 8192 tokens, and SHALL use 8192 as the effective
-context when it sizes chunks. Every draft, directed fix, improve, polish and revision call SHALL also state the output
+context when it sizes chunks. Every draft, directed fix and revision call SHALL also state the output
 it expects: its segment's output allowance, estimated from the length of the source display text, the upper bound of
 the language pair's length band and the target language's script. A reviewer call SHALL state the reviewer limit the next
-requirement gives. A reflect, pre-scan or summary call SHALL state no expected output.
+requirement gives. A pre-scan or summary call SHALL state no expected output.
 
 **Source:** `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#token-budget`,
 `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#effective-context`, `#service-owned-retry`.
@@ -529,19 +529,17 @@ expected output sets: a call that writes a long paragraph may wait longer than o
 
 ### Requirement: Cap the output of every call that states an expected output
 
-The system SHALL give every call that states an expected output — draft, directed fix, improve, polish and revision —
-also an output cap of `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, and a draft, directed fix, improve,
-polish and revision call never less than `128`, where the allowance is the expected
+The system SHALL give every call that states an expected output — draft, directed fix and revision —
+also an output cap of `max(64, ⌈1.5 × allowance⌉ + 16 + 6 × placeholder tokens)`, and a draft, directed fix and revision call never less than `128`, where the allowance is the expected
 output tokens the call states and the placeholder tokens are the `⟦gN⟧` tokens in the segment's masked text. A reviewer
 call SHALL carry the cap `64 + Σ (96 + the candidate's estimated tokens)` over its pairs and state half of it as its
 expected output, because a rewrite may repeat a whole candidate; the reviewer's response schema SHALL be flat — no
 `maxItems`, `maxLength` or `additionalProperties` — since a bounded schema once stalled a structured call on one
-provider. Every other call SHALL carry a cap too: a reflect call `600` (expecting `256`, its prompt asking for at most
-five issues), a summary call `1024` (expecting `600`, its prompt asking for at most 150 words per language and five
+provider. Every other call SHALL carry a cap too: a summary call `1024` (expecting `600`, its prompt asking for at most 150 words per language and five
 facts), a pre-scan batch `64 + 48 × candidates` (expecting half), and a glossary review batch `2048` (expecting
 `32 × terms`); no call kind goes out without a cap. IF a capped reply ends with a finish of cut off by length,
 THEN the system SHALL treat it as any other cut-off reply ("Flag a segment whose reply cannot be used, and continue");
-a cut-off reflect reply yields the issues it holds, a cut-off summary keeps the previous summary.
+a cut-off summary keeps the previous summary.
 
 **Source:** `docs/specification/02_Architecture/04_LLM_INTEGRATION.md#service-owned-retry`, `#response-handling`,
 `openspec/changes/complete-translation-workflow/proposal.md#what-changes`.
@@ -551,8 +549,8 @@ half as much again, a fixed margin for the `{"target":…}` wrapper, and room fo
 reply never reaches it and a runaway one is cut off, flagged and left behind. A one-word source under a 64-token cap came
 back as an empty target in the Bartimaeus run, so a translation call's cap never drops below 128. The reviewer was once left unbounded and a
 looping re-judge then held a whole run for three minutes per attempt; the reviewer's reply is, per pair, an id, a status
-and a few short edits, so its cap grows with the pairs and holds room for the one case that is long, a rewrite. A reflect call was left unbounded until gemma4:e4b
-on the fixture book streamed 9,664 lines of critique into the three-minute timeout, and the run's ETA jumped from three to
+and a few short edits, so its cap grows with the pairs and holds room for the one case that is long, a rewrite. A critique call (the retired reflect) was left unbounded until gemma4:e4b
+on the fixture book streamed 9,664 lines into the three-minute timeout, and the run's ETA jumped from three to
 nineteen minutes; every call kind now has a cap. How each server receives the cap is the `llm-provider` capability's
 rule.
 
@@ -562,11 +560,6 @@ rule.
   output tokens and holds no placeholder token
 - **THEN** the draft request carries an output cap of `128`
 - **AND** the reviewer call for its one-pair chunk carries an output cap of `170`
-
-#### Scenario: A reflect call is capped
-
-- **WHEN** the quality loop sends a reflect call for any segment
-- **THEN** the request carries an output cap of `600`
 
 #### Scenario: A long paragraph with tokens gets a proportional cap
 
@@ -824,8 +817,7 @@ accepted `ok`, repaired `fix`, glossary or memory applied `mem`, summary updated
 its colour, so the kind is readable without seeing the colour. Entries SHALL be rendered in a monospace face with the tag
 first.
 
-The run SHALL produce every kind: `ok` when a segment is accepted; `fix` for each repair call — a directed fix, a
-reflect, an improve or a polish; `retry` for a structural or placeholder format repair and for the resume that follows a
+The run SHALL produce every kind: `ok` when a segment is accepted; `fix` for each repair call — a directed fix; `retry` for a structural or placeholder format repair and for the resume that follows a
 provider-error pause; `mem` when a name scan adds glossary entries or a segment is reused from the translation memory;
 `sum` when the rolling summary is refreshed; `err` when a segment is flagged; and `info` for a run milestone — a stage
 start, a pause (including a provider-error pause), a resume or the finish. A retry the provider client makes inside one
@@ -1939,7 +1931,7 @@ to stay out of; export is its own action.
 ### Requirement: Announce each model call as it starts
 
 WHEN the engine starts a model call, it SHALL emit one event naming the call's kind — draft, structural repair,
-placeholder repair, reviewer, directed fix, reflect, improve, polish, pre-scan, summary or revision — and the segment the
+placeholder repair, reviewer, directed fix, pre-scan, summary or revision — and the segment the
 call belongs to when it belongs to one, before waiting for the answer, and SHALL NOT emit it for a call that was refused
 because a pause or a stop was already requested. Each such call SHALL emit its own event. The client's own retries of
 one call — a timeout, a `Retry-After` wait — belong to that same call and SHALL NOT emit another event.

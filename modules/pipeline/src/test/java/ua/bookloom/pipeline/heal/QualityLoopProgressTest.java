@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
 
 /**
- * Self-heal rounds stop when they make no progress, and a round interrupted by a provider error continues at the call
+ * Repair rounds stop when the blocker set does not shrink, and a round interrupted by a provider error continues at the call
  * that failed instead of starting the segment over.
  */
 class QualityLoopProgressTest {
@@ -32,19 +32,19 @@ class QualityLoopProgressTest {
 
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
-    // Three rounds are allowed; the second fix returns the first fix's text, so a third would change nothing.
+    // Three rounds are allowed; the first fix still echoes the source, so the blocker set did not shrink and the loop
+    // stops there with one call instead of spending the rest of the budget.
     @Test
-    void nextDecision_twoFixesWithIdenticalText_flagsAfterTheSecondRound() {
+    void nextDecision_fixThatLeavesTheSameBlockers_flagsAfterTheFirstRound() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(targetReply(STILL_ECHO)))
                 .answer(readable(targetReply(STILL_ECHO)))
                 .answer(readable(targetReply(GOOD_TARGET)));
 
         final SegmentOutcome decided = first(decider(ECHO, model, new DialParameters(1, 3, 0, false, false, 4)));
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decided.repairRounds()).isEqualTo(2);
-        assertThat(model.requests()).hasSize(2);
+        assertThat(decided.repairRounds()).isEqualTo(1);
+        assertThat(model.requests()).hasSize(1);
     }
 
     // The fix call failed; the next decision sends that same round again and the repaired target is then accepted.

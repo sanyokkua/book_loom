@@ -176,7 +176,7 @@ For each chunk (see `chunk-translate-loop.mermaid`):
 
 The judge, when the dial enables it, scores the whole chunk **once**, seeing its accepted-hard-gate pairs labelled
 `s1…sk` in document order; QA runs **per segment**. A failure — hard gate, soft check, or judge — routes only the
-**offending segment** to repair, never its chunk-mates: generation, directed fix, reflect/improve and polish each
+**offending segment** to repair, never its chunk-mates: generation and directed fix each
 return exactly one segment's target (`{"target":"…"}`), so a repair call never touches a sibling segment that already
 passed its checks. Self-heal fires only on a QA/judge failure (DD-16) and consumes the repair budget **N = the number
 of QA re-entry rounds**; each round takes exactly one path (ADR-0038):
@@ -184,18 +184,18 @@ of QA re-entry rounds**; each round takes exactly one path (ADR-0038):
 | Path              | Trigger                                            | Calls                                                                                                                                                                                                                   |
 |-------------------|-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Directed fix      | Concrete QA/judge findings exist                   | 1 call injecting the findings, asking the model to correct exactly those in this one segment. On a **tag-multiset mismatch** the instruction is specialised to inject the expected placeholder multiset ("restore exactly: `⟦g1⟧ ⟦g2⟧ …`"). |
-| Reflect → improve | Only a vague quality concern (no concrete finding) | 2 calls (reflect, then improve — each returning exactly one segment's target), followed by an **optional monolingual polish** — triggered only when the post-improve check leaves the segment with **no failed check** and `confidence` in `[τ − ε, τ)` (borderline). |
 
 With the judge on, a repaired target that passes its hard gates, fails no soft check and reaches `τ` is judged again
 on its own (a one-pair call labelled `s1`) and decided by that call instead of its chunk's; a target short of any of
 these goes to the next round with no judge call. After N rounds the still-failing segment (s) are FLAGGED. This
+keeps the best candidate seen (fewest failed hard gates, then fewest blocking checks): a step whose result does not lower the blocker set is discarded and ends the repair. The reflect → improve → polish chain was removed in task 15d.7. This
 realizes the automatic-first, tiered self-heal model (ADR-0007).
 
 | ID          | Requirement                                                                                                                                                                              |
 |-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| FR-ALGO-C11 | Prefer directed fix when concrete findings exist; use reflect→improve otherwise; specialise the directed fix for a tag-multiset mismatch by injecting the expected placeholder multiset. |
+| FR-ALGO-C11 | Send a directed fix only for a blocker with evidence (a failed check, or the quote of a reviewer edit that could not be verified); keep the best candidate, discard a step that does not lower the blocker set and stop on no progress; specialise the directed fix for a tag-multiset mismatch by injecting the expected placeholder multiset. |
 | FR-ALGO-C12 | Bound total repair rounds by the repair budget N from the quality dial (1 / 2 / 3).                                                                                                      |
-| FR-ALGO-C13 | Score the chunk once with the judge, labelling its qualifying pairs `s1…sk`; flag only the offending segment(s); repair each failing segment on its own — a directed fix, reflect/improve, or polish call returns exactly one segment's target — and re-QA that segment alone (ADR-0038). |
+| FR-ALGO-C13 | Score the chunk once with the judge, labelling its qualifying pairs `s1…sk`; flag only the offending segment(s); repair each failing segment on its own — a directed fix call returns exactly one segment's target — and re-QA that segment alone (ADR-0038). |
 
 ## phase-d-backward-revision {#phase-d-backward-revision}
 
@@ -240,8 +240,6 @@ paraphrase-away-from-source failure mode. The per-phase guidance is:
 | Draft translation                        | 0.2 (default)            | Faithful and reproducible; enough flexibility for fluent target phrasing without inventing content.                |
 | Judge / deterministic-QA-assisting judge | 0.1                      | A scorer should be near-deterministic so the same draft yields the same verdict; τ comparisons stay stable.        |
 | Directed fix                             | 0.2                      | A targeted correction of named findings; stay close to the accepted draft.                                                         |
-| Reflect → improve                        | 0.35                     | The failure is vague quality; a little more latitude helps the rewrite escape a bad local phrasing. Still bounded. |
-| Polish                                   | 0.2                      | Smoothing a near miss; stay close to the improved target.                                                          |
 | Backward revision                        | 0.2                      | Consistency alignment across the book; determinism preferred.                                                      |
 
 The default is **0.2**, user-adjustable in Generation settings over the range 0.0–2.0 (`07_SETTINGS.md#generation-tab`);

@@ -26,11 +26,6 @@ public record OutputLimit(int expectedTokens, int capTokens) {
     private static final int SHORT_SOURCE_CAP_FLOOR = 128;
     // Per item the reply spends tokens on the id and its wrapper: {"id":"12","target":""}.
     private static final int BATCH_ITEM_ENVELOPE_TOKENS = 16;
-    // A reflect reply is a short list of issues, each a note and a suggestion: the prompt asks for at most five. With
-    // no
-    // cap, gemma4:e4b once streamed 9,664 lines of it until the three-minute timeout.
-    private static final int REFLECT_EXPECTED_TOKENS = 256;
-    private static final int REFLECT_CAP_TOKENS = 600;
     // A summary reply holds the summary in both languages, each kept under the prompt's 150 words, and a few facts.
     private static final int SUMMARY_EXPECTED_TOKENS = 600;
     private static final int SUMMARY_CAP_TOKENS = 1024;
@@ -61,15 +56,6 @@ public record OutputLimit(int expectedTokens, int capTokens) {
         }
         final int capped = (int) Math.min(Integer.MAX_VALUE, cap);
         return new OutputLimit(capped / EXPECTED_SHARE_DIVISOR, capped);
-    }
-
-    /**
-     * The limit for one reflect call, whose reply is a short list of issues whatever the source's length.
-     *
-     * @return the limit: 600 tokens at most
-     */
-    public static OutputLimit forReflect() {
-        return new OutputLimit(REFLECT_EXPECTED_TOKENS, REFLECT_CAP_TOKENS);
     }
 
     /**

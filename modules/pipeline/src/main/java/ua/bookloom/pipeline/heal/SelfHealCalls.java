@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
- * What {@link DirectedFix}, {@link ReflectImprove#improve}, {@link Polish} and backward revision's re-render
+ * What {@link DirectedFix} and backward revision's re-render
  * otherwise each repeated: rendering a
  * call's system/user messages from the catalogue, computing its output limit, and reading a classified
  * {@link RepairReply} back into one consistent set of log lines. Each caller passes its own {@code @Slf4j} logger

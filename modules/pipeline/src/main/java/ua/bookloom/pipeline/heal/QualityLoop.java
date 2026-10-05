@@ -32,8 +32,6 @@ public final class QualityLoop {
     private final ReviewerCall reviewerCall;
     private final EditApplier editApplier;
     private final DirectedFix directedFix;
-    private final ReflectImprove reflectImprove;
-    private final Polish polish;
 
     /**
      * Starts the chunk's quality loop.
@@ -95,7 +93,7 @@ public final class QualityLoop {
     }
 
     private SegmentHealer healer(final LoopSettings settings, final GateFunction gate, final ModelCalls calls) {
-        return new SegmentHealer(editApplier, directedFix, reflectImprove, polish, settings, gate, calls);
+        return new SegmentHealer(editApplier, directedFix, settings, gate, calls);
     }
 
     private Map<Integer, QaResult> evaluateDrafts(final List<DraftOutcome> outcomes, final LoopSettings settings) {

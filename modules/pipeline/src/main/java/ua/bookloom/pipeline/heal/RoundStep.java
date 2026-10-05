@@ -6,7 +6,7 @@ import ua.bookloom.api.Result;
 
 /**
  * One self-heal round attempt's control-flow outcome: the segment is decided (accepted or flagged), the step ends
- * with an error the round is kept for, or the loop carries the updated {@link RoundState} into the next round.
+ * with an error the round is kept for, or the loop carries the updated {@link BestCandidate} into the next round.
  */
 sealed interface RoundStep {
 
@@ -26,7 +26,7 @@ sealed interface RoundStep {
      * @param state the state the next round attempt starts from
      * @return a continuing step
      */
-    static RoundStep continueWith(final RoundState state) {
+    static RoundStep continueWith(final BestCandidate state) {
         return new Continue(state);
     }
 
@@ -53,7 +53,7 @@ sealed interface RoundStep {
     }
 
     /** A step that continues the round loop. */
-    record Continue(RoundState state) implements RoundStep {
+    record Continue(BestCandidate state) implements RoundStep {
 
         /** Rejects a missing state. */
         public Continue {

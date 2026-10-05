@@ -12,10 +12,10 @@
  * the dial's repair-round budget, or, when the checks pass, through the reviewer's verified edits. {@link ua.bookloom.pipeline.heal.ReuseCheck} decides,
  * before any draft, whether a context-matched memory target may be reused — the acceptance rule with no reviewer.
  *
- * <p>A round's self-heal call is one of: a directed fix that names concrete findings, a reflect critique and the
- * improve rewrite that consumes it for a vague concern with none, or the optional polish for a near miss — each
- * sending exactly one call through {@link ua.bookloom.pipeline.prompt.ModelCalls} and reading its reply into a
- * {@link ua.bookloom.pipeline.heal.RepairReply}.
+ * <p>A repair round's one call is a directed fix that names the evidenced findings — a failed check, or a reviewer
+ * quote the app found and no edit fixed — sent through {@link ua.bookloom.pipeline.prompt.ModelCalls} and read into a
+ * {@link ua.bookloom.pipeline.heal.RepairReply}. The path carries a best candidate, discards a step that does not
+ * lower the blocker set and stops when a round makes no progress; there is no call without a finding to name.
  */
 @NullMarked
 package ua.bookloom.pipeline.heal;

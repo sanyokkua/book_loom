@@ -205,7 +205,7 @@ quality gates say).
 #### Scenario: A pause during the second repair round
 
 - **WHEN** a Balanced run drafts `He opened the old door.` and gets the echo `HE OPENED THE OLD DOOR.`, which the checks refuse
-  so no reviewer call is made, the first directed fix is answered with `He opened the old door.`, a pause is requested while the
+  so no reviewer call is made, the first directed fix is answered with `Він відчинив the old door.` (one blocker fewer, so it is kept), a pause is requested while the
   second directed fix is in flight, and after resume the second directed fix is answered with
   `Він відчинив старі двері.`
 - **THEN** the provider has received 3 requests before the pause — draft, first fix, second fix

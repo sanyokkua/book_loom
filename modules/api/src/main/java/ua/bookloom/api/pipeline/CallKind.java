@@ -20,15 +20,6 @@ public enum CallKind {
     /** A directed-fix call repairing the findings a check or the reviewer named. */
     DIRECTED_FIX,
 
-    /** A reflection call over the draft before repair. */
-    REFLECT,
-
-    /** An improvement pass over an accepted draft. */
-    IMPROVE,
-
-    /** A polish pass over an accepted draft. */
-    POLISH,
-
     /** A glossary prescan call. */
     PRESCAN,
 

@@ -826,21 +826,85 @@ flag every segment reviewed while it was down, so the run waits for it and revie
 - **THEN** the run waits, probes at 0:15, 0:45 and 1:45, reviews the chunk again once a probe passes, and ends Completed
   with all three ACCEPTED and none flagged
 
-### Requirement: Stop repairing a segment that does not change
+### Requirement: Keep the best candidate through the repair path
 
-WHEN a self-heal round's rewrite is identical to the text it was asked to repair and the segment is not accepted,
-THEN the system SHALL flag the segment at once with that round counted, and SHALL NOT spend the rest of the repair
-budget on it.
+The application SHALL carry a best candidate through a segment's repair path — the target with the fewest failed hard
+gates and, among those, the fewest blocking checks, the checks counting before any reviewer finding — and SHALL replace
+it by a step's result only when that result has fewer. WHEN a step's result does not, whether it regresses, swaps one
+blocker for another or repeats the text, THEN the application SHALL discard it, stop the path there and keep the best
+candidate, which is always the final target; progress SHALL be judged by the sets of blocking checks, never by a score.
+It SHALL send a directed fix only for a blocker with evidence the application holds — a failed check, or the quote of a
+reviewer edit it could not verify — never for a concern with no finding, so a segment with nothing to name is decided
+without a repair call, and it SHALL send at most as many fix rounds as the dial allows, none on a review retry. A fix for
+refused reviewer edits replaces the edited text only when it brings no new blocker and removes at least one of the
+quotes. It SHALL write each round's blocker set before and after to the log at DEBUG. The reflect, improve and polish
+calls and the near-miss polish window no longer exist.
 
-**Source:** `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`; tasks 15b.
-In plain words: on the hand test a directed fix returned the same 289-token rewrite three times. A round that changes nothing will not be changed by the next one, so the
-budget is not spent on it.
+**Source:** FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`), ADR-0038;
+tasks 15b, 15d.7.
+In plain words: on the hand test a repair that "improved" a segment sometimes left it with more defects than the draft
+had, and a directed fix once returned the same text three times. A repair is a bet, so the best text seen so far is
+kept and a step that does not beat it ends the attempt; the reflect, improve and polish chain could no longer run once
+acceptance stopped depending on a score, and no measurement showed it helped, so it is gone rather than hidden behind a
+switch.
 
-#### Scenario: Two fixes return the same text
+#### Scenario: A repair that breaks a hard gate is discarded
 
-- **WHEN** an echoed draft gets a first directed fix answering `HE OPENED THE OLD DOOR!`, a second answering the same,
-  with three rounds allowed
-- **THEN** the segment is FLAGGED after 2 rounds and no third fix is sent
+- **WHEN** the draft `Він.` fails only the length check and the directed fix answers `Він відчиниw.`, which fails
+  `script-purity`
+- **THEN** the segment is FLAGGED with `Він.` as its target and the `length` finding, and no second fix is sent
+
+#### Scenario: A second repair that makes it worse leaves the first
+
+- **WHEN** Max, the draft `Він відчиниw «старі двері.` fails `script-purity` and `quote-balance`, the first fix answers
+  `Він відчиниw старі двері.` (one blocker) and the second answers `HE OPENED THE «OLD DOOR.` (three)
+- **THEN** the segment is FLAGGED with the `script-purity` finding of the first fix and no `echo` or `quote-balance`
+  finding
+
+#### Scenario: Swapping one blocker for another stops the path
+
+- **WHEN** Max, a draft fails `script-purity` and `quote-balance`, the first fix leaves only `quote-balance`, and the
+  second leaves only `script-purity`
+- **THEN** the segment is FLAGGED with the `quote-balance` finding after 2 requests and no third fix is sent
+
+#### Scenario: A shrinking set continues up to the dial's rounds
+
+- **WHEN** Max, a draft fails `script-purity` and `quote-balance`, the first fix leaves only `script-purity` and the
+  second passes every check
+- **THEN** the segment is ACCEPTED after 2 rounds as repaired
+- **AND** with a dial of 1 round and the same first fix the segment is FLAGGED after 1 round
+
+#### Scenario: A fix that leaves the same blockers stops the path
+
+- **WHEN** an echoed draft gets a first directed fix answering `HE OPENED THE OLD DOOR!` with three rounds allowed
+- **THEN** the segment is FLAGGED after 1 round and no second fix is sent
+
+#### Scenario: A reviewer finding without a quote is never fixed
+
+- **WHEN** the reviewer asks for a rewrite that mixes alphabets in one word
+- **THEN** the draft is kept, the segment is FLAGGED and no directed fix is sent
+
+#### Scenario: A fix that adds a blocker is discarded
+
+- **WHEN** a reviewer edit is refused, and the directed fix answers a text that still holds the quote and an unclosed
+  guillemet
+- **THEN** the edited text stays as the target and the segment is FLAGGED
+
+#### Scenario: A fix that clears one of two quotes is kept
+
+- **WHEN** two reviewer edits are refused and the directed fix removes the first quote but not the second
+- **THEN** the fixed text is the target, the segment is FLAGGED, and the second quote stays on the record as evidence
+
+#### Scenario: A review retry makes no fix
+
+- **WHEN** a retry's reviewer edit is refused and the dial has no repair round
+- **THEN** no directed fix is sent and the segment is FLAGGED with the edited text
+
+#### Scenario: No defect ends worse than its first candidate
+
+- **WHEN** every fix answers a text with a Latin letter in a Cyrillic word and an unclosed guillemet, over each 15d.1
+  defect the checks decide
+- **THEN** each segment is FLAGGED with exactly its first candidate's findings
 
 ### Requirement: Fail a segment on a deterministic text defect before the reviewer reads it
 
@@ -1011,10 +1075,9 @@ WHEN a drafted segment is not accepted because a check refuses it, the applicati
 being 1 on Fast, 2 on Balanced and 3 on Max, counted only after the draft's one structural repair and one placeholder
 repair, which are not rounds — each returning one target for that one segment, by a directed fix naming the concrete
 finding: a failed hard gate, with the expected placeholder sequence stated when the placeholder or protected-span gate
-failed, or a soft check failed outright; a round with no concrete finding is a reflect call then an improve call, which
-the acceptance rule no longer produces and task 15d.7 revisits; after N rounds without acceptance it SHALL mark the
+failed, or a soft check failed outright; a round has no call when there is nothing concrete to name; after N rounds without acceptance it SHALL mark the
 segment FLAGGED with every finding, and a segment accepted after at least one round SHALL count as repaired and
-accepted. A target a round returns SHALL be decided by the checks alone, with no reviewer call.
+accepted. A target a round returns SHALL be decided by the checks alone, with no reviewer call, and a round that does not lower the blocker set ends the repair there ("Keep the best candidate through the repair path").
 
 **Source:** FR-ALGO-C11, FR-ALGO-C12 (`docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#self-heal`),
 `docs/specification/01_Product/05_TRANSLATION_ALGORITHM.md#quality-dial-mapping`,

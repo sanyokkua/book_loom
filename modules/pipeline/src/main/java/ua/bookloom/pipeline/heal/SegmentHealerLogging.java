@@ -59,7 +59,7 @@ final class SegmentHealerLogging {
             final String segmentId, final int round, final List<QaFinding> concreteFindings, final QaResult qa) {
         if (concreteFindings.isEmpty()) {
             log.debug(
-                    "Round choice segment={} round={} kind=reflect-improve confidence={}",
+                    "Round choice segment={} round={} kind=none confidence={}: no evidenced finding to fix",
                     segmentId,
                     round,
                     qa.confidence());
@@ -70,16 +70,6 @@ final class SegmentHealerLogging {
                 segmentId,
                 round,
                 SegmentFindings.kindsOf(concreteFindings));
-    }
-
-    static void logBorderlineDecision(
-            final String segmentId, final double confidence, final double tau, final boolean borderline) {
-        log.debug(
-                "Borderline decision segment={} confidence={} tau={} borderline={}",
-                segmentId,
-                confidence,
-                tau,
-                borderline);
     }
 
     static void logTraceTarget(final String segmentId, final String masked, final String restored) {

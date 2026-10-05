@@ -102,41 +102,6 @@ public enum PromptName {
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
             new Slots(Set.of("source", "text", "findings"), Set.of("expectedTokens"))),
 
-    /** The reflection critique before a rewrite, for a vague quality concern with no concrete finding. */
-    REFLECT(
-            "reflect",
-            CallKind.REFLECT,
-            "reflect",
-            ReflectSchema.SCHEMA,
-            0.35,
-            null,
-            new Slots(Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of()),
-            new Slots(Set.of("source", "text"), Set.of())),
-
-    /** The rewrite that consumes reflect's critique, at a higher temperature to escape a bad local phrasing. */
-    IMPROVE(
-            "improve",
-            CallKind.IMPROVE,
-            "improve",
-            DraftSchema.SCHEMA,
-            0.35,
-            null,
-            new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
-            new Slots(Set.of("source", "text"), Set.of("issues", "tokens"))),
-
-    /** The optional monolingual smoothing pass run only on a borderline improved target. */
-    POLISH(
-            "polish",
-            CallKind.POLISH,
-            "polish",
-            DraftSchema.SCHEMA,
-            0.2,
-            null,
-            new Slots(
-                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
-            new Slots(Set.of("source", "text"), Set.of("tokens"))),
-
     /**
      * Backward revision's re-render of one decided segment whose character's gender became known after it was
      * drafted; the facts block names each such character and gender, since the style sheet cannot.

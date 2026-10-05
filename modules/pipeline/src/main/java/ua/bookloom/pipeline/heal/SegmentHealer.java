@@ -39,15 +39,13 @@ final class SegmentHealer {
     SegmentHealer(
             final EditApplier editApplier,
             final DirectedFix directedFix,
-            final ReflectImprove reflectImprove,
-            final Polish polish,
             final LoopSettings settings,
             final GateFunction gate,
             final ModelCalls calls) {
         this.settings = Objects.requireNonNull(settings, "settings");
         this.calls = Objects.requireNonNull(calls, "calls");
         final RoundEvaluator evaluator = new RoundEvaluator(gate, settings);
-        this.rounds = new RoundRunner(directedFix, reflectImprove, polish, settings, evaluator, calls);
+        this.rounds = new RoundRunner(directedFix, settings, evaluator, calls);
         this.resolver = new ReviewResolver(editApplier, directedFix, evaluator, settings, calls);
     }
 
@@ -79,11 +77,10 @@ final class SegmentHealer {
     private Result<SegmentOutcome> decideKept(
             final DraftOutcome.Drafted outcome, final QaResult initialQa, @Nullable final ReviewVerdict verdict) {
         final String segmentId = outcome.segment().id();
-        final double tau = settings.reviewMode().threshold();
         final Resumption resumption = resumptions.remove(segmentId);
         if (resumption != null) {
             log.info("Continuing segment={} at round={}", segmentId, resumption.round());
-            return runRounds(outcome, segmentId, tau, resumption);
+            return runRounds(outcome, segmentId, resumption);
         }
         SegmentHealerLogging.logEvaluation(segmentId, 0, initialQa);
         final MachineTarget machine = MachineTarget.of(outcome, initialQa);
@@ -95,8 +92,8 @@ final class SegmentHealer {
         if (accepted) {
             return Result.ok(SegmentOutcomes.accepted(segmentId, machine, initialQa, List.of(), 0, SegmentPath.DRAFT));
         }
-        final RoundState first = new RoundState(initialQa, machine, outcome.maskedReply(), null);
-        return runRounds(outcome, segmentId, tau, Resumption.first(first));
+        final BestCandidate first = new BestCandidate(initialQa, machine, outcome.maskedReply(), null);
+        return runRounds(outcome, segmentId, Resumption.first(first));
     }
 
     // The reviewer read this pair: a reply it did not give is flagged, anything else is verified in code.
@@ -155,7 +152,7 @@ final class SegmentHealer {
                             segmentId, MachineTarget.of(outcome, initialQa), initialQa, List.of(), 0, reason),
                     outcome);
         }
-        final RoundState state = resumption.state();
+        final BestCandidate state = resumption.state();
         return keepRejected(
                 SegmentOutcomes.flagged(
                         segmentId, state.machine(), state.qa(), List.of(), resumption.round() - 1, reason),
@@ -163,11 +160,11 @@ final class SegmentHealer {
     }
 
     private Result<SegmentOutcome> runRounds(
-            final DraftOutcome.Drafted outcome, final String segmentId, final double tau, final Resumption start) {
-        RoundState state = start.state();
+            final DraftOutcome.Drafted outcome, final String segmentId, final Resumption start) {
+        BestCandidate state = start.state();
         final int budget = settings.dial().repairRounds();
         for (int round = start.round(); round <= budget; round++) {
-            switch (attemptRound(outcome, segmentId, tau, round, state)) {
+            switch (attemptRound(outcome, segmentId, round, state)) {
                 case RoundStep.Terminal terminal -> {
                     return terminal.result();
                 }
@@ -183,65 +180,61 @@ final class SegmentHealer {
     }
 
     private RoundStep attemptRound(
-            final DraftOutcome.Drafted outcome,
-            final String segmentId,
-            final double tau,
-            final int round,
-            final RoundState state) {
-        final List<QaFinding> concreteFindings =
-                SegmentFindings.withCarried(SegmentFindings.concrete(state.qa()), state.lastGateFinding());
-        SegmentHealerLogging.logRoundChoice(segmentId, round, concreteFindings, state.qa());
-        announceRound(segmentId, round, concreteFindings);
-        final RoundOutcome result = rounds.run(outcome, state.rewriteBase(), concreteFindings, tau, round);
-        return switch (result) {
+            final DraftOutcome.Drafted outcome, final String segmentId, final int round, final BestCandidate best) {
+        final List<QaFinding> findings =
+                SegmentFindings.withCarried(SegmentFindings.concrete(best.qa()), best.lastGateFinding());
+        SegmentHealerLogging.logRoundChoice(segmentId, round, findings, best.qa());
+        if (findings.isEmpty()) {
+            return RoundStep.terminal(Result.ok(
+                    SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round - 1, null)));
+        }
+        announceRound(segmentId, round, findings);
+        return switch (rounds.run(outcome, best.rewriteBase(), findings, round)) {
             case RoundOutcome.StepError stepError -> new RoundStep.Interrupted(stepError.error());
             case RoundOutcome.FlagNow flagNow ->
                 RoundStep.terminal(Result.ok(SegmentOutcomes.flagged(
-                        segmentId, state.machine(), state.qa(), List.of(), round, flagNow.error())));
-            case RoundOutcome.FlagNowAfterEvaluation flagNowAfter ->
-                RoundStep.terminal(Result.ok(flaggedAfterEvaluation(segmentId, round, flagNowAfter)));
-            case RoundOutcome.Failed failed -> RoundStep.continueWith(carryingFinding(state, failed));
-            case RoundOutcome.Evaluated evaluated -> decideEvaluated(segmentId, round, state, evaluated);
+                        segmentId, best.machine(), best.qa(), List.of(), round, flagNow.error())));
+            case RoundOutcome.Failed failed -> RoundStep.continueWith(carryingFinding(best, failed));
+            case RoundOutcome.Evaluated evaluated -> decideEvaluated(segmentId, round, best, evaluated);
         };
     }
 
     private void announceRound(final String segmentId, final int round, final List<QaFinding> findings) {
-        final String blocking = findings.isEmpty() ? null : findings.getFirst().kind();
-        calls.announce(new RoundStarted(segmentId, round, settings.dial().repairRounds(), null, blocking));
+        calls.announce(new RoundStarted(
+                segmentId,
+                round,
+                settings.dial().repairRounds(),
+                null,
+                findings.getFirst().kind()));
     }
 
-    private static RoundState carryingFinding(final RoundState state, final RoundOutcome.Failed failed) {
-        return failed.gateFinding() == null ? state : state.withLastGateFinding(failed.gateFinding());
+    private static BestCandidate carryingFinding(final BestCandidate best, final RoundOutcome.Failed failed) {
+        return failed.gateFinding() == null ? best : best.withLastGateFinding(failed.gateFinding());
     }
 
-    private static SegmentOutcome flaggedAfterEvaluation(
-            final String segmentId, final int round, final RoundOutcome.FlagNowAfterEvaluation flagNowAfter) {
-        final RoundOutcome.Evaluated evaluated = flagNowAfter.evaluated();
-        final MachineTarget machine = new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm());
-        return SegmentOutcomes.flagged(segmentId, machine, evaluated.qa(), List.of(), round, flagNowAfter.error());
-    }
-
-    // A repaired target is decided by the checks alone: the reviewer read the draft, not the repair.
+    // A repaired target is decided by the checks alone (the reviewer read the draft, not the repair), and it replaces
+    // the best candidate only when it has fewer blockers: a step that does not improve is discarded and ends the path.
     private RoundStep decideEvaluated(
-            final String segmentId,
-            final int round,
-            final RoundState previous,
-            final RoundOutcome.Evaluated evaluated) {
+            final String segmentId, final int round, final BestCandidate best, final RoundOutcome.Evaluated evaluated) {
         final QaResult qa = evaluated.qa();
         SegmentHealerLogging.logEvaluation(segmentId, round, qa);
-        final MachineTarget machine = qa.hardGatesPass()
-                ? new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm())
-                : previous.machine();
         final boolean accepted = AcceptanceRule.accepts(qa, 0);
         SegmentHealerLogging.logAcceptanceDecision(segmentId, qa, 0, accepted);
         if (accepted) {
-            return RoundStep.terminal(Result.ok(
-                    SegmentOutcomes.accepted(segmentId, machine, qa, List.of(), round, SegmentPath.REPAIRED)));
+            return RoundStep.terminal(Result.ok(SegmentOutcomes.accepted(
+                    segmentId, machineOf(best, evaluated), qa, List.of(), round, SegmentPath.REPAIRED)));
         }
-        if (RoundProgress.unchangedText(previous, evaluated, segmentId, round)) {
+        if (!RoundProgress.improves(best, qa, segmentId, round)) {
             return RoundStep.terminal(
-                    Result.ok(SegmentOutcomes.flagged(segmentId, machine, qa, List.of(), round, null)));
+                    Result.ok(SegmentOutcomes.flagged(segmentId, best.machine(), best.qa(), List.of(), round, null)));
         }
-        return RoundStep.continueWith(new RoundState(qa, machine, evaluated.maskedCandidate(), null));
+        return RoundStep.continueWith(
+                new BestCandidate(qa, machineOf(best, evaluated), evaluated.maskedCandidate(), null));
+    }
+
+    private static MachineTarget machineOf(final BestCandidate best, final RoundOutcome.Evaluated evaluated) {
+        return evaluated.qa().hardGatesPass()
+                ? new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm())
+                : best.machine();
     }
 }

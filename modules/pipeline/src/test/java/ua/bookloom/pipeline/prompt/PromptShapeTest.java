@@ -123,7 +123,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"IMPROVE", "POLISH", "REVISION"})
+            names = {"REVISION"})
     void render_rewriteOfTokenText_listsTheImmutableTokens(final PromptName name) {
         assertThat(user(name)).contains("[Immutable tokens]\nCopy this exact ordered sequence unchanged: ⟦g0⟧ ⟦g1⟧");
     }
@@ -131,7 +131,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"DIRECTED_FIX", "IMPROVE", "POLISH", "REVISION", "REFLECT"})
+            names = {"DIRECTED_FIX", "REVISION"})
     void render_rewrite_delimitsSourceAndTranslationApart(final PromptName name) {
         assertThat(user(name))
                 .contains("<Source>\n" + MASKED + "\n</Source>", "<Translation>\n" + MASKED + "\n</Translation>")

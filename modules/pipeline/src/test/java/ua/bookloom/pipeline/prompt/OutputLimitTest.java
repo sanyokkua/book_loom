@@ -57,11 +57,6 @@ class OutputLimitTest {
     }
 
     @Test
-    void forReflect_anySource_capsAtSixHundred() {
-        assertThat(OutputLimit.forReflect()).isEqualTo(new OutputLimit(256, 600));
-    }
-
-    @Test
     void forSummary_capsAtTenTwentyFour() {
         assertThat(OutputLimit.forSummary()).isEqualTo(new OutputLimit(600, 1024));
     }

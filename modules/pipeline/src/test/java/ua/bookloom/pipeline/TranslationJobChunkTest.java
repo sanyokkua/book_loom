@@ -63,6 +63,8 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 /** A run takes each chunk through its drafts, its one reviewer call and its decisions, and keeps them across a pause. */
 class TranslationJobChunkTest {
 
+    // Fails only the script check, where the echo fails it and the echo check too.
+    private static final String PARTLY_TRANSLATED = "Він відчинив the old door.";
     private static final AppError UNREACHABLE =
             AppError.of(ErrorCode.unreachable, "Provider unreachable", "The provider did not answer.");
 
@@ -252,11 +254,12 @@ class TranslationJobChunkTest {
     }
 
     // The first round is kept: the second round's fix is sent again, and the repaired target is decided by the checks.
-    // The first fix answers the English source, a rewrite that still fails, so the second round is needed.
+    // The first fix still leaves English words, but fewer blockers than the echo, so it is kept and a second round is
+    // needed.
     @Test
     void run_pauseDuringSecondFixRound_continuesAtTheSecondRound() {
         final ScriptedChatModel model =
-                replies(DOOR_ECHO, ChunkRunFixtures.DOOR, DOOR_TARGET).blockNthRequest(3);
+                replies(DOOR_ECHO, PARTLY_TRANSLATED, DOOR_TARGET).blockNthRequest(3);
         final TestProject project = balanced(ChunkRunFixtures.door(tempDir));
         final TranslationJobImpl translation = job(project, model);
         final LinkedBlockingQueue<Paused> pauses = pauses(translation);
@@ -274,7 +277,7 @@ class TranslationJobChunkTest {
 
     @Test
     void run_unreachableDuringSecondFixRound_pausesAndContinuesAtTheSecondRound() {
-        final ScriptedChatModel model = replies(DOOR_ECHO, ChunkRunFixtures.DOOR)
+        final ScriptedChatModel model = replies(DOOR_ECHO, PARTLY_TRANSLATED)
                 .answer(Result.err(UNREACHABLE))
                 .answer(target(DOOR_TARGET));
         final TestProject project = balanced(ChunkRunFixtures.door(tempDir));

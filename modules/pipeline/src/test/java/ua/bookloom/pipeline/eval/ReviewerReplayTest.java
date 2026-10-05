@@ -31,9 +31,7 @@ import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.LoopSettings;
-import ua.bookloom.pipeline.heal.Polish;
 import ua.bookloom.pipeline.heal.QualityLoop;
-import ua.bookloom.pipeline.heal.ReflectImprove;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
@@ -68,9 +66,7 @@ class ReviewerReplayTest {
         return new QualityLoop(
                 new ReviewerCall(templates, new ReviewReplyParser(MAPPER)),
                 new EditApplier(new EditVerifier()),
-                new DirectedFix(templates, draftReplies),
-                new ReflectImprove(templates, draftReplies, MAPPER),
-                new Polish(templates, draftReplies));
+                new DirectedFix(templates, draftReplies));
     }
 
     private static LoopSettings settings() {
