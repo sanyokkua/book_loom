@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -152,5 +154,28 @@ class BatchDrafterTest {
         drafter.record(clean);
 
         assertThat(drafter.size()).isEqualTo(2);
+    }
+
+    @Test
+    void record_manyFailuresInARun_neverTakeABatchingRunBelowTwo() {
+        final BatchDrafter drafter = drafter(reply("  "), 8);
+        final BatchReply unreadable = drafted(drafter, ITEMS);
+
+        drafter.record(unreadable);
+        drafter.record(unreadable);
+        drafter.record(unreadable);
+        drafter.record(unreadable);
+
+        assertThat(drafter.size()).isEqualTo(BatchDrafter.MIN_BATCHING_SIZE);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2})
+    void record_failureAtTheMinimum_keepsTheSize(final int initial) {
+        final BatchDrafter drafter = drafter(reply("  "), initial);
+
+        drafter.record(drafted(drafter, ITEMS));
+
+        assertThat(drafter.size()).isEqualTo(initial);
     }
 }

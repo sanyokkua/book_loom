@@ -5,6 +5,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -15,7 +17,8 @@ import ua.bookloom.api.project.LexiconEntry;
 
 /**
  * Stores a project's recurring-term lexicon over the shared {@link InMemoryStore}, one entry per term compared by
- * {@link LexiconEntry#keyOf}; {@link #record} counts through one atomic map step so concurrent drafts never lose a use.
+ * {@link LexiconEntry#keyOf}; {@link #record} and {@link #update} change an entry through one atomic map step so
+ * concurrent drafts and edits never lose a use.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
@@ -49,6 +52,22 @@ public final class InMemoryLexiconRepository implements LexiconRepository {
                     entry.term(),
                     entry.established().orElse(null));
             return Result.ok(entry);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<Optional<LexiconEntry>> update(
+            final String projectId, final String term, final UnaryOperator<LexiconEntry> change) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(term, "term");
+        Objects.requireNonNull(change, "change");
+        try {
+            final LexiconEntry stored = store.lexicon(projectId)
+                    .computeIfPresent(LexiconEntry.keyOf(term), (key, held) -> change.apply(held));
+            log.debug("Lexicon update projectId={} present={}", projectId, stored != null);
+            return Result.ok(Optional.ofNullable(stored));
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

@@ -32,7 +32,7 @@ public final class QuotedSpans {
     public static String narration(final String text, final String languageTag) {
         Objects.requireNonNull(text, "text");
         final char[] chars = text.toCharArray();
-        blankQuotes(chars, QuoteConventions.forLanguage(languageTag));
+        blankQuotes(chars, QuoteConventions.withEnglish(QuoteConventions.forLanguage(languageTag)));
         blankDashDialogue(chars, text);
         return new String(chars);
     }

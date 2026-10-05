@@ -2357,6 +2357,11 @@ finds no key sorts by the translated text.
 - **WHEN** `The Amulet of Samarkand` (`calibre:title_sort` = `Amulet of Samarkand, The`) is written with the title `Амулет Самарканда`
 - **THEN** the package holds the new title and no `calibre:title_sort`, while `calibre:series` is unchanged
 
+#### Scenario: A title written again as the source keeps its keys after an export that dropped them
+
+- **WHEN** an open book is written with a translated title and then, without being opened again, with the title's source text
+- **THEN** the second package holds every `file-as` and `calibre:title_sort` of the source, because the open book's own package is never stripped
+
 #### Scenario: Nothing translated keeps every key
 
 - **WHEN** the same book is written with no translated title or author

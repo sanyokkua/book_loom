@@ -34,6 +34,20 @@ public final class RunAudit {
         }
         Objects.requireNonNull(words, "words");
         Objects.requireNonNull(projectId, "projectId");
+        try {
+            audit(stores, words, projectId);
+        } catch (VirtualMachineError fatal) {
+            throw fatal;
+        } catch (Throwable thrown) {
+            // Only the type is logged: a check's message may quote the book.
+            log.warn(
+                    "Final audit failed project={} type={}; the run stays completed",
+                    projectId,
+                    thrown.getClass().getName());
+        }
+    }
+
+    private static void audit(final RunStores stores, final WordValidator words, final String projectId) {
         final Result<List<SuspiciousSegment>> audited = new AuditRecorder(
                         stores.projects(), stores.segments(), stores.glossary(), stores.openProjects(), words)
                 .run(projectId);

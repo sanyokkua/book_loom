@@ -95,17 +95,47 @@ final class RoutedCalls {
         return untilAnsweredOrFlagged(work::currentTranslationProgress, segmentId, step, call, flag);
     }
 
-    /** As {@link #untilAnsweredOrFlagged(WorkList, String, StepName, Supplier, Function)}, a pause reporting
-     * the progress {@code progress} gives. */
+    /**
+     * As {@link #untilAnsweredOrFlagged(WorkList, String, StepName, Supplier, Function)}, a pause reporting the
+     * progress {@code progress} gives.
+     */
     <T> Step<T> untilAnsweredOrFlagged(
             final Supplier<JobProgress> progress,
             @Nullable final String segmentId,
             final StepName step,
             final Supplier<Result<T>> call,
             final Function<AppError, T> flag) {
+        return untilAnsweredOrFlagged(progress, segmentId, step, call, flag, flag);
+    }
+
+    /**
+     * As {@link #untilAnsweredOrFlagged(WorkList, String, StepName, Supplier, Function)}, with a step the person skips
+     * answered by {@code skipped} instead of {@code flag}: a step that is not one segment's (a batch) tells a skip from
+     * a step that ran out of pauses.
+     *
+     * @param skipped turns the error the skipped step last answered into its answer
+     */
+    <T> Step<T> untilAnsweredOrFlagged(
+            final WorkList work,
+            @Nullable final String segmentId,
+            final StepName step,
+            final Supplier<Result<T>> call,
+            final Function<AppError, T> flag,
+            final Function<AppError, T> skipped) {
+        return untilAnsweredOrFlagged(work::currentTranslationProgress, segmentId, step, call, flag, skipped);
+    }
+
+    private <T> Step<T> untilAnsweredOrFlagged(
+            final Supplier<JobProgress> progress,
+            @Nullable final String segmentId,
+            final StepName step,
+            final Supplier<Result<T>> call,
+            final Function<AppError, T> flag,
+            final Function<AppError, T> skipped) {
         Objects.requireNonNull(step, "step");
         Objects.requireNonNull(flag, "flag");
-        return route(progress, segmentId, call, new GiveUp<>(step, flag));
+        Objects.requireNonNull(skipped, "skipped");
+        return route(progress, segmentId, call, new GiveUp<>(step, flag, skipped));
     }
 
     private <T> Step<T> route(
@@ -180,7 +210,7 @@ final class RoutedCalls {
         }
         if (giveUp != null && boundaries.takeSkipRequest()) {
             log.info("Skipping step={} as asked from a pause while its call waited; it is flagged", giveUp.step());
-            return Optional.of(new Step.Done<>(giveUp.flag().apply(SKIPPED)));
+            return Optional.of(new Step.Done<>(giveUp.skipped().apply(SKIPPED)));
         }
         return Optional.empty();
     }
@@ -249,7 +279,7 @@ final class RoutedCalls {
                 : pauses.merge(countKey(giveUp, recovery), 1, Integer::sum);
         if (boundaries.takeSkipRequest()) {
             log.info("Skipping step={} as asked from the pause code={}; it is flagged", giveUp.step(), error.code());
-            return Optional.of(new Step.Done<>(giveUp.flag().apply(error)));
+            return Optional.of(new Step.Done<>(giveUp.skipped().apply(error)));
         }
         log.debug("Resumed step={} pausesSoFar={}", giveUp.step(), paused);
         return Optional.empty();
@@ -331,6 +361,7 @@ final class RoutedCalls {
      *
      * @param step the step's name in the pause count
      * @param flag turns the step's last error into its flagged answer
+     * @param skipped turns the error of a step the person skipped into its answer
      */
-    private record GiveUp<T>(StepName step, Function<AppError, T> flag) {}
+    private record GiveUp<T>(StepName step, Function<AppError, T> flag, Function<AppError, T> skipped) {}
 }

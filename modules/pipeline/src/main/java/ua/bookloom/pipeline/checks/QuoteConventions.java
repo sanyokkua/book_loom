@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public final class QuoteConventions {
 
     private static final String RESOURCE = "quote-pairs.properties";
     private static final String FALLBACK_KEY = "*";
+    private static final QuotePair ENGLISH = new QuotePair('“', '”');
     private static final Map<String, List<QuotePair>> TABLE = load();
 
     /**
@@ -45,6 +47,20 @@ public final class QuoteConventions {
         final List<QuotePair> pairs =
                 Objects.requireNonNull(TABLE.containsKey(language) ? TABLE.get(language) : TABLE.get(FALLBACK_KEY));
         return pairs;
+    }
+
+    /**
+     * A language's pairs plus English curly quotes, which a model often writes whatever the target language: the typography
+     * pass leaves typographic marks alone, so a balanced “…” run is a style note, not a defect.
+     *
+     * @param pairs a language's own pairs
+     * @return {@code pairs}, with the “ ” pair added when none of them opens with “
+     */
+    static List<QuotePair> withEnglish(final List<QuotePair> pairs) {
+        if (pairs.stream().anyMatch(pair -> pair.open() == ENGLISH.open())) {
+            return pairs;
+        }
+        return Stream.concat(pairs.stream(), Stream.of(ENGLISH)).toList();
     }
 
     /**

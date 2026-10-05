@@ -22,6 +22,12 @@ class QuotedSpansTest {
     }
 
     @Test
+    void narration_balancedEnglishCurlyQuotesInUkrainian_areBlankedToo() {
+        assertThat(QuotedSpans.narration("Я сказав: “Йди геть” і пішов.", "uk"))
+                .isEqualTo("Я сказав:            і пішов.");
+    }
+
+    @Test
     void narration_unclosedQuote_blanksTheRest() {
         assertThat(QuotedSpans.narration("Я пішов. «Далі", "uk")).isEqualTo("Я пішов.      ");
     }

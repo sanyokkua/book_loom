@@ -54,7 +54,7 @@ public final class EditApplier {
         final List<EditOutcome.FailedEdit> failed = new ArrayList<>();
         final List<ReviewEdit> notes = new ArrayList<>();
         int ignored = 0;
-        for (final ReviewEdit edit : edits) {
+        for (final ReviewEdit edit : edits.stream().distinct().toList()) {
             if (edit.criterion().isNote()) {
                 notes.add(edit);
                 continue;

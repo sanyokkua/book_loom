@@ -1194,8 +1194,18 @@ segment of a batch keeps the answers of the rest and a resume makes no new batch
 is routed as one step named by its first segment and counts one toward the step's failure budget.
 
 The batch size SHALL start at 8, halve when a reply loses an id, repeats one, merges two items or names an id the batch
-never held, and grow by one after three clean batches, never above 16. Dial budgets are the chunk caps: Fast 8, Balanced
-8, Max 2 segments per chunk, so a batch is never larger than its chunk.
+never held, and grow by one after three clean batches, never above 16 and never below 2: a run that batches never halves
+its way to drafting every segment alone. A call that got no reply from the model — a provider outage, a step the run
+gave up on, an error the single draft would flag its segment for — says nothing about the size and SHALL leave it as it
+was. WHILE a batch step is paused on an error, Skip SHALL skip the step's first segment, flagged as a single draft's
+skip is, and the other segments SHALL batch or draft normally at their turn. Dial budgets are the chunk caps: Fast 8,
+Balanced 8, Max 2 segments per chunk, so a batch is never larger than its chunk.
+
+The window SHALL hold every prompt: the chunk budget reserves the dynamic context's whole allowance, the previous pairs
+of a batch take at most half of it and the next source at most a quarter, and before a batch is sent its assembled
+prompt, the reply its items are expected to need and the 500-token safety margin SHALL fit the run's window. A batch
+that does not fit is sent without the optional context (pairs, next source, memory, suggestions, recurring terms,
+characters), then with fewer segments, and drafted alone when two segments do not fit either.
 
 **Source:** `tasks.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book
 of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it
@@ -1215,6 +1225,16 @@ loses one of them only that one is asked again.
 
 - **WHEN** the entry for id 2 holds the translation of items 2 and 3 and id 3 has no entry
 - **THEN** items 2 and 3 are each drafted alone and the batch size halves
+
+#### Scenario: Outages never switch batching off
+
+- **WHEN** three batch calls in a row are answered with `contextWindow` and the fourth with a readable reply
+- **THEN** each of the first three is followed by its single drafts and the fourth is a batch call again
+
+#### Scenario: Skip during a batch call skips its first segment
+
+- **WHEN** the run is paused on a provider error in the batch call about segments 1 to 4 and the person skips
+- **THEN** segment 1 is flagged and segments 2 to 4 are drafted in a new batch call
 
 #### Scenario: A refusal sends every segment to its own draft
 
@@ -2105,7 +2125,10 @@ fails, THEN the segment SHALL NOT be flagged at once: it SHALL go to self-heal w
 fix states the expected token sequence and whose reply gets the restore-missing repair, and SHALL be FLAGGED only after
 the dial's repair rounds fail (the `quality-gates` capability). Such a segment keeps no machine translation, but SHALL
 keep the last refused reply, its protected spans put back, as its rejected target, so review shows the model's words
-labelled as no usable translation instead of the source; export writes its source.
+labelled as no usable translation instead of the source; export writes its source. A draft that the placeholder gates
+restored but a blocking text check refused (`script-purity`, `quote-balance`, `language-identity`) keeps no machine
+translation either, and SHALL likewise keep its restored text as its rejected target when it is FLAGGED, so the
+translated sentence is never lost with the check that refused it.
 
 A drop cap — a pair wrapping one or two visible characters at the start of a word, glued to its rest, such as
 `⟦g0⟧“A⟦g1⟧bove` — SHALL be folded out of the text the model is shown (`“Above`), with its tokens left out of the

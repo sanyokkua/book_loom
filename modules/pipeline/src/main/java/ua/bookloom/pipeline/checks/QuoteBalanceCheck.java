@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,10 @@ final class QuoteBalanceCheck {
         if (sourceDefect.isPresent()) {
             return Optional.empty();
         }
+        final List<QuotePair> targetPairs = QuoteConventions.forLanguage(targetLanguage);
+        if (defect(target, QuoteConventions.withEnglish(targetPairs)).isEmpty()) {
+            return Optional.of(englishQuotes(target, targetPairs));
+        }
         final Defect found = targetDefect.get();
         final int from = Math.max(0, found.problem() == Problem.UNCLOSED ? found.index() : found.index() - CONTEXT);
         final int to = Math.min(
@@ -63,6 +68,24 @@ final class QuoteBalanceCheck {
                 new TextSpan(from, to, target.substring(from, to)),
                 found.problem().explanation + " The source's quotes are balanced.",
                 true));
+    }
+
+    // Balanced once English curly quotes count as a pair: a style note for review, not a reason to repair.
+    private static CheckFinding englishQuotes(final String target, final List<QuotePair> pairs) {
+        final int at = IntStream.range(0, target.length())
+                .filter(index -> isEnglishMark(pairs, target.charAt(index)))
+                .findFirst()
+                .orElse(0);
+        return new CheckFinding(
+                FindingKind.UNBALANCED_QUOTES,
+                new TextSpan(at, at + 1, target.substring(at, at + 1)),
+                "The target uses English quote marks, which are balanced; the language's own marks are "
+                        + pairs.getFirst().open() + pairs.getFirst().close() + ".",
+                false);
+    }
+
+    private static boolean isEnglishMark(final List<QuotePair> pairs, final char mark) {
+        return (mark == '“' || mark == '”') && pairs.stream().noneMatch(pair -> pair.open() == mark);
     }
 
     private static Optional<Defect> defect(final String text, final List<QuotePair> pairs) {

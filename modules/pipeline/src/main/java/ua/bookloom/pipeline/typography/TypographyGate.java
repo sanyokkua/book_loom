@@ -53,14 +53,15 @@ public final class TypographyGate implements GateFunction {
     }
 
     private static GateResult noted(final GateResult result, final Normalisation normalised, final Segment segment) {
-        if (normalised.isChanged() && result instanceof GateResult.Restored restored) {
-            log.trace("Typography note segment={} {}", segment.id(), normalised.note());
-            return restored.withNormalised(new QaFinding(
-                    CheckName.TYPOGRAPHY.findingKind(),
-                    Severity.LOW,
-                    normalised.note(),
-                    CheckName.TYPOGRAPHY.raisedBy()));
+        if (!(result instanceof GateResult.Restored restored)) {
+            return result;
         }
-        return result;
+        final GateResult.Restored withCandidate = restored.withMaskedCandidate(normalised.text());
+        if (!normalised.isChanged()) {
+            return withCandidate;
+        }
+        log.trace("Typography note segment={} {}", segment.id(), normalised.note());
+        return withCandidate.withNormalised(new QaFinding(
+                CheckName.TYPOGRAPHY.findingKind(), Severity.LOW, normalised.note(), CheckName.TYPOGRAPHY.raisedBy()));
     }
 }

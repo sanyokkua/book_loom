@@ -56,4 +56,38 @@ class InMemoryLexiconRepositoryTest {
         assertThat(repository.remove("p1", "master").data()).isFalse();
         assertThat(held()).isEmpty();
     }
+
+    @Test
+    void update_heldTerm_appliesTheChangeToTheEntryAsItStands() {
+        repository.record("p1", "master", "господар");
+
+        final LexiconEntry stored = Objects.requireNonNull(repository
+                        .update("p1", "MASTER", entry -> entry.withChosen("пан"))
+                        .data())
+                .orElseThrow();
+
+        assertThat(stored.chosen()).isEqualTo("пан");
+        assertThat(stored.renderings()).containsExactly(new LexiconEntry.Rendering("господар", 1));
+    }
+
+    @Test
+    void update_removedTerm_createsNothing() {
+        assertThat(repository
+                        .update("p1", "master", entry -> entry.withChosen("пан"))
+                        .data())
+                .isEmpty();
+        assertThat(held()).isEmpty();
+    }
+
+    @Test
+    void update_alongsideManyRecords_losesNoCount() {
+        repository.record("p1", "master", "господар");
+        final int uses = 200;
+        IntStream.range(0, uses).parallel().forEach(i -> {
+            repository.record("p1", "master", "господар");
+            repository.update("p1", "master", entry -> entry.withSuggested("пан"));
+        });
+
+        assertThat(held().getFirst().renderings()).containsExactly(new LexiconEntry.Rendering("господар", uses + 1));
+    }
 }

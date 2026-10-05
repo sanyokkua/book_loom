@@ -13,6 +13,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.chunk.BatchSizeController;
 import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.PromptBreakdown;
 
 /**
  * Drafts several consecutive segments in one model call and reads the reply per id. It makes the call and judges the
@@ -33,6 +34,9 @@ public final class BatchDrafter {
 
     /** A batch size of one: no segment is ever drafted with another, so every draft is a single-segment call. */
     public static final int NO_BATCHING = 1;
+
+    /** The smallest size of a run that batches: halving never takes it down to {@link #NO_BATCHING}. */
+    public static final int MIN_BATCHING_SIZE = 2;
 
     static final int MAX_SIZE = 16;
     static final int CLEAN_STREAK_TO_GROW = 3;
@@ -66,12 +70,25 @@ public final class BatchDrafter {
         this.calls = Objects.requireNonNull(calls, "calls");
         this.sourceLanguage = sourceLanguage;
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
-        this.size = new BatchSizeController(NO_BATCHING, MAX_SIZE, initialSize, CLEAN_STREAK_TO_GROW);
+        // A run that batches never halves its way into no batching, which only an initial size of one asks for.
+        final int min = initialSize < MIN_BATCHING_SIZE ? NO_BATCHING : MIN_BATCHING_SIZE;
+        this.size = new BatchSizeController(min, MAX_SIZE, initialSize, CLEAN_STREAK_TO_GROW);
     }
 
     /** The items the next batch may carry, before the token budget cuts it. */
     public int size() {
         return size.size();
+    }
+
+    /**
+     * What a batch's prompt would weigh, so a run can fit it to the window before it sends it.
+     *
+     * @param context the non-null context shown with the items
+     * @param items the non-null items, at least one
+     * @return the estimated tokens of the whole prompt
+     */
+    public int promptTokens(final BatchContext context, final List<BatchItem> items) {
+        return PromptBreakdown.of(prompts.messagesFor(context, items)).total();
     }
 
     /**

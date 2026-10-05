@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import java.util.zip.ZipEntry;
@@ -72,6 +71,35 @@ class EpubWriterSortKeyTest {
                 .contains("author-sort-key");
     }
 
+    // IF the first export's dropped keys were gone from the open book for good, THEN reverting the title would still
+    // ship a title with no sort key.
+    @Test
+    void write_titleTranslatedThenRevertedOnTheSameOpenBook_keepsTheSortKeysTheSecondTime() {
+        final Path epub = tempDir.resolve("book.epub");
+        new EpubZipBuilder()
+                .mimetype()
+                .entry("META-INF/container.xml", CONTAINER_XML)
+                .entry("OEBPS/content.opf", opf())
+                .entry("OEBPS/c01.xhtml", chapter())
+                .writeTo(epub);
+        final OpenEpubRegistry registry = new OpenEpubRegistry();
+        final Document document = new EpubReader(registry).read(epub);
+        final EpubWriter writer = new EpubWriter(registry);
+        writer.write(
+                withAuxiliaryTarget(document, "aux:title", "Амулет Самарканда"), tempDir.resolve("one.epub"), "uk");
+
+        final Path second = writer.write(
+                withAuxiliaryTarget(document, "aux:title", "The Amulet of Samarkand"),
+                tempDir.resolve("two.epub"),
+                "uk");
+
+        assertThat(rawOpfTextOf(second))
+                .contains("The Amulet of Samarkand")
+                .contains("calibre:title_sort")
+                .contains("Samarkand, The")
+                .contains("title-sort-key");
+    }
+
     private Path writeWithAuxiliaryTarget(String segmentId, String target) {
         return writeEdited(document -> withAuxiliaryTarget(document, segmentId, target));
     }
@@ -90,10 +118,9 @@ class EpubWriterSortKeyTest {
     }
 
     private static Document withAuxiliaryTarget(Document document, String segmentId, String target) {
-        final List<Unit> units = new ArrayList<>();
-        for (final Unit unit : document.units()) {
-            units.add(unit.isAuxiliary() ? unit.withSegments(retargeted(unit, segmentId, target)) : unit);
-        }
+        final List<Unit> units = document.units().stream()
+                .map(unit -> unit.isAuxiliary() ? unit.withSegments(retargeted(unit, segmentId, target)) : unit)
+                .toList();
         return new Document(
                 document.id(),
                 document.format(),

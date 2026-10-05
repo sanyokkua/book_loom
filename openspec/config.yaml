@@ -59,7 +59,7 @@ context: |
 
   - **FX-free core.** No class in `:api/:util/:document/:llm/:pipeline/:persistence` imports `javafx..`.
   - **Skeleton is never regenerated.** Only text nodes and the attribute values DD-47 lists (image alt
-    text) change; structure/IDs/images/fonts survive a canonical-equal round trip (TXT is exact bytes,
+    text) change, plus the EPUB package's language rewrite and the removal of a changed title or creator's stale sort keys; structure/IDs/images/fonts survive a canonical-equal round trip (TXT is exact bytes,
     DD-43). Inline tags and locked terms mask to `gN` placeholders, are validated as a hard gate on
     return — the multiset, plus each pair's order and nesting, a pair that held text still holding text,
     and a line break staying inside its innermost pair (ADR-0040 as amended) — then unmasked.

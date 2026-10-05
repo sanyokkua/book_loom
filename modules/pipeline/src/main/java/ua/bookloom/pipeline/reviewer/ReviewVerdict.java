@@ -116,6 +116,9 @@ public record ReviewVerdict(
         if (second != null) {
             edits.addAll(second.edits());
         }
-        return edits.isEmpty() ? ReviewItem.ok(segmentId) : new ReviewItem(segmentId, ReviewStatus.EDITS, edits, null);
+        final List<ReviewEdit> distinct = edits.stream().distinct().toList();
+        return distinct.isEmpty()
+                ? ReviewItem.ok(segmentId)
+                : new ReviewItem(segmentId, ReviewStatus.EDITS, distinct, null);
     }
 }

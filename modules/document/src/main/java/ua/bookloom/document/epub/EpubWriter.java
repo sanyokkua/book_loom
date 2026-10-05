@@ -86,12 +86,19 @@ public final class EpubWriter {
         final ParsedEpub parsed =
                 registry.find(document.id()).orElseThrow(() -> new DocumentNotOpenException(document.id()));
 
-        final EpubSortKeys sortKeys = EpubSortKeys.snapshot(parsed.opfDocument());
+        final EpubSortKeys sortKeys = EpubSortKeys.snapshot(sourceOpf(parsed));
         final Set<String> changed = new HashSet<>(writeSegmentsBack(document, parsed));
-        sortKeys.dropStale(parsed.opfDocument());
         EpubLanguageRewriter.rewrite(parsed, document, sourceLanguage, targetLanguage, changed);
-        repackage(parsed, document, destination, changed);
+        repackage(parsed.withOpfDocument(sortKeys.withoutStale(parsed.opfDocument())), document, destination, changed);
         return destination;
+    }
+
+    private static org.jdom2.Document sourceOpf(ParsedEpub parsed) {
+        final RawEntry entry = parsed.rawEntries().stream()
+                .filter(raw -> raw.name().equals(parsed.opfPath()))
+                .findFirst()
+                .orElseThrow(() -> new CorruptContainerException("The package " + parsed.opfPath() + " is missing"));
+        return OpfParser.parse(entry.content(), parsed.opfPath()).jdomDocument();
     }
 
     /**

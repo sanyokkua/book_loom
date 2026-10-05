@@ -16,6 +16,7 @@ import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
+import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * The repair path never makes text worse: it carries the best candidate (fewest failed hard gates, then fewest
@@ -117,7 +118,37 @@ class QualityLoopBestCandidateTest {
         assertThat(model.requests()).isEmpty();
     }
 
+    // The placeholder gate restored the text fine; only a text check blocked it, so its words must stay for review.
+    @Test
+    void nextDecision_draftFailingOnlyATextCheck_keepsItsRestoredTextAsTheRejectedTarget() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
+
+        final SegmentOutcome decided = decide("Він відчинив «старі двері.", model, 1);
+
+        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
+        assertThat(decided.machineTarget()).isNull();
+        assertThat(decided.rejectedTarget()).isEqualTo("Він відчинив «старі двері.");
+    }
+
+    // The typography pass turns a lone straight quote into an unclosed guillemet, so the checks must read that text.
+    @Test
+    void nextDecision_repairWhoseNormalisedTextLeavesAQuoteOpen_isNotAccepted() {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable("{\"target\":\"Він відчинив \\\"старі двері.\"}"));
+        final GateFunction gate = TypographyGate.around(QualityLoopFixtures.PASSTHROUGH_GATE, "uk");
+
+        final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, 1, gate);
+
+        assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
+        assertThat(raisedBy(decided)).contains("quote-balance");
+    }
+
     private SegmentOutcome decide(final String draft, final ScriptedChatModel model, final int repairRounds) {
+        return decide(draft, model, repairRounds, QualityLoopFixtures.PASSTHROUGH_GATE);
+    }
+
+    private SegmentOutcome decide(
+            final String draft, final ScriptedChatModel model, final int repairRounds, final GateFunction gate) {
         final DraftOutcome.Drafted outcome =
                 new DraftOutcome.Drafted(segment(), SOURCE, List.of(), draft, draft, draft, null);
         final LoopSettings settings = new LoopSettings(
@@ -127,8 +158,7 @@ class QualityLoopBestCandidateTest {
                 NamePolicy.TRANSLITERATE,
                 List.of());
         final ChunkDecider decider = Objects.requireNonNull(
-                loop.start(List.of(outcome), settings, QualityLoopFixtures.PASSTHROUGH_GATE, calls(model))
-                        .data());
+                loop.start(List.of(outcome), settings, gate, calls(model)).data());
         return Objects.requireNonNull(decider.nextDecision().data());
     }
 

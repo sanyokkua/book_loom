@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -55,10 +56,7 @@ class EvidenceLogTest {
         traceFor("seg-accepted", logger, "prompt text of the accepted segment");
         keep("seg-flagged", logger);
 
-        for (int rotation = 0; rotation < 6; rotation++) {
-            logger.trace("filler line {}", rotation);
-            traceAppender().rollover();
-        }
+        rotateSixTimes(logger);
 
         assertThat(logLines(logDir.resolve("bookloom-trace.log"))).noneMatch(line -> line.contains("flagged segment"));
         assertThat(logLines(logDir.resolve(AppPaths.EVIDENCE_LOG_FILE_NAME)))
@@ -90,6 +88,13 @@ class EvidenceLogTest {
         keep("seg-flagged", LoggerFactory.getLogger("ua.bookloom.test"));
 
         assertThat(logDir.resolve(AppPaths.EVIDENCE_LOG_FILE_NAME)).doesNotExist();
+    }
+
+    private static void rotateSixTimes(final Logger logger) {
+        IntStream.range(0, 6).forEach(rotation -> {
+            logger.trace("filler line {}", rotation);
+            traceAppender().rollover();
+        });
     }
 
     private static void traceFor(final String segment, final Logger logger, final String text) {

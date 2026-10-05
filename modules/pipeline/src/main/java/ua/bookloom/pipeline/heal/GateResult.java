@@ -21,17 +21,31 @@ public sealed interface GateResult {
      *     {@code null} when the candidate passed as the model wrote it
      * @param normalised the low {@code normalised} finding saying the typography pass changed the candidate, or
      *     {@code null} when it left it as it was
+     * @param maskedCandidate the candidate after the typography pass with its protected-span tokens still in it —
+     *     the text the checks and the reviewer read, so they see what is stored; {@code null} when no typography
+     *     pass ran, and the candidate the caller sent stands
      */
     record Restored(
             String maskedForm,
             String restored,
             @Nullable QaFinding autoRepair,
-            @Nullable QaFinding normalised) implements GateResult {
+            @Nullable QaFinding normalised,
+            @Nullable String maskedCandidate)
+            implements GateResult {
 
         /** Rejects a missing component. */
         public Restored {
             Objects.requireNonNull(maskedForm, "maskedForm");
             Objects.requireNonNull(restored, "restored");
+        }
+
+        /** A restoration with no normalised candidate of its own. */
+        public Restored(
+                final String maskedForm,
+                final String restored,
+                @Nullable final QaFinding autoRepair,
+                @Nullable final QaFinding normalised) {
+            this(maskedForm, restored, autoRepair, normalised, null);
         }
 
         /** A candidate that passed as the model wrote it. */
@@ -51,7 +65,29 @@ public sealed interface GateResult {
          * @return this restoration with the finding
          */
         public Restored withNormalised(final QaFinding finding) {
-            return new Restored(maskedForm, restored, autoRepair, Objects.requireNonNull(finding, "finding"));
+            return new Restored(
+                    maskedForm, restored, autoRepair, Objects.requireNonNull(finding, "finding"), maskedCandidate);
+        }
+
+        /**
+         * The same restoration carrying the candidate the typography pass produced.
+         *
+         * @param candidate the non-null normalised candidate, protected-span tokens still in it
+         * @return this restoration with the candidate
+         */
+        public Restored withMaskedCandidate(final String candidate) {
+            return new Restored(
+                    maskedForm, restored, autoRepair, normalised, Objects.requireNonNull(candidate, "candidate"));
+        }
+
+        /**
+         * The candidate the checks read.
+         *
+         * @param given the candidate the caller sent to the gate
+         * @return the normalised candidate when a typography pass made one, else {@code given}
+         */
+        public String candidateOr(final String given) {
+            return maskedCandidate == null ? given : maskedCandidate;
         }
 
         /**
@@ -60,7 +96,7 @@ public sealed interface GateResult {
          * @return this restoration without its finding
          */
         public Restored withoutAutoRepair() {
-            return new Restored(maskedForm, restored, null, normalised);
+            return new Restored(maskedForm, restored, null, normalised, maskedCandidate);
         }
     }
 

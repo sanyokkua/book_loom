@@ -68,8 +68,11 @@ final class SegmentHealer {
     }
 
     // A segment no target passed for keeps the model's refused reply, so review shows its words instead of the source.
+    // A draft the placeholder gate restored but a text check blocked has no refused form of its own: its restored text
+    // is the best the model wrote, and must not be lost with the failed check.
     private static SegmentOutcome keepRejected(final SegmentOutcome decided, final DraftOutcome.Drafted outcome) {
-        final SegmentOutcome kept = decided.keepingRejected(outcome.rejectedForm());
+        final String rejected = outcome.rejectedForm() != null ? outcome.rejectedForm() : outcome.maskedForm();
+        final SegmentOutcome kept = decided.keepingRejected(rejected);
         if (kept.rejectedTarget() != null) {
             log.debug("Rejected reply kept for review segment={} status={}", decided.segmentId(), decided.status());
         }

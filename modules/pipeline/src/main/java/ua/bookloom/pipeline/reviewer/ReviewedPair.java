@@ -8,7 +8,7 @@ import java.util.Objects;
  *
  * @param segmentId the segment's real id
  * @param maskedSource the segment's masked source
- * @param maskedCandidate the segment's masked candidate, with kept names shown as names
+ * @param maskedCandidate the segment's masked candidate, as the model wrote it with its {@code ⟦gN⟧} tokens in place
  */
 public record ReviewedPair(String segmentId, String maskedSource, String maskedCandidate) {
 

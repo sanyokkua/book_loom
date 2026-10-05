@@ -23,7 +23,8 @@ import ua.bookloom.pipeline.reviewer.ReviewItem;
  * Turns the reviewer's answer about one drafted segment into a {@link Resolution} by verifying it in code. An
  * {@code ok} changes nothing. Edits are applied one by one when {@link EditVerifier} accepts each; a segment whose edits
  * were refused gets one directed fix that names the reviewer's quote, and the issue counts as resolved only when the
- * fixed text no longer holds that quote and the checks pass. A rewrite replaces the draft only when the whole text passes
+ * fixed text no longer shows the defect (the quote is gone, or, for an edit that adds words around it, the added words
+ * stand there) and the checks pass. A rewrite replaces the draft only when the whole text passes
  * every check, otherwise the draft stays and the segment is flagged with the evidence. Built fresh per chunk by
  * {@link SegmentHealer}; calling it again for the same segment repeats the same steps, which is what makes a segment
  * whose directed fix call failed resumable.
@@ -112,7 +113,8 @@ final class ReviewResolver {
     }
 
     // A directed fix is spent only on an issue the reviewer evidenced with a quote the app found, only when the dial
-    // has a repair round, and its text replaces the edited one only when it is no worse and clears at least one quote.
+    // has a repair round, and its text replaces the edited one only when it is no worse and resolves at least one
+    // refused edit.
     private Result<Resolution> fixRefused(
             final DraftOutcome.Drafted outcome,
             final Edited edited,
@@ -195,8 +197,7 @@ final class ReviewResolver {
     private static List<EditOutcome.FailedEdit> stillQuoted(
             final RoundOutcome.Evaluated fixed, final List<EditOutcome.FailedEdit> refused) {
         return refused.stream()
-                .filter(edit -> EditVerifier.occursIn(
-                        fixed.maskedCandidate(), edit.edit().quote()))
+                .filter(edit -> !EditVerifier.isResolvedIn(fixed.maskedCandidate(), edit.edit()))
                 .toList();
     }
 

@@ -621,7 +621,9 @@ the list already holds it), to remove a term, and to promote a term to the gloss
 entry of type term with its established rendering as the target and removes it from the lexicon.
 
 The lexicon SHALL live in memory behind a storage port, like the other project data, and SHALL NOT survive closing the
-application. A term the glossary holds SHALL NOT be asked about or shown from the lexicon: the glossary is the person's
+application. An edit of a rendering, a stored suggestion and a promotion SHALL change the entry as it stands in the store,
+in one step, never from a copy read earlier: a count a running draft records meanwhile is kept, and a term removed or
+promoted meanwhile is not created again (the edit answers that the term is unknown). A term the glossary holds SHALL NOT be asked about or shown from the lexicon: the glossary is the person's
 word.
 
 **Source:** `tasks.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: a book that

@@ -41,7 +41,7 @@ final class DraftOutcomes {
                 segment,
                 attempt.shownText(),
                 attempt.lockedRenderings(),
-                maskedReply,
+                restored.candidateOr(maskedReply),
                 restored.maskedForm(),
                 restored.restored(),
                 null,

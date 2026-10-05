@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** The deterministic text checks, in Ukrainian (Cyrillic) and Polish (Latin) to show nothing is script-specific. */
 class TextChecksTest {
@@ -114,6 +115,31 @@ class TextChecksTest {
     void run_balancedAndNestedQuotes_raisesNothing() {
         assertThat(uk("“He said ‘no’,” she said.", "«Він сказав „ні“», — сказала вона."))
                 .isEmpty();
+    }
+
+    @Test
+    void run_turkishApostropheAfterAName_isNotAStrayQuote() {
+        assertThat(TextChecks.run("He went to Ankara.", "Ankara’ya gitti.", "en", "tr"))
+                .isEmpty();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"uk", "ru", "be", "de", "cs", "sk", "sl", "hr", "bg"})
+    void run_balancedEnglishCurlyQuotes_isOnlyASoftNote(final String language) {
+        final List<CheckFinding> findings =
+                TextChecks.run("“No, sir,” said the boy.", "“Ні, сер,” — відповів хлопчик.", "en", language);
+
+        assertThat(findings)
+                .extracting(CheckFinding::kind, CheckFinding::blocking)
+                .containsExactly(tuple(FindingKind.UNBALANCED_QUOTES, false));
+        assertThat(findings.getFirst().explanation()).contains("English quote marks");
+    }
+
+    @Test
+    void run_englishCurlyQuoteLeftOpenInUkrainian_isStillBlocking() {
+        assertThat(uk("“No, sir,” said the boy.", "“Ні, сер, — відповів хлопчик."))
+                .extracting(CheckFinding::kind, CheckFinding::blocking)
+                .containsExactly(tuple(FindingKind.UNBALANCED_QUOTES, true));
     }
 
     @Test

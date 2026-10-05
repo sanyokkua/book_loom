@@ -85,6 +85,22 @@ class QualityLoopReviewerFixTest {
                 .satisfies(finding -> assertThat(finding.note()).contains("стіни"));
     }
 
+    // A correct omission fix still holds the quote ("двері" inside "старі двері"): resolved means the words are there.
+    @Test
+    void nextDecision_directedFixThatAddsTheWordsOfAnAmbiguousOmissionEdit_isKept() {
+        final String edit = "{\"criterion\":\"omission\",\"quote\":\"двері\",\"replacement\":\"старі двері\"}";
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(readable(reply(edit)))
+                .answer(readable(targetReply("Він відчинив старі двері і двері.")));
+
+        final SegmentOutcome decided =
+                decide("Він відчинив двері і двері.", model, DialParameters.of(QualityDial.BALANCED));
+
+        assertThat(model.requests()).hasSize(2);
+        assertThat(decided.machineTarget()).isEqualTo("Він відчинив старі двері і двері.");
+        assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
+    }
+
     private SegmentOutcome decide(final String draft, final ScriptedChatModel model, final DialParameters dial) {
         final DraftOutcome.Drafted outcome = new DraftOutcome.Drafted(
                 segment(), QualityLoopTestSupport.SOURCE, List.of(), draft, draft, draft, null);

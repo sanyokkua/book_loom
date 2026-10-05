@@ -47,6 +47,11 @@ record ParsedEpub(
         auxiliarySlotsByHandleId = Map.copyOf(auxiliarySlotsByHandleId);
     }
 
+    /** This book with {@code opf} as its package, for one export's output; the open book itself is left as it is. */
+    ParsedEpub withOpfDocument(final org.jdom2.Document opf) {
+        return new ParsedEpub(rawEntries, opfPath, opf, spineTreesByHandleId, auxiliarySlotsByHandleId, navigation);
+    }
+
     AuxiliarySlots slotsOf(Unit auxiliaryUnit) {
         return Objects.requireNonNull(
                 auxiliarySlotsByHandleId.get(auxiliaryUnit.skeleton().opaqueId()),

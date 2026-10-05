@@ -21,8 +21,9 @@ import ua.bookloom.document.model.RawEntry;
 /**
  * Places each spine document in the book's front matter, body or back matter from what the book itself says, in this
  * order: the navigation document's {@code landmarks}, the EPUB 2 guide, the document's own {@code epub:type}, and then
- * the labels the book gives it — its contents entry, its file name and its first short line. A document whose only
- * evidence is a label is matter outside the story, and lies in the front until the first story document and in the
+ * the labels the book gives it — its contents entry (when the entry names the whole file, not a place in it), its file
+ * name and its first short line. A document whose only evidence is a label, and which holds at most
+ * {@value #MAX_MATTER_SEGMENTS} segments, is matter outside the story, and lies in the front until the first story document and in the
  * back after it. A book that says nothing leaves every document {@link UnitRole#BODY}, so nothing is ever hidden
  * from a scan on a guess.
  */
@@ -105,7 +106,12 @@ final class EpubUnitRoles {
         return first == null ? Place.NONE : RoleMarkers.ofTypes(first.attr(EPUB_TYPE));
     }
 
+    // A label alone never makes a long document matter: a single-file book is named "Title Page" or "index" by its
+    // first contents entry or its file, yet it is the story.
     private static boolean matterByLabel(final Unit unit, final @Nullable String contentsLabel) {
+        if (unit.segments().size() > MAX_MATTER_SEGMENTS) {
+            return false;
+        }
         if (contentsLabel != null && RoleMarkers.ofLabel(contentsLabel) == Place.MATTER) {
             return true;
         }
@@ -113,7 +119,6 @@ final class EpubUnitRoles {
             return true;
         }
         return !unit.segments().isEmpty()
-                && unit.segments().size() <= MAX_MATTER_SEGMENTS
                 && isShortLine(unit.segments().getFirst())
                 && RoleMarkers.ofLabel(unit.segments().getFirst().masked()) == Place.MATTER;
     }
@@ -167,7 +172,10 @@ final class EpubUnitRoles {
 
     private static void collect(final List<NavigationParser.NavEntry> entries, final Map<String, String> labels) {
         for (final NavigationParser.NavEntry entry : entries) {
-            labels.putIfAbsent(entry.href(), entry.label());
+            // An entry that points into a file names a part of it, not the file.
+            if (entry.fragment() == null) {
+                labels.putIfAbsent(entry.href(), entry.label());
+            }
             collect(entry.children(), labels);
         }
     }

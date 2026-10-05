@@ -51,6 +51,7 @@ final class BatchStage {
     private final PrecedingTargets preceding;
     private final RoutedCalls calls;
     private final Supplier<@Nullable String> summary;
+    private final BatchFit fit;
 
     /**
      * Creates the batch side of one run.
@@ -75,6 +76,7 @@ final class BatchStage {
         this.preceding = Objects.requireNonNull(preceding, "preceding");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.summary = Objects.requireNonNull(summary, "summary");
+        this.fit = new BatchFit(drafter, settings);
     }
 
     /** A segment that will be drafted by a call, with what the batch needs of it. */
@@ -107,7 +109,17 @@ final class BatchStage {
             current.batches().tried(firstId);
             return Optional.empty();
         }
-        return send(current, batch);
+        final Result<Optional<Prepared>> prepared = prepare(current, batch);
+        if (prepared.isErr()) {
+            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(prepared.error(), "error")));
+        }
+        final Optional<Prepared> fitted = Objects.requireNonNull(prepared.data(), "prepared");
+        if (fitted.isEmpty()) {
+            log.warn("No batch fits the window segmentId={}: drafted on its own", firstId);
+            current.batches().tried(firstId);
+            return Optional.empty();
+        }
+        return send(current, fitted.get());
     }
 
     private List<Candidate> gather(final Current current, final Candidate first) {
@@ -165,32 +177,28 @@ final class BatchStage {
         return offer.reused() == null ? new Candidate(item, mask, offer) : null;
     }
 
-    private Optional<RunEnd> send(final Current current, final List<Candidate> batch) {
-        final List<BatchItem> items = itemsOf(batch);
+    private Optional<RunEnd> send(final Current current, final Prepared prepared) {
+        final List<Candidate> batch = prepared.batch();
+        final List<BatchItem> items = prepared.items();
         final List<String> segmentIds =
                 batch.stream().map(candidate -> candidate.segment().id()).toList();
-        final List<String> keyTerms = current.context()
-                .keyTermsIn(batch.stream().map(Candidate::segment).toList());
-        final Result<BatchContext> context = contextOf(current, batch, items, keyTerms);
-        if (context.isErr()) {
-            return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(context.error(), "error")));
-        }
         final List<String> ids = items.stream().map(BatchItem::id).toList();
         log.debug(
                 "Drafting a batch of {} segments from segmentId={} ids={}",
                 batch.size(),
                 segmentIds.getFirst(),
                 segmentIds);
-        final Step<BatchReply> step = calls.untilAnsweredOrFlagged(
+        final Step<BatchAttempt> step = calls.untilAnsweredOrFlagged(
                 current.work(),
                 null,
                 new RoutedCalls.StepName("batch", segmentIds.getFirst()),
-                () -> attempt(Objects.requireNonNull(context.data(), "context"), items, segmentIds),
-                error -> BatchReply.unreadable(ids));
+                () -> attempt(prepared.context(), items, segmentIds),
+                error -> BatchAttempt.unavailable(ids),
+                error -> BatchAttempt.skipped(ids, error));
         return switch (step) {
-            case Step.Stopped<BatchReply>(final RunEnd end) -> Optional.of(end);
-            case Step.Done<BatchReply>(final BatchReply reply) -> {
-                settle(current, batch, reply, keyTerms);
+            case Step.Stopped<BatchAttempt>(final RunEnd end) -> Optional.of(end);
+            case Step.Done<BatchAttempt>(final BatchAttempt attempt) -> {
+                settle(current, prepared, attempt);
                 yield Optional.empty();
             }
         };
@@ -204,23 +212,31 @@ final class BatchStage {
     }
 
     // An answer the draft step would flag its one segment for (an empty completion, a context-window error) says
-    // nothing about the others: the batch is unreadable and every segment takes its own draft, which flags itself.
-    private Result<BatchReply> attempt(
+    // nothing about the others: the batch is unavailable and every segment takes its own draft, which flags itself.
+    private Result<BatchAttempt> attempt(
             final BatchContext context, final List<BatchItem> items, final List<String> segmentIds) {
         final Result<BatchReply> answered = drafter.draft(context, items, segmentIds);
         final AppError error = answered.error();
-        if (error != null && PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE) {
+        if (error == null) {
+            return Result.ok(BatchAttempt.answered(Objects.requireNonNull(answered.data(), "reply")));
+        }
+        if (PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE) {
             log.warn("The batch call answered code={}; every segment is drafted on its own", error.code());
             return Result.ok(
-                    BatchReply.unreadable(items.stream().map(BatchItem::id).toList()));
+                    BatchAttempt.unavailable(items.stream().map(BatchItem::id).toList()));
         }
-        return answered;
+        return Result.err(error);
     }
 
     // Every segment the batch covered is tried; only the ones the model answered whole and the gate accepted wait for
-    // their turn, the rest take their own call there.
-    private void settle(
-            final Current current, final List<Candidate> batch, final BatchReply reply, final List<String> keyTerms) {
+    // their turn, the rest take their own call there. A skip leaves the others untried: they batch again at their turn.
+    private void settle(final Current current, final Prepared prepared, final BatchAttempt attempt) {
+        final List<Candidate> batch = prepared.batch();
+        if (attempt.kind() == BatchAttempt.Kind.SKIPPED) {
+            skipFirst(current, batch.getFirst(), Objects.requireNonNull(attempt.skip(), "skip"));
+            return;
+        }
+        final BatchReply reply = attempt.reply();
         int adopted = 0;
         for (int i = 0; i < batch.size(); i++) {
             final Candidate candidate = batch.get(i);
@@ -228,7 +244,7 @@ final class BatchStage {
             final ItemOutcome outcome = reply.outcome(Integer.toString(i + 1)).orElseThrow();
             if (outcome.isAccepted() && adopt(current, candidate, outcome)) {
                 adopted++;
-                recordTerms(current, candidate, outcome, keyTerms);
+                recordTerms(current, candidate, outcome, prepared.context().keyTerms());
             } else {
                 log.warn(
                         "Batch item falls back to its own draft segmentId={} status={} problems={}",
@@ -237,13 +253,33 @@ final class BatchStage {
                         outcome.problems());
             }
         }
-        drafter.record(reply);
+        if (attempt.kind() == BatchAttempt.Kind.ANSWERED) {
+            drafter.record(reply);
+        }
+        logSettled(batch.size(), adopted, attempt.kind());
+    }
+
+    private void logSettled(final int segments, final int adopted, final BatchAttempt.Kind kind) {
         log.info(
-                "Batch answered segments={} adopted={} fallbacks={} nextSize={}",
-                batch.size(),
+                "Batch answered segments={} adopted={} fallbacks={} kind={} nextSize={}",
+                segments,
                 adopted,
-                batch.size() - adopted,
+                segments - adopted,
+                kind,
                 drafter.size());
+    }
+
+    // The step is named by its first segment, so a skip skips that one, flagged as a single draft's skip is.
+    private static void skipFirst(final Current current, final Candidate first, final AppError error) {
+        log.info(
+                "Batch skipped as asked; its first segment is flagged segmentId={}",
+                first.segment().id());
+        current.batches().tried(first.segment().id());
+        current.batches()
+                .ready(
+                        first.segment().id(),
+                        new DraftOutcome.FlaggedAtOnce(
+                                first.segment(), first.segment().masked(), List.of(), error));
     }
 
     private static boolean adopt(final Current current, final Candidate candidate, final ItemOutcome outcome) {
@@ -273,27 +309,61 @@ final class BatchStage {
         current.context().lexicon().record(settings.projectId(), verified);
     }
 
-    private Result<BatchContext> contextOf(
-            final Current current,
-            final List<Candidate> batch,
-            final List<BatchItem> items,
-            final List<String> keyTerms) {
+    /** What one batch call is made of: the segments it covers, their items and the context it carries. */
+    private record Prepared(List<Candidate> batch, List<BatchItem> items, BatchContext context) {}
+
+    // The batch is shown to the model whole when its prompt fits the window; else without the optional context, else
+    // with fewer segments, the rest of which batch at their own turn. Fewer than two segments is no batch.
+    private Result<Optional<Prepared>> prepare(final Current current, final List<Candidate> batch) {
         final Candidate first = batch.getFirst();
         final List<Segment> unit = current.work().unitSegments(first.item());
         final int pairs =
                 Math.min(MAX_PAIRS, Math.max(MIN_PAIRS, settings.dial().precedingTargets()));
-        final List<DraftContext> perItem = perItemContexts(current, batch);
         return preceding
                 .earlierPairs(unit, first.segment(), pairs, current.drafts())
-                .map(earlier -> new BatchContext(
-                        merged(items, perItem),
-                        earlier.stream()
-                                .map(e -> new BatchContext.Pair(
-                                        DisplayText.of(e.segment().masked()), DisplayText.of(e.target())))
-                                .toList(),
-                        nextSourceAfter(unit, batch.getLast().segment()),
-                        characters(perItem),
-                        keyTerms));
+                .map(earlier -> shrinkToFit(current, batch, unit, earlier));
+    }
+
+    private Optional<Prepared> shrinkToFit(
+            final Current current,
+            final List<Candidate> batch,
+            final List<Segment> unit,
+            final List<PrecedingTargets.Earlier> earlier) {
+        final List<BatchContext.Pair> pairs = fit.capPairs(earlier.stream()
+                .map(e -> new BatchContext.Pair(DisplayText.of(e.segment().masked()), DisplayText.of(e.target())))
+                .toList());
+        List<Candidate> shown = batch;
+        while (shown.size() >= BatchDrafter.MIN_BATCHING_SIZE) {
+            final Prepared full = prepared(current, shown, unit, pairs);
+            if (fit.fits(full.context(), full.items())) {
+                return Optional.of(full);
+            }
+            final Prepared lean = new Prepared(shown, full.items(), BatchFit.lean(full.context()));
+            if (fit.fits(lean.context(), lean.items())) {
+                log.debug("Batch of {} fits only without its optional context", shown.size());
+                return Optional.of(lean);
+            }
+            shown = shown.subList(0, shown.size() > BatchDrafter.MIN_BATCHING_SIZE ? (shown.size() + 1) / 2 : 0);
+        }
+        return Optional.empty();
+    }
+
+    private Prepared prepared(
+            final Current current,
+            final List<Candidate> shown,
+            final List<Segment> unit,
+            final List<BatchContext.Pair> pairs) {
+        final List<BatchItem> items = itemsOf(shown);
+        final List<DraftContext> perItem = perItemContexts(current, shown);
+        final List<String> keyTerms = current.context()
+                .keyTermsIn(shown.stream().map(Candidate::segment).toList());
+        final BatchContext context = new BatchContext(
+                merged(items, perItem),
+                pairs,
+                fit.capNext(BatchFit.nextSourceAfter(unit, shown.getLast().segment())),
+                BatchFit.characters(perItem),
+                keyTerms);
+        return new Prepared(shown, items, context);
     }
 
     private List<DraftContext> perItemContexts(final Current current, final List<Candidate> batch) {
@@ -311,23 +381,5 @@ final class BatchStage {
     private static DraftContext merged(final List<BatchItem> items, final List<DraftContext> perItem) {
         return BatchContexts.of(items.stream().map(BatchItem::id).toList(), perItem, List.of(), null, List.of())
                 .draft();
-    }
-
-    // Who is who: each item's own character sheet, so the sheet is the one the budget already cut, joined without
-    // repeats.
-    private static List<String> characters(final List<DraftContext> perItem) {
-        return perItem.stream()
-                .flatMap(context -> context.characterLines().stream())
-                .distinct()
-                .toList();
-    }
-
-    private static @Nullable String nextSourceAfter(final List<Segment> unit, final Segment last) {
-        for (int i = 0; i < unit.size() - 1; i++) {
-            if (unit.get(i).id().equals(last.id())) {
-                return DisplayText.of(unit.get(i + 1).masked());
-            }
-        }
-        return null;
     }
 }

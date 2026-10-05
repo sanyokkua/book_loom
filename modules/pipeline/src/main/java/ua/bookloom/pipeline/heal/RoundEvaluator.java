@@ -51,7 +51,7 @@ final class RoundEvaluator {
                 WhitespaceRestoration.restore(outcome.segment().masked(), rawCandidate);
         final String segmentId = outcome.segment().id();
         return switch (gate.restoreRepairing(outcome.segment(), maskedCandidate, PlaceholderRepair.RESTORE_MISSING)) {
-            case GateResult.Restored restored -> evaluated(outcome, maskedCandidate, restored);
+            case GateResult.Restored restored -> evaluated(outcome, restored.candidateOr(maskedCandidate), restored);
             case GateResult.GateFailed failed -> {
                 log.debug(
                         "Self-heal round gate outcome segment={} outcome=GateFailed raisedBy={}"

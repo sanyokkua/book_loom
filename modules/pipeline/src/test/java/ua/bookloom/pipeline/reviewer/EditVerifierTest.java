@@ -43,6 +43,15 @@ class EditVerifierTest {
     }
 
     @Test
+    void verify_quoteTwiceWhoseChangeDoesNotFitItsCriterion_isIgnoredNotAmbiguous() {
+        final ReviewEdit shrinkingOmission = new ReviewEdit(ReviewCriterion.OMISSION, "Він ішов", "Ні");
+
+        final Verification result = VERIFIER.verify("Він ішов. Він ішов.", shrinkingOmission, CLEAN, NO_BLOCKERS);
+
+        assertThat(result).isInstanceOf(Verification.Ignored.class);
+    }
+
+    @Test
     void verify_quoteOverlappingItself_failsAsAmbiguous() {
         final Verification result = VERIFIER.verify("ааа", edit("аа", "б"), CLEAN, NO_BLOCKERS);
 

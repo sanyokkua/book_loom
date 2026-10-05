@@ -126,6 +126,35 @@ class EpubReaderRolesTest {
         assertThat(roles).containsExactly(UnitRole.FRONT_MATTER, UnitRole.BODY);
     }
 
+    @Test
+    void read_singleFileWhoseContentsStartsWithTitlePage_staysBody() {
+        final String toc = "<nav epub:type=\"toc\"><ol><li><a href=\"book.xhtml#title\">Title Page</a></li>"
+                + "<li><a href=\"book.xhtml#c1\">Chapter 1</a></li></ol></nav>";
+        final Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("OEBPS/content.opf", opf(NAV_ITEM + chapterItem("book"), "book"));
+        entries.put("OEBPS/toc01.html", NAV_HEAD + toc + NAV_TAIL);
+        entries.put("OEBPS/book.xhtml", chapter(manyParagraphs()));
+
+        final List<UnitRole> roles = rolesOf(support.open(support.epub("single.epub", entries)));
+
+        assertThat(roles).containsExactly(UnitRole.BODY);
+    }
+
+    @Test
+    void read_longStoryFileNamedIndex_staysBody() {
+        final Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("OEBPS/content.opf", opf(chapterItem("index"), "index"));
+        entries.put("OEBPS/index.xhtml", chapter(manyParagraphs()));
+
+        final List<UnitRole> roles = rolesOf(support.open(support.epub("index.epub", entries)));
+
+        assertThat(roles).containsExactly(UnitRole.BODY);
+    }
+
+    private static String manyParagraphs() {
+        return "<p>The story goes on and on for a while.</p>".repeat(45);
+    }
+
     /** Three chapter documents c01..c03 and a navigation document holding {@code navigation}. */
     private Document book(final String navigation, final String first, final String second, final String third) {
         final Map<String, String> entries = new LinkedHashMap<>();

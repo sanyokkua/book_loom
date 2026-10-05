@@ -3,10 +3,8 @@ package ua.bookloom.pipeline.run;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -18,7 +16,6 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.chunk.Chunk;
-import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextInputs;
 import ua.bookloom.pipeline.context.ContextPackage;
@@ -90,23 +87,6 @@ final class ChunkContext {
                     ProtectedSpans.gate(masks, documentGate), settings.frame().targetLanguage());
             return new ChunkContext(chunk, settings, entries, masks, gate, new Lexicon(lexicon));
         });
-    }
-
-    /**
-     * Estimates what the glossary lines of a unit take in the prompt, as the entries stand when the unit is packed.
-     * The lines mix the source term and its rendering, so they are estimated at the unknown script's rate.
-     *
-     * @param segments the non-null segments of the unit
-     * @param entries the non-null glossary entries
-     * @return the estimated tokens of every entry whose term occurs in the unit; 0 when none does
-     */
-    static int termsEstimate(final List<Segment> segments, final List<GlossaryEntry> entries) {
-        final String lines = occurringIn(segments, entries).stream()
-                .map(entry -> entry.term() + " → " + Objects.requireNonNullElse(entry.target(), "") + " ("
-                        + entry.type().name().toLowerCase(Locale.ROOT) + ", "
-                        + entry.gender().name().toLowerCase(Locale.ROOT) + ")")
-                .collect(Collectors.joining("\n"));
-        return lines.isEmpty() ? 0 : TokenEstimator.estimate(lines, null);
     }
 
     /** The segment's text with its protected spans hidden, as the model is shown it. */

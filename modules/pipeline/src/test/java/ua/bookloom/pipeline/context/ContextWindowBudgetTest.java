@@ -13,13 +13,16 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.pipeline.batch.BatchContext;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -48,7 +51,7 @@ class ContextWindowBudgetTest {
     void draftPrompt_anyWindow_neverExceedsWindowLessMarginAndReply(final int window) {
         final List<Segment> unit = unit();
         final List<GlossaryEntry> glossary = glossary();
-        final ContextBudget budget = ChunkBudget.budget(FRAME, unit, glossary, SUMMARY, window);
+        final ContextBudget budget = ChunkBudget.budget(FRAME, window);
         final int allowance = ChunkBudget.dynamicAllowance(FRAME, window);
         final DraftPromptBuilder builder = new DraftPromptBuilder(TEMPLATES, FRAME);
         int worst = 0;
@@ -63,6 +66,55 @@ class ContextWindowBudgetTest {
         }
 
         assertThat(worst).isLessThanOrEqualTo(window);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {4096, 8192})
+    void draftPrompt_memoryAndLexiconFillingTheirAllowance_stillFitsWindowLessMarginAndReply(final int window) {
+        final List<Segment> unit = unit();
+        final List<GlossaryEntry> glossary = glossary().subList(0, 2);
+        final ContextBudget budget = ChunkBudget.budget(FRAME, window);
+        final int allowance = ChunkBudget.dynamicAllowance(FRAME, window);
+        final DraftPromptBuilder builder = new DraftPromptBuilder(TEMPLATES, FRAME);
+        int worst = 0;
+
+        for (final Chunk chunk : ChunkPacker.pack(unit, "en", budget.chunkTokens(), 50)) {
+            final int reply = budget.outputTokens(sourceTokens(chunk));
+            for (final Segment segment : chunk.segments()) {
+                final ContextInputs inputs = new ContextInputs(
+                        FRAME.styleSheet(),
+                        SUMMARY,
+                        PRECEDING_COUNT,
+                        glossary,
+                        earlierTargets(unit, segment),
+                        allowance,
+                        lexicon());
+                final DraftContext context = ContextPackageAssembler.assemble(
+                                chunk, segment, ContextFixtures.mask(segment, glossary), richMemory(), inputs)
+                        .draftContext();
+                final List<ChatMessage> messages = builder.messagesFor(segment, context, segment.masked());
+                worst = Math.max(worst, PromptBreakdown.of(messages).total() + reply + ContextBudget.SAFETY_MARGIN);
+            }
+        }
+
+        assertThat(worst).isLessThanOrEqualTo(window);
+    }
+
+    private static TmLookup richMemory() {
+        final List<TmEntry> hints = new ArrayList<>();
+        for (int index = 0; index < TERMS; index++) {
+            hints.add(ContextFixtures.tmEntry(PARAGRAPH + "Memory " + index, "Пам'ятний абзац про гавань " + index));
+        }
+        return new TmLookup(null, hints, List.of());
+    }
+
+    private static List<LexiconEntry> lexicon() {
+        final List<LexiconEntry> entries = new ArrayList<>();
+        for (final String word : List.of("harbour", "town", "ship", "quay", "men", "dark", "argued", "seen", "ever")) {
+            entries.add(new LexiconEntry(
+                    "p1", word, List.of(new LexiconEntry.Rendering("рендеринг " + word, 3)), null, null));
+        }
+        return entries;
     }
 
     @Test

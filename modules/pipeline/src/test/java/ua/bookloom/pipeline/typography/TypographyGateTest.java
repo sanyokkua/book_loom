@@ -60,6 +60,16 @@ class TypographyGateTest {
     }
 
     @Test
+    void restore_textNeedingTypography_handsOnTheNormalisedCandidateWithItsTokens() {
+        final GateResult result = TypographyGate.around(recording, "uk").restore(segment(), "Не пам'ятаю ⟦g0⟧...");
+
+        assertThat(result)
+                .isInstanceOfSatisfying(
+                        GateResult.Restored.class,
+                        restored -> assertThat(restored.maskedCandidate()).isEqualTo("Не пам’ятаю ⟦g0⟧…"));
+    }
+
+    @Test
     void restoreRepairing_cleanText_addsNoNote() {
         final GateResult result = TypographyGate.around(recording, "uk")
                 .restoreRepairing(segment(), "Усе гаразд.", PlaceholderRepair.RESTORE_MISSING);

@@ -56,12 +56,12 @@ public final class EditVerifier {
         if (occurrences == 0) {
             return new Verification.Ignored("the quote is not in the candidate");
         }
-        if (occurrences > 1) {
-            return failed(Verification.FailureReason.AMBIGUOUS_QUOTE);
-        }
         if (!CriterionFit.fits(edit, candidate, renderings)) {
             return new Verification.Ignored(
                     "the change does not fit its criterion " + edit.criterion().wire());
+        }
+        if (occurrences > 1) {
+            return failed(Verification.FailureReason.AMBIGUOUS_QUOTE);
         }
         final String edited = text.replace(candidate, quote, edit.replacement());
         if (edited.equals(candidate)) {
@@ -79,6 +79,22 @@ public final class EditVerifier {
      */
     public static boolean occursIn(final String text, final String quote) {
         return NormalisedText.of(text).count(NormalisedText.of(quote)) > 0;
+    }
+
+    /**
+     * Whether the defect an edit named is gone from a text. An edit that adds words around its quote ({@code двері} →
+     * {@code старі двері}) leaves the quote in place when it is right, so it is resolved when its replacement stands in
+     * the text; any other edit is resolved when its quote no longer does.
+     *
+     * @param text the whole text, in masked form; never null
+     * @param edit the edit the reviewer wrote; never null
+     * @return {@code true} when the edit's defect no longer shows in {@code text}
+     */
+    public static boolean isResolvedIn(final String text, final ReviewEdit edit) {
+        final NormalisedText quote = NormalisedText.of(edit.quote());
+        final NormalisedText replacement = NormalisedText.of(edit.replacement());
+        final boolean addsAroundQuote = replacement.count(quote) > 0;
+        return addsAroundQuote ? occursIn(text, edit.replacement()) : !occursIn(text, edit.quote());
     }
 
     private static Verification checkEdited(

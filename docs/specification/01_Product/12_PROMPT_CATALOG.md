@@ -463,7 +463,7 @@ call that times out twice, flags the chunk's segments with `reviewer-unavailable
 Tolerant read: a label the reply leaves out reads as `ok`; unknown fields are ignored; a label outside `s1…sk` or a
 status that names nothing drops that answer; an edit with no quote, or whose replacement equals its quote, is dropped; a
 `status` of edits with no usable edit, or a rewrite with no text, reads as `ok`; a criterion that names nothing reads as
-`style`; an edit whose change does not fit its criterion is ignored like a hallucinated quote (an omission fix must add words, an addition fix remove them, a quotes fix touch a quote mark or bracket, a language fix touch a letter of another script than the candidate's, a terminology fix use a word the candidate or the glossary already has, and a meaning, terminology, gender or agreement fix may not delete over half of its quote); the reply may be wrapped in prose or a code fence. The criteria are meaning, omission, addition, terminology,
+`style`; an edit whose change does not fit its criterion is ignored like a hallucinated quote (an omission fix must add words, an addition fix remove them, a quotes fix touch a quote mark or bracket, a language fix touch a letter of another script than the candidate's, a terminology fix use a word the candidate or the glossary already has (judged before the quote's count, so such an edit is ignored, never refused as ambiguous), and a meaning, terminology, gender or agreement fix may not delete over half of its quote); the reply may be wrapped in prose or a code fence. The criteria are meaning, omission, addition, terminology,
 gender, agreement, invented-word, quotes, language (blockers) and fluency, style (notes).
 
 ## directed-fix-repair {#directed-fix-repair}

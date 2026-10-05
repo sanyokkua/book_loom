@@ -19,7 +19,6 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
-import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
@@ -213,25 +212,18 @@ public final class RetryDraft {
                 new DraftPromptBuilder(templates, plan.frame()),
                 new DraftReplyParser(mapper));
         return translator
-                .translateSplit(segment, context, mask, splitter, budgetOf(plan, terms), instruction, lowerTemperature)
+                .translateSplit(segment, context, mask, splitter, budgetOf(plan), instruction, lowerTemperature)
                 .flatMap(drafted -> decide(plan, drafted, gate, calls))
                 .flatMap(outcome -> store(plan, outcome));
     }
 
-    // The run drafts a segment alone above its unit's chunk budget in sentence-aligned pieces; a retry computes that
-    // budget the same way, from the unit and the replayed glossary and summary, so the longest paragraphs still fit.
-    private static int budgetOf(final RetryPlan plan, final List<GlossaryEntry> terms) {
+    // The run drafts a segment alone above its chunk budget in sentence-aligned pieces; a retry computes that budget
+    // the same way, so the longest paragraphs still fit.
+    private static int budgetOf(final RetryPlan plan) {
         final Segment segment = plan.segment();
-        final List<Segment> unit = plan.document().units().stream()
-                .filter(candidate -> candidate.id().equals(segment.unit()))
-                .findFirst()
-                .map(Unit::segments)
-                .orElse(List.of(segment));
-        final ContextBudget window =
-                ChunkBudget.budget(plan.frame(), unit, terms, plan.snapshot().summary(), ContextBudget.DEFAULT_WINDOW);
+        final ContextBudget window = ChunkBudget.budget(plan.frame(), ContextBudget.DEFAULT_WINDOW);
         final int budget = window.chunkTokens();
-        log.debug(
-                "retry: segment={} budget={} {} unitSegments={}", segment.id(), budget, window.describe(), unit.size());
+        log.debug("retry: segment={} budget={} {}", segment.id(), budget, window.describe());
         return budget;
     }
 

@@ -1,6 +1,8 @@
 package ua.bookloom.api.persistence;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.UnaryOperator;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.LexiconEntry;
 
@@ -26,6 +28,18 @@ public interface LexiconRepository {
      * @return the stored entry
      */
     Result<LexiconEntry> put(LexiconEntry entry);
+
+    /**
+     * Changes the entry held for a term as one step on the entry as it stands, so a count a draft records meanwhile is
+     * never overwritten, and nothing is created: a term that was removed or promoted since the caller read it stays
+     * gone.
+     *
+     * @param projectId the non-null project id
+     * @param term the non-null source term
+     * @param change the non-null function from the held entry to its replacement, which must keep the entry's term
+     * @return the entry as it now stands, or empty when the lexicon holds no such term
+     */
+    Result<Optional<LexiconEntry>> update(String projectId, String term, UnaryOperator<LexiconEntry> change);
 
     /**
      * Counts one more use of a rendering for a term, as one step so two drafts never lose a count; a term the lexicon

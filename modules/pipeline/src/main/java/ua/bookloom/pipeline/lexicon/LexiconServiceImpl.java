@@ -82,9 +82,8 @@ public final class LexiconServiceImpl implements LexiconService {
         return guarded(
                 "edit",
                 projectId,
-                () -> held(projectId, term)
-                        .flatMap(entry -> entry.map(found -> lexicon.put(found.withChosen(rendering)))
-                                .orElseGet(() -> unknown(term))));
+                () -> lexicon.update(projectId, term, found -> found.withChosen(rendering))
+                        .flatMap(entry -> entry.map(Result::ok).orElseGet(() -> unknown(term))));
     }
 
     @Override
@@ -148,7 +147,8 @@ public final class LexiconServiceImpl implements LexiconService {
         for (int i = 0; i < open.size(); i++) {
             final String target = answered.get(i).target();
             if (target != null && !target.isBlank()) {
-                final Result<LexiconEntry> stored = lexicon.put(open.get(i).withSuggested(target));
+                final Result<Optional<LexiconEntry>> stored =
+                        lexicon.update(projectId, open.get(i).term(), found -> found.withSuggested(target));
                 if (stored.isErr()) {
                     return Result.err(Objects.requireNonNull(stored.error(), "error"));
                 }

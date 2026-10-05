@@ -697,8 +697,8 @@ person and are never applied. Fast trades the reviewer away for speed.
 The application SHALL apply a reviewer edit only when its quote is a substring of the candidate that occurs exactly once
 after normalisation (white space runs and typographic apostrophes), the replacement keeps the `⟦gN⟧` tokens of the whole
 candidate in the same multiset and order, the deterministic checks and the placeholder gates pass on the edited text,
-and the set of blocking checks does not grow; it SHALL ignore an edit whose quote the candidate does not hold, and an edit whose change does not fit its criterion — an omission fix that does not add words, an addition fix that does not remove them, a quotes fix that touches no quote mark or bracket, a language fix that touches no letter of another script than the candidate's, a terminology fix that uses no word the candidate or the glossary already has, or a meaning, terminology, gender or agreement fix that deletes more than half of its quote; it SHALL
-apply edits one after another, each verified against the text the earlier ones left; and it SHALL treat an edit whose
+and the set of blocking checks does not grow; it SHALL ignore an edit whose quote the candidate does not hold, and an edit whose change does not fit its criterion (tested before the quote's count, so an unfit edit is never an ambiguity) — an omission fix that does not add words, an addition fix that does not remove them, a quotes fix that touches no quote mark or bracket, a language fix that touches no letter of another script than the candidate's, a terminology fix that uses no word the candidate or the glossary already has, or a meaning, terminology, gender or agreement fix that deletes more than half of its quote; it SHALL
+apply edits one after another, each verified against the text the earlier ones left, dropping an edit identical to an earlier one (the same criterion, quote and replacement, as the two Max passes can both write it); and it SHALL treat an edit whose
 quote was found but whose application was refused as evidence, never as an applied change.
 
 **Source:** FR-QA-02, FR-QA-07, ADR-0038; tasks 15d.6.
@@ -749,8 +749,8 @@ criterion names, so an edit that does not do what its criterion says is dropped 
 
 WHEN every edit that was applied leaves an edit whose quote was found but whose application was refused, the application
 SHALL send one directed fix for that segment naming the criterion, the quote and the reviewer's replacement, and SHALL
-count the issue as resolved only when the fixed text passes the hard gates and checks, adds no blocking check and no
-longer holds the quote; an issue not resolved is a verified blocker and the segment SHALL be FLAGGED with it recorded as
+count the issue as resolved only when the fixed text passes the hard gates and checks, adds no blocking check and the edit's defect is gone from it — its quote is no longer there or, for an edit whose
+replacement adds words around its quote (`двері` → `старі двері`), its replacement stands there; an issue not resolved is a verified blocker and the segment SHALL be FLAGGED with it recorded as
 a medium finding raised by `reviewer`, keeping the text the applied edits left. A `rewrite` SHALL replace the draft only
 when the whole text passes the placeholder gates and every deterministic check; otherwise the draft SHALL stay, the
 segment SHALL be FLAGGED and a medium `rewrite` finding SHALL say the draft was kept.
@@ -890,6 +890,12 @@ switch.
   guillemet
 - **THEN** the edited text stays as the target and the segment is FLAGGED
 
+#### Scenario: A fix that supplies the words of an omission edit is kept
+
+- **WHEN** an `omission` edit `двері` → `старі двері` is refused because `двері` occurs twice, and the directed fix
+  answers a text that holds `старі двері`
+- **THEN** the fixed text is the target and the edit counts as resolved although the quote is still in it
+
 #### Scenario: A fix that clears one of two quotes is kept
 
 - **WHEN** two reviewer edits are refused and the directed fix removes the first quote but not the second
@@ -913,7 +919,9 @@ any reviewer call, and SHALL treat a blocking finding as a failed hard gate: a w
 script beside a letter of another script or a digit (`навчg3вся`, `імпoву`) raises a medium-or-higher `language`
 finding from `script-purity`; a quote pair of the target language's convention table that the target leaves open,
 closes without opening or closes with the wrong mark, while the source's own pairs balance, raises a `fluency` finding
-from `quote-balance`; a paragraph of at least 12 words whose letters are under 60% in the target script, or, when the
+from `quote-balance`, except that a target balanced with English curly quotes (`“…”`) only adds a low `quote-balance`
+note, because the typography pass leaves typographic marks alone; a mark that is also an apostrophe (`’`) is never a
+quote mark of any language's table; a paragraph of at least 12 words whose letters are under 60% in the target script, or, when the
 scripts match, whose share of source-language function words (those the target language does not also use) is at
 least 30%, raises a `language` finding from `language-identity`. A doubled word and a spacing artefact the source does
 not have SHALL only add a low `fluency` finding (`duplicate-word`, `spacing`). Each finding SHALL carry the exact span
@@ -954,7 +962,8 @@ script (a name) and a number's suffix (`90х`) are not mixed words, and a coined
 
 The application SHALL, with no setting, put every candidate target — a draft, a repair round's rewrite, a review retry,
 a reused memory entry, a consistency-pass revision — through a deterministic typography pass before the placeholder
-gates restore it, so that the checks, the reviewer and the stored masked target all read the normalised text: a straight
+gates restore it, so that the checks, the reviewer, the edits applied to the candidate and the stored masked target all read the
+normalised text (a draft's masked reply is the normalised one): a straight
 apostrophe between two letters becomes `’`; three dots become `…`; a space before `,` `.` `;` `!` `?` or `…` is
 removed (French keeps the space before `?` `!` `;`); and, for a target language that has a line in the quote table, a
 straight `"` becomes that language's primary pair at the top level and its nested pair inside it (`«…„…“…»` in
@@ -1250,7 +1259,8 @@ protected-span gate. Spacing is not audited. Each finding SHALL be stored on the
 `raisedBy` is `audit:` and the check's name (`audit:language-identity`, `audit:quote-balance`, `audit:script-purity`,
 `audit:duplicate-word`, `audit:gender`, `audit:unknown-word`, `audit:token-leak`, `audit:name-missing`), replacing the
 findings of an earlier audit so that a segment fixed since loses its mark. The audit SHALL change no status, target or
-count of accepted segments, SHALL NOT fail a completed run, and SHALL persist nothing beyond those findings. A segment
+count of accepted segments, SHALL NOT fail a completed run — a check that throws is logged once and the run stays
+completed — and SHALL persist nothing beyond those findings. A segment
 is "suspicious" while it is ACCEPTED, not reviewed, and holds an audit finding.
 
 **Source:** FR-QA-01, task 15d.12.

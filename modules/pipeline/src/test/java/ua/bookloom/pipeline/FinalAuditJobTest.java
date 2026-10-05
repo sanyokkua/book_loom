@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.BatchedJobs.batchedJob;
 import static ua.bookloom.pipeline.ChunkRunFixtures.userMessage;
@@ -24,6 +25,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -41,6 +43,7 @@ import ua.bookloom.pipeline.audit.AuditRecorder;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.review.ReviewCounting;
 import ua.bookloom.pipeline.review.ReviewQueries;
+import ua.bookloom.pipeline.run.RunAudit;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -217,5 +220,18 @@ class FinalAuditJobTest {
                         run.stores().segments().find(run.id(), segmentId).data())
                 .orElseThrow()
                 .findings();
+    }
+
+    @Test
+    void after_checkThatThrows_leavesTheCompletedRunAndItsRecordsAlone() {
+        final TestProject run = finished(Map.of());
+        final List<SegmentRecord> before = stored(run);
+        final WordValidator broken = (target, language) -> {
+            throw new IllegalStateException("the dictionary is gone");
+        };
+
+        assertThatCode(() -> RunAudit.after(JobState.COMPLETED, run.stores(), broken, run.id()))
+                .doesNotThrowAnyException();
+        assertThat(stored(run)).isEqualTo(before);
     }
 }

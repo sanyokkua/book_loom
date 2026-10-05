@@ -49,6 +49,27 @@ class EditApplierTest {
     }
 
     @Test
+    void apply_sameNameEditTwice_appliesItOnce() {
+        final ReviewEdit edit = edit(ReviewCriterion.TERMINOLOGY, "Джон", "Джонатан");
+
+        final EditOutcome outcome =
+                APPLIER.apply("Джон прийшов.", List.of(edit, edit), CLEAN, Set.of(), List.of("Джонатан"));
+
+        assertThat(outcome.text()).isEqualTo("Джонатан прийшов.");
+        assertThat(outcome.applied()).hasSize(1);
+    }
+
+    @Test
+    void apply_sameOmissionEditTwice_appliesItOnce() {
+        final ReviewEdit edit = edit(ReviewCriterion.OMISSION, "двері", "старі двері");
+
+        final EditOutcome outcome = APPLIER.apply("Він відчинив двері.", List.of(edit, edit), CLEAN, Set.of());
+
+        assertThat(outcome.text()).isEqualTo("Він відчинив старі двері.");
+        assertThat(outcome.applied()).hasSize(1);
+    }
+
+    @Test
     void apply_fluencyAndStyleEdits_areNotesAndNeverApplied() {
         final EditOutcome outcome = APPLIER.apply(
                 CANDIDATE,

@@ -121,12 +121,7 @@ public final class ChunkRunner {
         if (glossary.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(glossary.error(), "error")));
         }
-        final ContextBudget window = ChunkBudget.budget(
-                settings.frame(),
-                segments,
-                Objects.requireNonNull(glossary.data(), "glossary"),
-                followUp.summary(),
-                settings.window());
+        final ContextBudget window = ChunkBudget.budget(settings.frame(), settings.window());
         final int budget = window.chunkTokens();
         final int cap = settings.dial().chunkCap(settings.mode());
         final List<Chunk> chunks = ChunkPacker.pack(segments, settings.frame().sourceLanguage(), budget, cap);

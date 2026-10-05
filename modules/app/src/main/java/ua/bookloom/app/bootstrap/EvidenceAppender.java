@@ -25,10 +25,15 @@ import ua.bookloom.util.paths.AppPaths;
  * <p>It holds each segment's BookLoom lines back until the pipeline says the segment is worth keeping, then writes them
  * and everything after them to the evidence file.
  *
- * <p>Memory is bounded by the number of segments held and the lines held per segment; the oldest segment that was
- * never kept is forgotten first. Lines that name no segment (a reviewer call reads a whole chunk) are held in one
- * short queue and written ahead of the next segment kept, once. A segment arrives in two spans (its draft, then
- * its decision) with its chunk-mates in between, which is why lines are held per segment key and not in order.
+ * <p>Memory is bounded by the number of segments held, the lines held per segment and, because a TRACE line may carry
+ * a whole prompt, by a byte budget over every line held: past it the oldest segment that was never kept is forgotten
+ * first, then the oldest lines of the one segment left. Lines that name no segment (a reviewer call reads a whole
+ * chunk) are held in one short queue and written ahead of the next segment kept, once. A segment arrives in two spans
+ * (its draft, then its decision) with its chunk-mates in between, which is why lines are held per segment key and not
+ * in order.
+ *
+ * <p>A segment that aged out of the kept set is like any other unmarked segment: its later lines are held within the
+ * same bounds and written only if the pipeline marks it again.
  */
 final class EvidenceAppender extends AppenderBase<ILoggingEvent> {
 
@@ -40,6 +45,10 @@ final class EvidenceAppender extends AppenderBase<ILoggingEvent> {
     // Segments held back at once and lines held per segment; a drafting chunk is at most eight segments.
     private static final int EVIDENCE_HELD_SEGMENTS = 64;
     private static final int EVIDENCE_LINES_PER_SEGMENT = 400;
+    // What every held line may take together, counted from its message; a line's own fields add a flat overhead.
+    static final long EVIDENCE_HELD_BYTES = 8L * 1024 * 1024;
+    private static final int BYTES_PER_CHAR = 2;
+    private static final int LINE_OVERHEAD_BYTES = 512;
 
     /**
      * Builds the evidence log: a rolling file of its own behind this appender, so that what explains a flagged or
@@ -83,9 +92,33 @@ final class EvidenceAppender extends AppenderBase<ILoggingEvent> {
     }
 
     private final Appender<ILoggingEvent> file;
-    private final Map<String, Deque<ILoggingEvent>> held = new LinkedHashMap<>(16, 0.75f, true);
+    private final Map<String, Held> held = new LinkedHashMap<>(16, 0.75f, true);
     private final Map<String, Boolean> kept = new LinkedHashMap<>(16, 0.75f, true);
-    private final Deque<ILoggingEvent> chunkLines = new ArrayDeque<>();
+    private final Held chunkLines = new Held();
+    private long heldBytes;
+
+    /** Lines held back with what they weigh. */
+    private static final class Held {
+
+        private final Deque<ILoggingEvent> lines = new ArrayDeque<>();
+        private long bytes;
+
+        void add(ILoggingEvent event) {
+            lines.addLast(event);
+            bytes += sizeOf(event);
+        }
+
+        long removeFirst() {
+            final long size = sizeOf(lines.removeFirst());
+            bytes -= size;
+            return size;
+        }
+    }
+
+    /** The bytes of lines held back now; the budget keeps it at or under {@link #EVIDENCE_HELD_BYTES}. */
+    long heldBytes() {
+        return heldBytes;
+    }
 
     EvidenceAppender(Appender<ILoggingEvent> file) {
         this.file = file;
@@ -105,17 +138,20 @@ final class EvidenceAppender extends AppenderBase<ILoggingEvent> {
         } else if (kept.containsKey(segment)) {
             file.doAppend(event);
         } else {
-            hold(held.computeIfAbsent(segment, key -> new ArrayDeque<>()), event);
+            hold(held.computeIfAbsent(segment, key -> new Held()), event);
             forgetOldest();
         }
     }
 
     private void keep(String segment, ILoggingEvent marked) {
-        chunkLines.forEach(file::doAppend);
-        chunkLines.clear();
-        final Deque<ILoggingEvent> lines = held.remove(segment);
+        chunkLines.lines.forEach(file::doAppend);
+        heldBytes -= chunkLines.bytes;
+        chunkLines.lines.clear();
+        chunkLines.bytes = 0;
+        final Held lines = held.remove(segment);
         if (lines != null) {
-            lines.forEach(file::doAppend);
+            lines.lines.forEach(file::doAppend);
+            heldBytes -= lines.bytes;
         }
         file.doAppend(marked);
         kept.put(segment, Boolean.TRUE);
@@ -126,15 +162,46 @@ final class EvidenceAppender extends AppenderBase<ILoggingEvent> {
 
     private void forgetOldest() {
         while (held.size() > EVIDENCE_HELD_SEGMENTS) {
-            held.remove(held.keySet().iterator().next());
+            forget(held.keySet().iterator().next());
         }
     }
 
-    private static void hold(Deque<ILoggingEvent> lines, ILoggingEvent event) {
-        lines.addLast(event);
-        if (lines.size() > EVIDENCE_LINES_PER_SEGMENT) {
-            lines.removeFirst();
+    private void forget(String segment) {
+        final Held dropped = held.remove(segment);
+        if (dropped != null) {
+            heldBytes -= dropped.bytes;
         }
+    }
+
+    private void hold(Held lines, ILoggingEvent event) {
+        lines.add(event);
+        heldBytes += sizeOf(event);
+        if (lines.lines.size() > EVIDENCE_LINES_PER_SEGMENT) {
+            heldBytes -= lines.removeFirst();
+        }
+        enforceByteBudget();
+    }
+
+    // The oldest segment goes first; the last one left and the chunk lines lose their oldest lines instead, the heavier
+    // of the two first.
+    private void enforceByteBudget() {
+        while (heldBytes > EVIDENCE_HELD_BYTES) {
+            if (held.size() > 1) {
+                forget(held.keySet().iterator().next());
+                continue;
+            }
+            final Held sole =
+                    held.isEmpty() ? chunkLines : held.values().iterator().next();
+            final Held victim = sole.bytes >= chunkLines.bytes ? sole : chunkLines;
+            if (victim.lines.isEmpty()) {
+                return;
+            }
+            heldBytes -= victim.removeFirst();
+        }
+    }
+
+    private static long sizeOf(ILoggingEvent event) {
+        return (long) event.getFormattedMessage().length() * BYTES_PER_CHAR + LINE_OVERHEAD_BYTES;
     }
 
     private static boolean isKeep(ILoggingEvent event) {

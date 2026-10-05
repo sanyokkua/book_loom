@@ -155,9 +155,15 @@ public final class FinalAudit {
                 brief.narrator());
         return QaEvaluator.textChecks(input, book.words()).stream()
                 .filter(result -> result.check() != CheckName.SPACING)
+                .filter(result -> !isEnglishQuoteNote(result))
                 .map(CheckResult::finding)
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    // Balanced English curly quotes are a style note for review, not something to doubt in a finished book.
+    private static boolean isEnglishQuoteNote(final CheckResult result) {
+        return result.check() == CheckName.QUOTE_BALANCE && result.passed();
     }
 
     // The stored plain target never holds a placeholder: unmasking turns each one back into the book's markup.

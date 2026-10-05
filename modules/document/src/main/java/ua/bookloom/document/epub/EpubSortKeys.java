@@ -1,10 +1,9 @@
 package ua.bookloom.document.epub;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
 import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
@@ -20,7 +19,7 @@ import org.jdom2.Namespace;
  * canonical-equal to its source.
  */
 @Slf4j
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 final class EpubSortKeys {
 
     private static final Namespace OPF_NS = Namespace.getNamespace("http://www.idpf.org/2007/opf");
@@ -30,35 +29,42 @@ final class EpubSortKeys {
     private static final String CREATOR = "creator";
     private static final String TITLE_SORT = "calibre:title_sort";
 
-    private final IdentityHashMap<Element, String> before = new IdentityHashMap<>();
+    private final List<String> before;
 
     /**
-     * Remembers the text of every title and author, before any segment is written back.
+     * Remembers the text of every title and author as the source wrote it. The package an open book keeps is changed
+     * by every export, so the source's own bytes are parsed afresh for this: comparing against the kept tree would
+     * take an earlier export's translated title for the original.
      *
-     * @param opf the parsed package; never null
-     * @return the snapshot to hand to {@link #dropStale} once the segments are written
+     * @param sourceOpf the package parsed from the source's bytes; never null
+     * @return the snapshot to hand to {@link #withoutStale} once the segments are written
      */
-    static EpubSortKeys snapshot(final org.jdom2.Document opf) {
-        final EpubSortKeys keys = new EpubSortKeys();
-        namedElements(opf).forEach(element -> keys.before.put(element, element.getText()));
-        return keys;
+    static EpubSortKeys snapshot(final org.jdom2.Document sourceOpf) {
+        return new EpubSortKeys(
+                namedElements(sourceOpf).stream().map(Element::getText).toList());
     }
 
     /**
-     * Removes the sort keys of every title or author whose text changed since the snapshot.
+     * Copies the package and removes from the copy the sort keys of every title or author whose text differs from the
+     * source's. The kept package is never touched, so a later export that writes the original title again still has
+     * every key.
      *
-     * @param opf the same package, after its segments were written back
+     * @param opf the kept package, after its segments were written back
+     * @return the package to serialize
      */
-    void dropStale(final org.jdom2.Document opf) {
-        final Element metadata = opf.getRootElement().getChild("metadata", OPF_NS);
+    org.jdom2.Document withoutStale(final org.jdom2.Document opf) {
+        final org.jdom2.Document copy = opf.clone();
+        final Element metadata = copy.getRootElement().getChild("metadata", OPF_NS);
         if (metadata == null) {
-            return;
+            return copy;
         }
-        for (final Element element : namedElements(opf)) {
-            if (!element.getText().equals(before.get(element))) {
-                dropKeysOf(metadata, element);
+        final List<Element> named = namedElements(copy);
+        for (int i = 0; i < named.size() && i < before.size(); i++) {
+            if (!named.get(i).getText().equals(before.get(i))) {
+                dropKeysOf(metadata, named.get(i));
             }
         }
+        return copy;
     }
 
     private static void dropKeysOf(final Element metadata, final Element changed) {
