@@ -191,7 +191,8 @@ public final class ChunkRunner {
                 settings.frame(),
                 settings.names(),
                 context.terms(),
-                context.termPairs());
+                context.termPairs(),
+                context.characterLines());
     }
 
     // The reviewer call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.

@@ -203,6 +203,7 @@ public final class DraftPromptBuilder {
                                 Map.entry("suggestedTerms", String.join("\n", context.suggestedLines())),
                                 Map.entry("memoryHint", String.join("\n", context.memoryLines())),
                                 Map.entry("lexiconTerms", String.join("\n", context.lexiconLines())),
+                                Map.entry("characters", String.join("\n", context.characterLines())),
                                 Map.entry("precedingTargets", String.join("\n\n", context.precedingTargets())),
                                 Map.entry("extraInstruction", extraInstruction)))
                 .strip();

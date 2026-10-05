@@ -187,7 +187,8 @@ public final class RetryDraft {
                 target,
                 StyleSheet.ofText(snapshot.styleSheet()),
                 brief.foreignPassages(),
-                CallFrame.bookLanguageOf(document));
+                CallFrame.bookLanguageOf(document),
+                brief.narrator());
         return Result.ok(new RetryPlan(record, snapshot, brief, frame, document, segment.get()));
     }
 

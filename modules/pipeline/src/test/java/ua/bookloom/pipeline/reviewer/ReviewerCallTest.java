@@ -199,4 +199,17 @@ class ReviewerCallTest {
     private static Result<ChatResponse> readable(final String content) {
         return Result.ok(new ChatResponse(content, FinishReason.STOP));
     }
+
+    @Test
+    void review_characterSheet_reachesThePromptOnlyWhenThereIsOne() {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(readable(ALL_OK)).answer(readable(ALL_OK));
+
+        CALL.review(THREE_PAIRS, FRAME, List.of(), List.of("Lyra — female"), ReviewPass.FIRST, calls(model));
+        CALL.review(THREE_PAIRS, FRAME, List.of(), ReviewPass.FIRST, calls(model));
+
+        assertThat(model.requests().get(0).messages().getLast().content())
+                .contains("[Characters in these pairs", "Lyra — female");
+        assertThat(model.requests().get(1).messages().getLast().content()).doesNotContain("Characters in these pairs");
+    }
 }

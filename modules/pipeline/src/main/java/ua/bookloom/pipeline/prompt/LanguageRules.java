@@ -279,6 +279,16 @@ public final class LanguageRules implements LanguageSupport {
         return languageFile(targetTag).get(key);
     }
 
+    /**
+     * The gender check a target language's file names, so the check is chosen by data and never by a hard-coded tag.
+     *
+     * @param targetTag the non-null target language tag
+     * @return the value of the file's {@code genderCheck} key, or null when the language has no file or names none
+     */
+    public @Nullable String genderCheck(final String targetTag) {
+        return targetValue(Objects.requireNonNull(targetTag, "targetTag"), "genderCheck");
+    }
+
     private LanguageFile languageFile(@Nullable final String tag) {
         final String primary = primary(tag);
         return primary.isEmpty() ? new LanguageFile("", Map.of()) : fileOf(primary, DIRECTORY + primary + SUFFIX);

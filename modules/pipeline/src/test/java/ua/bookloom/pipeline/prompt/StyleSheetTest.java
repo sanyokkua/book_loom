@@ -14,7 +14,10 @@ import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 
@@ -161,5 +164,30 @@ class StyleSheetTest {
                 balance,
                 base.alsoTranslate(),
                 base.dial());
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "FIRST|FEMALE|Narrator: first person, female.",
+                "FIRST|MALE|Narrator: first person, male.",
+                "FIRST|UNKNOWN|Narrator: first person. Where the target language shows gender",
+                "THIRD|FEMALE|Narrator: third person, outside the story"
+            })
+    void from_narratorChosen_addsOneNarratorLine(final String person, final String gender, final String expected) {
+        final BookBrief brief = BookBrief.defaults("en")
+                .withNarrator(new Narrator(NarratorPerson.valueOf(person), Gender.valueOf(gender)));
+
+        assertThat(StyleSheet.from(brief).text())
+                .startsWith(DEFAULT_LINE + "\n")
+                .contains(expected);
+    }
+
+    @Test
+    void from_narratorUnspecified_leavesTheDefaultSheetAndHashUntouched() {
+        assertThat(StyleSheet.from(BookBrief.defaults("en").withNarrator(Narrator.unspecified()))
+                        .text())
+                .isEqualTo(DEFAULT_LINE);
     }
 }

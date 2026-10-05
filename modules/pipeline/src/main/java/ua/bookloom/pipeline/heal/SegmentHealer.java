@@ -33,6 +33,7 @@ final class SegmentHealer {
     private final LoopSettings settings;
     private final RoundRunner rounds;
     private final ReviewResolver resolver;
+    private final GenderFix genderFix;
     private final ModelCalls calls;
     private final Map<String, Resumption> resumptions = new HashMap<>();
 
@@ -47,6 +48,7 @@ final class SegmentHealer {
         final RoundEvaluator evaluator = new RoundEvaluator(gate, settings);
         this.rounds = new RoundRunner(directedFix, settings, evaluator, calls);
         this.resolver = new ReviewResolver(editApplier, directedFix, evaluator, settings, calls);
+        this.genderFix = new GenderFix(directedFix, evaluator, settings, calls);
     }
 
     /**
@@ -90,7 +92,10 @@ final class SegmentHealer {
         final boolean accepted = AcceptanceRule.accepts(initialQa, 0);
         SegmentHealerLogging.logAcceptanceDecision(segmentId, initialQa, 0, accepted);
         if (accepted) {
-            return Result.ok(SegmentOutcomes.accepted(segmentId, machine, initialQa, List.of(), 0, SegmentPath.DRAFT));
+            return Result.ok(genderFix.settle(
+                    outcome,
+                    new GenderFix.Accepted(
+                            machine, initialQa, outcome.maskedReply(), List.of(), 0, SegmentPath.DRAFT)));
         }
         final BestCandidate first = new BestCandidate(initialQa, machine, outcome.maskedReply(), null);
         return runRounds(outcome, segmentId, Resumption.first(first));
@@ -108,22 +113,25 @@ final class SegmentHealer {
                     segmentId, machine, initialQa, 0, verdict.unavailableBecause()));
         }
         final ReviewItem item = verdict.itemFor(segmentId).orElseGet(() -> ReviewItem.ok(segmentId));
-        return resolver.resolve(outcome, initialQa, item).map(resolution -> decidedBy(segmentId, resolution));
+        return resolver.resolve(outcome, initialQa, item).map(resolution -> decidedBy(outcome, resolution));
     }
 
-    private static SegmentOutcome decidedBy(final String segmentId, final Resolution resolution) {
+    private SegmentOutcome decidedBy(final DraftOutcome.Drafted outcome, final Resolution resolution) {
+        final String segmentId = outcome.segment().id();
         final boolean accepted = AcceptanceRule.accepts(resolution.qa(), resolution.verifiedBlockersLeft());
         SegmentHealerLogging.logAcceptanceDecision(
                 segmentId, resolution.qa(), resolution.verifiedBlockersLeft(), accepted);
         final SegmentPath path = resolution.rounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT;
         return accepted
-                ? SegmentOutcomes.accepted(
-                        segmentId,
-                        resolution.machine(),
-                        resolution.qa(),
-                        resolution.findings(),
-                        resolution.rounds(),
-                        path)
+                ? genderFix.settle(
+                        outcome,
+                        new GenderFix.Accepted(
+                                resolution.machine(),
+                                resolution.qa(),
+                                resolution.maskedText(),
+                                resolution.findings(),
+                                resolution.rounds(),
+                                path))
                 : SegmentOutcomes.flagged(
                         segmentId,
                         resolution.machine(),
@@ -195,7 +203,7 @@ final class SegmentHealer {
                 RoundStep.terminal(Result.ok(SegmentOutcomes.flagged(
                         segmentId, best.machine(), best.qa(), List.of(), round, flagNow.error())));
             case RoundOutcome.Failed failed -> RoundStep.continueWith(carryingFinding(best, failed));
-            case RoundOutcome.Evaluated evaluated -> decideEvaluated(segmentId, round, best, evaluated);
+            case RoundOutcome.Evaluated evaluated -> decideEvaluated(outcome, round, best, evaluated);
         };
     }
 
@@ -215,14 +223,25 @@ final class SegmentHealer {
     // A repaired target is decided by the checks alone (the reviewer read the draft, not the repair), and it replaces
     // the best candidate only when it has fewer blockers: a step that does not improve is discarded and ends the path.
     private RoundStep decideEvaluated(
-            final String segmentId, final int round, final BestCandidate best, final RoundOutcome.Evaluated evaluated) {
+            final DraftOutcome.Drafted outcome,
+            final int round,
+            final BestCandidate best,
+            final RoundOutcome.Evaluated evaluated) {
+        final String segmentId = outcome.segment().id();
         final QaResult qa = evaluated.qa();
         SegmentHealerLogging.logEvaluation(segmentId, round, qa);
         final boolean accepted = AcceptanceRule.accepts(qa, 0);
         SegmentHealerLogging.logAcceptanceDecision(segmentId, qa, 0, accepted);
         if (accepted) {
-            return RoundStep.terminal(Result.ok(SegmentOutcomes.accepted(
-                    segmentId, machineOf(best, evaluated), qa, List.of(), round, SegmentPath.REPAIRED)));
+            return RoundStep.terminal(Result.ok(genderFix.settle(
+                    outcome,
+                    new GenderFix.Accepted(
+                            machineOf(best, evaluated),
+                            qa,
+                            evaluated.maskedCandidate(),
+                            List.of(),
+                            round,
+                            SegmentPath.REPAIRED))));
         }
         if (!RoundProgress.improves(best, qa, segmentId, round)) {
             return RoundStep.terminal(

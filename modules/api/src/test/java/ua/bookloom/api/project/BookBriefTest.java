@@ -72,4 +72,35 @@ class BookBriefTest {
 
         assertThat(brief.balance()).isEqualTo(balance);
     }
+
+    @Test
+    void defaults_noNarratorChosen_narratorIsUnspecified() {
+        final Narrator narrator = BookBrief.defaults("en").narrator();
+
+        assertThat(narrator).isEqualTo(Narrator.unspecified());
+        assertThat(narrator.isSpecified()).isFalse();
+        assertThat(narrator.hasCheckableGender()).isFalse();
+    }
+
+    @Test
+    void withNarrator_firstPersonFemale_keepsEveryOtherChoiceAndSurvivesLanguageChange() {
+        final BookBrief base = BookBrief.defaults("en").withLanguages("en", "uk");
+        final Narrator chosen = new Narrator(NarratorPerson.FIRST, Gender.FEMALE);
+
+        final BookBrief brief = base.withNarrator(chosen).withLanguages("en", "pl");
+
+        assertThat(brief.narrator()).isEqualTo(chosen);
+        assertThat(brief.targetLanguage()).isEqualTo("pl");
+        assertThat(brief.withNarrator(Narrator.unspecified())).isEqualTo(base.withLanguages("en", "pl"));
+    }
+
+    @Test
+    void hasCheckableGender_thirdPersonOrNeuter_isFalse() {
+        assertThat(new Narrator(NarratorPerson.THIRD, Gender.FEMALE).hasCheckableGender())
+                .isFalse();
+        assertThat(new Narrator(NarratorPerson.FIRST, Gender.NEUTER).hasCheckableGender())
+                .isFalse();
+        assertThat(new Narrator(NarratorPerson.FIRST, Gender.MALE).hasCheckableGender())
+                .isTrue();
+    }
 }

@@ -2,7 +2,6 @@ package ua.bookloom.pipeline.run;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -13,12 +12,8 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
-import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.batch.BatchContext;
 import ua.bookloom.pipeline.batch.BatchContexts;
 import ua.bookloom.pipeline.batch.BatchDrafter;
@@ -287,21 +282,22 @@ final class BatchStage {
         final List<Segment> unit = current.work().unitSegments(first.item());
         final int pairs =
                 Math.min(MAX_PAIRS, Math.max(MIN_PAIRS, settings.dial().precedingTargets()));
+        final List<DraftContext> perItem = perItemContexts(current, batch);
         return preceding
                 .earlierPairs(unit, first.segment(), pairs, current.drafts())
                 .map(earlier -> new BatchContext(
-                        merged(current, batch, items),
+                        merged(items, perItem),
                         earlier.stream()
                                 .map(e -> new BatchContext.Pair(
                                         DisplayText.of(e.segment().masked()), DisplayText.of(e.target())))
                                 .toList(),
                         nextSourceAfter(unit, batch.getLast().segment()),
-                        characters(current, batch),
+                        characters(perItem),
                         keyTerms));
     }
 
-    private DraftContext merged(final Current current, final List<Candidate> batch, final List<BatchItem> items) {
-        final List<DraftContext> perItem = batch.stream()
+    private List<DraftContext> perItemContexts(final Current current, final List<Candidate> batch) {
+        return batch.stream()
                 .map(candidate -> current.context()
                         .contextFor(
                                 candidate.segment(),
@@ -310,8 +306,20 @@ final class BatchStage {
                                 summary.get())
                         .draftContext())
                 .toList();
+    }
+
+    private static DraftContext merged(final List<BatchItem> items, final List<DraftContext> perItem) {
         return BatchContexts.of(items.stream().map(BatchItem::id).toList(), perItem, List.of(), null, List.of())
                 .draft();
+    }
+
+    // Who is who: each item's own character sheet, so the sheet is the one the budget already cut, joined without
+    // repeats.
+    private static List<String> characters(final List<DraftContext> perItem) {
+        return perItem.stream()
+                .flatMap(context -> context.characterLines().stream())
+                .distinct()
+                .toList();
     }
 
     private static @Nullable String nextSourceAfter(final List<Segment> unit, final Segment last) {
@@ -321,22 +329,5 @@ final class BatchStage {
             }
         }
         return null;
-    }
-
-    // Who is who: the characters of the glossary that the batch's texts name, with the gender the glossary knows.
-    private static List<String> characters(final Current current, final List<Candidate> batch) {
-        final List<String> texts = batch.stream()
-                .map(candidate -> Tokens.replace(candidate.segment().masked(), " "))
-                .toList();
-        return current.context().glossary().stream()
-                .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() != Gender.UNKNOWN)
-                .filter(entry -> !entry.term().isBlank() && namedIn(entry, texts))
-                .map(entry -> entry.term() + " — " + entry.gender().name().toLowerCase(Locale.ROOT))
-                .toList();
-    }
-
-    private static boolean namedIn(final GlossaryEntry entry, final List<String> texts) {
-        return texts.stream()
-                .anyMatch(text -> WholeWord.pattern(entry.term()).matcher(text).find());
     }
 }

@@ -25,6 +25,11 @@ Write each term as shown, inflected as the sentence needs, unless the glossary s
 {{lexiconTerms}}
 {{/lexiconTerms}}
 
+{{#characters}}
+[Characters in this text — keep their gender and agreement]
+{{characters}}
+{{/characters}}
+
 {{#memoryHint}}
 [Earlier decisions — keep consistent]
 {{memoryHint}}

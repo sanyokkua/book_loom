@@ -94,7 +94,8 @@ final class BookOpener {
                 languages.units(),
                 languages.balance(),
                 languages.alsoTranslate(),
-                dial);
+                dial,
+                languages.narrator());
     }
 
     private static AppError refusal(InspectionVerdict verdict) {

@@ -12,6 +12,8 @@ import javafx.scene.control.TextInputControl;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.Tips;
@@ -22,7 +24,8 @@ import ua.bookloom.ui.state.Genre;
 
 /**
  * The Tone &amp; style card: a genre box that suggests the forty predefined genres and also takes free text, the
- * register, and the free-text narrative voice and audience.
+ * register, the free-text narrative voice and audience, and who narrates (the person and, for a first-person narrator, the
+ * gender).
  *
  * <p>The person sees a predefined genre in the interface language while the brief holds its English name, because the
  * prompt is written in English.
@@ -35,6 +38,8 @@ final class BriefToneCard {
     private final Messages messages;
     private final SearchableCombo<String> genre;
     private final BriefChoice<Register> register;
+    private final BriefChoice<NarratorPerson> narrator;
+    private final BriefChoice<Gender> narratorGender;
     private final TextArea voice = new TextArea();
     private final TextField audience = new TextField();
     private final Node node;
@@ -53,6 +58,8 @@ final class BriefToneCard {
                         new BriefChoice.Option<>(Register.CASUAL, MessageKey.BRIEF_REGISTER_CASUAL)),
                 viewModel::setRegister);
         Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
+        this.narrator = narratorChoice(viewModel, messages);
+        this.narratorGender = narratorGenderChoice(viewModel, messages);
         configureInputs(viewModel);
         this.node = BriefCards.card(
                 "brief-tone-card",
@@ -61,7 +68,37 @@ final class BriefToneCard {
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_GENRE, genre),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_REGISTER, register.node()),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_VOICE, voice),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_AUDIENCE, audience));
+                BriefCards.field(messages, MessageKey.BRIEF_TONE_AUDIENCE, audience),
+                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR, narrator.node()),
+                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.node()));
+    }
+
+    private static BriefChoice<NarratorPerson> narratorChoice(
+            final BookBriefViewModel viewModel, final Messages messages) {
+        final BriefChoice<NarratorPerson> choice = new BriefChoice<>(
+                "brief-tone-narrator",
+                messages,
+                List.of(
+                        new BriefChoice.Option<>(NarratorPerson.UNSPECIFIED, MessageKey.BRIEF_NARRATOR_UNSPECIFIED),
+                        new BriefChoice.Option<>(NarratorPerson.FIRST, MessageKey.BRIEF_NARRATOR_FIRST),
+                        new BriefChoice.Option<>(NarratorPerson.THIRD, MessageKey.BRIEF_NARRATOR_THIRD)),
+                viewModel::setNarratorPerson);
+        Tips.install(messages, choice.node(), MessageKey.BRIEF_TONE_NARRATOR_TIP);
+        return choice;
+    }
+
+    private static BriefChoice<Gender> narratorGenderChoice(
+            final BookBriefViewModel viewModel, final Messages messages) {
+        final BriefChoice<Gender> choice = new BriefChoice<>(
+                "brief-tone-narrator-gender",
+                messages,
+                List.of(
+                        new BriefChoice.Option<>(Gender.UNKNOWN, MessageKey.BRIEF_NARRATOR_GENDER_UNKNOWN),
+                        new BriefChoice.Option<>(Gender.MALE, MessageKey.BRIEF_NARRATOR_GENDER_MALE),
+                        new BriefChoice.Option<>(Gender.FEMALE, MessageKey.BRIEF_NARRATOR_GENDER_FEMALE)),
+                viewModel::setNarratorGender);
+        Tips.install(messages, choice.node(), MessageKey.BRIEF_TONE_NARRATOR_GENDER_TIP);
+        return choice;
     }
 
     private void configureInputs(final BookBriefViewModel viewModel) {
@@ -102,6 +139,9 @@ final class BriefToneCard {
                 genre.select(shown);
             }
             register.show(brief.register());
+            narrator.show(brief.narrator().person());
+            narratorGender.show(brief.narrator().gender());
+            narratorGender.node().setDisable(brief.narrator().person() != NarratorPerson.FIRST);
             showText(voice, brief.voiceEra());
             showText(audience, brief.audience());
         } finally {

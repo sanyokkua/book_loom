@@ -542,6 +542,28 @@ A review panel "Retry with note" is a draft with the note under `[Extra instruct
 **Expected output:** `{"target":"<corrected translation>"}` — the same single-segment shape as `#draft-translation`.
 Re-enters unmask + QA for this one segment; bounded by the repair budget N.
 
+### narrator-and-characters {#narrator-and-characters}
+
+The narrator and the gender sheet (15d.10) keep who-is-who out of the model's guesswork. Three prompt-facing parts:
+
+- **Narrator line** (every call that carries the style sheet: draft, batch draft, directed fix, reviewer). When the Book
+  Brief names a narrator person, the style sheet gets one more line from `style-phrases.properties`: `Narrator: first
+  person, female. Write the narrator's own "I" verbs, adjectives and participles in the feminine form wherever the target
+  language shows gender; a character speaking in quotes follows that character's own gender.` (the male line is the
+  same with masculine; a first-person narrator with no gender asks to keep one gender throughout; third person says
+  `Narrator: third person, outside the story; do not turn the narration into "I".`). An unstated narrator adds nothing, so
+  the style sheet and its hash are what they were.
+- **Character sheet** (draft, batch draft; reviewer). `[Characters in this text — keep their gender and agreement]` and
+  one `name — gender` line for each glossary character of known gender the segment names; in a batch the lines of all the
+  items, once each, under `[Characters in these items — context only; keep their gender and agreement]`; in the reviewer
+  `[Characters in these pairs — who they are]` for the chunk. A tenth of the dynamic allowance (`ContextSection.CHARACTERS`),
+  taken before the lexicon; recorded in `ContextSnapshot.characters`.
+- **Gender finding** (directed fix, no new template). A `gender` finding, such as `The narrator is male, but this
+  past-tense word after «я» is feminine. Use the masculine (-в) form of that word and change nothing else.`, is repeated in
+  the directed fix's findings list with the quoted word. The reviewer's `gender` criterion is unchanged.
+
+The check behind the finding is chosen by the target language's file (`genderCheck=uk`); see the `quality-gates` capability.
+
 ## backward-revision-consistency {#backward-revision-consistency}
 
 Optional whole-book pass (dial-gated: Max or the export toggle), applied **one segment per call**. Resolves

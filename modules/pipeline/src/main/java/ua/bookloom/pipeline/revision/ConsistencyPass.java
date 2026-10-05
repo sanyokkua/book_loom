@@ -166,7 +166,7 @@ public final class ConsistencyPass {
         document.units().forEach(unit -> unit.segments().forEach(segment -> sources.put(segment.id(), segment)));
         return new PassInputs(
                 projectId,
-                new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages()),
+                new CallFrame(source, target, StyleSheet.from(brief), brief.foreignPassages(), null, brief.narrator()),
                 brief.names(),
                 TypographyGate.around(GateFunction.of(documents, document.format()), target),
                 sources,

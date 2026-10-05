@@ -5,6 +5,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Narrator;
 
 /**
  * The four system-message values every model call of a run carries — its language pair, its derived style sheet and
@@ -17,19 +18,32 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
  * @param foreignPassagePolicy the Book Brief's foreign-passage policy
  * @param bookLanguage the language the book's own metadata declares, or null when it declares none or is not known
  *     here; a block declaring this language is never a foreign passage, even when the brief's source differs
+ * @param narrator the Book Brief's narrator, read by the gender check; the style sheet already tells the model
  */
 public record CallFrame(
         @Nullable String sourceLanguage,
         String targetLanguage,
         StyleSheet styleSheet,
         ForeignPassagePolicy foreignPassagePolicy,
-        @Nullable String bookLanguage) {
+        @Nullable String bookLanguage,
+        Narrator narrator) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public CallFrame {
         Objects.requireNonNull(targetLanguage, "targetLanguage");
         Objects.requireNonNull(styleSheet, "styleSheet");
         Objects.requireNonNull(foreignPassagePolicy, "foreignPassagePolicy");
+        Objects.requireNonNull(narrator, "narrator");
+    }
+
+    /** A frame for a book whose narrator is not stated. */
+    public CallFrame(
+            @Nullable String sourceLanguage,
+            String targetLanguage,
+            StyleSheet styleSheet,
+            ForeignPassagePolicy foreignPassagePolicy,
+            @Nullable String bookLanguage) {
+        this(sourceLanguage, targetLanguage, styleSheet, foreignPassagePolicy, bookLanguage, Narrator.unspecified());
     }
 
     /** A frame for a call made without the book at hand, so no block is compared with the book's own language. */
@@ -38,7 +52,7 @@ public record CallFrame(
             String targetLanguage,
             StyleSheet styleSheet,
             ForeignPassagePolicy foreignPassagePolicy) {
-        this(sourceLanguage, targetLanguage, styleSheet, foreignPassagePolicy, null);
+        this(sourceLanguage, targetLanguage, styleSheet, foreignPassagePolicy, null, Narrator.unspecified());
     }
 
     /**

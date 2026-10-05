@@ -1,0 +1,275 @@
+[
+ {
+  "id": "m-closed-door",
+  "narrator": "MALE",
+  "candidate": "Я зачинила двері й пішов геть.",
+  "defective": true,
+  "rationale": "feminine verb after я"
+ },
+ {
+  "id": "m-looked",
+  "narrator": "MALE",
+  "candidate": "Я подивилась на неї довгим поглядом.",
+  "defective": true,
+  "rationale": "feminine reflexive"
+ },
+ {
+  "id": "m-adverb",
+  "narrator": "MALE",
+  "candidate": "Я тихо відчинила вікно.",
+  "defective": true,
+  "rationale": "feminine after adverb"
+ },
+ {
+  "id": "m-negation",
+  "narrator": "MALE",
+  "candidate": "Я не знала, що казати.",
+  "defective": true,
+  "rationale": "feminine after не"
+ },
+ {
+  "id": "m-sentence-start",
+  "narrator": "MALE",
+  "candidate": "Надворі темніло. Я стояла біля дверей.",
+  "defective": true,
+  "rationale": "second sentence"
+ },
+ {
+  "id": "m-after-speech",
+  "narrator": "MALE",
+  "candidate": "— Іди сюди, — сказав він. Я підійшла ближче.",
+  "defective": true,
+  "rationale": "narration after dash dialogue"
+ },
+ {
+  "id": "m-neuter",
+  "narrator": "MALE",
+  "candidate": "Я відчуло, як холод пробирає до кісток.",
+  "defective": true,
+  "rationale": "neuter after я"
+ },
+ {
+  "id": "m-two",
+  "narrator": "MALE",
+  "candidate": "Я схопила ліхтар і побігла до виходу.",
+  "defective": true,
+  "rationale": "feminine, first verb"
+ },
+ {
+  "id": "f-closed-door",
+  "narrator": "FEMALE",
+  "candidate": "Я зачинив двері й пішла геть.",
+  "defective": true,
+  "rationale": "masculine verb after я"
+ },
+ {
+  "id": "f-looked",
+  "narrator": "FEMALE",
+  "candidate": "Я подивився на нього довгим поглядом.",
+  "defective": true,
+  "rationale": "masculine"
+ },
+ {
+  "id": "f-adverb",
+  "narrator": "FEMALE",
+  "candidate": "Я тихо відчинив вікно.",
+  "defective": true,
+  "rationale": "masculine after adverb"
+ },
+ {
+  "id": "f-negation",
+  "narrator": "FEMALE",
+  "candidate": "Я не знав, що казати.",
+  "defective": true,
+  "rationale": "masculine after не"
+ },
+ {
+  "id": "f-after-quote",
+  "narrator": "FEMALE",
+  "candidate": "Він сказав: «Заходь». Я зайшов у кімнату.",
+  "defective": true,
+  "rationale": "narration after a quote"
+ },
+ {
+  "id": "f-reflexive",
+  "narrator": "FEMALE",
+  "candidate": "Я засміявся вперше за багато днів.",
+  "defective": true,
+  "rationale": "masculine reflexive"
+ },
+ {
+  "id": "m-ok-closed",
+  "narrator": "MALE",
+  "candidate": "Я зачинив двері й пішов геть.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-looked",
+  "narrator": "MALE",
+  "candidate": "Я подивився на неї довгим поглядом.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-speech",
+  "narrator": "MALE",
+  "candidate": "«Я зачинила двері», — сказала вона.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-dash",
+  "narrator": "MALE",
+  "candidate": "— Я зачинила двері, — сказала вона.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-dash2",
+  "narrator": "MALE",
+  "candidate": "— Я не знала, що казати. Іди звідси, — додала вона.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-third",
+  "narrator": "MALE",
+  "candidate": "Вона зачинила двері й пішла геть.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-quote-inside",
+  "narrator": "MALE",
+  "candidate": "Я прошепотів: «Я не знала цього».",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-comma",
+  "narrator": "MALE",
+  "candidate": "Я, як і раніше, дивився у вікно.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-mala",
+  "narrator": "MALE",
+  "candidate": "Я мало знав про цей будинок.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-prep",
+  "narrator": "MALE",
+  "candidate": "Я в тебе вірив.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-present",
+  "narrator": "MALE",
+  "candidate": "Я знаю, що ти тут.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-future",
+  "narrator": "MALE",
+  "candidate": "Я прийду завтра вранці.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-closed",
+  "narrator": "FEMALE",
+  "candidate": "Я зачинила двері й пішла геть.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-looked",
+  "narrator": "FEMALE",
+  "candidate": "Я подивилась на нього довгим поглядом.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-speech",
+  "narrator": "FEMALE",
+  "candidate": "«Я зачинив двері», — сказав він.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-dash",
+  "narrator": "FEMALE",
+  "candidate": "— Я не знав, що казати, — відповів він.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-third",
+  "narrator": "FEMALE",
+  "candidate": "Він зачинив двері й пішов геть.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-quote-inside",
+  "narrator": "FEMALE",
+  "candidate": "Я прошепотіла: «Я не знав цього».",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-neg",
+  "narrator": "FEMALE",
+  "candidate": "Я не знала, що казати.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-adverb",
+  "narrator": "FEMALE",
+  "candidate": "Я тихо відчинила вікно.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-present",
+  "narrator": "FEMALE",
+  "candidate": "Я бачу світло у вікні.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-noun",
+  "narrator": "FEMALE",
+  "candidate": "Яблуко впало на землю.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-reflexive",
+  "narrator": "MALE",
+  "candidate": "Я засміявся вперше за багато днів.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "f-ok-plain",
+  "narrator": "FEMALE",
+  "candidate": "Надворі темніло, і ми стояли мовчки.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ },
+ {
+  "id": "m-ok-name",
+  "narrator": "MALE",
+  "candidate": "Ліра зачинила двері, а я лишився в кімнаті.",
+  "defective": false,
+  "rationale": "faithful, agrees with the narrator"
+ }
+]

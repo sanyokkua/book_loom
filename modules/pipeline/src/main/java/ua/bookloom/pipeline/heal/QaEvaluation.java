@@ -104,7 +104,8 @@ public final class QaEvaluation {
                 namePolicy,
                 segment.declaredLanguage(),
                 glossaryTerms,
-                lockedRenderings);
+                lockedRenderings,
+                frame.narrator());
         return QaEvaluator.evaluate(givenHardGates, input);
     }
 }

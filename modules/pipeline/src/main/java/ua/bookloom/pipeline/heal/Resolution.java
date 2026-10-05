@@ -19,6 +19,7 @@ import ua.bookloom.pipeline.qa.QaResult;
  * @param verifiedBlockersLeft how many issues the reviewer evidenced with a quote the app found, that no edit or fix
  *     resolved
  * @param reason the error to record against a flagged segment, or {@code null}
+ * @param maskedText the masked text {@code machine} stands on, the base a later directed fix rewrites
  */
 record Resolution(
         MachineTarget machine,
@@ -26,13 +27,15 @@ record Resolution(
         List<QaFinding> findings,
         int rounds,
         int verifiedBlockersLeft,
-        @Nullable AppError reason) {
+        @Nullable AppError reason,
+        String maskedText) {
 
     /** Copies the findings and rejects a missing component. */
     Resolution {
         Objects.requireNonNull(machine, "machine");
         Objects.requireNonNull(qa, "qa");
         Objects.requireNonNull(findings, "findings");
+        Objects.requireNonNull(maskedText, "maskedText");
         findings = List.copyOf(findings);
     }
 }

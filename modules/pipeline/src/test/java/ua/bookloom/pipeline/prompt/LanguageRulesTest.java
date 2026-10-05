@@ -214,4 +214,14 @@ class LanguageRulesTest {
     private static int tokens(final String text) {
         return TokenEstimator.estimate(text, "en");
     }
+
+    @Test
+    void genderCheck_bundledLanguages_onlyUkrainianNamesOne() {
+        final LanguageRules rules = LanguageRules.bundled();
+
+        assertThat(rules.genderCheck("uk")).isEqualTo("uk");
+        assertThat(rules.genderCheck("uk-UA")).isEqualTo("uk");
+        assertThat(rules.genderCheck("en")).isNull();
+        assertThat(rules.genderCheck("xx")).isNull();
+    }
 }

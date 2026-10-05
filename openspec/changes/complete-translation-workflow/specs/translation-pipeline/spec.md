@@ -1325,6 +1325,40 @@ hand, and a language nobody has written rules for is translated with general adv
 - **WHEN** `BOOKLOOM_EVAL_RULES=generic` is set and the section for English to Ukrainian is built
 - **THEN** it holds the generic rules and no Ukrainian, English or pair rule
 
+### Requirement: Tell the model who narrates and who is present
+
+The application SHALL add one narrator line to the run's style sheet when the brief names a narrator person
+(`Narrator: first person, female. Write the narrator's own "I" verbs, adjectives and participles in the feminine form
+...`, the masculine and gender-less first-person lines, and `Narrator: third person, outside the story ...`), and no
+line, with the style sheet and its hash unchanged, while the narrator is unstated. The application SHALL also give each
+draft, in the single and the batch prompt, a character gender sheet: one `name — gender` line for each glossary
+character of known gender that the segment (for a batch, any of its items) names as a whole word, under
+`[Characters in this text — keep their gender and agreement]`. The sheet SHALL have a share of its own in the dynamic
+context (`ContextSection.CHARACTERS`, a tenth of what the glossary leaves, taken before the lexicon, the memory, the
+preceding text and the summary), and SHALL be recorded in `ContextSnapshot.characters` so a retry shows the same. The
+reviewer's user message SHALL carry the chunk's sheet under `[Characters in these pairs — who they are]` when it is not
+empty, and its system message carries the narrator line through the style sheet.
+
+**Source:** FR-TRANS-05, ADR-0038; tasks 15d.10.
+In plain words: a model that is told once that the narrator is a man and that Lyra is a woman does not need to guess a
+verb ending from a name, and a character who is not in the scene costs no tokens.
+
+#### Scenario: Only the characters in the scene are listed
+
+- **WHEN** the glossary holds Lyra (female), Hale (male), Quill (gender unknown) and Oxford (a place) and the segment is
+  `Lyra walked to Oxford with Quill.`
+- **THEN** the draft prompt's sheet is exactly `Lyra — female`
+
+#### Scenario: A short window cuts the sheet before the glossary
+
+- **WHEN** the dynamic allowance is 12 tokens and two characters and two glossary lines are offered
+- **THEN** one glossary line is shown, and the sheet is empty
+
+#### Scenario: An unstated narrator changes nothing
+
+- **WHEN** the brief's narrator is not stated
+- **THEN** the style sheet is the default sheet and no narrator line is sent
+
 ## MODIFIED Requirements
 
 ### Requirement: Send each pending segment to the model in document order

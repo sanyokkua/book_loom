@@ -452,6 +452,35 @@ general advice, and a person should know which one they picked.
 - **WHEN** the target is Ukrainian
 - **THEN** no note is shown
 
+### Requirement: Capture who narrates the book
+
+The book-brief screen SHALL offer, in its Tone & style card, a narrator choice of `Not stated`, `First person` or `Third
+person`, defaulting to `Not stated`, and a narrator-gender choice of `Not stated`, `Male` or `Female`, defaulting to
+`Not stated` and available only while the narrator is in the first person. Each control SHALL explain itself on hover.
+The brief SHALL hold the choice as `BookBrief.narrator` (the person and the gender); a brief made before the narrator
+existed SHALL hold the unspecified narrator and read as it did, and every other change of the brief SHALL keep the
+narrator it holds.
+
+**Source:** FR-BRIEF-02, ADR-0038; tasks 15d.10.
+In plain words: a first-person narrator's past-tense verbs show their gender in Ukrainian and many other languages
+(`я зачинив` / `я зачинила`), and the source gives no hint of it, so the person says it once and every call and check
+uses it.
+
+#### Scenario: A new book starts with no narrator stated
+
+- **WHEN** a book is opened and the brief is shown
+- **THEN** the narrator choice is `Not stated` and the gender choice is not available
+
+#### Scenario: A first-person female narrator reaches the brief
+
+- **WHEN** the person chooses `First person` and then `Female`
+- **THEN** the brief holds a first-person female narrator and the gender choice is available
+
+#### Scenario: Another change keeps the narrator
+
+- **WHEN** a first-person male narrator is set and the register, the genre and the dial are then changed
+- **THEN** the brief still holds the first-person male narrator
+
 ## REMOVED Requirements
 
 ### Requirement: Choose the target language and show the source the book declares

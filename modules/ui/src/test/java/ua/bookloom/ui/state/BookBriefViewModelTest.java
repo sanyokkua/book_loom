@@ -12,7 +12,10 @@ import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 import ua.bookloom.ui.BookFixtures;
@@ -215,5 +218,21 @@ class BookBriefViewModelTest extends BookBriefViewModelTestBase {
 
         assertThat(projects.briefs()).isEmpty();
         assertThat(onFx(() -> current.brief().get())).isNull();
+    }
+
+    // IF a later change rebuilt the brief without the narrator, THEN choosing a genre would silently forget who
+    // narrates.
+    @Test
+    void narrator_firstPersonMale_survivesEveryOtherChangeAndANewViewModel() {
+        openBook(BookFixtures.frankensteinImport());
+        change(() -> brief.setNarratorPerson(NarratorPerson.FIRST));
+        change(() -> brief.setNarratorGender(Gender.MALE));
+
+        change(() -> brief.setRegister(Register.CASUAL));
+        change(() -> brief.setGenre("Gothic novel"));
+        change(() -> brief.setDial(QualityDial.MAX));
+        recreateBrief();
+
+        assertThat(current().narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE));
     }
 }

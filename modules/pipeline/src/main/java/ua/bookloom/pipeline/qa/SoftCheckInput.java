@@ -5,6 +5,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Narrator;
 
 /**
  * Everything {@link SoftChecks#run(SoftCheckInput)} needs for one segment, already reduced to display texts
@@ -24,6 +25,7 @@ import ua.bookloom.api.project.NamePolicy;
  *     echo checks apply before comparing texts
  * @param lockedRenderings the locked glossary terms present in this segment, each with its entered rendering, read
  *     by {@link GlossaryCheck}; a kept foreign run is not listed, its own hard gate covers it
+ * @param narrator the Book Brief's narrator, which the target language's gender check holds the text against
  */
 public record SoftCheckInput(
         String sourceDisplayText,
@@ -35,7 +37,8 @@ public record SoftCheckInput(
         NamePolicy namePolicy,
         @Nullable String declaredLanguage,
         List<String> glossaryTerms,
-        List<LockedRendering> lockedRenderings) {
+        List<LockedRendering> lockedRenderings,
+        Narrator narrator) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies the two list components.
@@ -49,7 +52,34 @@ public record SoftCheckInput(
         Objects.requireNonNull(namePolicy, "namePolicy");
         Objects.requireNonNull(glossaryTerms, "glossaryTerms");
         Objects.requireNonNull(lockedRenderings, "lockedRenderings");
+        Objects.requireNonNull(narrator, "narrator");
         glossaryTerms = List.copyOf(glossaryTerms);
         lockedRenderings = List.copyOf(lockedRenderings);
+    }
+
+    /** An input for a book whose narrator is not stated, so no gender check applies. */
+    public SoftCheckInput(
+            final String sourceDisplayText,
+            final String targetDisplayText,
+            final String targetWithRenderings,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final ForeignPassagePolicy foreignPassagePolicy,
+            final NamePolicy namePolicy,
+            @Nullable final String declaredLanguage,
+            final List<String> glossaryTerms,
+            final List<LockedRendering> lockedRenderings) {
+        this(
+                sourceDisplayText,
+                targetDisplayText,
+                targetWithRenderings,
+                sourceLanguage,
+                targetLanguage,
+                foreignPassagePolicy,
+                namePolicy,
+                declaredLanguage,
+                glossaryTerms,
+                lockedRenderings,
+                Narrator.unspecified());
     }
 }

@@ -10,6 +10,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 import ua.bookloom.util.hash.HashUtil;
@@ -101,6 +102,7 @@ public record StyleSheet(String text, String hash) {
         lines.add(phrases.phrase(brief.names()));
         lines.add(phrases.phrase(brief.footnotes()));
         lines.add(phrases.phrase(brief.units()));
+        addEntry(lines, "", phrases.narrator(brief.narrator()));
         return lines;
     }
 
@@ -123,6 +125,7 @@ public record StyleSheet(String text, String hash) {
                 && brief.balance() == DEFAULT_BALANCE
                 && isBlank(brief.genre())
                 && isBlank(brief.voiceEra())
-                && isBlank(brief.audience());
+                && isBlank(brief.audience())
+                && brief.narrator().person() == NarratorPerson.UNSPECIFIED;
     }
 }

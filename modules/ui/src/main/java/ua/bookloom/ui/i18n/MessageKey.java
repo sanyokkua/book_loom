@@ -500,6 +500,26 @@ public enum MessageKey {
     BRIEF_TONE_AUDIENCE_TIP("brief.tone.audience.tip"),
     /** Prompt text of the audience field. */
     BRIEF_TONE_AUDIENCE_PROMPT("brief.tone.audience.prompt"),
+    /** Label of the narrator-person choice on the tone card. */
+    BRIEF_TONE_NARRATOR("brief.tone.narrator"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_NARRATOR}. */
+    BRIEF_TONE_NARRATOR_TIP("brief.tone.narrator.tip"),
+    /** Narrator option: not stated. */
+    BRIEF_NARRATOR_UNSPECIFIED("brief.narrator.unspecified"),
+    /** Narrator option: first person. */
+    BRIEF_NARRATOR_FIRST("brief.narrator.first"),
+    /** Narrator option: third person. */
+    BRIEF_NARRATOR_THIRD("brief.narrator.third"),
+    /** Label of the narrator-gender choice on the tone card. */
+    BRIEF_TONE_NARRATOR_GENDER("brief.tone.narrator.gender"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_TONE_NARRATOR_GENDER}. */
+    BRIEF_TONE_NARRATOR_GENDER_TIP("brief.tone.narrator.gender.tip"),
+    /** Narrator gender option: not stated. */
+    BRIEF_NARRATOR_GENDER_UNKNOWN("brief.narrator.gender.unknown"),
+    /** Narrator gender option: male. */
+    BRIEF_NARRATOR_GENDER_MALE("brief.narrator.gender.male"),
+    /** Narrator gender option: female. */
+    BRIEF_NARRATOR_GENDER_FEMALE("brief.narrator.gender.female"),
     /** Label of the character-and-place-names policy. */
     BRIEF_POLICY_NAMES("brief.policy.names"),
     /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_NAMES}. */

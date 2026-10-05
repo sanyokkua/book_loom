@@ -124,8 +124,8 @@ public final class QualityLoop {
         if (pairs.isEmpty()) {
             return new ReviewOutcome(null, null);
         }
-        final Result<ReviewVerdict> first =
-                reviewerCall.review(pairs, settings.frame(), settings.glossaryPairs(), ReviewPass.FIRST, calls);
+        final Result<ReviewVerdict> first = reviewerCall.review(
+                pairs, settings.frame(), settings.glossaryPairs(), settings.characters(), ReviewPass.FIRST, calls);
         if (first.isErr() || settings.dial().reviewPasses() < 2) {
             return outcomeOf(first);
         }
@@ -133,8 +133,8 @@ public final class QualityLoop {
         if (!firstVerdict.readable()) {
             return outcomeOf(first);
         }
-        final Result<ReviewVerdict> second =
-                reviewerCall.review(pairs, settings.frame(), settings.glossaryPairs(), ReviewPass.SECOND, calls);
+        final Result<ReviewVerdict> second = reviewerCall.review(
+                pairs, settings.frame(), settings.glossaryPairs(), settings.characters(), ReviewPass.SECOND, calls);
         return second.isErr()
                 ? outcomeOf(second)
                 : new ReviewOutcome(firstVerdict.followedBy(Objects.requireNonNull(second.data())), null);

@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.QualityDial;
  * @param balance the translation-freedom balance, from 0 (most literal) to 100 (most free)
  * @param alsoTranslate the auxiliary-text switches
  * @param dial the chosen speed/quality dial
+ * @param narrator who narrates the book; {@link Narrator#unspecified()} when the person has not said
  */
 public record BookBrief(
         @Nullable String sourceLanguage,
@@ -38,7 +39,8 @@ public record BookBrief(
         UnitPolicy units,
         int balance,
         AlsoTranslate alsoTranslate,
-        QualityDial dial) {
+        QualityDial dial,
+        Narrator narrator) {
 
     private static final int MIN_BALANCE = 0;
     private static final int MAX_BALANCE = 100;
@@ -55,9 +57,42 @@ public record BookBrief(
         Objects.requireNonNull(units, "units");
         Objects.requireNonNull(alsoTranslate, "alsoTranslate");
         Objects.requireNonNull(dial, "dial");
+        Objects.requireNonNull(narrator, "narrator");
         if (balance < MIN_BALANCE || balance > MAX_BALANCE) {
             throw new IllegalArgumentException("balance must be within [0,100], but was " + balance);
         }
+    }
+
+    /** A brief with no narrator stated, which is what every brief made before the narrator existed holds. */
+    public BookBrief(
+            @Nullable final String sourceLanguage,
+            @Nullable final String targetLanguage,
+            @Nullable final String genre,
+            final Register register,
+            @Nullable final String voiceEra,
+            @Nullable final String audience,
+            final NamePolicy names,
+            final ForeignPassagePolicy foreignPassages,
+            final FootnotePolicy footnotes,
+            final UnitPolicy units,
+            final int balance,
+            final AlsoTranslate alsoTranslate,
+            final QualityDial dial) {
+        this(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                Narrator.unspecified());
     }
 
     /**
@@ -80,7 +115,8 @@ public record BookBrief(
                 UnitPolicy.KEEP,
                 DEFAULT_BALANCE,
                 AlsoTranslate.defaults(),
-                QualityDial.BALANCED);
+                QualityDial.BALANCED,
+                Narrator.unspecified());
     }
 
     /**
@@ -104,6 +140,127 @@ public record BookBrief(
                 units,
                 balance,
                 alsoTranslate,
-                dial);
+                dial,
+                narrator);
+    }
+
+    /**
+     * Returns this brief with its narrator replaced, everything else kept.
+     *
+     * @param chosen the non-null narrator
+     * @return a new brief with the narrator
+     */
+    public BookBrief withNarrator(final Narrator chosen) {
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                chosen);
+    }
+
+    /**
+     * Returns this brief with its genre replaced, everything else kept.
+     *
+     * @param genre the replacement, or null to clear it
+     * @return a new brief with the genre
+     */
+    public BookBrief withGenre(@Nullable final String genre) {
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                narrator);
+    }
+
+    /**
+     * Returns this brief with its voice and era notes replaced, everything else kept.
+     *
+     * @param voiceEra the replacement, or null to clear it
+     * @return a new brief with the voice and era notes
+     */
+    public BookBrief withVoiceEra(@Nullable final String voiceEra) {
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                narrator);
+    }
+
+    /**
+     * Returns this brief with its audience replaced, everything else kept.
+     *
+     * @param audience the replacement, or null to clear it
+     * @return a new brief with the audience
+     */
+    public BookBrief withAudience(@Nullable final String audience) {
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                narrator);
+    }
+
+    /**
+     * Returns this brief with its quality dial replaced, everything else kept.
+     *
+     * @param dial the replacement
+     * @return a new brief with the quality dial
+     */
+    public BookBrief withDial(final QualityDial dial) {
+        return new BookBrief(
+                sourceLanguage,
+                targetLanguage,
+                genre,
+                register,
+                voiceEra,
+                audience,
+                names,
+                foreignPassages,
+                footnotes,
+                units,
+                balance,
+                alsoTranslate,
+                dial,
+                narrator);
     }
 }

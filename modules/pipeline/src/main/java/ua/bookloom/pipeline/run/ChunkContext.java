@@ -19,9 +19,11 @@ import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextInputs;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
+import ua.bookloom.pipeline.context.InjectedCharacters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.lexicon.TermMatch;
@@ -159,6 +161,17 @@ final class ChunkContext {
                 .filter(entry -> !heldByGlossary(entry))
                 .toList();
         return Lexicon.termsIn(open, textsOf(segments));
+    }
+
+    /**
+     * The character gender sheet of the chunk, cut to the sheet's own share of the dynamic allowance, for the reviewer.
+     */
+    List<String> characterLines() {
+        final List<String> lines = InjectedCharacters.within(
+                InjectedCharacters.select(chunk.segments(), glossary),
+                ContextBudget.characterAllowance(ChunkBudget.dynamicAllowance(settings.frame(), settings.window())));
+        log.debug("Reviewer character sheet lines={}", lines.size());
+        return lines;
     }
 
     /** The run's lexicon, to which a verified pair is recorded. */

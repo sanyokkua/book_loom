@@ -3,6 +3,11 @@
 {{glossaryTerms}}
 {{/glossaryTerms}}
 
+{{#characters}}
+[Characters in these pairs — who they are]
+{{characters}}
+{{/characters}}
+
 {{#passFocus}}
 {{passFocus}}
 

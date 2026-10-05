@@ -1139,3 +1139,58 @@ and what it put there.
 
 - **WHEN** a segment is accepted with a `style` remark from the reviewer
 - **THEN** its record carries that remark as a low finding raised by `reviewer`
+
+### Requirement: Hold a first-person narrator's words to the narrator's gender
+
+The application SHALL, when the brief's narrator is in the first person with a male or female gender and the target
+language's file names a gender check with `genderCheck=<name>`, run that check on every candidate and raise a low
+`gender` finding (`raisedBy` `gender`) naming each word that disagrees. A gender check SHALL be a soft check: it never
+fails a hard gate, never blocks acceptance and never flags a segment by itself. The Ukrainian check (`genderCheck=uk`)
+SHALL read the first word after the narrator's `я`, past a short list of particles and adverbs and never behind a
+comma, a full stop, a colon, a bracket or a dash, and SHALL take a past-tense ending `-в`/`-вся` as masculine, `-ла`/
+`-лась`/`-лася` as feminine and `-ло`/`-лось` as neuter (which fits no narrator), except for a list of words that end
+so and are not past-tense verbs; it SHALL read only the narrator's own words, so a passage inside quote marks of the
+language's convention table (nested pairs and an unclosed one included) and the speech lines of a dash dialogue are left
+out, as are third-person sentences. Every other language SHALL have no check and find nothing.
+
+WHEN an accepted segment carries a `gender` finding and the dial has a repair round and the segment was not drafted in
+pieces, the application SHALL spend exactly one directed fix on it, naming the finding, and SHALL take the fix only when
+its text passes every check and no longer carries the finding; otherwise the segment stays accepted as it was with the
+finding kept as a note. A fix call that fails SHALL leave the accepted segment as it was.
+
+**Source:** FR-QA-01, ADR-0038; tasks 15d.10.
+In plain words: when the person says the narrator is a man and the draft says «я зачинила», code can see the wrong
+ending, so one repair call is made for it; because a suffix rule is sometimes wrong, the check can only note and
+repair, never reject.
+
+#### Scenario: A male narrator with a feminine verb is flagged
+
+- **WHEN** the narrator is first-person male and the target is `Я зачинила двері й пішов.`
+- **THEN** one finding spans `зачинила` and the segment is accepted and sent to one directed fix
+
+#### Scenario: A woman speaking in quotes is not flagged
+
+- **WHEN** the narrator is first-person male and the target is `«Я зачинила двері», — сказала вона.`
+- **THEN** there is no finding, and the same holds for `— Я зачинила двері, — сказала вона.`
+
+#### Scenario: Third-person text is left alone
+
+- **WHEN** the target is `Вона зачинила двері.` or the narrator is third-person
+- **THEN** there is no finding
+
+#### Scenario: The fix repairs the segment
+
+- **WHEN** the scripted model first answers `Я відчинила старі двері.` for a male narrator and the fix answers
+  `Я відчинив старі двері.`
+- **THEN** the segment is accepted on the repaired path with the fixed text and no `gender` finding
+
+#### Scenario: A fix that does not help is not repeated
+
+- **WHEN** the fix answers the same wrong text
+- **THEN** the segment stays accepted with its draft, carries the `gender` finding and no second fix is called
+
+#### Scenario: The corpus is caught without a model
+
+- **WHEN** the check runs over the gender corpus
+- **THEN** every defective case is flagged and at most 5% of the faithful cases are
+

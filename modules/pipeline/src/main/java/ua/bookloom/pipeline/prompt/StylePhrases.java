@@ -13,7 +13,9 @@ import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 
@@ -69,6 +71,21 @@ final class StylePhrases {
         return Math.min(BANDS, balance / BAND_WIDTH + 1);
     }
 
+    /** The narrator line; empty when the person has not said who narrates. */
+    String narrator(final Narrator narrator) {
+        return switch (narrator.person()) {
+            case UNSPECIFIED -> "";
+            case THIRD -> properties.getProperty("narrator.third");
+            case FIRST ->
+                properties.getProperty("narrator.first."
+                        + (isStated(narrator.gender()) ? narrator.gender().name() : "UNKNOWN"));
+        };
+    }
+
+    private static boolean isStated(final Gender gender) {
+        return gender == Gender.MALE || gender == Gender.FEMALE;
+    }
+
     String phrase(final Enum<?> choice) {
         return properties.getProperty(key(choice));
     }
@@ -88,10 +105,18 @@ final class StylePhrases {
                 .map(choice -> key((Enum<?>) choice));
         final Stream<String> bands =
                 Stream.iterate(1, band -> band + 1).limit(BANDS).map(band -> "balance.band" + band);
-        Stream.concat(Stream.concat(keys, bands), Stream.of("default.line")).forEach(key -> {
-            if (properties.getProperty(Objects.requireNonNull(key)) == null) {
-                throw new IllegalStateException(FILE + " lacks key '" + key + "'");
-            }
-        });
+        Stream.concat(
+                        Stream.concat(keys, bands),
+                        Stream.of(
+                                "default.line",
+                                "narrator.third",
+                                "narrator.first.MALE",
+                                "narrator.first.FEMALE",
+                                "narrator.first.UNKNOWN"))
+                .forEach(key -> {
+                    if (properties.getProperty(Objects.requireNonNull(key)) == null) {
+                        throw new IllegalStateException(FILE + " lacks key '" + key + "'");
+                    }
+                });
     }
 }

@@ -60,6 +60,29 @@ public final class ReviewerCall {
             final List<String> glossaryPairs,
             final ReviewPass pass,
             final ModelCalls calls) {
+        return review(pairs, frame, glossaryPairs, List.of(), pass, calls);
+    }
+
+    /**
+     * Reviews one batch in a single call, telling the reviewer who the characters are.
+     *
+     * @param pairs the batch's pairs, in document order; never empty
+     * @param frame the run's language pair, style sheet and foreign-passage policy
+     * @param glossaryPairs the glossary renderings the batch had to use, one {@code source → target} line each
+     * @param characters the characters present with their gender, one {@code name — gender} line each, or empty when
+     *     the glossary knows none
+     * @param pass which pass of the batch this is
+     * @param calls the seam the call is sent through
+     * @return as {@link #review(List, CallFrame, List, ReviewPass, ModelCalls)}
+     */
+    public Result<ReviewVerdict> review(
+            final List<ReviewedPair> pairs,
+            final CallFrame frame,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final ReviewPass pass,
+            final ModelCalls calls) {
+        Objects.requireNonNull(characters, "characters");
         Objects.requireNonNull(pairs, "pairs");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
@@ -69,7 +92,7 @@ public final class ReviewerCall {
                 pairs.stream().map(ReviewedPair::segmentId).toList();
         log.debug("Reviewing batch pairCount={} pass={} segmentIds={}", pairs.size(), pass, segmentIds);
         try {
-            final ChatRequest request = request(pairs, frame, glossaryPairs, pass);
+            final ChatRequest request = request(pairs, frame, glossaryPairs, characters, pass);
             logTraceMessages(request);
             final Result<ChatResponse> reply = send(segmentIds, request, calls);
             return reply.isErr()
@@ -132,11 +155,13 @@ public final class ReviewerCall {
             final List<ReviewedPair> pairs,
             final CallFrame frame,
             final List<String> glossaryPairs,
+            final List<String> characters,
             final ReviewPass pass) {
         final String system = templates.renderSystem(PromptName.REVIEWER, frame).strip();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("pairs", renderPairs(pairs));
         userValues.put("glossaryTerms", String.join("\n", glossaryPairs));
+        userValues.put("characters", String.join("\n", characters));
         userValues.put("passFocus", pass.instruction());
         final String user =
                 templates.renderUser(PromptName.REVIEWER, userValues).strip();

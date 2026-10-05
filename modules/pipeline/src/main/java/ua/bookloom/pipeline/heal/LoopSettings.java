@@ -17,6 +17,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param glossaryTerms every glossary term in the chunk, read by the same name removal
  * @param glossaryPairs the chunk's unlocked glossary renderings, one {@code source → target} line each, which the
  *     reviewer checks the candidates against
+ * @param characters the chunk's character gender sheet, one {@code name — gender} line each, shown to the reviewer
  */
 public record LoopSettings(
         ReviewMode reviewMode,
@@ -24,7 +25,8 @@ public record LoopSettings(
         CallFrame frame,
         NamePolicy namePolicy,
         List<String> glossaryTerms,
-        List<String> glossaryPairs) {
+        List<String> glossaryPairs,
+        List<String> characters) {
 
     /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
     public LoopSettings {
@@ -34,8 +36,21 @@ public record LoopSettings(
         Objects.requireNonNull(namePolicy, "namePolicy");
         Objects.requireNonNull(glossaryTerms, "glossaryTerms");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
+        Objects.requireNonNull(characters, "characters");
         glossaryTerms = List.copyOf(glossaryTerms);
         glossaryPairs = List.copyOf(glossaryPairs);
+        characters = List.copyOf(characters);
+    }
+
+    /** Settings for a chunk whose reviewer is shown no character sheet. */
+    public LoopSettings(
+            final ReviewMode reviewMode,
+            final DialParameters dial,
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<String> glossaryPairs) {
+        this(reviewMode, dial, frame, namePolicy, glossaryTerms, glossaryPairs, List.of());
     }
 
     /** Settings for a chunk whose glossary has no rendering the reviewer needs to check. */
@@ -45,6 +60,6 @@ public record LoopSettings(
             final CallFrame frame,
             final NamePolicy namePolicy,
             final List<String> glossaryTerms) {
-        this(reviewMode, dial, frame, namePolicy, glossaryTerms, List.of());
+        this(reviewMode, dial, frame, namePolicy, glossaryTerms, List.of(), List.of());
     }
 }

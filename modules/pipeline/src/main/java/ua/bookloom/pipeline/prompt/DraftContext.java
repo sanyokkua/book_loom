@@ -16,6 +16,7 @@ import org.jspecify.annotations.Nullable;
  *     shown apart as a hint rather than a rendering to apply exactly
  * @param lexiconLines one {@code term → rendering} line per recurring term whose rendering the book has established,
  *     shown as a "keep consistent" hint; it never overrides the glossary
+ * @param characterLines one {@code name — gender} line per character of the segment whose gender the glossary knows
  */
 public record DraftContext(
         List<String> precedingTargets,
@@ -23,7 +24,8 @@ public record DraftContext(
         List<String> glossaryLines,
         List<String> memoryLines,
         List<String> suggestedLines,
-        List<String> lexiconLines) {
+        List<String> lexiconLines,
+        List<String> characterLines) {
 
     /**
      * Rejects null entries and makes the context immutable at the prompt boundary, leaving out empty and
@@ -36,6 +38,18 @@ public record DraftContext(
         memoryLines = PromptHygiene.clean(Objects.requireNonNull(memoryLines, "memoryLines"));
         suggestedLines = PromptHygiene.clean(Objects.requireNonNull(suggestedLines, "suggestedLines"));
         lexiconLines = PromptHygiene.clean(Objects.requireNonNull(lexiconLines, "lexiconLines"));
+        characterLines = PromptHygiene.clean(Objects.requireNonNull(characterLines, "characterLines"));
+    }
+
+    /** A context with no character sheet. */
+    public DraftContext(
+            final List<String> precedingTargets,
+            @Nullable final String summary,
+            final List<String> glossaryLines,
+            final List<String> memoryLines,
+            final List<String> suggestedLines,
+            final List<String> lexiconLines) {
+        this(precedingTargets, summary, glossaryLines, memoryLines, suggestedLines, lexiconLines, List.of());
     }
 
     /** A context with no recurring-term renderings. */

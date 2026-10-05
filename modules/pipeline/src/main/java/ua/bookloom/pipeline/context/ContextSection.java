@@ -11,19 +11,25 @@ public enum ContextSection {
     GLOSSARY(1, Relevance.TERM_PRESENT),
 
     /**
+     * Who is who among the characters the segment names, with the gender the glossary knows — a short sheet with a
+     * share of its own, so a wrong pronoun or verb ending is prevented without taking the glossary's room.
+     */
+    CHARACTERS(2, Relevance.TERM_PRESENT),
+
+    /**
      * The established renderings of recurring terms the chunk names — a soft "keep consistent" hint, so it has a share
      * of its own and never takes the glossary's room.
      */
-    LEXICON(2, Relevance.TERM_PRESENT),
+    LEXICON(3, Relevance.TERM_PRESENT),
 
     /** Earlier translation-memory decisions the segment should stay consistent with. */
-    MEMORY(3, Relevance.WHEN_EXISTS),
+    MEMORY(4, Relevance.WHEN_EXISTS),
 
     /** The unit's last few translated segments, newest kept first. */
-    PRECEDING(4, Relevance.SAME_UNIT),
+    PRECEDING(5, Relevance.SAME_UNIT),
 
     /** The rolling "book so far" summary — useful, but the cheapest thing to lose. */
-    SUMMARY(5, Relevance.WHEN_EXISTS);
+    SUMMARY(6, Relevance.WHEN_EXISTS);
 
     /** The rule that decides whether a section has anything to show for this chunk. */
     public enum Relevance {

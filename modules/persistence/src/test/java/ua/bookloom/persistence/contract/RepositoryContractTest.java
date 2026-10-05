@@ -22,6 +22,9 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentCounts;
 import ua.bookloom.api.project.SegmentPath;
@@ -54,6 +57,25 @@ public abstract class RepositoryContractTest {
         assertThat(found.data())
                 .isPresent()
                 .hasValueSatisfying(p -> assertThat(p.id()).isEqualTo("p1"));
+    }
+
+    @Test
+    void save_briefWithANarrator_comesBackWithTheNarrator() {
+        final ProjectRepository repository = projectRepository();
+        final Narrator narrator = new Narrator(NarratorPerson.FIRST, Gender.FEMALE);
+        final Project base = project("p1");
+
+        repository.save(new Project(
+                base.id(),
+                base.source(),
+                base.format(),
+                base.contentHash(),
+                base.brief().withNarrator(narrator)));
+
+        assertThat(repository.find("p1").data())
+                .isPresent()
+                .hasValueSatisfying(
+                        found -> assertThat(found.brief().narrator()).isEqualTo(narrator));
     }
 
     @Test

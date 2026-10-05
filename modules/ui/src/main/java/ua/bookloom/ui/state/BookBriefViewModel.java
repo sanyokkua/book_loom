@@ -17,7 +17,10 @@ import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.FootnotePolicy;
 import ua.bookloom.api.project.ForeignPassagePolicy;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.UnitPolicy;
 import ua.bookloom.ui.BackgroundExecutor;
@@ -158,23 +161,7 @@ public final class BookBriefViewModel {
     public void setGenre(final String genre) {
         final String text = blankToNull(genre);
         log.trace("genre is now '{}'", text);
-        change(
-                "genre",
-                text == null ? "cleared" : "set",
-                brief -> new BookBrief(
-                        brief.sourceLanguage(),
-                        brief.targetLanguage(),
-                        text,
-                        brief.register(),
-                        brief.voiceEra(),
-                        brief.audience(),
-                        brief.names(),
-                        brief.foreignPassages(),
-                        brief.footnotes(),
-                        brief.units(),
-                        brief.balance(),
-                        brief.alsoTranslate(),
-                        brief.dial()));
+        change("genre", text == null ? "cleared" : "set", brief -> brief.withGenre(text));
     }
 
     /**
@@ -185,23 +172,7 @@ public final class BookBriefViewModel {
     public void setVoiceEra(final String voiceEra) {
         final String text = blankToNull(voiceEra);
         log.trace("voice and era are now '{}'", text);
-        change(
-                "voice and era",
-                text == null ? "cleared" : "set",
-                brief -> new BookBrief(
-                        brief.sourceLanguage(),
-                        brief.targetLanguage(),
-                        brief.genre(),
-                        brief.register(),
-                        text,
-                        brief.audience(),
-                        brief.names(),
-                        brief.foreignPassages(),
-                        brief.footnotes(),
-                        brief.units(),
-                        brief.balance(),
-                        brief.alsoTranslate(),
-                        brief.dial()));
+        change("voice and era", text == null ? "cleared" : "set", brief -> brief.withVoiceEra(text));
     }
 
     /**
@@ -212,23 +183,7 @@ public final class BookBriefViewModel {
     public void setAudience(final String audience) {
         final String text = blankToNull(audience);
         log.trace("audience is now '{}'", text);
-        change(
-                "audience",
-                text == null ? "cleared" : "set",
-                brief -> new BookBrief(
-                        brief.sourceLanguage(),
-                        brief.targetLanguage(),
-                        brief.genre(),
-                        brief.register(),
-                        brief.voiceEra(),
-                        text,
-                        brief.names(),
-                        brief.foreignPassages(),
-                        brief.footnotes(),
-                        brief.units(),
-                        brief.balance(),
-                        brief.alsoTranslate(),
-                        brief.dial()));
+        change("audience", text == null ? "cleared" : "set", brief -> brief.withAudience(text));
     }
 
     /**
@@ -314,29 +269,40 @@ public final class BookBriefViewModel {
     }
 
     /**
+     * Sets who narrates the book; the gender is kept when only the person changes.
+     *
+     * @param person the narrator's grammatical person
+     */
+    public void setNarratorPerson(final NarratorPerson person) {
+        Objects.requireNonNull(person, "person");
+        change(
+                "narrator person",
+                person.name(),
+                brief ->
+                        brief.withNarrator(new Narrator(person, brief.narrator().gender())));
+    }
+
+    /**
+     * Sets the narrator's gender, which a first-person narrator's verbs must agree with; the person is kept.
+     *
+     * @param gender the narrator's gender, or {@link Gender#UNKNOWN} when not stated
+     */
+    public void setNarratorGender(final Gender gender) {
+        Objects.requireNonNull(gender, "gender");
+        change(
+                "narrator gender",
+                gender.name(),
+                brief -> brief.withNarrator(new Narrator(brief.narrator().person(), gender)));
+    }
+
+    /**
      * Sets the quality dial.
      *
      * @param dial the speed and quality choice
      */
     public void setDial(final QualityDial dial) {
         Objects.requireNonNull(dial, "dial");
-        change(
-                "quality dial",
-                dial.name(),
-                brief -> new BookBrief(
-                        brief.sourceLanguage(),
-                        brief.targetLanguage(),
-                        brief.genre(),
-                        brief.register(),
-                        brief.voiceEra(),
-                        brief.audience(),
-                        brief.names(),
-                        brief.foreignPassages(),
-                        brief.footnotes(),
-                        brief.units(),
-                        brief.balance(),
-                        brief.alsoTranslate(),
-                        dial));
+        change("quality dial", dial.name(), brief -> brief.withDial(dial));
     }
 
     private static BookBrief rebuild(
@@ -361,7 +327,8 @@ public final class BookBriefViewModel {
                 units == null ? brief.units() : units,
                 balance == null ? brief.balance() : balance,
                 alsoTranslate == null ? brief.alsoTranslate() : alsoTranslate,
-                brief.dial());
+                brief.dial(),
+                brief.narrator());
     }
 
     private static @Nullable String blankToNull(final String text) {

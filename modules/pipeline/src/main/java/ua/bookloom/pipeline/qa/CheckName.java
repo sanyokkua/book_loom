@@ -49,6 +49,9 @@ public enum CheckName {
     /** Text check, soft: a doubled space, or a space before a full stop or comma or inside a bracket. */
     SPACING(0.0, "fluency", "spacing", false),
 
+    /** Text check, soft: a past-tense word after the narrator's «я» whose gender is not the narrator's. */
+    GENDER(0.0, "gender", "gender", false),
+
     /** Note only: the typography pass changed the target's apostrophes, ellipses, quote marks or spacing. */
     TYPOGRAPHY(0.0, "fluency", "normalised", false);
 

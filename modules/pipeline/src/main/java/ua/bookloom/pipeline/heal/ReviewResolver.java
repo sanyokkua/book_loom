@@ -63,7 +63,7 @@ final class ReviewResolver {
                 item.edits().size());
         final MachineTarget draft = MachineTarget.of(outcome, initialQa);
         return switch (item.status()) {
-            case OK -> Result.ok(new Resolution(draft, initialQa, List.of(), 0, 0, null));
+            case OK -> Result.ok(new Resolution(draft, initialQa, List.of(), 0, 0, null, outcome.maskedReply()));
             case EDITS -> applyEdits(outcome, initialQa, draft, item.edits());
             case REWRITE -> tryRewrite(outcome, initialQa, draft, Objects.requireNonNull(item.rewrite()));
         };
@@ -81,7 +81,7 @@ final class ReviewResolver {
         final Edited edited = evaluateEdited(outcome, initialQa, draft, applied);
         final int rounds = applied.applied().isEmpty() ? 0 : 1;
         if (applied.failed().isEmpty()) {
-            return Result.ok(new Resolution(edited.machine(), edited.qa(), findings, rounds, 0, null));
+            return Result.ok(new Resolution(edited.machine(), edited.qa(), findings, rounds, 0, null, edited.text()));
         }
         return fixRefused(outcome, edited, applied.failed(), baseline, findings);
     }
@@ -160,7 +160,7 @@ final class ReviewResolver {
                 remaining.size());
         final List<QaFinding> all = new ArrayList<>(findings);
         remaining.stream().map(ReviewResolver::evidenceOf).forEach(all::add);
-        return new Resolution(machineOf(fixed), fixed.qa(), all, 1, remaining.size(), null);
+        return new Resolution(machineOf(fixed), fixed.qa(), all, 1, remaining.size(), null, fixed.maskedCandidate());
     }
 
     private static Resolution unresolved(
@@ -171,7 +171,7 @@ final class ReviewResolver {
             final int blockersLeft) {
         final List<QaFinding> all = new ArrayList<>(findings);
         all.addAll(evidence);
-        return new Resolution(edited.machine(), edited.qa(), all, rounds, blockersLeft, null);
+        return new Resolution(edited.machine(), edited.qa(), all, rounds, blockersLeft, null, edited.text());
     }
 
     private void announceFix(final DraftOutcome.Drafted outcome, final List<QaFinding> evidence) {
@@ -213,7 +213,8 @@ final class ReviewResolver {
             log.debug("Rewrite accepted segment={}", outcome.segment().id());
             final QaFinding note = new QaFinding(
                     REWRITE_KIND, Severity.LOW, "The reviewer rewrote this segment.", SegmentOutcomes.REVIEWER);
-            return Result.ok(new Resolution(machineOf(evaluated), evaluated.qa(), List.of(note), 1, 0, null));
+            return Result.ok(new Resolution(
+                    machineOf(evaluated), evaluated.qa(), List.of(note), 1, 0, null, evaluated.maskedCandidate()));
         }
         final String why = result instanceof RoundOutcome.Evaluated evaluated
                 ? "it fails " + String.join(", ", Blockers.of(evaluated.qa()))
@@ -224,7 +225,7 @@ final class ReviewResolver {
                 Severity.MEDIUM,
                 "The reviewer asked for a rewrite of this segment, but " + why + ", so the draft was kept.",
                 SegmentOutcomes.REVIEWER);
-        return Result.ok(new Resolution(draft, initialQa, List.of(evidence), 0, 1, null));
+        return Result.ok(new Resolution(draft, initialQa, List.of(evidence), 0, 1, null, outcome.maskedReply()));
     }
 
     private Optional<Set<String>> blockersOf(final DraftOutcome.Drafted outcome, final String text) {

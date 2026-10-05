@@ -16,5 +16,8 @@ public enum FindingKind {
     DUPLICATE_WORD,
 
     /** A space where none belongs: doubled, before a full stop or comma, inside a bracket. */
-    SPACING
+    SPACING,
+
+    /** A past-tense word of the narrator's whose gender is not the narrator's. */
+    GENDER
 }

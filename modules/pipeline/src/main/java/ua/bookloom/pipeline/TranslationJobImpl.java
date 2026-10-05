@@ -287,7 +287,8 @@ final class TranslationJobImpl implements TranslationJob {
                 Objects.requireNonNull(brief.targetLanguage(), "target language checked at the start"),
                 styleSheet,
                 brief.foreignPassages(),
-                CallFrame.bookLanguageOf(run.document()));
+                CallFrame.bookLanguageOf(run.document()),
+                brief.narrator());
         final ModelCalls calls = new JobModelCalls(
                 onSent -> new CancellableChatModel(model, control, onSent, watchdog),
                 this::emit,

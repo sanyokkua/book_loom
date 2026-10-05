@@ -52,6 +52,7 @@ public final class ContextPackageAssembler {
         Objects.requireNonNull(inputs, "inputs");
         final DynamicFit fit = DynamicFit.of(
                 InjectedTerms.select(chunk, mask, inputs.glossary()),
+                InjectedCharacters.select(List.of(segment), inputs.glossary()),
                 InjectedLexicon.select(chunk, inputs.lexicon(), inputs.glossary()),
                 memoryHits(memory),
                 precedingTexts(inputs),
@@ -71,14 +72,16 @@ public final class ContextPackageAssembler {
                 lines(terms, false),
                 memoryLines(fit.hits()),
                 lines(terms, true),
-                lexiconLines(fit.lexicon()));
+                lexiconLines(fit.lexicon()),
+                fit.characters());
         final ContextSnapshot snapshot = new ContextSnapshot(
                 fit.preceding(),
                 terms.stream().map(InjectedTerm::term).toList(),
                 fit.hits(),
                 fit.summary(),
                 styleSheet,
-                fit.lexicon());
+                fit.lexicon(),
+                fit.characters());
         return new ContextPackage(context, snapshot);
     }
 
@@ -104,7 +107,8 @@ public final class ContextPackageAssembler {
                 glossaryLines,
                 memoryLines(snapshot.tmHits()),
                 lines(terms, true),
-                lexiconLines(snapshot.lexicon()));
+                lexiconLines(snapshot.lexicon()),
+                snapshot.characters());
         log.debug(
                 "Replayed context preceding={} terms={} lexicon={} glossaryLines={} suggestedLines={} memoryLines={} summary={}",
                 context.precedingTargets().size(),
@@ -179,13 +183,14 @@ public final class ContextPackageAssembler {
         final long suggested = terms.stream().filter(SnapshotTerm::suggested).count();
         log.debug(
                 "Assembled context segment={} preceding={} lockedTerms={} unlockedTerms={} suggestedTerms={} "
-                        + "noTargetTerms={} lexicon={} hints={} suggestions={} reuse={} summary={}",
+                        + "noTargetTerms={} characters={} lexicon={} hints={} suggestions={} reuse={} summary={}",
                 segment.id(),
                 snapshot.precedingTargets().size(),
                 locked,
                 terms.size() - locked - noTarget - suggested,
                 suggested,
                 noTarget,
+                snapshot.characters().size(),
                 snapshot.lexicon().size(),
                 hitsOfKind(snapshot, TmHitKind.EXACT),
                 hitsOfKind(snapshot, TmHitKind.FUZZY),

@@ -22,9 +22,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.AlsoTranslate;
 import ua.bookloom.api.project.FootnotePolicy;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.ThemeTestSupport;
+import ua.bookloom.ui.TooltipProbe;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.SettingsViewModel;
 
@@ -144,6 +148,41 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
         assertThat(brief().audience()).isEqualTo("General adult readers");
     }
 
+    // IF the narrator choice did not reach the brief, THEN the gender check would never know who narrates.
+    @Test
+    void narrator_firstPersonFemaleChosen_reachesTheBriefAndEnablesTheGenderChoice() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+        assertThat(required("brief-tone-narrator-gender").isDisabled()).isTrue();
+
+        onFx(() -> segmented("brief-tone-narrator").getButtons().get(1).setSelected(true));
+        onFx(() -> segmented("brief-tone-narrator-gender").getButtons().get(2).setSelected(true));
+
+        assertThat(brief().narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.FEMALE));
+        assertThat(required("brief-tone-narrator-gender").isDisabled()).isFalse();
+    }
+
+    // IF the narrator controls did not follow the brief, THEN a trip to another screen would show a choice already
+    // lost.
+    @Test
+    void narrator_changedInTheViewModel_isShownInBothChoices() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        onFx(() -> briefModel().setNarratorPerson(NarratorPerson.FIRST));
+        onFx(() -> briefModel().setNarratorGender(Gender.MALE));
+
+        assertThat(selectedStates("brief-tone-narrator")).containsExactly(false, true, false);
+        assertThat(selectedStates("brief-tone-narrator-gender")).containsExactly(false, true, false);
+    }
+
+    // IF a narrator choice had no explanation, THEN a person could not tell what the check does with it.
+    @ParameterizedTest
+    @ValueSource(strings = {"brief-tone-narrator", "brief-tone-narrator-gender"})
+    void narrator_choices_explainThemselvesOnHover(final String id) throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        assertThat(TooltipProbe.tipText(required(id))).contains("narrator");
+    }
+
     // IF the controls did not follow the brief, THEN a trip to another screen would show choices already lost.
     @Test
     void controls_briefChangedInTheViewModel_showTheChange() throws TimeoutException {
@@ -214,7 +253,14 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     // IF a Ukrainian label were cut short, THEN a choice could not be read; the reference rendering was seen to read
     // "Транслітерув…" at this width.
     @ParameterizedTest
-    @ValueSource(strings = {"brief-policy-names", "brief-policy-foreign", "brief-tone-register"})
+    @ValueSource(
+            strings = {
+                "brief-policy-names",
+                "brief-policy-foreign",
+                "brief-tone-register",
+                "brief-tone-narrator",
+                "brief-tone-narrator-gender"
+            })
     void segmentedLabels_underUkrainianAt1024_showWholeWithNoEllipsis(final String id) throws TimeoutException {
         useLocale(Locale.forLanguageTag("uk"));
         resizeScene(1024, 768);
