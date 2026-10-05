@@ -9,7 +9,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -22,15 +21,15 @@ import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
-import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.BackgroundExecutor;
-import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
 /**
@@ -49,9 +48,11 @@ public final class NamesStyleViewModel {
     private final GlossaryService glossary;
     private final GlossaryCalls calls;
     private final GlossaryModelRuns modelRuns;
-    private final Messages messages;
     private final GlossaryFiles files;
     private final ObservableList<GlossaryEntry> rows = FXCollections.observableArrayList();
+    private final ObservableList<LexiconEntry> lexiconRows = FXCollections.observableArrayList();
+    private final RecurringTerms recurring;
+    private final GlossaryRowEdits edits;
     private final ReadOnlyObjectWrapper<@Nullable GlossaryNotice> notice = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyIntegerWrapper restorations = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suggestedCount = new ReadOnlyIntegerWrapper();
@@ -63,6 +64,7 @@ public final class NamesStyleViewModel {
      * Receives the collaborators the injector owns.
      *
      * @param glossary the port the glossary is read and edited through
+     * @param lexicon the port the recurring terms are read and edited through
      * @param models where the model of a model scan is built
      * @param settings where the chosen provider and model are read
      * @param executor the daemon executor every call runs on, never the FX thread
@@ -72,6 +74,7 @@ public final class NamesStyleViewModel {
     @Inject
     public NamesStyleViewModel(
             final GlossaryService glossary,
+            final LexiconService lexicon,
             final ChatModelFactory models,
             final SettingsViewModel settings,
             final @BackgroundExecutor ExecutorService executor,
@@ -79,6 +82,7 @@ public final class NamesStyleViewModel {
             final ActivityTracker activities) {
         this(
                 glossary,
+                lexicon,
                 models,
                 settings,
                 executor,
@@ -90,6 +94,7 @@ public final class NamesStyleViewModel {
     // The id source is a seam so that a test states the ids it expects.
     NamesStyleViewModel(
             final GlossaryService glossary,
+            final LexiconService lexicon,
             final ChatModelFactory models,
             final SettingsViewModel settings,
             final ExecutorService executor,
@@ -98,18 +103,25 @@ public final class NamesStyleViewModel {
             final Supplier<String> ids) {
         this.glossary = Objects.requireNonNull(glossary, "glossary");
         this.calls = new GlossaryCalls(executor);
-        this.messages = Objects.requireNonNull(messages, "messages");
         this.modelRuns = new GlossaryModelRuns(
                 new GlossaryModelRuns.Screen(
                         glossary,
+                        Objects.requireNonNull(lexicon, "lexicon"),
                         models,
                         settings,
                         messages,
                         rows,
+                        lexiconRows,
                         notice,
                         () -> projectId,
                         Objects.requireNonNull(activities, "activities")),
                 calls);
+        this.recurring = new RecurringTerms(
+                new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice),
+                () -> projectId,
+                this::whileCurrent,
+                modelRuns::suggestRenderings);
+        this.edits = new GlossaryRowEdits(glossary, calls, rows, messages, notice, restorations);
         this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages));
         this.additions = new GlossaryAdditions(
                 glossary, calls, rows, messages, Objects.requireNonNull(ids, "ids"), () -> projectId);
@@ -154,6 +166,15 @@ public final class NamesStyleViewModel {
     }
 
     /**
+     * The recurring terms the Recurring terms card shows.
+     *
+     * @return the card's state, which lives as long as this view model
+     */
+    public RecurringTerms recurring() {
+        return recurring;
+    }
+
+    /**
      * How many refused edits have been undone.
      *
      * @return a read-only counter that only ever grows
@@ -174,6 +195,7 @@ public final class NamesStyleViewModel {
         log.debug("showing the glossary of project {} (opening {})", project, ticket);
         rows.clear();
         notice.set(null);
+        recurring.show(project);
         calls.run(
                 "load",
                 () -> GlossaryLoad.loadOrScan(glossary, project),
@@ -188,7 +210,11 @@ public final class NamesStyleViewModel {
      */
     public void setTarget(final String entryId, final String text) {
         Objects.requireNonNull(text, "text");
-        change(entryId, "target", held -> GlossaryEdits.target(held, text.isBlank() ? null : text.strip()));
+        edits.change(
+                entryId,
+                "target",
+                held -> GlossaryEdits.target(held, text.isBlank() ? null : text.strip()),
+                whileCurrent());
     }
 
     /**
@@ -198,7 +224,7 @@ public final class NamesStyleViewModel {
      * @param locked whether the term is locked
      */
     public void setLocked(final String entryId, final boolean locked) {
-        change(entryId, "locked", held -> GlossaryEdits.locked(held, locked));
+        edits.change(entryId, "locked", held -> GlossaryEdits.locked(held, locked), whileCurrent());
     }
 
     /**
@@ -209,7 +235,7 @@ public final class NamesStyleViewModel {
      */
     public void setType(final String entryId, final TermType type) {
         Objects.requireNonNull(type, "type");
-        change(entryId, "type", held -> GlossaryEdits.type(held, type));
+        edits.change(entryId, "type", held -> GlossaryEdits.type(held, type), whileCurrent());
     }
 
     /**
@@ -220,52 +246,7 @@ public final class NamesStyleViewModel {
      */
     public void setGender(final String entryId, final Gender gender) {
         Objects.requireNonNull(gender, "gender");
-        change(entryId, "gender", held -> GlossaryEdits.gender(held, gender));
-    }
-
-    private void change(final String entryId, final String field, final UnaryOperator<GlossaryEntry> edit) {
-        Objects.requireNonNull(entryId, "entryId");
-        final int at = GlossaryEdits.indexOf(rows, entryId);
-        if (at < 0) {
-            log.debug("edit of {} on entry {} ignored: no such row", field, entryId);
-            return;
-        }
-        final GlossaryEntry changed = edit.apply(rows.get(at));
-        if (changed.equals(rows.get(at))) {
-            log.debug("edit of {} on entry {} ignored: nothing changed", field, entryId);
-            return;
-        }
-        log.debug("editing {} of entry {}", field, entryId);
-        log.trace("entry {} becomes term '{}' target '{}'", entryId, changed.term(), changed.target());
-        final long ticket = generation;
-        calls.run(
-                "update", () -> glossary.update(changed), answer -> ifCurrent(ticket, () -> updated(entryId, answer)));
-    }
-
-    private void updated(final String entryId, final Result<GlossaryEntry> answer) {
-        final int at = GlossaryEdits.indexOf(rows, entryId);
-        final AppError failure = answer.error();
-        if (failure == null) {
-            if (at >= 0) {
-                rows.set(at, Objects.requireNonNull(answer.data(), "data"));
-            }
-            notice.set(null);
-            return;
-        }
-        refuse(entryId, failure);
-        if (at >= 0) {
-            rows.set(at, rows.get(at));
-        }
-        restorations.set(restorations.get() + 1);
-    }
-
-    private void refuse(final String entryId, final AppError failure) {
-        if (failure.code() == ErrorCode.validation) {
-            log.warn("edit of entry {} refused: a locked term needs a target", entryId);
-            error(messages.get(MessageKey.NAMES_STYLE_LOCK_NEEDS_TARGET));
-            return;
-        }
-        fail("update", failure);
+        edits.change(entryId, "gender", held -> GlossaryEdits.gender(held, gender), whileCurrent());
     }
 
     /**
@@ -341,7 +322,7 @@ public final class NamesStyleViewModel {
      * @param entryId the row's entry id
      */
     public void accept(final String entryId) {
-        change(entryId, "accept", GlossaryEntry::accepted);
+        edits.change(entryId, "accept", GlossaryEntry::accepted, whileCurrent());
     }
 
     /** Confirms every row's suggested target, each as {@link #accept(String)} would. */

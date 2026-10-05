@@ -15,12 +15,23 @@ import ua.bookloom.pipeline.prompt.PromptHygiene;
  * @param precedingPairs the chapter's last decided pairs, oldest first; two or three
  * @param nextSource the masked source of the segment after the batch, or null at the end of the unit
  * @param characters one line per character present in the batch, with the gender the glossary knows
+ * @param keyTerms the recurring key terms the batch's items name — the closed list the model reports renderings for
  */
 public record BatchContext(
         DraftContext draft,
         List<Pair> precedingPairs,
         @Nullable String nextSource,
-        List<String> characters) {
+        List<String> characters,
+        List<String> keyTerms) {
+
+    /** A context that asks for no key-term renderings. */
+    public BatchContext(
+            final DraftContext draft,
+            final List<Pair> precedingPairs,
+            @Nullable final String nextSource,
+            final List<String> characters) {
+        this(draft, precedingPairs, nextSource, characters, List.of());
+    }
 
     /** One decided segment shown as context. */
     public record Pair(String source, String target) {
@@ -38,6 +49,7 @@ public record BatchContext(
         precedingPairs = List.copyOf(Objects.requireNonNull(precedingPairs, "precedingPairs"));
         nextSource = PromptHygiene.cleanText(nextSource);
         characters = PromptHygiene.clean(Objects.requireNonNull(characters, "characters"));
+        keyTerms = PromptHygiene.clean(Objects.requireNonNull(keyTerms, "keyTerms"));
     }
 
     /** A context with nothing beyond the items. */

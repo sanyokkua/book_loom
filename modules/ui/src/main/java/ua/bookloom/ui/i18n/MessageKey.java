@@ -759,6 +759,58 @@ public enum MessageKey {
     NAMES_STYLE_REMOVE("namesStyle.remove"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_REMOVE}. */
     NAMES_STYLE_REMOVE_TIP("namesStyle.remove.tip"),
+    /** Heading of the recurring-terms card. */
+    RECURRING_TITLE("namesStyle.recurring.title"),
+    /** Line under the heading that says what the card is for. */
+    RECURRING_NOTE("namesStyle.recurring.note"),
+    /** Button that runs the deterministic scan for recurring terms. */
+    RECURRING_FIND("namesStyle.recurring.find"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_FIND}. */
+    RECURRING_FIND_TIP("namesStyle.recurring.find.tip"),
+    /** Button that asks the model for a rendering of each term that has none. */
+    RECURRING_SUGGEST("namesStyle.recurring.suggest"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_SUGGEST}. */
+    RECURRING_SUGGEST_TIP("namesStyle.recurring.suggest.tip"),
+    /** Placeholder of the field where a word or title is typed. */
+    RECURRING_ADD_PROMPT("namesStyle.recurring.add.prompt"),
+    /** Hover explanation of the field whose placeholder is {@link #RECURRING_ADD_PROMPT}. */
+    RECURRING_ADD_PROMPT_TIP("namesStyle.recurring.add.prompt.tip"),
+    /** Button that adds the typed word or title to the list. */
+    RECURRING_ADD("namesStyle.recurring.add"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_ADD}. */
+    RECURRING_ADD_TIP("namesStyle.recurring.add.tip"),
+    /** Header of the source-term column. */
+    RECURRING_COLUMN_TERM("namesStyle.recurring.column.term"),
+    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_TERM}. */
+    RECURRING_COLUMN_TERM_TIP("namesStyle.recurring.column.term.tip"),
+    /** Header of the rendering column. */
+    RECURRING_COLUMN_RENDERING("namesStyle.recurring.column.rendering"),
+    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_RENDERING}. */
+    RECURRING_COLUMN_RENDERING_TIP("namesStyle.recurring.column.rendering.tip"),
+    /** Header of the column that lists the renderings the drafts used. */
+    RECURRING_COLUMN_SEEN("namesStyle.recurring.column.seen"),
+    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_SEEN}. */
+    RECURRING_COLUMN_SEEN_TIP("namesStyle.recurring.column.seen.tip"),
+    /** Header of the column that holds a recurring term's actions. */
+    RECURRING_COLUMN_ACTIONS("namesStyle.recurring.column.actions"),
+    /** Hover explanation of the column labelled by {@link #RECURRING_COLUMN_ACTIONS}. */
+    RECURRING_COLUMN_ACTIONS_TIP("namesStyle.recurring.column.actions.tip"),
+    /** Shown in the used column of a term no draft has used yet. */
+    RECURRING_SEEN_NONE("namesStyle.recurring.seen.none"),
+    /** Row button that moves a term to the glossary. */
+    RECURRING_PROMOTE("namesStyle.recurring.promote"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_PROMOTE}. */
+    RECURRING_PROMOTE_TIP("namesStyle.recurring.promote.tip"),
+    /** Accessible name of a recurring term's remove action. */
+    RECURRING_REMOVE("namesStyle.recurring.remove"),
+    /** Hover explanation of the control named by {@link #RECURRING_REMOVE}. */
+    RECURRING_REMOVE_TIP("namesStyle.recurring.remove.tip"),
+    /** Why the suggestion of renderings did not start. */
+    RECURRING_NO_MODEL("namesStyle.recurring.noModel"),
+    /** Result of the suggestion of renderings; argument 0 is how many terms now have a rendering, as an Integer. */
+    RECURRING_SUGGESTED("namesStyle.recurring.suggested"),
+    /** Refusal of a term the glossary or the list already holds; argument 0 is the typed term. */
+    RECURRING_DUPLICATE("namesStyle.recurring.duplicate"),
     /** Refusal of a lock on a term that has no target. */
     NAMES_STYLE_LOCK_NEEDS_TARGET("namesStyle.lockNeedsTarget"),
     /** Refusal of a duplicate term; argument 0 is the typed term. */

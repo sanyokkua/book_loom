@@ -27,6 +27,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedGlossaryService;
+import ua.bookloom.ui.ScriptedLexiconService;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -57,7 +58,14 @@ class NamesStyleModelActionsTest extends FxTestBase {
 
     private NamesStyleViewModel viewModel(final ExecutorService executor) {
         final NamesStyleViewModel vm = onFx(() -> new NamesStyleViewModel(
-                glossary, ScriptedChatModelFactory.ok(), settings, executor, messages, activities, () -> "new"));
+                glossary,
+                new ScriptedLexiconService(),
+                ScriptedChatModelFactory.ok(),
+                settings,
+                executor,
+                messages,
+                activities,
+                () -> "new"));
         interact(() -> vm.notice().addListener((observed, was, now) -> {
             if (now != null) {
                 lines.add(now.text());

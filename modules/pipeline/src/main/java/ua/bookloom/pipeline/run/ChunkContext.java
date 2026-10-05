@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.run;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -11,7 +12,9 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.chunk.Chunk;
@@ -20,6 +23,8 @@ import ua.bookloom.pipeline.context.ContextInputs;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
 import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.lexicon.Lexicon;
+import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpan;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
@@ -42,24 +47,28 @@ final class ChunkContext {
     private final List<GlossaryEntry> glossary;
     private final Map<String, ProtectedMask> masks;
     private final GateFunction gate;
+    private final Lexicon lexicon;
 
     private ChunkContext(
             final Chunk chunk,
             final RunSettings settings,
             final List<GlossaryEntry> glossary,
             final Map<String, ProtectedMask> masks,
-            final GateFunction gate) {
+            final GateFunction gate,
+            final Lexicon lexicon) {
         this.chunk = chunk;
         this.settings = settings;
         this.glossary = List.copyOf(glossary);
         this.masks = Map.copyOf(masks);
         this.gate = gate;
+        this.lexicon = lexicon;
     }
 
     /**
      * Reads the glossary for one chunk and hides each of its segments' protected spans.
      *
      * @param glossary the non-null glossary store
+     * @param lexicon the non-null lexicon store, read live because a batch of this chunk may add to it
      * @param settings the non-null run settings, whose languages and foreign-passage policy decide what is hidden
      * @param chunk the non-null chunk about to be drafted
      * @param documentGate the non-null gate that checks the document's own markup once the spans are back
@@ -67,6 +76,7 @@ final class ChunkContext {
      */
     static Result<ChunkContext> read(
             final GlossaryRepository glossary,
+            final LexiconRepository lexicon,
             final RunSettings settings,
             final Chunk chunk,
             final GateFunction documentGate) {
@@ -76,7 +86,7 @@ final class ChunkContext {
             chunk.segments().forEach(segment -> masks.put(segment.id(), maskOf(segment, settings, entries)));
             final GateFunction gate = TypographyGate.around(
                     ProtectedSpans.gate(masks, documentGate), settings.frame().targetLanguage());
-            return new ChunkContext(chunk, settings, entries, masks, gate);
+            return new ChunkContext(chunk, settings, entries, masks, gate, new Lexicon(lexicon));
         });
     }
 
@@ -121,11 +131,50 @@ final class ChunkContext {
         return terms;
     }
 
-    /** The unlocked glossary renderings of the chunk's terms as {@code source → target} lines, for the reviewer. */
+    /**
+     * The unlocked glossary renderings of the chunk's terms and the lexicon's established renderings of the recurring
+     * terms the glossary does not hold, as {@code source → target} lines, for the reviewer.
+     */
     List<String> termPairs() {
-        return occurringIn(chunk.segments(), glossary).stream()
+        final List<String> pairs = new ArrayList<>(occurringIn(chunk.segments(), glossary).stream()
                 .filter(entry -> entry.target() != null && !entry.target().isBlank() && !entry.locked())
                 .map(entry -> entry.term() + " → " + entry.target())
+                .toList());
+        final List<String> texts = textsOf(chunk.segments());
+        lexicon.entries(settings.projectId()).stream()
+                .filter(entry -> !heldByGlossary(entry))
+                .filter(entry -> texts.stream().anyMatch(text -> TermMatch.occursIn(entry.term(), text)))
+                .forEach(entry ->
+                        entry.established().ifPresent(rendering -> pairs.add(entry.term() + " → " + rendering)));
+        log.debug("Reviewer term pairs for a chunk pairs={}", pairs.size());
+        return pairs;
+    }
+
+    /**
+     * The recurring key terms the given segments name and the glossary does not decide: the closed list a batch asks
+     * the model to report renderings for.
+     */
+    List<String> keyTermsIn(final List<Segment> segments) {
+        final List<LexiconEntry> open = lexicon.entries(settings.projectId()).stream()
+                .filter(entry -> !heldByGlossary(entry))
+                .toList();
+        return Lexicon.termsIn(open, textsOf(segments));
+    }
+
+    /** The run's lexicon, to which a verified pair is recorded. */
+    Lexicon lexicon() {
+        return lexicon;
+    }
+
+    private boolean heldByGlossary(final LexiconEntry entry) {
+        final String key = LexiconEntry.keyOf(entry.term());
+        return glossary.stream()
+                .anyMatch(held -> LexiconEntry.keyOf(held.term()).equals(key));
+    }
+
+    private static List<String> textsOf(final List<Segment> segments) {
+        return segments.stream()
+                .map(segment -> Tokens.replace(segment.masked(), " "))
                 .toList();
     }
 
@@ -150,7 +199,8 @@ final class ChunkContext {
                 settings.dial().precedingTargets(),
                 glossary,
                 earlierMaskedTargets,
-                ChunkBudget.dynamicAllowance(settings.frame(), settings.window()));
+                ChunkBudget.dynamicAllowance(settings.frame(), settings.window()),
+                lexicon.entries(settings.projectId()));
         return ContextPackageAssembler.assemble(chunk, segment, mask(segment), memory, inputs);
     }
 

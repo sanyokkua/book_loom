@@ -10,14 +10,20 @@ public enum ContextSection {
     /** Glossary and locked-name lines — a wrong rendering is the most visible error, so these are cut last. */
     GLOSSARY(1, Relevance.TERM_PRESENT),
 
+    /**
+     * The established renderings of recurring terms the chunk names — a soft "keep consistent" hint, so it has a share
+     * of its own and never takes the glossary's room.
+     */
+    LEXICON(2, Relevance.TERM_PRESENT),
+
     /** Earlier translation-memory decisions the segment should stay consistent with. */
-    MEMORY(2, Relevance.WHEN_EXISTS),
+    MEMORY(3, Relevance.WHEN_EXISTS),
 
     /** The unit's last few translated segments, newest kept first. */
-    PRECEDING(3, Relevance.SAME_UNIT),
+    PRECEDING(4, Relevance.SAME_UNIT),
 
     /** The rolling "book so far" summary — useful, but the cheapest thing to lose. */
-    SUMMARY(4, Relevance.WHEN_EXISTS);
+    SUMMARY(5, Relevance.WHEN_EXISTS);
 
     /** The rule that decides whether a section has anything to show for this chunk. */
     public enum Relevance {

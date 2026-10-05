@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,8 +24,13 @@ import ua.bookloom.pipeline.prompt.JsonReplies;
 @RequiredArgsConstructor
 final class BatchEntries {
 
-    /** One entry of a reply. */
-    record Entry(String id, String text) {}
+    /** One entry of a reply, with the term renderings the model reported for it, if any. */
+    record Entry(String id, String text, Map<String, String> terms) {
+
+        Entry(final String id, final String text) {
+            this(id, text, Map.of());
+        }
+    }
 
     private static final Pattern JSON_ENTRY = Pattern.compile(
             "\\{\\s*\"id\"\\s*:\\s*(\"?)([^\",}\\s]+)\\1\\s*,\\s*\"target\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*[,}]");
@@ -75,7 +82,27 @@ final class BatchEntries {
         final JsonNode id = node.path("id");
         final JsonNode target = node.path("target");
         if ((id.isTextual() || id.isNumber()) && target.isTextual()) {
-            entries.add(new Entry(id.asText().strip(), target.textValue().strip()));
+            entries.add(new Entry(id.asText().strip(), target.textValue().strip(), termsOf(node.path("terms"))));
+        }
+    }
+
+    /**
+     * The renderings a model reported, from the object it was asked for ({@code {"master":"господар"}}) or the list of
+     * pairs a small model sometimes writes instead; anything else is read as none.
+     */
+    private static Map<String, String> termsOf(final JsonNode node) {
+        final Map<String, String> terms = new LinkedHashMap<>();
+        if (node.isObject()) {
+            node.properties().forEach(field -> put(terms, field.getKey(), field.getValue()));
+        } else if (node.isArray()) {
+            node.forEach(pair -> put(terms, pair.path("source").asText(""), pair.path("target")));
+        }
+        return terms;
+    }
+
+    private static void put(final Map<String, String> terms, final String term, final JsonNode rendering) {
+        if (!term.isBlank() && rendering.isTextual() && !rendering.textValue().isBlank()) {
+            terms.putIfAbsent(term.strip(), rendering.textValue().strip());
         }
     }
 

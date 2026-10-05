@@ -1,5 +1,5 @@
 /**
- * Storage ports for a project's persisted state — the project itself, its segments, glossary, translation memory,
+ * Storage ports for a project's persisted state — the project itself, its segments, glossary, recurring-term lexicon, translation memory,
  * rolling summary, deferrals, run history and the checkpoint that commits a chunk's decided segments together
  * (ADR-0034).
  *

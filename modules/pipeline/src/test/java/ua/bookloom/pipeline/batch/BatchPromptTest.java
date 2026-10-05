@@ -60,6 +60,34 @@ class BatchPromptTest {
     }
 
     @Test
+    void messagesFor_lexiconAndKeyTerms_carryTheRenderingsAndTheClosedList() {
+        final BatchContext context = new BatchContext(
+                new DraftContext(List.of(), null, List.of(), List.of(), List.of(), List.of("master → господар")),
+                List.of(),
+                null,
+                List.of(),
+                List.of("master", "imp"));
+
+        final String user =
+                builder("en", "uk").messagesFor(context, ITEMS).get(1).content();
+
+        assertThat(user)
+                .contains("[Established renderings of recurring terms", "master → господар")
+                .contains("[Key terms", "master, imp")
+                .doesNotContain("{{", "}}");
+    }
+
+    @Test
+    void messagesFor_noLexiconAndNoKeyTerms_leavesBothBlocksOut() {
+        final String user = builder("en", "uk")
+                .messagesFor(BatchContext.empty(), ITEMS)
+                .get(1)
+                .content();
+
+        assertThat(user).doesNotContain("[Established renderings", "[Key terms");
+    }
+
+    @Test
     void messagesFor_emptyContext_leavesEveryOptionalBlockOut() {
         final String user = builder("en", "uk")
                 .messagesFor(BatchContext.empty(), List.of(new BatchItem("1", "1881")))

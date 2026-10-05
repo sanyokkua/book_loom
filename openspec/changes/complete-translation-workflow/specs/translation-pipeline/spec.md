@@ -1175,10 +1175,13 @@ instead of a prompt it silently truncates.
 The system SHALL draft the segments of a chunk that need a model call in batches: when a chunk reaches a segment that
 needs a call and no batch has dealt with it, that segment and the next ones that need a call, up to the batch size and
 within the chunk's source-token budget (never a fixed segment count), SHALL go in one call whose reply is the JSON
-object `{"items":[{"id","target"}]}` — ids `1…n` within the batch, answered by the flat batch schema. The prompt SHALL
+object `{"items":[{"id","target","terms"?}]}` — ids `1…n` within the batch, answered by the flat batch schema, whose optional
+`terms` object holds the renderings of the lexicon's key terms the item used ("Record the renderings a draft used and keep
+them consistent", glossary). The prompt SHALL
 carry the items, the summary, glossary, memory and suggestions of every item once, the last two or three decided
 source and target pairs of the chapter, the source of the segment after the batch, the characters of the glossary the
-batch names with their genders, and, for each locked name, a line prefixed with its item's id (`3: ⟦g0⟧ → name`). A
+batch names with their genders, the established renderings of the recurring terms the items name and the closed list of
+key terms to report, and, for each locked name, a line prefixed with its item's id (`3: ⟦g0⟧ → name`). A
 segment kept as it is, an auxiliary text, a translation-memory reuse and a segment larger than the chunk budget SHALL
 never join a batch, and Manual review, whose chunks hold one segment, SHALL draft every segment alone.
 
@@ -1227,6 +1230,12 @@ loses one of them only that one is asked again.
 
 - **WHEN** the run pauses after the first decided segment of a batch of four and is resumed
 - **THEN** no further model call is made for the other three, which are decided from the batch
+
+#### Scenario: Reported terms are verified before they count
+
+- **WHEN** an accepted batch item reports `master → господар` and its target holds `господар`
+- **THEN** the lexicon counts the pair; a reported rendering the target does not hold counts nothing and the item is still
+  accepted
 
 #### Scenario: The size adapts
 

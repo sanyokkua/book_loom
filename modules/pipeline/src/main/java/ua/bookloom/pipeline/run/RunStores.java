@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.run;
 import java.util.Objects;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -21,6 +22,7 @@ import ua.bookloom.pipeline.project.OpenProjects;
  * @param glossary the project's glossary, which preparation scans into when it is empty and each chunk reads
  * @param tm the translation memory each segment is looked up in before it is drafted; the checkpoint writes it
  * @param summaries the rolling summary's versions, whose latest every draft is shown
+ * @param lexicon the project's recurring-term lexicon, which drafts read and batch replies add verified renderings to
  */
 public record RunStores(
         ProjectRepository projects,
@@ -30,7 +32,8 @@ public record RunStores(
         RunRepository runs,
         GlossaryRepository glossary,
         TmRepository tm,
-        SummaryRepository summaries) {
+        SummaryRepository summaries,
+        LexiconRepository lexicon) {
 
     /** Rejects a missing store. */
     public RunStores {
@@ -42,5 +45,6 @@ public record RunStores(
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(tm, "tm");
         Objects.requireNonNull(summaries, "summaries");
+        Objects.requireNonNull(lexicon, "lexicon");
     }
 }

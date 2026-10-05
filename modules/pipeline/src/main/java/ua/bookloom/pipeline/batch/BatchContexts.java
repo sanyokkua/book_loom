@@ -47,6 +47,7 @@ public final class BatchContexts {
         final List<String> glossary = new ArrayList<>();
         final List<String> memory = new ArrayList<>();
         final List<String> suggested = new ArrayList<>();
+        final List<String> lexicon = new ArrayList<>();
         String summary = null;
         for (int i = 0; i < perItem.size(); i++) {
             final DraftContext context = perItem.get(i);
@@ -56,10 +57,12 @@ public final class BatchContexts {
             }
             memory.addAll(context.memoryLines());
             suggested.addAll(context.suggestedLines());
+            lexicon.addAll(context.lexiconLines());
         }
         logJoined(itemIds.size(), glossary, memory, suggested, precedingPairs, nextSource);
+        log.debug("Joined lexicon lines={}", lexicon.size());
         return new BatchContext(
-                new DraftContext(List.of(), summary, glossary, memory, suggested),
+                new DraftContext(List.of(), summary, glossary, memory, suggested, lexicon),
                 precedingPairs,
                 nextSource,
                 characters);

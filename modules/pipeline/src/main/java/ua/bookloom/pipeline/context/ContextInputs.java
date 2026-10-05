@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
@@ -17,6 +18,8 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
  *     drafted and waiting in the same chunk; empty at a unit's start
  * @param dynamicTokens the tokens the dynamic context may take, from {@link ContextBudget#dynamicAllowance}; the
  *     lowest-priority sections are cut to fit it
+ * @param lexicon the project's recurring-term entries as they stand; only the established renderings of terms the
+ *     chunk names are shown, and never one the glossary already holds
  */
 public record ContextInputs(
         StyleSheet styleSheet,
@@ -24,7 +27,19 @@ public record ContextInputs(
         int precedingCount,
         List<GlossaryEntry> glossary,
         List<String> earlierMaskedTargets,
-        int dynamicTokens) {
+        int dynamicTokens,
+        List<LexiconEntry> lexicon) {
+
+    /** A set of inputs with a window to respect and no lexicon. */
+    public ContextInputs(
+            final StyleSheet styleSheet,
+            @Nullable final String summary,
+            final int precedingCount,
+            final List<GlossaryEntry> glossary,
+            final List<String> earlierMaskedTargets,
+            final int dynamicTokens) {
+        this(styleSheet, summary, precedingCount, glossary, earlierMaskedTargets, dynamicTokens, List.of());
+    }
 
     /** A set of inputs with no limit on the dynamic context, as a caller with no window to respect has. */
     public ContextInputs(
@@ -47,5 +62,6 @@ public record ContextInputs(
         }
         glossary = List.copyOf(Objects.requireNonNull(glossary, "glossary"));
         earlierMaskedTargets = List.copyOf(Objects.requireNonNull(earlierMaskedTargets, "earlierMaskedTargets"));
+        lexicon = List.copyOf(Objects.requireNonNull(lexicon, "lexicon"));
     }
 }

@@ -98,6 +98,8 @@ public final class BatchPromptBuilder {
         values.put("lockedNames", lines(draft.glossaryLines(), true));
         values.put("suggestedTerms", String.join("\n", draft.suggestedLines()));
         values.put("memoryHint", String.join("\n", draft.memoryLines()));
+        values.put("lexiconTerms", String.join("\n", draft.lexiconLines()));
+        values.put("keyTerms", String.join(", ", context.keyTerms()));
         values.put("characters", String.join("\n", context.characters()));
         values.put("precedingPairs", pairs(context.precedingPairs()));
         values.put("nextSource", context.nextSource() == null ? "" : context.nextSource());

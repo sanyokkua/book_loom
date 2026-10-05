@@ -27,8 +27,10 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -55,21 +57,25 @@ final class GlossaryModelRuns {
     /**
      * Where the actions read and show what they do.
      *
-     * @param glossary the port the actions call
+     * @param glossary the port the scan and review call
+     * @param lexicon the port the suggestion of recurring-term renderings calls
      * @param models where the chosen model is built
      * @param settings where the chosen provider and model are read
      * @param messages the catalogue the lines are worded from
      * @param rows the screen's rows
+     * @param lexiconRows the recurring-terms card's rows
      * @param notice the line the screen reports in place
      * @param project the project the screen shows now
      * @param activities the model work under way, which a scan or review must not overlap
      */
     record Screen(
             GlossaryService glossary,
+            LexiconService lexicon,
             ChatModelFactory models,
             SettingsViewModel settings,
             Messages messages,
             ObservableList<GlossaryEntry> rows,
+            ObservableList<LexiconEntry> lexiconRows,
             ObjectProperty<@Nullable GlossaryNotice> notice,
             Supplier<String> project,
             ActivityTracker activities) {}
@@ -134,6 +140,15 @@ final class GlossaryModelRuns {
                 this::reviewed);
     }
 
+    void suggestRenderings() {
+        final String project = screen.project().get();
+        start(
+                ActivityKind.GLOSSARY_REVIEW,
+                MessageKey.RECURRING_NO_MODEL,
+                (model, progress) -> screen.lexicon().suggest(project, model, progress),
+                this::renderingsSuggested);
+    }
+
     /** Stops the action under way, if any; the glossary keeps what it had. */
     void stop() {
         final Future<?> current = running;
@@ -168,6 +183,14 @@ final class GlossaryModelRuns {
                 GlossaryNotice.Level.INFO,
                 screen.messages()
                         .get(MessageKey.NAMES_STYLE_REVIEWED, report.removed(), report.updated(), report.suggested()));
+    }
+
+    private void renderingsSuggested(final List<LexiconEntry> all) {
+        final int rendered = (int)
+                all.stream().filter(entry -> entry.established().isPresent()).count();
+        log.info("model suggested renderings: {} of {} recurring terms have one", rendered, all.size());
+        screen.lexiconRows().setAll(all);
+        line(GlossaryNotice.Level.INFO, screen.messages().get(MessageKey.RECURRING_SUGGESTED, rendered));
     }
 
     private <T> void start(

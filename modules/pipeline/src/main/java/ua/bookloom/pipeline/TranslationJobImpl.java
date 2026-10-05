@@ -36,6 +36,7 @@ import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.memory.RollingSummaryKeeper;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -260,7 +261,11 @@ final class TranslationJobImpl implements TranslationJob {
         log.debug("Translation job stage change stage={} project={}", JobStage.PREP, request.projectId());
         emit(new StageStarted(JobStage.PREP, work.preparationProgress()));
         final Result<PrepStage.Prepared> prepared = PrepStage.prepare(
-                stores.glossary(), request.projectId(), run.project().brief(), run.document());
+                stores.glossary(),
+                stores.lexicon(),
+                request.projectId(),
+                run.project().brief(),
+                run.document());
         if (prepared.isErr()) {
             return finish(JobState.FAILED, run, errorOf(prepared));
         }
@@ -269,6 +274,7 @@ final class TranslationJobImpl implements TranslationJob {
             emit(MemoryEvents.namesAdded(proposed));
         }
         final RunEnd end = stages(run, dataOf(prepared).styleSheet()).run(work);
+        new Lexicon(stores.lexicon()).logConsistency(request.projectId());
         return finish(end.state(), run, end.error());
     }
 

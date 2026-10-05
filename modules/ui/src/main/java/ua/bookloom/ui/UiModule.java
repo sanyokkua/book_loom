@@ -9,6 +9,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
+import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -59,7 +60,7 @@ import ua.bookloom.ui.theme.PlatformColorSchemeProvider;
  * The singletons are bound explicitly rather than left to JIT so the composition root's graph lists everything the
  * window depends on. The {@link DiagnosticLog} value, the {@link BuildVersion} value, the {@link BackgroundExecutor} pool, the ports ({@link
  * ProviderConfigs}, {@link ProviderVerifier}, {@link ModelCatalog}, {@link ChatModelFactory},
- * {@link TranslationEngine}, {@link ProjectService}, {@link GlossaryService}, {@link ReviewDesk} and
+ * {@link TranslationEngine}, {@link ProjectService}, {@link GlossaryService}, {@link LexiconService}, {@link ReviewDesk} and
  * {@link ExportService}) and the {@link ReviewMode} are deliberately absent: the composition root owns the value, the
  * pool and the mode, and {@code :document}, {@code :llm} and {@code :pipeline} implement the ports. This module
  * requires all of them, so a root that forgets one fails at injector-build time rather than when About is first
@@ -131,6 +132,7 @@ public final class UiModule extends AbstractModule {
         requireBinding(TranslationEngine.class);
         requireBinding(ProjectService.class);
         requireBinding(GlossaryService.class);
+        requireBinding(LexiconService.class);
         requireBinding(ReviewDesk.class);
         requireBinding(ExportService.class);
         requireBinding(ReviewMode.class);

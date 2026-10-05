@@ -27,10 +27,13 @@ import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
+import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.pipeline.RenderingConsistency;
 import ua.bookloom.util.paths.DestinationPath;
 
 /**
@@ -66,6 +69,7 @@ public final class TranslateCommand {
     private final ShutdownCancellation shutdown;
     private final Clock clock;
     private final ModelCapabilities capabilities;
+    private final LexiconService lexicon;
 
     /** Runs one parsed command and reports only its user-facing result to the supplied stream. */
     public int run(List<String> args, PrintStream out) {
@@ -180,6 +184,7 @@ public final class TranslateCommand {
         shutdown.hold(job::cancel);
         final Result<JobReport> result = timed(report, "translate", job::run);
         report.run(result, watch);
+        report.lexicon(RenderingConsistency.of(lexiconOf(target.projectId())));
         if (result.isErr()) {
             return printError(errorOf(result), out);
         }
@@ -195,6 +200,11 @@ public final class TranslateCommand {
             return printError(endingError(run, watch), out);
         }
         return exportAndReport(run, completed, target, report, out, watch);
+    }
+
+    private List<LexiconEntry> lexiconOf(String projectId) {
+        final List<LexiconEntry> held = lexicon.entries(projectId).data();
+        return held == null ? List.of() : held;
     }
 
     private int exportAndReport(

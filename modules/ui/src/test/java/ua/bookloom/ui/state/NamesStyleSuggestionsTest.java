@@ -25,6 +25,7 @@ import ua.bookloom.api.project.TermType;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ScriptedChatModelFactory;
 import ua.bookloom.ui.ScriptedGlossaryService;
+import ua.bookloom.ui.ScriptedLexiconService;
 import ua.bookloom.ui.UiTestInjector;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -58,6 +59,7 @@ class NamesStyleSuggestionsTest extends FxTestBase {
         settings = injector.getInstance(SettingsViewModel.class);
         vm = onFx(() -> new NamesStyleViewModel(
                 glossary,
+                new ScriptedLexiconService(),
                 ScriptedChatModelFactory.ok(),
                 settings,
                 new DirectExecutor(),

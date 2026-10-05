@@ -17,6 +17,7 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -196,7 +197,8 @@ final class SoakRun {
                 injector.getInstance(RunRepository.class),
                 injector.getInstance(GlossaryRepository.class),
                 injector.getInstance(TmRepository.class),
-                injector.getInstance(SummaryRepository.class));
+                injector.getInstance(SummaryRepository.class),
+                injector.getInstance(LexiconRepository.class));
     }
 
     private ExportReport export(final String projectId, final Path destination) {

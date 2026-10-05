@@ -603,6 +603,115 @@ not make `відчинив` or `відчинила` agree with it.
 - **WHEN** the glossary is empty
 - **THEN** the prompt carries no glossary terms
 
+### Requirement: Keep a lexicon of recurring terms and show it on Names & style
+
+The application SHALL keep, for each project, a lexicon of recurring common terms and titles (`master`, `imp`, `Mr`) that a
+model would otherwise render differently from one page to the next. A deterministic scan SHALL propose them without a
+model: a title of the source language's bundled list (English first) that the book's running text uses at least three
+times, and a word the book writes both with a capital away from a sentence start and in lower case (so it is neither a
+name nor a function word) at least five times, at most thirty, never a term the glossary or the lexicon already holds. The
+scan SHALL run when a run is prepared and the lexicon is empty, and when the person asks on Names & style ("Find recurring
+terms"); a word that is only ever lower case, such as `pentacle`, is added by hand. Names & style SHALL show the lexicon
+in a "Recurring terms" card under the glossary: each term, the rendering later requests are asked to keep (the person's if
+typed, else the most used verified rendering, else the model's suggestion), the verified renderings with their counts, and
+the actions to edit the rendering (Enter or leaving the field stores it; clearing it returns to the most used), to
+suggest renderings with the model (the glossary's suggestion call over terms of type term, one model action at a time
+with the name scan and review, needing a chosen model), to add a term by hand (refused with a message when the glossary or
+the list already holds it), to remove a term, and to promote a term to the glossary, which stores it there as an unlocked
+entry of type term with its established rendering as the target and removes it from the lexicon.
+
+The lexicon SHALL live in memory behind a storage port, like the other project data, and SHALL NOT survive closing the
+application. A term the glossary holds SHALL NOT be asked about or shown from the lexicon: the glossary is the person's
+word.
+
+**Source:** `tasks.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: a book that
+calls a master "господар" in chapter one and "учитель" in chapter nine reads as two characters; the app finds the words a
+book keeps repeating, learns from the drafts which rendering the book is using, and keeps every later request to it,
+while leaving the person free to choose, or to make an entry a hard glossary rule.
+
+#### Scenario: The scan proposes a title and a dual-use word
+
+- **WHEN** a book's running text holds `Mr.` four times, and `Imp` capitalised mid-sentence three times and `imp` in lower
+  case three times
+- **THEN** the scan proposes `mr` and `imp` and nothing for a name written only with a capital or a word written only in
+  lower case
+
+#### Scenario: A held term is not proposed
+
+- **WHEN** the glossary holds `Imp` and the lexicon holds `MR`
+- **THEN** the scan proposes neither
+
+#### Scenario: Editing a rendering
+
+- **WHEN** the person types `пан` in the rendering field of `master` and presses Enter
+- **THEN** the lexicon stores `пан` as the person's rendering of `master`, every later request is asked to keep it, and
+  clearing the field returns to the most used verified rendering
+
+#### Scenario: Promoting a term
+
+- **WHEN** the person presses "To glossary" on `master`, whose established rendering is `господар`
+- **THEN** the glossary holds `master` → `господар` (term, unlocked, the person's target) and the Recurring terms card no
+  longer lists `master`
+
+#### Scenario: A duplicate term is refused
+
+- **WHEN** the person types `IMP` in the add field while `imp` is listed
+- **THEN** the line above the glossary says `IMP is already in the glossary or the list` and no term is added
+
+### Requirement: Record the renderings a draft used and keep them consistent
+
+WHEN a batch is drafted, the application SHALL give the model the closed list of the lexicon's key terms the batch's items
+name, and the model SHALL answer, for each item that holds one, the rendering it used in the entry's optional `terms`
+object (`{"master":"господар"}`; a list of `{"source","target"}` pairs is read the same way). The application SHALL verify
+each pair against the item before it counts: the term is on the list, it occurs in the item's source as a whole word (an
+English plural or possessive tolerated), and every significant word of the rendering has its stem in the target — an
+inflected rendering passes, a multi-word rendering needs every word, a rendering the target does not hold is dropped.
+Only verified pairs of an item adopted from the batch SHALL be counted, per project, as source → rendering.
+
+The application SHALL show every later draft and retry the established rendering of each lexicon term the chunk names, as
+`term → rendering` lines under `[Established renderings of recurring terms — keep consistent]` with its own share of the
+dynamic context — a fifth of what the glossary leaves, after the glossary and before the translation memory, the
+preceding text and the summary — and SHALL record the lines in the draft's context snapshot so a retry shows the same.
+Which rendering is established SHALL follow one conflict policy: the person's rendering wins; else the most used verified
+rendering, the one first seen when two are used equally often; else the model's suggestion; else none. The reviewer SHALL be
+given the established renderings of the terms in the chunk with the glossary's, so one thing named two ways is a
+terminology finding. The run SHALL log, once at its end, `lexiconTerms`, `used`, `distinctRenderingsPerTerm` and
+`conflicted`, and the command's JSON report SHALL carry them in a `lexicon` object.
+
+**Source:** `tasks.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: the model
+reports what it used, the app checks the claim against the text so a model cannot teach the book a word it did not write,
+and the majority wins the conflict so one early slip does not outvote a book's habit; the metric `distinctRenderingsPerTerm`
+reads 1.0 when every recurring term was written one way.
+
+#### Scenario: An inflected rendering is accepted
+
+- **WHEN** the model reports `master → господар` for an item whose source holds `master` and whose target holds `господаря`
+- **THEN** the pair is verified and `господар` is counted once for `master`
+
+#### Scenario: A hallucinated pair is dropped
+
+- **WHEN** the model reports `master → учитель` and the target holds no word with that stem, or reports a term the item's
+  source lacks, or a term off the list
+- **THEN** nothing is counted for it
+
+#### Scenario: Conflict policy
+
+- **WHEN** `господар` was used twice and `учитель` once
+- **THEN** `господар` is established; with the person's rendering `пан` it is `пан`; with one use each it is the one seen
+  first; with none used and a suggestion `пан` it is `пан`
+
+#### Scenario: The second batch keeps the first one's rendering
+
+- **WHEN** the first batch of a book renders `master` as `господар`, and a model that would otherwise write `учитель` in the
+  next call is shown the established block
+- **THEN** the second call's prompt lists `master → господар`, the book's `distinctRenderingsPerTerm` is `1.0` and the
+  draft's snapshot records `master → господар`
+
+#### Scenario: The glossary wins
+
+- **WHEN** the glossary holds `Master` and the lexicon holds `master`
+- **THEN** the prompt lists the glossary entry and no recurring-term line for `master`, and the batch does not ask about it
+
 ### Requirement: Apply glossary edits made during a pause from the next chunk
 
 WHEN the person edits the glossary while a run is paused, the application SHALL apply the edit from the first chunk that

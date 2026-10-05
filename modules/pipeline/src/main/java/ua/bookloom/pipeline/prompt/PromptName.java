@@ -33,6 +33,7 @@ public enum PromptName {
                             "lockedNames",
                             "suggestedTerms",
                             "memoryHint",
+                            "lexiconTerms",
                             "precedingTargets",
                             "extraInstruction"))),
 
@@ -269,6 +270,8 @@ public enum PromptName {
                         "lockedNames",
                         "suggestedTerms",
                         "memoryHint",
+                        "lexiconTerms",
+                        "keyTerms",
                         "characters",
                         "precedingPairs",
                         "nextSource",

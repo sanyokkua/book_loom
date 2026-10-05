@@ -19,10 +19,21 @@ Use each rendering unless it is clearly wrong; inflect it as the sentence needs.
 {{suggestedTerms}}
 {{/suggestedTerms}}
 
+{{#lexiconTerms}}
+[Established renderings of recurring terms — keep consistent]
+Write each term as shown, inflected as the sentence needs, unless the glossary says otherwise.
+{{lexiconTerms}}
+{{/lexiconTerms}}
+
 {{#memoryHint}}
 [Earlier decisions — keep consistent]
 {{memoryHint}}
 {{/memoryHint}}
+
+{{#keyTerms}}
+[Key terms — a closed list. For each item that contains one of these words, add "terms":{"<key term>":"<your rendering, base form>"} to that item's entry; omit "terms" for an item with none of them]
+{{keyTerms}}
+{{/keyTerms}}
 
 {{#characters}}
 [Characters in these items — context only; keep their gender and agreement]

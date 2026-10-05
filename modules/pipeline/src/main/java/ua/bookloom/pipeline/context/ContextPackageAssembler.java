@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.ContextSnapshot;
+import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.api.project.SnapshotTmHit.TmHitKind;
@@ -51,24 +52,33 @@ public final class ContextPackageAssembler {
         Objects.requireNonNull(inputs, "inputs");
         final DynamicFit fit = DynamicFit.of(
                 InjectedTerms.select(chunk, mask, inputs.glossary()),
+                InjectedLexicon.select(chunk, inputs.lexicon(), inputs.glossary()),
                 memoryHits(memory),
                 precedingTexts(inputs),
                 inputs.summary(),
                 inputs.dynamicTokens());
+        final ContextPackage assembled = packageOf(fit, inputs.styleSheet().text());
+        logAssembly(
+                segment, assembled.snapshot(), memoryLines(assembled.snapshot().tmHits()), assembled.draftContext());
+        return assembled;
+    }
+
+    private static ContextPackage packageOf(final DynamicFit fit, final String styleSheet) {
         final List<InjectedTerm> terms = fit.terms();
-        final List<SnapshotTmHit> hits = fit.hits();
-        final List<SnapshotTerm> snapshotTerms =
-                terms.stream().map(InjectedTerm::term).toList();
-        final List<String> memoryLines = memoryLines(hits);
-        final DraftContext context =
-                new DraftContext(fit.preceding(), fit.summary(), lines(terms, false), memoryLines, lines(terms, true));
+        final DraftContext context = new DraftContext(
+                fit.preceding(),
+                fit.summary(),
+                lines(terms, false),
+                memoryLines(fit.hits()),
+                lines(terms, true),
+                lexiconLines(fit.lexicon()));
         final ContextSnapshot snapshot = new ContextSnapshot(
                 fit.preceding(),
-                snapshotTerms,
-                hits,
+                terms.stream().map(InjectedTerm::term).toList(),
+                fit.hits(),
                 fit.summary(),
-                inputs.styleSheet().text());
-        logAssembly(segment, snapshot, memoryLines, context);
+                styleSheet,
+                fit.lexicon());
         return new ContextPackage(context, snapshot);
     }
 
@@ -93,11 +103,13 @@ public final class ContextPackageAssembler {
                 snapshot.summary(),
                 glossaryLines,
                 memoryLines(snapshot.tmHits()),
-                lines(terms, true));
+                lines(terms, true),
+                lexiconLines(snapshot.lexicon()));
         log.debug(
-                "Replayed context preceding={} terms={} glossaryLines={} suggestedLines={} memoryLines={} summary={}",
+                "Replayed context preceding={} terms={} lexicon={} glossaryLines={} suggestedLines={} memoryLines={} summary={}",
                 context.precedingTargets().size(),
                 snapshot.glossary().size(),
+                snapshot.lexicon().size(),
                 glossaryLines.size(),
                 context.suggestedLines().size(),
                 context.memoryLines().size(),
@@ -111,6 +123,10 @@ public final class ContextPackageAssembler {
                 .filter(term -> term.term().suggested() == suggested)
                 .flatMap(term -> term.lines().stream())
                 .toList();
+    }
+
+    private static List<String> lexiconLines(final List<SnapshotRendering> lexicon) {
+        return lexicon.stream().map(InjectedLexicon::line).toList();
     }
 
     private static List<String> memoryLines(final List<SnapshotTmHit> hits) {
@@ -163,13 +179,14 @@ public final class ContextPackageAssembler {
         final long suggested = terms.stream().filter(SnapshotTerm::suggested).count();
         log.debug(
                 "Assembled context segment={} preceding={} lockedTerms={} unlockedTerms={} suggestedTerms={} "
-                        + "noTargetTerms={} hints={} suggestions={} reuse={} summary={}",
+                        + "noTargetTerms={} lexicon={} hints={} suggestions={} reuse={} summary={}",
                 segment.id(),
                 snapshot.precedingTargets().size(),
                 locked,
                 terms.size() - locked - noTarget - suggested,
                 suggested,
                 noTarget,
+                snapshot.lexicon().size(),
                 hitsOfKind(snapshot, TmHitKind.EXACT),
                 hitsOfKind(snapshot, TmHitKind.FUZZY),
                 hitsOfKind(snapshot, TmHitKind.CONTEXT) > 0,

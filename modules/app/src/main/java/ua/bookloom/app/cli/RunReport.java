@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.pipeline.RenderingConsistency;
 
 /**
  * The command's JSON summary of one run, for a script or a person comparing runs: what was translated with what, how
@@ -104,6 +105,19 @@ final class RunReport {
         for (final FlaggedSegment segment : report.flaggedSegments()) {
             reasons.addObject().put("segmentId", segment.segmentId()).put("reason", String.valueOf(segment.reason()));
         }
+    }
+
+    /**
+     * Records how consistently the run kept its recurring terms: how many terms it tracked, how many it saw used, how
+     * many renderings it saw per term used (1.0 is one rendering each) and how many terms were written two ways.
+     */
+    void lexicon(RenderingConsistency consistency) {
+        final ObjectNode lexicon = root.putObject("lexicon");
+        lexicon.put("terms", consistency.terms());
+        lexicon.put("used", consistency.used());
+        lexicon.put("renderings", consistency.renderings());
+        lexicon.put("distinctRenderingsPerTerm", consistency.distinctPerTerm());
+        lexicon.put("conflicted", consistency.conflicted());
     }
 
     void export(ExportReport report, boolean partial) {

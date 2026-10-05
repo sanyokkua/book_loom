@@ -36,6 +36,9 @@ public final class ContextLine {
         if (!snapshot.glossary().isEmpty()) {
             parts.add("glossary(" + snapshot.glossary().size() + ")");
         }
+        if (!snapshot.lexicon().isEmpty()) {
+            parts.add("recurring(" + snapshot.lexicon().size() + ")");
+        }
         if (!snapshot.tmHits().isEmpty()) {
             parts.add("memory(" + snapshot.tmHits().size() + ")");
         }

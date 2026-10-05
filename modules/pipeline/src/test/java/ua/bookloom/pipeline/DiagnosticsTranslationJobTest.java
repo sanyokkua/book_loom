@@ -257,7 +257,8 @@ class DiagnosticsTranslationJobTest {
                         stores.runs(),
                         stores.glossary(),
                         stores.tm(),
-                        stores.summaries()),
+                        stores.summaries(),
+                        stores.lexicon()),
                 project.documents(),
                 project.deferrals());
     }

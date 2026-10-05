@@ -23,6 +23,12 @@ final class BatchedJobs {
 
     /** A job that drafts in batches, asked to run exactly {@code request}. */
     static TranslationJobImpl batchedJob(final TestProject project, final ChatModel model, final RunRequest request) {
+        return batchedJob(project, model, request, BatchDrafter.DEFAULT_INITIAL_SIZE);
+    }
+
+    /** A job that drafts in batches that start at {@code firstBatchSize} items. */
+    static TranslationJobImpl batchedJob(
+            final TestProject project, final ChatModel model, final RunRequest request, final int firstBatchSize) {
         return new TranslationJobImpl(
                 project.documents(),
                 request,
@@ -36,6 +42,6 @@ final class BatchedJobs {
                 Clock.systemUTC(),
                 RecoveryTimer.REAL,
                 RunTicks.DAEMON,
-                BatchDrafter.DEFAULT_INITIAL_SIZE);
+                firstBatchSize);
     }
 }

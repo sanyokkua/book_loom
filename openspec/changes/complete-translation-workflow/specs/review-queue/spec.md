@@ -314,7 +314,7 @@ it says what to do instead; the editor opens on the source so the person can wri
 ### Requirement: Retry a segment with the context it first saw
 
 WHEN the person chooses Retry or Retry with note on a FLAGGED or ACCEPTED segment, the application SHALL draft that one
-segment again with the same brief, glossary entries, preceding targets, memory and summary text it first saw — as they
+segment again with the same brief, glossary entries, recurring-term renderings, preceding targets, memory and summary text it first saw — as they
 read then, not as they read now — adding the note as an extra instruction and lowering the draft's temperature when
 `Lower temperature for this retry` is checked; SHALL pass the result through the hard gates, the soft checks and, when
 the brief's quality dial enables the reviewer, a reviewer call over that one pair; and SHALL decide it by the acceptance
@@ -325,7 +325,7 @@ leave an ACCEPTED segment ACCEPTED with its previous target, reporting the new f
 **Source:** FR-REVIEW-05 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-review`), FR-REVIEW-A1,
 FR-REVIEW-A2 (`docs/specification/01_Product/06_REVIEW_AND_EDITING.md#segment-actions`),
 `docs/specification/01_Product/08_UI_SCREENS_AND_STATES.md#dialog-retry-with-note`, ADR-0038.
-In plain words: a retry must be a fair second attempt at the same problem, not a translation with different context;
+In plain words: a retry must be a fair second attempt at the same problem, not a translation with different context (the recurring-term renderings included);
 the note lets the person steer it ("keep it more formal"). The same gates, checks and reviewer decide it as decided the
 first draft (the quality-gates capability), but a retry is one attempt the person asked for, not a new round of
 automatic repairs — if it fails, the person sees why and chooses again. The temperature values are the inference
@@ -351,6 +351,13 @@ capability's. When a retry may run at all is "Allow a retry whenever no run of t
 - **WHEN** ACCEPTED `ch2 · p04` reads `Дощ ущух лише надвечір.` and a retry returns a target with a length ratio of
   `0.45` against the band `0.7–1.8`
 - **THEN** `ch2 · p04` stays ACCEPTED with `Дощ ущух лише надвечір.` and the new length-ratio finding is reported
+
+#### Scenario: A retry replays the recurring-term renderings as they were
+
+- **WHEN** `ch5 · p12` was drafted while the lexicon established `master → господар`, a later draft made `учитель` the
+  most used rendering, and `ch5 · p12` is retried
+- **THEN** the retry's prompt carries `master → господар`, the rendering the first draft saw, and the context line of the
+  segment names `recurring(1)`
 
 #### Scenario: A retry replays the glossary as it was
 

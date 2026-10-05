@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.RunRecord;
@@ -45,6 +46,7 @@ final class InMemoryStore {
     private final Map<String, RollingSummary> summaryByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Deferral>> deferralsByProject = new ConcurrentHashMap<>();
     private final Map<String, Map<String, RunRecord>> runsByProject = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, LexiconEntry>> lexiconByProject = new ConcurrentHashMap<>();
 
     ReadWriteLock lock() {
         return lock;
@@ -94,6 +96,14 @@ final class InMemoryStore {
      */
     Map<String, RunRecord> runs(final String projectId) {
         return runsByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
+    }
+
+    /**
+     * Returns the lexicon table for a project, keyed by {@link LexiconEntry#keyOf} of the term, creating an empty one
+     * on first use.
+     */
+    Map<String, LexiconEntry> lexicon(final String projectId) {
+        return lexiconByProject.computeIfAbsent(projectId, id -> new ConcurrentHashMap<>());
     }
 
     /**

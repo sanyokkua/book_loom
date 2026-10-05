@@ -19,6 +19,12 @@ Use each rendering unless it is clearly wrong; inflect it as the sentence needs.
 {{suggestedTerms}}
 {{/suggestedTerms}}
 
+{{#lexiconTerms}}
+[Established renderings of recurring terms — keep consistent]
+Write each term as shown, inflected as the sentence needs, unless the glossary says otherwise.
+{{lexiconTerms}}
+{{/lexiconTerms}}
+
 {{#memoryHint}}
 [Earlier decisions — keep consistent]
 {{memoryHint}}

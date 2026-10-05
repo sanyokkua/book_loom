@@ -158,7 +158,8 @@ public final class ChunkRunner {
 
     private Optional<RunEnd> runChunk(
             final WorkList work, final Chunk chunk, final List<WorkItem> items, final int index, final int budget) {
-        final Result<ChunkContext> read = ChunkContext.read(stores.glossary(), settings, chunk, steps.gate());
+        final Result<ChunkContext> read =
+                ChunkContext.read(stores.glossary(), stores.lexicon(), settings, chunk, steps.gate());
         if (read.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), "error")));
         }

@@ -28,6 +28,7 @@ import ua.bookloom.pipeline.batch.ItemOutcome;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.VerbatimCheck;
+import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.prompt.DraftContext;
 
@@ -173,7 +174,9 @@ final class BatchStage {
         final List<BatchItem> items = itemsOf(batch);
         final List<String> segmentIds =
                 batch.stream().map(candidate -> candidate.segment().id()).toList();
-        final Result<BatchContext> context = contextOf(current, batch, items);
+        final List<String> keyTerms = current.context()
+                .keyTermsIn(batch.stream().map(Candidate::segment).toList());
+        final Result<BatchContext> context = contextOf(current, batch, items, keyTerms);
         if (context.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(context.error(), "error")));
         }
@@ -192,7 +195,7 @@ final class BatchStage {
         return switch (step) {
             case Step.Stopped<BatchReply>(final RunEnd end) -> Optional.of(end);
             case Step.Done<BatchReply>(final BatchReply reply) -> {
-                settle(current, batch, reply);
+                settle(current, batch, reply, keyTerms);
                 yield Optional.empty();
             }
         };
@@ -221,7 +224,8 @@ final class BatchStage {
 
     // Every segment the batch covered is tried; only the ones the model answered whole and the gate accepted wait for
     // their turn, the rest take their own call there.
-    private void settle(final Current current, final List<Candidate> batch, final BatchReply reply) {
+    private void settle(
+            final Current current, final List<Candidate> batch, final BatchReply reply, final List<String> keyTerms) {
         int adopted = 0;
         for (int i = 0; i < batch.size(); i++) {
             final Candidate candidate = batch.get(i);
@@ -229,6 +233,7 @@ final class BatchStage {
             final ItemOutcome outcome = reply.outcome(Integer.toString(i + 1)).orElseThrow();
             if (outcome.isAccepted() && adopt(current, candidate, outcome)) {
                 adopted++;
+                recordTerms(current, candidate, outcome, keyTerms);
             } else {
                 log.warn(
                         "Batch item falls back to its own draft segmentId={} status={} problems={}",
@@ -253,8 +258,31 @@ final class BatchStage {
         return drafted.isPresent();
     }
 
+    // What the model says it used for a key term counts only once the text proves it; the lexicon then holds one more
+    // use.
+    private void recordTerms(
+            final Current current, final Candidate candidate, final ItemOutcome outcome, final List<String> keyTerms) {
+        if (outcome.terms().isEmpty()) {
+            return;
+        }
+        final List<TermMappingVerifier.Pair> verified = TermMappingVerifier.verify(
+                outcome.terms(),
+                keyTerms,
+                Tokens.replace(candidate.mask().maskedText(), " "),
+                Tokens.replace(outcome.target(), " "));
+        log.debug(
+                "Batch item reported {} terms, {} verified segmentId={}",
+                outcome.terms().size(),
+                verified.size(),
+                candidate.segment().id());
+        current.context().lexicon().record(settings.projectId(), verified);
+    }
+
     private Result<BatchContext> contextOf(
-            final Current current, final List<Candidate> batch, final List<BatchItem> items) {
+            final Current current,
+            final List<Candidate> batch,
+            final List<BatchItem> items,
+            final List<String> keyTerms) {
         final Candidate first = batch.getFirst();
         final List<Segment> unit = current.work().unitSegments(first.item());
         final int pairs =
@@ -268,7 +296,8 @@ final class BatchStage {
                                         DisplayText.of(e.segment().masked()), DisplayText.of(e.target())))
                                 .toList(),
                         nextSourceAfter(unit, batch.getLast().segment()),
-                        characters(current, batch)));
+                        characters(current, batch),
+                        keyTerms));
     }
 
     private DraftContext merged(final Current current, final List<Candidate> batch, final List<BatchItem> items) {

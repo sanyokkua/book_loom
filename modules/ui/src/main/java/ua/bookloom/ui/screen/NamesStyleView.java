@@ -89,7 +89,8 @@ final class NamesStyleView {
                 messages,
                 new Banner("names-style-banner", Banner.Role.INFO, "ℹ", "", messages.get(MessageKey.NAMES_STYLE_SKIP)),
                 MessageKey.NAMES_STYLE_SKIP_TIP);
-        return new VBox(SCREEN_SPACING, noticeBanner(), card(), skip, footer());
+        return new VBox(
+                SCREEN_SPACING, noticeBanner(), card(), RecurringTermsCard.build(messages, glossary), skip, footer());
     }
 
     private Node noticeBanner() {

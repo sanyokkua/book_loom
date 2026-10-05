@@ -57,6 +57,8 @@ class PromptHygieneLintTest {
             Map.entry("glossaryTerms", "Hale → Гейл (character, male)"),
             Map.entry("lockedNames", "⟦g0⟧ → Гейл, character, male"),
             Map.entry("suggestedTerms", "Moreau → Моро (character, male)"),
+            Map.entry("lexiconTerms", "master → господар"),
+            Map.entry("keyTerms", "master, imp"),
             Map.entry("memoryHint", "He left. → Він пішов."),
             Map.entry("precedingTargets", "Один."),
             Map.entry("extraInstruction", "Keep the dialogue tone."),

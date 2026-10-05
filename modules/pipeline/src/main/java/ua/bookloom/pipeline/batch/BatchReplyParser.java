@@ -57,11 +57,15 @@ public final class BatchReplyParser {
             return BatchReply.unreadable(items.stream().map(BatchItem::id).toList());
         }
         final Map<String, List<String>> byId = new HashMap<>();
-        found.forEach(entry ->
-                byId.computeIfAbsent(entry.id(), id -> new ArrayList<>()).add(entry.text()));
+        final Map<String, Map<String, String>> termsById = new HashMap<>();
+        found.forEach(entry -> {
+            byId.computeIfAbsent(entry.id(), id -> new ArrayList<>()).add(entry.text());
+            termsById.putIfAbsent(entry.id(), entry.terms());
+        });
         final List<ItemOutcome> outcomes = new ArrayList<>();
         for (int i = 0; i < items.size(); i++) {
-            outcomes.add(outcome(items, i, byId, sourceTag, targetTag));
+            outcomes.add(outcome(items, i, byId, sourceTag, targetTag)
+                    .withTerms(termsById.getOrDefault(items.get(i).id(), Map.of())));
         }
         final Set<String> expected =
                 new LinkedHashSet<>(items.stream().map(BatchItem::id).toList());

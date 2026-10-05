@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.api.project.TermType;
@@ -44,5 +45,18 @@ class ContextLineTest {
         final ContextSnapshot snapshot = new ContextSnapshot(List.of(), List.of(), List.of(), null, "  ");
 
         assertThat(ContextLine.of(snapshot)).isEmpty();
+    }
+
+    @Test
+    void of_establishedRecurringRenderings_addsRecurringWithTheCount() {
+        final ContextSnapshot snapshot = new ContextSnapshot(
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                "Formal",
+                List.of(new SnapshotRendering("master", "господар"), new SnapshotRendering("imp", "біс")));
+
+        assertThat(ContextLine.of(snapshot)).isEqualTo("brief · recurring(2)");
     }
 }

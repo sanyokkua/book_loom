@@ -294,4 +294,41 @@ class BatchReplyParserTest {
 
         assertThat(PARSER.parse(reply, items, "en", "uk").acceptedIds()).containsExactly("1", "2");
     }
+
+    @Test
+    void parse_termsObjectOnAnItem_isKeptOnThatOutcomeAsWritten() {
+        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1
+                + "\",\"terms\":{\"door\":\"двері\"}},{\"id\":\"2\",\"target\":\"" + T2 + "\"}]}";
+
+        final BatchReply parsed = PARSER.parse(reply, ITEMS.subList(0, 2), "en", "uk");
+
+        assertThat(parsed.outcome("1"))
+                .hasValueSatisfying(o -> assertThat(o.terms()).containsExactly(Map.entry("door", "двері")));
+        assertThat(parsed.outcome("2"))
+                .hasValueSatisfying(o -> assertThat(o.terms()).isEmpty());
+        assertThat(parsed.acceptedIds()).containsExactly("1", "2");
+    }
+
+    @Test
+    void parse_termsListOfPairs_isReadLikeTheObject() {
+        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1
+                + "\",\"terms\":[{\"source\":\"door\",\"target\":\"двері\"}]}]}";
+
+        final BatchReply parsed = PARSER.parse(reply, ITEMS.subList(0, 1), "en", "uk");
+
+        assertThat(parsed.outcome("1"))
+                .hasValueSatisfying(o -> assertThat(o.terms()).containsExactly(Map.entry("door", "двері")));
+    }
+
+    @Test
+    void parse_termsThatAreNotText_areIgnoredAndTheItemStillCounts() {
+        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1
+                + "\",\"terms\":{\"door\":7,\"\":\"x\",\"lock\":\" \"}}]}";
+
+        final BatchReply parsed = PARSER.parse(reply, ITEMS.subList(0, 1), "en", "uk");
+
+        assertThat(parsed.outcome("1"))
+                .hasValueSatisfying(o -> assertThat(o.terms()).isEmpty());
+        assertThat(parsed.acceptedIds()).containsExactly("1");
+    }
 }

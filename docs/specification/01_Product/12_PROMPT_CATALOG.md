@@ -219,6 +219,12 @@ Use each rendering unless it is clearly wrong; inflect it as the sentence needs.
 {{suggestedTerms}}
 {{/suggestedTerms}}
 
+{{#lexiconTerms}}
+[Established renderings of recurring terms — keep consistent]
+Write each term as shown, inflected as the sentence needs, unless the glossary says otherwise.
+{{lexiconTerms}}
+{{/lexiconTerms}}
+
 {{#memoryHint}}
 [Earlier decisions — keep consistent]
 {{memoryHint}}
@@ -259,7 +265,7 @@ Return exactly one JSON object matching this schema: {"target":"<translation>"}
 | `{{text}}`                         | Required  | The one masked source segment, rendered verbatim inside `<Text>`.                                                                                                                                        |
 | `{{tokens}}`                       | Required  | This segment's exact source-order placeholder sequence, or the no-token statement `(none — write no ⟦gN⟧ token at all; write every name as plain text)`: a small model otherwise invents a token for a name. |
 | `{{precedingTargets}}`             | Optional  | The targets just before the segment in the current unit (dial-capped); the entire block is omitted when absent and reset at a section boundary.                                                          |
-| `{{summary}}`, `{{glossaryTerms}}`, `{{lockedNames}}`, `{{suggestedTerms}}`, `{{memoryHint}}`, `{{extraInstruction}}` | Optional | The rolling summary, the glossary lines of the terms in the chunk whose target is the person's, under a header saying each name is written out as plain text; `{{lockedNames}}`, the locked terms the segment hides behind tokens, as `⟦gN⟧ → rendering` under a header saying the token is kept and the name never written — a block present only when the segment holds such a token, so a text with none never sees a token explained beside a name; the lines of the terms whose target the model suggested and nobody confirmed (`#glossary-target-suggestions`; a hint the draft may inflect, never a token), translation-memory hints, and a retry's note; each block is omitted when empty. |
+| `{{summary}}`, `{{glossaryTerms}}`, `{{lockedNames}}`, `{{suggestedTerms}}`, `{{lexiconTerms}}`, `{{memoryHint}}`, `{{extraInstruction}}` | Optional | The rolling summary, the glossary lines of the terms in the chunk whose target is the person's, under a header saying each name is written out as plain text; `{{lockedNames}}`, the locked terms the segment hides behind tokens, as `⟦gN⟧ → rendering` under a header saying the token is kept and the name never written — a block present only when the segment holds such a token, so a text with none never sees a token explained beside a name; the lines of the terms whose target the model suggested and nobody confirmed (`#glossary-target-suggestions`; a hint the draft may inflect, never a token), the established renderings of the recurring terms the chunk names (`#recurring-terms`), translation-memory hints, and a retry's note; each block is omitted when empty. |
 
 **Parameters:** temperature 0.2; output format = the strict `target` JSON schema; reasoning low/off; non-streaming.
 
@@ -283,13 +289,15 @@ system message (`draft-batch-json.system.prompt`; the draft's rules with the ite
 `{{languageRules}}` and the batch examples from the pair's, else the target's, else the generic `batchExample.N` keys; about
 850 tokens, within `ChunkBudget.SYSTEM_PROMPT_RESERVE`) is byte-identical across a run's batches, and the user message
 holds, each block omitted when empty, the summary, glossary, locked names (a line per locked token, prefixed with its item
-id — `3: ⟦g0⟧ → name` — because tokens are numbered per item), suggestions, earlier decisions, the characters present with
+id — `3: ⟦g0⟧ → name` — because tokens are numbered per item), suggestions, the established renderings of recurring terms
+(`#recurring-terms`), earlier decisions, the key terms to report, the characters present with
 the gender the glossary knows, the last two or three decided pairs of the chapter, the next segment's source for pronoun
 and gender look-ahead (all read-only context), the immutable tokens per item and the items as `<s id="1">…</s>`, the ids
 being 1…n within the batch.
 
-The reply is the JSON object `{"items":[{"id":"1","target":"…"}]}`, requested with the flat `BatchSchema` (no
-`maxItems`/`maxLength`); the optional `terms` field is reserved for the terminology lexicon. Decision (2026-10-05, the
+The reply is the JSON object `{"items":[{"id":"1","target":"…","terms":{"master":"господар"}}]}`, requested with the flat
+`BatchSchema` (no `maxItems`/`maxLength`; `terms` is declared as a bare object, its values checked by the app, see
+`#recurring-terms`). Decision (2026-10-05, the
 A/B on the e4b and 26b classes at 4, 8, 12 and 16 items): JSON answered every id exactly once and kept every token at every
 size on both models, while tagged blocks (`<t id="1">…</t>`) were never better and e4b fell to 92% of ids at 8 items, so
 the tagged protocol, its prompts and its parsing were removed.
@@ -302,6 +310,41 @@ in order) and its length band checked, then the chunk's placeholder gate. A refu
 every id. Only a failing id falls back to a single-segment draft; every other segment is decided from its own entry
 through the same quality loop as a single draft. A segment kept as it is, an auxiliary text, a translation-memory reuse
 and a segment larger than the chunk budget are never in a batch.
+
+### recurring-terms {#recurring-terms}
+
+The lexicon (15d.9) keeps a book's recurring common words and titles (`master`, `imp`, `Mr`) to one rendering each, without
+making them glossary entries. Four prompt-facing parts:
+
+- **Key terms to report** (batch draft only). When the batch's items name terms of the project's lexicon that the glossary
+  does not hold, the user message ends its context with
+  `[Key terms — a closed list. For each item that contains one of these words, add "terms":{"<key term>":"<your rendering, base form>"} to that item's entry; omit "terms" for an item with none of them]`
+  and the list, comma-separated. The system message is not touched, so its bytes stay identical across the run.
+- **Established renderings** (draft, batch draft). The block above the earlier decisions, `term → rendering` lines for the
+  lexicon terms the chunk names, under `[Established renderings of recurring terms — keep consistent]` and the line `Write
+  each term as shown, inflected as the sentence needs, unless the glossary says otherwise.` The block is a soft hint: a
+  term the glossary holds is never in it. It has its own share of the dynamic context (`ContextSection.LEXICON`: a fifth of
+  what the glossary leaves, taken before the memory, the preceding text and the summary), and the lines shown are recorded
+  in `ContextSnapshot.lexicon`, so a retry shows the same.
+- **Which rendering is established** (`LexiconEntry.established`, the conflict policy): the person's rendering; else the
+  most used verified rendering, the one first seen when two are used equally often; else the model's suggestion from the
+  suggestion call; else none and no line.
+- **Verification** (`TermMappingVerifier`, no prompt): a reported pair counts only when the term is on the closed list and
+  occurs as a whole word in the item's source (an English plural or possessive tolerated), and every significant word of
+  the rendering (three letters or more; all words when none is that long) has its stem in the target. A stem is a prefix:
+  a word of eight letters or more may lose its last three, of six or seven the last two, of four or five the last one, and
+  the target word may be at most three letters longer. An inflected rendering (`господар` for `господаря`) passes, a
+  multi-word rendering needs all its words, a rendering whose stem changes inside the word (`кінь`, `коня`) is dropped and
+  only costs a count. Only the pairs of an item adopted from the batch are counted.
+
+The reviewer is given the established renderings of the chunk's recurring terms beside the glossary's pairs
+(`[Glossary the translation had to use: source → target]`), so its `terminology` criterion — "a glossary rendering unused,
+or one thing named two ways" — covers adherence; a hallucinated quote is still refused by its verifier. The metric of the
+whole mechanism is `RenderingConsistency` — the mean number of distinct verified renderings per term used, 1.0 when every
+term was written one way — logged once at the end of a run (`Lexicon consistency … distinctRenderingsPerTerm=…`) and
+written to the command's report as `lexicon.distinctRenderingsPerTerm`. The terms come from `KeyTermScan` (titles from
+`glossary/titles/<language>.txt`, English only so far, and words written both capitalised mid-sentence and in lower case)
+when a run is prepared with an empty lexicon, from the "Find recurring terms" button, and by hand.
 
 ## reviewer-in-place-fixes {#reviewer-in-place-fixes}
 

@@ -40,6 +40,7 @@ public final class GlossaryModelScans {
     private final OpenProjects openProjects;
     private final PreScan preScan;
     private final TermReview termReview;
+    private final SuggestTargets suggestTargets;
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
@@ -57,6 +58,25 @@ public final class GlossaryModelScans {
         return book(projectId)
                 .flatMap(book -> termReview.review(
                         projectId, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
+    }
+
+    /**
+     * Asks the model for a rendering of each entry by the call the glossary's suggestions use; nothing is written.
+     *
+     * @param projectId the non-null project whose book gives each term its example sentence
+     * @param entries the non-null terms to render, as glossary entries of type term
+     * @param model the non-null model to call
+     * @param progress the non-null receiver of each call's start and finish
+     * @return the entries with the suggested targets written in, or the first failed call's error
+     */
+    public Result<List<GlossaryEntry>> suggestOnto(
+            final String projectId,
+            final List<GlossaryEntry> entries,
+            final ChatModel model,
+            final Consumer<JobEvent> progress) {
+        return book(projectId)
+                .flatMap(book -> suggestTargets.suggestOnto(
+                        entries, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {

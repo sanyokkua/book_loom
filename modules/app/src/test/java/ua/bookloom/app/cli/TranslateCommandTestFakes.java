@@ -22,6 +22,7 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.llm.VerificationPolicy;
 import ua.bookloom.api.llm.VerificationReport;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.TranslationEngine;
 
 /** Recording seams for translate-command provider tests. */
@@ -57,7 +58,8 @@ final class TranslateCommandTestFakes {
                 exports,
                 core.getInstance(ShutdownCancellation.class),
                 core.getInstance(Clock.class),
-                (providerId, modelId) -> Result.ok(ContextLength.unknown()));
+                (providerId, modelId) -> Result.ok(ContextLength.unknown()),
+                core.getInstance(LexiconService.class));
     }
 
     static final class RecordingProviderConfigs implements ProviderConfigs {

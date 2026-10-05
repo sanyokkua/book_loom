@@ -12,6 +12,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -38,6 +39,7 @@ class PersistenceModuleTest {
         assertThat(injector.getInstance(TmRepository.class)).isNotNull();
         assertThat(injector.getInstance(SummaryRepository.class)).isNotNull();
         assertThat(injector.getInstance(DeferralRepository.class)).isNotNull();
+        assertThat(injector.getInstance(LexiconRepository.class)).isNotNull();
         assertThat(injector.getInstance(RunRepository.class)).isNotNull();
         assertThat(injector.getInstance(CheckpointPort.class)).isNotNull();
     }

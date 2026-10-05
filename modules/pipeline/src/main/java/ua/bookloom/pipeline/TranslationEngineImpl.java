@@ -13,6 +13,7 @@ import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -63,6 +64,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final GlossaryRepository glossary,
             final TmRepository tm,
             final SummaryRepository summaries,
+            final LexiconRepository lexicon,
             final QualityLoop qualityLoop,
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
@@ -71,7 +73,8 @@ public final class TranslationEngineImpl implements TranslationEngine {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
-        this.stores = new RunStores(projects, segments, checkpoint, openProjects, runs, glossary, tm, summaries);
+        this.stores =
+                new RunStores(projects, segments, checkpoint, openProjects, runs, glossary, tm, summaries, lexicon);
         this.qualityLoop = Objects.requireNonNull(qualityLoop, "qualityLoop");
         this.splitter = Objects.requireNonNull(splitter, "splitter");
         this.revision = Objects.requireNonNull(revision, "revision");

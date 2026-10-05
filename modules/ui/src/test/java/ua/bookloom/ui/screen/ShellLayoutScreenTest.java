@@ -95,10 +95,12 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
     }
 
     // IF fitting the window's height squeezed the screen to its minimum, THEN the glossary table would shrink to a few
-    // rows and the shell would never scroll; at the minimum it scrolls and the table keeps its height.
+    // rows and the shell would never scroll; the table keeps its height and the shell scrolls, as the Recurring terms
+    // card under the glossary does not fit beside a table of that height even in the tallest window the headless screen
+    // has.
     @ParameterizedTest
-    @CsvSource({CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT + ", true", "1000, 900, false"})
-    void namesStyle_withABook_keepsTheTableTallAndScrollsTheShellWhenShort(
+    @CsvSource({CONTENT_AT_MINIMUM_WIDTH + ", " + CONTENT_AT_MINIMUM_HEIGHT + ", true", "1000, 900, true"})
+    void namesStyle_withABook_keepsTheTableTallAndScrollsTheShell(
             final double width, final double height, final boolean scrolls) throws TimeoutException {
         readyToStart();
         glossary.willAnswer(Result.ok(List.of()));

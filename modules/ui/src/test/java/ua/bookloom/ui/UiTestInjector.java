@@ -23,6 +23,7 @@ import ua.bookloom.api.llm.ProviderVerifier;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.LanguageSupport;
+import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
@@ -96,6 +97,7 @@ public final class UiTestInjector {
         private ChatModelFactory models = ScriptedChatModelFactory.ok();
         private TranslationEngine engine = ScriptedTranslationEngine.idle();
         private ScriptedGlossaryService glossary = new ScriptedGlossaryService();
+        private ScriptedLexiconService lexicon = new ScriptedLexiconService();
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
         private @Nullable ReplaceRunPrompt prompt;
@@ -159,6 +161,12 @@ public final class UiTestInjector {
             return this;
         }
 
+        /** What the graph's {@link LexiconService} is, so the test can fill and read the recurring terms. */
+        public Builder lexicon(final ScriptedLexiconService value) {
+            lexicon = Objects.requireNonNull(value, "lexicon");
+            return this;
+        }
+
         /** What the graph's {@link ReviewDesk} is, so the test can script the counts and the queue it is answered. */
         public Builder reviewDesk(final ScriptedReviewDesk value) {
             desk = Objects.requireNonNull(value, "desk");
@@ -191,7 +199,7 @@ public final class UiTestInjector {
         public Injector build() {
             final ReplaceRunPrompt replacement = prompt;
             return Guice.createInjector(Modules.override(new UiModule())
-                    .with(new ReviewPortsModule(glossary, desk, reviewMode), new AbstractModule() {
+                    .with(new ReviewPortsModule(glossary, lexicon, desk, reviewMode), new AbstractModule() {
                         @Override
                         protected void configure() {
                             bind(LocaleProvider.class).toInstance(() -> locale);
@@ -224,11 +232,17 @@ public final class UiTestInjector {
     private static final class ReviewPortsModule extends AbstractModule {
 
         private final GlossaryService glossary;
+        private final LexiconService lexicon;
         private final ReviewDesk desk;
         private final ReviewMode reviewMode;
 
-        ReviewPortsModule(final GlossaryService glossary, final ReviewDesk desk, final ReviewMode reviewMode) {
+        ReviewPortsModule(
+                final GlossaryService glossary,
+                final LexiconService lexicon,
+                final ReviewDesk desk,
+                final ReviewMode reviewMode) {
             this.glossary = glossary;
+            this.lexicon = lexicon;
             this.desk = desk;
             this.reviewMode = reviewMode;
         }
@@ -236,6 +250,7 @@ public final class UiTestInjector {
         @Override
         protected void configure() {
             bind(GlossaryService.class).toInstance(glossary);
+            bind(LexiconService.class).toInstance(lexicon);
             bind(ReviewDesk.class).toInstance(desk);
             bind(ReviewMode.class).toInstance(reviewMode);
         }

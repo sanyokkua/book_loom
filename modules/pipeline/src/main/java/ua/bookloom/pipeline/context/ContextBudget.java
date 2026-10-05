@@ -29,6 +29,7 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
     public static final int DYNAMIC_CEILING = 1100;
 
     private static final double DYNAMIC_SHARE = 0.4;
+    private static final double LEXICON_SHARE = 0.2;
 
     /** Rejects a window that is not positive, a negative reservation or a ratio that is not positive. */
     public ContextBudget {
@@ -63,6 +64,17 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
     public static int dynamicAllowance(final int window, final int staticPrefixTokens) {
         final int free = Math.max(0, window - staticPrefixTokens - SAFETY_MARGIN);
         return Math.min(DYNAMIC_CEILING, (int) (free * DYNAMIC_SHARE));
+    }
+
+    /**
+     * What the recurring-term renderings may take of the dynamic allowance: a fifth, so a long lexicon never starves the
+     * glossary, the memory or the preceding text, and a short one leaves its room to them.
+     *
+     * @param allowance the dynamic context's allowance in tokens
+     * @return the lexicon's share, never above the allowance
+     */
+    public static int lexiconAllowance(final int allowance) {
+        return (int) Math.min(allowance, Math.ceil(allowance * LEXICON_SHARE));
     }
 
     /** The source tokens a batch may hold so that it and its reply fit what the window leaves. */

@@ -22,6 +22,7 @@ import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.document.UnitRole;
 import ua.bookloom.api.persistence.CheckpointPort;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
@@ -57,7 +58,8 @@ class WorkListTest {
                 injector.getInstance(RunRepository.class),
                 injector.getInstance(GlossaryRepository.class),
                 injector.getInstance(TmRepository.class),
-                injector.getInstance(SummaryRepository.class));
+                injector.getInstance(SummaryRepository.class),
+                injector.getInstance(LexiconRepository.class));
     }
 
     // A draft's preceding targets come from its whole unit, so the segments decided before this run must be listed too.

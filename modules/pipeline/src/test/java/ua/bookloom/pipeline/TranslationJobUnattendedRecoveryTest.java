@@ -384,7 +384,8 @@ class TranslationJobUnattendedRecoveryTest {
                         stores.runs(),
                         broken,
                         stores.tm(),
-                        stores.summaries()),
+                        stores.summaries(),
+                        stores.lexicon()),
                 project.documents(),
                 project.deferrals());
     }
