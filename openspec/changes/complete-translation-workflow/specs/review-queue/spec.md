@@ -498,3 +498,28 @@ stated so nobody mistakes it for a bug, and it is what the persistence change wi
 - **WHEN** the person accepts `ch5 · p12`, goes to Export and back to Translating
 - **THEN** `ch5 · p12` is still ACCEPTED
 - **AND** after closing and reopening the application the book's segments are not remembered
+
+### Requirement: List the accepted segments the final audit doubts
+
+The review desk SHALL offer a Suspicious filter that lists, in document order, the ACCEPTED segments no person has
+reviewed that hold an audit finding, each opened with its findings so the check that fired is named. The review desk
+SHALL count them as `suspicious` beside its other counts, and SHALL run the audit again on demand and answer the
+doubted segments with their checks. The Translating screen's outcome card SHALL show the count as "suspicious" with a
+hover explanation, and the review panel SHALL show a "suspicious" filter chip with a hover explanation, both in English
+and Ukrainian. A person who accepts or edits a listed segment has reviewed it, so it leaves the list. The filter and the
+count SHALL leave a segment kept as source out, and SHALL NOT change what the flagged filters list.
+
+**Source:** FR-REVIEW-A1, task 15d.12.
+In plain words: a segment that passed every gate can still hold a leak, so there is one more list to open after a run,
+and the finished run says how long it is.
+
+#### Scenario: The chip lists the audited segments
+
+- **WHEN** the person presses "suspicious" in the review panel after a run whose audit doubts `ch2 · p04`
+- **THEN** the desk is asked for the SUSPICIOUS queue and `ch2 · p04` is listed
+- **AND** the chip explains on hover that it shows accepted segments a last check still doubts
+
+#### Scenario: The outcome card counts them
+
+- **WHEN** a run completes and its audit doubts 3 accepted segments
+- **THEN** the outcome card shows "3" under "suspicious"

@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -22,13 +23,14 @@ import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.SourceFallback;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.RenderingConsistency;
 
 /**
  * The command's JSON summary of one run, for a script or a person comparing runs: what was translated with what, how
  * long each phase took, how the run ended and why, every flagged segment with its reason, each outage waited through,
- * the names review and what the export wrote. It holds counts, ids, codes and timings only — never book text.
+ * the names review, what the export wrote and the accepted segments the final audit doubts. It holds counts, ids, codes and timings only — never book text.
  */
 @Slf4j
 final class RunReport {
@@ -132,6 +134,19 @@ final class RunReport {
         final ArrayNode fallbacks = export.putArray("sourceFallbacks");
         for (final SourceFallback fallback : report.sourceFallbacks()) {
             fallbacks.addObject().put("segmentId", fallback.segmentId()).put("locator", fallback.locator());
+        }
+    }
+
+    /** Records what the final audit doubts: how many accepted segments, and for each its id, locator and checks. */
+    void audit(List<SuspiciousSegment> suspicious) {
+        final ObjectNode audit = root.putObject("audit");
+        audit.put("suspicious", suspicious.size());
+        final ArrayNode segments = audit.putArray("segments");
+        for (final SuspiciousSegment segment : suspicious) {
+            final ObjectNode node = segments.addObject();
+            node.put("segmentId", segment.segmentId()).put("locator", segment.locator());
+            final ArrayNode checks = node.putArray("checks");
+            segment.checks().forEach(checks::add);
         }
     }
 

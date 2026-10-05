@@ -711,3 +711,26 @@ it is needed and ignored by edits made after the run.
 **Migration**: The destination, its default name, the shared naming rule and the occupied-path warning move to the export
 screen — see "Choose where to save on the export screen" and "Replace an existing file only when the person allows it".
 The command line keeps its flags, output name and exit codes.
+
+### Requirement: Carry the final audit in the export report and the command report
+
+WHEN an export succeeds, the system SHALL audit the stored records as they stand (without storing anything) and put the
+accepted segments it doubts, in book order with their locators and the checks that fired, in the export's result, in a
+"Suspicious accepted segments" section of `<name>.report.md` (the text `None.` when there is none), and in the command
+line's `--report` JSON as an `audit` object holding `suspicious` (the count) and `segments` (each with `segmentId`,
+`locator` and `checks`, never text). The command SHALL print one line `Audit: N accepted segment(s) look suspicious — …`
+naming each locator with its checks when N is above zero, and no audit line when N is zero.
+
+**Source:** FR-EXPORT-05, task 15d.12.
+In plain words: whoever reads the report or the run's JSON sees what the audit doubts without opening the app; a quiet
+audit adds nothing to the console.
+
+#### Scenario: The report names the doubted segment
+
+- **WHEN** an accepted segment is still in English and the report side file is chosen
+- **THEN** the export's result and `Door.uk.report.md` list `ch1 · p01` with `language-identity`
+
+#### Scenario: The command's JSON and console say so
+
+- **WHEN** a command run accepts a segment holding a doubled word
+- **THEN** the console has one `Audit: 1 accepted segment(s) look suspicious` line and the JSON `audit.suspicious` is 1 with the segment id and `duplicate-word`

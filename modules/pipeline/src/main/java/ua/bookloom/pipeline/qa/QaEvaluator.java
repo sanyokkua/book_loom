@@ -58,6 +58,19 @@ public final class QaEvaluator {
                 soft.stream().anyMatch(CheckResult::blocking));
     }
 
+    /**
+     * Runs only the deterministic text checks, the gender check and the word validator on one segment, as a run's gate
+     * does before any reviewer reads it; the final audit asks again with them.
+     *
+     * @param input the segment's display texts, languages and policies
+     * @param words the word validator; never null
+     * @return one result per finding, blocking ones as failed hard gates and soft ones as passed results carrying a
+     *     low finding; empty for a kept foreign passage and for a clean text
+     */
+    public static List<CheckResult> textChecks(final SoftCheckInput input, final WordValidator words) {
+        return TextCheckGates.run(input, words);
+    }
+
     private static List<QaFinding> findings(final List<CheckResult> hardGates, final List<CheckResult> soft) {
         return Stream.concat(hardGates.stream(), soft.stream())
                 .map(CheckResult::finding)

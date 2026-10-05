@@ -12,6 +12,7 @@ import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.SourceFallback;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.review.ReviewCounting;
 
@@ -104,13 +105,15 @@ record ExportCounts(
      * @param sideFiles the non-null side files written beside it
      * @param consistency the non-null summary of the consistency pass
      * @param sourceFallbacks the non-null segments written in their source for a broken translation
+     * @param suspicious the non-null accepted segments the final audit doubts
      * @return the report carrying these counts
      */
     ExportReport report(
             final Path destination,
             final List<Path> sideFiles,
             final ConsistencySummary consistency,
-            final List<SourceFallback> sourceFallbacks) {
+            final List<SourceFallback> sourceFallbacks,
+            final List<SuspiciousSegment> suspicious) {
         return new ExportReport(
                 destination,
                 written,
@@ -123,6 +126,7 @@ record ExportCounts(
                 bodySegments,
                 consistency,
                 keptVerbatim,
-                sourceFallbacks);
+                sourceFallbacks,
+                suspicious);
     }
 }

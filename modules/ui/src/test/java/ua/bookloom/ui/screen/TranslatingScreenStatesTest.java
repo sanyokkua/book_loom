@@ -190,6 +190,22 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         assertThat(isShown("translating-continue")).isTrue();
     }
 
+    // IF the audit's doubts were not on the outcome card, THEN a silent leak in an accepted segment would pass unseen.
+    @Test
+    void completed_auditDoubtsThreeSegments_showsTheSuspiciousTileWithItsHover() throws Exception {
+        bookReadyWithPending(0);
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 3, 0, 0, 0, 0, 0, 3));
+        showTranslating();
+        publishRunning(1180, 45, 3, 0);
+        mirror().live().publishSuspicious(3);
+        mirror().publishOutcome(RunState.COMPLETED, completedReport(), null);
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(labelText("translating-outcome-suspicious")).isEqualTo("3");
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(required("translating-outcome-tile-suspicious")))
+                .startsWith("Accepted segments that a last check");
+    }
+
     // IF chapter numbers kept as they are were counted as kept by choice, THEN the outcome would misreport the book.
     @Test
     void completed_twoKeptAsIs_showsThemApartFromKeptAsSource() throws Exception {

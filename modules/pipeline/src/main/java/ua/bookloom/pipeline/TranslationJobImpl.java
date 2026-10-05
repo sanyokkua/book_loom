@@ -52,6 +52,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 import ua.bookloom.pipeline.run.MemoryEvents;
 import ua.bookloom.pipeline.run.PendingCommit;
 import ua.bookloom.pipeline.run.PrepStage;
+import ua.bookloom.pipeline.run.RunAudit;
 import ua.bookloom.pipeline.run.RunEnd;
 import ua.bookloom.pipeline.run.RunRecorder;
 import ua.bookloom.pipeline.run.RunReports;
@@ -259,7 +260,7 @@ final class TranslationJobImpl implements TranslationJob {
             JobLifecycleLogger.started(request, run, work, control.pausePoints());
             return translate(run, work);
         } catch (Throwable cause) {
-            return failAtBoundary(cause, run);
+            return finish(JobState.FAILED, run, unexpectedError(cause));
         }
     }
 
@@ -352,6 +353,7 @@ final class TranslationJobImpl implements TranslationJob {
         if (unsaved != null && end != JobState.FAILED) {
             return finish(JobState.FAILED, run, unsaved);
         }
+        RunAudit.after(end, stores, words, run.project().id());
         final JobReport report =
                 RunReports.of(stores, run.project().id(), run.document().format(), end, error);
         recorder.ended(report.end());
@@ -365,10 +367,6 @@ final class TranslationJobImpl implements TranslationJob {
         JobLifecycleLogger.ended(
                 report, Duration.between(startedAt, clock.instant()).toMillis());
         return Result.ok(report);
-    }
-
-    private Result<JobReport> failAtBoundary(final Throwable cause, final RunStart.Started run) {
-        return finish(JobState.FAILED, run, unexpectedError(cause));
     }
 
     private void emit(final JobEvent event) {

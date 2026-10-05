@@ -31,4 +31,14 @@ class ReviewCountsTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new ReviewCounts(3, 0, 0, 3, 0, 0, 0, flaggedWithoutTarget, 0));
     }
+
+    @Test
+    void constructor_negativeSuspicious_isRejected() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new ReviewCounts(5, 1, 1, 0, 0, 0, 0, 0, 0, -1));
+    }
+
+    @Test
+    void constructor_withoutSuspicious_countsNone() {
+        assertThat(new ReviewCounts(5, 1, 1, 0, 0, 0, 0, 0, 0).suspicious()).isZero();
+    }
 }

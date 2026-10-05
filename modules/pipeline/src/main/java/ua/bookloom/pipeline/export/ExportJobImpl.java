@@ -21,9 +21,12 @@ import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.audit.FinalAudit;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.revision.ConsistencyReport;
 
@@ -220,9 +223,8 @@ final class ExportJobImpl implements ExportJob {
     }
 
     private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {
-        final boolean needed = request.sideFiles().contains(SideFile.GLOSSARY_CSV);
-        log.debug("export step=read-glossary project={} needed={}", projectId, needed);
-        return needed ? parts.glossary().all(projectId) : Result.ok(List.of());
+        log.debug("export step=read-glossary project={}", projectId);
+        return parts.glossary().all(projectId);
     }
 
     // The side files are built once the book is written, so the quality report counts the segments the check had to
@@ -247,15 +249,49 @@ final class ExportJobImpl implements ExportJob {
         if (written.isErr()) {
             return Result.err(errorOf(written));
         }
-        final BookExporter.Exported exported = Objects.requireNonNull(written.data(), "written book");
-        final Fallbacks.Fallen fallen = fallbacks.of(targets.sourceFallbacks(), exported.sourceFallbacks());
-        final Set<SegmentKind> kept = project.brief().alsoTranslate().keptKinds();
+        return withSideFiles(
+                project,
+                new Written(targets, fallbacks, glossary, pass),
+                Objects.requireNonNull(written.data(), "written book"));
+    }
+
+    /** What the side files and the report are built from once the book is written. */
+    private record Written(
+            EffectiveTargets targets,
+            Fallbacks fallbacks,
+            List<GlossaryEntry> glossary,
+            @Nullable ConsistencyReport pass) {}
+
+    private Result<ExportReport> withSideFiles(
+            final Project project, final Written book, final BookExporter.Exported exported) {
+        final Fallbacks.Fallen fallen =
+                book.fallbacks().of(book.targets().sourceFallbacks(), exported.sourceFallbacks());
+        final List<SuspiciousSegment> suspicious = audit(project, book.fallbacks(), book.glossary());
         final List<SideFiles.Content> sideFiles = SideFiles.build(
                 request.sideFiles(),
                 new SideFiles.Sources(
-                        request.destination(), targets, fallbacks.stored(), kept, fallen.counts(), pass, glossary));
+                        request.destination(),
+                        book.targets(),
+                        book.fallbacks().stored(),
+                        project.brief().alsoTranslate().keptKinds(),
+                        fallen.counts(),
+                        book.pass(),
+                        book.glossary(),
+                        suspicious));
         return SideFiles.write(sideFiles, request.overwrite(), parts.moves(), () -> isCancelledBefore("side-file"))
-                .map(paths -> fallen.counts().report(exported.path(), paths, summary(pass), fallen.listed()));
+                .map(paths -> fallen.counts()
+                        .report(exported.path(), paths, summary(book.pass()), fallen.listed(), suspicious));
+    }
+
+    // On demand, over the records as they stand now, nothing stored: the run's own audit may be older than an edit.
+    private List<SuspiciousSegment> audit(
+            final Project project, final Fallbacks fallbacks, final List<GlossaryEntry> glossary) {
+        final FinalAudit.Book book =
+                new FinalAudit.Book(project.brief(), fallbacks.opened(), glossary, WordValidator.none());
+        final List<SuspiciousSegment> suspicious =
+                FinalAudit.named(FinalAudit.scan(book, fallbacks.stored()), fallbacks.opened());
+        log.debug("export step=audit project={} suspicious={}", project.id(), suspicious.size());
+        return suspicious;
     }
 
     private Result<Project> findProject() {

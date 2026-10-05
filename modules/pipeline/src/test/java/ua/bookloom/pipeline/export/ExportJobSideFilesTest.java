@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static ua.bookloom.pipeline.export.ExportJobFixture.error;
 import static ua.bookloom.pipeline.export.ExportJobFixture.hiddenFiles;
 import static ua.bookloom.pipeline.export.ExportJobFixture.ok;
@@ -20,6 +21,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
@@ -100,6 +102,28 @@ class ExportJobSideFilesTest {
                         "- Flagged, written with the machine translation: 1",
                         "- ch1 · p02: omission (medium) — a clause is missing",
                         "The consistency pass was not run.");
+    }
+
+    // An accepted paragraph still in English is no flagged segment, yet the report lists it with the check that fired.
+    @Test
+    void run_acceptedParagraphLeftInEnglish_reportCarriesTheAudit() {
+        final String leftover = "The old wooden door opened slowly and the captain looked into the dark room.";
+        final String id = fixture.importBook(
+                TestBooks.epub(tempDir.resolve("Door.epub"), List.of(List.of(leftover, "He left.")), "en"), "en");
+        final List<String> ids = fixture.bodyRecords(id).stream()
+                .map(record -> record.segmentId())
+                .toList();
+        fixture.accept(id, ids.get(0), leftover);
+        fixture.accept(id, ids.get(1), "Він пішов.");
+
+        final ExportReport report = ok(
+                fixture.export(request(id, tempDir.resolve("Door.uk.epub"), false, Set.of(SideFile.QUALITY_REPORT))));
+
+        assertThat(report.suspicious())
+                .extracting(SuspiciousSegment::segmentId, SuspiciousSegment::checks)
+                .containsExactly(tuple(ids.get(0), List.of("language-identity")));
+        assertThat(read(tempDir.resolve("Door.uk.report.md")))
+                .contains("## Suspicious accepted segments", "ch1 · p01: language-identity");
     }
 
     // A composite format suffix is removed whole.

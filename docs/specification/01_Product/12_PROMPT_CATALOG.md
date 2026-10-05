@@ -1050,3 +1050,12 @@ Return one JSON object:
 Tolerant read: `facts` may be absent; unknown fields ignored; a reply that is not JSON, or whose `summary.target` is
 empty, is unreadable — the previous summary is kept and one WARN is logged; the bilingual `summary` is stored per
 `02_Architecture/06_DATA_MODEL_SQLITE.md#summaries`.
+
+## final-audit {#final-audit}
+
+Not a prompt: the final audit (15d.12) makes no model call. After a run completes, on demand from the review desk and
+when an export is made, it re-runs the deterministic checks (leftover source-language text, mixed-alphabet words,
+unbalanced quotes, doubled words, the gender check, the run's word validator), a placeholder-token leak and a soft
+`name-missing` check over every accepted, unreviewed segment, and records each hit as a finding raised by
+`audit:<check>`. A model that drops an unlocked glossary name or leaves a paragraph in English therefore shows up in the
+"suspicious" list, the outcome card, the report and the command's `--report` JSON even though every gate passed it.

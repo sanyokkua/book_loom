@@ -98,4 +98,13 @@ public interface ReviewDesk {
      * @return the computed counts
      */
     Result<ReviewCounts> counts(String projectId);
+
+    /**
+     * Runs the final audit again over every accepted segment no person has reviewed and stores what it finds, so the
+     * Suspicious list and count follow the target as it is now; the audit already ran once when the run completed.
+     *
+     * @param projectId the non-null project id
+     * @return the suspicious segments in document order, empty when every check is quiet
+     */
+    Result<List<SuspiciousSegment>> audit(String projectId);
 }

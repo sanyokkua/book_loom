@@ -153,6 +153,18 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
         assertThat(desk.calls()).containsExactly("counts(project-1)");
     }
 
+    // IF a finished run did not publish the audit's count, THEN the outcome card could not say how many look doubtful.
+    @Test
+    void finish_completedRun_publishesTheSuspiciousCount() {
+        desk.willAnswerCounts(new ReviewCounts(1240, 1180, 45, 3, 0, 0, 12, 0, 0, 7));
+        final RunSession session = session();
+
+        session.finish(Result.ok(completedReport(1240)), () -> {});
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(onFx(() -> mirror.live().suspicious().get())).isEqualTo(7);
+    }
+
     // IF a new run kept the last run's rows, THEN its panel would open showing another book's sentences.
     @Test
     void publishRunStarted_afterARun_clearsEveryLiveField() {

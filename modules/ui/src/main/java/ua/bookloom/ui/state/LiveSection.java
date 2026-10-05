@@ -26,6 +26,7 @@ public final class LiveSection {
     private final ReadOnlyObjectWrapper<LiveRows> liveRows = new ReadOnlyObjectWrapper<>(LiveRows.EMPTY);
     private final ReadOnlyObjectWrapper<Throughput> throughput = new ReadOnlyObjectWrapper<>(Throughput.EMPTY);
     private final ReadOnlyIntegerWrapper sourceKept = new ReadOnlyIntegerWrapper();
+    private final ReadOnlyIntegerWrapper suspicious = new ReadOnlyIntegerWrapper();
     private final ReadOnlyObjectWrapper<@Nullable WaitingCall> waitingCall = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<ConnectionStatus> connection =
             new ReadOnlyObjectWrapper<>(ConnectionStatus.UNKNOWN);
@@ -97,6 +98,15 @@ public final class LiveSection {
     }
 
     /**
+     * How many accepted segments the finished run's final audit doubts.
+     *
+     * @return the read-only count, zero until a run ends; read on the FX thread
+     */
+    public ReadOnlyIntegerProperty suspicious() {
+        return suspicious.getReadOnlyProperty();
+    }
+
+    /**
      * The flagged segments, in document order, as of the last flagged decision.
      *
      * @return an unmodifiable list; read on the FX thread
@@ -136,6 +146,16 @@ public final class LiveSection {
     }
 
     /**
+     * Shows how many accepted segments the final audit doubts.
+     *
+     * @param count the non-negative count
+     */
+    public void publishSuspicious(final int count) {
+        log.debug("publishing {} suspicious segments", count);
+        Platform.runLater(() -> suspicious.set(count));
+    }
+
+    /**
      * Replaces the flagged queue.
      *
      * @param rows the flagged segments in document order
@@ -162,6 +182,7 @@ public final class LiveSection {
         liveRows.set(LiveRows.EMPTY);
         throughput.set(Throughput.EMPTY);
         sourceKept.set(0);
+        suspicious.set(0);
         waitingCall.set(null);
         connection.set(ConnectionStatus.UNKNOWN);
         queue.clear();

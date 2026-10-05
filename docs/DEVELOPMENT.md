@@ -800,3 +800,18 @@ Windows/Linux aarch64. Install Liberica 25 Full there ([§1](#prerequisites)); n
 regenerate them (`docs/specification/assets/icon/README.md`).
 
 **`scripts/*.sh` or the hooks do not run on Windows** — run them from Git Bash or WSL, with Python 3 installed.
+
+## Final audit (15d.12) {#final-audit}
+
+After a run completes, the app checks every accepted segment again with the cheap deterministic checks and lists the
+doubtful ones as "suspicious" (outcome card, the review panel's filter chip, `<name>.report.md`, and the `audit` object
+of the command's `--report` JSON; the command prints one `Audit:` line when something is listed). To audit a book that was
+already exported, with no model and no project, run the local-only tool against the source and the exported book:
+
+```bash
+BOOKLOOM_AUDIT_SOURCE=<source book> BOOKLOOM_AUDIT_EXPORT=<exported book> [BOOKLOOM_AUDIT_GLOSSARY=<glossary.csv>] \
+  [BOOKLOOM_AUDIT_FROM=en] [BOOKLOOM_AUDIT_TO=uk] ./gradlew :pipeline:corpus --tests '*ExportedBookAuditTool*' -i
+```
+
+It prints `AUDIT <segment id> <locator> [checks]` lines, and `AUDIT-NAME` lines naming the glossary words a segment
+lost. It treats every written segment as accepted, so segments the run had flagged are listed too.

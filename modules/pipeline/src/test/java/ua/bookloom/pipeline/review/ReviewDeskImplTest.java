@@ -266,7 +266,8 @@ class ReviewDeskImplTest {
                 desk.queries(),
                 desk.retryDraft(ReviewMode.ASSISTED),
                 desk.projects(),
-                throwing(failure));
+                throwing(failure),
+                desk.audits(desk.segments()));
 
         final Result<ReviewCounts> result = port.counts(desk.projectId());
 
@@ -285,7 +286,12 @@ class ReviewDeskImplTest {
         final SegmentActions actions = new SegmentActions(
                 desk.documents(), desk.openProjects(), desk.projects(), throwing(failure), desk.deferrals());
         final ReviewDeskImpl port = new ReviewDeskImpl(
-                actions, desk.queries(), desk.retryDraft(ReviewMode.ASSISTED), desk.projects(), desk.segments());
+                actions,
+                desk.queries(),
+                desk.retryDraft(ReviewMode.ASSISTED),
+                desk.projects(),
+                desk.segments(),
+                desk.audits(desk.segments()));
 
         final Result<SegmentRecord> result = port.accept(desk.projectId(), FLAGGED_ID);
 

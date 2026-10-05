@@ -11,6 +11,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.audit.AuditFindings;
 
 /**
  * The one counts rule the review desk and the export report share, so the tiles a person reads before exporting and
@@ -47,7 +48,8 @@ public final class ReviewCounting {
                 countIf(
                         translated,
                         record -> record.status() == SegmentStatus.FLAGGED && record.machineTarget() == null),
-                countIf(translated, record -> isUnreviewedAccept(record, SegmentPath.VERBATIM)));
+                countIf(translated, record -> isUnreviewedAccept(record, SegmentPath.VERBATIM)),
+                countIf(translated, AuditFindings::isSuspicious));
     }
 
     private static boolean isUnreviewedAccept(final SegmentRecord record, final SegmentPath... paths) {

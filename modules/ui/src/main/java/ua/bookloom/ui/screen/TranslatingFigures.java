@@ -165,11 +165,22 @@ final class TranslatingFigures {
                 "stat-number",
                 () -> grouping.format(mirror.live().sourceKept().get()),
                 mirror.live().sourceKept());
+        final Label suspicious = boundLabel(
+                "translating-outcome-suspicious",
+                "stat-number-warn",
+                () -> grouping.format(mirror.live().suspicious().get()),
+                mirror.live().suspicious());
         final HBox row = new HBox(TILE_SPACING);
         OUTCOME.forEach(spec -> row.getChildren().add(tile(spec, mirror, messages)));
         row.getChildren()
                 .add(new StatTile(
                         "translating-outcome-tile-kept", kept, messages.get(MessageKey.TRANSLATING_COUNT_KEPT)));
+        final StatTile suspiciousTile = new StatTile(
+                "translating-outcome-tile-suspicious",
+                suspicious,
+                messages.get(MessageKey.TRANSLATING_COUNT_SUSPICIOUS));
+        Tips.install(messages, suspiciousTile, MessageKey.TRANSLATING_COUNT_SUSPICIOUS_TIP);
+        row.getChildren().add(suspiciousTile);
         return BriefCards.card("translating-outcome-card", messages, MessageKey.TRANSLATING_OUTCOME_TITLE, row);
     }
 

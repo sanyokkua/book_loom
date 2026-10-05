@@ -151,6 +151,23 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
         assertThat(desk.calls()).contains("queue(" + projectIdOfOpenBook() + ", ALL_SEGMENTS)");
     }
 
+    // IF the suspicious chip did not ask the desk for the audit's list, THEN a leak the audit found could not be
+    // opened.
+    @Test
+    void suspiciousChip_pressed_listsTheAuditedSegmentAndExplainsItself() throws Exception {
+        openPanelWith(RunState.COMPLETED, 0, ReviewFixtures.accepted());
+
+        final javafx.scene.control.ToggleButton chip =
+                (javafx.scene.control.ToggleButton) required("review-chip-suspicious");
+        onFx(chip::fire);
+        selectFirstRow();
+
+        assertThat(chip.getText()).isEqualTo("suspicious");
+        assertThat(ua.bookloom.ui.TooltipProbe.tipText(chip)).startsWith("Shows accepted segments that a last check");
+        assertThat(desk.calls()).contains("queue(" + projectIdOfOpenBook() + ", SUSPICIOUS)");
+        assertThat(rowTexts()).containsExactly("ch2 · p04");
+    }
+
     private String projectIdOfOpenBook() {
         return ThemeTestSupport.onFx(() -> injector.getInstance(ua.bookloom.ui.state.CurrentProject.class)
                 .book()

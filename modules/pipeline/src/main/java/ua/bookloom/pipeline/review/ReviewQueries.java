@@ -28,6 +28,7 @@ import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.audit.AuditFindings;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
@@ -138,6 +139,7 @@ public final class ReviewQueries {
             return switch (filter) {
                 case ALL_SEGMENTS -> kept || record.status() != SegmentStatus.PENDING;
                 case ALL_FLAGGED -> listed;
+                case SUSPICIOUS -> !kept && AuditFindings.isSuspicious(record);
                 case NAMES -> listed && hasFinding(record, GLOSSARY_KIND);
                 case OMISSIONS -> listed && hasFinding(record, OMISSION_KIND);
                 case FOREIGN_KEPT -> listed && holdsForeignText(record);

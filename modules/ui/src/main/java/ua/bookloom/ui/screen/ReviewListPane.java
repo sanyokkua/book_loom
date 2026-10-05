@@ -31,7 +31,7 @@ import ua.bookloom.ui.state.ReviewRow;
 import ua.bookloom.ui.state.ReviewViewModel;
 
 /**
- * The review panel's left side: the four filter chips, the All segments chip when it is offered, and the list of
+ * The review panel's left side: the five filter chips, the All segments chip when it is offered, and the list of
  * segments with a badge for each one's main finding.
  *
  * <p>The list and the chips only follow the view model: picking a row selects that segment, and a segment the view
@@ -74,6 +74,11 @@ final class ReviewListPane extends VBox {
                     ReviewFilter.FOREIGN_KEPT,
                     MessageKey.REVIEW_CHIP_FOREIGN_KEPT,
                     MessageKey.REVIEW_CHIP_FOREIGN_KEPT_TIP),
+            new Chip(
+                    "review-chip-suspicious",
+                    ReviewFilter.SUSPICIOUS,
+                    MessageKey.REVIEW_CHIP_SUSPICIOUS,
+                    MessageKey.REVIEW_CHIP_SUSPICIOUS_TIP),
             new Chip(
                     "review-chip-all-segments",
                     ReviewFilter.ALL_SEGMENTS,

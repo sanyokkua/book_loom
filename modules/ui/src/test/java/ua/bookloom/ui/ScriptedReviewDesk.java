@@ -17,6 +17,7 @@ import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.SegmentRecord;
 
 /**
@@ -152,6 +153,11 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             return view;
         }
         return answer("counts(" + projectId + ")");
+    }
+
+    @Override
+    public Result<List<SuspiciousSegment>> audit(final String projectId) {
+        return answer("audit(" + projectId + ")");
     }
 
     private void awaitAcceptGate() {

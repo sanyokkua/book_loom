@@ -35,6 +35,8 @@ import ua.bookloom.api.project.Severity;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.TestBooks;
+import ua.bookloom.pipeline.audit.AuditRecorder;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.ProjectServiceImpl;
@@ -97,9 +99,14 @@ public final class ReviewFixtures {
                     mode);
         }
 
+        /** The audit over the same stores, with no word validator. */
+        AuditRecorder audits(final SegmentRepository store) {
+            return new AuditRecorder(projects, store, glossary, openProjects, WordValidator.none());
+        }
+
         /** The port over the real parts and the same stores. */
         public ReviewDeskImpl reviewDesk(final ReviewMode mode) {
-            return new ReviewDeskImpl(actions, queries, retryDraft(mode), projects, segments);
+            return new ReviewDeskImpl(actions, queries, retryDraft(mode), projects, segments, audits(segments));
         }
     }
 

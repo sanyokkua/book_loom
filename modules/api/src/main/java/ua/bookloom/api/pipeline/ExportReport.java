@@ -21,6 +21,8 @@ import java.util.Objects;
  *     Roman numerals, a single character); counted in {@code written}, never in {@code sourceKept}
  * @param sourceFallbacks segments written in their source although they had a translation, because it broke their
  *     formatting, in book order; counted in {@code pending}, never in {@code written}
+ * @param suspicious accepted segments the final audit doubts as the book was written, in book order, each with the
+ *     checks that fired
  */
 public record ExportReport(
         Path destination,
@@ -34,7 +36,8 @@ public record ExportReport(
         int verifiedSegments,
         ConsistencySummary consistency,
         int keptVerbatim,
-        List<SourceFallback> sourceFallbacks) {
+        List<SourceFallback> sourceFallbacks,
+        List<SuspiciousSegment> suspicious) {
 
     /** Rejects a report without its destination, a negative count, or defensively copies {@code sideFiles}. */
     public ExportReport {
@@ -42,6 +45,7 @@ public record ExportReport(
         Objects.requireNonNull(sideFiles, "sideFiles");
         Objects.requireNonNull(consistency, "consistency");
         Objects.requireNonNull(sourceFallbacks, "sourceFallbacks");
+        Objects.requireNonNull(suspicious, "suspicious");
         if (written < 0
                 || pending < 0
                 || sourceKept < 0
@@ -56,6 +60,37 @@ public record ExportReport(
         }
         sideFiles = List.copyOf(sideFiles);
         sourceFallbacks = List.copyOf(sourceFallbacks);
+        suspicious = List.copyOf(suspicious);
+    }
+
+    /** A report whose audit found nothing doubtful. */
+    public ExportReport(
+            final Path destination,
+            final int written,
+            final int pending,
+            final int sourceKept,
+            final int flaggedWritten,
+            final int autoAccepted,
+            final int reviewed,
+            final List<Path> sideFiles,
+            final int verifiedSegments,
+            final ConsistencySummary consistency,
+            final int keptVerbatim,
+            final List<SourceFallback> sourceFallbacks) {
+        this(
+                destination,
+                written,
+                pending,
+                sourceKept,
+                flaggedWritten,
+                autoAccepted,
+                reviewed,
+                sideFiles,
+                verifiedSegments,
+                consistency,
+                keptVerbatim,
+                sourceFallbacks,
+                List.of());
     }
 
     /** A report with no segment written in its source for a broken translation. */

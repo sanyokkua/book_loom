@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -125,6 +126,41 @@ class TranslateCommandRecoveryTest {
                         .path("completionTokens")
                         .asInt())
                 .isPositive();
+    }
+
+    // A doubled word passes the run's gates as a note; the audit lists the segment, the console says so in one line
+    // and the report carries the segment with the check.
+    @Test
+    void run_acceptedSegmentWithADoubledWord_isListedByTheAuditInTheConsoleAndTheReport() throws IOException {
+        final ScriptedModels models = new ScriptedModels(Set.of(), ErrorCode.unreachable, Map.of("Two.", "Два два."));
+        final ByteArrayOutputStream console = new ByteArrayOutputStream();
+        final Path report = tempDir.resolve("reports/audit.json");
+
+        command(models, new ScriptedProbe(0)).run(arguments("--report", report.toString()), print(console));
+
+        assertThat(lines(console))
+                .anyMatch(line -> line.startsWith("Audit: 1 accepted segment(s) look suspicious")
+                        && line.contains("duplicate-word"));
+        final JsonNode audit =
+                new ObjectMapper().readTree(Files.readString(report)).path("audit");
+        assertThat(audit.path("suspicious").asInt()).isEqualTo(1);
+        assertThat(audit.path("segments").get(0).path("checks").get(0).asText()).isEqualTo("duplicate-word");
+        assertThat(audit.path("segments").get(0).path("segmentId").asText()).isEqualTo("Book.md:1");
+    }
+
+    @Test
+    void run_cleanBook_reportsAnEmptyAuditAndNoAuditLine() throws IOException {
+        final ByteArrayOutputStream console = new ByteArrayOutputStream();
+        final Path report = tempDir.resolve("reports/clean.json");
+
+        command(new ScriptedModels(Set.of(), ErrorCode.unreachable), new ScriptedProbe(0))
+                .run(arguments("--report", report.toString()), print(console));
+
+        assertThat(lines(console)).noneMatch(line -> line.startsWith("Audit:"));
+        final JsonNode audit =
+                new ObjectMapper().readTree(Files.readString(report)).path("audit");
+        assertThat(audit.path("suspicious").asInt()).isZero();
+        assertThat(audit.path("segments")).isEmpty();
     }
 
     @Test

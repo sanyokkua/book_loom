@@ -14,6 +14,8 @@ package ua.bookloom.api.pipeline;
  *     an export writes them in the source language
  * @param keptVerbatim accepted segments kept as they are with no model call (numbers, symbols, Roman numerals, a single
  *     character) and not yet reviewed; never in {@code autoAccepted}, and never "kept as source by choice"
+ * @param suspicious accepted segments no person has reviewed that the final audit doubts; they stay counted in the
+ *     accepted figures too
  */
 public record ReviewCounts(
         int total,
@@ -24,7 +26,32 @@ public record ReviewCounts(
         int pending,
         int sourceKept,
         int flaggedWithoutTarget,
-        int keptVerbatim) {
+        int keptVerbatim,
+        int suspicious) {
+
+    /** Counts with no suspicious segment. */
+    public ReviewCounts(
+            final int total,
+            final int autoAccepted,
+            final int repairedAccepted,
+            final int flagged,
+            final int reviewed,
+            final int pending,
+            final int sourceKept,
+            final int flaggedWithoutTarget,
+            final int keptVerbatim) {
+        this(
+                total,
+                autoAccepted,
+                repairedAccepted,
+                flagged,
+                reviewed,
+                pending,
+                sourceKept,
+                flaggedWithoutTarget,
+                keptVerbatim,
+                0);
+    }
 
     /** Rejects a negative count, and a {@code flaggedWithoutTarget} above {@code flagged}. */
     public ReviewCounts {
@@ -36,10 +63,11 @@ public record ReviewCounts(
                 || pending < 0
                 || sourceKept < 0
                 || flaggedWithoutTarget < 0
-                || keptVerbatim < 0) {
+                || keptVerbatim < 0
+                || suspicious < 0) {
             throw new IllegalArgumentException("no count may be negative: " + total + ", " + autoAccepted + ", "
                     + repairedAccepted + ", " + flagged + ", " + reviewed + ", " + pending + ", " + sourceKept + ", "
-                    + flaggedWithoutTarget + ", " + keptVerbatim);
+                    + flaggedWithoutTarget + ", " + keptVerbatim + ", " + suspicious);
         }
         if (flaggedWithoutTarget > flagged) {
             throw new IllegalArgumentException(

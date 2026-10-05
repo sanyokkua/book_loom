@@ -17,6 +17,9 @@ public enum ReviewFilter {
     /** Flagged segments whose findings concern a foreign passage kept untranslated. */
     FOREIGN_KEPT,
 
+    /** Accepted segments no person has reviewed that the final audit doubts, each with the check that fired. */
+    SUSPICIOUS,
+
     /** Every segment, regardless of status. */
     ALL_SEGMENTS
 }

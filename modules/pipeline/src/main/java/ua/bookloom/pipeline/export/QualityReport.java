@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.api.project.SegmentRecord;
@@ -39,6 +40,7 @@ final class QualityReport {
      * @param records the non-null stored records
      * @param keptKinds the non-null auxiliary kinds the brief keeps as source, whose records are never listed flagged
      * @param pass what the consistency pass changed, or null when it was not run
+     * @param suspicious the non-null accepted segments the final audit doubts, listed with the checks that fired
      * @return the report's Markdown text
      */
     static String of(
@@ -47,12 +49,15 @@ final class QualityReport {
             final Document book,
             final List<SegmentRecord> records,
             final Set<SegmentKind> keptKinds,
-            @Nullable final ConsistencyReport pass) {
+            @Nullable final ConsistencyReport pass,
+            final List<SuspiciousSegment> suspicious) {
         Objects.requireNonNull(counts, "counts");
         final String text = "# Export report: " + title + "\n\n"
                 + counts(counts)
                 + "\n## Flagged segments\n\n"
                 + flagged(book, records, keptKinds)
+                + "\n## Suspicious accepted segments\n\n"
+                + suspicious(suspicious)
                 + "\n## Consistency notes\n\n"
                 + notes(pass);
         log.debug("Quality report built title={} length={} consistencyPass={}", title, text.length(), pass != null);
@@ -95,6 +100,14 @@ final class QualityReport {
 
     private static String finding(final QaFinding finding) {
         return finding.kind() + " (" + finding.severity().name().toLowerCase(Locale.ROOT) + ") — " + finding.note();
+    }
+
+    private static String suspicious(final List<SuspiciousSegment> suspicious) {
+        return suspicious.isEmpty()
+                ? "None.\n"
+                : suspicious.stream()
+                        .map(segment -> "- " + segment.locator() + ": " + String.join(", ", segment.checks()) + "\n")
+                        .collect(Collectors.joining());
     }
 
     private static String notes(@Nullable final ConsistencyReport pass) {

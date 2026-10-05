@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -202,6 +203,18 @@ public final class TranslateCommand {
         return exportAndReport(run, completed, target, report, out, watch);
     }
 
+    // Silent when the audit is quiet, so a clean run's output stays the one line it was.
+    private static void printAudit(ExportReport written, PrintStream out) {
+        final int doubted = written.suspicious().size();
+        log.info("translate command audit suspicious={}", doubted);
+        if (doubted > 0) {
+            out.println("Audit: " + doubted + " accepted segment(s) look suspicious — "
+                    + written.suspicious().stream()
+                            .map(segment -> segment.locator() + " (" + String.join(", ", segment.checks()) + ")")
+                            .collect(Collectors.joining("; ")));
+        }
+    }
+
     private List<LexiconEntry> lexiconOf(String projectId) {
         final List<LexiconEntry> held = lexicon.entries(projectId).data();
         return held == null ? List.of() : held;
@@ -216,6 +229,8 @@ public final class TranslateCommand {
         }
         final ExportReport written = dataOf(exported);
         report.export(written, !completed);
+        report.audit(written.suspicious());
+        printAudit(written, out);
         if (completed) {
             out.println("Completed: " + written.destination() + " (accepted=" + run.accepted() + ", flagged="
                     + run.flagged() + ")");

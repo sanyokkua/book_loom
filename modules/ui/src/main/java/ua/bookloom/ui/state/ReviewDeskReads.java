@@ -52,8 +52,13 @@ final class ReviewDeskReads {
             log.debug("the kept-as-source count could not be read for project {}", projectId);
             return;
         }
-        log.debug("run ended: {} segments kept as source in project {}", data.sourceKept(), projectId);
+        log.debug(
+                "run ended: {} segments kept as source and {} suspicious in project {}",
+                data.sourceKept(),
+                data.suspicious(),
+                projectId);
         live.publishSourceKept(data.sourceKept());
+        live.publishSuspicious(data.suspicious());
     }
 
     private void readQueue(final long ticket) {

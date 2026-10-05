@@ -18,6 +18,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.glossary.GlossaryCsv;
@@ -43,6 +44,7 @@ final class SideFiles {
      * @param counts the counts the export reports
      * @param pass what the consistency pass changed, or null when it was not run
      * @param glossary the project's glossary entries
+     * @param suspicious the accepted segments the final audit doubts
      */
     record Sources(
             Path destination,
@@ -51,7 +53,8 @@ final class SideFiles {
             Set<SegmentKind> keptKinds,
             ExportCounts counts,
             @Nullable ConsistencyReport pass,
-            List<GlossaryEntry> glossary) {
+            List<GlossaryEntry> glossary,
+            List<SuspiciousSegment> suspicious) {
 
         /** Rejects missing parts and copies the collections. */
         Sources {
@@ -61,6 +64,7 @@ final class SideFiles {
             records = List.copyOf(records);
             keptKinds = Set.copyOf(keptKinds);
             glossary = List.copyOf(glossary);
+            suspicious = List.copyOf(suspicious);
         }
     }
 
@@ -117,7 +121,8 @@ final class SideFiles {
                         sources.targets().document(),
                         sources.records(),
                         sources.keptKinds(),
-                        sources.pass());
+                        sources.pass(),
+                        sources.suspicious());
         };
     }
 

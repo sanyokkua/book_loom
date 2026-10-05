@@ -1237,3 +1237,46 @@ measured.
 - **WHEN** `scripts/eval-matrix.sh --suite words` runs the ten garbled and ten clean sentences of `eval/words.json`
 - **THEN** a report holds the recall over the garbled cases and the false-positive rate over the clean ones
 
+### Requirement: Audit every accepted segment again when a run completes
+
+WHEN a run ends COMPLETED, and again whenever the review desk is asked, the application SHALL look at every ACCEPTED
+segment no person has reviewed (not kept as source, not kept verbatim) with the checks a run applies before acceptance:
+the deterministic text checks (leftover source-language text, a word that mixes alphabets, an unbalanced quote pair, a
+doubled word), the gender check, the run's word validator, a placeholder token written into the stored plain target, and
+a soft `name-missing` check. `name-missing` SHALL fire when an unlocked glossary entry of type character or place with a
+non-empty target has its source form as a whole word in the source segment and no word of the target holds the stem of
+its target form (the stem rule the lexicon uses, so a declined name is no loss); locked entries are left to their
+protected-span gate. Spacing is not audited. Each finding SHALL be stored on the record as an ordinary finding whose
+`raisedBy` is `audit:` and the check's name (`audit:language-identity`, `audit:quote-balance`, `audit:script-purity`,
+`audit:duplicate-word`, `audit:gender`, `audit:unknown-word`, `audit:token-leak`, `audit:name-missing`), replacing the
+findings of an earlier audit so that a segment fixed since loses its mark. The audit SHALL change no status, target or
+count of accepted segments, SHALL NOT fail a completed run, and SHALL persist nothing beyond those findings. A segment
+is "suspicious" while it is ACCEPTED, not reviewed, and holds an audit finding.
+
+**Source:** FR-QA-01, task 15d.12.
+In plain words: the run's checks only see a candidate while it is being decided, so a leak that gets through (a
+paragraph left in English, a stray quote, a name that an oversize piece dropped) used to be found only by reading the
+book. The audit asks the same checks again over the finished book and lists what is still doubtful, with the check
+that fired, as advice that never blocks anything.
+
+#### Scenario: A leftover, a stray quote and a dropped name are listed
+
+- **WHEN** a finished run holds an accepted segment whose target is still English, one whose target leaves a quote
+  open that the source closed, and one that lost the glossary name `Nell` → `Нелл`, and the audit runs
+- **THEN** the three segments are suspicious with the checks `language-identity`, `quote-balance` and `name-missing`
+- **AND** the segments the run translated cleanly are not listed
+
+#### Scenario: A fixed segment leaves the list
+
+- **WHEN** a suspicious segment's target is clean at the next audit, or a person has reviewed the segment
+- **THEN** it holds no audit finding and is not suspicious
+
+#### Scenario: The fixture book is not doubted
+
+- **WHEN** the earth-gravity fixture goes through a run with a model that never fails, in each of the four formats
+- **THEN** the audit lists no segment
+
+#### Scenario: A declined name is no loss
+
+- **WHEN** the glossary maps `Nell` to `Нелл` and the target holds `Нелла`
+- **THEN** `name-missing` does not fire

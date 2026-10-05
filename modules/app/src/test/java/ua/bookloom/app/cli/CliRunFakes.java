@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +47,7 @@ final class CliRunFakes {
 
         private final Set<Integer> failingDrafts;
         private final ErrorCode failure;
+        private final Map<String, String> translations;
         private final AtomicInteger drafts = new AtomicInteger();
 
         /**
@@ -53,8 +55,15 @@ final class CliRunFakes {
          * @param failure the error those calls answer
          */
         ScriptedModels(Set<Integer> failingDrafts, ErrorCode failure) {
+            this(failingDrafts, failure, Map.of());
+        }
+
+        /** As above, writing {@code replacements} where the model would write its usual translation of a source. */
+        ScriptedModels(Set<Integer> failingDrafts, ErrorCode failure, Map<String, String> replacements) {
             this.failingDrafts = Set.copyOf(failingDrafts);
             this.failure = failure;
+            this.translations = new HashMap<>(TRANSLATIONS);
+            this.translations.putAll(replacements);
         }
 
         @Override
@@ -73,7 +82,7 @@ final class CliRunFakes {
             }
             final String text = user.substring(start + "<Text>\n".length(), user.indexOf("\n</Text>", start));
             return Result.ok(new ChatResponse(
-                    "{\"target\":\"" + TRANSLATIONS.getOrDefault(text, text) + "\"}", FinishReason.STOP));
+                    "{\"target\":\"" + translations.getOrDefault(text, text) + "\"}", FinishReason.STOP));
         }
     }
 

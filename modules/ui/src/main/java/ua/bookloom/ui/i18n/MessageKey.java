@@ -1027,6 +1027,10 @@ public enum MessageKey {
     TRANSLATING_COUNT_KEPT("translating.count.kept"),
     /** Caption of the outcome tile counting segments kept as they are: numbers, symbols, nothing to translate. */
     TRANSLATING_COUNT_VERBATIM("translating.count.verbatim"),
+    /** Caption of the outcome tile counting accepted segments the final audit doubts. */
+    TRANSLATING_COUNT_SUSPICIOUS("translating.count.suspicious"),
+    /** Hover explanation of the tile labelled by {@link #TRANSLATING_COUNT_SUSPICIOUS}. */
+    TRANSLATING_COUNT_SUSPICIOUS_TIP("translating.count.suspicious.tip"),
     /** Title of the ready card shown before a run exists. */
     TRANSLATING_READY_TITLE("translating.ready.title"),
     /** Label of the ready card's book row. */
@@ -1503,6 +1507,10 @@ public enum MessageKey {
     REVIEW_CHIP_FOREIGN_KEPT("review.chip.foreignKept"),
     /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_FOREIGN_KEPT}. */
     REVIEW_CHIP_FOREIGN_KEPT_TIP("review.chip.foreignKept.tip"),
+    /** Filter chip listing accepted segments the final audit doubts. */
+    REVIEW_CHIP_SUSPICIOUS("review.chip.suspicious"),
+    /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_SUSPICIOUS}. */
+    REVIEW_CHIP_SUSPICIOUS_TIP("review.chip.suspicious.tip"),
     /** Browse chip listing every segment, offered after an Unattended run. */
     REVIEW_CHIP_ALL_SEGMENTS("review.chip.allSegments"),
     /** Hover explanation of the control labelled by {@link #REVIEW_CHIP_ALL_SEGMENTS}. */

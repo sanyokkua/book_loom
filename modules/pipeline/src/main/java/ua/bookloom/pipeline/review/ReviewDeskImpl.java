@@ -17,8 +17,10 @@ import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.pipeline.SegmentView;
+import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.audit.AuditRecorder;
 
 /**
  * The review panel's one seam: every action and read is delegated to its part, and whatever escapes a part is caught
@@ -37,6 +39,7 @@ public final class ReviewDeskImpl implements ReviewDesk {
     private final RetryDraft retryDraft;
     private final ProjectRepository projects;
     private final SegmentRepository segments;
+    private final AuditRecorder audits;
 
     @Override
     public Result<SegmentRecord> accept(final String projectId, final String segmentId) {
@@ -124,6 +127,13 @@ public final class ReviewDeskImpl implements ReviewDesk {
                         .flatMap(project -> segments.all(projectId)
                                 .map(records -> ReviewCounting.count(
                                         records, project.brief().alsoTranslate().keptKinds()))));
+    }
+
+    @Override
+    public Result<List<SuspiciousSegment>> audit(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        log.debug("audit project={} part=AuditRecorder", projectId);
+        return guarded("audit", null, () -> audits.run(projectId));
     }
 
     private Result<SegmentRecord> recordOf(final String projectId, final String segmentId) {
