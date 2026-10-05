@@ -106,6 +106,6 @@ public final class QaEvaluation {
                 glossaryTerms,
                 lockedRenderings,
                 frame.narrator());
-        return QaEvaluator.evaluate(givenHardGates, input);
+        return QaEvaluator.evaluate(givenHardGates, input, frame.wordValidator());
     }
 }

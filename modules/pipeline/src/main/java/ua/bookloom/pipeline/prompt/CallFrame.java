@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Narrator;
+import ua.bookloom.pipeline.checks.WordValidator;
 
 /**
  * The four system-message values every model call of a run carries — its language pair, its derived style sheet and
@@ -19,6 +20,8 @@ import ua.bookloom.api.project.Narrator;
  * @param bookLanguage the language the book's own metadata declares, or null when it declares none or is not known
  *     here; a block declaring this language is never a foreign passage, even when the brief's source differs
  * @param narrator the Book Brief's narrator, read by the gender check; the style sheet already tells the model
+ * @param wordValidator the run's word validator, which the quality checks ask about doubtful words; the no-op one
+ *     unless a run is given another
  */
 public record CallFrame(
         @Nullable String sourceLanguage,
@@ -26,7 +29,8 @@ public record CallFrame(
         StyleSheet styleSheet,
         ForeignPassagePolicy foreignPassagePolicy,
         @Nullable String bookLanguage,
-        Narrator narrator) {
+        Narrator narrator,
+        WordValidator wordValidator) {
 
     /** Validates the invariants a caller is entitled to assume. */
     public CallFrame {
@@ -34,6 +38,25 @@ public record CallFrame(
         Objects.requireNonNull(styleSheet, "styleSheet");
         Objects.requireNonNull(foreignPassagePolicy, "foreignPassagePolicy");
         Objects.requireNonNull(narrator, "narrator");
+        Objects.requireNonNull(wordValidator, "wordValidator");
+    }
+
+    /** A frame whose run has no word validator. */
+    public CallFrame(
+            @Nullable String sourceLanguage,
+            String targetLanguage,
+            StyleSheet styleSheet,
+            ForeignPassagePolicy foreignPassagePolicy,
+            @Nullable String bookLanguage,
+            Narrator narrator) {
+        this(
+                sourceLanguage,
+                targetLanguage,
+                styleSheet,
+                foreignPassagePolicy,
+                bookLanguage,
+                narrator,
+                WordValidator.none());
     }
 
     /** A frame for a book whose narrator is not stated. */

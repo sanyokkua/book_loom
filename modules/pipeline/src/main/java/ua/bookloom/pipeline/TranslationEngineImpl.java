@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.QualityLoop;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -45,6 +46,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
     private final ConsistencyPass revision;
     private final Clock clock;
     private final RecoveryTimer timer;
+    private final WordValidator words;
 
     /**
      * Creates an engine with the application-wide tolerant JSON mapper, the quality loop every run decides through,
@@ -69,7 +71,8 @@ public final class TranslationEngineImpl implements TranslationEngine {
             final SentenceSplitter splitter,
             final ConsistencyPass revision,
             final Clock clock,
-            final RecoveryTimer timer) {
+            final RecoveryTimer timer,
+            final WordValidator words) {
         this.documents = Objects.requireNonNull(documents, "documents");
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         this.templates = Objects.requireNonNull(templates, "templates");
@@ -80,6 +83,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
         this.revision = Objects.requireNonNull(revision, "revision");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.timer = Objects.requireNonNull(timer, "timer");
+        this.words = Objects.requireNonNull(words, "words");
     }
 
     @Override
@@ -88,20 +92,7 @@ public final class TranslationEngineImpl implements TranslationEngine {
             Objects.requireNonNull(request, "request");
             Objects.requireNonNull(model, "model");
             log.debug("Preparing translation job project={} mode={}", request.projectId(), request.mode());
-            return Result.ok(new TranslationJobImpl(
-                    documents,
-                    request,
-                    model,
-                    mapper,
-                    templates,
-                    stores,
-                    qualityLoop,
-                    splitter,
-                    revision,
-                    clock,
-                    timer,
-                    RunTicks.DAEMON,
-                    BatchDrafter.DEFAULT_INITIAL_SIZE));
+            return Result.ok(jobFor(request, model));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
@@ -112,5 +103,23 @@ public final class TranslationEngineImpl implements TranslationEngine {
             log.error("Unexpected translation engine boundary failure code={}", error.code(), cause);
             return Result.err(error);
         }
+    }
+
+    private TranslationJobImpl jobFor(final RunRequest request, final ChatModel model) {
+        return new TranslationJobImpl(
+                documents,
+                request,
+                model,
+                mapper,
+                templates,
+                stores,
+                qualityLoop,
+                splitter,
+                revision,
+                clock,
+                timer,
+                RunTicks.DAEMON,
+                BatchDrafter.DEFAULT_INITIAL_SIZE,
+                words);
     }
 }

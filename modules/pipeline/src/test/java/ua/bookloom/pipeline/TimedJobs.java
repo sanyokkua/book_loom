@@ -11,6 +11,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Jobs whose recovery waits and watchdog cadence a test scripts. */
@@ -41,7 +42,8 @@ final class TimedJobs {
                 clock,
                 timer,
                 ticks,
-                BatchDrafter.NO_BATCHING);
+                BatchDrafter.NO_BATCHING,
+                WordValidator.none());
         job.pauseAt(Set.of(PausePoint.ON_ERROR));
         return job;
     }

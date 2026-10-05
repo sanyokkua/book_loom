@@ -37,6 +37,10 @@ public record OutputLimit(int expectedTokens, int capTokens) {
     // non-Latin rendering costs more tokens than its letters suggest, hence the margin.
     private static final int SUGGEST_BASE_TOKENS = 128;
     private static final int SUGGEST_TOKENS_PER_TERM = 40;
+    // A garbled-word reply is empty for clean text and otherwise holds a short entry (id, word, quote) per doubtful
+    // word; a text rarely holds more than one or two, so a few entries' worth per text is a generous cap.
+    private static final int WORDS_BASE_TOKENS = 128;
+    private static final int WORDS_TOKENS_PER_TEXT = 96;
 
     /**
      * The limit for one reviewer call.
@@ -92,6 +96,20 @@ public record OutputLimit(int expectedTokens, int capTokens) {
             throw new IllegalArgumentException("termCount must be positive: " + termCount);
         }
         final int cap = SUGGEST_BASE_TOKENS + SUGGEST_TOKENS_PER_TERM * termCount;
+        return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
+    }
+
+    /**
+     * The limit for one garbled-word call.
+     *
+     * @param textCount how many texts the call sends; at least one
+     * @return the limit, growing with the texts, whose expected length is half the cap
+     */
+    public static OutputLimit forSuspiciousWords(final int textCount) {
+        if (textCount < 1) {
+            throw new IllegalArgumentException("textCount must be positive: " + textCount);
+        }
+        final int cap = WORDS_BASE_TOKENS + WORDS_TOKENS_PER_TEXT * textCount;
         return new OutputLimit(cap / EXPECTED_SHARE_DIVISOR, cap);
     }
 

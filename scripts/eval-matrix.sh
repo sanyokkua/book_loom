@@ -7,7 +7,8 @@
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
 # draft A/B instead (batches of 4/8/12/16 consecutive cases through the JSON batch protocol; reports end in
-# -batch.json) and prints one row per model and batch size.
+# -batch.json) and prints one row per model and batch size. --suite words runs the garbled-word check (ADR-0042) over
+# eval/words.json (reports end in -words.json) and prints recall and false positives per model.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -70,7 +71,12 @@ if sys.argv[2] == "batch":
         for c in r["cells"]:
             print("%-36s %4d %5d %7.0f%% %7.0f%% %7.1f%% %7.1f%% %8.1f" % (r["model"], c["size"], c["calls"], 100 * c["idValidity"], 100 * c["tokenGate"], 100 * c["omission"], 100 * c["merge"], c["outputTokensPerItem"]))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") != "batch"]
+if sys.argv[2] == "words":
+    print("%-36s %5s %8s %8s %6s" % ("model", "cases", "recall", "falsePos", "ok"))
+    for r in (r for r in reports if r.get("suite") == "words"):
+        print("%-36s %5d %7.0f%% %7.0f%% %6s" % (r["model"], r["cases"], 100 * r["recall"], 100 * r["falsePositive"], "yes" if r["meetsTarget"] else "NO"))
+    sys.exit(0)
+rows = [r for r in reports if r.get("suite") not in ("batch", "words")]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

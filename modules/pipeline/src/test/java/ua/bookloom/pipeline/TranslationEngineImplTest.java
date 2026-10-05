@@ -26,6 +26,7 @@ import ua.bookloom.api.pipeline.TranslationJob;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Covers the public engine boundary: the job it creates runs over the stored project it is asked for. */
@@ -132,7 +133,8 @@ class TranslationEngineImplTest {
                 Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
                 ConsistencyPassFixture.over(project),
                 Clock.systemUTC(),
-                RecoveryTimer.REAL);
+                RecoveryTimer.REAL,
+                WordValidator.none());
     }
 
     private static ScriptedChatModel answers(final String reply) {

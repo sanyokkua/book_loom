@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.pipeline.checks.WordValidator;
 
 /**
  * Runs every quality-gate check for one segment's restored candidate: the refusal gate this package owns, the
@@ -27,11 +28,25 @@ public final class QaEvaluator {
      *     check failed outright
      */
     public static QaResult evaluate(final List<CheckResult> givenHardGates, final SoftCheckInput input) {
+        return evaluate(givenHardGates, input, WordValidator.none());
+    }
+
+    /**
+     * Evaluates one candidate as {@link #evaluate(List, SoftCheckInput)} does, with a word validator whose doubts
+     * become one low {@code unknown-word} note.
+     *
+     * @param givenHardGates the gate results already computed for this segment
+     * @param input the segment's display texts, languages and policies
+     * @param words the run's word validator; never null
+     * @return the segment's outcome
+     */
+    public static QaResult evaluate(
+            final List<CheckResult> givenHardGates, final SoftCheckInput input, final WordValidator words) {
         Objects.requireNonNull(givenHardGates, "givenHardGates");
         Objects.requireNonNull(input, "input");
         final CheckResult refusal = RefusalGate.run(input);
         final List<CheckResult> hardGates = Stream.of(
-                        givenHardGates.stream(), Stream.of(refusal), TextCheckGates.run(input).stream())
+                        givenHardGates.stream(), Stream.of(refusal), TextCheckGates.run(input, words).stream())
                 .flatMap(results -> results)
                 .toList();
         final List<CheckResult> soft = SoftChecks.run(input);

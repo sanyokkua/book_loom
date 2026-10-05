@@ -162,6 +162,20 @@ public enum PromptName {
                     Set.of("styleSheet", "foreignPassageRule", "examples", "languageRules")),
             new Slots(Set.of("terms"), Set.of())),
 
+    /**
+     * The optional garbled-word check (ADR-0042): a batch of finished target texts, answered with the words that are
+     * not real words, each with the phrase that holds it; sampled at zero because the answer must repeat.
+     */
+    SUSPICIOUS_WORDS(
+            "suspicious-words",
+            CallKind.REVIEW,
+            "suspicious-words",
+            SuspiciousWordsSchema.SCHEMA,
+            0.0,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("items"), Set.of())),
+
     /** The chapter-end summary the Max dial asks the model for; the reply's target text is what later prompts carry. */
     SUMMARY(
             "summary",

@@ -19,5 +19,8 @@ public enum FindingKind {
     SPACING,
 
     /** A past-tense word of the narrator's whose gender is not the narrator's. */
-    GENDER
+    GENDER,
+
+    /** A word that is not a real word of the target language: garbled or coined, written in the right script. */
+    UNKNOWN_WORD
 }

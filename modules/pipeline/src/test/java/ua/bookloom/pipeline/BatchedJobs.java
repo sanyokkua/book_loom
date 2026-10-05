@@ -9,6 +9,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.batch.BatchDrafter;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /** Jobs that draft in batches, as a run does; {@link TranslationJobTestSupport#job} drafts every segment alone. */
@@ -42,6 +43,7 @@ final class BatchedJobs {
                 Clock.systemUTC(),
                 RecoveryTimer.REAL,
                 RunTicks.DAEMON,
-                firstBatchSize);
+                firstBatchSize,
+                WordValidator.none());
     }
 }

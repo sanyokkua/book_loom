@@ -30,7 +30,8 @@ class PromptNameTest {
         "PRESCAN,prescan,PRESCAN,prescan,0.2",
         "REVIEW_TERMS,review-terms,REVIEW_TERMS,review-terms,0.1",
         "SUGGEST_TARGETS,suggest-targets,SUGGEST_TARGETS,suggest-targets,0.1",
-        "SUMMARY,summary,SUMMARY,summary,0.2"
+        "SUMMARY,summary,SUMMARY,summary,0.2",
+        "SUSPICIOUS_WORDS,suspicious-words,REVIEW,suspicious-words,0.0"
     })
     void constants_declared_carryListedValues(
             final PromptName name,
@@ -59,7 +60,8 @@ class PromptNameTest {
         "PRESCAN",
         "REVIEW_TERMS",
         "SUGGEST_TARGETS",
-        "SUMMARY"
+        "SUMMARY",
+        "SUSPICIOUS_WORDS"
     })
     void temperature_lowerNotDefined_throws(final PromptName name) {
         assertThatThrownBy(() -> name.temperature(true)).isInstanceOf(IllegalArgumentException.class);

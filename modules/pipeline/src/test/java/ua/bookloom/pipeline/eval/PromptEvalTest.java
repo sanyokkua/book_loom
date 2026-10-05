@@ -39,12 +39,13 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * <p>{@code BOOKLOOM_EVAL_LANGS} (a comma list of tags, or {@code all}) runs the per-language mini-corpora under
  * {@code eval/languages/} instead; {@code BOOKLOOM_EVAL_RULES=generic} forces every prompt to the generic language
  * rules, and the reports then end in {@code -generic}, so the two can be compared. With
- * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead.
+ * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead, and with
+ * {@code BOOKLOOM_EVAL_SUITE=words} {@link WordsEvalTest} does.
  */
 @Slf4j
 @Tag("promptEval")
 @EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_URL", matches = ".+")
-@DisabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "batch")
+@DisabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "batch|words")
 class PromptEvalTest {
 
     private static final String DEFAULT_MODEL = "gemma4:e4b-mlx";

@@ -10,6 +10,7 @@ import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.TranslationEngine;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
 import ua.bookloom.pipeline.glossary.GlossaryServiceImpl;
 import ua.bookloom.pipeline.lexicon.LexiconServiceImpl;
@@ -49,6 +50,8 @@ public final class PipelineModule extends AbstractModule {
         bind(GlossaryService.class).to(GlossaryServiceImpl.class);
         bind(LexiconService.class).to(LexiconServiceImpl.class);
         bind(ReviewDesk.class).to(ReviewDeskImpl.class);
+        // No source of words is accepted yet (ADR-0042), so a run's word check has no opinion.
+        bind(WordValidator.class).toInstance(WordValidator.none());
     }
 
     @Provides

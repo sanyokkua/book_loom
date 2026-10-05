@@ -52,6 +52,9 @@ public enum CheckName {
     /** Text check, soft: a past-tense word after the narrator's «я» whose gender is not the narrator's. */
     GENDER(0.0, "gender", "gender", false),
 
+    /** Text check, soft: a word the word validator doubts is a real word of the target language. */
+    UNKNOWN_WORD(0.0, "fluency", "unknown-word", false),
+
     /** Note only: the typography pass changed the target's apostrophes, ellipses, quote marks or spacing. */
     TYPOGRAPHY(0.0, "fluency", "normalised", false);
 

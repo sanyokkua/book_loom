@@ -14,6 +14,7 @@ import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.GenderCheck;
 import ua.bookloom.pipeline.checks.GenderChecks;
 import ua.bookloom.pipeline.checks.TextChecks;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
@@ -26,8 +27,9 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class TextCheckGates {
 
-    static List<CheckResult> run(final SoftCheckInput input) {
+    static List<CheckResult> run(final SoftCheckInput input, final WordValidator words) {
         Objects.requireNonNull(input, "input");
+        Objects.requireNonNull(words, "words");
         if (ForeignMarking.isMarked(input)) {
             log.debug("Text checks skipped: a kept foreign passage");
             return List.of();
@@ -43,7 +45,23 @@ final class TextCheckGates {
                         .map(TextCheckGates::resultOf)
                         .toList());
         genderResult(input, target).ifPresent(results::add);
+        wordResult(input, target, words).ifPresent(results::add);
         return List.copyOf(results);
+    }
+
+    // One low note per segment that names every doubtful word; it never blocks, because a real rare word can be
+    // missing.
+    private static Optional<CheckResult> wordResult(
+            final SoftCheckInput input, final String target, final WordValidator words) {
+        final List<CheckFinding> found = words.find(target, input.targetLanguage());
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+        log.debug("Word validator doubts {} word(s)", found.size());
+        final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
+        final CheckName name = CheckName.UNKNOWN_WORD;
+        return Optional.of(CheckResult.passWithNotice(
+                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
     }
 
     // One notice per segment that names every wrong word, so the repair prompt gets them all in a single finding.
@@ -82,6 +100,7 @@ final class TextCheckGates {
             case DUPLICATE_WORD -> CheckName.DUPLICATE_WORD;
             case SPACING -> CheckName.SPACING;
             case GENDER -> CheckName.GENDER;
+            case UNKNOWN_WORD -> CheckName.UNKNOWN_WORD;
         };
     }
 }

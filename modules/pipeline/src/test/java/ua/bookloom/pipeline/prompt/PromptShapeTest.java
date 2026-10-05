@@ -47,7 +47,8 @@ class PromptShapeTest {
             "review-terms", "verdicts",
             "suggest-targets", "suggestions",
             "summary", "summary",
-            "draft-batch-json", "items");
+            "draft-batch-json", "items",
+            "suspicious-words", "words");
 
     // The draft system measured 698 before the language-rules map replaced the per-language example files.
     private static final int DRAFT_SYSTEM_BUDGET = 697;
@@ -73,7 +74,7 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "SUMMARY"},
+            names = {"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "SUMMARY", "SUSPICIOUS_WORDS"},
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
         assertThat(prompt(name)).contains("⟦gN⟧ token");

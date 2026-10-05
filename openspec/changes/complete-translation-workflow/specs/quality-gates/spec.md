@@ -1194,3 +1194,46 @@ repair, never reject.
 - **WHEN** the check runs over the gender corpus
 - **THEN** every defective case is flagged and at most 5% of the faithful cases are
 
+### Requirement: Ask a word validator about doubtful words, as a note only
+
+The application SHALL run every candidate's display text through the run's `WordValidator` after the other text checks
+and raise one low `unknown-word` finding (`raisedBy` `unknown-word`, kind `fluency`) naming each word the validator
+doubts with its quoted span. The finding SHALL be a soft note: it never fails a hard gate, never blocks acceptance and
+never flags a segment by itself, because a real rare, dialect or archaic word can be missing from any source of words.
+The validator bound by default SHALL have no opinion, so a run with it is exactly a run without the check. A validator
+SHALL be a pure function of the text and the target language tag. The optional model-based validator SHALL cost one
+structured call per batch of texts at temperature zero with a flat schema, SHALL keep a reported word only when it is a
+whole word of the text it names and its quoted phrase, when given, is words of that text that include it, SHALL say
+nothing when its call fails, and SHALL NOT be enabled by default, in the window or by the command line. No dictionary
+file is bundled until ADR-0042 is accepted.
+
+**Source:** FR-QA-01, ADR-0042; task 15d.11.
+In plain words: a made-up word such as `кафедрахрі` cannot be caught by script, so a validator may point at it, but only
+as a note, because a list or a model can be wrong; today nothing is bound, and a model-based pointer exists only to be
+measured.
+
+#### Scenario: The default validator changes nothing
+
+- **WHEN** a segment is evaluated with the default validator
+- **THEN** the result equals the one produced without a validator
+
+#### Scenario: A doubted word becomes a low note
+
+- **WHEN** the validator doubts `кафедрахрі` in `Він сидів на кафедрахрі й мовчки дивився у вікно.`
+- **THEN** one low `unknown-word` finding quotes `кафедрахрі`, the hard gates pass and the segment is not failed outright
+
+#### Scenario: A word the text does not hold is dropped
+
+- **WHEN** the model-based validator reports a word that is not a whole word of the text, or a quote the text does not hold
+- **THEN** no finding is raised for it
+
+#### Scenario: A failed call says nothing
+
+- **WHEN** the model-based validator's call fails
+- **THEN** it reports no words and the segment is judged as it would be without the check
+
+#### Scenario: The corpus is measured, not asserted
+
+- **WHEN** `scripts/eval-matrix.sh --suite words` runs the ten garbled and ten clean sentences of `eval/words.json`
+- **THEN** a report holds the recall over the garbled cases and the false-positive rate over the clean ones
+

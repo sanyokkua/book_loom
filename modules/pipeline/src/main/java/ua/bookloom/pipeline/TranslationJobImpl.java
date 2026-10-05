@@ -32,6 +32,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
@@ -91,6 +92,7 @@ final class TranslationJobImpl implements TranslationJob {
     private final StallWatchdog watchdog;
     private final RunTicks ticks;
     private final int batchSize;
+    private final WordValidator words;
 
     TranslationJobImpl(
             final DocumentPort documents,
@@ -116,13 +118,15 @@ final class TranslationJobImpl implements TranslationJob {
                 clock,
                 RecoveryTimer.REAL,
                 RunTicks.DAEMON,
-                BatchDrafter.NO_BATCHING);
+                BatchDrafter.NO_BATCHING,
+                WordValidator.none());
     }
 
     /**
      * Creates a job whose recovery waits and watchdog cadence are the given ones, so a test replays hours of an outage
      * or a stall on a scripted clock, and that drafts in batches from the given first size;
-     * {@link BatchDrafter#NO_BATCHING} drafts every segment on its own, as a test of the single-segment path wants.
+     * {@link BatchDrafter#NO_BATCHING} drafts every segment on its own, as a test of the single-segment path wants. The
+     * quality checks ask {@code words} about doubtful words.
      */
     TranslationJobImpl(
             final DocumentPort documents,
@@ -137,7 +141,9 @@ final class TranslationJobImpl implements TranslationJob {
             final Clock clock,
             final RecoveryTimer timer,
             final RunTicks ticks,
-            final int batchSize) {
+            final int batchSize,
+            final WordValidator words) {
+        this.words = Objects.requireNonNull(words, "words");
         this.batchSize = batchSize;
         this.documents = Objects.requireNonNull(documents, "documents");
         this.request = Objects.requireNonNull(request, "request");
@@ -288,7 +294,8 @@ final class TranslationJobImpl implements TranslationJob {
                 styleSheet,
                 brief.foreignPassages(),
                 CallFrame.bookLanguageOf(run.document()),
-                brief.narrator());
+                brief.narrator(),
+                words);
         final ModelCalls calls = new JobModelCalls(
                 onSent -> new CancellableChatModel(model, control, onSent, watchdog),
                 this::emit,
