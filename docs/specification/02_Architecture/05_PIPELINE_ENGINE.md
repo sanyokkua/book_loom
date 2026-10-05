@@ -22,7 +22,7 @@ segment would exceed the chunk **token budget**; the chunk then closes and a new
 across chunks, so one target block always maps back to one source block. Concretely, a chunk is a run of consecutive
 pending segments of one unit, packed to at most `min(effectiveContext − reservedHeadroom, chunkBudgetSetting)`
 estimated tokens (`min(8192 − reservedHeadroom, 1200)` with this build's constants) and capped at 8 segments on Fast,
-4 on Balanced, 2 on Max, and 1 under Manual review — whichever limit is reached first; a unit boundary always closes
+8 on Balanced, 2 on Max, and 1 under Manual review — whichever limit is reached first; a unit boundary always closes
 the current chunk and soft-resets the preceding-target window (ADR-0038).
 
 The budget is **derived from the provider's effective context window** rather than a fixed constant, and the Generation

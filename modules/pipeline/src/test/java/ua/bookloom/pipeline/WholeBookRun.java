@@ -61,12 +61,13 @@ import ua.bookloom.persistence.PersistenceModule;
 /**
  * The whole-book scenario {@link WholeBookPipelineEndToEndTest} checks facet by facet: the real document, persistence
  * and pipeline modules wired as the app wires them, the WireMock-backed model passed to the run, and the six
- * provider answers stubbed in the order the engine asks for them: the first chunk's four drafts are one batch call.
+ * provider answers stubbed in the order the engine asks for them: the first chunk's eight drafts are one batch call.
  *
  * <p>Code-point lengths of each stubbed target against its source (D-3 needs 0.81–1.69 and Cyrillic):
  * {@code Book.md:0} 32/37 = 0.86; {@code Book.md:1} 35/40 = 0.88 and its fix 37/40 = 0.93; {@code Book.md:2} 45/47 =
- * 0.96 in masked form; {@code Book.md:3} 26/26 = 1.00 and the edit 30/26 = 1.15; {@code Book.md:4} 30/35 = 0.86. The
- * fourth segment's fixes answer its English source, which the echo check fails outright.
+ * 0.96 in masked form; {@code Book.md:3} to {@code :6} the four filler paragraphs, each inside the band; {@code
+ * Book.md:7} 26/26 = 1.00 and the edit 30/26 = 1.15; {@code Book.md:8} 30/35 = 0.86. The eighth segment's fixes answer
+ * its English source, which the echo check fails outright.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -76,6 +77,10 @@ final class WholeBookRun {
     static final String DRAFT_1 = "Вона пішла з Гейлом до темної зали.";
     static final String DRAFT_2 = "Вони чекали на ⟦g0⟧Гейла⟦g1⟧ до самого ранку.";
     static final String DRAFT_3 = "Він пішов з дому вдосвіта.";
+    static final String FILLER_0 = "Рибалки лагодили свої сіті.";
+    static final String FILLER_1 = "Діти весело бігли вздовж берега.";
+    static final String FILLER_2 = "Пекар відчинив свою маленьку крамницю.";
+    static final String FILLER_3 = "Капітан вивчав стару карту.";
     static final String FIX_1 = "Вона пройшла з Гейлом до темної зали.";
     static final String EDIT = "Він вийшов з дому на світанку.";
     static final String DRAFT_4 = "Того вечора дощ так і не вщух.";
@@ -86,6 +91,10 @@ final class WholeBookRun {
             "The door was opened by Hale at night.",
             "She walked with Hale into the dark hall.",
             "They waited for *Hale* until the morning.",
+            "The fishermen mended their nets.",
+            "The children ran along the shore.",
+            "The baker opened his small shop.",
+            "The captain studied the old map.",
             SOURCE_3,
             "The rain did not stop that evening.");
     // Two edits whose results the checks refuse (a Latin letter inside a Cyrillic word), so each segment gets one
@@ -96,14 +105,14 @@ final class WholeBookRun {
     private static final String CHUNK_REVIEW = "{\"results\":["
             + "{\"id\":\"s2\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"пішла\","
             + "\"replacement\":\"пішлa\"}]},"
-            + "{\"id\":\"s4\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"Він пішов\","
+            + "{\"id\":\"s8\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"Він пішов\","
             + "\"replacement\":\"Він пішoв\"}]}]}";
     private static final String LAST_REVIEW = "{\"results\":[]}";
     private static final int PROMPT_TOKENS = 120;
     private static final int COMPLETION_TOKENS = 45;
     private static final long EVAL_NANOS = 1_500_000_000L;
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(60);
-    private static final int SEGMENTS = 5;
+    private static final int SEGMENTS = 9;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** What the scenario left behind, read at the pause and after the export. */
@@ -163,7 +172,7 @@ final class WholeBookRun {
         return new Project(injector, id);
     }
 
-    /** The five-paragraph book, three of whose paragraphs name Hale mid-sentence, written as {@code Book.md}. */
+    /** The nine-paragraph book, three of whose paragraphs name Hale mid-sentence, written as {@code Book.md}. */
     static Path book(final Path directory) {
         return TestBooks.markdown(directory.resolve("Book.md"), BOOK);
     }
@@ -215,10 +224,10 @@ final class WholeBookRun {
         return pauses;
     }
 
-    /** Saves the person's edit of the flagged Book.md:3 through the review desk, as the review panel would. */
+    /** Saves the person's edit of the flagged Book.md:7 through the review desk, as the review panel would. */
     private static SegmentView editTheFlaggedSegment(final Project project) {
-        dataOf(project.desk().saveEdit(project.id(), "Book.md:3", EDIT));
-        return view(project, "Book.md:3");
+        dataOf(project.desk().saveEdit(project.id(), "Book.md:7", EDIT));
+        return view(project, "Book.md:7");
     }
 
     /** The six answers, in the order the engine is predicted to ask. */
@@ -232,9 +241,9 @@ final class WholeBookRun {
                 provider.reply(LAST_REVIEW, Duration.ZERO));
     }
 
-    /** The first chunk's four drafts as one batch reply, ids numbered within the batch. */
+    /** The first chunk's eight drafts as one batch reply, ids numbered within the batch. */
     private static String firstBatch() {
-        return batchReply(List.of(DRAFT_0, DRAFT_1, DRAFT_2, DRAFT_3));
+        return batchReply(List.of(DRAFT_0, DRAFT_1, DRAFT_2, FILLER_0, FILLER_1, FILLER_2, FILLER_3, DRAFT_3));
     }
 
     /** A batch reply answering {@code targets} under the ids 1, 2, … in order. */

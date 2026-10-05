@@ -311,7 +311,7 @@ The book-brief screen SHALL offer, in its Quality vs speed card, a dial of `Fast
 to `Balanced`, and SHALL show beneath it a one-line hint naming what the chosen position turns on:
 
 - `Fast: chunks of up to 8 segments · AI reviewer off · backward-consistency pass off`
-- `Balanced: chunks of up to 4 segments · AI reviewer on · backward-consistency pass off`
+- `Balanced: chunks of up to 8 segments · AI reviewer on · backward-consistency pass off`
 - `Max: chunks of up to 2 segments · AI reviewer on · backward-consistency pass on`
 
 The card SHALL show a model row naming the provider and the model the run will use, with a `change` link that opens
@@ -337,7 +337,7 @@ belong here.
 
 - **WHEN** a book is opened and the brief is shown
 - **THEN** the dial is at `Balanced` and the hint reads
-  `Balanced: chunks of up to 4 segments · AI reviewer on · backward-consistency pass off`
+  `Balanced: chunks of up to 8 segments · AI reviewer on · backward-consistency pass off`
 
 #### Scenario: The hint follows the dial
 

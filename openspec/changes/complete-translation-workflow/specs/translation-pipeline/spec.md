@@ -1195,7 +1195,7 @@ is routed as one step named by its first segment and counts one toward the step'
 
 The batch size SHALL start at 8, halve when a reply loses an id, repeats one, merges two items or names an id the batch
 never held, and grow by one after three clean batches, never above 16. Dial budgets are the chunk caps: Fast 8, Balanced
-4, Max 2 segments per chunk, so a batch is never larger than its chunk.
+8, Max 2 segments per chunk, so a batch is never larger than its chunk.
 
 **Source:** `tasks.md` 15d.8; `docs/specification/01_Product/12_PROMPT_CATALOG.md#batch-draft`. In plain words: a book
 of short paragraphs no longer pays the whole prompt once per paragraph; the model answers several at once, and if it
@@ -1369,7 +1369,7 @@ it has nothing to translate ("Keep a segment with nothing to translate as it is"
 one already drafted or accepted in the run ("Send identical auxiliary text once"), which are decided with no call — grouped into chunks and decided as
 "Decide a chunk's segments in document order" says. A chunk SHALL hold consecutive PENDING segments of one unit — one
 EPUB spine document, one FB2 body, or a whole Markdown or TXT file — up to the chunk token budget and at most 8 segments
-on Fast, 4 on Balanced and 2 on Max, and exactly 1 in the Manual review mode; a unit boundary SHALL always close a
+on Fast, 8 on Balanced and 2 on Max, and exactly 1 in the Manual review mode; a unit boundary SHALL always close a
 chunk. Every generation call SHALL still carry exactly one segment, as the catalog's draft-translation prompt:
 
 - a system message that names the source and target languages as English display names plus their raw BCP-47 tags

@@ -89,7 +89,7 @@ class TranslationJobChunkTest {
     }
 
     @Test
-    void run_balancedTenShortSegments_packs442() {
+    void run_balancedTenShortSegments_packs82() {
         final String book = IntStream.rangeClosed(1, 10)
                 .mapToObj(index -> "Short line " + index + ".")
                 .collect(Collectors.joining("\n\n"));
@@ -97,15 +97,13 @@ class TranslationJobChunkTest {
                         .mapToObj(index -> "Короткий рядок " + index + ".")
                         .toArray(String[]::new))
                 .answerTo(REVIEW, reviewed())
-                .answerTo(REVIEW, reviewed())
                 .answerTo(REVIEW, reviewed());
         final TestProject project = balanced(TestBooks.markdown(tempDir.resolve("Book.md"), book));
 
         report(job(project, model).run());
 
         assertThat(formats(model))
-                .containsExactly(
-                        DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, DRAFT, DRAFT, REVIEW);
+                .containsExactly(DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, DRAFT, REVIEW, DRAFT, DRAFT, REVIEW);
         assertThat(counts(project)).isEqualTo(new SegmentCounts(0, 10, 0, 0, 0));
     }
 

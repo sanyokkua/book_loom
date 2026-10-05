@@ -190,7 +190,6 @@ class TranslationJobConsistencyTest {
         final TestProject project = project(twoChapters(tempDir, "Yes."), epubBriefOn(QualityDial.BALANCED));
         final ScriptedChatModel model = replies(PAUSED, "Так.", SMILED, LATE, PAUSED, SMILED, LEFT)
                 .answerTo(REVIEW, reviewed())
-                .answerTo(REVIEW, reviewed())
                 .answerTo(REVIEW, reviewed());
         final TranslationJobImpl translation = job(project, model);
         final List<MemoryUpdated> memory = memoryEvents(translation);
@@ -216,7 +215,8 @@ class TranslationJobConsistencyTest {
         assertThat(drafts.get(5)).contains("She smiled. → " + SMILED);
         assertThat(messagesOf(model, REVIEW).get(1))
                 .contains(REVIEWED_THREE)
-                .doesNotContain("Yes.", "<Pair id=\"s4\">");
+                .contains("<Pair id=\"s4\"><Source>They left.")
+                .doesNotContain("Yes.", "<Pair id=\"s5\">");
     }
 
     @Test

@@ -6,7 +6,7 @@ import java.util.List;
  * The port that decides whether a translated word is a real word of the target language. A garbled or coined word
  * ({@code кафедрахрі}) is written in the right script, so the script checks cannot see it; a validator can, by a
  * dictionary or by a model. What it finds is only ever a soft note: a rare or dialect word a dictionary lacks must not
- * stop a book, so the port is bound to {@link #none()} until the owner accepts a source of words (ADR-0042).
+ * stop a book, so the port is bound to {@link #none()} because no dictionary of words is bundled or planned.
  */
 @FunctionalInterface
 public interface WordValidator {

@@ -13,7 +13,7 @@ multi-segment reply and contradicts C4. Judging every segment on its own doubles
 ## Decision
 
 - A **chunk** is a run of consecutive segments of one unit, packed to the token budget and capped by the quality dial:
-  at most 8 segments on Fast, 4 on Balanced, 2 on Max; Manual review mode forces 1.
+  at most 8 segments on Fast, 8 on Balanced, 2 on Max; Manual review mode forces 1.
 - **Generation stays per segment**: every draft, directed fix, reflect/improve and polish call returns one
   `{"target":"…"}` for one segment. The chunk's other targets may be shown read-only as context.
 - **The judge runs once per chunk**, seeing the chunk's source/target pairs labelled `s1…sk` (local labels, not

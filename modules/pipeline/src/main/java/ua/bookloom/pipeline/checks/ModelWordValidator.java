@@ -20,7 +20,7 @@ import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 
 /**
- * The optional model-based {@link WordValidator} (ADR-0042): one extra structured call over a batch of finished
+ * The optional model-based {@link WordValidator}: one extra structured call over a batch of finished
  * target texts that lists the words that are not real words, each with a quoted phrase, and code that keeps only the
  * words the texts really hold. It costs a call and trusts a model's idea of a word, so nothing binds it by default;
  * it is built explicitly, and used by the garbled-word eval.

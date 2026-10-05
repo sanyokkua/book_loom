@@ -50,7 +50,7 @@ public final class PipelineModule extends AbstractModule {
         bind(GlossaryService.class).to(GlossaryServiceImpl.class);
         bind(LexiconService.class).to(LexiconServiceImpl.class);
         bind(ReviewDesk.class).to(ReviewDeskImpl.class);
-        // No source of words is accepted yet (ADR-0042), so a run's word check has no opinion.
+        // No dictionary of words is bundled or planned, so a run's word check has no opinion.
         bind(WordValidator.class).toInstance(WordValidator.none());
     }
 

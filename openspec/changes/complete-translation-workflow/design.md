@@ -244,7 +244,7 @@ and a thread-safe `ScriptedChatModel` that can block and answer by call kind.
   preceding window (at most 3 targets) and memory hits are not known then and count as zero; the 8192-token context
   leaves room for them.
 - `chunk.ChunkPacker` packs consecutive pending segments of one unit (records kept as source excluded) until the budget
-  or the dial's segment cap (Fast 8, Balanced 4, Max 2; Manual review forces 1). A unit boundary always closes a chunk
+  or the dial's segment cap (Fast 8, Balanced 8, Max 2; Manual review forces 1). A unit boundary always closes a chunk
   and soft-resets the preceding window.
 - **Splitting** (`split.IcuSentenceSplitter`, behind the `:api` `SentenceSplitter` port): a segment whose masked text
   alone exceeds the budget is split at sentence boundaries.
@@ -955,7 +955,7 @@ starting points, each in one place.
 | τ_judge | = τ | reference `05_PIPELINE_ENGINE.md#quality-dial` | `heal.AcceptanceRule` |
 | Ollama `num_ctx` / effective context | 8192 | chosen here (the reference default 32768 in `07_SETTINGS.md#generation-tab` is edited in task group 0) | `chunk.TokenBudget` |
 | chunk budget | `min(8192 − headroom, 1200)` | reference formula `05_TRANSLATION_ALGORITHM.md#token-budget`; cap 1200 from `07_SETTINGS.md#generation-tab` | `chunk.TokenBudget` |
-| segments per chunk | Fast 8, Balanced 4, Max 2; Manual review 1 | chosen here (ADR-0038) | `dial.DialParameters`, `chunk.ChunkPacker` |
+| segments per chunk | Fast 8, Balanced 8, Max 2; Manual review 1 | chosen here (ADR-0038) | `dial.DialParameters`, `chunk.ChunkPacker` |
 | repair rounds N | 1 / 2 / 3 | reference `05_PIPELINE_ENGINE.md#quality-dial` | `dial.DialParameters` |
 | preceding targets | 1 / 2 / 3 | reference `05_PIPELINE_ENGINE.md#quality-dial` | `dial.DialParameters` |
 | judge / revision / LLM summary by dial | off-on-on / off-off-on / off-off-on | reference `05_PIPELINE_ENGINE.md#quality-dial`; LLM summary on Max only chosen here | `dial.DialParameters` |

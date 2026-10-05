@@ -150,12 +150,12 @@ class ProjectServiceImplTest {
     }
 
     @Test
-    void plan_tenShortParagraphsOnBalanced_plansThreeChunksAndNoOversized() {
+    void plan_tenShortParagraphsOnBalanced_plansTwoChunksAndNoOversized() {
         final ImportedBook imported = importOk(markdownOfParagraphs(10, "A short paragraph."));
 
         final BookPlan plan = planOk(idOf(imported));
 
-        assertThat(plan.chunksPerUnit()).containsEntry("Book.md", 3);
+        assertThat(plan.chunksPerUnit()).containsEntry("Book.md", 2);
         assertThat(plan.oversizedSegmentIds()).isEmpty();
     }
 

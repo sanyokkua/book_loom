@@ -62,11 +62,3 @@ explicitly — read them before planning work.
 | ADR-0039 | Import refusal kind reported as data; ErrorCode stays at fifteen                      | DD-14               |
 | ADR-0040 | Paired placeholders keep order and nesting; atomic ones may move                      | DD-19               |
 | ADR-0041 | DD-47 attribute values (image alt) are translatable                                   | DD-47               |
-
-## Proposed ADRs
-
-Not yet accepted; the code that depends on one ships behind a default that changes nothing.
-
-| ADR      | Title                                                                       | Backs        |
-|----------|-----------------------------------------------------------------------------|--------------|
-| ADR-0042 | Source of words for the garbled-word check (bundled spelling dictionary)   | DD-16, DD-45 |

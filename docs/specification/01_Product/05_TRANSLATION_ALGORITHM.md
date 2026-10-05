@@ -63,7 +63,7 @@ Chunking is **paragraph-grouped**. Segments (whole paragraphs/blocks) are packed
 the next segment would exceed the chunk **token budget**, then the chunk closes and a new one opens. A paragraph is
 never split across two chunks, so a translated block always corresponds to a single source block. Concretely, a chunk
 is a run of consecutive pending segments of one unit, packed to at most `min(8192 − reservedHeadroom, 1200)` estimated
-tokens (`#token-budget`) and capped at 8 segments on Fast, 4 on Balanced, 2 on Max, and 1 under Manual review —
+tokens (`#token-budget`) and capped at 8 segments on Fast, 8 on Balanced, 2 on Max, and 1 under Manual review —
 whichever limit is reached first; a unit boundary always closes the current chunk (ADR-0038).
 
 The budget is **derived from the provider's effective context window**, not a fixed constant, and the Generation **"

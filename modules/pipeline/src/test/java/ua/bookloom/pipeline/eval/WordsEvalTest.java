@@ -26,7 +26,7 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
- * The garbled-word suite (ADR-0042): the model-based pass over {@code eval/words.json} against a real local model,
+ * The garbled-word suite: the model-based pass over {@code eval/words.json} against a real local model,
  * reporting recall over the garbled cases and the false-positive rate over the clean ones in
  * {@code build/reports/promptEval/<model>-words.json} and {@code .txt}. Local-only:
  * {@code scripts/eval-matrix.sh --suite words}, or {@code BOOKLOOM_EVAL_SUITE=words ./gradlew :pipeline:promptEval}

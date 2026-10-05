@@ -406,6 +406,36 @@ Reading both together: 27 % of Bartimaeus blocks have at most 10 words yet carry
 segment spends most of its calls on very little text, and the 1,020-token prompt is mostly fixed instructions. That is what
 batching (15d.8) and a lean reviewer (15d.6) have to win back; generation of the translation itself is the floor.
 
+### Group 15d: before and after {#15d-results}
+
+Measured 2026-10-05 on Bartimaeus 1 (EPUB, en→uk, Ollama native endpoint, **Balanced**, Unattended, names transliterate,
+one inference at a time) with the `--report` JSON; "before" is the 15d.0 measurement on the same first 300 segments and,
+for the whole book, the 8 h 18 min LM Studio `google/gemma-4-26b-a4b-qat` run of 2026-10-03. "Seconds per segment" is the
+model time (`modelSeconds`) divided by the segments decided.
+
+| Run | Calls / segment | Seconds / segment | Flagged | Notes |
+|---|---:|---:|---:|---|
+| e4b, first 300, before (15d.0) | 1.29 | 3.1 | 4 of 300 | judge + fix chain, one draft call per segment |
+| e4b, first 300, batches of 4 | 0.60 | 3.45 | 5 of 300 | draft 0.30 / segment, reviewer 80 calls |
+| e4b, first 300, batches of 8 (now) | **0.34** | **3.02** | 4 of 300 | draft 91 → 51 calls, reviewer 80 → 42 calls |
+| 26b, first 300, before (15d.0) | 1.63 | 6.8 | 20 of 300 | |
+| 26b, first 300, batches of 4 | 0.69 | 4.48 | 5 of 300 | |
+| 26b, first 300, batches of 8 (now) | **0.50** | **5.14** | 3 of 300 | draft calls dominate (1,180 s) |
+| e4b, whole book (3,783), now | **0.36** | **3.44** | 92 (2.4 %) | 3 h 40 min against 8 h 18 min; 0 timeouts; 584 repaired, 72 verbatim; audit lists 5 suspicious |
+| 26b (LM Studio), whole book, 2026-10-03 | not measured | 7.9 | 170 (4.5 %) | the 8-hour baseline |
+
+Against the targets of task 15d.14: calls per segment ≤ 0.4 **met** (0.34 on the first 300, 0.36 over the book); the whole
+book takes 44 % of the baseline's time **(about half, met)**, but the first-300 goal of about 1.6 s (e4b) and 3.4 s (26b)
+per segment is **not met** (3.0 s and 5.1 s): generating the translation is the floor (about 20,000 output tokens for 300
+segments at about 38 tokens a second, 2.0 s a segment), and the reviewer adds about 0.9 s. Flagged ≤ 2 % is **just missed**
+over the book (2.4 %; 4.5 % before). Unbalanced quote pairs: none left in the audit's list. False flags as a share of flags
+and name consistency ≥ 99 % were **not measured**. Recurring terms with one rendering for ≥ 95 % of occurrences is **not
+shown**: `gemma4:e4b-mlx` never returned the optional `terms` field (0 renderings recorded over the book), `gemma4:26b-mlx`
+did (14 uses, 1.14 renderings per term); making the field required made e4b degenerate and was reverted.
+
+Where e4b's 13,017 s of model time went over the book: draft 8,648 s (674 calls, 1.00 M prompt tokens, 290 k output),
+reviewer 3,718 s (484 calls, 1.03 M prompt, 106 k output), directed fix 612 s (198 calls), placeholder repair 39 s.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run

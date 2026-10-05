@@ -52,7 +52,7 @@ import ua.bookloom.pipeline.WholeBookRun.BookRun;
 
 /**
  * The one test that proves the parts of a run are connected at the real HTTP seam, in both provider dialects: a
- * five-paragraph Markdown book goes through preparation, drafting (the first chunk's four paragraphs in one batch
+ * nine-paragraph Markdown book goes through preparation, drafting (the first chunk's eight paragraphs in one batch
  * call), the chunk's reviewer, a directed fix for a refused edit that resolves it, a fix that answers the source
  * and leaves the issue open so the segment is flagged, the Assisted pause, the person's edit, the resume, the
  * unit's end and an export with every side file. Every stubbed Ukrainian target is Cyrillic with a length ratio inside
@@ -88,8 +88,8 @@ class WholeBookPipelineEndToEndTest {
     }
 
     // The chunk's one batch draft and its reviewer come before any decision; the two fixes follow, and the flagged
-    // fourth segment stops the run before the next chunk's draft. A call about several segments — the batch draft of
-    // four, the chunk's reviewer over four — names none; a call about one segment names it.
+    // eighth segment stops the run before the next chunk's draft. A call about several segments — the batch draft of
+    // eight, the chunk's reviewer over eight — names none; a call about one segment names it.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_assistedBalancedBook_callsInTheStubbedOrder(final ProviderKind kind) {
@@ -100,9 +100,9 @@ class WholeBookPipelineEndToEndTest {
                         "DRAFT null",
                         "REVIEW null",
                         "DIRECTED_FIX Book.md:1",
-                        "DIRECTED_FIX Book.md:3",
-                        "DRAFT Book.md:4",
-                        "REVIEW Book.md:4");
+                        "DIRECTED_FIX Book.md:7",
+                        "DRAFT Book.md:8",
+                        "REVIEW Book.md:8");
     }
 
     // A pause on the flagged segment after exactly four requests, with the whole first chunk already stored.
@@ -113,10 +113,14 @@ class WholeBookPipelineEndToEndTest {
 
         assertThat(run.pause())
                 .extracting(Paused::reason, Paused::segmentId)
-                .containsExactly(PauseReason.ON_FLAGGED, "Book.md:3");
+                .containsExactly(PauseReason.ON_FLAGGED, "Book.md:7");
         assertThat(run.requestsAtPause()).isEqualTo(4);
         assertThat(run.statusesAtPause())
                 .containsExactly(
+                        SegmentStatus.ACCEPTED,
+                        SegmentStatus.ACCEPTED,
+                        SegmentStatus.ACCEPTED,
+                        SegmentStatus.ACCEPTED,
                         SegmentStatus.ACCEPTED,
                         SegmentStatus.ACCEPTED,
                         SegmentStatus.ACCEPTED,
@@ -137,14 +141,14 @@ class WholeBookPipelineEndToEndTest {
         assertThat(WholeBookRun.userMessage(run.bodies().get(2))).contains("пішла", "meaning");
     }
 
-    // The batch of four short paragraphs is capped by its items' allowances; the reviewer of four pairs by its pairs.
+    // The batch of eight short paragraphs is capped by its items' allowances; the reviewer of eight pairs by its pairs.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_batchAndReview_capTheBatchByItsItemsAndTheReviewerByItsPairs(final ProviderKind kind) {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
-        assertThat(run.bodies().get(0)).contains(capField(kind) + ":273");
-        assertThat(run.bodies().get(1)).contains(capField(kind) + ":503");
+        assertThat(run.bodies().get(0)).contains(capField(kind) + ":507");
+        assertThat(run.bodies().get(1)).contains(capField(kind) + ":937");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.
@@ -160,7 +164,7 @@ class WholeBookPipelineEndToEndTest {
         assertThat(run.bodies()).hasSize(6);
         assertThat(run.report().end()).isEqualTo(JobState.COMPLETED);
         assertThat(run.runState()).isEqualTo(JobState.COMPLETED);
-        assertThat(run.segment("Book.md:4").status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(run.segment("Book.md:8").status()).isEqualTo(SegmentStatus.ACCEPTED);
     }
 
     // Preparation proposes the thrice-named Hale once; the unit's end holds it and summarises without a model call.
@@ -179,7 +183,7 @@ class WholeBookPipelineEndToEndTest {
     }
 
     // The batch draft's reply carries the dialect's own usage fields, which reach its finished-call event as reported;
-    // the call is about four segments, so it names none of them alone.
+    // the call is about eight segments, so it names none of them alone.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void run_replyWithUsage_finishesItsCallWithTheReportedTokens(final ProviderKind kind) {
@@ -214,8 +218,8 @@ class WholeBookPipelineEndToEndTest {
     }
 
     // Every chosen side file is written beside the book: the glossary, the offline bilingual page and the report. The
-    // report counts Book.md:0, :2 and :4 as accepted without review — the repaired :1 is counted apart — and the edited
-    // :3 as reviewed.
+    // report counts Book.md:0, :2 to :6 and :8 as accepted without review — the repaired :1 is counted apart — and the
+    // edited :7 as reviewed.
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void export_allThreeSideFiles_writesThemBesideTheBook(final ProviderKind kind) {
@@ -230,14 +234,14 @@ class WholeBookPipelineEndToEndTest {
                 .startsWith("term,target,type,gender,locked")
                 .containsPattern("(?m)^Hale,");
         final String bilingual = WholeBookRun.read(tempDir.resolve("Book.uk.bilingual.html"));
-        assertThat(bilingual.split("<tr><td>", -1)).hasSize(6);
+        assertThat(bilingual.split("<tr><td>", -1)).hasSize(10);
         assertThat(bilingual).doesNotContain("http");
         assertThat(WholeBookRun.read(tempDir.resolve("Book.uk.report.md")))
                 .contains(
-                        "- Written with a translation: 5",
-                        "- Accepted without review: 3",
+                        "- Written with a translation: 9",
+                        "- Accepted without review: 7",
                         "- Reviewed by you: 1",
-                        "- Body segments re-opened and verified: 5");
+                        "- Body segments re-opened and verified: 9");
     }
 
     // Three 503 answers use up the client's attempts; the run pauses with upstream and redoes the call on resume.

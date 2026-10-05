@@ -215,7 +215,7 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
     void qualityHint_dialMovedToMax_followsTheDial() throws TimeoutException {
         openFrankensteinThenShowBrief();
         assertThat(labelText("brief-quality-hint"))
-                .isEqualTo("Balanced: chunks of up to 4 segments · AI reviewer on · backward-consistency pass off");
+                .isEqualTo("Balanced: chunks of up to 8 segments · AI reviewer on · backward-consistency pass off");
 
         onFx(() -> segmented("brief-quality").getButtons().get(2).setSelected(true));
 

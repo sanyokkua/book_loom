@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * A {@link WordValidator} that looks each word up in a word list the caller supplies. It is the shape any bundled
- * dictionary plugs into; no word list ships with the application until the owner accepts ADR-0042.
+ * dictionary plugs into; no word list ships with the application.
  */
 @Slf4j
 public final class DictionaryWordValidator implements WordValidator {

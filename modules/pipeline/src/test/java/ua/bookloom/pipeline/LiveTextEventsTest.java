@@ -116,7 +116,7 @@ class LiveTextEventsTest {
     }
 
     @Test
-    void run_decisionInChunkFortyOneOfSixtySix_carriesSectionSevenOfElevenAndChunkFortyOneOfSixtySix() {
+    void run_decisionInChunkTwentyOneOfThirtyThree_carriesSectionSevenOfElevenAndChunkTwentyOneOfThirtyThree() {
         final List<String> paragraphs =
                 IntStream.range(0, 264).mapToObj(index -> "Line " + index + ".").toList();
         final TestProject project = LiveTextFixtures.seventhChapterPending(tempDir, paragraphs);
@@ -128,7 +128,7 @@ class LiveTextEventsTest {
 
         assertThat(decided(events, "ch07.xhtml:160").progress())
                 .extracting(JobProgress::section, JobProgress::sections, JobProgress::chunk, JobProgress::chunks)
-                .containsExactly(7, 11, 41, 66);
+                .containsExactly(7, 11, 21, 33);
     }
 
     // A repair is its own call, and both belong to the segment before its decision.

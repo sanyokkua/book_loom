@@ -11,7 +11,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 class DialParametersTest {
 
     @ParameterizedTest
-    @CsvSource({"FAST,1,1,0,false,false,8", "BALANCED,2,2,1,false,false,4", "MAX,3,3,2,true,true,2"})
+    @CsvSource({"FAST,1,1,0,false,false,8", "BALANCED,2,2,1,false,false,8", "MAX,3,3,2,true,true,2"})
     void of_eachDial_holdsItsRow(
             final QualityDial dial,
             final int preceding,
@@ -31,7 +31,7 @@ class DialParametersTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"FAST,UNATTENDED,8", "BALANCED,ASSISTED,4", "MAX,UNATTENDED,2"})
+    @CsvSource({"FAST,UNATTENDED,8", "BALANCED,ASSISTED,8", "MAX,UNATTENDED,2"})
     void chunkCap_otherModes_isTheDialsCap(final QualityDial dial, final ReviewMode mode, final int cap) {
         assertThat(DialParameters.of(dial).chunkCap(mode)).isEqualTo(cap);
     }

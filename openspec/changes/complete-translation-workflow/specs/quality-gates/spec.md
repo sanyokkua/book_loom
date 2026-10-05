@@ -1205,9 +1205,9 @@ SHALL be a pure function of the text and the target language tag. The optional m
 structured call per batch of texts at temperature zero with a flat schema, SHALL keep a reported word only when it is a
 whole word of the text it names and its quoted phrase, when given, is words of that text that include it, SHALL say
 nothing when its call fails, and SHALL NOT be enabled by default, in the window or by the command line. No dictionary
-file is bundled until ADR-0042 is accepted.
+of words is bundled or planned.
 
-**Source:** FR-QA-01, ADR-0042; task 15d.11.
+**Source:** FR-QA-01; task 15d.11.
 In plain words: a made-up word such as `кафедрахрі` cannot be caught by script, so a validator may point at it, but only
 as a note, because a list or a model can be wrong; today nothing is bound, and a model-based pointer exists only to be
 measured.

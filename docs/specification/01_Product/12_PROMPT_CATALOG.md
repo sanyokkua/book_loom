@@ -843,7 +843,7 @@ with no type or gender, so a review with it changes nothing.
 
 ## garbled-word-check {#garbled-word-check}
 
-An optional call (15d.11, ADR-0042, call kind `REVIEW`, template `suspicious-words`), off by default and not offered in
+An optional call (15d.11, call kind `REVIEW`, template `suspicious-words`), off by default and not offered in
 the window: one call over a batch of finished target texts that lists the words that are not real words of the target
 language, each with its text number and a quoted phrase. It exists to be measured (`scripts/eval-matrix.sh --suite
 words`) and to be enabled by hand through `ModelWordValidator`; a run binds the no-op `WordValidator` instead.

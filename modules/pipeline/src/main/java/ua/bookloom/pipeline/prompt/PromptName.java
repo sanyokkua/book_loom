@@ -163,7 +163,7 @@ public enum PromptName {
             new Slots(Set.of("terms"), Set.of())),
 
     /**
-     * The optional garbled-word check (ADR-0042): a batch of finished target texts, answered with the words that are
+     * The optional garbled-word check: a batch of finished target texts, answered with the words that are
      * not real words, each with the phrase that holds it; sampled at zero because the answer must repeat.
      */
     SUSPICIOUS_WORDS(

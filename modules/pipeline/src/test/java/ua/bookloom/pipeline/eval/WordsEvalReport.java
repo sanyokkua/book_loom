@@ -14,7 +14,7 @@ import java.util.function.Predicate;
  */
 record WordsEvalReport(String model, List<WordsEvalRow> rows) {
 
-    /** The recall the owner asks of ADR-0042's chosen option. */
+    /** The recall the model-based pass is measured against. */
     static final double RECALL_TARGET = 0.70;
 
     /** Copies the rows. */
