@@ -21,7 +21,7 @@ class LexiconEntryTest {
                         .map(pair -> pair.split(":"))
                         .map(parts -> new LexiconEntry.Rendering(parts[0], Integer.parseInt(parts[1])))
                         .toList();
-        return new LexiconEntry("p1", "master", held, chosen, suggested);
+        return new LexiconEntry("p1", "master", held, chosen, suggested, null);
     }
 
     // The conflict policy table: the person's choice, then the majority, the first seen on a tie, then the suggestion.
@@ -72,6 +72,29 @@ class LexiconEntryTest {
     @Test
     void rendering_countBelowOne_isRefused() {
         assertThatThrownBy(() -> new LexiconEntry.Rendering("господар", 0))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void established_learnedRendering_outranksReportedAndSuggestedButNotTheChoice() {
+        final LexiconEntry learned =
+                entry("учитель:4", null, "пан").withLearned(new LexiconEntry.Learned("господар", 5, 6));
+
+        assertThat(learned.established()).contains("господар");
+        assertThat(learned.withChosen("володар").established()).contains("володар");
+        assertThat(learned.withLearned(null).established()).contains("учитель");
+    }
+
+    @Test
+    void seen_entryWithLearnedRendering_keepsIt() {
+        final LexiconEntry learned = entry("", null, null).withLearned(new LexiconEntry.Learned("господар", 3, 3));
+
+        assertThat(learned.seen("учитель").learned()).isEqualTo(new LexiconEntry.Learned("господар", 3, 3));
+    }
+
+    @Test
+    void learned_supportAboveOccurrences_isRefused() {
+        assertThatThrownBy(() -> new LexiconEntry.Learned("господар", 4, 3))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

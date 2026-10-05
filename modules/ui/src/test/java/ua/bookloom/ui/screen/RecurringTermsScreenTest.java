@@ -74,6 +74,14 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
     }
 
     @Test
+    void card_termWithALearnedRendering_showsItWithItsSupportAndAsTheRendering() throws Exception {
+        showCard(IMP.withLearned(new LexiconEntry.Learned("біс", 5, 6)));
+
+        assertThat(inTable(".muted").map(node -> ((Label) node).getText())).contains("біс ×5 (learned from the text)");
+        assertThat(renderingOf("біс")).isNotNull();
+    }
+
+    @Test
     void enter_afterTypingARendering_choosesItThroughTheServiceAndShowsIt() throws Exception {
         showCard(MASTER);
         final TextField field = renderingOf("господар");

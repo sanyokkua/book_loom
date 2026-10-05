@@ -112,7 +112,7 @@ class ContextWindowBudgetTest {
         final List<LexiconEntry> entries = new ArrayList<>();
         for (final String word : List.of("harbour", "town", "ship", "quay", "men", "dark", "argued", "seen", "ever")) {
             entries.add(new LexiconEntry(
-                    "p1", word, List.of(new LexiconEntry.Rendering("рендеринг " + word, 3)), null, null));
+                    "p1", word, List.of(new LexiconEntry.Rendering("рендеринг " + word, 3)), null, null, null));
         }
         return entries;
     }

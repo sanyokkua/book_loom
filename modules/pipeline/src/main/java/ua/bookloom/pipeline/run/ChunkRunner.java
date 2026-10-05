@@ -57,6 +57,7 @@ public final class ChunkRunner {
     private final SegmentEvents events;
     private final DraftShortcuts shortcuts;
     private final BatchStage batches;
+    private final TermLearning learning;
 
     /**
      * Creates the runner of one run.
@@ -85,6 +86,7 @@ public final class ChunkRunner {
         this.events = new SegmentEvents(sinks.emit(), locators);
         this.shortcuts = new DraftShortcuts(settings.frame().styleSheet().text());
         this.batches = new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary);
+        this.learning = new TermLearning(stores, settings.projectId());
     }
 
     /**
@@ -100,6 +102,7 @@ public final class ChunkRunner {
         if (unread.isPresent()) {
             return unread.get();
         }
+        learning.replay(work.decidedSegments());
         while (work.hasPending()) {
             final Optional<RunEnd> end = runUnit(work, work.nextSection());
             if (end.isPresent()) {
@@ -355,6 +358,7 @@ public final class ChunkRunner {
                         record,
                         memory.entryFor(record, item.segment(), current.work().unitSegments(item)));
         current.drafts().decided(record.segmentId());
+        learning.decided(item.segment(), record);
         shortcuts.decided(item.segment(), record);
         sinks.recorder().decided(record.status());
         final JobProgress progress = current.work().apply(item, record.status(), record.path());
@@ -386,8 +390,10 @@ public final class ChunkRunner {
     private Optional<RunEnd> commitChunk(final int index, final int decided) {
         final Result<Integer> committed = sinks.pending().flush();
         log.debug("Committed chunk={} decided={} ok={}", index, decided, committed.isOk());
-        return committed.isErr()
-                ? Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(committed.error(), "error")))
-                : Optional.empty();
+        if (committed.isErr()) {
+            return Optional.of(new RunEnd(JobState.FAILED, Objects.requireNonNull(committed.error(), "error")));
+        }
+        learning.committed();
+        return Optional.empty();
     }
 }

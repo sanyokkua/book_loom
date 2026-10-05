@@ -674,11 +674,22 @@ The application SHALL show every later draft and retry the established rendering
 `term → rendering` lines under `[Established renderings of recurring terms — keep consistent]` with its own share of the
 dynamic context — a fifth of what the glossary leaves, after the glossary and before the translation memory, the
 preceding text and the summary — and SHALL record the lines in the draft's context snapshot so a retry shows the same.
-Which rendering is established SHALL follow one conflict policy: the person's rendering wins; else the most used verified
-rendering, the one first seen when two are used equally often; else the model's suggestion; else none. The reviewer SHALL be
+Which rendering is established SHALL follow one conflict policy: the person's rendering wins; else the rendering learned
+by co-occurrence; else the most used verified rendering, the one first seen when two are used equally often; else the
+model's suggestion; else none. The reviewer SHALL be
 given the established renderings of the terms in the chunk with the glossary's, so one thing named two ways is a
-terminology finding. The run SHALL log, once at its end, `lexiconTerms`, `used`, `distinctRenderingsPerTerm` and
-`conflicted`, and the command's JSON report SHALL carry them in a `lexicon` object.
+terminology finding. The run SHALL log, once at its end, `lexiconTerms`, `used`, `distinctRenderingsPerTerm`, `conflicted`,
+`learned` and `learnedCoverage`, and the command's JSON report SHALL carry them in a `lexicon` object.
+
+The application SHALL also learn a lexicon term's rendering from the decided segments with no model call, so a model that
+never returns `terms` still keeps the book consistent. Once a chunk's records are stored, each decided pair (an accepted
+draft; never a flagged, verbatim, memory-reused or person-edited segment) SHALL be counted by word stems (the first four
+letters of each target word of three letters or more, names skipped), and a term SHALL get a learned rendering only when at
+least three of its segments carry one stem, the stem's Dice association with the term is at least 0.6 and at least twice
+that of any unrelated rival; the rendering is the stem's base form. A term the glossary holds SHALL NOT be learned, a word
+the glossary holds SHALL NOT be a rendering, a stop SHALL leave no count for an undecided segment, and a run that continues
+over stored decisions SHALL replay them first. Where the evidence is split (a title before changing surnames, a word with
+two meanings, a term rendered several ways) nothing SHALL be established.
 
 **Source:** `tasks.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: the model
 reports what it used, the app checks the claim against the text so a model cannot teach the book a word it did not write,
@@ -713,6 +724,25 @@ reads 1.0 when every recurring term was written one way.
 
 - **WHEN** the glossary holds `Master` and the lexicon holds `master`
 - **THEN** the prompt lists the glossary entry and no recurring-term line for `master`, and the batch does not ask about it
+
+#### Scenario: A rendering is learned with no `terms` reply
+
+- **WHEN** a model that never returns `terms` renders `master` as `господар` in three stored chapters, and would write
+  `учитель` in the fourth unless shown the block
+- **THEN** the fourth chapter's prompt lists `master → господар`, the lexicon holds the learned rendering with its support,
+  and `distinctRenderingsPerTerm` is `1.0`
+
+#### Scenario: Split evidence establishes nothing
+
+- **WHEN** a title is rendered `містер` half the time and `пан` the other half, or a word is rendered `посох` in one meaning
+  and `персонал` in another
+- **THEN** no learned rendering is stored and no line is shown for it
+
+#### Scenario: A stop leaves no phantom count
+
+- **WHEN** a run is cancelled after the fourth segment naming a term was decided inside a chunk that was not committed, and
+  a new run is started
+- **THEN** the learned support is three until the new run starts, and four after it replays the stored decisions
 
 ### Requirement: Apply glossary edits made during a pause from the next chunk
 

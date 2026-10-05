@@ -429,9 +429,10 @@ book takes 44 % of the baseline's time **(about half, met)**, but the first-300 
 per segment is **not met** (3.0 s and 5.1 s): generating the translation is the floor (about 20,000 output tokens for 300
 segments at about 38 tokens a second, 2.0 s a segment), and the reviewer adds about 0.9 s. Flagged ≤ 2 % is **just missed**
 over the book (2.4 %; 4.5 % before). Unbalanced quote pairs: none left in the audit's list. False flags as a share of flags
-and name consistency ≥ 99 % were **not measured**. Recurring terms with one rendering for ≥ 95 % of occurrences is **not
-shown**: `gemma4:e4b-mlx` never returned the optional `terms` field (0 renderings recorded over the book), `gemma4:26b-mlx`
-did (14 uses, 1.14 renderings per term); making the field required made e4b degenerate and was reverted.
+and name consistency ≥ 99 % were **not measured**. Recurring terms: `gemma4:e4b-mlx` never returns the optional `terms` field (0 renderings recorded over the book), so renderings are
+now also learned from the decided pairs by co-occurrence (second e4b whole-book run, 2026-10-06: 3 h 31 min, 0.347 calls per
+segment, 70 flagged = 1.85 %): 12 terms learned, 90.3 % of their occurrences carry the learned rendering (`master` 99 %,
+`pentacle` 94 %), against the 95 % target; the generic words the key-term scan also proposes pull the aggregate down.
 
 Where e4b's 13,017 s of model time went over the book: draft 8,648 s (674 calls, 1.00 M prompt tokens, 290 k output),
 reviewer 3,718 s (484 calls, 1.03 M prompt, 106 k output), directed fix 612 s (198 calls), placeholder repair 39 s.

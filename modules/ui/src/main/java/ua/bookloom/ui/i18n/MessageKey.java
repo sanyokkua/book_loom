@@ -821,6 +821,8 @@ public enum MessageKey {
     RECURRING_COLUMN_ACTIONS_TIP("namesStyle.recurring.column.actions.tip"),
     /** Shown in the used column of a term no draft has used yet. */
     RECURRING_SEEN_NONE("namesStyle.recurring.seen.none"),
+    /** Shown in the used column for a rendering learned from the translated text: the rendering and its support. */
+    RECURRING_SEEN_LEARNED("namesStyle.recurring.seen.learned"),
     /** Row button that moves a term to the glossary. */
     RECURRING_PROMOTE("namesStyle.recurring.promote"),
     /** Hover explanation of the control labelled by {@link #RECURRING_PROMOTE}. */

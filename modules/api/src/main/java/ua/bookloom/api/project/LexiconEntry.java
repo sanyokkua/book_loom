@@ -21,13 +21,16 @@ import org.jspecify.annotations.Nullable;
  * @param renderings the verified renderings in the order they were first seen, each with how often it was used
  * @param chosen the rendering the person typed or accepted, or null; it always wins
  * @param suggested the model's suggested rendering from the suggestion call, or null; used only while nothing was seen
+ * @param learned the rendering the run learned by co-occurrence from the decided segments, or null; it outranks the
+ *     reported renderings but never the person's choice
  */
 public record LexiconEntry(
         String projectId,
         String term,
         List<Rendering> renderings,
         @Nullable String chosen,
-        @Nullable String suggested) {
+        @Nullable String suggested,
+        @Nullable Learned learned) {
 
     /**
      * One verified rendering and its use count.
@@ -42,6 +45,25 @@ public record LexiconEntry(
             Objects.requireNonNull(text, "text");
             if (text.isBlank() || count < 1) {
                 throw new IllegalArgumentException("a rendering needs a text and a count of at least 1");
+            }
+        }
+    }
+
+    /**
+     * A rendering learned from the decided segments with no model call: the base form of the target word that
+     * accompanies the term, and the evidence it passed the gate with.
+     *
+     * @param text the base form of the learned rendering, non-blank
+     * @param support how many decided segments naming the term carry the rendering; at least 1
+     * @param occurrences how many decided segments name the term; at least {@code support}
+     */
+    public record Learned(String text, int support, int occurrences) {
+
+        /** Rejects a blank text or counts that do not fit. */
+        public Learned {
+            Objects.requireNonNull(text, "text");
+            if (text.isBlank() || support < 1 || occurrences < support) {
+                throw new IllegalArgumentException("a learned rendering needs a text and 1 <= support <= occurrences");
             }
         }
     }
@@ -63,7 +85,7 @@ public record LexiconEntry(
      * @return an entry with no rendering, choice or suggestion
      */
     public static LexiconEntry of(final String projectId, final String term) {
-        return new LexiconEntry(projectId, term, List.of(), null, null);
+        return new LexiconEntry(projectId, term, List.of(), null, null, null);
     }
 
     /**
@@ -79,14 +101,17 @@ public record LexiconEntry(
     }
 
     /**
-     * The rendering a draft is asked to keep: the person's choice if there is one; else the most used verified
-     * rendering, the one first seen when two are used equally often; else the model's suggestion.
+     * The rendering a draft is asked to keep: the person's choice if there is one; else the learned one; else the most
+     * used verified rendering, the one first seen when two are used equally often; else the model's suggestion.
      *
      * @return the rendering, or empty when nothing was chosen, seen or suggested
      */
     public Optional<String> established() {
         if (chosen != null) {
             return Optional.of(chosen);
+        }
+        if (learned != null) {
+            return Optional.of(learned.text());
         }
         return majority().or(() -> Optional.ofNullable(suggested));
     }
@@ -127,7 +152,7 @@ public record LexiconEntry(
         if (!found) {
             next.add(new Rendering(rendering.strip(), 1));
         }
-        return new LexiconEntry(projectId, term, next, chosen, suggested);
+        return new LexiconEntry(projectId, term, next, chosen, suggested, learned);
     }
 
     /**
@@ -137,7 +162,7 @@ public record LexiconEntry(
      * @return a copy with the choice set
      */
     public LexiconEntry withChosen(@Nullable final String rendering) {
-        return new LexiconEntry(projectId, term, renderings, rendering, suggested);
+        return new LexiconEntry(projectId, term, renderings, rendering, suggested, learned);
     }
 
     /**
@@ -147,7 +172,17 @@ public record LexiconEntry(
      * @return a copy with the suggestion set
      */
     public LexiconEntry withSuggested(@Nullable final String rendering) {
-        return new LexiconEntry(projectId, term, renderings, chosen, rendering);
+        return new LexiconEntry(projectId, term, renderings, chosen, rendering, learned);
+    }
+
+    /**
+     * This entry with the rendering the run learned by co-occurrence.
+     *
+     * @param learned the learned rendering with its evidence, or null to say nothing is established
+     * @return a copy with the learned rendering set
+     */
+    public LexiconEntry withLearned(@Nullable final Learned learned) {
+        return new LexiconEntry(projectId, term, renderings, chosen, suggested, learned);
     }
 
     /**

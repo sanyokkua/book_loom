@@ -1,6 +1,7 @@
 package ua.bookloom.ui.screen;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -110,25 +111,27 @@ final class RecurringTermsCells {
         }
     }
 
-    /** The renderings the drafts used, each with how often. */
+    /** What the term was rendered as: the learned rendering with its support, then each reported one with its count. */
     static final class SeenCell extends RowCell<Label> {
 
+        private final Messages messages;
         private final String none;
 
         SeenCell(final Messages messages) {
             super(new Label());
+            this.messages = messages;
             none = messages.get(MessageKey.RECURRING_SEEN_NONE);
             control().getStyleClass().add("muted");
         }
 
         @Override
         void show(final Label shown, final LexiconEntry entry) {
-            shown.setText(
-                    entry.renderings().isEmpty()
-                            ? none
-                            : entry.renderings().stream()
-                                    .map(rendering -> rendering.text() + " ×" + rendering.count())
-                                    .collect(Collectors.joining(COUNT_SEPARATOR)));
+            final Stream<String> learned = Stream.ofNullable(entry.learned())
+                    .map(found -> messages.get(MessageKey.RECURRING_SEEN_LEARNED, found.text(), found.support()));
+            final Stream<String> reported =
+                    entry.renderings().stream().map(rendering -> rendering.text() + " ×" + rendering.count());
+            final String text = Stream.concat(learned, reported).collect(Collectors.joining(COUNT_SEPARATOR));
+            shown.setText(text.isEmpty() ? none : text);
         }
     }
 

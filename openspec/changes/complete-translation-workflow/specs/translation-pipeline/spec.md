@@ -1257,6 +1257,13 @@ loses one of them only that one is asked again.
 - **THEN** the lexicon counts the pair; a reported rendering the target does not hold counts nothing and the item is still
   accepted
 
+#### Scenario: A stored chunk teaches the lexicon
+
+- **WHEN** a chunk's decided records are committed
+- **THEN** its accepted drafts are counted by co-occurrence and the learned rendering of each term the chunk names is
+  published to the lexicon before the next chunk's context is read; the decisions of a chunk that was not committed are not
+  counted
+
 #### Scenario: The size adapts
 
 - **WHEN** the first batch of eight loses an id

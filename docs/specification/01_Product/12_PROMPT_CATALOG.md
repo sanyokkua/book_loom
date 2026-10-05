@@ -327,8 +327,25 @@ making them glossary entries. Four prompt-facing parts:
   what the glossary leaves, taken before the memory, the preceding text and the summary), and the lines shown are recorded
   in `ContextSnapshot.lexicon`, so a retry shows the same.
 - **Which rendering is established** (`LexiconEntry.established`, the conflict policy): the person's rendering; else the
-  most used verified rendering, the one first seen when two are used equally often; else the model's suggestion from the
-  suggestion call; else none and no line.
+  rendering learned by co-occurrence (below); else the most used verified rendering, the one first seen when two are used
+  equally often; else the model's suggestion from the suggestion call; else none and no line.
+- **Learning by co-occurrence** (`CooccurrenceLearner`, `TermLearning`, no prompt, no model call, so it works for a model
+  that ignores the optional `terms` field). Once a chunk's records are stored, each decided pair (an accepted draft, repaired
+  or not; never a flagged segment, a verbatim one, a memory reuse or the person's edit) is counted: for every target word of
+  three letters or more (a name — capitalised away from a sentence start — is skipped) its stem, the first four letters, is
+  counted once per segment, and for every lexicon term the source names (a whole word, English plural or possessive
+  tolerated) the same stems are counted under that term. A stem's score for a term is `2·c(term,stem) / (n(term) + c(stem))`
+  (Dice): the term's segments carrying the stem, over the term's segments plus the segments carrying the stem. A rendering
+  is learned only when at least three of the term's segments carry the winning stem, its score is at least 0.6, and it is at
+  least twice the best rival's (rivals: other stems with three or more segments, not the winner's own inflection, and no
+  word the glossary holds). The text kept is the base form — the surface form the most other forms of the stem extend
+  (`господар` for `господаря`), else the most used. Measured on a real translated book (3,783 pairs): `djinni`, `demon`,
+  `pentacle`, `boy`, `sir`, `master`, `orb`, `police`, `magician` got the right winner at the third or fourth occurrence, `imp`
+  at the seventh. It stays silent where the evidence is split: a title followed by changing surnames (`Mr`, `Mrs`), a word
+  with two meanings (`staff`, `command`) and a term the book renders several ways are left to the person's glossary lock or
+  the suggested renderings. The counts are vocabulary only (memory grows with the book's vocabulary, not its length), a stop
+  leaves no count for an undecided segment, and a run that continues over stored decisions replays them first. The
+  learned rendering is shown in the Recurring terms card with its support and reaches every prompt that shows the block.
 - **Verification** (`TermMappingVerifier`, no prompt): a reported pair counts only when the term is on the closed list and
   occurs as a whole word in the item's source (an English plural or possessive tolerated), and every significant word of
   the rendering (three letters or more; all words when none is that long) has its stem in the target. A stem is a prefix:
@@ -342,7 +359,9 @@ The reviewer is given the established renderings of the chunk's recurring terms 
 or one thing named two ways" — covers adherence; a hallucinated quote is still refused by its verifier. The metric of the
 whole mechanism is `RenderingConsistency` — the mean number of distinct verified renderings per term used, 1.0 when every
 term was written one way — logged once at the end of a run (`Lexicon consistency … distinctRenderingsPerTerm=…`) and
-written to the command's report as `lexicon.distinctRenderingsPerTerm`. The terms come from `KeyTermScan` (titles from
+written to the command's report as `lexicon.distinctRenderingsPerTerm` (a term with only a learned rendering counts as one),
+with `learned` (terms learned by co-occurrence) and `learnedCoverage` (the share of those terms' occurrences that carry the
+learned rendering). The terms come from `KeyTermScan` (titles from
 `glossary/titles/<language>.txt`, English only so far, and words written both capitalised mid-sentence and in lower case)
 when a run is prepared with an empty lexicon, from the "Find recurring terms" button, and by hand.
 

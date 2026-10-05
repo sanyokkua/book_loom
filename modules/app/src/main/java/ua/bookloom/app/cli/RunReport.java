@@ -111,7 +111,8 @@ final class RunReport {
 
     /**
      * Records how consistently the run kept its recurring terms: how many terms it tracked, how many it saw used, how
-     * many renderings it saw per term used (1.0 is one rendering each) and how many terms were written two ways.
+     * many renderings it saw per term used (1.0 is one rendering each), how many terms were written two ways, how many
+     * renderings were learned by co-occurrence and the share of those terms' occurrences that carry them.
      */
     void lexicon(RenderingConsistency consistency) {
         final ObjectNode lexicon = root.putObject("lexicon");
@@ -120,6 +121,8 @@ final class RunReport {
         lexicon.put("renderings", consistency.renderings());
         lexicon.put("distinctRenderingsPerTerm", consistency.distinctPerTerm());
         lexicon.put("conflicted", consistency.conflicted());
+        lexicon.put("learned", consistency.learned());
+        lexicon.put("learnedCoverage", consistency.learnedCoverage());
     }
 
     void export(ExportReport report, boolean partial) {
