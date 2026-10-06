@@ -148,7 +148,7 @@ class WholeBookPipelineEndToEndTest {
         final BookRun run = WholeBookRun.run(kind, tempDir);
 
         assertThat(run.bodies().get(0)).contains(capField(kind) + ":507");
-        assertThat(run.bodies().get(1)).contains(capField(kind) + ":937");
+        assertThat(run.bodies().get(1)).contains(capField(kind) + ":1753");
     }
 
     // The edit saved during the pause is the person's text, and the next chunk's draft reads it as a preceding target.

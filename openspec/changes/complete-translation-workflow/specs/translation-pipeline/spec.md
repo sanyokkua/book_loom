@@ -1201,6 +1201,11 @@ was. WHILE a batch step is paused on an error, Skip SHALL skip the step's first 
 skip is, and the other segments SHALL batch or draft normally at their turn. Dial budgets are the chunk caps: Fast 8,
 Balanced 8, Max 2 segments per chunk, so a batch is never larger than its chunk.
 
+A batch item whose target carries protocol text of the reply SHALL fail as an item problem (`LEAKED`) and be drafted alone,
+never stripped and never stored: a `terms` or `items` key followed by a colon (straight or typographic quotes), a brace
+holding an `id` key or a quoted key and colon, or a code fence. A paragraph that merely uses the word "terms" or a brace in
+dialogue is not protocol.
+
 The window SHALL hold every prompt: the chunk budget reserves the dynamic context's whole allowance, the previous pairs
 of a batch take at most half of it and the next source at most a quarter, and before a batch is sent its assembled
 prompt, the reply its items are expected to need and the 500-token safety margin SHALL fit the run's window. A batch
@@ -1225,6 +1230,11 @@ loses one of them only that one is asked again.
 
 - **WHEN** the entry for id 2 holds the translation of items 2 and 3 and id 3 has no entry
 - **THEN** items 2 and 3 are each drafted alone and the batch size halves
+
+#### Scenario: A leaked terms tail falls back alone
+
+- **WHEN** the entry for id 2 ends `… сказав господар. «terms»: {«master»: «господар»}}, {`
+- **THEN** a single-segment draft is made for the second segment only, and its stored target holds no `terms` text
 
 #### Scenario: Outages never switch batching off
 

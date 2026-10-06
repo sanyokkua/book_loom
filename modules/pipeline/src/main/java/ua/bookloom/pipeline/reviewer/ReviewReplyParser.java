@@ -1,8 +1,11 @@
 package ua.bookloom.pipeline.reviewer;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +46,65 @@ public final class ReviewReplyParser {
             log.debug("Reviewer reply holds no results list readable={}", false);
             return ReviewVerdict.unreadable();
         }
+        return verdictOf(results, pairs);
+    }
+
+    /**
+     * Reads a reply the model's output cap cut off: every complete entry of the {@code results} list is kept and the
+     * entry the cut fell in, and anything after it, is left unread. Where {@link #parse} calls a reply with no closed
+     * JSON unreadable, a cut reply is readable here, possibly with no entry.
+     *
+     * @param replyText the reply as the model sent it; never null
+     * @param pairs the batch's pairs, whose order maps {@code s1}..{@code sk} to segment ids; never null
+     * @return a readable verdict of the complete entries; the pairs it names no answer for are the unread ones
+     */
+    public ReviewVerdict parseSalvaging(final String replyText, final List<ReviewedPair> pairs) {
+        Objects.requireNonNull(replyText, "replyText");
+        Objects.requireNonNull(pairs, "pairs");
+        final List<JsonNode> entries = completeEntries(fromFirstBracket(replyText));
+        final ReviewVerdict verdict = verdictOf(entries, pairs);
+        log.debug(
+                "Salvaged a cut reviewer reply answers={} of={}",
+                verdict.items().size(),
+                pairs.size());
+        return verdict;
+    }
+
+    private List<JsonNode> completeEntries(final String text) {
+        final List<JsonNode> entries = new ArrayList<>();
+        try (JsonParser reader = mapper.getFactory().createParser(text)) {
+            if (enterResults(reader)) {
+                while (reader.nextToken() == JsonToken.START_OBJECT) {
+                    entries.add(mapper.readTree(reader));
+                }
+            }
+        } catch (IOException ignored) {
+            log.debug("The reviewer reply ends inside an entry; the entries before it are kept");
+        }
+        return entries;
+    }
+
+    // Positions the reader just before the first entry of the results array (or of a bare array).
+    private static boolean enterResults(final JsonParser reader) throws IOException {
+        JsonToken token = reader.nextToken();
+        if (token == JsonToken.START_ARRAY) {
+            return true;
+        }
+        if (token != JsonToken.START_OBJECT) {
+            return false;
+        }
+        while ((token = reader.nextToken()) == JsonToken.FIELD_NAME) {
+            final boolean results = "results".equals(reader.currentName());
+            token = reader.nextToken();
+            if (results && token == JsonToken.START_ARRAY) {
+                return true;
+            }
+            reader.skipChildren();
+        }
+        return false;
+    }
+
+    private ReviewVerdict verdictOf(final Iterable<JsonNode> results, final List<ReviewedPair> pairs) {
         final Map<String, String> labels = labelToSegmentId(pairs);
         final Map<String, ReviewItem> bySegment = new LinkedHashMap<>();
         for (final JsonNode node : results) {

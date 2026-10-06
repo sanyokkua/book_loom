@@ -371,9 +371,12 @@ nearer bound divided by one tenth of the band's width, at most 1.0. Inside the b
 words look missing: when the target has more letter-word-followed-by-space-then-full-stop-or-comma spots (`помогою .`)
 than the source, or — for a source of at least 8 words, neither text in a script written without spaces — when the
 target has fewer than 0.55 words per source word while its character ratio is under 0.85. Its finding SHALL name which
-of the two it saw. A compact short line — a source under 40 characters and of at most 8 words whose target keeps at
-least half of its words — SHALL NOT fail for a ratio below the band's lower bound; a ratio above the upper bound still
-fails.
+of the two it saw. A compact short line — a source under 60 characters and of at most 10 words whose target keeps at
+least half of its words — SHALL NOT fail for a ratio below the band's lower bound, and, past 40 characters or 8 words, not for the word-count omission note
+above; a ratio above the upper bound still fails. A line of 40 characters or more, or of more than 8 words, is compact
+only while its target keeps at least 0.40 of the source's characters and either half of its words or three words and
+0.30 of its words (`Then, without a word, the old man left the room.` → `Старий мовчки вийшов.` is complete). A space
+left before a full stop still fails a compact line.
 
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`.
@@ -388,7 +391,7 @@ faithful translation is not caught by it; for the same reason a line under 60 ch
 (`it has been falling night and day` → `вона падає ніч і день`, 0.64, is no omission). A compact line such as
 `Unfortunately, nothing happened.` → `На жаль, нічого.` (0.50) is complete in half the characters because Ukrainian
 needs fewer function words; one real run flagged 14 such lines as omissions, so below the lower bound a compact line is
-trusted as long as it keeps half its words (`The monster met me at midnight.` → `Чудовисько тут` is still an
+trusted as long as it keeps half its words (or, past 40 characters, three words and a ratio of 0.40) (`The monster met me at midnight.` → `Чудовисько тут` is still an
 omission).
 
 #### Scenario: A space left before a full stop fails
@@ -801,8 +804,16 @@ and the run SHALL go on with the next segment. A reviewer call answered with any
 is waited out and the reviewer call made again, exactly as for a draft call. On Max a second pass that cannot be read
 leaves the first pass's answers in force.
 
+A reviewer reply that stopped with the finish reason `length` (the output cap cut it) SHALL NEVER flag a segment. The
+cap SHALL be sized from the batch: 128 tokens, plus for each pair 70, the pair's candidate (a rewrite may repeat it) and
+120 for a possible edit, bounded by half the window. The complete entries of the cut reply SHALL be kept, the pairs left
+unread SHALL be asked about once more in one smaller call of the same pass, and a pair still unread after that SHALL be
+taken as `ok` with a warning in the log: the deterministic checks have passed it, and a flag would hand the person a
+segment nothing is known to be wrong with (the draft stays unreviewed but accepted by the checks). A re-ask that fails
+with a provider error is not waited for; its pairs are taken as `ok` the same way.
+
 **Source:** FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
-`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6.
+`docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7.
 In plain words: a reviewer that does not answer says nothing about the translation, so the translation is kept and handed
 to the person for review instead of holding the whole book. A provider that is down is another matter: overnight it would
 flag every segment reviewed while it was down, so the run waits for it and reviews again.
@@ -818,6 +829,17 @@ flag every segment reviewed while it was down, so the run waits for it and revie
 
 - **WHEN** the reviewer replies `Looks good to me!`
 - **THEN** the segment is FLAGGED with a `reviewer-unavailable` finding and no flag reason
+
+#### Scenario: A reply cut by the cap keeps what it answered
+
+- **WHEN** the reviewer's reply for eight pairs stops with `length` after the fifth entry
+- **THEN** the five answers are used, one more reviewer call is made for the three unread pairs only, and no segment is
+  flagged `reviewer-unavailable`
+
+#### Scenario: Pairs unread after the re-ask are taken as ok
+
+- **WHEN** the re-ask is cut too and answers none of its pairs
+- **THEN** those pairs are decided by the quality checks alone, with no further reviewer call and no flag
 
 #### Scenario: A provider outage during review is waited out
 

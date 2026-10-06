@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -211,5 +212,100 @@ class ReviewerCallTest {
         assertThat(model.requests().get(0).messages().getLast().content())
                 .contains("[Characters in these pairs", "Lyra — female");
         assertThat(model.requests().get(1).messages().getLast().content()).doesNotContain("Characters in these pairs");
+    }
+
+    private static List<ReviewedPair> eightPairs() {
+        return IntStream.range(0, 8)
+                .mapToObj(index -> new ReviewedPair("Book.md:" + index, "Source " + index, "Кандидат " + index))
+                .toList();
+    }
+
+    private static String okEntry(final int label) {
+        return "{\"id\":\"s" + label + "\",\"status\":\"ok\"}";
+    }
+
+    private static Result<ChatResponse> cut(final String content) {
+        return Result.ok(new ChatResponse(content, FinishReason.LENGTH));
+    }
+
+    private static String fiveThenACutSixth() {
+        return "{\"results\":["
+                + IntStream.rangeClosed(1, 5)
+                        .mapToObj(ReviewerCallTest::okEntry)
+                        .collect(java.util.stream.Collectors.joining(","))
+                + ",{\"id\":\"s6\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"gen";
+    }
+
+    @Test
+    void review_replyCutAfterFiveOfEight_keepsFiveAndAsksOnceForTheThreeUnread() {
+        final String rest = "{\"results\":[" + okEntry(1) + "," + okEntry(2)
+                + ",{\"id\":\"s3\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"gender\","
+                + "\"quote\":\"Кандидат 7\",\"replacement\":\"Кандидатка 7\"}]}]}";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(cut(fiveThenACutSixth())).answer(readable(rest));
+
+        final ReviewVerdict verdict =
+                Objects.requireNonNull(CALL.review(eightPairs(), FRAME, List.of(), ReviewPass.FIRST, calls(model))
+                        .data());
+
+        assertThat(model.requests()).hasSize(2);
+        final String asked = model.requests().get(1).messages().getLast().content();
+        assertThat(asked).contains("Кандидат 5", "Кандидат 6", "Кандидат 7").doesNotContain("Кандидат 4");
+        assertThat(verdict.readable()).isTrue();
+        assertThat(verdict.isUnavailable()).isFalse();
+        assertThat(verdict.items()).hasSize(8);
+        assertThat(verdict.itemFor("Book.md:7"))
+                .hasValueSatisfying(item -> assertThat(item.status()).isEqualTo(ReviewStatus.EDITS));
+    }
+
+    @Test
+    void review_replyCutAndTheReAskCutToo_neverReadsAsUnavailableAndAsksOnlyOnce() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(cut(fiveThenACutSixth()))
+                .answer(cut("{\"results\":[{\"id\":\"s1\",\"sta"));
+
+        final ReviewVerdict verdict =
+                Objects.requireNonNull(CALL.review(eightPairs(), FRAME, List.of(), ReviewPass.FIRST, calls(model))
+                        .data());
+
+        assertThat(model.requests()).hasSize(2);
+        assertThat(verdict.readable()).isTrue();
+        assertThat(verdict.isUnavailable()).isFalse();
+        assertThat(verdict.items()).hasSize(5);
+        assertThat(verdict.itemFor("Book.md:6")).isEmpty();
+    }
+
+    @Test
+    void review_replyCutBeforeAnyEntry_isNotUnreadable() {
+        final ScriptedChatModel model = new ScriptedChatModel().answerTimes(2, cut("{\"results\":[{\"id\":\"s1"));
+
+        final ReviewVerdict verdict =
+                Objects.requireNonNull(CALL.review(THREE_PAIRS, FRAME, List.of(), ReviewPass.FIRST, calls(model))
+                        .data());
+
+        assertThat(verdict.readable()).isTrue();
+        assertThat(verdict.isUnavailable()).isFalse();
+    }
+
+    @Test
+    void review_reAskFailsWithAnError_keepsTheSalvagedAnswers() {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(cut(fiveThenACutSixth()))
+                .answer(Result.err(AppError.of(ErrorCode.upstream, "Model failure", "down")));
+
+        final Result<ReviewVerdict> result =
+                CALL.review(eightPairs(), FRAME, List.of(), ReviewPass.FIRST, calls(model));
+
+        assertThat(result.isOk()).isTrue();
+        assertThat(Objects.requireNonNull(result.data()).items()).hasSize(5);
+    }
+
+    @Test
+    void review_completeReplyThatLeavesSomeIdsOut_isNotAskedAgain() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(ALL_OK));
+
+        CALL.review(THREE_PAIRS, FRAME, List.of(), ReviewPass.FIRST, calls(model));
+
+        assertThat(model.requests()).hasSize(1);
     }
 }

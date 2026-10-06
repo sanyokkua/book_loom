@@ -3,8 +3,11 @@ package ua.bookloom.pipeline.prompt;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /** The expected length and the hard cap a call states for one masked source. */
 class OutputLimitTest {
@@ -36,9 +39,18 @@ class OutputLimitTest {
 
     @Test
     void forReview_onePair_capsAtTheBaseAndOneEnvelopeAndTheCandidateItself() {
-        // 64 base + 96 per pair + the candidate's own tokens, because a rewrite may repeat it whole.
+        // 128 base + 70 per pair + 120 for a possible edit + the candidate's own tokens (115), because a rewrite may
+        // repeat it whole.
         assertThat(OutputLimit.forReview(List.of("a".repeat(400)), "en").capTokens())
-                .isEqualTo(275);
+                .isEqualTo(433);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1,433", "4,1348", "8,2568"})
+    void forReview_batchSizeTable_growsByOnePairAllowanceEach(final int pairs, final int cap) {
+        assertThat(OutputLimit.forReview(Collections.nCopies(pairs, "a".repeat(400)), "en")
+                        .capTokens())
+                .isEqualTo(cap);
     }
 
     @Test

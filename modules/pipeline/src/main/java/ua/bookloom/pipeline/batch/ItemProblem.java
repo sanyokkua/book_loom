@@ -16,5 +16,8 @@ public enum ItemProblem {
     TOO_LONG,
 
     /** The target is shorter than the language pair's band allows for the source. */
-    TOO_SHORT
+    TOO_SHORT,
+
+    /** The target carries protocol text of the reply — a {@code terms} object, an id entry, a code fence. */
+    LEAKED
 }

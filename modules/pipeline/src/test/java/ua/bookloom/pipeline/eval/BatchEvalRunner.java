@@ -19,6 +19,7 @@ import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.batch.ItemOutcome;
 import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
+import ua.bookloom.pipeline.batch.ProtocolLeak;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
@@ -112,7 +113,7 @@ final class BatchEvalRunner {
                         .filter(outcome -> outcome.problems().contains(ItemProblem.TOO_SHORT))
                         .count(),
                 (int) parsed.outcomes().stream()
-                        .filter(outcome -> outcome.status() == ItemStatus.OK && LeakCheck.leaks(outcome.target()))
+                        .filter(outcome -> outcome.status() == ItemStatus.OK && ProtocolLeak.leaks(outcome.target()))
                         .count(),
                 usage != null && usage.completion() != null
                         ? usage.completion()

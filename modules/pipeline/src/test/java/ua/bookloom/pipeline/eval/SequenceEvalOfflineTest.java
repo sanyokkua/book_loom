@@ -219,7 +219,7 @@ class SequenceEvalOfflineTest {
     @ValueSource(
             strings = {
                 "Він сказав \"terms\": []",
-                "Він сказав «terms»",
+                "Він сказав «terms»: []",
                 "```json Він сказав",
                 "{\"id\": \"1\"} Він сказав"
             })

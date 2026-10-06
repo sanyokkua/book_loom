@@ -50,10 +50,6 @@ class RealRunCorpusTest {
         return named(RunCorpus.text().stream().filter(c -> !c.isDeterministic() && c.bad() != null));
     }
 
-    private static Stream<Arguments> knownFailures() {
-        return named(RunCorpus.text().stream().filter(RunCase::knownFailure));
-    }
-
     private static Stream<Arguments> batchCases() {
         return RunCorpus.batches().stream().map(c -> Arguments.of(c.id(), c));
     }
@@ -67,10 +63,6 @@ class RealRunCorpusTest {
 
     private static Stream<Arguments> acceptedBatchReplies() {
         return batchReplies(false);
-    }
-
-    private static Stream<Arguments> knownBatchReplies() {
-        return batchReplies(true);
     }
 
     private static Stream<Arguments> scans(final boolean known) {
@@ -156,23 +148,22 @@ class RealRunCorpusTest {
                 .isFalse();
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("knownFailures")
-    void knownFailure_cleanCandidate_isStillRefusedByProduction(final String id, final RunCase runCase) {
-        assertThat(RunVerdicts.of(runCase).fires(runCase.good()))
-                .as(id + " now passes: drop knownFailure from the case (task " + runCase.fixedBy() + ")")
-                .isTrue();
+    @Test
+    void knownFailure_cleanCandidates_areStillRefusedByProduction() {
+        assertThat(RunCorpus.text().stream().filter(RunCase::knownFailure))
+                .allSatisfy(runCase -> assertThat(RunVerdicts.of(runCase).fires(runCase.good()))
+                        .as(runCase.id() + " now passes: drop knownFailure from the case (task " + runCase.fixedBy()
+                                + ")")
+                        .isTrue());
     }
 
     @Test
     void knownFailure_everyCase_namesTheTaskThatFixesIt() {
         assertThat(RunCorpus.text().stream().filter(RunCase::knownFailure))
-                .isNotEmpty()
                 .allSatisfy(runCase -> assertThat(runCase.fixedBy()).matches("15e\\.\\d+"));
         assertThat(RunCorpus.batches().stream()
                         .flatMap(c -> c.replies().stream())
                         .filter(BatchCase.Reply::knownFailure))
-                .isNotEmpty()
                 .allSatisfy(reply -> assertThat(reply.fixedBy()).matches("15e\\.\\d+"));
     }
 
@@ -235,13 +226,14 @@ class RealRunCorpusTest {
         assertThat(parse(batchCase, reply).isClean()).as(id).isEqualTo(reply.expectAccepted());
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("knownBatchReplies")
-    void knownFailure_batchReply_isStillReadWrongByProduction(
-            final String id, final BatchCase batchCase, final BatchCase.Reply reply) {
-        assertThat(parse(batchCase, reply).isClean())
-                .as(id + " now reads right: drop knownFailure (task " + reply.fixedBy() + ")")
-                .isNotEqualTo(reply.expectAccepted());
+    @Test
+    void knownFailure_batchReplies_areStillReadWrongByProduction() {
+        assertThat(RunCorpus.batches())
+                .allSatisfy(batchCase -> assertThat(batchCase.replies().stream().filter(BatchCase.Reply::knownFailure))
+                        .allSatisfy(reply -> assertThat(parse(batchCase, reply).isClean())
+                                .as(batchCase.id() + "/" + reply.shape() + " now reads right: drop knownFailure (task "
+                                        + reply.fixedBy() + ")")
+                                .isNotEqualTo(reply.expectAccepted())));
     }
 
     @Test

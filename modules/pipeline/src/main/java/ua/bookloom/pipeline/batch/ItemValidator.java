@@ -53,6 +53,9 @@ final class ItemValidator {
         if (isEcho(item.masked(), target)) {
             problems.add(ItemProblem.ECHO);
         }
+        if (ProtocolLeak.leaks(target)) {
+            problems.add(ItemProblem.LEAKED);
+        }
         lengthProblem(item.masked(), target, sourceTag, targetTag).ifPresent(problems::add);
         log.debug("Validated batch item id={} problems={}", item.id(), problems);
         return problems;

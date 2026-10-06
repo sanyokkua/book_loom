@@ -473,11 +473,11 @@
   "good": "А за мить — вибух.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15e.8",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "context": null,
-  "rationale": "a faithful compact translation (41 chars, 7 words, ratio 0.44) that LengthCheck wrongly refuses; expected clean once 15e.8 lands"
+  "rationale": "a faithful compact translation (41 chars, 7 words, ratio 0.44) that LengthCheck refused before 15e.8"
  },
  {
   "id": "short-old-man",
@@ -487,11 +487,11 @@
   "good": "Старий мовчки вийшов.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15e.8",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "context": null,
-  "rationale": "a faithful compact translation (48 chars, 10 words, ratio 0.44) that LengthCheck wrongly refuses; expected clean once 15e.8 lands"
+  "rationale": "a faithful compact translation (48 chars, 10 words, ratio 0.44) that LengthCheck refused before 15e.8"
  },
  {
   "id": "short-nothing-came",
@@ -501,11 +501,11 @@
   "good": "Проте нічого не вийшло.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15e.8",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "context": null,
-  "rationale": "a faithful compact translation (40 chars, 8 words, ratio 0.57) that LengthCheck wrongly refuses; expected clean once 15e.8 lands"
+  "rationale": "a faithful compact translation (40 chars, 8 words, ratio 0.57) that LengthCheck refused before 15e.8"
  },
  {
   "id": "short-lamp",
@@ -515,11 +515,11 @@
   "good": "Лампа згасла, і стало темно.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15e.8",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "context": null,
-  "rationale": "a faithful compact translation (58 chars, 10 words, ratio 0.48) that LengthCheck wrongly refuses; expected clean once 15e.8 lands"
+  "rationale": "a faithful compact translation (58 chars, 10 words, ratio 0.48) that LengthCheck refused before 15e.8"
  },
  {
   "id": "short-house-silent",
@@ -529,11 +529,11 @@
   "good": "Дім раптом знову затих.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15e.8",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "context": null,
-  "rationale": "a faithful compact translation (48 chars, 8 words, ratio 0.48) that LengthCheck wrongly refuses; expected clean once 15e.8 lands"
+  "rationale": "a faithful compact translation (48 chars, 8 words, ratio 0.48) that LengthCheck refused before 15e.8"
  },
  {
   "id": "short-nobody-dared",
@@ -543,10 +543,10 @@
   "good": "На мить усі онімілі.",
   "bad": null,
   "deterministic": true,
-  "knownFailure": true,
-  "fixedBy": "15e.8",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "context": null,
-  "rationale": "a faithful compact translation (48 chars, 10 words, ratio 0.42) that LengthCheck wrongly refuses; expected clean once 15e.8 lands"
+  "rationale": "a faithful compact translation (48 chars, 10 words, ratio 0.42) that LengthCheck refused before 15e.8"
  }
 ]

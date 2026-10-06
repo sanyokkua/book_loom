@@ -19,6 +19,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.pipeline.RenderingConsistency;
+import ua.bookloom.pipeline.batch.ProtocolLeak;
 import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.FindingKind;
 import ua.bookloom.pipeline.checks.GenderChecks;
@@ -42,7 +43,6 @@ final class SequenceMeasure {
     private static final String WORD_END = ")(?![\\p{L}\\p{M}])";
     private static final String GENDER_CHECK = "uk";
     private static final int MIN_ECHO_LETTERS = 3;
-    private static final Pattern PROTOCOL = Pattern.compile("\"terms\"|«terms»|```|\\{\\s*\"id\"");
 
     private final SequenceFixture fixture;
 
@@ -105,8 +105,7 @@ final class SequenceMeasure {
         builder.hardGateFailuresRound0(run.hardGateFailuresRound0())
                 .hardGateKinds(run.hardGateKinds())
                 .leakedProtocol((int) run.segments().stream()
-                        .filter(s -> s.target() != null
-                                && PROTOCOL.matcher(s.target()).find())
+                        .filter(s -> s.target() != null && ProtocolLeak.leaks(s.target()))
                         .count())
                 .reviewerTruncated(run.reviewerTruncated())
                 .termClaimedWrong(claims.values().stream().mapToInt(List::size).sum())

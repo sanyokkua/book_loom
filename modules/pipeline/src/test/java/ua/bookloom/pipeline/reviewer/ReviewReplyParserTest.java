@@ -130,4 +130,31 @@ class ReviewReplyParserTest {
                         .items())
                 .containsExactly(ReviewItem.ok("Book.md:0"));
     }
+
+    private static final String CUT_REPLY = "{\"results\":[{\"id\":\"s1\",\"status\":\"ok\"},"
+            + "{\"id\":\"s2\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"gender\",\"quote\":\"Два\","
+            + "\"replacement\":\"Дві\"}]},{\"id\":\"s3\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"gen";
+
+    @Test
+    void parseSalvaging_replyCutInsideTheThirdEntry_keepsTheTwoCompleteOnes() {
+        final ReviewVerdict verdict = PARSER.parseSalvaging(CUT_REPLY, PAIRS);
+
+        assertThat(verdict.readable()).isTrue();
+        assertThat(verdict.items()).extracting(ReviewItem::segmentId).containsExactly("Book.md:0", "Book.md:1");
+        assertThat(verdict.itemFor("Book.md:1"))
+                .hasValueSatisfying(item -> assertThat(item.edits()).hasSize(1));
+    }
+
+    @Test
+    void parseSalvaging_replyCutBeforeAnyEntryCloses_isReadableAndEmpty() {
+        final ReviewVerdict verdict = PARSER.parseSalvaging("{\"results\":[{\"id\":\"s1\",\"status\":\"edi", PAIRS);
+
+        assertThat(verdict.readable()).isTrue();
+        assertThat(verdict.items()).isEmpty();
+    }
+
+    @Test
+    void parse_strictReplyCutMidEntry_staysUnreadable() {
+        assertThat(PARSER.parse(CUT_REPLY, PAIRS).readable()).isFalse();
+    }
 }

@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
@@ -92,22 +93,97 @@ public final class ReviewerCall {
                 pairs.stream().map(ReviewedPair::segmentId).toList();
         log.debug("Reviewing batch pairCount={} pass={} segmentIds={}", pairs.size(), pass, segmentIds);
         try {
-            final ChatRequest request = request(pairs, frame, glossaryPairs, characters, pass);
-            logTraceMessages(request);
-            final Result<ChatResponse> reply = send(segmentIds, request, calls);
+            final Result<ChatResponse> reply = ask(pairs, frame, glossaryPairs, characters, pass, calls);
             return reply.isErr()
                     ? routeFailure(segmentIds, Objects.requireNonNull(reply.error()))
-                    : Result.ok(readVerdict(segmentIds, pairs, Objects.requireNonNull(reply.data())));
+                    : Result.ok(read(
+                            Objects.requireNonNull(reply.data()),
+                            pairs,
+                            frame,
+                            glossaryPairs,
+                            characters,
+                            pass,
+                            calls));
         } catch (Throwable cause) {
-            final AppError error = AppError.of(
-                    ErrorCode.internal,
-                    "Review call failed",
-                    "The reviewer could not evaluate this batch.",
-                    null,
-                    cause);
-            log.error("Unexpected review failure code={}", error.code(), cause);
-            return Result.err(error);
+            return internalFailure(cause);
         }
+    }
+
+    private static Result<ReviewVerdict> internalFailure(final Throwable cause) {
+        final AppError error = AppError.of(
+                ErrorCode.internal, "Review call failed", "The reviewer could not evaluate this batch.", null, cause);
+        log.error("Unexpected review failure code={}", error.code(), cause);
+        return Result.err(error);
+    }
+
+    private ReviewVerdict read(
+            final ChatResponse response,
+            final List<ReviewedPair> pairs,
+            final CallFrame frame,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final ReviewPass pass,
+            final ModelCalls calls) {
+        return response.finishReason() == FinishReason.LENGTH
+                ? readCut(pairs, response, frame, glossaryPairs, characters, pass, calls)
+                : readVerdict(pairs.stream().map(ReviewedPair::segmentId).toList(), pairs, response);
+    }
+
+    private Result<ChatResponse> ask(
+            final List<ReviewedPair> pairs,
+            final CallFrame frame,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final ReviewPass pass,
+            final ModelCalls calls) {
+        final ChatRequest request = request(pairs, frame, glossaryPairs, characters, pass);
+        logTraceMessages(request);
+        return send(pairs.stream().map(ReviewedPair::segmentId).toList(), request, calls);
+    }
+
+    /**
+     * A reply the output cap cut is never a reason to flag: the complete entries are kept, the pairs left unread are
+     * asked about once more in a smaller batch, and any pair still unread is taken as {@code ok} — the deterministic
+     * checks already passed it, and a flag would hand the person a segment nothing is known to be wrong with.
+     */
+    private ReviewVerdict readCut(
+            final List<ReviewedPair> pairs,
+            final ChatResponse response,
+            final CallFrame frame,
+            final List<String> glossaryPairs,
+            final List<String> characters,
+            final ReviewPass pass,
+            final ModelCalls calls) {
+        logTraceReply(response.content());
+        final ReviewVerdict first = parser.parseSalvaging(response.content(), pairs);
+        final List<ReviewedPair> unread = unreadOf(pairs, first);
+        log.warn(
+                "Review reply cut by the output cap read={} unread={}",
+                first.items().size(),
+                unread.size());
+        if (unread.isEmpty()) {
+            return first;
+        }
+        final Result<ChatResponse> again = ask(unread, frame, glossaryPairs, characters, pass, calls);
+        if (again.isErr()) {
+            log.warn("Re-asking the unread pairs failed; they are taken as ok count={}", unread.size());
+            return first;
+        }
+        final ChatResponse second = Objects.requireNonNull(again.data());
+        logTraceReply(second.content());
+        final ReviewVerdict rest = parser.parseSalvaging(second.content(), unread);
+        final List<ReviewItem> items = new ArrayList<>(first.items());
+        items.addAll(rest.items());
+        log.warn(
+                "Pairs still unread after the re-ask are taken as ok count={}",
+                unread.size() - rest.items().size());
+        return ReviewVerdict.answered(items);
+    }
+
+    private static List<ReviewedPair> unreadOf(final List<ReviewedPair> pairs, final ReviewVerdict verdict) {
+        return pairs.stream()
+                .filter(pair -> verdict.itemFor(pair.segmentId()).isEmpty())
+                .toList();
     }
 
     private Result<ChatResponse> send(

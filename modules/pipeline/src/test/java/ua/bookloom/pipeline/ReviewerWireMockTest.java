@@ -121,6 +121,39 @@ class ReviewerWireMockTest {
         }
     }
 
+    // finish_reason "length" (OpenAI-compatible) and done_reason "length" (Ollama) both mean the cap cut the reply.
+    @ParameterizedTest
+    @EnumSource(ProviderKind.class)
+    void review_replyCutByTheCapOnTheWire_isReAskedForTheUnreadPairAndNeverUnavailable(final ProviderKind kind) {
+        try (WireMockProvider provider = new WireMockProvider(kind)) {
+            provider.stubSequence(List.of(
+                    provider.replyCut(
+                            "{\"results\":[{\"id\":\"s1\",\"status\":\"ok\"},{\"id\":\"s2\",\"status\":\"edits\",\"ed"),
+                    provider.reply(REVIEWER_REPLY, Duration.ZERO)));
+            final ChatModel model = provider.model(Duration.ofSeconds(5), duration -> {});
+
+            final ReviewVerdict verdict = Objects.requireNonNull(REVIEWER_CALL
+                    .review(
+                            List.of(
+                                    new ReviewedPair("Book.md:0", SOURCE_TEXT, DRAFT_TARGET),
+                                    new ReviewedPair("Book.md:1", SOURCE_TEXT, "Він відчинив двері.")),
+                            FRAME,
+                            List.of(),
+                            ReviewPass.FIRST,
+                            (callKind, segmentId, request) -> model.chat(request))
+                    .data());
+
+            assertThat(provider.chatBodies()).hasSize(2);
+            assertThat(provider.chatBodies().get(1))
+                    .contains("Він відчинив двері.")
+                    .doesNotContain(DRAFT_TARGET);
+            assertThat(verdict.isUnavailable()).isFalse();
+            assertThat(verdict.items()).extracting(ReviewItem::segmentId).containsExactly("Book.md:0", "Book.md:1");
+            assertThat(verdict.itemFor("Book.md:1"))
+                    .hasValueSatisfying(item -> assertThat(item.status()).isEqualTo(ReviewStatus.EDITS));
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(ProviderKind.class)
     void review_firstCall_carriesTheResponseFormatOnTheWire(final ProviderKind kind) {

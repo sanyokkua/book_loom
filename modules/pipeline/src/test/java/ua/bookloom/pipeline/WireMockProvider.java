@@ -96,6 +96,11 @@ final class WireMockProvider implements AutoCloseable {
         return delay.isZero() ? response : response.withFixedDelay((int) delay.toMillis());
     }
 
+    /** A reply that stopped at the output cap: {@code content} is cut and the finish reason is {@code length}. */
+    ResponseDefinitionBuilder replyCut(final String content) {
+        return aResponse().withStatus(200).withBody(envelope(content, "length"));
+    }
+
     /**
      * A reply carrying {@code content} and the token usage in this dialect's own fields: Ollama's
      * {@code prompt_eval_count}, {@code eval_count} and {@code eval_duration}, or the OpenAI-compatible
@@ -183,13 +188,20 @@ final class WireMockProvider implements AutoCloseable {
     }
 
     private String envelope(final String content) {
+        return envelope(content, "stop");
+    }
+
+    private String envelope(final String content, final String finish) {
         try {
             return MAPPER.writeValueAsString(
                     kind == ProviderKind.OLLAMA
                             ? Map.of(
-                                    "model", "test-model",
-                                    "message", Map.of("role", "assistant", "content", content),
-                                    "done_reason", "stop")
+                                    "model",
+                                    "test-model",
+                                    "message",
+                                    Map.of("role", "assistant", "content", content),
+                                    "done_reason",
+                                    finish)
                             : Map.of(
                                     "model",
                                     "test-model",
@@ -198,7 +210,7 @@ final class WireMockProvider implements AutoCloseable {
                                             "message",
                                             Map.of("role", "assistant", "content", content),
                                             "finish_reason",
-                                            "stop"))));
+                                            finish))));
         } catch (JsonProcessingException cause) {
             throw new AssertionError("could not encode provider reply", cause);
         }

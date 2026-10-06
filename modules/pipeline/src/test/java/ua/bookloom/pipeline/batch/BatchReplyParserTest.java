@@ -331,4 +331,44 @@ class BatchReplyParserTest {
                 .hasValueSatisfying(o -> assertThat(o.terms()).isEmpty());
         assertThat(parsed.acceptedIds()).containsExactly("1");
     }
+
+    @Test
+    void parse_targetHoldingTheTermsTail_failsThatIdAsLeaked() {
+        final Map<String, String> entries = clean();
+        entries.put("2", "Він довго нічого не казав.» «terms»: {«old»: «старий»}}, {");
+
+        final BatchReply reply = parse(write(entries));
+
+        assertThat(reply.failingIds()).containsExactly("2");
+        assertThat(reply.outcome("2"))
+                .hasValueSatisfying(outcome -> assertThat(outcome.problems()).containsExactly(ItemProblem.LEAKED));
+    }
+
+    @Test
+    void parse_targetHoldingACodeFence_failsThatIdAsLeaked() {
+        final Map<String, String> entries = clean();
+        entries.put("1", T1 + "\\n```");
+
+        assertThat(parse(write(entries)).failingIds()).containsExactly("1");
+    }
+
+    @Test
+    void parse_targetWithTheWordTermsAndBraces_isAccepted() {
+        final Map<String, String> entries = clean();
+        entries.put("2", "Він довго казав «terms» і {щось} ще.");
+
+        assertThat(parse(write(entries)).isClean()).isTrue();
+    }
+
+    @Test
+    void parse_brokenJsonWithLeakedTail_doesNotSwallowTheRestIntoTheTarget() {
+        final String reply = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1
+                + "\"},{\"id\":\"2\",\"target\":\"Він довго нічого не казав.\"},"
+                + "{\"id\":\"3\",\"target\":\"1881\"},{\"id\":\"4\",\"target\":\"" + T4 + "\"";
+
+        final BatchReply parsed = parse(reply);
+
+        assertThat(parsed.outcome("2"))
+                .hasValueSatisfying(outcome -> assertThat(outcome.target()).isEqualTo(T2));
+    }
 }

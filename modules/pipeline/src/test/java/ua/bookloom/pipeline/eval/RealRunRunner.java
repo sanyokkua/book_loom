@@ -22,6 +22,7 @@ import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
+import ua.bookloom.pipeline.batch.ProtocolLeak;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
 import ua.bookloom.pipeline.eval.ReviewerEval.BatchReviewed;
 import ua.bookloom.pipeline.eval.ReviewerEval.Reviewed;
@@ -229,7 +230,7 @@ final class RealRunRunner {
                 .filter(outcome -> outcome.problems().contains(ItemProblem.TOO_SHORT))
                 .count();
         final int leaked = (int) parsed.outcomes().stream()
-                .filter(outcome -> outcome.status() == ItemStatus.OK && LeakCheck.leaks(outcome.target()))
+                .filter(outcome -> outcome.status() == ItemStatus.OK && ProtocolLeak.leaks(outcome.target()))
                 .count();
         final long reported = parsed.outcomes().stream()
                 .filter(outcome -> !outcome.terms().isEmpty())

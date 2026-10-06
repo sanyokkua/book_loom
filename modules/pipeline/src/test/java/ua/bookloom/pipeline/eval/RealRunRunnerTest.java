@@ -108,14 +108,14 @@ class RealRunRunnerTest {
     }
 
     @Test
-    void text_shortLine_isAKnownFailureTheGateRefusesBeforeAnyReviewer() {
+    void text_shortLine_passesTheLengthCheckAndReachesTheReviewer() {
         final List<Sent> sent = new ArrayList<>();
 
         final List<RealRunRow> rows = runner(sent, kind -> stop("{\"target\":\"А за мить — вибух.\"}"))
                 .text(text("short-split-second"));
 
-        assertThat(sent).extracting(Sent::kind).containsExactly(CallKind.DRAFT);
-        assertThat(rows).extracting(RealRunRow::outcome).containsOnly(Outcome.KNOWN_RED);
+        assertThat(sent).extracting(Sent::kind).containsExactly(CallKind.DRAFT, CallKind.REVIEW);
+        assertThat(rows).extracting(RealRunRow::outcome).doesNotContain(Outcome.KNOWN_RED);
     }
 
     @Test
@@ -165,7 +165,8 @@ class RealRunRunnerTest {
                                 FinishReason.LENGTH))
                 .reviewerBatch(longCase);
 
-        assertThat(sent).hasSize(1);
+        // The cut reply is salvaged (here nothing), then the unread pairs are asked once more, as the run does.
+        assertThat(sent).hasSize(2);
         assertThat(all(sent.getFirst())).contains("s12");
         assertThat(rows).hasSize(12);
         assertThat(rows.stream().filter(RealRunRow::truncated)).hasSize(1);

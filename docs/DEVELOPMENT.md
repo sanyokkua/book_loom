@@ -600,8 +600,7 @@ check of 15e.11; invented words, since no dictionary is bundled; an ASCII `"` in
 so it counts for the reviewer only.
 
 *Known failures.* `knownFailure: true` marks a case production gets wrong today, with `fixedBy` naming the task: the
-41-character and five other compact lines that `LengthCheck` refuses (15e.8), the leaked `terms` and code-fence replies the
-batch parser accepts (15e.6), the generic words `great`, `hall` and `old` that `KeyTermScan` proposes (15e.11). They are
+generic words `great`, `hall` and `old` that `KeyTermScan` proposes (15e.11). They are
 reported beside the rates (`+Nk` in the matrix, `known` in the table), never inside one, and the offline test fails when one
 starts passing, so the fixing task drops the flag in the same change.
 
@@ -674,7 +673,7 @@ so the difference between the two rows is what the narrator field buys.
 | `english` | targets still in the source language: `LanguageIdentityCheck` finding or a plain echo of the source |
 | `flaggedNoTarget` | flagged segments with no stored target, which an export writes as the source (the 23-English-paragraphs bug, fixed by 15e.5) |
 | `hardGateRound0` and `kinds` | segments whose first evaluation failed a hard gate (a blocking quote or script finding, a placeholder), read from the run's `Evaluated ... round=0 ... hardGatesPass=false` line; `kinds` counts the findings of their first repair round (`Round choice ... round=1`). The real run: 73 of 3,783 |
-| `leakedProtocol` | final targets holding `"terms"`, `«terms»`, a code fence or a `{"id"` object (the real run: 4) |
+| `leakedProtocol` | final targets holding protocol text (`ProtocolLeak`: a `terms`/`items` key and colon, a brace holding an `id` key, a code fence; the real run: 4) |
 | `reviewerTruncated` | reviewer replies the provider cut off at the output cap (`finish=LENGTH`), counted by a recording wrapper around the model |
 | `termClaimedWrong` and `claimed` | lexicon terms whose learned rendering another term also claimed (`mr` and `mrs` both learning «пані»), with the shared renderings |
 | `quote` / `ascii` / `mixed` | `TextChecks` blocking unbalanced-quote and mixed-script findings in the final targets (a soft "English quote marks" note is not counted); `ascii` counts targets that still hold a straight `"` (an eval-side count, the quote check does not read the kind) |

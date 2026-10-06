@@ -72,6 +72,43 @@ class LengthCheckTest {
         assertThat(result.finding()).isNull();
     }
 
+    // The six lines of the 6-hour real run: 40 to 58 characters, 7 to 10 words, the target 0.42 to 0.57 of the length.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "And, a split second later, the explosion.|І за мить стався вибух.",
+                "And, a split second later, the explosion.|А за мить — вибух.",
+                "Then, without a word, the old man left the room.|Старий мовчки вийшов.",
+                "Nothing, however, came of it in the end.|Проте нічого не вийшло.",
+                "Slowly, very slowly, the lamp went out, and darkness fell.|Лампа згасла, і стало темно.",
+                "Suddenly, the whole house fell silent once more.|Дім раптом знову затих.",
+                "For a moment, nobody in the room dared to speak.|На мить усі онімілі."
+            })
+    void run_compactLineOfUpToSixtyCharactersAndTenWords_passes(final String source, final String target) {
+        final CheckResult result = LengthCheck.run(SoftCheckFixtures.length(source, target, "en", "uk"));
+
+        assertThat(result.passed()).isTrue();
+        assertThat(result.finding()).isNull();
+    }
+
+    // Outside the compact line: too long a line, too few words kept, or a ratio under the 0.40 floor.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Then, without a word, the old man left the room, and later the rest followed.|Старий вийшов.",
+                "Then, without a word, the old man left the room.|Старий пішов.",
+                "Then, without a word, the old man left.|Так.",
+                "The old man left the room without a word.|Він і я та ти.",
+                "The monster met me at midnight.|Чудовисько тут"
+            })
+    void run_lineOutsideTheCompactRules_stillFails(final String source, final String target) {
+        final CheckResult result = LengthCheck.run(SoftCheckFixtures.length(source, target, "en", "uk"));
+
+        assertThat(result.passed()).isFalse();
+    }
+
     @Test
     void run_longerLineCutToAFragment_stillFailsAsAnOmission() {
         final CheckResult result = LengthCheck.run(
