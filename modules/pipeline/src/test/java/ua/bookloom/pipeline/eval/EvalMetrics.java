@@ -1,6 +1,9 @@
 package ua.bookloom.pipeline.eval;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -38,6 +41,20 @@ final class EvalMetrics {
     /** Cases whose reviewer replies all parsed. */
     static double parseRate(final List<DefectRow> rows) {
         return share(rows, row -> true, DefectRow::readable, 1.0);
+    }
+
+    /**
+     * Per defect family, the share of cases that came out right — flagged exactly when defective — in the order the
+     * families first appear.
+     */
+    static Map<String, Double> rightByKind(final List<DefectRow> rows) {
+        final Map<String, List<DefectRow>> byKind = new LinkedHashMap<>();
+        rows.forEach(row ->
+                byKind.computeIfAbsent(row.kind(), kind -> new ArrayList<>()).add(row));
+        final Map<String, Double> rates = new LinkedHashMap<>();
+        byKind.forEach((kind, own) ->
+                rates.put(kind, share(own, row -> true, row -> row.flagged() == row.defective(), 1.0)));
+        return rates;
     }
 
     private static double share(

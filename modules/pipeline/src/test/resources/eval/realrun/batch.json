@@ -1,0 +1,135 @@
+[
+ {
+  "id": "batch-terms-protocol",
+  "kind": "batch-terms",
+  "chunk": [
+   "The master raised his staff, and the imp shrank back against the wall.",
+   "“You will not leave this room,” said the master, “until the circle is closed.”",
+   "Nell watched from the doorway, her hands pressed tightly against her mouth, and waited for something to happen.",
+   "The candles guttered and the smell of sulphur filled the room."
+  ],
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "context": {
+   "preceding": [
+    {
+     "source": "It was long past midnight.",
+     "target": "Було далеко за північ."
+    },
+    {
+     "source": "Nobody in the house was asleep.",
+     "target": "Ніхто в домі не спав."
+    }
+   ],
+   "lexicon": [
+    {
+     "term": "master",
+     "rendering": "господар"
+    },
+    {
+     "term": "imp",
+     "rendering": "імп"
+    }
+   ]
+  },
+  "expectTerms": true,
+  "replies": [
+   {
+    "shape": "CORRECT",
+    "reply": "{\"items\": [{\"id\": \"1\", \"target\": \"Господар підняв посох, і імп відсахнувся до стіни.\", \"terms\": {\"master\": \"господар\", \"imp\": \"імп\"}}, {\"id\": \"2\", \"target\": \"«Ви не вийдете з цієї кімнати», — сказав господар, — «доки коло не замкнеться».\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"3\", \"target\": \"Нелл дивилася з дверей, міцно притиснувши руки до рота, і чекала, що щось станеться.\"}, {\"id\": \"4\", \"target\": \"Свічки захиталися, і кімната наповнилася запахом сірки.\"}]}",
+    "expectAccepted": true,
+    "knownFailure": false,
+    "fixedBy": null
+   },
+   {
+    "shape": "TERMS_LEAK",
+    "reply": "{\"items\": [{\"id\": \"1\", \"target\": \"Господар підняв посох, і імп відсахнувся до стіни.\", \"terms\": {\"master\": \"господар\", \"imp\": \"імп\"}}, {\"id\": \"2\", \"target\": \"«Ви не вийдете з цієї кімнати», — сказав господар. «terms»: {«master»: «господар»}}, {\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"3\", \"target\": \"Нелл дивилася з дверей, міцно притиснувши руки до рота, і чекала, що щось станеться.\"}, {\"id\": \"4\", \"target\": \"Свічки захиталися, і кімната наповнилася запахом сірки.\"}]}",
+    "expectAccepted": false,
+    "knownFailure": true,
+    "fixedBy": "15e.6"
+   },
+   {
+    "shape": "CODE_FENCE",
+    "reply": "{\"items\": [{\"id\": \"1\", \"target\": \"Господар підняв посох, і імп відсахнувся до стіни.\", \"terms\": {\"master\": \"господар\", \"imp\": \"імп\"}}, {\"id\": \"2\", \"target\": \"«Ви не вийдете з цієї кімнати», — сказав господар, — «доки коло не замкнеться».\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"3\", \"target\": \"Нелл дивилася з дверей, міцно притиснувши руки до рота, і чекала, що щось станеться.\\n```\"}, {\"id\": \"4\", \"target\": \"Свічки захиталися, і кімната наповнилася запахом сірки.\"}]}",
+    "expectAccepted": false,
+    "knownFailure": true,
+    "fixedBy": "15e.6"
+   },
+   {
+    "shape": "TOO_SHORT",
+    "reply": "{\"items\": [{\"id\": \"1\", \"target\": \"Господар підняв посох, і імп відсахнувся до стіни.\", \"terms\": {\"master\": \"господар\", \"imp\": \"імп\"}}, {\"id\": \"2\", \"target\": \"«Ви не вийдете з цієї кімнати», — сказав господар, — «доки коло не замкнеться».\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"3\", \"target\": \"Так.\"}, {\"id\": \"4\", \"target\": \"Свічки захиталися, і кімната наповнилася запахом сірки.\"}]}",
+    "expectAccepted": false,
+    "knownFailure": false,
+    "fixedBy": null
+   }
+  ],
+  "rationale": "a lexicon with master and imp makes the batch ask for terms; three reply shapes of the real run: clean, the terms JSON leaked into a target as «terms»: {…}}, { and a code fence left in a target"
+ },
+ {
+  "id": "batch-context-lexicon",
+  "kind": "batch-context",
+  "chunk": [
+   "The boy carried the lantern across the courtyard and set it down by the well.",
+   "“Is the master awake?” asked Nell.",
+   "“He is always awake,” said the boy, “and so is the imp.”",
+   "Behind them the old gate swung slowly shut."
+  ],
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "context": {
+   "preceding": [
+    {
+     "source": "The rain had stopped by the time they reached the house.",
+     "target": "Дощ перестав, коли вони дійшли до дому."
+    },
+    {
+     "source": "A single window was lit on the upper floor.",
+     "target": "Лише одне вікно на верхньому поверсі світилося."
+    }
+   ],
+   "summary": "Раніше: Нелл і хлопчик прийшли до дому господаря серед ночі.",
+   "lexicon": [
+    {
+     "term": "master",
+     "rendering": "господар"
+    },
+    {
+     "term": "imp",
+     "rendering": "імп"
+    }
+   ]
+  },
+  "expectTerms": true,
+  "replies": [
+   {
+    "shape": "CORRECT",
+    "reply": "{\"items\": [{\"id\": \"1\", \"target\": \"Хлопчик переніс ліхтар через двір і поставив його біля криниці.\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"2\", \"target\": \"«Господар не спить?» — запитала Нелл.\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"3\", \"target\": \"«Він завжди не спить», — сказав хлопчик, — «і імп теж».\", \"terms\": {\"master\": \"господар\", \"imp\": \"імп\"}}, {\"id\": \"4\", \"target\": \"Позаду них стара брама повільно зачинилась.\"}]}",
+    "expectAccepted": true,
+    "knownFailure": false,
+    "fixedBy": null
+   },
+   {
+    "shape": "TOO_SHORT",
+    "reply": "{\"items\": [{\"id\": \"1\", \"target\": \"Так.\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"2\", \"target\": \"«Господар не спить?» — запитала Нелл.\", \"terms\": {\"master\": \"господар\"}}, {\"id\": \"3\", \"target\": \"«Він завжди не спить», — сказав хлопчик, — «і імп теж».\", \"terms\": {\"master\": \"господар\", \"imp\": \"імп\"}}, {\"id\": \"4\", \"target\": \"Позаду них стара брама повільно зачинилась.\"}]}",
+    "expectAccepted": false,
+    "knownFailure": false,
+    "fixedBy": null
+   }
+  ],
+  "rationale": "previous pairs, a rolling summary, a lexicon block and a glossary name in one batch"
+ }
+]

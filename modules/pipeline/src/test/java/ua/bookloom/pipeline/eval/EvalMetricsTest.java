@@ -61,4 +61,15 @@ class EvalMetricsTest {
         assertThat(corpus).extracting(DefectCase::defective).contains(true, false);
         assertThat(corpus).extracting(DefectCase::id).doesNotHaveDuplicates();
     }
+
+    @Test
+    void rightByKind_rowsOfTwoFamilies_giveTheShareRightPerFamilyInFirstSeenOrder() {
+        final List<DefectRow> rows = List.of(
+                new DefectRow("a", "quotes", true, true, true, true, 1, 0),
+                new DefectRow("b", "quotes", true, false, true, true, 1, 0),
+                new DefectRow("c", "gender", false, false, true, true, 1, 0));
+
+        assertThat(EvalMetrics.rightByKind(rows))
+                .containsExactly(java.util.Map.entry("quotes", 0.5), java.util.Map.entry("gender", 1.0));
+    }
 }

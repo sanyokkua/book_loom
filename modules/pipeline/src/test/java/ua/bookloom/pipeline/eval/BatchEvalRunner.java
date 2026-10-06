@@ -17,6 +17,7 @@ import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.batch.ItemOutcome;
+import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
@@ -107,6 +108,12 @@ final class BatchEvalRunner {
                 (int) parsed.count(ItemStatus.DUPLICATE),
                 (int) parsed.count(ItemStatus.MERGED_SUSPECT),
                 (int) parsed.count(ItemStatus.EXTRA),
+                (int) parsed.outcomes().stream()
+                        .filter(outcome -> outcome.problems().contains(ItemProblem.TOO_SHORT))
+                        .count(),
+                (int) parsed.outcomes().stream()
+                        .filter(outcome -> outcome.status() == ItemStatus.OK && LeakCheck.leaks(outcome.target()))
+                        .count(),
                 usage != null && usage.completion() != null
                         ? usage.completion()
                         : TokenEstimator.estimate(response.content(), TARGET),
@@ -120,6 +127,6 @@ final class BatchEvalRunner {
     }
 
     private static BatchEvalRow failed(final int size) {
-        return new BatchEvalRow(size, 0, 0, size, 0, 0, 0, 0, -1, true);
+        return new BatchEvalRow(size, 0, 0, size, 0, 0, 0, 0, 0, 0, -1, true);
     }
 }

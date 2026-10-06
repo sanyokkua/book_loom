@@ -185,24 +185,32 @@ final class PromptEvalRunner {
 
     private EvalRow repair(final Repair repair) {
         final EvalProject project = project(repair.masked());
+        final Optional<ChatRequest> request = repairRequest(project, repair.step(), repair.rejected());
+        if (request.isEmpty()) {
+            return failed(repair.name(), "repair", "the gate accepts the rejected target", repair.expect());
+        }
+        return read(
+                repair.name(),
+                "repair",
+                project.mask(0).maskedText(),
+                calls.call(repairKind(repair.step()), project.segment(0).id(), request.get()),
+                repair.expect());
+    }
+
+    /** The request a run sends to repair the project's first segment after {@code rejected}, or empty when none is needed. */
+    static Optional<ChatRequest> repairRequest(
+            final EvalProject project, final RepairStep step, final String rejected) {
         final Segment segment = project.segment(0);
         final DraftContext context = project.draftContext(0).draftContext();
         final ProtectedMask mask = project.mask(0);
         final PromptRequests requests = project.requests();
-        final boolean structural = repair.step() == RepairStep.STRUCTURAL;
-        final Optional<ChatRequest> request = structural
-                ? Optional.of(requests.structuralRepairRequest(segment, context, mask, repair.rejected()))
-                : requests.placeholderRepairRequest(segment, context, mask, repair.rejected());
-        if (request.isEmpty()) {
-            return failed(repair.name(), "repair", "the gate accepts the rejected target", repair.expect());
-        }
-        final CallKind kind = structural ? CallKind.STRUCTURAL_REPAIR : CallKind.PLACEHOLDER_REPAIR;
-        return read(
-                repair.name(),
-                "repair",
-                mask.maskedText(),
-                calls.call(kind, segment.id(), request.get()),
-                repair.expect());
+        return step == RepairStep.STRUCTURAL
+                ? Optional.of(requests.structuralRepairRequest(segment, context, mask, rejected))
+                : requests.placeholderRepairRequest(segment, context, mask, rejected);
+    }
+
+    static CallKind repairKind(final RepairStep step) {
+        return step == RepairStep.STRUCTURAL ? CallKind.STRUCTURAL_REPAIR : CallKind.PLACEHOLDER_REPAIR;
     }
 
     private EvalRow read(

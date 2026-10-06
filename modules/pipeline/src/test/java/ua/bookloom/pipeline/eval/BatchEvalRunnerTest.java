@@ -72,6 +72,37 @@ class BatchEvalRunnerTest {
         assertThat(cell(report, 4).tokenGate()).isEqualTo(0.75);
     }
 
+    /** A model that answers every item with {@code answer(source)}. */
+    private static ModelCalls answering(final java.util.function.UnaryOperator<String> answer) {
+        return (kind, segmentId, request) -> {
+            final String user = request.messages().get(1).content();
+            final List<String> entries = new ArrayList<>();
+            final Matcher matcher = ITEM.matcher(user.substring(user.indexOf("<Items>")));
+            while (matcher.find()) {
+                entries.add("{\"id\":\"" + matcher.group(1) + "\",\"target\":\""
+                        + answer.apply(matcher.group(2)).replace("\"", "\\\"").replace("\n", "\\n") + "\"}");
+            }
+            return Result.ok(new ChatResponse("{\"items\":[" + String.join(",", entries) + "]}", FinishReason.STOP));
+        };
+    }
+
+    @Test
+    void runAll_modelAnsweringATokenText_scoresTheTooShortItems() {
+        final BatchEvalReport report =
+                new BatchEvalReport("scripted", new BatchEvalRunner(answering(source -> "Ok")).runAll(List.of(8)));
+
+        assertThat(cell(report, 8).tooShort()).isGreaterThan(0.0);
+        assertThat(cell(report, 8).leaked()).isZero();
+    }
+
+    @Test
+    void runAll_modelLeakingACodeFenceIntoEveryTarget_scoresEveryItemLeaked() {
+        final BatchEvalReport report = new BatchEvalReport(
+                "scripted", new BatchEvalRunner(answering(source -> source + "\n```")).runAll(List.of(4)));
+
+        assertThat(cell(report, 4).leaked()).isEqualTo(1.0);
+    }
+
     @Test
     void run_callThatFails_failsEveryItemOfTheBatch() {
         final ModelCalls failing =
@@ -108,7 +139,8 @@ class BatchEvalRunnerTest {
         assertThat(report.json())
                 .startsWith("{\"suite\":\"batch\",\"model\":\"m:1\",\"cells\":[")
                 .contains("\"size\":8")
-                .contains("\"idValidity\":1.000");
-        assertThat(report.table()).contains("idValid", "tokGate", "omit", "merge");
+                .contains("\"idValidity\":1.000")
+                .contains("\"tooShort\":0.000", "\"leaked\":0.000");
+        assertThat(report.table()).contains("idValid", "tokGate", "omit", "merge", "tooShort", "leaked");
     }
 }

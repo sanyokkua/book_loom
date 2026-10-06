@@ -9,7 +9,8 @@ import java.util.function.ToIntFunction;
 /**
  * The batch A/B of one model: per batch size the rates that decide the batch size —
  * the share of items answered under their id exactly once, the share that also kept their tokens (the token gate), the
- * omission and merge rates, the output tokens per item and the calls per item.
+ * omission and merge rates, the share of items that came back far too short or with the protocol leaked into their text,
+ * the output tokens per item and the calls per item.
  *
  * @param model the model measured
  * @param rows every batch call's outcome
@@ -31,6 +32,8 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
             double tokenGate,
             double omission,
             double merge,
+            double tooShort,
+            double leaked,
             double outputTokensPerItem,
             double callFailures) {}
 
@@ -57,6 +60,8 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
                 share(own, BatchEvalRow::tokenPass, items),
                 share(own, BatchEvalRow::missing, items),
                 share(own, BatchEvalRow::merged, items),
+                share(own, BatchEvalRow::tooShort, items),
+                share(own, BatchEvalRow::leaked, items),
                 share(own, BatchEvalRow::outputTokens, items),
                 (double) own.stream().filter(BatchEvalRow::callFailed).count() / own.size());
     }
@@ -72,7 +77,8 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
             entries.add(String.format(
                     Locale.ROOT,
                     "{\"size\":%d,\"calls\":%d,\"items\":%d,\"idValidity\":%.3f,"
-                            + "\"tokenGate\":%.3f,\"omission\":%.3f,\"merge\":%.3f,\"outputTokensPerItem\":%.1f,"
+                            + "\"tokenGate\":%.3f,\"omission\":%.3f,\"merge\":%.3f,\"tooShort\":%.3f,"
+                            + "\"leaked\":%.3f,\"outputTokensPerItem\":%.1f,"
                             + "\"callFailures\":%.3f}",
                     cell.size(),
                     cell.calls(),
@@ -81,6 +87,8 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
                     cell.tokenGate(),
                     cell.omission(),
                     cell.merge(),
+                    cell.tooShort(),
+                    cell.leaked(),
                     cell.outputTokensPerItem(),
                     cell.callFailures()));
         }
@@ -93,7 +101,7 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
         lines.add("promptEval batch model=" + model);
         lines.add(String.format(
                 Locale.ROOT,
-                "%4s %5s %5s %8s %8s %8s %8s %8s",
+                "%4s %5s %5s %8s %8s %8s %8s %8s %8s %8s",
                 "size",
                 "calls",
                 "items",
@@ -101,6 +109,8 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
                 "tokGate",
                 "omit",
                 "merge",
+                "tooShort",
+                "leaked",
                 "outTok/i"));
         cells().forEach(cell -> lines.add(line(cell)));
         return String.join("\n", lines);
@@ -109,7 +119,7 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
     private static String line(final Cell cell) {
         return String.format(
                 Locale.ROOT,
-                "%4d %5d %5d %7.0f%% %7.0f%% %7.1f%% %7.1f%% %8.1f",
+                "%4d %5d %5d %7.0f%% %7.0f%% %7.1f%% %7.1f%% %7.1f%% %7.1f%% %8.1f",
                 cell.size(),
                 cell.calls(),
                 cell.items(),
@@ -117,6 +127,8 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
                 100 * cell.tokenGate(),
                 100 * cell.omission(),
                 100 * cell.merge(),
+                100 * cell.tooShort(),
+                100 * cell.leaked(),
                 cell.outputTokensPerItem());
     }
 }

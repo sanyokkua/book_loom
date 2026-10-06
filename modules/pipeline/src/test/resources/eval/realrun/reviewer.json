@@ -1,0 +1,274 @@
+[
+ {
+  "id": "reviewer-glossary-6",
+  "kind": "reviewer-batch",
+  "long": false,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   },
+   {
+    "term": "Vance",
+    "target": "Венс",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   },
+   {
+    "term": "Harrow Vale",
+    "target": "Гарроу-Вейл",
+    "type": "PLACE",
+    "gender": "UNKNOWN",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "pairs": [
+   {
+    "source": "Nell lit the lamp and sat down by the fire.",
+    "candidate": "Нелл запалила лампу й сіла біля вогню.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Vance did not look up from his notes.",
+    "candidate": "Венс не підвів очей від своїх нотаток.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "The road to Harrow Vale was long and empty.",
+    "candidate": "Дорога до Гарроу-Вейла була довга й безлюдна.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Nell said nothing, but she kept watching the door.",
+    "candidate": "Ніл нічого не сказала, але не зводила очей з дверей.",
+    "defective": true,
+    "note": "the glossary name is written Ніл, not Нелл"
+   },
+   {
+    "source": "A cold wind came down from the hills.",
+    "candidate": "З пагорбів дув холодний вітер.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Vance closed his notebook and stood up.",
+    "candidate": "Венс зачинив свій записник і підвівся.",
+    "defective": false,
+    "note": ""
+   }
+  ],
+  "rationale": "six pairs with glossary names, one wrong rendering of a name among clean pairs"
+ },
+ {
+  "id": "reviewer-lexicon-5",
+  "kind": "reviewer-batch",
+  "long": false,
+  "glossary": [],
+  "context": {
+   "lexicon": [
+    {
+     "term": "master",
+     "rendering": "господар"
+    },
+    {
+     "term": "imp",
+     "rendering": "імп"
+    }
+   ]
+  },
+  "pairs": [
+   {
+    "source": "The master opened the book and read aloud.",
+    "candidate": "Господар розкрив книгу й почав читати вголос.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "An imp crouched on the shelf above him.",
+    "candidate": "На полиці над ним скоцюрбився імп.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "The master did not trust the imp.",
+    "candidate": "Майстер не довіряв імпові.",
+    "defective": true,
+    "note": "master is rendered майстер, the book's rendering is господар"
+   },
+   {
+    "source": "Outside, the rain had started again.",
+    "candidate": "Надворі знову почався дощ.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "The imp whispered something and vanished.",
+    "candidate": "Імп щось прошепотів і зник.",
+    "defective": false,
+    "note": ""
+   }
+  ],
+  "rationale": "a lexicon rendering held to in five pairs, one drift"
+ },
+ {
+  "id": "reviewer-narrator-8",
+  "kind": "reviewer-batch",
+  "long": false,
+  "glossary": [
+   {
+    "term": "Nell",
+    "target": "Нелл",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "context": {
+   "narrator": {
+    "person": "FIRST",
+    "gender": "MALE"
+   }
+  },
+  "pairs": [
+   {
+    "source": "I could not sleep that night.",
+    "candidate": "Тієї ночі я не міг заснути.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Nell was waiting at the foot of the stairs.",
+    "candidate": "Нелл чекала біля підніжжя сходів.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "I told Nell that the door was open.",
+    "candidate": "Я сказала Нелл, що двері відчинені.",
+    "defective": true,
+    "note": "feminine verb for a male first-person narrator"
+   },
+   {
+    "source": "She nodded and looked away.",
+    "candidate": "Вона кивнула й відвела погляд.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "I took the lantern and went out into the yard.",
+    "candidate": "Я взяв ліхтар і вийшов на подвір’я.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "The ground was hard and white with frost.",
+    "candidate": "Земля була тверда й біла від паморозі.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "I walked to the well and listened.",
+    "candidate": "Я підійшов до криниці й прислухався.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Nothing moved in the dark.",
+    "candidate": "У темряві нічого не ворушилося.",
+    "defective": false,
+    "note": ""
+   }
+  ],
+  "rationale": "eight pairs with the narrator set and a character with gender, one slip"
+ },
+ {
+  "id": "reviewer-long-12",
+  "kind": "reviewer-long",
+  "long": true,
+  "glossary": [],
+  "context": null,
+  "pairs": [
+   {
+    "source": "The lighthouse keeper climbed the stairs slowly, counting each step under his breath. The children, still half asleep, were pulling on their boots in the dark hallways. It was addressed to a woman who had left the village before most of them were born. The fishermen carried their nets up from the beach and did not speak of the weather. A thin line of smoke rose from every chimney and bent toward the sea.",
+    "candidate": "Доглядач маяка повільно піднімався сходами, пошепки рахуючи кожен крок. Діти, ще напівсонні, натягали чоботи в темних коридорах. Його адресували жінці, яка залишила село ще до того, як народилася більшість із них. Рибалки несли свої сітки з берега й не говорили про погоду. З кожного комина здіймалася тонка цівка диму й хилилася до моря.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Down in the village, the baker had begun to light his ovens for the morning. On windy nights the sound of the sea came up through the floor like a slow heartbeat. In the end they left it on the table in the inn, beside a candle that nobody lit. He polished the glass until it shone, though no ship had passed the rocks for a week. Its bell had not rung in forty years, but the ropes were always kept clean.",
+    "candidate": "Унизу, в селі, пекар уже почав розпалювати печі на ранок. Вітряними ночами шум моря підіймався крізь підлогу, мов повільне серцебиття. Зрештою вони залишили його на столі в корчмі, поруч зі свічкою, яку ніхто не запалив. Він полірував скло, аж доки воно не засяяло, хоча вже тиждень жоден корабель не проходив повз скелі. Її дзвін не лунав уже сорок років, проте мотузки завжди тримали чистими.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Nobody in the village remembered who had built the old chapel on the hill. The envelope was yellow with age and smelled faintly of salt and cedar. The lighthouse keeper climbed the stairs slowly, counting each step under his breath. The children, still half asleep, were pulling on their boots in the dark hallways. It was addressed to a woman who had left the village before most of them were born.",
+    "candidate": "Ніхто в селі не пам’ятав, хто збудував стару каплицю на пагорбі. Конверт пожовк від часу й ледь чутно пахнув сіллю та кедром. Доглядач маяка повільно піднімався сходами, пошепки рахуючи кожен крок. Діти, ще напівсонні, натягали чоботи в темних коридорах. Його адресували жінці, яка залишила село ще до того, як народилася більшість із них.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "The postman arrived at noon with a single letter, and the whole street gathered to watch him deliver it. Late in the afternoon the sky turned the colour of old pewter. Down in the village, the baker had begun to light his ovens for the morning. On windy nights the sound of the sea came up through the floor like a slow heartbeat. In the end they left it on the table in the inn, beside a candle that nobody lit.",
+    "candidate": "Листоноша прийшов опівдні з єдиним листом, і вся вулиця зібралася дивитися, як він його вручає. Пізно по обіді небо набуло кольору старого олова. Унизу, в селі, пекар уже почав розпалювати печі на ранок. Вітряними ночами шум моря підіймався крізь підлогу, мов повільне серцебиття. Зрештою вони залишили його на столі в корчмі, поруч зі свічкою, яку ніхто не запалив.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Somebody suggested opening it, and somebody else said that it would bring bad luck. At the top, the great lamp waited, cold and silent, like a sleeping animal. Nobody in the village remembered who had built the old chapel on the hill. The envelope was yellow with age and smelled faintly of salt and cedar. The lighthouse keeper climbed the stairs slowly, counting each step under his breath.",
+    "candidate": "Хтось запропонував відкрити його, а хтось інший сказав, що це принесе нещастя. Нагорі чекала велика лампа, холодна й мовчазна, як тварина, що спить. Ніхто в селі не пам’ятав, хто збудував стару каплицю на пагорбі. Конверт пожовк від часу й ледь чутно пахнув сіллю та кедром. Доглядач маяка повільно піднімався сходами, пошепки рахуючи кожен крок.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "The fishermen carried their nets up from the beach and did not speak of the weather. A thin line of smoke rose from every chimney and bent toward the sea. The postman arrived at noon with a single letter, and the whole street gathered to watch him deliver it. Late in the afternoon the sky turned the colour of old pewter. Down in the village, the baker had begun to light his ovens for the morning.",
+    "candidate": "Рибалки несли свої сітки з берега й не говорили про погоду. З кожного комина здіймалася тонка цівка диму й хилилася до моря. Листоноша прийшов опівдні з єдиним листом, і вся вулиця зібралася дивитися, як він його вручає. Пізно по обіді небо набуло кольору старого олова. Унизу, в селі, пекар уже почав розпалювати печі на ранок.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "He polished the glass until it shone, though no ship had passed the rocks for a week. Its bell had not rung in forty years, but the ropes were always kept clean. Somebody suggested opening it, and somebody else said that it would bring bad luck. At the top, the great lamp waited, cold and silent, like a sleeping animal. Nobody in the village remembered who had built the old chapel on the hill.",
+    "candidate": "Він полірував скло, аж доки воно не засяяло, хоча вже тиждень жоден корабель не проходив повз скелі. Її дзвін не лунав уже сорок років, проте мотузки завжди тримали чистими. Хтось запропонував відкрити його, а хтось інший сказав, що це принесе нещастя.",
+    "defective": true,
+    "note": "the last two sentences are missing"
+   },
+   {
+    "source": "The children, still half asleep, were pulling on their boots in the dark hallways. It was addressed to a woman who had left the village before most of them were born. The fishermen carried their nets up from the beach and did not speak of the weather. A thin line of smoke rose from every chimney and bent toward the sea. The postman arrived at noon with a single letter, and the whole street gathered to watch him deliver it.",
+    "candidate": "Діти, ще напівсонні, натягали чоботи в темних коридорах. Його адресували жінці, яка залишила село ще до того, як народилася більшість із них. Рибалки несли свої сітки з берега й не говорили про погоду. З кожного комина здіймалася тонка цівка диму й хилилася до моря. Листоноша прийшов опівдні з єдиним листом, і вся вулиця зібралася дивитися, як він його вручає.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "On windy nights the sound of the sea came up through the floor like a slow heartbeat. In the end they left it on the table in the inn, beside a candle that nobody lit. He polished the glass until it shone, though no ship had passed the rocks for a week. Its bell had not rung in forty years, but the ropes were always kept clean. Somebody suggested opening it, and somebody else said that it would bring bad luck.",
+    "candidate": "Вітряними ночами шум моря підіймався крізь підлогу, мов повільне серцебиття. Зрештою вони залишили його на столі в корчмі, поруч зі свічкою, яку ніхто не запалив. Він полірував скло, аж доки воно не засяяло, хоча вже тиждень жоден корабель не проходив повз скелі. Її дзвін не лунав уже сорок років, проте мотузки завжди тримали чистими. Хтось запропонував відкрити його, а хтось інший сказав, що це принесе нещастя.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "The envelope was yellow with age and smelled faintly of salt and cedar. The lighthouse keeper climbed the stairs slowly, counting each step under his breath. The children, still half asleep, were pulling on their boots in the dark hallways. It was addressed to a woman who had left the village before most of them were born. The fishermen carried their nets up from the beach and did not speak of the weather.",
+    "candidate": "Конверт пожовк від часу й ледь чутно пахнув сіллю та кедром. Доглядач маяка повільно піднімався сходами, пошепки рахуючи кожен крок. Діти, ще напівсонні, натягали чоботи в темних коридорах. Його адресували жінці, яка залишила село ще до того, як народилася більшість із них. Рибалки несли свої сітки з берега й не говорили про погоду.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Late in the afternoon the sky turned the colour of old pewter. Down in the village, the baker had begun to light his ovens for the morning. On windy nights the sound of the sea came up through the floor like a slow heartbeat. In the end they left it on the table in the inn, beside a candle that nobody lit. He polished the glass until it shone, though no ship had passed the rocks for a week.",
+    "candidate": "Пізно по обіді небо набуло кольору старого олова. Унизу, в селі, пекар уже почав розпалювати печі на ранок. Вітряними ночами шум моря підіймався крізь підлогу, мов повільне серцебиття. Зрештою вони залишили його на столі в корчмі, поруч зі свічкою, яку ніхто не запалив. Він полірував скло, аж доки воно не засяяло, хоча вже тиждень жоден корабель не проходив повз скелі.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "At the top, the great lamp waited, cold and silent, like a sleeping animal. Nobody in the village remembered who had built the old chapel on the hill. The envelope was yellow with age and smelled faintly of salt and cedar. The lighthouse keeper climbed the stairs slowly, counting each step under his breath. The children, still half asleep, were pulling on their boots in the dark hallways.",
+    "candidate": "Нагорі чекала велика лампа, холодна й мовчазна, як тварина, що спить. Ніхто в селі не пам’ятав, хто збудував стару каплицю на пагорбі. Конверт пожовк від часу й ледь чутно пахнув сіллю та кедром. Доглядач маяка повільно піднімався сходами, пошепки рахуючи кожен крок. Діти, ще напівсонні, натягали чоботи в темних коридорах.",
+    "defective": false,
+    "note": ""
+   }
+  ],
+  "rationale": "twelve long paragraphs (about 450 characters each) in one reviewer call: the reply cap is what is tested (finish=LENGTH); one pair drops two sentences"
+ }
+]

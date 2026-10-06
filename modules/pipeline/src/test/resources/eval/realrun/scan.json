@@ -1,0 +1,59 @@
+[
+ {
+  "id": "scan-titles-and-master",
+  "scan": "KEY_TERMS",
+  "repeat": 6,
+  "lines": [
+   "Mr Anderson shut the door. Mr Anderson did not look up.",
+   "Then the master called the imp, and the master laughed."
+  ],
+  "mustPropose": [
+   "mr",
+   "master"
+  ],
+  "mustNotPropose": [],
+  "knownFailure": false,
+  "fixedBy": null,
+  "rationale": "a bundled title and a dual-use word the book capitalises and not: both are recurring terms the run keeps one rendering for"
+ },
+ {
+  "id": "scan-generic-words",
+  "scan": "KEY_TERMS",
+  "repeat": 6,
+  "lines": [
+   "The pupils gathered in the Great Hall before dinner.",
+   "They crossed the great hall slowly, and the hall was cold; an old man sat by the old fire.",
+   "Nobody liked the Old Bailey, and the old courts were grim."
+  ],
+  "mustPropose": [],
+  "mustNotPropose": [
+   "great",
+   "hall",
+   "old"
+  ],
+  "knownFailure": true,
+  "fixedBy": "15e.11",
+  "rationale": "Great Hall and Old Bailey are names for the glossary; their words great, hall and old are generic and must not become recurring terms (the real run proposed them)"
+ },
+ {
+  "id": "scan-names-with-title-and-place",
+  "scan": "NAMES",
+  "repeat": 6,
+  "lines": [
+   "Mr Anderson shut the door. Mr Anderson did not look up.",
+   "The pupils gathered in the Great Hall before dinner.",
+   "He was tried at the Old Bailey in the spring, and the Old Bailey was full."
+  ],
+  "mustPropose": [
+   "Anderson",
+   "Great Hall",
+   "Old Bailey"
+  ],
+  "mustNotPropose": [
+   "Mr"
+  ],
+  "knownFailure": false,
+  "fixedBy": null,
+  "rationale": "the name scan keeps the person without the title and the two-word places whole"
+ }
+]

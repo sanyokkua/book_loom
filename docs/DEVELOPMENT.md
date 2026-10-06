@@ -512,7 +512,49 @@ term pairs and character sheet. A locked name is written out in the case text an
 the real mask. Every model call goes through `JobModelCalls`, so the request is sized to the window and the reply cap
 exactly as in a run; `BOOKLOOM_EVAL_WINDOW` sets that window (default: the app's, 8192 tokens). The equality of the
 two paths is held by `PromptRequestsEquivalenceTest`. Not covered by this path yet: the name prescan, the glossary
-review and the rolling summary call, which build their own frame (15e.2).
+review and the rolling summary call, which build their own frame (deferred from 15e.2 to 15e.13, which tunes those
+prompts; `SummaryModelCall` is package-private).
+
+**Real-run corpus (15e.2).** The defect classes of the 6 h 17 min GUI run (Bartimaeus 1, en → uk, 26b) as synthetic cases
+under `modules/pipeline/src/test/resources/eval/realrun/` (no book text; failure shapes only), run as their own suite:
+
+```bash
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx BOOKLOOM_EVAL_STABILITY=3 \
+  BOOKLOOM_EVAL_SUITE=realrun ./gradlew :pipeline:promptEval          # e4b (BOOKLOOM_EVAL_ONLY=<case-id prefix> narrows it)
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:26b-mlx BOOKLOOM_EVAL_STABILITY=3 \
+  BOOKLOOM_EVAL_SUITE=realrun ./gradlew :pipeline:promptEval          # the 26b class
+scripts/eval-matrix.sh --suite realrun --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx" --stability 3   # both, one table
+```
+
+| File | Kind (report group) | What it holds |
+|---|---|---|
+| `text.json` | `quotes` (10), `mixed-script` (6), `invented-word` (3), `russian-letters` (5), `narrator` (6), `short-line` (6) | one source with a clean and a defective Ukrainian candidate (`good`, `bad`), the production check that decides it (`QUOTES`, `SCRIPT`, `GENDER`, `LENGTH`, `NONE`), a glossary and the context (earlier pairs, summary, lexicon, narrator) |
+| `batch.json` | `batch-terms`, `batch-context` | a batch whose lexicon makes it ask for `terms`, with scripted replies of the shapes the run produced: correct, the `terms` JSON leaked into a target (`«terms»: {…}}, {`), a code fence in a target, a far-too-short target |
+| `reviewer.json` | `reviewer-batch` (6, 5 and 8 pairs with glossary, lexicon, characters and the narrator), `reviewer-long` (12 long paragraphs) | one defect among clean pairs; each pair labelled |
+| `repair.json` | `repair-placeholder`, `repair-structural` | a Markdown source the real parser masks, the reply a run refuses and two scripted answers for the production document gate |
+| `scan.json` | offline only | the key-term and name scans on synthetic lines (titles, `Great Hall`, `Old Bailey`) |
+
+Every request of a model run is the run's own (draft, batch with its `terms` request, reviewer over a whole chunk with
+the term pairs and character sheet, repairs). Each label of a deterministic case is held to the production code by plain
+offline tests (`RealRunCorpusTest`, `RealRunRunnerTest`; no model, part of `check`): the text checks, `GenderChecks`, the
+draft evaluation's length check, `BatchReplyParser` with `ItemValidator`, the real document gate, `KeyTermScan`.
+`deterministic: false` marks a case only the reviewer can judge (the Russian-only letters `ы ъ э ё` until the alphabet
+check of 15e.11; invented words, since no dictionary is bundled; an ASCII `"` inside « »; a gender slip behind `нічого не`),
+so it counts for the reviewer only.
+
+*Known failures.* `knownFailure: true` marks a case production gets wrong today, with `fixedBy` naming the task: the
+41-character and five other compact lines that `LengthCheck` refuses (15e.8), the leaked `terms` and code-fence replies the
+batch parser accepts (15e.6), the generic words `great`, `hall` and `old` that `KeyTermScan` proposes (15e.11). They are
+reported beside the rates (`+Nk` in the matrix, `known` in the table), never inside one, and the offline test fails when one
+starts passing, so the fixing task drops the flag in the same change.
+
+*Report.* Rows are grouped by kind and call (`quotes/draft`, `quotes/review`, `reviewer-long/review-batch`, …); a rate is
+the share of counted cases that came out as labelled. Extra metrics: `truncated` (reviewer calls whose reply stopped with
+`finish=LENGTH`), `tooShort` and `leaked` (share of batch items whose target is far shorter than the source, or carries the
+`terms` object, an `id` entry or a fence), and `stability` (reviewer rows whose `BOOKLOOM_EVAL_STABILITY` repeats agree).
+`tooShort` and `leaked` also appear in the batch A/B (`--suite batch`), and every case-set report now ends with the share
+of corpus cases right per kind (`byKind` in its JSON, a second table in the matrix). No threshold is set yet: 15e.4 records
+the "before" numbers and the thresholds per model class from this suite.
 
 Calibration on 2026-10-02 (one sample per case, temperature as in production):
 

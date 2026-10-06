@@ -1,0 +1,56 @@
+[
+ {
+  "id": "repair-dropped-close",
+  "step": "PLACEHOLDER",
+  "markdown": "The *old* man opened the **heavy** door.",
+  "rejected": "⟦g0⟧Старий⟦g1⟧ чоловік відчинив ⟦g2⟧важкі двері.",
+  "good": "⟦g0⟧Старий⟦g1⟧ чоловік відчинив ⟦g2⟧важкі⟦g3⟧ двері.",
+  "bad": "⟦g0⟧Старий⟦g1⟧ чоловік відчинив ⟦g2⟧важкі двері.",
+  "rationale": "the closing ⟦g3⟧ was dropped"
+ },
+ {
+  "id": "repair-duplicated-open",
+  "step": "PLACEHOLDER",
+  "markdown": "The *old* man opened the **heavy** door.",
+  "rejected": "⟦g0⟧Старий⟦g0⟧ чоловік відчинив ⟦g2⟧важкі⟦g3⟧ двері.",
+  "good": "⟦g0⟧Старий⟦g1⟧ чоловік відчинив ⟦g2⟧важкі⟦g3⟧ двері.",
+  "bad": "⟦g0⟧Старий⟦g0⟧ чоловік відчинив ⟦g2⟧важкі⟦g3⟧ двері.",
+  "rationale": "⟦g0⟧ written twice, ⟦g1⟧ gone"
+ },
+ {
+  "id": "repair-footnote-duplicated",
+  "step": "PLACEHOLDER",
+  "markdown": "He read the note.<sup>1</sup> Then he left.",
+  "rejected": "Він прочитав записку.⟦g0⟧1⟦g1⟧ Потім⟦g0⟧1⟦g1⟧ пішов.",
+  "good": "Він прочитав записку.⟦g0⟧1⟦g1⟧ Потім пішов.",
+  "bad": "Він прочитав записку.⟦g0⟧1⟦g1⟧ Потім⟦g0⟧1⟦g1⟧ пішов.",
+  "rationale": "the footnote marker was written twice, once after the text it does not belong to"
+ },
+ {
+  "id": "repair-footnote-lost-close",
+  "step": "PLACEHOLDER",
+  "markdown": "He read the note.<sup>1</sup> Then he left.",
+  "rejected": "Він прочитав записку.⟦g0⟧1 Потім пішов.",
+  "good": "Він прочитав записку.⟦g0⟧1⟦g1⟧ Потім пішов.",
+  "bad": "Він прочитав записку.⟦g0⟧1 Потім пішов.",
+  "rationale": "the marker moved off its closing token"
+ },
+ {
+  "id": "repair-structural-prose",
+  "step": "STRUCTURAL",
+  "markdown": "She read the [letter](http://x.example/a) twice.",
+  "rejected": "Ось переклад: Вона двічі прочитала ⟦g0⟧листа⟦g1⟧.",
+  "good": "Вона двічі прочитала ⟦g0⟧листа⟦g1⟧.",
+  "bad": "Вона двічі прочитала листа.",
+  "rationale": "the reply was prose around the text instead of the JSON object"
+ },
+ {
+  "id": "repair-structural-truncated-json",
+  "step": "STRUCTURAL",
+  "markdown": "She read the [letter](http://x.example/a) twice.",
+  "rejected": "{\"target\": \"Вона двічі прочитала ⟦g0⟧листа",
+  "good": "Вона двічі прочитала ⟦g0⟧листа⟦g1⟧.",
+  "bad": "Вона двічі прочитала ⟦g0⟧листа.",
+  "rationale": "the JSON object was cut off before it closed"
+ }
+]

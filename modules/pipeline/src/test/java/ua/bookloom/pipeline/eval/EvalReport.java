@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import ua.bookloom.pipeline.eval.EvalRow.Check;
 
 /**
@@ -100,6 +101,24 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 EvalMetrics.tokenBreaks(defectRows));
     }
 
+    /** One line of the share of cases right per defect family, empty when no corpus was run. */
+    String kindSummary() {
+        if (defectRows.isEmpty()) {
+            return "";
+        }
+        return "corpus by kind  "
+                + EvalMetrics.rightByKind(defectRows).entrySet().stream()
+                        .map(entry ->
+                                String.format(Locale.ROOT, "%s %.0f%%", entry.getKey(), percent(entry.getValue())))
+                        .collect(Collectors.joining("  "));
+    }
+
+    private String kindJson() {
+        return EvalMetrics.rightByKind(defectRows).entrySet().stream()
+                .map(entry -> String.format(Locale.ROOT, "\"%s\":%.3f", entry.getKey(), entry.getValue()))
+                .collect(Collectors.joining(",", "{", "}"));
+    }
+
     /** The report as one JSON object: the rates a matrix compares. */
     String json() {
         return String.format(
@@ -107,7 +126,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 "{\"model\":\"%s\",\"rules\":\"%s\",\"class\":\"%s\",\"parse\":%.3f,\"gate\":%.3f,\"script\":%.3f,"
                         + "\"marker\":%.3f,\"injection\":%.3f,\"reviewSeparation\":%.3f,"
                         + "\"reviewParse\":%.3f,\"falseNegative\":%.3f,\"falsePositive\":%.3f,"
-                        + "\"stability\":%.3f,\"tokenBreaks\":%d,\"meetsThresholds\":%b}",
+                        + "\"stability\":%.3f,\"tokenBreaks\":%d,\"byKind\":%s,\"meetsThresholds\":%b}",
                 model,
                 rules,
                 EvalThresholds.classOf(model),
@@ -122,6 +141,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 EvalMetrics.falsePositiveRate(defectRows),
                 EvalMetrics.stability(defectRows),
                 EvalMetrics.tokenBreaks(defectRows),
+                kindJson(),
                 meetsThresholds());
     }
 
@@ -147,6 +167,7 @@ record EvalReport(String model, List<EvalRow> rows, List<DefectRow> defectRows, 
                 percent(injectionRate())));
         defectRows.forEach(row -> lines.add(defectLine(row)));
         lines.add(defectSummary());
+        lines.add(kindSummary());
         return String.join("\n", lines);
     }
 

@@ -5,8 +5,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.checks.CheckFinding;
@@ -55,32 +63,118 @@ final class ReviewerEval {
      */
     record Reviewed(boolean readable, boolean flagged, int tokenBreaks, String signature, String detail) {}
 
+    /**
+     * What a reviewer call over several pairs came to.
+     *
+     * @param items one outcome per pair, in order
+     * @param truncated whether the reviewer's reply was cut by its cap (the model stopped with {@code finish=LENGTH})
+     */
+    record BatchReviewed(List<Reviewed> items, boolean truncated) {
+
+        /** Copies the list. */
+        BatchReviewed {
+            items = List.copyOf(items);
+        }
+    }
+
     // The pair, the term pairs and the character sheet are what a run gives the reviewer for a chunk of this segment.
     Reviewed review(final EvalProject project, final String candidate) {
-        final String id = project.segment(0).id();
-        final String masked = project.mask(0).maskedText();
-        final Result<ReviewVerdict> result =
-                loop.review(List.of(new ReviewedPair(id, masked, candidate)), project.loop(), ReviewPass.FIRST, calls);
+        return reviewAll(project, List.of(candidate)).items().getFirst();
+    }
+
+    /**
+     * Sends the project's chunk to the reviewer in one call, as a run reviews a chunk: every segment of the project is a
+     * pair with the candidate given at its index.
+     */
+    BatchReviewed reviewAll(final EvalProject project, final List<String> candidates) {
+        final FinishWatch watch = new FinishWatch(calls);
+        final List<ReviewedPair> pairs = IntStream.range(0, candidates.size())
+                .mapToObj(i -> new ReviewedPair(
+                        project.segment(i).id(), project.mask(i).maskedText(), candidates.get(i)))
+                .toList();
+        final Result<ReviewVerdict> result = loop.review(pairs, project.loop(), ReviewPass.FIRST, watch);
         final ReviewVerdict verdict =
                 result.isOk() ? Objects.requireNonNull(result.data()) : ReviewVerdict.unreadable();
+        final List<Reviewed> items = pairs.stream()
+                .map(pair -> read(project.frame(), renderingsOf(project), verdict, pair))
+                .toList();
+        return new BatchReviewed(items, watch.truncated());
+    }
+
+    // As the run reads them (ReviewResolver): the target of every term pair is a rendering a terminology edit may use.
+    private static List<String> renderingsOf(final EvalProject project) {
+        return project.loop().glossaryPairs().stream()
+                .map(line -> line.substring(line.indexOf('→') + 1).strip())
+                .toList();
+    }
+
+    private Reviewed read(
+            final CallFrame frame,
+            final List<String> renderings,
+            final ReviewVerdict verdict,
+            final ReviewedPair pair) {
         if (!verdict.readable()) {
-            return new Reviewed(false, !isClean(candidate), 0, "unreadable", "unreadable");
+            return new Reviewed(false, !isClean(pair.maskedCandidate()), 0, "unreadable", "unreadable");
         }
-        final ReviewItem item = verdict.itemFor(id).orElseGet(() -> ReviewItem.ok(id));
+        final ReviewItem item = verdict.itemFor(pair.segmentId()).orElseGet(() -> ReviewItem.ok(pair.segmentId()));
         return switch (item.status()) {
             case OK -> new Reviewed(true, false, 0, "ok", "ok");
-            case EDITS -> editsOf(project.frame(), masked, candidate, item);
-            case REWRITE -> rewriteOf(candidate, item);
+            case EDITS -> editsOf(frame, renderings, pair.maskedSource(), pair.maskedCandidate(), item);
+            case REWRITE -> rewriteOf(pair.maskedCandidate(), item);
         };
     }
 
+    /** Passes every call through and notes whether any reply was cut by the model's output cap. */
+    private static final class FinishWatch implements ModelCalls {
+
+        private final ModelCalls delegate;
+        private final AtomicBoolean truncated = new AtomicBoolean();
+
+        FinishWatch(final ModelCalls delegate) {
+            this.delegate = delegate;
+        }
+
+        boolean truncated() {
+            return truncated.get();
+        }
+
+        @Override
+        public Result<ChatResponse> call(
+                final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
+            return note(delegate.call(kind, segmentId, request));
+        }
+
+        @Override
+        public Result<ChatResponse> callAbout(
+                final CallKind kind, final List<String> segmentIds, final ChatRequest request) {
+            return note(delegate.callAbout(kind, segmentIds, request));
+        }
+
+        @Override
+        public void announce(final JobEvent event) {
+            delegate.announce(event);
+        }
+
+        private Result<ChatResponse> note(final Result<ChatResponse> reply) {
+            if (reply.isOk() && Objects.requireNonNull(reply.data()).finishReason() == FinishReason.LENGTH) {
+                truncated.set(true);
+            }
+            return reply;
+        }
+    }
+
     private Reviewed editsOf(
-            final CallFrame frame, final String masked, final String candidate, final ReviewItem item) {
+            final CallFrame frame,
+            final List<String> renderings,
+            final String masked,
+            final String candidate,
+            final ReviewItem item) {
         final EditOutcome outcome = editApplier.apply(
                 candidate,
                 item.edits(),
                 text -> blockersOf(frame, masked, text),
-                blockersOf(frame, masked, candidate).orElseGet(java.util.Set::of));
+                blockersOf(frame, masked, candidate).orElseGet(java.util.Set::of),
+                renderings);
         final boolean flagged =
                 !outcome.applied().isEmpty() || !outcome.failed().isEmpty();
         final int broken = Tokens.inOrder(outcome.text()).equals(Tokens.inOrder(candidate)) ? 0 : 1;
