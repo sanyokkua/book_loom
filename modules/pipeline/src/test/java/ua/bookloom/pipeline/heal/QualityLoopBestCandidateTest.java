@@ -30,10 +30,10 @@ class QualityLoopBestCandidateTest {
 
     private static final String SOURCE = "He opened the old door.";
     private static final String GOOD = "Він відчинив старі двері.";
-    private static final String PURITY_AND_QUOTE = "Він відчиниw «старі двері.";
+    private static final String PURITY_AND_QUOTE = "Він відчиниw «старі «двері.";
     private static final String PURITY_ONLY = "Він відчиниw старі двері.";
-    private static final String QUOTE_ONLY = "Він «відчинив старі двері.";
-    private static final String ECHO_AND_QUOTE = "HE OPENED THE «OLD DOOR.";
+    private static final String QUOTE_ONLY = "Він «відчинив «старі двері.";
+    private static final String ECHO_AND_QUOTE = "HE OPENED THE «OLD «DOOR.";
     private static final String TOO_SHORT = "Він.";
     private static final String SHORT_WITH_PURITY = "Він відчиниw.";
 
@@ -118,23 +118,23 @@ class QualityLoopBestCandidateTest {
         assertThat(model.requests()).isEmpty();
     }
 
-    // The placeholder gate restored the text fine; only a text check blocked it, so its words must stay for review.
+    // The placeholder gate restored the text fine; only a text check blocked it, so its words are the machine target.
     @Test
-    void nextDecision_draftFailingOnlyATextCheck_keepsItsRestoredTextAsTheRejectedTarget() {
+    void nextDecision_draftFailingOnlyATextCheck_keepsItsRestoredTextAsTheMachineTarget() {
         final ScriptedChatModel model = new ScriptedChatModel().answer(readable(targetReply(QUOTE_ONLY)));
 
-        final SegmentOutcome decided = decide("Він відчинив «старі двері.", model, 1);
+        final SegmentOutcome decided = decide(QUOTE_ONLY, model, 1);
 
         assertThat(decided.status()).isEqualTo(SegmentStatus.FLAGGED);
-        assertThat(decided.machineTarget()).isNull();
-        assertThat(decided.rejectedTarget()).isEqualTo("Він відчинив «старі двері.");
+        assertThat(decided.machineTarget()).isEqualTo(QUOTE_ONLY);
+        assertThat(decided.maskedMachineTarget()).isEqualTo(QUOTE_ONLY);
     }
 
     // The typography pass turns a lone straight quote into an unclosed guillemet, so the checks must read that text.
     @Test
     void nextDecision_repairWhoseNormalisedTextLeavesAQuoteOpen_isNotAccepted() {
         final ScriptedChatModel model =
-                new ScriptedChatModel().answer(readable("{\"target\":\"Він відчинив \\\"старі двері.\"}"));
+                new ScriptedChatModel().answer(readable("{\"target\":\"Він \\\"відчинив \\\"старі двері.\"}"));
         final GateFunction gate = TypographyGate.around(QualityLoopFixtures.PASSTHROUGH_GATE, "uk");
 
         final SegmentOutcome decided = decide(PURITY_AND_QUOTE, model, 1, gate);

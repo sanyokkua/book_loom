@@ -255,8 +255,8 @@ final class SegmentHealer {
     }
 
     private static MachineTarget machineOf(final BestCandidate best, final RoundOutcome.Evaluated evaluated) {
-        return evaluated.qa().hardGatesPass()
-                ? new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm())
-                : best.machine();
+        final MachineTarget standing =
+                MachineTarget.standingOn(evaluated.restoredTarget(), evaluated.maskedForm(), evaluated.qa());
+        return standing.restored() != null ? standing : best.machine();
     }
 }

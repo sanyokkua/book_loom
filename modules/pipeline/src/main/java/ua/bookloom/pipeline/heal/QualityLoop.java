@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -56,12 +57,13 @@ public final class QualityLoop {
                 "Starting quality loop chunkSize={} reviewPasses={}",
                 outcomes.size(),
                 settings.dial().reviewPasses());
-        final Map<Integer, QaResult> initialQa = evaluateDrafts(outcomes, settings);
-        final ReviewOutcome reviewed = reviewChunk(outcomes, initialQa, settings, calls);
+        final EvaluatedDrafts drafts = evaluateDrafts(outcomes, settings, gate);
+        final ReviewOutcome reviewed = reviewChunk(drafts.outcomes(), drafts.qa(), settings, calls);
         if (reviewed.error() != null) {
             return Result.err(reviewed.error());
         }
-        return Result.ok(new ChunkDecider(outcomes, initialQa, reviewed.verdict(), healer(settings, gate, calls)));
+        return Result.ok(
+                new ChunkDecider(drafts.outcomes(), drafts.qa(), reviewed.verdict(), healer(settings, gate, calls)));
     }
 
     /**
@@ -85,11 +87,9 @@ public final class QualityLoop {
         Objects.requireNonNull(settings, "settings");
         Objects.requireNonNull(reason, "reason");
         log.warn("Deciding a chunk without its reviewer chunkSize={} code={}", outcomes.size(), reason.code());
+        final EvaluatedDrafts drafts = evaluateDrafts(outcomes, settings, Objects.requireNonNull(gate, "gate"));
         return new ChunkDecider(
-                outcomes,
-                evaluateDrafts(outcomes, settings),
-                ReviewVerdict.unavailable(reason),
-                healer(settings, Objects.requireNonNull(gate, "gate"), calls));
+                drafts.outcomes(), drafts.qa(), ReviewVerdict.unavailable(reason), healer(settings, gate, calls));
     }
 
     /**
@@ -115,14 +115,22 @@ public final class QualityLoop {
         return new SegmentHealer(editApplier, directedFix, settings, gate, calls);
     }
 
-    private Map<Integer, QaResult> evaluateDrafts(final List<DraftOutcome> outcomes, final LoopSettings settings) {
+    /** The chunk's outcomes, each draft whose quote marks were repaired replaced by the repaired one, with their QA. */
+    private record EvaluatedDrafts(List<DraftOutcome> outcomes, Map<Integer, QaResult> qa) {}
+
+    private EvaluatedDrafts evaluateDrafts(
+            final List<DraftOutcome> outcomes, final LoopSettings settings, final GateFunction gate) {
+        final List<DraftOutcome> current = new ArrayList<>(outcomes);
         final Map<Integer, QaResult> results = new LinkedHashMap<>();
         for (int index = 0; index < outcomes.size(); index++) {
             if (outcomes.get(index) instanceof DraftOutcome.Drafted drafted) {
-                results.put(index, DraftEvaluation.evaluate(drafted, settings));
+                final QaResult qa = DraftEvaluation.evaluate(drafted, settings);
+                final Optional<QuoteFixUp.FixedDraft> fixed = QuoteFixUp.fixDraft(drafted, qa, gate, settings);
+                current.set(index, fixed.isPresent() ? fixed.get().outcome() : drafted);
+                results.put(index, fixed.isPresent() ? fixed.get().qa() : qa);
             }
         }
-        return results;
+        return new EvaluatedDrafts(current, results);
     }
 
     /**

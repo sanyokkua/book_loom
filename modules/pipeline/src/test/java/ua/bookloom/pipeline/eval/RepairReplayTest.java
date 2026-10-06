@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
@@ -55,13 +56,10 @@ class RepairReplayTest {
 
     static Stream<Arguments> defects() {
         return Stream.of(
-                Arguments.of("mixed-script", List.of("script-purity"), false),
-                Arguments.of("unbalanced-quotes", List.of("quote-balance"), false),
+                Arguments.of("mixed-script", List.of("script-purity"), true),
                 Arguments.of("english-accepted", List.of("script", "echo"), true),
-                Arguments.of("quotes-missing-close", List.of("quote-balance"), false),
-                Arguments.of("quotes-stray-close", List.of("quote-balance"), false),
                 Arguments.of("leftover-english-paragraph", List.of("language-identity", "script", "echo"), false),
-                Arguments.of("mixed-script-look-alike", List.of("script-purity"), false),
+                Arguments.of("mixed-script-look-alike", List.of("script-purity"), true),
                 Arguments.of("omission", List.of("length"), true),
                 Arguments.of("duplicate-word", List.of("duplicate-word", "length"), true));
     }
@@ -84,6 +82,24 @@ class RepairReplayTest {
                 .extracting(QaFinding::raisedBy)
                 .containsExactlyInAnyOrderElementsOf(expectedFindings);
         assertThat(decided.machineTarget()).isEqualTo(candidateStands ? defect.candidate() : null);
+    }
+
+    // The quote defects are repaired by the deterministic fix-up before any model reads them, so no finding blocks.
+    @ParameterizedTest
+    @ValueSource(strings = {"unbalanced-quotes", "quotes-missing-close", "quotes-stray-close"})
+    void replay_quoteDefect_isRepairedWithoutAModelFix(final String id) {
+        final DefectCase defect = EvalCorpus.defects().stream()
+                .filter(candidate -> candidate.id().equals(id))
+                .findFirst()
+                .orElseThrow();
+
+        final SegmentOutcome decided = decide(
+                defect,
+                new ScriptedChatModel().answerTimes(3, Result.ok(new ChatResponse(WORSE_FIX, FinishReason.STOP))));
+
+        assertThat(decided.findings()).extracting(QaFinding::raisedBy).contains("normalised");
+        assertThat(decided.findings()).extracting(QaFinding::raisedBy).doesNotContain("quote-balance");
+        assertThat(decided.machineTarget()).isNotNull().isNotEqualTo(defect.candidate());
     }
 
     private static SegmentOutcome decide(final DefectCase defect, final ScriptedChatModel model) {

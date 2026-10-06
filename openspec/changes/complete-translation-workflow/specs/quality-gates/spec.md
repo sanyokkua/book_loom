@@ -997,6 +997,43 @@ the book is written.
 - **WHEN** an already normalised text is normalised again
 - **THEN** it is the same text and no finding is added
 
+### Requirement: Repair a candidate's quote marks deterministically, and keep a usable draft when a text check still blocks
+
+When the only blocker of a restored candidate is `quote-balance`, the application SHALL repair its quote marks without a
+model call before any round or reviewer reads it: it collapses a doubled mark (`»»`), writes straight marks as the
+language's pairs, replaces a closer that crosses the open mark with the open mark's own closer, opens a paragraph whose
+first mark is a stray closer when the source opens with a quote, drops a stray closer at a paragraph edge, and closes
+one unclosed opener before the dash clause that follows it or at the paragraph's end, before a single final full stop.
+It SHALL change quote marks only, never a word, a protected span or a `⟦gN⟧` token, SHALL return the text unchanged when
+the source's own quotes are open, a placeholder token sits inside a word, a language has no quote line of its own, or
+any step would be a guess, and SHALL repeat to the same text. The repaired candidate goes through the gate and the checks
+again and replaces the original only when the quote blocker is gone; the change is recorded as a low `normalised`
+finding.
+
+A segment that still ends FLAGGED, whose draft restored through the placeholder gate and whose every failed hard gate is
+`quote-balance` or `script-purity`, SHALL keep that draft (the best candidate of its repair path) as its machine
+target, so review shows it with its finding and export writes it instead of the source. A segment whose failed gate is
+`language-identity`, `refusal`, `placeholder`, `locked-term` or `kept-run` SHALL keep no machine target.
+
+**Source:** FR-QA-01, FR-QA-07, ADR-0038; tasks 15e.5.
+In plain words: a usable Ukrainian paragraph with one stray quote mark is mended by code, or at worst exported as the
+model wrote it and flagged for a look; an English leftover is never exported as if it were a translation.
+
+#### Scenario: An unclosed quote is repaired and the segment accepted
+
+- **WHEN** a draft's only blocker is an unclosed «
+- **THEN** the mark is closed without a model call, the segment is ACCEPTED with a low `normalised` finding
+
+#### Scenario: A quote the repair cannot clear keeps the draft
+
+- **WHEN** a draft with two unclosed « ends FLAGGED
+- **THEN** its machine target is the draft, and the export writes it, not the source
+
+#### Scenario: An English leftover keeps no draft
+
+- **WHEN** a draft fails `language-identity` and ends FLAGGED
+- **THEN** it has no machine target and the export writes the source and lists it
+
 ### Requirement: Accept a segment only by the acceptance rule
 
 The application SHALL accept a drafted, edited or repaired segment only when its hard gates pass, no soft check failed

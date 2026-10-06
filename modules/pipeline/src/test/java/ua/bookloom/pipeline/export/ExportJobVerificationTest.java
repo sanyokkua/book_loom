@@ -147,6 +147,29 @@ class ExportJobVerificationTest {
         assertThat(report.written()).isEqualTo(1);
     }
 
+    // A segment flagged for a quote or script check keeps its draft as the machine target: the export writes the draft,
+    // counts it as written and does not list it as a source fallback.
+    @Test
+    void run_flaggedSegmentWithAMachineTarget_isWrittenAsTheDraftAndNotListed() throws IOException {
+        final String id = fixture.importBook(
+                TestBooks.markdown(tempDir.resolve("Book.md"), "He opened the door.\n\nShe left."), "en");
+        fixture.decide(
+                id,
+                "Book.md:0",
+                record -> record.withStatus(SegmentStatus.FLAGGED)
+                        .withMachineTarget("Він «відчинив «двері.", "Він «відчинив «двері."));
+        fixture.accept(id, "Book.md:1", "Вона пішла.");
+        final Path destination = tempDir.resolve("Book.uk.md");
+
+        final ExportReport report = ok(fixture.export(request(id, destination, false)));
+
+        assertThat(report.sourceFallbacks()).isEmpty();
+        assertThat(report.written()).isEqualTo(2);
+        assertThat(Files.readString(destination))
+                .contains("Він «відчинив «двері.")
+                .contains("Вона пішла.");
+    }
+
     // Two broken targets are both written in the source and both listed, in book order.
     @Test
     void run_twoStoredTargetsWithBrokenPlaceholders_listsBoth() throws IOException {

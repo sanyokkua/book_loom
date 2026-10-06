@@ -19,7 +19,8 @@ import ua.bookloom.api.document.Unit;
  * @param ord this segment's position within its unit, in document order
  * @param kind what block this segment was parsed from
  * @param status this segment's position in the status machine
- * @param machineTarget the last target that passed every hard gate, or null until translated
+ * @param machineTarget the last target that passed every hard gate (or failed only quote balance or script purity,
+ *     which keeps a flagged segment's draft for export), or null until translated
  * @param maskedMachineTarget {@code machineTarget} after protected-span restore and before {@code DocumentPort.unmask}
  *     — the document's own {@code ⟦gN⟧} tokens still in place, locked names shown as their renderings — or null
  *     until translated

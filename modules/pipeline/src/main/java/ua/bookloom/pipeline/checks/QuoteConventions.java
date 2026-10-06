@@ -76,6 +76,18 @@ public final class QuoteConventions {
         return Optional.ofNullable(TABLE.get(Locale.forLanguageTag(languageTag).getLanguage()));
     }
 
+    /**
+     * Whether a text's quote marks pair up under a language's table, with the same rule the quote-balance check uses.
+     *
+     * @param text any text; tokens and unlisted marks are ignored
+     * @param languageTag a BCP 47 tag, or null when the language is not known
+     * @return {@code true} when every opening mark is closed by its own mark and none is closed unopened
+     */
+    public static boolean isBalanced(final String text, @Nullable final String languageTag) {
+        Objects.requireNonNull(text, "text");
+        return QuoteBalanceCheck.isBalanced(text, forLanguage(languageTag));
+    }
+
     private static Map<String, List<QuotePair>> load() {
         final Properties lines = new Properties();
         try (InputStream in = QuoteConventions.class.getResourceAsStream(RESOURCE)) {

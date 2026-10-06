@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.heal;
 
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.PlaceholderRepair;
@@ -83,7 +84,27 @@ final class RoundEvaluator {
                 restored.maskedForm(),
                 settings,
                 outcome.lockedRenderings());
+        final Optional<QuoteFixUp.Fixed> fixed = QuoteFixUp.fix(
+                outcome.segment(),
+                outcome.maskedSource(),
+                outcome.lockedRenderings(),
+                maskedCandidate,
+                qa,
+                restored.normalised(),
+                gate,
+                settings);
+        if (fixed.isPresent()) {
+            return evaluatedOf(
+                    fixed.get().maskedCandidate(),
+                    fixed.get().restored(),
+                    fixed.get().qa());
+        }
         SegmentHealerLogging.logTraceTarget(outcome.segment().id(), restored.maskedForm(), restored.restored());
+        return evaluatedOf(maskedCandidate, restored, qa);
+    }
+
+    private static RoundOutcome evaluatedOf(
+            final String maskedCandidate, final GateResult.Restored restored, final QaResult qa) {
         return new RoundOutcome.Evaluated(maskedCandidate, restored.maskedForm(), restored.restored(), qa);
     }
 }

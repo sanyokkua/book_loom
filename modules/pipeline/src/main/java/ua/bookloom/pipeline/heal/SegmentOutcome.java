@@ -15,8 +15,9 @@ import ua.bookloom.api.project.SegmentPath;
  * @param segmentId the decided segment's id
  * @param status {@link SegmentStatus#ACCEPTED} or {@link SegmentStatus#FLAGGED}; the quality loop never produces
  *     another status
- * @param machineTarget the last target that passed every hard gate, restored through {@code DocumentPort.unmask};
- *     {@code null} when none ever did
+ * @param machineTarget the last target that passed every hard gate or failed only quote balance or script purity,
+ *     restored through {@code DocumentPort.unmask}; {@code null} when none ever did, which export writes as the
+ *     source
  * @param maskedMachineTarget {@code machineTarget}'s masked form, still carrying its {@code ⟦gN⟧} tokens;
  *     {@code null} exactly when {@code machineTarget} is
  * @param confidence the last evaluated target's blended confidence, in {@code [0,1]}

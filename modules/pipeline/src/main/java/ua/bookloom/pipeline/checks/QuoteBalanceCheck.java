@@ -70,6 +70,10 @@ final class QuoteBalanceCheck {
                 true));
     }
 
+    static boolean isBalanced(final String text, final List<QuotePair> pairs) {
+        return defect(text, pairs).isEmpty();
+    }
+
     // Balanced once English curly quotes count as a pair: a style note for review, not a reason to repair.
     private static CheckFinding englishQuotes(final String target, final List<QuotePair> pairs) {
         final int at = IntStream.range(0, target.length())

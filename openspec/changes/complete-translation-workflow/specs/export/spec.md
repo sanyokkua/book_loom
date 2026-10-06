@@ -356,7 +356,8 @@ writing for each segment:
 - a REVISED segment's text as the person saved it, with the typography pass applied (a person's edit does not pass
   through the run's gate), kept as saved if the normalised form would not restore;
 - a FLAGGED segment's machine translation, or its source text when no translation of it ever passed the placeholder
-  check;
+  check or its draft failed a gate other than quote balance or script purity (an English leftover is never written as
+  a translation);
 - a PENDING segment's source text;
 - the source text of every segment kept as source by choice — an auxiliary segment whose kind the book brief's "Also
   translate" switches leave off when the export starts.
