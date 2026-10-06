@@ -40,6 +40,9 @@ public final class CooccurrenceLearner {
     /** How many leading letters of a lower-cased word are its stem. */
     static final int STEM_LENGTH = 4;
 
+    /** A common word must be written in lower case in at least this share of the segments that name it. */
+    static final double MIN_LOWER_SHARE = 0.2;
+
     private static final int MIN_LETTERS = 3;
     private static final int MIN_SUPPORT = 3;
     private static final double MIN_DICE = 0.6;
@@ -61,11 +64,17 @@ public final class CooccurrenceLearner {
     /** What is counted for one tracked term. */
     private static final class Tracked {
         private final String term;
+        private final boolean commonWord;
+        private final Pattern lowerCaseForm;
         private int occurrences;
+        private int lowerCaseSegments;
         private final Map<String, Integer> withStem = new HashMap<>();
 
-        Tracked(final String term) {
+        Tracked(final String term, final boolean commonWord) {
             this.term = term;
+            this.commonWord = commonWord;
+            this.lowerCaseForm = Pattern.compile("(?<![\\p{L}\\p{N}])" + Pattern.quote(term.toLowerCase(Locale.ROOT))
+                    + "(?:['’ʼ]?s|es)?(?![\\p{L}\\p{N}])");
         }
     }
 
@@ -78,6 +87,34 @@ public final class CooccurrenceLearner {
     private final Map<String, Integer> segmentsWithStem = new HashMap<>();
     private final Map<String, Map<String, Integer>> surfaceForms = new HashMap<>();
     private final Map<String, Tracked> tracked = new LinkedHashMap<>();
+    private final List<String> obliqueEndings;
+
+    /** A learner with no language data: every surface form of a stem is as good a dictionary form as another. */
+    public CooccurrenceLearner() {
+        this(List.of());
+    }
+
+    /**
+     * A learner that prefers, among the forms of a stem, one that does not end like an oblique case form.
+     *
+     * @param obliqueEndings the non-null endings of the target language's oblique forms; empty for no preference
+     */
+    public CooccurrenceLearner(final List<String> obliqueEndings) {
+        this.obliqueEndings = List.copyOf(Objects.requireNonNull(obliqueEndings, "obliqueEndings"));
+    }
+
+    /**
+     * The key a rendering is claimed under: the stem of its first word.
+     *
+     * @param rendering the non-null rendering
+     * @return its lower-cased stem; empty when it holds no word
+     */
+    public static String stemOf(final String rendering) {
+        return wordsOf(Objects.requireNonNull(rendering, "rendering")).stream()
+                .findFirst()
+                .map(Word::stem)
+                .orElse("");
+    }
 
     /**
      * Starts counting a term; segments observed earlier are not counted for it, so a term tracked late learns from
@@ -86,9 +123,20 @@ public final class CooccurrenceLearner {
      * @param term the non-blank source term
      */
     public void track(final String term) {
+        track(term, false);
+    }
+
+    /**
+     * Starts counting a term, optionally holding it to be a common word.
+     *
+     * @param term the non-blank source term
+     * @param commonWord {@code true} for a term that is no title: if the book writes it in lower case in under a fifth
+     *     of the segments that name it, it is a part of a title or a name ({@code The Times}) and learns nothing
+     */
+    public void track(final String term, final boolean commonWord) {
         Objects.requireNonNull(term, "term");
         final String key = LexiconEntry.keyOf(term);
-        if (tracked.putIfAbsent(key, new Tracked(term)) == null) {
+        if (tracked.putIfAbsent(key, new Tracked(term, commonWord)) == null) {
             log.debug("Learner tracks a term; {} terms tracked", tracked.size());
             log.trace("Learner tracks term {}", term);
         }
@@ -112,12 +160,24 @@ public final class CooccurrenceLearner {
         }
         stems.forEach(stem -> segmentsWithStem.merge(stem, 1, Integer::sum));
         tracked.values().forEach(counts -> {
-            if (TermMatch.occursIn(counts.term, source)) {
+            if (namesTerm(counts, source)) {
                 counts.occurrences++;
+                if (counts.lowerCaseForm.matcher(source).find()) {
+                    counts.lowerCaseSegments++;
+                }
                 stems.forEach(stem -> counts.withStem.merge(stem, 1, Integer::sum));
             }
         });
         log.trace("Learner observed {} stems, {} terms tracked", stems.size(), tracked.size());
+    }
+
+    // Mr matches Mrs through the plural ending, but a match another tracked term owns (Mrs) is that term's, so the
+    // two titles never count the same segment.
+    private boolean namesTerm(final Tracked counts, final String source) {
+        final String own = LexiconEntry.keyOf(counts.term);
+        return TermMatch.matches(counts.term, source).stream()
+                .map(LexiconEntry::keyOf)
+                .anyMatch(match -> match.equals(own) || !tracked.containsKey(match));
     }
 
     /**
@@ -132,6 +192,13 @@ public final class CooccurrenceLearner {
         Objects.requireNonNull(excludedWords, "excludedWords");
         final Tracked counts = tracked.get(LexiconEntry.keyOf(term));
         if (counts == null || counts.occurrences < MIN_SUPPORT) {
+            return Optional.empty();
+        }
+        if (counts.commonWord && counts.lowerCaseSegments < MIN_LOWER_SHARE * counts.occurrences) {
+            log.debug(
+                    "Learner skips a title-case term: lower-case in {} of {} segments",
+                    counts.lowerCaseSegments,
+                    counts.occurrences);
             return Optional.empty();
         }
         final Set<String> excluded = new HashSet<>();
@@ -184,17 +251,23 @@ public final class CooccurrenceLearner {
         return one.startsWith(other) || other.startsWith(one);
     }
 
+    // With language data, a form that ends like an oblique case form (землі) loses to one that does not (земля).
     // The base form is the surface form the most uses of the stem extend ({@code господар} for {@code господаря},
     // {@code господарю}), so a book that mostly meets the term in an oblique case still gets its dictionary form; where
     // no form is a prefix of the others it is the most used, and the shortest on a tie.
     private String baseForm(final String stem) {
         final Map<String, Integer> forms = surfaceForms.getOrDefault(stem, Map.of());
         return forms.keySet().stream()
-                .max(Comparator.comparingInt((String form) -> extended(form, forms))
+                .max(Comparator.comparingInt((String form) -> isOblique(form) ? 0 : 1)
+                        .thenComparingInt(form -> extended(form, forms))
                         .thenComparingInt(form -> forms.get(form))
                         .thenComparing(Comparator.comparingInt(String::length).reversed())
                         .thenComparing(Comparator.<String>naturalOrder().reversed()))
                 .orElse(stem);
+    }
+
+    private boolean isOblique(final String form) {
+        return obliqueEndings.stream().anyMatch(form::endsWith);
     }
 
     private static int extended(final String form, final Map<String, Integer> forms) {

@@ -172,6 +172,21 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
                 "Review flagged (3)".equals(button("translating-review-flagged").getText()));
     }
 
+    // IF the button counted only the flagged while the outcome showed the audit's doubts, THEN the two figures
+    // disagreed.
+    @Test
+    void reviewButton_flaggedAndSuspicious_namesBothCounts() throws Exception {
+        bookReadyWithPending(0);
+        desk.willAnswerCounts(new ReviewCounts(1240, 0, 0, 47, 0, 0, 0, 0, 0, 45));
+        showTranslating();
+        publishRunning(1180, 45, 47, 0);
+        publishFlaggedQueue(47);
+        mirror().live().publishSuspicious(45);
+
+        awaitFx(() -> "Review (47 flagged · 45 suspicious)"
+                .equals(button("translating-review-flagged").getText()));
+    }
+
     // IF a completed run showed only counts, THEN a person would have nowhere to go next.
     @Test
     void completed_noPending_showsTheOutcomeAndContinueToExportAndNoStartPauseOrResume() throws Exception {

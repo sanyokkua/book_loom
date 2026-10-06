@@ -130,7 +130,12 @@ public final class FinalAudit {
         final List<QaFinding> found = new ArrayList<>();
         textChecks(book, source, sourceText, target).forEach(found::add);
         tokenLeak(record).ifPresent(found::add);
-        NameMissingCheck.find(book.glossary(), sourceText, target).ifPresent(found::add);
+        NameMissingCheck.find(
+                        book.glossary(),
+                        sourceText,
+                        target,
+                        Objects.requireNonNull(book.brief().targetLanguage(), "target language"))
+                .ifPresent(found::add);
         final List<QaFinding> audited = found.stream().map(AuditFindings::of).toList();
         if (!audited.isEmpty()) {
             log.debug("Final audit doubts segment {}: {}", record.segmentId(), AuditFindings.checksOf(audited));

@@ -3,7 +3,9 @@ package ua.bookloom.pipeline.revision;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import ua.bookloom.api.project.DeferralReason;
 
 /**
  * The counts and notes of one pass as it goes. Used from the pass's own thread only, which is why it is plain
@@ -40,8 +42,8 @@ final class PassTally {
         return changedSegments.size();
     }
 
-    ConsistencyReport report() {
-        return new ConsistencyReport(termSubstitutions, genderReRenders, proposals, notes);
+    ConsistencyReport report(final Map<DeferralReason, Integer> openDeferrals) {
+        return new ConsistencyReport(termSubstitutions, genderReRenders, proposals, notes, openDeferrals);
     }
 
     private void changed(final String segmentId, final String locator, final String what) {

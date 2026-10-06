@@ -300,7 +300,10 @@ is a plain text substitution, so it can only find a spelling it knew: the one th
 
 - **WHEN** the book is exported with the switch on and the pass adjusted 3 segments
 - **THEN** the screen's checks and the export-complete dialog read "Consistency pass: 3 segments adjusted"
-- **AND** when it adjusted none they read "Consistency pass ran — nothing needed changing"
+- **AND** when it adjusted none they read "Consistency pass ran — nothing needed changing", unless deferrals are
+  still open: with 142 segments waiting for a character's gender they read "Consistency pass: 142 segments await the
+  gender of a character; set it in Names & style and run the pass again" (the pass records the open deferrals by
+  reason in its summary)
 - **AND** with the switch off neither mentions the pass
 
 #### Scenario: A model that cannot be created does not stop the export
@@ -557,7 +560,7 @@ slots".
 
 WHEN an export succeeds, the export screen SHALL show the title "Translated book ready" and four tiles: the number of
 segments written with a translation ("segments translated"), the share of segments accepted without review
-("auto-accepted"), the number of segments the person accepted, edited or reverted ("reviewed by you"), and whether the
+("auto-accepted", of the segments that needed a decision: the written ones less those kept as they are, plus the pending ones), the number of segments the person accepted, edited or reverted ("reviewed by you"), and whether the
 written file passed its verification ("file validates").
 
 WHEN an export succeeds, the system SHALL report with the written file: the number of segments written with a

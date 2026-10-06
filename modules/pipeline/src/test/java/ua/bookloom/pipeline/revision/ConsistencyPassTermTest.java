@@ -11,6 +11,7 @@ import static ua.bookloom.pipeline.revision.RevisionBook.ok;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -163,7 +164,9 @@ class ConsistencyPassTermTest {
         assertThat(book.openDeferrals())
                 .extracting(Deferral::proposal, Deferral::maskedProposal)
                 .containsExactly(tuple("Гейл пішов геть.", "Гейл пішов геть."));
-        assertThat(report).isEqualTo(new ConsistencyReport(0, 0, 1, List.of("ch1 · p04: proposal recorded")));
+        assertThat(report)
+                .isEqualTo(new ConsistencyReport(
+                        0, 0, 1, List.of("ch1 · p04: proposal recorded"), Map.of(DeferralReason.TERM, 1)));
     }
 
     // Running the pass again over a waiting proposal recomputes the same proposal instead of losing it.

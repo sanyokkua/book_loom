@@ -276,44 +276,44 @@
  {
   "id": "russian-bacon",
   "kind": "russian-letters",
-  "check": "NONE",
+  "check": "ALPHABET",
   "source": "The innkeeper fried some bacon and set it before the guest.",
   "good": "Корчмар посмажив бекону і поставив його перед гостем.",
   "bad": "Корчмар посмажив бэкона і поставив його перед гостем.",
-  "deterministic": false,
+  "deterministic": true,
   "knownFailure": false,
   "fixedBy": "15e.11",
   "glossary": [],
   "context": null,
-  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the deterministic alphabet check is task 15e.11, until then only the reviewer counts"
+  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the target-alphabet check (15e.11) finds the letter, softly: it earns one directed fix and never flags"
  },
  {
   "id": "russian-mare",
   "kind": "russian-letters",
-  "check": "NONE",
+  "check": "ALPHABET",
   "source": "She led the mare out of the stable at dawn.",
   "good": "Вона вивела кобилу зі стайні на світанку.",
   "bad": "Вона вивела кобыли зі стайні на світанку.",
-  "deterministic": false,
+  "deterministic": true,
   "knownFailure": false,
   "fixedBy": "15e.11",
   "glossary": [],
   "context": null,
-  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the deterministic alphabet check is task 15e.11, until then only the reviewer counts"
+  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the target-alphabet check (15e.11) finds the letter, softly: it earns one directed fix and never flags"
  },
  {
   "id": "russian-reed",
   "kind": "russian-letters",
-  "check": "NONE",
+  "check": "ALPHABET",
   "source": "A heron stood motionless among the reeds.",
   "good": "Чапля стояла нерухомо серед очерету.",
   "bad": "Чапля стояла нерухомо серед камыша.",
-  "deterministic": false,
+  "deterministic": true,
   "knownFailure": false,
   "fixedBy": "15e.11",
   "glossary": [],
   "context": null,
-  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the deterministic alphabet check is task 15e.11, until then only the reviewer counts"
+  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the target-alphabet check (15e.11) finds the letter, softly: it earns one directed fix and never flags"
  },
  {
   "id": "russian-sob",
@@ -327,7 +327,7 @@
   "fixedBy": "15e.11",
   "glossary": [],
   "context": null,
-  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the deterministic alphabet check is task 15e.11, until then only the reviewer counts"
+  "rationale": "A Russian word written with Ukrainian letters (всхлип, струйка): no letter gives it away, so no deterministic check can; only the reviewer counts"
  },
  {
   "id": "russian-stream",
@@ -341,7 +341,7 @@
   "fixedBy": "15e.11",
   "glossary": [],
   "context": null,
-  "rationale": "Russian-only letters (ы ъ э ё) in a Ukrainian text; the deterministic alphabet check is task 15e.11, until then only the reviewer counts"
+  "rationale": "A Russian word written with Ukrainian letters (всхлип, струйка): no letter gives it away, so no deterministic check can; only the reviewer counts"
  },
  {
   "id": "narrator-could-not",

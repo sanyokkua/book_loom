@@ -16,6 +16,7 @@ final class WordCounts {
     private final Map<String, Integer> lower = new HashMap<>();
     private final Map<String, Integer> capitalised = new HashMap<>();
     private final Map<String, Integer> midSentence = new HashMap<>();
+    private final Map<String, Integer> standalone = new HashMap<>();
 
     private WordCounts() {}
 
@@ -23,6 +24,7 @@ final class WordCounts {
         final WordCounts counts = new WordCounts();
         for (final Occurrences.Read segment : segments) {
             segment.words().forEach(counts::count);
+            countStandalone(counts, segment);
         }
         log.debug(
                 "Word counts over {} segments: {} lower-case forms, {} capitalised forms",
@@ -30,6 +32,34 @@ final class WordCounts {
                 counts.lower.size(),
                 counts.capitalised.size());
         return counts;
+    }
+
+    // A capital that stands beside another capitalised word is a part of a name (Great Hall, Old Bailey), so it says
+    // nothing about the common word it also is.
+    private static void countStandalone(final WordCounts counts, final Occurrences.Read segment) {
+        final List<Occurrences.Word> words = segment.words();
+        for (int index = 0; index < words.size(); index++) {
+            final Occurrences.Word word = words.get(index);
+            if (word.capitalised() && !word.initial() && !hasCapitalNeighbour(segment, index)) {
+                counts.standalone.merge(word.key(), 1, Integer::sum);
+            }
+        }
+    }
+
+    private static boolean hasCapitalNeighbour(final Occurrences.Read segment, final int index) {
+        final List<Occurrences.Word> words = segment.words();
+        final Occurrences.Word word = words.get(index);
+        final boolean before = index > 0
+                && words.get(index - 1).capitalised()
+                && isSpaceGap(segment.text(), words.get(index - 1).end(), word.start());
+        final boolean after = index + 1 < words.size()
+                && words.get(index + 1).capitalised()
+                && isSpaceGap(segment.text(), word.end(), words.get(index + 1).start());
+        return before || after;
+    }
+
+    private static boolean isSpaceGap(final String text, final int from, final int to) {
+        return text.substring(from, to).isBlank();
     }
 
     private void count(final Occurrences.Word word) {
@@ -66,5 +96,16 @@ final class WordCounts {
      */
     int midSentence(final String key) {
         return midSentence.getOrDefault(key, 0);
+    }
+
+    /**
+     * How often a word is written with a capital away from a sentence start and not beside another capitalised word,
+     * which would make it a part of a name.
+     *
+     * @param key the word's {@link Occurrences#keyOf} key
+     * @return the count; 0 when never
+     */
+    int standaloneMidSentence(final String key) {
+        return standalone.getOrDefault(key, 0);
     }
 }

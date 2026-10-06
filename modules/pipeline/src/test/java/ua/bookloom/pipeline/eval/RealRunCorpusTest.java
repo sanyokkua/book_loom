@@ -284,7 +284,7 @@ class RealRunCorpusTest {
                 .isEmpty();
     }
 
-    @ParameterizedTest(name = "{0}")
+    @ParameterizedTest(name = "{0}", allowZeroInvocations = true)
     @MethodSource("knownScans")
     void knownFailure_scan_stillProposesAGenericWord(final String id, final ScanCase scanCase) {
         assertThat(proposed(scanCase))

@@ -14,6 +14,7 @@ import static ua.bookloom.pipeline.revision.RevisionBook.reply;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -123,7 +124,8 @@ class ConsistencyPassGenderTest {
 
         assertThat(book.stored(SAM_DOOR).maskedMachineTarget()).isEqualTo(DOOR_MASKED);
         assertThat(book.stored(SAM_DOOR).status()).isEqualTo(SegmentStatus.ACCEPTED);
-        assertThat(report).isEqualTo(new ConsistencyReport(0, 0, 0, List.of()));
+        assertThat(report)
+                .isEqualTo(new ConsistencyReport(0, 0, 0, List.of(), Map.of(DeferralReason.GENDER_UNKNOWN, 1)));
         assertThat(book.openDeferrals())
                 .extracting(Deferral::segmentId, Deferral::reason)
                 .containsExactly(tuple(SAM_DOOR, DeferralReason.GENDER_UNKNOWN));
@@ -174,10 +176,11 @@ class ConsistencyPassGenderTest {
         book.decide(SAM_DOOR, DOOR_PLAIN, DOOR_MASKED);
         book.recordUnknownGender(SAM_DOOR);
 
-        ok(book.run(true));
+        final ConsistencyReport report = ok(book.run(true));
 
         assertThat(book.model().requests()).isEmpty();
         assertThat(book.openDeferrals()).hasSize(1);
+        assertThat(report.openGenderDeferrals()).isEqualTo(1);
     }
 
     // The person's edit is never overwritten: the re-render waits as a proposal until the desk applies it.

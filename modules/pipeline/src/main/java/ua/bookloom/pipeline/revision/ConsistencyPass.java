@@ -94,7 +94,8 @@ public final class ConsistencyPass {
                 .sweep(inputs, open, tally)
                 .flatMap(swept -> deferrals.open(inputs.projectId()))
                 .flatMap(afterSweep -> revise(inputs, afterSweep, calls, writer, tally))
-                .map(done -> ended(inputs.projectId(), tally));
+                .flatMap(done -> deferrals.open(inputs.projectId()))
+                .map(stillOpen -> ended(inputs.projectId(), tally, byReason(stillOpen)));
     }
 
     private Result<Boolean> revise(
@@ -117,16 +118,18 @@ public final class ConsistencyPass {
         return new GenderRevision(glossary, segments, deferrals, writer, call).revise(inputs, open, calls, tally);
     }
 
-    private static ConsistencyReport ended(final String projectId, final PassTally tally) {
-        final ConsistencyReport report = tally.report();
+    private static ConsistencyReport ended(
+            final String projectId, final PassTally tally, final Map<DeferralReason, Integer> stillOpen) {
+        final ConsistencyReport report = tally.report(stillOpen);
         log.info(
                 "Backward revision ended project={} segmentsChanged={} termSubstitutions={} genderReRenders={} "
-                        + "proposals={}",
+                        + "proposals={} openDeferrals={}",
                 projectId,
                 tally.segmentsChanged(),
                 report.termSubstitutions(),
                 report.genderReRenders(),
-                report.proposals());
+                report.proposals(),
+                stillOpen);
         return report;
     }
 

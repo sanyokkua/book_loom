@@ -73,6 +73,16 @@ class RecurringTermsScreenTest extends TranslatingScreenTestBase {
         assertThat(renderingOf("господар")).isNotNull();
     }
 
+    // The note once said only that the model reports renderings; the book also learns them from the translated text.
+    @Test
+    void card_note_saysRenderingsAreAlsoLearnedFromTheTextAndAnAmbiguousTermStaysBlank() throws Exception {
+        showCard(IMP);
+
+        assertThat(labelText("recurring-note"))
+                .contains("also learned from the translated text")
+                .contains("A term the book renders several ways stays blank");
+    }
+
     @Test
     void card_termWithALearnedRendering_showsItWithItsSupportAndAsTheRendering() throws Exception {
         showCard(IMP.withLearned(new LexiconEntry.Learned("біс", 5, 6)));

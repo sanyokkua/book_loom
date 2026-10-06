@@ -23,7 +23,7 @@ class NameMissingCheckTest {
     void find_nameKeptOrDeclined_saysNothing(final String target) {
         final List<GlossaryEntry> glossary = List.of(entry("Nell", "Нелл", TermType.CHARACTER, false));
 
-        assertThat(NameMissingCheck.find(glossary, "Nell opened the door slowly.", target))
+        assertThat(NameMissingCheck.find(glossary, "Nell opened the door slowly.", target, "uk"))
                 .isEmpty();
     }
 
@@ -32,7 +32,7 @@ class NameMissingCheckTest {
         final List<GlossaryEntry> glossary = List.of(entry("Nell", "Нелл", TermType.CHARACTER, false));
 
         final QaFinding finding = NameMissingCheck.find(
-                        glossary, "Nell opened the door slowly.", "Вона відчинила двері.")
+                        glossary, "Nell opened the door slowly.", "Вона відчинила двері.", "uk")
                 .orElseThrow();
 
         assertThat(finding.raisedBy()).isEqualTo("name-missing");
@@ -43,7 +43,7 @@ class NameMissingCheckTest {
     void find_possessiveInTheSource_stillCountsAsTheName() {
         final List<GlossaryEntry> glossary = List.of(entry("Nell", "Нелл", TermType.CHARACTER, false));
 
-        assertThat(NameMissingCheck.find(glossary, "Nell's door was open.", "Двері були відчинені."))
+        assertThat(NameMissingCheck.find(glossary, "Nell's door was open.", "Двері були відчинені.", "uk"))
                 .isPresent();
     }
 
@@ -53,7 +53,7 @@ class NameMissingCheckTest {
             final TermType type, final boolean locked, final String target) {
         final List<GlossaryEntry> glossary = List.of(entry("Nell", target, type, locked));
 
-        assertThat(NameMissingCheck.find(glossary, "Nell opened the door.", "Вона відчинила двері."))
+        assertThat(NameMissingCheck.find(glossary, "Nell opened the door.", "Вона відчинила двері.", "uk"))
                 .isEmpty();
     }
 
@@ -61,7 +61,56 @@ class NameMissingCheckTest {
     void find_nameNotInTheSource_saysNothing() {
         final List<GlossaryEntry> glossary = List.of(entry("Nell", "Нелл", TermType.CHARACTER, false));
 
-        assertThat(NameMissingCheck.find(glossary, "The door opened slowly.", "Двері повільно відчинилися."))
+        assertThat(NameMissingCheck.find(glossary, "The door opened slowly.", "Двері повільно відчинилися.", "uk"))
                 .isEmpty();
+    }
+
+    // Names, hyphenated and derived forms from the owner's run: declined, adjectival, alternating, spelled twice.
+    @ParameterizedTest(name = "[{index}] {0} -> {1} in «{3}»")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Bartimaeus|Бартімей|B-Bartimaeus came back.|Б-Бартімей повернувся.",
+                "Bartimaeus|Бартімей|Bartimaeus-senior came back.|Бартімей-старший повернувся.",
+                "London|Лондон|The London police came.|Лондонського поліцейського викликали.",
+                "Prague|Прага|The Prague papers came.|Празькі газети надійшли.",
+                "Prague|Прага|Prague came.|Прага прийшла."
+            })
+    void find_declinedHyphenatedOrDerivedName_isNotLost(
+            final String term, final String target, final String source, final String translated) {
+        final List<GlossaryEntry> glossary = List.of(entry(term, target, TermType.PLACE, false));
+
+        assertThat(NameMissingCheck.find(glossary, source, translated, "uk")).isEmpty();
+    }
+
+    @Test
+    void find_twoSpellingsOfOneName_isNotLostWhenOneIsThere() {
+        final List<GlossaryEntry> glossary = List.of(
+                entry("Maurice", "Моріс", TermType.CHARACTER, false),
+                entry("Maurice", "Морис", TermType.CHARACTER, false));
+
+        assertThat(NameMissingCheck.find(glossary, "Maurice came.", "Моріс прийшов.", "uk"))
+                .isEmpty();
+    }
+
+    @Test
+    void find_genuinelyMissingNameBesideAPresentOne_isStillReportedWithTermAndTarget() {
+        final List<GlossaryEntry> glossary = List.of(
+                entry("Maurice", "Моріс", TermType.CHARACTER, false),
+                entry("Bartimaeus", "Бартімей", TermType.CHARACTER, false));
+
+        final QaFinding finding = NameMissingCheck.find(
+                        glossary, "Maurice and Bartimaeus came.", "Моріс і хтось прийшли.", "uk")
+                .orElseThrow();
+
+        assertThat(finding.note()).contains("\"Bartimaeus\" → \"Бартімей\"").doesNotContain("Maurice");
+    }
+
+    @Test
+    void find_languageWithNoAlternationData_keepsThePlainPrefixRule() {
+        final List<GlossaryEntry> glossary = List.of(entry("Prague", "Прага", TermType.PLACE, false));
+
+        assertThat(NameMissingCheck.find(glossary, "Prague came.", "Празькі газети надійшли.", "xx"))
+                .isPresent();
     }
 }

@@ -608,7 +608,7 @@ not make `відчинив` or `відчинила` agree with it.
 The application SHALL keep, for each project, a lexicon of recurring common terms and titles (`master`, `imp`, `Mr`) that a
 model would otherwise render differently from one page to the next. A deterministic scan SHALL propose them without a
 model: a title of the source language's bundled list (English first) that the book's running text uses at least three
-times, and a word the book writes both with a capital away from a sentence start and in lower case (so it is neither a
+times, and a word the book writes both with a capital away from a sentence start and not beside another capitalised word (so it is no part of a name such as `Great Hall`), and in lower case (so it is neither a
 name nor a function word) at least five times, at most thirty, never a term the glossary or the lexicon already holds. The
 scan SHALL run when a run is prepared and the lexicon is empty, and when the person asks on Names & style ("Find recurring
 terms"); a word that is only ever lower case, such as `pentacle`, is added by hand. Names & style SHALL show the lexicon
@@ -773,3 +773,8 @@ starts, so the rest of a chunk paused in the middle keeps the glossary it began 
 
 - **WHEN** the person added `Justine` → `Жустіна`, closes the application and reopens the same book
 - **THEN** the glossary does not contain `Justine`
+
+#### Scenario: The words of a repeated place are not recurring terms
+
+- **WHEN** a book holds `the Great Hall` 4 times, `Old Bailey` 3 times and `the great hall` and `the old courts` in lower case
+- **THEN** the key-term scan proposes neither `great`, `hall` nor `old`, while `Master` written 3 times with a capital beside no other capital and `master` 3 times in lower case is still proposed

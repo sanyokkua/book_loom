@@ -34,7 +34,7 @@ class LanguageFilesTest {
     private static final int PAIR_LIMIT = 100;
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
     private static final Pattern KEY = Pattern.compile(
-            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck"
+            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
                     + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+)");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");

@@ -44,6 +44,9 @@ final class TextCheckGates {
                         .stream()
                         .map(TextCheckGates::resultOf)
                         .toList());
+        AlphabetCheck.find(input.sourceDisplayText(), target, input.targetLanguage()).stream()
+                .map(TextCheckGates::resultOf)
+                .forEach(results::add);
         genderResult(input, target).ifPresent(results::add);
         wordResult(input, target, words).ifPresent(results::add);
         return List.copyOf(results);
@@ -101,6 +104,7 @@ final class TextCheckGates {
             case SPACING -> CheckName.SPACING;
             case GENDER -> CheckName.GENDER;
             case UNKNOWN_WORD -> CheckName.UNKNOWN_WORD;
+            case ALPHABET -> CheckName.ALPHABET;
         };
     }
 }

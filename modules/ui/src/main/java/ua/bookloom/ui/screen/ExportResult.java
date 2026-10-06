@@ -163,12 +163,15 @@ final class ExportResult {
     }
 
     private String share(final ExportReport report) {
-        if (report.written() == 0) {
+        // Lines kept as they are never needed a decision, and a segment still pending did: the share is of the segments
+        // a model or a person had to decide.
+        final int decided = report.written() - report.keptVerbatim() + report.pending();
+        if (decided <= 0) {
             return DASH;
         }
         final NumberFormat percent = NumberFormat.getPercentInstance(messages.locale());
         percent.setMaximumFractionDigits(1);
-        return percent.format(report.autoAccepted() / (double) report.written());
+        return percent.format(report.autoAccepted() / (double) decided);
     }
 
     private Path target() {

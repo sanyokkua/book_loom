@@ -327,10 +327,12 @@ final class TranslatingView {
         button.getStyleClass().add("btn-ghost");
         button.textProperty()
                 .bind(Bindings.createStringBinding(
-                        () -> messages.get(
-                                MessageKey.TRANSLATING_REVIEW_FLAGGED,
-                                review.flaggedCount().get()),
-                        review.flaggedCount()));
+                        () -> reviewLabel(
+                                messages,
+                                review.flaggedCount().get(),
+                                mirror.live().suspicious().get()),
+                        review.flaggedCount(),
+                        mirror.live().suspicious()));
         button.setOnAction(event -> {
             log.debug(
                     "review flagged pressed with {} flagged segments: opening the panel",
@@ -338,6 +340,14 @@ final class TranslatingView {
             panel.setOpen(true);
         });
         return StateVisibility.shownIn(button, mirror.runState(), REVIEWABLE);
+    }
+
+    // The suspicious segments are accepted ones the audit doubts: the button names them beside the flagged, so the
+    // number a person sees here is the number the outcome card shows.
+    private static String reviewLabel(final Messages messages, final int flagged, final int suspicious) {
+        return suspicious > 0
+                ? messages.get(MessageKey.TRANSLATING_REVIEW_FLAGGED_SUSPICIOUS, flagged, suspicious)
+                : messages.get(MessageKey.TRANSLATING_REVIEW_FLAGGED, flagged);
     }
 
     private static Node footer(final StateMirror mirror, final Messages messages, final Navigator navigator) {

@@ -1,6 +1,8 @@
 package ua.bookloom.api.pipeline;
 
+import java.util.Map;
 import java.util.Objects;
+import ua.bookloom.api.project.DeferralReason;
 
 /**
  * What the final consistency pass did during one export, so the screen can say something after a pass that changes
@@ -9,8 +11,11 @@ import java.util.Objects;
  * @param status whether the pass ran, and whether it had a model for its gender step
  * @param termSubstitutions segments whose locked term was swept to its new rendering
  * @param genderReRenders segments re-rendered because a character's gender became known
+ * @param openDeferrals the deferrals still open after the pass, counted by reason, so a pass that changed nothing can
+ *     say what it is waiting for
  */
-public record ConsistencySummary(Status status, int termSubstitutions, int genderReRenders) {
+public record ConsistencySummary(
+        Status status, int termSubstitutions, int genderReRenders, Map<DeferralReason, Integer> openDeferrals) {
 
     /** The summary of an export whose pass was switched off: nothing ran, nothing is to be said. */
     public static final ConsistencySummary NOT_RUN = new ConsistencySummary(Status.NOT_RUN, 0, 0);
@@ -25,9 +30,15 @@ public record ConsistencySummary(Status status, int termSubstitutions, int gende
         RAN_WITHOUT_MODEL
     }
 
-    /** Rejects a missing status or a negative count. */
+    /** A summary that left no deferral open. */
+    public ConsistencySummary(final Status status, final int termSubstitutions, final int genderReRenders) {
+        this(status, termSubstitutions, genderReRenders, Map.of());
+    }
+
+    /** Rejects a missing status or a negative count and copies the open counts. */
     public ConsistencySummary {
         Objects.requireNonNull(status, "status");
+        openDeferrals = Map.copyOf(Objects.requireNonNull(openDeferrals, "openDeferrals"));
         if (termSubstitutions < 0 || genderReRenders < 0) {
             throw new IllegalArgumentException(
                     "no count may be negative: " + termSubstitutions + ", " + genderReRenders);
@@ -37,5 +48,10 @@ public record ConsistencySummary(Status status, int termSubstitutions, int gende
     /** Segments the pass changed. */
     public int adjusted() {
         return termSubstitutions + genderReRenders;
+    }
+
+    /** Segments still waiting for a character's gender, which no pass can render until it is set. */
+    public int openGenderDeferrals() {
+        return openDeferrals.getOrDefault(DeferralReason.GENDER_UNKNOWN, 0);
     }
 }

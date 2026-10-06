@@ -55,6 +55,9 @@ public enum CheckName {
     /** Text check, soft: a word the word validator doubts is a real word of the target language. */
     UNKNOWN_WORD(0.0, "fluency", "unknown-word", false),
 
+    /** Text check, soft: a word with a letter outside the target language's alphabet (ы ъ э ё in Ukrainian). */
+    ALPHABET(0.0, "language", "alphabet", false),
+
     /** Note only: the typography pass changed the target's apostrophes, ellipses, quote marks or spacing. */
     TYPOGRAPHY(0.0, "fluency", "normalised", false);
 

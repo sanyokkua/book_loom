@@ -38,6 +38,24 @@ class KeyTermScanTest {
     }
 
     static Stream<Arguments> books() {
+        return Stream.concat(plainBooks(), namePartBooks());
+    }
+
+    private static Stream<Arguments> namePartBooks() {
+        return Stream.of(
+                Arguments.of(
+                        "the words of a repeated two-word place",
+                        join(
+                                copies("We went to the Great Hall today.", 4),
+                                copies("the great hall was a cold place.", 4)),
+                        List.of()),
+                Arguments.of(
+                        "a title written with a capital beside no other capital",
+                        join(copies("We saw the Master again.", 3), copies("the master laughed.", 3)),
+                        List.of("master")));
+    }
+
+    private static Stream<Arguments> plainBooks() {
         return Stream.of(
                 Arguments.of("a title seen three times", copies("Then Mr. Hale nodded.", 3), List.of("mr")),
                 Arguments.of("a title seen twice", copies("Then Mr. Hale nodded.", 2), List.of()),

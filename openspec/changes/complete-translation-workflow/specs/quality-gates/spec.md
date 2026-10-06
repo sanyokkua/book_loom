@@ -1313,7 +1313,7 @@ the deterministic text checks (leftover source-language text, a word that mixes 
 doubled word), the gender check, the run's word validator, a placeholder token written into the stored plain target, and
 a soft `name-missing` check. `name-missing` SHALL fire when an unlocked glossary entry of type character or place with a
 non-empty target has its source form as a whole word in the source segment and no word of the target holds the stem of
-its target form (the stem rule the lexicon uses, so a declined name is no loss); locked entries are left to their
+its target form (the stem rule the lexicon uses, so a declined name is no loss; a hyphenated target word holds each of its parts, a target language whose file lists `stemAlternations` also accepts a derived form that keeps a stem of four letters with its last letter swapped within a group — `Прага` → `Празькі`, `Лондон` → `лондонського` — and two entries whose targets differ by one letter, `Моріс` and `Морис`, are one name that is lost only when neither is there); the finding's note names every lost term and its target; locked entries are left to their
 protected-span gate. Spacing is not audited. Each finding SHALL be stored on the record as an ordinary finding whose
 `raisedBy` is `audit:` and the check's name (`audit:language-identity`, `audit:quote-balance`, `audit:script-purity`,
 `audit:duplicate-word`, `audit:gender`, `audit:unknown-word`, `audit:token-leak`, `audit:name-missing`), replacing the
@@ -1349,3 +1349,24 @@ that fired, as advice that never blocks anything.
 
 - **WHEN** the glossary maps `Nell` to `Нелл` and the target holds `Нелла`
 - **THEN** `name-missing` does not fire
+
+### Requirement: Check each target word against the target language's alphabet
+
+The deterministic text checks SHALL include a target-alphabet check driven by language data: a target language whose
+file lists `forbiddenLetters` (Ukrainian: `ыъэё`) gets a soft `alphabet` finding for every target word that holds one of
+them, naming the word and the letter. The finding SHALL NOT block acceptance or flag a segment; with a repair round
+available it earns the same single directed fix as a narrator-gender finding (taken only when the fixed text passes every
+check and no longer holds a soft finding of that kind), otherwise it stays a note for review and the final audit lists it.
+A word that stands in the source text as well is a kept foreign word and is left alone, and a language with no such key is
+never checked.
+
+#### Scenario: A Russian letter in a Ukrainian word earns one directed fix
+
+- **WHEN** a Ukrainian draft holds `бэкона` or `кобыли`
+- **THEN** the segment is accepted with an `alphabet` finding naming the word, and one directed fix is asked for it
+- **AND** a fix that still holds the letter leaves the draft accepted with the finding as a note
+
+#### Scenario: A clean Ukrainian text is not touched
+
+- **WHEN** a Ukrainian text holds `бекону`, `кобилу`, `очерету` and `ґанок`
+- **THEN** the alphabet check says nothing

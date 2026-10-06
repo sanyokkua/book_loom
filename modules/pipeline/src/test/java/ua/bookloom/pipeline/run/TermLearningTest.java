@@ -222,4 +222,53 @@ class TermLearningTest {
 
         assertThat(master().learned()).isNull();
     }
+
+    // Two terms that both keep company with one word never both claim it: the stronger one holds it.
+    @Test
+    void committed_twoTermsThatWouldShareARendering_leaveItToOne() {
+        stores.lexicon().put(LexiconEntry.of(PROJECT, "lord"));
+        final String[][] pairs = {
+            {"The master and the lord spoke.", "Господар заговорив."},
+            {"The master and the lord sat.", "Господар сів."},
+            {"The master and the lord ate.", "Господар їв."},
+            {"The master and the lord slept.", "Господар спав."}
+        };
+        final List<Map.Entry<Segment, SegmentRecord>> book = new ArrayList<>(book(0));
+        for (final String[] pair : pairs) {
+            final Segment segment = segment(book.size(), pair[0]);
+            book.add(Map.entry(segment, decided(segment, pair[1], SegmentStatus.ACCEPTED, SegmentPath.DRAFT)));
+        }
+
+        learnFrom(book);
+
+        final List<LexiconEntry> held =
+                Objects.requireNonNull(stores.lexicon().all(PROJECT).data());
+        assertThat(held)
+                .filteredOn(entry -> entry.learned() != null)
+                .extracting(LexiconEntry::term)
+                .containsExactly("lord");
+    }
+
+    // The newspaper "The Times" makes no common word to learn.
+    @Test
+    void committed_termWrittenOnlyInATitleCasePhrase_isNotLearned() {
+        stores.lexicon().put(LexiconEntry.of(PROJECT, "times"));
+        final String[][] pairs = {
+            {"He read The Times.", "Він читав часи."},
+            {"She quoted The Times.", "Вона цитувала часи."},
+            {"The Times printed it.", "Часи надрукували це."},
+            {"The Times wrote so.", "Часи написали так."}
+        };
+        final List<Map.Entry<Segment, SegmentRecord>> book = new ArrayList<>(book(0));
+        for (final String[] pair : pairs) {
+            final Segment segment = segment(book.size(), pair[0]);
+            book.add(Map.entry(segment, decided(segment, pair[1], SegmentStatus.ACCEPTED, SegmentPath.DRAFT)));
+        }
+
+        learnFrom(book);
+
+        assertThat(Objects.requireNonNull(stores.lexicon().all(PROJECT).data()))
+                .filteredOn(entry -> entry.term().equals("times"))
+                .allSatisfy(entry -> assertThat(entry.learned()).isNull());
+    }
 }

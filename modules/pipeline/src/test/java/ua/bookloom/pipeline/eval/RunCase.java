@@ -45,6 +45,8 @@ record RunCase(
         QUOTES,
         /** A blocking mixed-script finding. */
         SCRIPT,
+        /** A soft target-alphabet finding. */
+        ALPHABET,
         /** A narrator-gender finding. */
         GENDER,
         /** A failed length check. */

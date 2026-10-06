@@ -52,6 +52,9 @@ final class RunVerdicts {
         return switch (runCase.check()) {
             case QUOTES -> hasBlocking(candidate, FindingKind.UNBALANCED_QUOTES);
             case SCRIPT -> hasBlocking(candidate, FindingKind.MIXED_SCRIPT);
+            case ALPHABET ->
+                qa(candidate).findings().stream()
+                        .anyMatch(finding -> CheckName.ALPHABET.raisedBy().equals(finding.raisedBy()));
             case GENDER ->
                 !GenderChecks.named(RunCorpus.TARGET_LANGUAGE)
                         .find(DisplayText.of(candidate), narratorGender())

@@ -1,8 +1,10 @@
 package ua.bookloom.pipeline.lexicon;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -33,6 +35,21 @@ public final class TermMatch {
         Objects.requireNonNull(term, "term");
         Objects.requireNonNull(text, "text");
         return !term.isBlank() && pattern(term).matcher(text).find();
+    }
+
+    /**
+     * The words or phrases of a text that name the term, as written.
+     *
+     * @param term the non-blank key term
+     * @param text the non-null text to search, tokens already removed
+     * @return each match in text order, a plural or possessive ending included; never null, empty when none
+     */
+    public static List<String> matches(final String term, final String text) {
+        Objects.requireNonNull(term, "term");
+        Objects.requireNonNull(text, "text");
+        return term.isBlank()
+                ? List.of()
+                : pattern(term).matcher(text).results().map(MatchResult::group).toList();
     }
 
     private static Pattern pattern(final String term) {

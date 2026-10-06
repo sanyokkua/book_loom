@@ -22,5 +22,8 @@ public enum FindingKind {
     GENDER,
 
     /** A word that is not a real word of the target language: garbled or coined, written in the right script. */
-    UNKNOWN_WORD
+    UNKNOWN_WORD,
+
+    /** A word with a letter the target language's alphabet does not have. */
+    ALPHABET
 }

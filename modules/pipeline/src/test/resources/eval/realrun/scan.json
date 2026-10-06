@@ -31,8 +31,8 @@
    "hall",
    "old"
   ],
-  "knownFailure": true,
-  "fixedBy": "15e.11",
+  "knownFailure": false,
+  "fixedBy": null,
   "rationale": "Great Hall and Old Bailey are names for the glossary; their words great, hall and old are generic and must not become recurring terms (the real run proposed them)"
  },
  {

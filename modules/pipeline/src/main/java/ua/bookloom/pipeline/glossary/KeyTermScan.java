@@ -121,6 +121,18 @@ public final class KeyTermScan {
                 }));
     }
 
+    /**
+     * Whether a term is a title of the source language's bundled list, which a book may write with a capital only.
+     *
+     * @param term the non-null term
+     * @param sourceLanguage the book's BCP 47 tag, or null to read English
+     * @return {@code true} if the list holds the term, {@code false} otherwise
+     */
+    public static boolean isTitle(final String term, @Nullable final String sourceLanguage) {
+        Objects.requireNonNull(term, "term");
+        return titles(sourceLanguage).contains(Occurrences.keyOf(term));
+    }
+
     private static boolean qualifies(
             final NameCandidate tally, final WordCounts counts, final Set<String> stopWords, final Set<String> titles) {
         final String key = tally.term();
@@ -130,7 +142,7 @@ public final class KeyTermScan {
         return tally.count() >= DUAL_USE_MIN_COUNT
                 && key.codePointCount(0, key.length()) >= MIN_WORD_LETTERS
                 && !stopWords.contains(key)
-                && counts.midSentence(key) >= MID_SENTENCE_MIN_COUNT
+                && counts.standaloneMidSentence(key) >= MID_SENTENCE_MIN_COUNT
                 && counts.lowerShare(key) >= FrequencyScan.LOWER_SHARE_LIMIT;
     }
 

@@ -85,7 +85,11 @@ public final class ChunkRunner {
         this.events = new SegmentEvents(sinks.emit(), locators);
         this.shortcuts = new DraftShortcuts(settings.frame().styleSheet().text());
         this.batches = new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary);
-        this.learning = new TermLearning(stores, settings.projectId());
+        this.learning = new TermLearning(
+                stores,
+                settings.projectId(),
+                settings.frame().sourceLanguage(),
+                settings.frame().targetLanguage());
     }
 
     /**

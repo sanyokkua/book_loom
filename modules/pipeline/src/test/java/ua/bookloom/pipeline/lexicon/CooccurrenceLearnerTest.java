@@ -193,4 +193,90 @@ class CooccurrenceLearnerTest {
         assertThat(established(learner, "master"))
                 .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("господар"));
     }
+
+    // The run learned mr -> пані because Mr matched the segments of Mrs through the plural ending.
+    @Test
+    void established_mrAndMrsTrackedTogether_eachKeepsItsOwnRendering() {
+        final CooccurrenceLearner learner = learnerWithFiller("Mr", "Mrs");
+
+        learner.observe("Mr Hale left.", "Пан Хейл пішов.");
+        learner.observe("Mr Hale slept.", "Пан Хейл спав.");
+        learner.observe("Mr Hale ate.", "Пан Хейл їв.");
+        learner.observe("Mrs Hale came.", "Пані Хейл прийшла.");
+        learner.observe("Mrs Hale sat.", "Пані Хейл сіла.");
+        learner.observe("Mrs Hale sang.", "Пані Хейл співала.");
+        learner.observe("Mrs Hale wept.", "Пані Хейл плакала.");
+
+        assertThat(established(learner, "Mr"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("пан"));
+        assertThat(established(learner, "Mrs"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("пані"));
+    }
+
+    @Test
+    void established_segmentWithBothTitles_countsForBoth() {
+        final CooccurrenceLearner learner = learnerWithFiller("Mr", "Mrs");
+
+        learner.observe("Mr Hale and Mrs Hale left.", "Пан Хейл і пані Хейл пішли.");
+        learner.observe("Mr Hale and Mrs Hale sat.", "Пан Хейл і пані Хейл сіли.");
+        learner.observe("Mr Hale and Mrs Hale ate.", "Пан Хейл і пані Хейл їли.");
+
+        assertThat(learner.established("Mr", NO_NAMES)).isPresent();
+        assertThat(learner.established("Mrs", NO_NAMES)).isPresent();
+    }
+
+    // Among землі, земля and землю the dictionary form is the one with no oblique ending.
+    @Test
+    void established_withObliqueEndingData_prefersTheDictionaryForm() {
+        final CooccurrenceLearner learner = new CooccurrenceLearner(List.of("і", "ю", "и", "ів"));
+        learner.track("earth");
+        FILLER.forEach(pair -> learner.observe(pair[0], pair[1]));
+        learner.observe("The earth shook.", "Землі трясло.");
+        learner.observe("He knelt on the earth.", "Він став навколішки на землю.");
+        learner.observe("The earth was cold.", "Земля була холодна.");
+        learner.observe("Under the earth it was dark.", "Під землі було темно.");
+        learner.observe("The earth slept.", "Землі спалося.");
+
+        assertThat(learner.established("earth", NO_NAMES))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("земля"));
+    }
+
+    @Test
+    void established_withoutLanguageData_keepsTheMostExtendedForm() {
+        final CooccurrenceLearner learner = learnerWithFiller("earth");
+        learner.observe("The earth shook.", "Землі трясло.");
+        learner.observe("The earth was cold.", "Земля була холодна.");
+        learner.observe("Under the earth it was dark.", "Під землі було темно.");
+        learner.observe("The earth slept.", "Землі спалося.");
+
+        assertThat(established(learner, "earth"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("землі"));
+    }
+
+    // The newspaper The Times is a name: its words are never a common word's rendering.
+    @Test
+    void established_titleCaseNameOfACommonWord_learnsNothing() {
+        final CooccurrenceLearner learner = new CooccurrenceLearner();
+        learner.track("times", true);
+        FILLER.forEach(pair -> learner.observe(pair[0], pair[1]));
+        learner.observe("He read The Times.", "Він читав часи.");
+        learner.observe("She quoted The Times.", "Вона цитувала часи.");
+        learner.observe("The Times printed it.", "Часи надрукували це.");
+        learner.observe("The Times wrote so.", "Часи написали так.");
+
+        assertThat(learner.established("times", NO_NAMES)).isEmpty();
+    }
+
+    @Test
+    void established_commonWordAlsoWrittenInLowerCase_isStillLearned() {
+        final CooccurrenceLearner learner = new CooccurrenceLearner();
+        learner.track("times", true);
+        FILLER.forEach(pair -> learner.observe(pair[0], pair[1]));
+        learner.observe("It was hard in those times.", "Було важко в ті часи.");
+        learner.observe("Times were hard.", "Часи були важкі.");
+        learner.observe("In bad times we wept.", "У лихі часи ми плакали.");
+        learner.observe("The times changed.", "Часи змінилися.");
+
+        assertThat(learner.established("times", NO_NAMES)).isPresent();
+    }
 }

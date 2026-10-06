@@ -3,7 +3,6 @@ package ua.bookloom.pipeline.heal;
 import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
@@ -12,20 +11,21 @@ import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * Settles an accepted segment whose narrator's words carry the wrong gender. The finding is soft — a mismatch the
- * suffix rule cannot be sure of must never flag a segment — so it earns exactly one directed fix, taken only when the
- * fixed text passes every check and no longer has the finding; otherwise the segment stays accepted as it was with the
- * finding kept as a note for review. Built fresh per chunk by {@link SegmentHealer}.
+ * Settles an accepted segment that carries a soft finding a directed fix can mend: a narrator's word of the wrong
+ * gender, or a word with a letter outside the target alphabet. Such a finding is soft — a rule that cannot be sure
+ * must never flag a segment — so all of them together earn exactly one directed fix, taken only when the fixed text
+ * passes every check and holds none of them any more; otherwise the segment stays accepted as it was with the
+ * findings kept as a note for review. Built fresh per chunk by {@link SegmentHealer}.
  */
 @Slf4j
-final class GenderFix {
+final class SoftFix {
 
     private final DirectedFix directedFix;
     private final RoundEvaluator evaluator;
     private final LoopSettings settings;
     private final ModelCalls calls;
 
-    GenderFix(
+    SoftFix(
             final DirectedFix directedFix,
             final RoundEvaluator evaluator,
             final LoopSettings settings,
@@ -47,12 +47,17 @@ final class GenderFix {
 
     SegmentOutcome settle(final DraftOutcome.Drafted outcome, final Accepted accepted) {
         final String segmentId = outcome.segment().id();
-        final QaFinding finding = genderFinding(accepted.qa());
-        if (finding == null || !worthAFix(outcome)) {
+        final List<QaFinding> fixable = fixableFindings(accepted.qa());
+        if (fixable.isEmpty() || !worthAFix(outcome)) {
             return asDecided(segmentId, accepted);
         }
-        log.debug("Directed fix for the narrator's gender segment={}", segmentId);
-        calls.announce(new RoundStarted(segmentId, 1, settings.dial().repairRounds(), null, finding.kind()));
+        log.debug("Directed fix for {} soft finding(s) segment={}", fixable.size(), segmentId);
+        calls.announce(new RoundStarted(
+                segmentId,
+                1,
+                settings.dial().repairRounds(),
+                null,
+                fixable.getFirst().kind()));
         final RoundOutcome result = evaluator.classify(
                 outcome,
                 directedFix.fix(
@@ -60,13 +65,13 @@ final class GenderFix {
                         settings.frame(),
                         outcome.maskedSource(),
                         accepted.maskedText(),
-                        List.of(finding),
+                        fixable,
                         calls));
         if (result instanceof RoundOutcome.Evaluated fixed && clears(fixed.qa())) {
-            log.debug("Gender fix adopted segment={}", segmentId);
+            log.debug("Soft fix adopted segment={}", segmentId);
             return asDecided(segmentId, adopted(accepted, fixed));
         }
-        log.debug("Gender fix discarded, the accepted text stays segment={}", segmentId);
+        log.debug("Soft fix discarded, the accepted text stays segment={}", segmentId);
         return asDecided(segmentId, accepted);
     }
 
@@ -74,7 +79,7 @@ final class GenderFix {
         final boolean repairable = settings.dial().repairRounds() >= 1 && !outcome.inPieces();
         if (!repairable) {
             log.debug(
-                    "Gender finding kept as a note segment={} (no repair round or drafted in pieces)",
+                    "Soft finding kept as a note segment={} (no repair round or drafted in pieces)",
                     outcome.segment().id());
         }
         return repairable;
@@ -91,7 +96,7 @@ final class GenderFix {
     }
 
     private static boolean clears(final QaResult qa) {
-        return AcceptanceRule.accepts(qa, 0) && genderFinding(qa) == null;
+        return AcceptanceRule.accepts(qa, 0) && fixableFindings(qa).isEmpty();
     }
 
     private static SegmentOutcome asDecided(final String segmentId, final Accepted accepted) {
@@ -104,11 +109,12 @@ final class GenderFix {
                 accepted.path());
     }
 
-    private static @Nullable QaFinding genderFinding(final QaResult qa) {
-        return qa.findings().stream().filter(GenderFix::isGender).findFirst().orElse(null);
+    private static List<QaFinding> fixableFindings(final QaResult qa) {
+        return qa.findings().stream().filter(SoftFix::isFixable).toList();
     }
 
-    private static boolean isGender(final QaFinding finding) {
-        return CheckName.GENDER.raisedBy().equals(finding.raisedBy());
+    private static boolean isFixable(final QaFinding finding) {
+        return CheckName.GENDER.raisedBy().equals(finding.raisedBy())
+                || CheckName.ALPHABET.raisedBy().equals(finding.raisedBy());
     }
 }

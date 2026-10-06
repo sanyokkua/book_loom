@@ -1,6 +1,9 @@
 package ua.bookloom.pipeline.run;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -10,6 +13,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
@@ -21,8 +25,10 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.lexicon.CooccurrenceLearner;
 import ua.bookloom.pipeline.lexicon.TermMatch;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
  * Teaches the lexicon what the run has already decided: the translated pairs of a chunk are counted by the
@@ -37,12 +43,14 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
 @Slf4j
 final class TermLearning {
 
+    private static final int MIN_FAMILY_LETTERS = 4;
     private static final Pattern NON_LETTERS = Pattern.compile("[^\\p{L}\\p{M}'’ʼ-]+");
 
     /** A decided pair, tokens removed. */
     record Pair(String source, String target) {}
 
-    private final CooccurrenceLearner learner = new CooccurrenceLearner();
+    private final CooccurrenceLearner learner;
+    private final @Nullable String sourceLanguage;
     private final SegmentRepository segments;
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
@@ -50,7 +58,22 @@ final class TermLearning {
     private final List<Pair> held = new ArrayList<>();
 
     TermLearning(final RunStores stores, final String projectId) {
+        this(stores, projectId, null, null);
+    }
+
+    /**
+     * Learns with the languages' data: the target's oblique endings choose the dictionary form, and the source's
+     * title list tells a title, which a book may write with a capital only, from a common word.
+     */
+    TermLearning(
+            final RunStores stores,
+            final String projectId,
+            final @Nullable String sourceLanguage,
+            final @Nullable String targetLanguage) {
         Objects.requireNonNull(stores, "stores");
+        this.sourceLanguage = sourceLanguage;
+        this.learner = new CooccurrenceLearner(
+                targetLanguage == null ? List.of() : LanguageRules.bundled().obliqueEndings(targetLanguage));
         this.segments = stores.segments();
         this.lexicon = stores.lexicon();
         this.glossary = stores.glossary();
@@ -122,24 +145,78 @@ final class TermLearning {
         final List<LexiconEntry> tracked = terms.data().stream()
                 .filter(entry -> !locked.contains(LexiconEntry.keyOf(entry.term())))
                 .toList();
-        tracked.forEach(entry -> learner.track(entry.term()));
+        tracked.forEach(entry -> learner.track(entry.term(), !KeyTermScan.isTitle(entry.term(), sourceLanguage)));
         pairs.forEach(pair -> learner.observe(pair.source(), pair.target()));
         final Set<String> excluded = wordsOf(names.data());
-        final long changed = tracked.stream()
+        final List<LexiconEntry> affected = tracked.stream()
                 .filter(entry -> everyTerm || named(entry.term(), pairs))
-                .filter(entry -> publish(entry, excluded))
+                .toList();
+        final Map<String, LexiconEntry.Learned> decided = unclaimed(terms.data(), affected, excluded);
+        final long changed = affected.stream()
+                .filter(entry -> publish(entry, decided.get(entry.term())))
                 .count();
         log.debug("Term learning done project={} tracked={} changed={}", projectId, tracked.size(), changed);
+    }
+
+    // A rendering stem belongs to one term: the person's choices and the renderings already learned or most used for
+    // the other terms come first, then the new findings by strength; a finding on a stem another term holds is
+    // dropped (mr and mrs are two titles, so they never share пані), unless the two are one word family.
+    private Map<String, LexiconEntry.Learned> unclaimed(
+            final List<LexiconEntry> all, final List<LexiconEntry> affected, final Set<String> excluded) {
+        final Set<String> affectedTerms =
+                affected.stream().map(LexiconEntry::term).collect(Collectors.toSet());
+        final Map<String, String> claims = new HashMap<>();
+        all.stream().filter(entry -> !affectedTerms.contains(entry.term())).forEach(entry -> claim(claims, entry));
+        final Map<String, CooccurrenceLearner.Learned> found = new LinkedHashMap<>();
+        affected.forEach(entry ->
+                learner.established(entry.term(), excluded).ifPresent(learned -> found.put(entry.term(), learned)));
+        final Map<String, LexiconEntry.Learned> kept = new HashMap<>();
+        found.entrySet().stream()
+                .sorted(Map.Entry.<String, CooccurrenceLearner.Learned>comparingByValue(
+                                Comparator.comparingDouble(CooccurrenceLearner.Learned::dice)
+                                        .reversed())
+                        .thenComparing(Map.Entry.comparingByKey()))
+                .forEach(entry -> keepIfUnclaimed(entry.getKey(), entry.getValue(), claims, kept));
+        return kept;
+    }
+
+    private void keepIfUnclaimed(
+            final String term,
+            final CooccurrenceLearner.Learned learned,
+            final Map<String, String> claims,
+            final Map<String, LexiconEntry.Learned> kept) {
+        final String stem = CooccurrenceLearner.stemOf(learned.rendering());
+        final String owner = claims.get(stem);
+        if (owner != null && !isSameFamily(owner, term)) {
+            log.debug("Learned rendering dropped: its stem is held by another term project={}", projectId);
+            log.trace("Term {} lost the stem {} to {}", term, stem, owner);
+            return;
+        }
+        claims.putIfAbsent(stem, term);
+        kept.put(term, new LexiconEntry.Learned(learned.rendering(), learned.support(), learned.occurrences()));
+    }
+
+    private static void claim(final Map<String, String> claims, final LexiconEntry entry) {
+        entry.established().map(CooccurrenceLearner::stemOf).ifPresent(stem -> claims.putIfAbsent(stem, entry.term()));
+    }
+
+    // Terms that differ only by an English plural or possessive are one word; an abbreviation (mr, mrs) is too short
+    // to carry an inflection, so it is a word of its own.
+    private static boolean isSameFamily(final String one, final String other) {
+        return base(one).equals(base(other));
+    }
+
+    private static String base(final String term) {
+        final String key = LexiconEntry.keyOf(term);
+        final String stripped = key.replaceFirst("(?:'s|es|s)$", "");
+        return stripped.codePointCount(0, stripped.length()) >= MIN_FAMILY_LETTERS ? stripped : key;
     }
 
     private static boolean named(final String term, final List<Pair> pairs) {
         return pairs.stream().anyMatch(pair -> TermMatch.occursIn(term, pair.source()));
     }
 
-    private boolean publish(final LexiconEntry entry, final Set<String> excluded) {
-        final LexiconEntry.Learned found = learner.established(entry.term(), excluded)
-                .map(learned -> new LexiconEntry.Learned(learned.rendering(), learned.support(), learned.occurrences()))
-                .orElse(null);
+    private boolean publish(final LexiconEntry entry, final LexiconEntry.@Nullable Learned found) {
         if (Objects.equals(entry.learned(), found)) {
             return false;
         }

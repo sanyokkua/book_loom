@@ -215,11 +215,12 @@ final class ExportJobImpl implements ExportJob {
         final ConsistencySummary.Status status =
                 calls == null ? ConsistencySummary.Status.RAN_WITHOUT_MODEL : ConsistencySummary.Status.RAN;
         log.debug(
-                "export consistency summary status={} termSubstitutions={} genderReRenders={}",
+                "export consistency summary status={} termSubstitutions={} genderReRenders={} openDeferrals={}",
                 status,
                 pass.termSubstitutions(),
-                pass.genderReRenders());
-        return new ConsistencySummary(status, pass.termSubstitutions(), pass.genderReRenders());
+                pass.genderReRenders(),
+                pass.openDeferrals());
+        return new ConsistencySummary(status, pass.termSubstitutions(), pass.genderReRenders(), pass.openDeferrals());
     }
 
     private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {

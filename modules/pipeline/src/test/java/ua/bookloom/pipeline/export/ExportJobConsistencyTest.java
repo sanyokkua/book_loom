@@ -6,6 +6,7 @@ import static ua.bookloom.pipeline.export.ExportJobFixture.zipEntry;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +17,8 @@ import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.SideFile;
+import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
@@ -114,6 +117,20 @@ class ExportJobConsistencyTest {
                 exportWithModel(new ExportRequest(projectId, tempDir.resolve("B.uk.epub"), false, Set.of(), true));
 
         assertThat(report.consistency()).isEqualTo(new ConsistencySummary(ConsistencySummary.Status.RAN, 0, 0));
+    }
+
+    // A pass that changes nothing says what it waits for: the segments whose character has no gender yet.
+    @Test
+    void run_passOnWithOpenGenderDeferrals_reportsTheirCount() {
+        fixture.accept(projectId, WENT, "Джастін пішла.");
+        ok(fixture.deferrals()
+                .add(new Deferral("d1", projectId, WENT, DeferralReason.GENDER_UNKNOWN, "Justine", null, null, null)));
+
+        final ExportReport report =
+                exportWithModel(new ExportRequest(projectId, tempDir.resolve("E.uk.epub"), false, Set.of(), true));
+
+        assertThat(report.consistency().adjusted()).isZero();
+        assertThat(report.consistency().openDeferrals()).containsExactly(Map.entry(DeferralReason.GENDER_UNKNOWN, 1));
     }
 
     // Without a model the name sweep still runs and the report says the gender step was skipped.

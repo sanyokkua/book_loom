@@ -1035,7 +1035,7 @@ is visibly busy rather than stuck, and a draft waiting for the chunk's reviewer 
 WHILE no run has started for the open book, the Translating screen SHALL show a ready card — the book, the model, the
 review mode, the quality dial and the pending count — and SHALL offer its own Start, naming in place a missing model or
 brief field. WHEN a run completes, the screen SHALL show its outcome — the auto-accepted, repaired-and-accepted, flagged
-and kept-as-source counts — and SHALL offer Continue to Export and Review flagged (n), and its Start only WHILE pending
+and kept-as-source counts — and SHALL offer Continue to Export and Review flagged (n) — worded "Review (n flagged · m suspicious)" while the final audit doubts m accepted segments — and its Start only WHILE pending
 segments remain, as they do after an "Also translate" switch is turned on once the run has completed. WHEN a run ends
 Failed, the screen SHALL show the blocking error dialog, which says `Decided segments are kept until the application
 closes.`, then the outcome so far, and SHALL offer its Start. The screen's Start SHALL begin a new run at the project's
@@ -1273,6 +1273,21 @@ loses one of them only that one is asked again.
 - **THEN** its accepted drafts are counted by co-occurrence and the learned rendering of each term the chunk names is
   published to the lexicon before the next chunk's context is read; the decisions of a chunk that was not committed are not
   counted
+
+#### Scenario: A learned rendering belongs to one term
+
+- **WHEN** the decided pairs name `Mr` with `пан` and `Mrs` with `пані`, or two other terms would both learn `господар`
+- **THEN** `Mr` learns `пан` and `Mrs` learns `пані` (a match of `Mrs` counts for `Mr` only when `Mrs` is not tracked), and
+  of two terms that would share a rendering stem the one with the stronger evidence keeps it, unless the terms are one word
+  family (`master`, `masters`; an abbreviation is its own word)
+
+#### Scenario: The dictionary form and the common word
+
+- **WHEN** the pairs of `earth` carry `землі`, `земля` and `землю` and the target language's file lists its oblique
+  endings
+- **THEN** the learned rendering is `земля`; without that data the most extended form stays the base form
+- **AND** a term the book writes with a capital only, in the segments that name it (`The Times`), learns nothing unless it
+  is a bundled title
 
 #### Scenario: The size adapts
 

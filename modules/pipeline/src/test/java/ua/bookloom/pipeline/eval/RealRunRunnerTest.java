@@ -119,10 +119,21 @@ class RealRunRunnerTest {
     }
 
     @Test
-    void text_russianLetterCase_isOnlyAReviewerRowUntilTheAlphabetCheckLands() {
+    void text_russianLetterCase_isCaughtByTheAlphabetCheckSoOnlyTheCleanCandidateIsReviewed() {
         final List<Sent> sent = new ArrayList<>();
 
-        final List<RealRunRow> rows = runner(sent, kind -> stop(REVIEW_OK)).text(text("russian-mare"));
+        final List<RealRunRow> rows = runner(sent, kind -> stop(kind == CallKind.DRAFT ? DRAFT_REPLY : REVIEW_OK))
+                .text(text("russian-mare"));
+
+        assertThat(rows).extracting(RealRunRow::call).containsExactly("draft", "review");
+        assertThat(rows.getLast().outcome()).isEqualTo(Outcome.PASS);
+    }
+
+    @Test
+    void text_russianWordInUkrainianLetters_isOnlyAReviewerRow() {
+        final List<Sent> sent = new ArrayList<>();
+
+        final List<RealRunRow> rows = runner(sent, kind -> stop(REVIEW_OK)).text(text("russian-sob"));
 
         assertThat(rows).extracting(RealRunRow::call).containsExactly("review");
         assertThat(rows.getFirst().outcome()).isEqualTo(Outcome.FAIL);

@@ -289,6 +289,42 @@ public final class LanguageRules implements LanguageSupport {
         return targetValue(Objects.requireNonNull(targetTag, "targetTag"), "genderCheck");
     }
 
+    /**
+     * The groups of letters a name's stem may swap its last letter within before a suffix, from the target language's
+     * {@code stemAlternations} key, so the name check never hard-codes a language.
+     *
+     * @param targetTag the non-null target language tag
+     * @return the groups, such as {@code гзж}; never null, empty when the language names none
+     */
+    public List<String> stemAlternations(final String targetTag) {
+        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "stemAlternations");
+        return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
+    }
+
+    /**
+     * The word endings of a target language's oblique case forms, from its {@code obliqueEndings} key, so the lexicon
+     * can prefer the dictionary form of a learned rendering by data and never by a hard-coded tag.
+     *
+     * @param targetTag the non-null target language tag
+     * @return the endings, such as {@code і} and {@code ів}; never null, empty when the language lists none
+     */
+    public List<String> obliqueEndings(final String targetTag) {
+        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "obliqueEndings");
+        return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
+    }
+
+    /**
+     * The letters a target language's alphabet does not have, from its {@code forbiddenLetters} key, so the alphabet
+     * check is chosen by data and never by a hard-coded tag.
+     *
+     * @param targetTag the non-null target language tag
+     * @return the lower-case letters, such as {@code ыъэё}; never null, empty when the language lists none
+     */
+    public String forbiddenLetters(final String targetTag) {
+        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "forbiddenLetters");
+        return value == null ? "" : value.toLowerCase(Locale.ROOT);
+    }
+
     private LanguageFile languageFile(@Nullable final String tag) {
         final String primary = primary(tag);
         return primary.isEmpty() ? new LanguageFile("", Map.of()) : fileOf(primary, DIRECTORY + primary + SUFFIX);

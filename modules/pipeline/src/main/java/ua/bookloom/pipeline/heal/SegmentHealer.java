@@ -33,7 +33,7 @@ final class SegmentHealer {
     private final LoopSettings settings;
     private final RoundRunner rounds;
     private final ReviewResolver resolver;
-    private final GenderFix genderFix;
+    private final SoftFix softFix;
     private final ModelCalls calls;
     private final Map<String, Resumption> resumptions = new HashMap<>();
 
@@ -48,7 +48,7 @@ final class SegmentHealer {
         final RoundEvaluator evaluator = new RoundEvaluator(gate, settings);
         this.rounds = new RoundRunner(directedFix, settings, evaluator, calls);
         this.resolver = new ReviewResolver(editApplier, directedFix, evaluator, settings, calls);
-        this.genderFix = new GenderFix(directedFix, evaluator, settings, calls);
+        this.softFix = new SoftFix(directedFix, evaluator, settings, calls);
     }
 
     /**
@@ -95,10 +95,9 @@ final class SegmentHealer {
         final boolean accepted = AcceptanceRule.accepts(initialQa, 0);
         SegmentHealerLogging.logAcceptanceDecision(segmentId, initialQa, 0, accepted);
         if (accepted) {
-            return Result.ok(genderFix.settle(
+            return Result.ok(softFix.settle(
                     outcome,
-                    new GenderFix.Accepted(
-                            machine, initialQa, outcome.maskedReply(), List.of(), 0, SegmentPath.DRAFT)));
+                    new SoftFix.Accepted(machine, initialQa, outcome.maskedReply(), List.of(), 0, SegmentPath.DRAFT)));
         }
         final BestCandidate first = new BestCandidate(initialQa, machine, outcome.maskedReply(), null);
         return runRounds(outcome, segmentId, Resumption.first(first));
@@ -126,9 +125,9 @@ final class SegmentHealer {
                 segmentId, resolution.qa(), resolution.verifiedBlockersLeft(), accepted);
         final SegmentPath path = resolution.rounds() > 0 ? SegmentPath.REPAIRED : SegmentPath.DRAFT;
         return accepted
-                ? genderFix.settle(
+                ? softFix.settle(
                         outcome,
-                        new GenderFix.Accepted(
+                        new SoftFix.Accepted(
                                 resolution.machine(),
                                 resolution.qa(),
                                 resolution.maskedText(),
@@ -236,9 +235,9 @@ final class SegmentHealer {
         final boolean accepted = AcceptanceRule.accepts(qa, 0);
         SegmentHealerLogging.logAcceptanceDecision(segmentId, qa, 0, accepted);
         if (accepted) {
-            return RoundStep.terminal(Result.ok(genderFix.settle(
+            return RoundStep.terminal(Result.ok(softFix.settle(
                     outcome,
-                    new GenderFix.Accepted(
+                    new SoftFix.Accepted(
                             machineOf(best, evaluated),
                             qa,
                             evaluated.maskedCandidate(),

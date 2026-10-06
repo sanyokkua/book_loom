@@ -1069,6 +1069,11 @@ public enum MessageKey {
     TRANSLATING_REVIEW_FLAGGED("translating.reviewFlagged"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_REVIEW_FLAGGED}. */
     TRANSLATING_REVIEW_FLAGGED_TIP("translating.reviewFlagged.tip"),
+    /**
+     * The same button when the final audit doubts accepted segments too; argument 0 is the flagged count, argument 1
+     * the suspicious count.
+     */
+    TRANSLATING_REVIEW_FLAGGED_SUSPICIOUS("translating.reviewFlaggedSuspicious"),
     /** Button that leaves a completed run for the Export step. */
     TRANSLATING_CONTINUE("translating.continue"),
     /** Hover explanation of the control labelled by {@link #TRANSLATING_CONTINUE}. */
@@ -1287,6 +1292,8 @@ public enum MessageKey {
     EXPORT_CHECK_CONSISTENCY_ADJUSTED("export.check.consistency.adjusted"),
     /** Check line after an export: the consistency pass ran and changed nothing. */
     EXPORT_CHECK_CONSISTENCY_NOTHING("export.check.consistency.nothing"),
+    /** Check line after an export: segments still wait for a character's gender; argument 0 is their count. */
+    EXPORT_CHECK_CONSISTENCY_AWAITING_GENDER("export.check.consistency.awaitingGender"),
     /** Check line after an export: the consistency pass skipped its gender step because no model was available. */
     EXPORT_CHECK_CONSISTENCY_NO_MODEL("export.check.consistency.noModel"),
     /** The forward action of the last step, always unavailable. */

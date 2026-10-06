@@ -85,4 +85,12 @@ class TermMappingVerifierTest {
         assertThat(verify(Map.of("master", "  "), SOURCE, "Господар заговорив."))
                 .isEmpty();
     }
+
+    @Test
+    void verify_hyphenatedTargetWord_holdsEachPart() {
+        final var pairs = TermMappingVerifier.verify(
+                Map.of("Bartimaeus", "Бартімей"), List.of("Bartimaeus"), "B-Bartimaeus came.", "Б-Бартімей прийшов.");
+
+        assertThat(pairs).containsExactly(new TermMappingVerifier.Pair("Bartimaeus", "Бартімей"));
+    }
 }
