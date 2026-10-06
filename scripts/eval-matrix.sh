@@ -12,6 +12,14 @@
 # real-run corpus (15e.2: quotes, scripts, narrator, short lines, batch protocol, reviewer batches, repairs; reports end in
 # -realrun.json) and prints the share of cases right per kind and call, the known failures beside them, the truncated
 # reviewer calls and the too-short and leaked batch items; --stability repeats the reviewer calls, --only is a case-id prefix.
+# --suite sequence runs a generated synthetic book (8 chapters, ~320 paragraphs; 15e.3; reports end in
+# -sequence-<narrator>.json) through the real job and prints one row per model and narrator mode: distinct renderings per
+# term, name variants, narrator-gender slips, English leftovers, quote failures, flagged rate, first-round hard-gate
+# failures, leaked protocol, truncated reviewer replies, wrongly shared renderings, batch fallback rate, calls and seconds per
+# segment. --narrator unset|set|both (default unset = the real run's brief with no narrator; set = first-person male)
+# chooses the brief; both runs each model twice. BOOKLOOM_EVAL_DIAL (default BALANCED) and BOOKLOOM_EVAL_WINDOW pass
+# through. A run takes about 15-25 min on a small model and 40-70 min on a 26B class model, so the per-model timeout
+# (MODEL_TIMEOUT, seconds) defaults to 5400 for this suite and 1500 for the others, per narrator mode; set it to override.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -24,6 +32,7 @@ RULES=language
 LANGS=""
 SUITE=""
 BATCH_SIZES=""
+NARRATOR=unset
 MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | tr '\n' ' ')
 
 while [ $# -gt 0 ]; do
@@ -36,25 +45,27 @@ while [ $# -gt 0 ]; do
     --langs) LANGS=$2; shift 2 ;;
     --suite) SUITE=$2; shift 2 ;;
     --batch-sizes) BATCH_SIZES=$2; shift 2 ;;
+    --narrator) NARRATOR=$2; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
 
 REPORTS=modules/pipeline/build/reports/promptEval
+if [ "$SUITE" = sequence ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
 
 run_one() {
-  local provider=${1%%:*} model=${1#*:} url env_provider
+  local provider=${1%%:*} model=${1#*:} narrator=${2:-unset} url env_provider
   if [ "$provider" = lmstudio ]; then
     url=$LMSTUDIO_URL; env_provider=lmstudio
     lms unload --all >/dev/null 2>&1; lms load "$model" -y >/dev/null 2>&1 || { echo "!! cannot load $model"; return; }
   else
     url=$OLLAMA_URL; env_provider=ollama
   fi
-  echo "== $provider $model"
+  echo "== $provider $model narrator=$narrator"
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_BATCH_SIZES=${BATCH_SIZES:-4,8,12,16} ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_BATCH_SIZES=${BATCH_SIZES:-4,8,12,16} ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
   local pid=$!
-  ( sleep "${MODEL_TIMEOUT:-1500}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
+  ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
   local dog=$!
   wait "$pid" || echo "   (below threshold, failed or timed out — see $REPORTS)"
   kill "$dog" 2>/dev/null
@@ -62,7 +73,10 @@ run_one() {
 }
 
 if [ "$TABLE_ONLY" = 0 ]; then
-  for m in $MODELS; do run_one "$m"; done
+  if [ "$NARRATOR" = both ]; then MODES="unset set"; else MODES=$NARRATOR; fi
+  for m in $MODELS; do
+    if [ "$SUITE" = sequence ]; then for n in $MODES; do run_one "$m" "$n"; done; else run_one "$m"; fi
+  done
 fi
 
 python3 - "$REPORTS" "$SUITE" <<'PY'
@@ -90,12 +104,23 @@ if sys.argv[2] == "realrun":
         print("%-36s %9d %7.1f%% %6.1f%% %8.0f%%" % (r["model"], r["truncated"], 100 * r["tooShort"], 100 * r["leaked"], 100 * r["stability"]))
     print("(+Nk: N known failures reported beside the rate, see tasks.md 15e.2)")
     sys.exit(0)
+if sys.argv[2] == "sequence":
+    runs = sorted((r for r in reports if r.get("suite") == "sequence"), key=lambda r: (r["model"], r.get("narrator", "")))
+    print("%-30s %-6s %-8s %5s %7s %6s %7s %7s %6s %6s %6s %6s %7s %7s %6s %7s" % ("model", "narr", "dial", "segs", "rend/tm", "nameV", "gender", "english", "quote", "ascii", "mixed", "flag%", "noTgt", "fallbk%", "calls", "sec/seg"))
+    for r in runs:
+        print("%-30s %-6s %-8s %5d %7.2f %6d %7d %7d %6d %6d %6d %5.1f%% %7d %6.1f%% %6.2f %7.2f" % (r["model"], r.get("narrator", "?"), r["dial"], r["segments"], r["renderingsPerTerm"], r["nameVariants"], r["genderSlips"], r["englishLeftovers"], r["quoteFailures"], r["asciiQuotes"], r["mixedScript"], 100.0 * r["flagged"] / max(1, r["segments"]), r["flaggedWithoutTarget"], 100 * r["batchFallbackRate"], r["callsPerSegment"], r["secondsPerSegment"]))
+    print()
+    print("%-30s %-6s %7s %7s %8s %8s %8s %8s %8s  %s" % ("model", "narr", "hard0", "leaked", "revTrunc", "claimed", "domin%", "learned", "cover", "per term: distinct renderings (dominant share)"))
+    for r in runs:
+        print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%%  %s" % (r["model"], r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r["learned"], 100 * r["learnedCoverage"], " ".join("%s=%d(%.0f%%)" % (t["term"], t["distinct"], 100 * t.get("dominantShare", 0)) for t in r["terms"])))
+    print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering)")
+    sys.exit(0)
 if sys.argv[2] == "words":
     print("%-36s %5s %8s %8s %6s" % ("model", "cases", "recall", "falsePos", "ok"))
     for r in (r for r in reports if r.get("suite") == "words"):
         print("%-36s %5d %7.0f%% %7.0f%% %6s" % (r["model"], r["cases"], 100 * r["recall"], 100 * r["falsePositive"], "yes" if r["meetsTarget"] else "NO"))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun")]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence")]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

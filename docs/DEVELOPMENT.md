@@ -437,6 +437,63 @@ segment, 70 flagged = 1.85 %): 12 terms learned, 90.3 % of their occurrences car
 Where e4b's 13,017 s of model time went over the book: draft 8,648 s (674 calls, 1.00 M prompt tokens, 290 k output),
 reviewer 3,718 s (484 calls, 1.03 M prompt, 106 k output), directed fix 612 s (198 calls), placeholder repair 39 s.
 
+### Quality round 2: the "before" table (15e.4) {#15e-before}
+
+Measured 2026-10-06/07 on the commit that holds 15e.1–15e.3, Ollama native endpoint, one inference at a time, through the
+production request factory (`PromptRequests`, window 8192, Balanced). These are the numbers every 15e task has to move.
+Thresholds per model class stay in `eval/thresholds.json`; the new suites assert no floor yet, a task that fixes a class
+raises the floor in its own change.
+
+**Reviewer corpus (15d.1 + 15e.2 production path, stability ×3).** e4b: false negatives 0 %, false positives 0 %, stability 100 %, token breaks 0; 26b: false negatives 0 %, false positives 5.9 %, stability 97 %, token breaks 0.
+
+**Batch protocol (size 4 / 8 / 12 / 16: id validity / token gate / too short).** e4b: 100 % / 96 % / 0 %; 100 % / 100 % / 4 %; 100 % / 100 % / 4 %; 100 % / 100 % / 0 %. 26b: 100 % / 100 % / 0 %; 100 % / 100 % / 0 %; 100 % / 100 % / 0 %; 100 % / 100 % / 0 %.
+
+**Real-run corpus (`--suite realrun`, pass rate per kind and call; `+Nk` = known failures reported beside the rate).**
+
+| kind / call | e4b | 26b |
+|---|---|---|
+| `quotes/draft` | 100% (9/9) | 89% (8/9) |
+| `quotes/review` | 90% (9/10) | 80% (8/10) |
+| `mixed-script/draft` | 100% (6/6) | 100% (6/6) |
+| `mixed-script/review` | 67% (4/6) | 83% (5/6) |
+| `invented-word/review` | 0% (0/3) | 100% (3/3) |
+| `russian-letters/review` | 0% (0/5) | 20% (1/5) |
+| `narrator/draft` | 100% (5/5) | 100% (5/5) |
+| `narrator/review` | 83% (5/6) | 83% (5/6) |
+| `short-line/draft` | 100% (0/0) +6k | 100% (0/0) +6k |
+| `short-line/review` | 100% (0/0) +6k | 100% (0/0) +6k |
+| `reviewer-batch/review-batch` | 100% (19/19) | 95% (18/19) |
+| `reviewer-long/review-batch` | 92% (11/12) | 92% (11/12) |
+| `batch-terms/batch` | 100% (1/1) | 100% (1/1) |
+| `batch-context/batch` | 100% (1/1) | 100% (1/1) |
+| `repair/repair-placeholder` | 50% (2/4) | 100% (4/4) |
+| `repair/repair-structural` | 100% (2/2) | 100% (2/2) |
+
+**Sequence eval (`--suite sequence`, 328 paragraphs, narrator unset | set).**
+
+| metric | e4b unset | e4b set | 26b unset | 26b set |
+|---|---:|---:|---:|---:|
+| Flagged of 328 | 19 | 15 | 12 | 18 |
+| Flagged with no stored target (exported as source) | 2 | 2 | 7 | 11 |
+| Hard-gate failures at round 0 | 12 | 16 | 36 | 31 |
+| Narrator gender slips (first-person chapters) | 1 | 0 | 16 | 0 |
+| English leftovers | 0 | 0 | 0 | 0 |
+| Blocking quote failures | 0 | 0 | 0 | 0 |
+| Leaked protocol text | 0 | 0 | 0 | 0 |
+| Truncated reviewer replies | 0 | 0 | 0 | 0 |
+| Wrongly shared learned renderings | 0 | 0 | 0 | 0 |
+| Dominant rendering share (mean over terms) | 0.87 | 0.87 | 0.92 | 0.92 |
+| Distinct renderings per term (mean) | 1.80 | 1.80 | 1.60 | 1.50 |
+| Name spelling variants (sum over names) | 3 | 2 | 2 | 1 |
+| Batch fallback rate | 0.01 | 0.01 | 0.07 | 0.05 |
+| Calls per segment | 0.35 | 0.36 | 0.62 | 0.48 |
+| Seconds per segment | 3.8 | 4.0 | 6.3 | 5.6 |
+
+Reading it: the sequence eval reproduces the run's gate and consistency problems (flagged segments exported without a
+target, round-0 hard-gate failures, magician/pentacle/sir/boy splits, name spelling variants) and the narrator-gender
+slips that appear only on 26b with the narrator unset (16 against 0 with it set). It does not reproduce leaked protocol
+text or truncated reviewer replies at this size; the realrun corpus carries those shapes.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run
@@ -555,6 +612,81 @@ the share of counted cases that came out as labelled. Extra metrics: `truncated`
 `tooShort` and `leaked` also appear in the batch A/B (`--suite batch`), and every case-set report now ends with the share
 of corpus cases right per kind (`byKind` in its JSON, a second table in the matrix). No threshold is set yet: 15e.4 records
 the "before" numbers and the thresholds per model class from this suite.
+
+**Sequence eval (15e.3).** Every case above stands alone; the defects of the 6 h run (a title drifting between renderings, a
+name in two spellings, a narrator's gender slipping, English paragraphs exported as source) only show over many segments
+with the context accumulating. The sequence suite runs a synthetic book through the *real batched job* — preparation, token-budgeted
+batches, the reviewer the dial enables, the repair path, the lexicon and its learner, the rolling summary — against a real
+model, unattended, then reads what the run decided and measures it with production checks only.
+
+```bash
+# e4b, the real run's brief (no narrator), then the same book with a first-person male narrator in the brief
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx BOOKLOOM_EVAL_SUITE=sequence \
+  BOOKLOOM_EVAL_NARRATOR=unset ./gradlew :pipeline:promptEval
+BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx BOOKLOOM_EVAL_SUITE=sequence \
+  BOOKLOOM_EVAL_NARRATOR=set ./gradlew :pipeline:promptEval
+# 26b: the same two commands with BOOKLOOM_EVAL_MODEL=gemma4:26b-mlx (BOOKLOOM_EVAL_DIAL=FAST|BALANCED|MAX, default BALANCED; BOOKLOOM_EVAL_WINDOW as for the other suites)
+scripts/eval-matrix.sh --suite sequence --narrator both --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx"   # all four runs, one table
+```
+
+*Runtime.* About 15-25 minutes per narrator mode on e4b and 40-70 minutes on a 26B class model (about 330 segments, Balanced), so
+the matrix timeout for this suite is 5400 s per run instead of 1500 s; `MODEL_TIMEOUT=<seconds>` overrides it. LM Studio:
+`BOOKLOOM_EVAL_PROVIDER=lmstudio` with its `/v1` URL, or `--models "lmstudio:<id>"`.
+
+*Fixture* (`modules/pipeline/src/test/resources/eval/sequence/`, no text from a real book). The 58-paragraph book of the first cut was
+too easy: a 6 h run of 3,783 segments had 1.7 % of its segments fail a quote or script gate in the first round, 28 narrator
+gender slips, 186 batch fallbacks in 722 batches and drifting terms, none of which 58 paragraphs can reproduce at those rates.
+`book.md` is now *generated* by `SequenceBookGenerator` (test source, fixed seed, JDK only) from the original sentences and slots of
+`SequenceBookLibrary` and `SequenceTopic`, and committed; `SequenceFixtureTest` checks that regenerating gives the same bytes.
+After changing a pool, rewrite it with
+`java -cp modules/pipeline/build/classes/java/test ua.bookloom.pipeline.eval.SequenceBookGenerator modules/pipeline/src/test/resources/eval/sequence/book.md`
+(after `./gradlew :pipeline:testClasses`) and re-pin the counts of `SequenceEvalOfflineTest`. The book has 8 chapters, 328 paragraphs
+(40 per chapter with the footnote line, 8 headings besides) and about 13,200 words; chapters 2, 5 and 7 are narrated in the first
+person by a male spirit in the past tense, the other five in the third person. Densities of the committed file, pinned by the test:
+
+| Feature | In the book |
+|---|---|
+| speech paragraphs (straight `"`, curly `“ ”`, nested `' '` / `‘ ’`, em-dash `—`, mixed) | about 145 (44 %); 16 mix straight and curly marks |
+| long paragraphs of 80-140 words / short lines of 1-8 words | 46 (14 %) / 69 (21 %), 9 of them 40-60 characters like "And, a split second later, the explosion." |
+| `Mr` / `Mrs` / `Ms` with surnames | 71 / 64 / 66 paragraphs |
+| `master` / `imp` / `magician` / `boy` | 59 / 66 / 63 / 68 |
+| `sir` / `pentacle` / `circle` | 27 / 29 / 32 |
+| names with tempting spellings (Bartimaeus, Nathaniel, Underwood, Lovelace, Whitlock, Harrowgate, Quill), the stammered `B-Bartimaeus`, the hyphenated `Stoke-on-Marsh`, generic capitalised places (`Great Hall`, `Old Bailey`) | in narration and in speech |
+| `[n]` footnote markers and footnote lines, `*emphasis*` / `**bold**`, Latin kept foreign, numbers and dates, three verses | 16 markers, 8 footnote lines, 14 Latin paragraphs |
+
+`manifest.json` lists the chapters and their narrator, the glossary the run starts with (Nathaniel locked, Underwood unlocked, Lovelace
+and Bartimaeus with no target) and, per term and name, the renderings and spellings that are counted (`master`'s list leaves out
+`пан`, which a `Mr` in the same paragraph would otherwise claim). Three paragraphs are fixed anchors for the scripted model of the offline test.
+
+*Narrator modes* (`BOOKLOOM_EVAL_NARRATOR`, reports `<model>-sequence-<mode>.{txt,json}`, the JSON field `narrator`). `unset`, the default,
+writes a brief with **no narrator**, which is what the real run had: the style sheet carries no first-person rule and the Ukrainian
+gender check is silent, so the male narrator's «я була / могла» slips through. `set` writes a first-person male narrator into the brief
+(rule in the style sheet, check on, one directed fix per slip). `genderSlips` counts slips in the three first-person chapters in both modes,
+so the difference between the two rows is what the narrator field buys.
+
+*Metrics* (one table per model and mode):
+
+| Metric | How it is read |
+|---|---|
+| `renderings/term`, `dominantShare` | per fixture term, the known renderings (inflected, as regular expressions) found in the targets of the paragraphs that name the term; the mean count of distinct ones over the terms rendered at all (1.00 is ideal) and, per term and as a mean, the commonest rendering's share (100 % is ideal; the real run's `master` was 143 майстер to 7 господар) |
+| `nameVariants` | per name, the spellings seen (`бартімей` and `бартімеус`); the sum of those beyond the first |
+| `genderSlips` | `GenderChecks` («я» + a past-tense word of the wrong gender) over the first-person chapters |
+| `english` | targets still in the source language: `LanguageIdentityCheck` finding or a plain echo of the source |
+| `flaggedNoTarget` | flagged segments with no stored target, which an export writes as the source (the 23-English-paragraphs bug, fixed by 15e.5) |
+| `hardGateRound0` and `kinds` | segments whose first evaluation failed a hard gate (a blocking quote or script finding, a placeholder), read from the run's `Evaluated ... round=0 ... hardGatesPass=false` line; `kinds` counts the findings of their first repair round (`Round choice ... round=1`). The real run: 73 of 3,783 |
+| `leakedProtocol` | final targets holding `"terms"`, `«terms»`, a code fence or a `{"id"` object (the real run: 4) |
+| `reviewerTruncated` | reviewer replies the provider cut off at the output cap (`finish=LENGTH`), counted by a recording wrapper around the model |
+| `termClaimedWrong` and `claimed` | lexicon terms whose learned rendering another term also claimed (`mr` and `mrs` both learning «пані»), with the shared renderings |
+| `quote` / `ascii` / `mixed` | `TextChecks` blocking unbalanced-quote and mixed-script findings in the final targets (a soft "English quote marks" note is not counted); `ascii` counts targets that still hold a straight `"` (an eval-side count, the quote check does not read the kind) |
+| `flag%`, `fallbk%` | flagged share; batch items that fell back to their own draft over batched items (reasons are `status/problems`, read from the run's own warning) |
+| `calls`, `sec/seg`, `edits+`, `edits-` | finished model calls and wall seconds per segment; reviewer edits applied and refused |
+| `learned`, `coverage`, `lexicon/t` | renderings the lexicon learned by co-occurrence, the share of those terms' occurrences carrying it (the `--report` lexicon section), the lexicon's own distinct renderings per term |
+
+Offline (`check`, no model, under 20 s): `SequenceFixtureTest` (the committed book equals the generator's output; paragraph, word and density
+counts; term and name counts; the narrator modes), `SequenceEvalOfflineTest` (the same code through the real job over `SequenceScriptedModel`,
+which drifts `master`, `Mr` and `Bartimaeus` for the second half of the book, says «я була» once, echoes one paragraph in English and appends one
+stray quote, and over hand-written runs for each defect class and the new metrics). No floor is asserted: 15e.4 records the "before" table
+and the thresholds per model class from this suite.
 
 Calibration on 2026-10-02 (one sample per case, temperature as in production):
 

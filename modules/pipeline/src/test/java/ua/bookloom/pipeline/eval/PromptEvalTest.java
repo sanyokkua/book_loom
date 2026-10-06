@@ -43,7 +43,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
  * rules, and the reports then end in {@code -generic}, so the two can be compared. With
  * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead, with
  * {@code BOOKLOOM_EVAL_SUITE=words} {@link WordsEvalTest} does, and with {@code BOOKLOOM_EVAL_SUITE=realrun}
- * {@link RealRunTest} does.
+ * {@link RealRunTest} does, and with {@code BOOKLOOM_EVAL_SUITE=sequence} {@link SequenceEvalTest} does.
  *
  * <p>The requests are the app's: {@link PromptEvalRunner} and {@link BatchEvalRunner} build them with the run's own
  * request factory over an {@link EvalProject}, and every call goes through {@link JobModelCalls}, which sizes it to the
@@ -53,7 +53,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 @Slf4j
 @Tag("promptEval")
 @EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_URL", matches = ".+")
-@DisabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "batch|words|realrun")
+@DisabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "batch|words|realrun|sequence")
 class PromptEvalTest {
 
     private static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
@@ -129,6 +129,19 @@ class PromptEvalTest {
     }
 
     static ModelCalls calls(final String modelId) {
+        final ChatModel chatModel = chatModel(modelId);
+        // The run's own seam, so a request is sized to the window and capped exactly as the app sends it; the guard
+        // lets everything through and nothing is announced.
+        return new JobModelCalls(
+                onSent -> chatModel,
+                event -> {},
+                Clock.systemUTC(),
+                PromptEvalCases.TARGET_LANGUAGE,
+                EvalProject.window());
+    }
+
+    /** The real chat model of the eval's provider, built by the production factory. */
+    static ChatModel chatModel(final String modelId) {
         final Injector injector = Guice.createInjector(new LlmModule());
         final boolean lmStudio = "lmstudio".equalsIgnoreCase(System.getenv("BOOKLOOM_EVAL_PROVIDER"));
         final ProviderConfig config = new ProviderConfig(
@@ -145,14 +158,6 @@ class PromptEvalTest {
         final Result<ChatModel> model =
                 injector.getInstance(ChatModelFactory.class).create(new ModelSelection("eval", modelId));
         assertThat(model.isOk()).as("chat model creation: " + model.error()).isTrue();
-        final ChatModel chatModel = Objects.requireNonNull(model.data());
-        // The run's own seam, so a request is sized to the window and capped exactly as the app sends it; the guard
-        // lets everything through and nothing is announced.
-        return new JobModelCalls(
-                onSent -> chatModel,
-                event -> {},
-                Clock.systemUTC(),
-                PromptEvalCases.TARGET_LANGUAGE,
-                EvalProject.window());
+        return Objects.requireNonNull(model.data());
     }
 }

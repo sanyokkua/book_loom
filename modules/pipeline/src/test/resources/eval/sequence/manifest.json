@@ -1,0 +1,310 @@
+{
+ "source": "en",
+ "target": "uk",
+ "chapters": [
+  {
+   "title": "The Courtyard",
+   "narrator": "THIRD"
+  },
+  {
+   "title": "The Spirit's Account",
+   "narrator": "FIRST"
+  },
+  {
+   "title": "The Reckoning",
+   "narrator": "THIRD"
+  },
+  {
+   "title": "Ledgers and Lamps",
+   "narrator": "THIRD"
+  },
+  {
+   "title": "What the Spirit Saw",
+   "narrator": "FIRST"
+  },
+  {
+   "title": "The Council Sits",
+   "narrator": "THIRD"
+  },
+  {
+   "title": "The Spirit's Reply",
+   "narrator": "FIRST"
+  },
+  {
+   "title": "The Last Candle",
+   "narrator": "THIRD"
+  }
+ ],
+ "glossary": [
+  {
+   "term": "Nathaniel",
+   "target": "Натаніель",
+   "type": "CHARACTER",
+   "gender": "MALE",
+   "locked": true
+  },
+  {
+   "term": "Underwood",
+   "target": "Андервуд",
+   "type": "CHARACTER",
+   "gender": "MALE",
+   "locked": false
+  },
+  {
+   "term": "Lovelace",
+   "target": null,
+   "type": "CHARACTER",
+   "gender": "FEMALE",
+   "locked": false
+  },
+  {
+   "term": "Bartimaeus",
+   "target": null,
+   "type": "CHARACTER",
+   "gender": "MALE",
+   "locked": false
+  }
+ ],
+ "terms": [
+  {
+   "term": "Mr",
+   "pattern": "\\bMr\\b",
+   "renderings": [
+    {
+     "label": "містер",
+     "pattern": "містер\\p{L}*"
+    },
+    {
+     "label": "пан",
+     "pattern": "пан(а|у|ові|ом|е)?"
+    }
+   ]
+  },
+  {
+   "term": "Mrs",
+   "pattern": "\\bMrs\\b",
+   "renderings": [
+    {
+     "label": "місіс",
+     "pattern": "місіс"
+    },
+    {
+     "label": "пані",
+     "pattern": "пан(і|ею|ії)"
+    }
+   ]
+  },
+  {
+   "term": "Ms",
+   "pattern": "\\bMs\\b",
+   "renderings": [
+    {
+     "label": "міс",
+     "pattern": "міс"
+    },
+    {
+     "label": "пані",
+     "pattern": "пан(і|ею|ії)"
+    }
+   ]
+  },
+  {
+   "term": "master",
+   "pattern": "\\b[Mm]aster\\b",
+   "renderings": [
+    {
+     "label": "господар",
+     "pattern": "господар\\p{L}*"
+    },
+    {
+     "label": "майстер",
+     "pattern": "майстр\\p{L}*|майстер\\p{L}*"
+    },
+    {
+     "label": "учитель",
+     "pattern": "учител\\p{L}*"
+    },
+    {
+     "label": "володар",
+     "pattern": "володар\\p{L}*"
+    }
+   ]
+  },
+  {
+   "term": "imp",
+   "pattern": "\\bimps?\\b",
+   "renderings": [
+    {
+     "label": "біс",
+     "pattern": "біс\\p{L}*"
+    },
+    {
+     "label": "демон",
+     "pattern": "демон\\p{L}*"
+    },
+    {
+     "label": "імп",
+     "pattern": "імп\\p{L}*"
+    },
+    {
+     "label": "дух",
+     "pattern": "дух\\p{L}*"
+    }
+   ]
+  },
+  {
+   "term": "magician",
+   "pattern": "\\bmagicians?\\b",
+   "renderings": [
+    {
+     "label": "маг",
+     "pattern": "маг(а|у|ові|ом|и|ів)?"
+    },
+    {
+     "label": "чарівник",
+     "pattern": "чарівник\\p{L}*"
+    },
+    {
+     "label": "чаклун",
+     "pattern": "чаклун\\p{L}*"
+    }
+   ]
+  },
+  {
+   "term": "boy",
+   "pattern": "\\bboy\\b",
+   "renderings": [
+    {
+     "label": "хлопч",
+     "pattern": "хлопч\\p{L}*|хлопц\\p{L}*|хлопець"
+    },
+    {
+     "label": "хлопец",
+     "pattern": "хлопец\\p{L}*"
+    },
+    {
+     "label": "хлопак",
+     "pattern": "хлопак\\p{L}*"
+    },
+    {
+     "label": "малий",
+     "pattern": "мал(ий|ого|ому|им|е)"
+    }
+   ]
+  },
+  {
+   "term": "sir",
+   "pattern": "\\bsir\\b",
+   "renderings": [
+    {
+     "label": "сер",
+     "pattern": "сер(а|у|ові|ом|е)?"
+    },
+    {
+     "label": "пане",
+     "pattern": "пане"
+    },
+    {
+     "label": "добродію",
+     "pattern": "доброді\\p{L}*"
+    }
+   ]
+  },
+  {
+   "term": "pentacle",
+   "pattern": "\\bpentacle\\b",
+   "renderings": [
+    {
+     "label": "пентакл",
+     "pattern": "пентакл\\p{L}*"
+    },
+    {
+     "label": "пентагра",
+     "pattern": "пентагр\\p{L}*"
+    },
+    {
+     "label": "зірк",
+     "pattern": "зірк\\p{L}*"
+    }
+   ]
+  },
+  {
+   "term": "circle",
+   "pattern": "\\bcircle\\b",
+   "renderings": [
+    {
+     "label": "коло",
+     "pattern": "кол(о|а|у|ом|і)"
+    },
+    {
+     "label": "круг",
+     "pattern": "круг\\p{L}*"
+    },
+    {
+     "label": "кільце",
+     "pattern": "кільц\\p{L}*"
+    }
+   ]
+  }
+ ],
+ "names": [
+  {
+   "name": "Bartimaeus",
+   "spellings": [
+    "бартімей",
+    "бартімеус",
+    "бартимей",
+    "бартимеус"
+   ]
+  },
+  {
+   "name": "Nathaniel",
+   "spellings": [
+    "натаніел",
+    "натаніль",
+    "нетаніел",
+    "натанієл"
+   ]
+  },
+  {
+   "name": "Underwood",
+   "spellings": [
+    "андервуд",
+    "ундервуд",
+    "андервід"
+   ]
+  },
+  {
+   "name": "Lovelace",
+   "spellings": [
+    "лавлейс",
+    "ловлейс",
+    "лавлис"
+   ]
+  },
+  {
+   "name": "Whitlock",
+   "spellings": [
+    "вітлок",
+    "вайтлок",
+    "уїтлок"
+   ]
+  },
+  {
+   "name": "Harrowgate",
+   "spellings": [
+    "гарроугейт",
+    "гарровгейт",
+    "харроугейт"
+   ]
+  },
+  {
+   "name": "Quill",
+   "spellings": [
+    "квіл",
+    "куїл",
+    "квил"
+   ]
+  }
+ ]
+}
