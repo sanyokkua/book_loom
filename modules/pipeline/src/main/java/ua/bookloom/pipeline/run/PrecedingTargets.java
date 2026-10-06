@@ -38,7 +38,7 @@ final class PrecedingTargets {
     Result<List<String>> earlierMaskedTargets(
             final List<Segment> unitSegments, final Segment segment, final int count, final ChunkDrafts drafts) {
         return earlier(unitSegments, segment, count, drafts)
-                .map(found -> found.stream().map(Earlier::target).toList());
+                .map(found -> found.stream().map(EarlierPair::target).toList());
     }
 
     /**
@@ -47,17 +47,14 @@ final class PrecedingTargets {
      *
      * @return never null; empty at a unit's start, or the repository's error
      */
-    Result<List<Earlier>> earlierPairs(
+    Result<List<EarlierPair>> earlierPairs(
             final List<Segment> unitSegments, final Segment segment, final int count, final ChunkDrafts drafts) {
         return earlier(unitSegments, segment, count, drafts);
     }
 
-    /** One earlier segment of the unit and the masked target it has. */
-    record Earlier(Segment segment, String target) {}
-
-    private Result<List<Earlier>> earlier(
+    private Result<List<EarlierPair>> earlier(
             final List<Segment> unitSegments, final Segment segment, final int count, final ChunkDrafts drafts) {
-        final List<Earlier> earlier = new ArrayList<>();
+        final List<EarlierPair> earlier = new ArrayList<>();
         for (int index = positionOf(unitSegments, segment) - 1; index >= 0 && earlier.size() < count; index--) {
             final Segment before = unitSegments.get(index);
             final Result<Optional<String>> target = maskedTargetOf(before.id(), drafts);
@@ -65,7 +62,7 @@ final class PrecedingTargets {
                 return Result.err(Objects.requireNonNull(target.error(), "error"));
             }
             Objects.requireNonNull(target.data(), "target")
-                    .ifPresent(found -> earlier.addFirst(new Earlier(before, found)));
+                    .ifPresent(found -> earlier.addFirst(new EarlierPair(before, found)));
         }
         log.debug("Read preceding targets segmentId={} wanted={} found={}", segment.id(), count, earlier.size());
         return Result.ok(List.copyOf(earlier));

@@ -1489,6 +1489,61 @@ check leaves evidence.
   - **Depends on:** 15d.1–15d.13.
   - **Done when:** the table is in `docs/DEVELOPMENT.md` and the backlog section "Real-run follow-ups" is marked resolved or re-opened per item.
 
+## 15e. Quality round 2 — evals that mirror the app, then fix what the 6h run showed (after group 15d)
+
+The 6 h 17 min GUI run of Bartimaeus 1 (LM Studio, gemma-4-26b, Balanced) beat the first try (8 h 18 min, 170 flagged → 47 flagged, typography clean) but still exported 23 English paragraphs, leaked protocol text into 4 targets, slipped narrator gender 28 times, invented words and drifted names. Two causes: hard text gates drop a usable draft, and the evals did not build the prompts the app sends. Order: 15e.1–15e.4 first (the evals), then 15e.5–15e.12 (each starts from a failing test or eval case), then 15e.13–15e.15, measured on the 15e.2/15e.3 corpus on e4b and 26b before and after.
+
+- [x] 15e.1 Make the prompt evals build exactly the requests the app sends: one public `PromptRequests` (`pipeline.run`) holds the request-building entry points the job already used inside `ChunkContext`, `BatchStage`/`BatchFit`, `SegmentTranslator` and `JobModelCalls` (draft single, draft batch with its key-terms `terms` request, the reviewer's whole-batch inputs, directed fix, placeholder and structural repair); the job calls it and the evals call it. → `:pipeline`, docs
+  - **Depends on:** nothing.
+  - **Change:** `EvalProject` (test side) builds the chunk, glossary, lexicon, characters, brief with narrator, language rules, preceding targets and summary from a case; eval model calls go through `JobModelCalls` with the real window (`BOOKLOOM_EVAL_WINDOW`, default the app's); a case kind `repair`.
+  - **Test first:** `PromptRequestsEquivalenceTest`: the messages, response format and parameters the factory builds equal those a running job sends to a recording model, for single draft, batch (with and without key terms), reviewer batch and directed fix.
+  - **Done when:** the equivalence test is green and `PromptEvalRunner`, `BatchEvalRunner` and the reviewer eval no longer build a `DraftContext` by hand; the box is ticked after the first real-model run through the new path.
+
+- [ ] 15e.2 Add eval cases from the real run, in the 15d.1 format: ASCII `"` mixed with curly quotes and dialogue, mixed-script words, Russian-only letters, a first-person narrator with the brief's narrator set, 41-character short lines, a batch that asks for `terms` (leaked `"terms"` JSON, too-short metric), a multi-pair reviewer batch with glossary, lexicon and characters and a long batch that tests output caps, placeholder and structural repair, and prescan, review-terms and summary (which still build their own frame). → `:pipeline` (test sources)
+  - **Depends on:** 15e.1.
+  - **Done when:** each case has an expected verdict from the production checks and the matrix runs them on e4b and 26b.
+
+- [ ] 15e.3 Add the sequence eval (`scripts/eval-matrix.sh --suite sequence`): a synthetic 3–4 chapter book of about 40 paragraphs (no book text) with recurring Mr/Mrs/Ms, master, imp, magician, boy, a name with two spellings, a first-person male narrator and mixed-quote dialogue, run through the real job against a real model. → `:pipeline` (test sources), scripts
+  - **Depends on:** 15e.1.
+  - **Change:** metrics: distinct renderings per term, name variants, narrator gender slips, English leftovers, quote-balance and mixed-script failures, flagged rate, batch fallback rate; `MODEL_TIMEOUT` raised for large models (about 10–20 min small, 30–60 min for 26B and up).
+  - **Done when:** the suite prints one table per model.
+
+- [ ] 15e.4 Record the "before" table for e4b and 26b (15e.2 corpus and 15e.3 sequence) in `docs/DEVELOPMENT.md`, with thresholds per model class, so every later task has a number to move. → docs
+  - **Depends on:** 15e.2, 15e.3.
+
+- [ ] 15e.5 Keep a usable draft instead of English: when the only failed hard gates are quote balance or script purity, keep the restored draft as the machine target (`SegmentHealer.keepRejected`, `heal/MachineTarget`, so export uses it) and add a deterministic quote fix-up (collapse `»»`, close an unclosed «, drop a stray ») before flagging. → `:pipeline`
+  - **Test first:** the 23-paragraph pattern: a draft with a stray `"` is exported as the draft, not the source.
+  - **Done when:** English paragraphs in the sequence eval are 0.
+
+- [ ] 15e.6 Stop leaked protocol text: `batch/ItemValidator` rejects a target containing `"terms"` or `«terms»`, a `{…}` holding `"id"`, or a code fence, so that id falls back to a single draft. → `:pipeline`
+  - **Test first:** the four leaked targets as batch items.
+
+- [ ] 15e.7 Never flag on a truncated reviewer reply (3 × `finish=LENGTH`, 19 segments flagged): size the cap from the batch, salvage the complete entries of a truncated reply and ask again only for the unread ids. → `:pipeline`
+  - **Test first:** a reply cut after entry 5 of 8 yields five verdicts and one re-ask for three ids.
+
+- [ ] 15e.8 Fix `qa/LengthCheck` false positives on compact lines: 60 characters or 10 words, ratio floor 0.40 (the 41-character case). → `:pipeline`
+  - **Test first:** the 41-character line from the run.
+
+- [ ] 15e.9 Make the audit's name-missing check precise: `lexicon/TermMappingVerifier` splits hyphenated names and allows г/з/ж, к/ц/ч, х/с/ш alternations and adjectival stems; the finding names the lost term. → `:pipeline`
+  - **Test first:** inflected and hyphenated names from the run's audit list.
+
+- [ ] 15e.10 Make the consistency pass and the Review button honest: the pass message reports the open gender deferrals (142), the button counts flagged plus suspicious, and the 84.2 % figure is fixed or relabelled. → `:pipeline`, `:ui`
+  - **Test first:** a pass over a run with open deferrals names their count.
+
+- [ ] 15e.11 Catch Russian-letter words with a target-alphabet check (uk: ы ъ э ё) and stop `KeyTermScan` proposing generic words (Great Hall → `great`, `hall`); the recurring-terms card says renderings are also learned from the text. → `:pipeline`, `:ui`
+  - **Test first:** a Ukrainian target containing `ы` is a blocking finding; the Great Hall scan proposes the pair.
+
+- [ ] 15e.12 Raise the lexicon's precision: a rendering already claimed by another term is rejected (mr vs mrs), the lemma form is preferred and title-case names ("The Times") are skipped. → `:pipeline`
+  - **Test first:** the wrong learned `mr → пані` of the run.
+
+- [ ] 15e.13 Prompt for consistency, measured with the 15e.3 sequence eval (keep a change only if a metric moves on e4b and 26b): where and how recurring-term renderings, glossary names and "Established renderings" appear in draft, batch and reviewer prompts (the first rendering the book used for Mr/Mrs/Ms shown early), uk language rules (« » only, apostrophe, dialogue dash, no Russian letters) and reviewer checklists for gender, terminology and quotes, and a glossary CSV round trip that keeps locks and genders. → `:pipeline`, `:ui`
+
+- [ ] 15e.14 Narrator: detect first-person narration from the source, ask once at Start translation for the narrator's gender (the owner's recommended default), put the line in every call's style sheet and the reviewer's checks, and seed glossary genders from a small bundled first-name list. → `:pipeline`, `:ui`
+  - **Done when:** narrator gender slips in the sequence eval are at most 5.
+
+- [ ] 15e.15 Speed, one change at a time with a first-300 A/B: use the detected window up to a cap (16k, then 32k) with larger batch and reviewer caps, re-ask only the missing ids of a batch before falling back (133 fallbacks cost about 1,080 s), and cut log noise (WorkList 29 % and ForeignMarking 7 % of the lines) while keeping TRACE evidence for flagged segments. → `:pipeline`, `:app`
+  - **Done when:** the 26b whole book takes at most 5 h with no quality metric worse.
+
 ## 16. The gate — after every group above
 
 - [x] 16.1 Bring the whole project green with no pre-existing-failure exemption, and paste the gate's tail as evidence. Each group ended on `./gradlew build :app:archTest`; only the whole-project clean gate — `clean`, `check` with its coverage gate, and `spotlessCheck` — proves the groups agree with each other, and a red check anywhere means the change is not done. → all modules, build

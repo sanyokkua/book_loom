@@ -48,20 +48,48 @@ sealed interface EvalCase {
     }
 
     /**
-     * A draft of one masked segment.
+     * A draft of one segment, built the way a run builds it: the segment's inline markup is already masked, its glossary
+     * names are hidden or listed by the production context code, and the context around it comes from {@code context}.
      *
      * @param name the case name
-     * @param masked the masked source shown to the model
-     * @param glossary the glossary lines injected into the prompt
+     * @param masked the segment's text as the document model masks it: inline markup is {@code ⟦gN⟧}; a locked name is
+     *     written out, since the run hides it behind its own token
+     * @param glossary the glossary entries the run holds, of which the ones the text names are shown or hidden
      * @param expect what the reply must show
+     * @param context what surrounds the segment: earlier pairs, summary, lexicon and narrator
      */
-    record Draft(String name, String masked, List<String> glossary, Expect expect) implements EvalCase {
+    record Draft(String name, String masked, List<EvalTerm> glossary, Expect expect, EvalContext context)
+            implements EvalCase {
 
-        /** Copies the glossary. */
+        /** Copies the glossary and fills an absent context. */
         public Draft {
-            glossary = List.copyOf(glossary);
+            glossary = glossary == null ? List.of() : List.copyOf(glossary);
+            context = context == null ? EvalContext.none() : context;
+        }
+
+        Draft(final String name, final String masked, final List<EvalTerm> glossary, final Expect expect) {
+            this(name, masked, glossary, expect, EvalContext.none());
         }
     }
+
+    /** Which repair call a {@link Repair} case sends. */
+    enum RepairStep {
+        /** The correction after a reply that was not the required JSON object. */
+        STRUCTURAL,
+        /** The correction after a target that fails the placeholder gate. */
+        PLACEHOLDER
+    }
+
+    /**
+     * A draft's repair call, built through the run's own request factory from a reply the run would refuse.
+     *
+     * @param name the case name
+     * @param step which repair
+     * @param masked the segment's text with its inline markup masked
+     * @param rejected the refused reply: the raw reply for a structural repair, the target text for a placeholder one
+     * @param expect what the repaired reply must show
+     */
+    record Repair(String name, RepairStep step, String masked, String rejected, Expect expect) implements EvalCase {}
 
     /**
      * A directed fix of a rejected target.

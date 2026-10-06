@@ -22,7 +22,6 @@ import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
-import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
@@ -156,20 +155,21 @@ public final class ChunkRunner {
 
     private Optional<RunEnd> runChunk(
             final WorkList work, final Chunk chunk, final List<WorkItem> items, final int index, final int budget) {
-        final Result<ChunkContext> read =
-                ChunkContext.read(stores.glossary(), stores.lexicon(), settings, chunk, steps.gate());
+        final Result<PromptRequests> read = PromptRequests.read(
+                stores.glossary(), stores.lexicon(), settings, chunk, steps.gate(), steps.translator(), steps.batch());
         if (read.isErr()) {
             return Optional.of(RoutedCalls.failedBy(Objects.requireNonNull(read.error(), "error")));
         }
-        final ChunkContext context = Objects.requireNonNull(read.data(), "context");
+        final PromptRequests requests = Objects.requireNonNull(read.data(), "requests");
         final Current current = new Current(
                 work,
                 items,
                 new ChunkDrafts(),
                 new ChunkBatches(),
-                context,
-                loopSettings(context),
-                steps.translator().gatedBy(context.gate()),
+                requests.context(),
+                requests,
+                requests.loopSettings(),
+                requests.translator(),
                 budget);
         final Optional<RunEnd> end =
                 settings.dial().hasReviewer() ? reviewedChunk(current, items) : unreviewedChunk(current, items);
@@ -180,17 +180,6 @@ public final class ChunkRunner {
         }
         log.debug("Chunk decided chunk={} segments={}", index, items.size());
         return commitChunk(index, items.size());
-    }
-
-    private LoopSettings loopSettings(final ChunkContext context) {
-        return new LoopSettings(
-                settings.mode(),
-                settings.dial(),
-                settings.frame(),
-                settings.names(),
-                context.terms(),
-                context.termPairs(),
-                context.characterLines());
     }
 
     // The reviewer call reads the whole chunk, so its lines name no segment; each draft's and decision's lines do.
@@ -316,7 +305,7 @@ public final class ChunkRunner {
     private ContextPackage contextOf(
             final Current current, final Segment segment, final List<String> targets, final MemoryReuse.Offer offer) {
         final ContextPackage context =
-                current.context().contextFor(segment, targets, offer.lookup(), followUp.summary());
+                current.requests().contextFor(segment, targets, offer.lookup(), followUp.summary());
         if (log.isTraceEnabled()) {
             log.trace(
                     "Preceding targets segmentId={} targets={}",

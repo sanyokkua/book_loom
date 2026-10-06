@@ -20,16 +20,13 @@ import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.PieceRedraft;
 import ua.bookloom.pipeline.memory.ProtectedMask;
-import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 import ua.bookloom.pipeline.prompt.DraftStep;
-import ua.bookloom.pipeline.prompt.GateNotes;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.run.PauseDecider;
 
 /**
@@ -45,6 +42,7 @@ public final class SegmentTranslator {
     private final BookFormat format;
     private final DraftPromptBuilder promptBuilder;
     private final DraftReplyParser replyParser;
+    private final DraftRequests requests;
 
     /** Creates the draft step of one run over its placeholder gate, call seam, format, prompts and reply reader. */
     public SegmentTranslator(
@@ -58,6 +56,7 @@ public final class SegmentTranslator {
         this.format = Objects.requireNonNull(format, "format");
         this.promptBuilder = Objects.requireNonNull(promptBuilder, "promptBuilder");
         this.replyParser = Objects.requireNonNull(replyParser, "replyParser");
+        this.requests = new DraftRequests(gate, promptBuilder, replyParser);
     }
 
     Result<DraftOutcome> translate(final Segment segment) {
@@ -239,35 +238,12 @@ public final class SegmentTranslator {
 
     ChatRequest requestFor(
             final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
-        final OutputLimit limit = OutputLimit.forSource(
-                attempt.shownText(), promptBuilder.sourceLanguage(), promptBuilder.targetLanguage());
-        final boolean lower = step == DraftStep.DRAFT && attempt.lowerTemperature();
-        final ChatRequest request =
-                ChatRequests.build(step.promptName(), messagesFor(attempt, step, rejected, diagnostic), limit, lower);
-        log.debug(
-                "Built chat request segmentId={} maskedLength={} messageCount={} expectedTokens={} capTokens={}",
-                attempt.segment().id(),
-                attempt.shownText().length(),
-                request.messages().size(),
-                request.expectedOutputTokens() == null ? "none" : request.expectedOutputTokens(),
-                request.maxOutputTokens() == null ? "none" : request.maxOutputTokens());
-        return request;
+        return requests.build(attempt, step, rejected, diagnostic);
     }
 
-    private List<ua.bookloom.api.llm.ChatMessage> messagesFor(
-            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
-        final Segment segment = attempt.segment();
-        final DraftContext context = attempt.context();
-        final String shown = attempt.shownText();
-        final String extra = attempt.extraInstruction();
-        return switch (step) {
-            case DRAFT -> promptBuilder.messagesFor(segment, context, shown, extra);
-            case STRUCTURAL_REPAIR ->
-                promptBuilder.messagesForStructuredRepair(segment, context, shown, extra, rejected, diagnostic);
-            case PLACEHOLDER_REPAIR ->
-                promptBuilder.messagesForPlaceholderRepair(
-                        segment, context, shown, extra, rejected, diagnostic.isEmpty() ? null : diagnostic);
-        };
+    /** The requests this draft step sends, which a prompt eval builds the same way. */
+    public DraftRequests requests() {
+        return requests;
     }
 
     // Design D3 rule 1: an error the routing table flags at once is the segment's, every other one is the run's.
@@ -370,12 +346,7 @@ public final class SegmentTranslator {
     private Result<DraftOutcome> repairPlaceholder(
             final DraftAttempt attempt, final String rejectedTarget, final GateResult.GateFailed failed) {
         final Segment segment = attempt.segment();
-        final String note = GateNotes.describe(
-                attempt.shownText(),
-                rejectedTarget,
-                segment.pairs(),
-                segment.lineBreakTokens(),
-                failed.finding().note());
+        final String note = DraftRequests.placeholderNote(attempt, rejectedTarget, failed);
         log.warn("Repairing placeholder mismatch segmentId={}", segment.id());
         final Result<DraftOutcome> repaired = send(attempt, DraftStep.PLACEHOLDER_REPAIR, rejectedTarget, note);
         if (repaired.isOk()

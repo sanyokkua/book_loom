@@ -9,6 +9,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -27,6 +28,7 @@ import ua.bookloom.api.llm.ProviderConfigs;
 import ua.bookloom.api.llm.ProviderKind;
 import ua.bookloom.llm.LlmModule;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
  * The prompt eval: the fixed case set through the production prompt builders against a real local Ollama model,
@@ -41,6 +43,11 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
  * rules, and the reports then end in {@code -generic}, so the two can be compared. With
  * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead, and with
  * {@code BOOKLOOM_EVAL_SUITE=words} {@link WordsEvalTest} does.
+ *
+ * <p>The requests are the app's: {@link PromptEvalRunner} and {@link BatchEvalRunner} build them with the run's own
+ * request factory over an {@link EvalProject}, and every call goes through {@link JobModelCalls}, which sizes it to the
+ * window. {@code BOOKLOOM_EVAL_WINDOW} sets that window (default: what the app uses when the provider reports none or
+ * more than its cap), so a model can be measured at the window a run will give it.
  */
 @Slf4j
 @Tag("promptEval")
@@ -138,6 +145,13 @@ class PromptEvalTest {
                 injector.getInstance(ChatModelFactory.class).create(new ModelSelection("eval", modelId));
         assertThat(model.isOk()).as("chat model creation: " + model.error()).isTrue();
         final ChatModel chatModel = Objects.requireNonNull(model.data());
-        return (callKind, segmentId, request) -> chatModel.chat(request);
+        // The run's own seam, so a request is sized to the window and capped exactly as the app sends it; the guard
+        // lets everything through and nothing is announced.
+        return new JobModelCalls(
+                onSent -> chatModel,
+                event -> {},
+                Clock.systemUTC(),
+                PromptEvalCases.TARGET_LANGUAGE,
+                EvalProject.window());
     }
 }

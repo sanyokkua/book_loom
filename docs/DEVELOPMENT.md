@@ -501,7 +501,20 @@ repair: it parses, its tokens are intact with every pair around words (gate), it
 marker (a glossary rendering, a correct drop cap, a translated instruction, a name's uninflected dictionary form), and
 the reviewer leaves a good candidate alone and asks for a change to a bad one (an edit whose quote is in the text, or a rewrite; an edit that quotes nothing is a harmless hallucination). The table lands in
 `modules/pipeline/build/reports/promptEval/<model>.txt`; the task fails below parse 95%, gate 90% or review separation
-80%. Calibration on 2026-10-02 (one sample per case, temperature as in production):
+80%.
+
+*How the eval builds a request (15e.1).* An eval sends what the app sends. Each case becomes an `EvalProject`
+(test side): its glossary entries and recurring terms go into the in-memory stores, its segments form one unit with the
+earlier pairs, summary and narrator the case states (`EvalContext`; a case that states none gets none), and the request
+is built by the run's own `PromptRequests` (`ua.bookloom.pipeline.run`) — the same code the job calls for a chunk's
+context, a batch's fit and previous pairs, the `terms` request, the draft and its two repairs, and the reviewer's
+term pairs and character sheet. A locked name is written out in the case text and hidden behind the run's token by
+the real mask. Every model call goes through `JobModelCalls`, so the request is sized to the window and the reply cap
+exactly as in a run; `BOOKLOOM_EVAL_WINDOW` sets that window (default: the app's, 8192 tokens). The equality of the
+two paths is held by `PromptRequestsEquivalenceTest`. Not covered by this path yet: the name prescan, the glossary
+review and the rolling summary call, which build their own frame (15e.2).
+
+Calibration on 2026-10-02 (one sample per case, temperature as in production):
 
 | Prompts | Model | parse | gate | review separation | script | marker | injection |
 |---|---|---|---|---|---|---|---|

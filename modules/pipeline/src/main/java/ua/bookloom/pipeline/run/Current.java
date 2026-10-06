@@ -15,6 +15,7 @@ record Current(
         ChunkDrafts drafts,
         ChunkBatches batches,
         ChunkContext context,
+        PromptRequests requests,
         LoopSettings loop,
         SegmentTranslator translator,
         int budget) {}

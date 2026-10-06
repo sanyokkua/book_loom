@@ -92,6 +92,25 @@ public final class QualityLoop {
                 healer(settings, Objects.requireNonNull(gate, "gate"), calls));
     }
 
+    /**
+     * One reviewer pass over a chunk's pairs, with the term pairs and the character sheet the chunk's loop settings
+     * carry — the call a run makes, which a prompt eval makes the same way.
+     *
+     * @param pairs the chunk's pairs that qualify for review, in document order
+     * @param settings the chunk's loop settings
+     * @param pass which pass this is
+     * @param calls the seam the call is sent through
+     * @return the verdict, or the error the call answered
+     */
+    public Result<ReviewVerdict> review(
+            final List<ReviewedPair> pairs,
+            final LoopSettings settings,
+            final ReviewPass pass,
+            final ModelCalls calls) {
+        return reviewerCall.review(
+                pairs, settings.frame(), settings.glossaryPairs(), settings.characters(), pass, calls);
+    }
+
     private SegmentHealer healer(final LoopSettings settings, final GateFunction gate, final ModelCalls calls) {
         return new SegmentHealer(editApplier, directedFix, settings, gate, calls);
     }
@@ -124,8 +143,7 @@ public final class QualityLoop {
         if (pairs.isEmpty()) {
             return new ReviewOutcome(null, null);
         }
-        final Result<ReviewVerdict> first = reviewerCall.review(
-                pairs, settings.frame(), settings.glossaryPairs(), settings.characters(), ReviewPass.FIRST, calls);
+        final Result<ReviewVerdict> first = review(pairs, settings, ReviewPass.FIRST, calls);
         if (first.isErr() || settings.dial().reviewPasses() < 2) {
             return outcomeOf(first);
         }
@@ -133,8 +151,7 @@ public final class QualityLoop {
         if (!firstVerdict.readable()) {
             return outcomeOf(first);
         }
-        final Result<ReviewVerdict> second = reviewerCall.review(
-                pairs, settings.frame(), settings.glossaryPairs(), settings.characters(), ReviewPass.SECOND, calls);
+        final Result<ReviewVerdict> second = review(pairs, settings, ReviewPass.SECOND, calls);
         return second.isErr()
                 ? outcomeOf(second)
                 : new ReviewOutcome(firstVerdict.followedBy(Objects.requireNonNull(second.data())), null);

@@ -6,7 +6,6 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
@@ -105,8 +104,7 @@ public final class BatchDrafter {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(items, "items");
         log.debug("Drafting a batch items={} segmentIds={} size={}", items.size(), segmentIds, size.size());
-        final List<ChatMessage> messages = prompts.messagesFor(context, items);
-        final ChatRequest request = prompts.requestFor(messages, items, false);
+        final ChatRequest request = request(context, items);
         final Result<ChatResponse> answered = calls.callAbout(CallKind.DRAFT, segmentIds, request);
         final ChatResponse response = answered.data();
         if (response == null) {
@@ -120,6 +118,18 @@ public final class BatchDrafter {
                 ? BatchReply.unreadable(ids)
                 : parser.parse(response.content(), items, sourceLanguage, targetLanguage);
         return Result.ok(reply);
+    }
+
+    /**
+     * The request one batch's call sends, before the run's seam sizes it to the window: the same one {@link #draft}
+     * sends, so a caller that only needs the request (a prompt eval) builds exactly the run's.
+     *
+     * @param context the non-null read-only context shown with the items
+     * @param items the non-null items, at least one
+     * @return the request asking for the batch schema, with the reply capped by the items' size
+     */
+    public ChatRequest request(final BatchContext context, final List<BatchItem> items) {
+        return prompts.requestFor(prompts.messagesFor(context, items), items, false);
     }
 
     /**

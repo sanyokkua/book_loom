@@ -17,14 +17,14 @@ import ua.bookloom.pipeline.qa.QaResult;
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class SegmentFindings {
+public final class SegmentFindings {
 
     /**
      * The concrete findings that send a round to a directed fix: a failed hard gate or a soft check failed outright
      * ({@code specs/quality-gates/spec.md} "Repair a failing segment within the dial's repair budget before
-     * flagging it").
+     * flagging it"). Public so a prompt eval names the same findings in a directed fix that a run does.
      */
-    static List<QaFinding> concrete(final QaResult qa) {
+    public static List<QaFinding> concrete(final QaResult qa) {
         final List<QaFinding> findings = new ArrayList<>();
         qa.hardGates().stream()
                 .filter(result -> !result.passed())

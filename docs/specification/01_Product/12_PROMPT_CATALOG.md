@@ -17,6 +17,10 @@ The consistency machinery referenced throughout is the **name/term dictionary**,
 memory** (exact/context/fuzzy by deterministic string similarity — not vector embeddings), and the **rolling bilingual
 summary**. There is no embedding or RAG step anywhere in this catalogue.
 
+The prompt evals (`promptEval`) and the job build their draft, batch, reviewer and repair requests through one factory,
+`PromptRequests` (`ua.bookloom.pipeline.run`), so an eval measures the prompts a run sends, not a hand-made imitation of
+them (the prompt-eval section of `docs/DEVELOPMENT.md`).
+
 ## prompt-construction {#prompt-construction}
 
 Every prompt is assembled from a fixed template with named slots. **No-garbage rule (15d.5):** a slot that carries no
