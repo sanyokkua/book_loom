@@ -36,7 +36,7 @@ class OpenAiCompatibleClientLoggingTest {
 
     private static final String PRIVATE_BODY = "<html>private-proxy-body-marker</html>";
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {

@@ -43,7 +43,7 @@ class OllamaClientUsageTest {
     private static final String CHAT_PATH = "/api/chat";
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {

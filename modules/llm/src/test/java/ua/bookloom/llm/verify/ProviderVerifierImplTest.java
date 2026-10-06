@@ -64,7 +64,7 @@ class ProviderVerifierImplTest {
     private static final Clock FIXED_CLOCK = Clock.fixed(Instant.parse("2026-09-22T12:00:00Z"), ZoneOffset.UTC);
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
     private final List<Duration> retryDelays = new ArrayList<>();
     private InMemoryProviderConfigs configs;
     private InferenceGate gate;

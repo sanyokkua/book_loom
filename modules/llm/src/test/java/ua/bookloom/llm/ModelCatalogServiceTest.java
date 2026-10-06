@@ -36,7 +36,7 @@ class ModelCatalogServiceTest {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(3);
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
     private InMemoryProviderConfigs configs;
     private ModelCatalogService catalog;
 

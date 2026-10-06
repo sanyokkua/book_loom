@@ -51,7 +51,7 @@ class GatedChatModelTimeoutRetryTest {
     private static final int SLOWER_THAN_THE_TIMEOUT_MS = 1500;
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {

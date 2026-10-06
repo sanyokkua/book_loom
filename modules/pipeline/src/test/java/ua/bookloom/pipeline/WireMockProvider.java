@@ -43,8 +43,10 @@ final class WireMockProvider implements AutoCloseable {
     private static final long POLL_MILLIS = 5;
 
     private final ProviderKind kind;
+    // Bound to loopback, not the wildcard: on macOS a wildcard bind succeeds on a port where another program (an IDE's
+    // built-in server) already listens on 127.0.0.1, and a client then reaches that program instead of this stub.
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     WireMockProvider(final ProviderKind kind) {
         this.kind = Objects.requireNonNull(kind, "kind");

@@ -59,7 +59,7 @@ class TraceRedactionTest {
     private static final String STATUS_PROMPT = "Return exactly one JSON object";
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @TempDir
     private Path tempDir;

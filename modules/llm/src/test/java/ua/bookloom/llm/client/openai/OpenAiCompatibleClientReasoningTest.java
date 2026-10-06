@@ -45,7 +45,7 @@ class OpenAiCompatibleClientReasoningTest {
     private static final String CHAT_PATH = "/v1/chat/completions";
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
 
     @BeforeEach
     void startServer() {

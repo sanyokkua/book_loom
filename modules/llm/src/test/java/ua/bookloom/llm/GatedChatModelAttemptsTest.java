@@ -48,7 +48,7 @@ class GatedChatModelAttemptsTest {
     private static final int SLOWER_THAN_THE_TIMEOUT_MS = 1500;
 
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
     private final List<String> heard = new ArrayList<>();
     private final CallAttemptListener listener = new CallAttemptListener() {
         @Override

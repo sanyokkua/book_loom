@@ -128,13 +128,14 @@ class ReviewerWireMockTest {
             provider.stubAlways(provider.reply(REVIEWER_REPLY, Duration.ZERO));
             final ChatModel model = provider.model(Duration.ofSeconds(5), duration -> {});
 
-            REVIEWER_CALL.review(
+            final Result<ReviewVerdict> reviewed = REVIEWER_CALL.review(
                     List.of(new ReviewedPair("Book.md:0", SOURCE_TEXT, DRAFT_TARGET)),
                     FRAME,
                     List.of(),
                     ReviewPass.FIRST,
                     (callKind, segmentId, request) -> model.chat(request));
 
+            assertThat(reviewed.error()).as("review result").isNull();
             assertThat(provider.chatBodies())
                     .singleElement()
                     .satisfies(body ->

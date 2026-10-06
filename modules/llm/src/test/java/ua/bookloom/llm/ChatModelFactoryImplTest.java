@@ -55,7 +55,7 @@ class ChatModelFactoryImplTest {
     private static final String OPENAI_REPLY =
             "{\"model\":\"google/gemma-4-e4b\",\"choices\":[{\"message\":{\"content\":\"hello\"},\"finish_reason\":\"stop\"}]}";
     private final WireMockServer server =
-            new WireMockServer(WireMockConfiguration.options().dynamicPort());
+            new WireMockServer(WireMockConfiguration.options().dynamicPort().bindAddress("127.0.0.1"));
     private ProviderConfigs configs;
 
     @BeforeEach
