@@ -62,7 +62,11 @@ public final class PlaceholderGate {
         final List<String> expected = Placeholders.tokensOf(expectedMasked);
         final List<String> observed = Placeholders.tokensOf(target);
         final GateRule broken = firstBrokenRule(expectedMasked, target, pairs, lineBreakTokens);
-        log.debug("gate: rule broken = {}", broken);
+        if (broken == null) {
+            log.trace("gate: no rule broken");
+        } else {
+            log.debug("gate: rule broken = {}", broken);
+        }
         return new GateOutcome(broken == null, expected, observed, broken);
     }
 

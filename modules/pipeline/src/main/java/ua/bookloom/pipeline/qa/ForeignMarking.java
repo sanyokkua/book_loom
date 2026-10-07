@@ -68,7 +68,7 @@ public final class ForeignMarking {
         }
         final Optional<String> source = LanguageTags.normalize(sourceLanguage);
         if (source.isEmpty()) {
-            log.debug("foreign marking: source language {} not recognized, not marked", sourceLanguage);
+            log.trace("foreign marking: source language {} not recognized, not marked", sourceLanguage);
             return false;
         }
         if (declaredLanguageDiffers(declaredLanguage, source.get())) {
@@ -90,13 +90,13 @@ public final class ForeignMarking {
     private static boolean dominantScriptDiffers(final String sourceDisplayText, final String source) {
         final Optional<Language> catalogued = Languages.byTag(source);
         if (catalogued.isEmpty()) {
-            log.debug("foreign marking: source {} has no known script, dominant-script test skipped", source);
+            log.trace("foreign marking: source {} has no known script, dominant-script test skipped", source);
             return false;
         }
         final boolean differs =
                 DominantScript.of(sourceDisplayText, catalogued.get().script())
                         != catalogued.get().script();
-        log.debug("foreign marking: dominant script differs from source {}: {}", source, differs);
+        log.trace("foreign marking: dominant script differs from source {}: {}", source, differs);
         return differs;
     }
 }

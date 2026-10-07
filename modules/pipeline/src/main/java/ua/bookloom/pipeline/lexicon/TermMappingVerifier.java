@@ -104,7 +104,7 @@ public final class TermMappingVerifier {
                 log.trace("Term claim {} -> {}", claim.getKey(), claim.getValue());
             }
         }
-        log.debug("Term pairs verified {} of {}", verified.size(), claimed.size());
+        log.trace("Term pairs verified {} of {}", verified.size(), claimed.size());
         return verified;
     }
 

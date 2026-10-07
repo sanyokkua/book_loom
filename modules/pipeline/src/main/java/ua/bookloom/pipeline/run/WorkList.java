@@ -170,7 +170,7 @@ public final class WorkList {
                 log.debug("Kept as source segmentId={} kind={}", segment.id(), record.kind());
             } else if (record != null && record.status() == SegmentStatus.PENDING) {
                 queued.add(new WorkItem(segment, section, record));
-                log.debug("Queued pending segment id={} section={}", segment.id(), section);
+                log.trace("Queued pending segment id={} section={}", segment.id(), section);
             }
         }
     }
