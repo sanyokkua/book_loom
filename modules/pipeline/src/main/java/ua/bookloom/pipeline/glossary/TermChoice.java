@@ -13,6 +13,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
@@ -39,6 +40,21 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TermChoice {
 
+    /**
+     * The model's verdicts.
+     *
+     * @param kept the lexicon keys of the terms it said to keep
+     * @param dropped the lexicon keys of the terms it explicitly said to drop; a term it did not mention is in neither
+     */
+    public record Choice(Set<String> kept, Set<String> dropped) {
+
+        /** Copies the sets. */
+        public Choice {
+            kept = Set.copyOf(kept);
+            dropped = Set.copyOf(dropped);
+        }
+    }
+
     private static final int BATCH_SIZE = 40;
     private static final int TOKENS_PER_VERDICT = 24;
     private static final int BASE_TOKENS = 96;
@@ -54,17 +70,17 @@ public final class TermChoice {
      * @param segments the book's body segments, where each term's example is read
      * @param frame the run's language pair and style
      * @param calls the seam every model call goes through
-     * @return the terms the model said to keep, as lexicon keys; the first failed call's error otherwise. A term the
-     *     model did not mention counts as dropped.
+     * @return the verdicts as lexicon keys; the first failed call's error otherwise, and {@code validation} when an
+     *     answer cannot be read, since a half-read answer must not decide what is removed
      */
-    public Result<Set<String>> choose(
+    public Result<Choice> choose(
             final List<String> terms, final List<Segment> segments, final CallFrame frame, final ModelCalls calls) {
         Objects.requireNonNull(terms, "terms");
         Objects.requireNonNull(segments, "segments");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(calls, "calls");
         if (terms.isEmpty()) {
-            return Result.ok(Set.of());
+            return Result.ok(new Choice(Set.of(), Set.of()));
         }
         final Map<String, Evidence> evidence = TermEvidence.of(segments, terms);
         final String system =
@@ -72,21 +88,23 @@ public final class TermChoice {
         final int batches = (terms.size() + BATCH_SIZE - 1) / BATCH_SIZE;
         log.info("Term choice started terms={} batches={}", terms.size(), batches);
         final Set<String> kept = new HashSet<>();
+        final Set<String> dropped = new HashSet<>();
         for (int index = 0; index < batches; index++) {
             final List<String> batch =
                     terms.subList(index * BATCH_SIZE, Math.min(terms.size(), (index + 1) * BATCH_SIZE));
             calls.announce(new BatchStarted(CallKind.REVIEW_TERMS, index + 1, batches));
-            final Result<Set<String>> answered = runBatch(batch, evidence, system, calls);
+            final Result<Choice> answered = runBatch(batch, evidence, system, calls);
             if (answered.isErr()) {
                 return answered;
             }
-            kept.addAll(Objects.requireNonNull(answered.data(), "kept"));
+            kept.addAll(Objects.requireNonNull(answered.data(), "choice").kept());
+            dropped.addAll(answered.data().dropped());
         }
-        log.info("Term choice finished kept={} of {}", kept.size(), terms.size());
-        return Result.ok(kept);
+        log.info("Term choice finished kept={} dropped={} of {}", kept.size(), dropped.size(), terms.size());
+        return Result.ok(new Choice(kept, dropped));
     }
 
-    private Result<Set<String>> runBatch(
+    private Result<Choice> runBatch(
             final List<String> batch,
             final Map<String, Evidence> evidence,
             final String system,
@@ -115,33 +133,42 @@ public final class TermChoice {
         }
         final String content = Objects.requireNonNull(reply.data(), "reply").content();
         log.trace("Term choice reply {}", content);
-        return Result.ok(kept(content, batch));
+        return verdicts(content, batch);
     }
 
-    private Set<String> kept(final String reply, final List<String> asked) {
+    private Result<Choice> verdicts(final String reply, final List<String> asked) {
         final Map<String, String> byKey = new LinkedHashMap<>();
         asked.forEach(term -> byKey.put(LexiconEntry.keyOf(term), term));
         final Set<String> kept = new HashSet<>();
+        final Set<String> dropped = new HashSet<>();
         final int from = reply.indexOf('{');
         final int to = reply.lastIndexOf('}');
-        if (from < 0 || to <= from) {
-            log.debug("Term choice reply is not JSON; nothing is kept");
-            return kept;
-        }
         try {
-            final JsonNode terms =
-                    mapper.readTree(reply.substring(from, to + 1)).path("terms");
+            final JsonNode terms = from < 0 || to <= from
+                    ? null
+                    : mapper.readTree(reply.substring(from, to + 1)).path("terms");
+            if (terms == null || !terms.isArray()) {
+                return unreadable();
+            }
             for (final JsonNode verdict : terms) {
                 final String key = LexiconEntry.keyOf(verdict.path("term").asText(""));
-                if (verdict.path("keep").asBoolean(false) && byKey.containsKey(key)) {
-                    kept.add(key);
+                if (byKey.containsKey(key) && verdict.has("keep")) {
+                    (verdict.path("keep").asBoolean(false) ? kept : dropped).add(key);
                 }
             }
-        } catch (IOException unreadable) {
-            log.debug("Term choice reply is not readable; nothing is kept");
+        } catch (IOException cut) {
+            return unreadable();
         }
-        log.debug("Term choice batch answered asked={} kept={}", asked.size(), kept.size());
-        return kept;
+        log.debug("Term choice batch answered asked={} kept={} dropped={}", asked.size(), kept.size(), dropped.size());
+        return Result.ok(new Choice(kept, dropped));
+    }
+
+    private static Result<Choice> unreadable() {
+        log.warn("Term choice reply could not be read; nothing is decided");
+        return Result.err(AppError.of(
+                ErrorCode.validation,
+                "Unreadable answer",
+                "The model's answer could not be read; nothing was changed."));
     }
 
     private static String line(final String term, final Evidence evidence) {

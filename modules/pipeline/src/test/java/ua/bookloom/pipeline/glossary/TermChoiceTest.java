@@ -6,10 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -56,6 +57,10 @@ class TermChoiceTest {
         };
     }
 
+    private static TermChoice.Choice ok(final Result<TermChoice.Choice> result) {
+        return Objects.requireNonNull(result.data(), "verdicts");
+    }
+
     private static Result<ChatResponse> reply(final String content) {
         return Result.ok(new ChatResponse(Objects.requireNonNull(content), FinishReason.STOP));
     }
@@ -67,9 +72,11 @@ class TermChoiceTest {
                 .answer(reply(
                         "{\"terms\":[{\"term\":\"pentacle\",\"keep\":true},{\"term\":\"table\",\"keep\":false}]}"));
 
-        final Result<Set<String>> kept = choice.choose(List.of("pentacle", "table"), BOOK, FRAME, calls(model));
+        final Result<TermChoice.Choice> verdicts =
+                choice.choose(List.of("pentacle", "table"), BOOK, FRAME, calls(model));
 
-        assertThat(kept.data()).containsExactly("pentacle");
+        assertThat(ok(verdicts).kept()).containsExactly("pentacle");
+        assertThat(ok(verdicts).dropped()).containsExactly("table");
         final String user = model.requests().getFirst().messages().get(1).content();
         assertThat(user).contains("- pentacle · 2 uses — \"The master drew the pentacle on the floor.\"");
         assertThat(model.requests().getFirst().callKind()).isEqualTo(CallKind.REVIEW_TERMS);
@@ -82,16 +89,33 @@ class TermChoiceTest {
                 .answer(reply(
                         "{\"terms\":[{\"term\":\"dragon\",\"keep\":true},{\"term\":\"pentacle\",\"keep\":true}]}"));
 
-        assertThat(choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model)).data())
+        assertThat(ok(choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model)))
+                        .kept())
                 .containsExactly("pentacle");
     }
 
-    @Test
-    void choose_replyThatIsNotJson_keepsNothing() {
-        final ScriptedChatModel model = new ScriptedChatModel().answer(reply("They are all terms."));
+    // IF an unreadable answer counted as "drop everything", THEN one bad reply would wipe a person's list.
+    @ParameterizedTest
+    @ValueSource(strings = {"They are all terms.", "{\"terms\":[{\"term\":\"pentacle\",\"keep\":tru"})
+    void choose_replyThatIsNotReadable_isAnErrorAndDecidesNothing(final String reply) {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reply(reply));
 
-        assertThat(choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model)).data())
-                .isEmpty();
+        final Result<TermChoice.Choice> verdicts = choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model));
+
+        assertThat(verdicts.error()).isNotNull();
+        assertThat(verdicts.error().code()).isEqualTo(ErrorCode.validation);
+    }
+
+    // A word the model left out of its answer is neither kept nor dropped.
+    @Test
+    void choose_modelLeavesAWordOut_isInNeitherSet() {
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply("{\"terms\":[{\"term\":\"pentacle\",\"keep\":true}]}"));
+
+        final TermChoice.Choice verdicts = ok(choice.choose(List.of("pentacle", "table"), BOOK, FRAME, calls(model)));
+
+        assertThat(verdicts.kept()).containsExactly("pentacle");
+        assertThat(verdicts.dropped()).isEmpty();
     }
 
     @Test
@@ -114,7 +138,7 @@ class TermChoiceTest {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Down", "The server is not answering.")));
 
-        final Result<Set<String>> kept = choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model));
+        final Result<TermChoice.Choice> kept = choice.choose(List.of("pentacle"), BOOK, FRAME, calls(model));
 
         assertThat(kept.error()).isNotNull();
         assertThat(kept.error().code()).isEqualTo(ErrorCode.unreachable);
@@ -124,7 +148,8 @@ class TermChoiceTest {
     void choose_noCandidates_asksNothing() {
         final ScriptedChatModel model = new ScriptedChatModel();
 
-        assertThat(choice.choose(List.of(), BOOK, FRAME, calls(model)).data()).isEmpty();
+        assertThat(ok(choice.choose(List.of(), BOOK, FRAME, calls(model))).kept())
+                .isEmpty();
         assertThat(model.requests()).isEmpty();
     }
 }

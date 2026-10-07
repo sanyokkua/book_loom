@@ -24,8 +24,11 @@ public final class Sentences {
 
     private static final Pattern END = Pattern.compile("[.!?…。！？]+[»”\"’)]*(?=\\s|$)");
     private static final Pattern LAST_WORD = Pattern.compile("(\\p{L}+)$");
+    // Titles and common abbreviations of the spaced alphabets: English, then Russian and Ukrainian.
     private static final Set<String> TITLES = Set.of(
-            "mr", "mrs", "ms", "dr", "st", "jr", "sr", "vs", "prof", "gen", "col", "capt", "lt", "sgt", "mt", "etc");
+            "mr", "mrs", "ms", "dr", "st", "jr", "sr", "vs", "prof", "gen", "col", "capt", "lt", "sgt", "mt", "etc",
+            "г", "ул", "д", "кв", "т", "тт", "им", "стр", "рис", "см", "напр", "др", "пр", "тыс", "млн", "млрд", "проф",
+            "акад", "св", "вул", "буд", "ім", "мал", "грн", "тис");
 
     /**
      * Cuts a text into sentences.

@@ -94,6 +94,24 @@ class SetupAssistantImplTest {
         assertThat(SetupAssistantImpl.cleanFileName(raw)).isEqualTo(expected);
     }
 
+    // IF the name were cut by characters, THEN 150 Cyrillic letters would be 300 bytes and no file system would take
+    // it.
+    @Test
+    void cleanFileName_longCyrillicName_isCutToTheByteLimitBetweenWholeCharacters() {
+        final String cut = SetupAssistantImpl.cleanFileName("Ї".repeat(150));
+
+        assertThat(cut.getBytes(java.nio.charset.StandardCharsets.UTF_8)).hasSizeLessThanOrEqualTo(200);
+        assertThat(cut).isEqualTo("Ї".repeat(100));
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {"CON|CON_", "nul.txt|nul.txt_", "Console|Console", "A\u202Eb|A b"})
+    void cleanFileName_deviceNamesAndInvisibleFormatCharacters_areMadeSafe(final String raw, final String expected) {
+        assertThat(SetupAssistantImpl.cleanFileName(raw)).isEqualTo(expected);
+    }
+
     // IF the model were not shown the opening of the book, THEN it could only guess from the title.
     @Test
     void suggestBrief_modelReply_isShownTheOpeningAndMappedToTheBriefsChoices() {

@@ -39,6 +39,21 @@ class CriterionFitTest {
         assertThat(fits(criterion, quote, replacement)).isTrue();
     }
 
+    // IF a common noun's rendering or a short name's stem held other words, THEN agreement and gender edits would be
+    // refused.
+    @ParameterizedTest
+    @CsvSource({
+        "AGREEMENT,старий чарівник прийшов,старого чарівника прийшов",
+        "GENDER,наш господар пішов,наша господиня пішла",
+        "MEANING,біля джерело води,біля джерела води"
+    })
+    void fits_editNearACommonNounOrAWordSharingANamesStart_stillFits(
+            final ReviewCriterion criterion, final String quote, final String replacement) {
+        assertThat(CriterionFit.fits(
+                        new ReviewEdit(criterion, quote, replacement), quote, List.of("Джек", "господар", "чарівник")))
+                .isTrue();
+    }
+
     @ParameterizedTest
     @CsvSource({"TERMINOLOGY,Джак сказали,Джек сказали"})
     void fits_terminologyEdit_mayStillTouchANameForm(

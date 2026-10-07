@@ -58,7 +58,7 @@ final class ItemValidator {
             problems.add(ItemProblem.LEAKED);
         }
         lengthProblem(item.masked(), target, sourceTag, targetTag).ifPresent(problems::add);
-        if (SentenceCount.dropsSentence(DisplayText.of(item.masked()), DisplayText.of(target))) {
+        if (SentenceCount.dropsSentence(DisplayText.of(item.masked()), DisplayText.of(target), sourceTag, targetTag)) {
             problems.add(ItemProblem.SENTENCES);
         }
         log.debug("Validated batch item id={} problems={}", item.id(), problems);

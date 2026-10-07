@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentStatus;
@@ -72,7 +74,9 @@ final class NeighbourRevision {
         return Result.ok(true);
     }
 
-    // Repaired, flagged or noted: the shapes where a defect is likely. A clean accepted draft is left alone.
+    // Repaired or flagged: the shapes where a defect is likely. A clean accepted draft, even one carrying a soft note,
+    // is
+    // left alone, so the pass costs a call only for the paragraphs the run already had trouble with.
     private static boolean isRisky(@Nullable final SegmentRecord record) {
         if (record == null || record.userTarget() != null || record.maskedMachineTarget() == null) {
             return false;
@@ -80,9 +84,7 @@ final class NeighbourRevision {
         final boolean decided = record.status() != SegmentStatus.PENDING;
         return decided
                 && record.path() != SegmentPath.VERBATIM
-                && (record.status() == SegmentStatus.FLAGGED
-                        || record.path() == SegmentPath.REPAIRED
-                        || !record.findings().isEmpty());
+                && (record.status() == SegmentStatus.FLAGGED || record.path() == SegmentPath.REPAIRED);
     }
 
     private Result<Boolean> checkOne(
@@ -105,7 +107,14 @@ final class NeighbourRevision {
         final Result<Optional<GateResult.Restored>> revised = call.checkAgainstNeighbours(
                 inputs, source, masked, facts(inputs, source, at, order), previous, next, calls);
         if (revised.isErr()) {
-            return Result.err(Objects.requireNonNull(revised.error(), "error"));
+            // One paragraph's failed call (a timeout, an unreadable reply) is no reason to lose the whole pass or the
+            // book's export; only the person's stop ends it.
+            final AppError error = Objects.requireNonNull(revised.error(), "error");
+            if (error.code() == ErrorCode.cancelled) {
+                return Result.err(error);
+            }
+            log.warn("Neighbour check segmentId={} skipped: the call failed code={}", id, error.code());
+            return Result.ok(false);
         }
         final GateResult.Restored restored = Objects.requireNonNull(revised.data(), "revised")
                 .filter(answer -> !answer.maskedForm().equals(masked))

@@ -28,6 +28,7 @@ public final class NameSuggestion {
     private final ExportViewModel destination;
     private final ReadOnlyBooleanWrapper suggesting = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper notice = new ReadOnlyStringWrapper("");
+    private @Nullable String askedFor;
 
     NameSuggestion(
             final CurrentProject project,
@@ -62,6 +63,7 @@ public final class NameSuggestion {
             return;
         }
         log.debug("a file name suggestion is asked for project {}", book.projectId());
+        askedFor = destination.destination().get();
         notice.set("");
         suggesting.set(true);
         setup.run(
@@ -90,6 +92,10 @@ public final class NameSuggestion {
         if (failure != null) {
             log.warn("the file name suggestion failed with {}", failure.code());
             notice.set(failure.message());
+            return;
+        }
+        if (!Objects.equals(askedFor, destination.destination().get())) {
+            log.debug("the file name suggestion is dropped: the person changed the destination while it waited");
             return;
         }
         final String stem = Objects.requireNonNull(answer.data(), "data");

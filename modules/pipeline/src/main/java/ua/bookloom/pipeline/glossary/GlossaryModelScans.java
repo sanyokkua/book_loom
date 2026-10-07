@@ -5,7 +5,6 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,9 +87,9 @@ public final class GlossaryModelScans {
      * @param terms the non-null candidate terms
      * @param model the non-null model to call
      * @param progress the non-null receiver of each call's start and finish
-     * @return the terms to keep, as lexicon keys, or the first failed call's error
+     * @return the model's verdicts as lexicon keys, or the first failed call's error
      */
-    public Result<Set<String>> chooseTerms(
+    public Result<TermChoice.Choice> chooseTerms(
             final String projectId,
             final List<String> terms,
             final ChatModel model,

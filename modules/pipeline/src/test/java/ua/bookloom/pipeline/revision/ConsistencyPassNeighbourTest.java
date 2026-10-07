@@ -6,12 +6,18 @@ import static ua.bookloom.pipeline.revision.RevisionBook.ok;
 import static ua.bookloom.pipeline.revision.RevisionBook.reply;
 
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
+import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.review.ReviewFixtures;
 
 /**
@@ -110,6 +116,33 @@ class ConsistencyPassNeighbourTest {
         final ConsistencyReport report = ok(book.run(false));
 
         assertThat(report.neighbourFixes()).isZero();
+        assertThat(book.model().requests()).isEmpty();
+    }
+
+    // IF one paragraph's failed call ended the pass, THEN an export would write no book because of a timeout.
+    @Test
+    void run_oneCallFails_theRestOfThePassAndTheReportSurvive() {
+        repaired(SAM_MET_HALE, BEFORE);
+        book.model()
+                .answerTo(CONSISTENCY, Result.err(AppError.of(ErrorCode.timeout, "Slow", "The model took too long.")));
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        assertThat(report.neighbourFixes()).isZero();
+        assertThat(book.stored(SAM_MET_HALE).machineTarget()).isEqualTo(BEFORE);
+    }
+
+    // IF a paragraph that only carried a soft note were checked, THEN every export would pay a call for it again.
+    @Test
+    void run_acceptedDraftWithOnlyASoftNote_isNotChecked() {
+        book.decide(SAM_MET_HALE, BEFORE, BEFORE);
+        ReviewFixtures.update(
+                book.desk(),
+                SAM_MET_HALE,
+                record -> record.withFindings(List.of(new QaFinding("fluency", Severity.LOW, "a note", "spacing"))));
+
+        ok(book.run(true));
+
         assertThat(book.model().requests()).isEmpty();
     }
 }

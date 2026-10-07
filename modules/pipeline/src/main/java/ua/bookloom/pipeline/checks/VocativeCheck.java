@@ -7,6 +7,8 @@ import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
 
 /**
@@ -27,7 +29,8 @@ final class VocativeCheck {
             final String source,
             final String target,
             final List<String> glossaryPairs,
-            final List<String> alternations) {
+            final List<String> alternations,
+            @Nullable final String sourceLanguage) {
         final List<CheckFinding> found = new ArrayList<>();
         for (final String pair : glossaryPairs) {
             final int at = pair.indexOf(ARROW);
@@ -36,7 +39,10 @@ final class VocativeCheck {
             }
             final String term = pair.substring(0, at).strip();
             final String rendering = pair.substring(at + ARROW.length()).strip();
-            if (!isName(term) || rendering.isEmpty() || !isCalledOut(source, term)) {
+            if (!isName(term)
+                    || KeyTermScan.isTitle(term, sourceLanguage)
+                    || rendering.isEmpty()
+                    || !isCalledOut(source, term)) {
                 continue;
             }
             if (TermMappingVerifier.verify(Map.of(term, rendering), List.of(term), source, target, alternations)

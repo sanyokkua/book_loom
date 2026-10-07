@@ -123,7 +123,7 @@ public final class SetupHelper {
     private <T> Result<T> answer(final ModelSelection selection, final Function<ChatModel, Result<T>> work) {
         try {
             return models.create(selection).flatMap(work);
-        } catch (RuntimeException thrown) {
+        } catch (Throwable thrown) {
             log.error("a setup proposal threw instead of returning a result", thrown);
             return Result.err(
                     AppError.of(ErrorCode.internal, "Suggestion failed", "An unexpected failure stopped it."));

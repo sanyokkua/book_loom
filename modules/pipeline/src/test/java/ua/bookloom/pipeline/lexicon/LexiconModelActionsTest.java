@@ -75,19 +75,35 @@ class LexiconModelActionsTest {
         assertThat(after).extracting(LexiconEntry::term).containsExactly("pentacle");
     }
 
-    // IF a review removed a term whose rendering the person chose, THEN their decision would vanish.
+    // IF a review removed what the person typed, what a draft verified or what the model never mentioned, THEN one
+    // answer could undo the list.
     @Test
-    void review_modelDropsATerm_removesItButNeverATermThePersonChose() {
+    void review_modelDropsATerm_removesOnlyThatTermAndSparesTheRest() {
         lexicon.put(LexiconEntry.of(desk.projectId(), "pentacle"));
         lexicon.put(LexiconEntry.of(desk.projectId(), "table"));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "lamp"));
         lexicon.put(LexiconEntry.of(desk.projectId(), "room").withChosen("кімната"));
-        model.answer(reply("{\"terms\":[{\"term\":\"pentacle\",\"keep\":true}]}"));
+        lexicon.put(LexiconEntry.of(desk.projectId(), "wall").seen("стіна"));
+        model.answer(reply("{\"terms\":[{\"term\":\"pentacle\",\"keep\":true},{\"term\":\"table\",\"keep\":false}]}"));
 
         final List<LexiconEntry> after =
                 service.review(desk.projectId(), model, event -> {}).data();
 
-        assertThat(after).extracting(LexiconEntry::term).containsExactlyInAnyOrder("pentacle", "room");
-        assertThat(model.requests().getFirst().messages().get(1).content()).doesNotContain("- room");
+        assertThat(after).extracting(LexiconEntry::term).containsExactlyInAnyOrder("pentacle", "lamp", "room", "wall");
+        assertThat(model.requests().getFirst().messages().get(1).content())
+                .doesNotContain("- room")
+                .doesNotContain("- wall");
+    }
+
+    @Test
+    void review_unreadableAnswer_removesNothing() {
+        lexicon.put(LexiconEntry.of(desk.projectId(), "pentacle"));
+        model.answer(reply("I would drop them all."));
+
+        final Result<List<LexiconEntry>> result = service.review(desk.projectId(), model, event -> {});
+
+        assertThat(result.error()).isNotNull();
+        assertThat(lexicon.all(desk.projectId()).data()).hasSize(1);
     }
 
     @Test

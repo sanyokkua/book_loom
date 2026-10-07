@@ -124,4 +124,42 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
                 .isEqualTo(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, "It could not be read."));
         assertThat(stored()).isEqualTo(before);
     }
+
+    // IF a field the model left out were cleared, THEN pressing the button would erase what the person had written.
+    @Test
+    void suggestStyle_modelLeavesFieldsEmpty_keepsWhatThePersonWrote() {
+        chooseModel();
+        onFx(() -> {
+            brief.setAudience("Teenagers");
+            brief.setVoiceEra("Victorian");
+            brief.setGenre("Gothic novel");
+            return null;
+        });
+        assistant.answersBrief(Result.ok(
+                new BriefSuggestion(null, Register.CASUAL, null, null, NarratorPerson.UNSPECIFIED, Gender.UNKNOWN)));
+
+        suggest();
+
+        assertThat(stored().audience()).isEqualTo("Teenagers");
+        assertThat(stored().voiceEra()).isEqualTo("Victorian");
+        assertThat(stored().genre()).isEqualTo("Gothic novel");
+        assertThat(stored().register()).isEqualTo(Register.CASUAL);
+    }
+
+    // IF the model could replace a narrator the person gave, THEN the answer at Start would be overwritten by a guess.
+    @Test
+    void suggestStyle_personAlreadyNamedANarrator_isNeverReplaced() {
+        chooseModel();
+        onFx(() -> {
+            brief.setFirstPersonNarrator(Gender.MALE);
+            return null;
+        });
+        assistant.answersBrief(Result.ok(
+                new BriefSuggestion(null, Register.NEUTRAL, null, null, NarratorPerson.THIRD, Gender.UNKNOWN)));
+
+        suggest();
+
+        assertThat(stored().narrator().person()).isEqualTo(NarratorPerson.FIRST);
+        assertThat(stored().narrator().gender()).isEqualTo(Gender.MALE);
+    }
 }

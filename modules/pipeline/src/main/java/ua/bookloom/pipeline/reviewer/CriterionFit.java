@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 final class CriterionFit {
 
     private static final int MIN_NAME_LETTERS = 4;
-    private static final int MIN_NAME_STEM = 3;
+    private static final int MIN_NAME_STEM = 4;
     private static final int NAME_ENDING_LETTERS = 2;
     private static final String PAIR_MARKS = "«»„“”\"()[]{}‹›‘’'";
 
@@ -55,10 +55,12 @@ final class CriterionFit {
     // name (Джеку → Джек, Хром → Хромів) made the text worse in a real run, so only a terminology edit may touch one.
     private static boolean changesNameForm(
             final String quote, final String replacement, final Collection<String> renderings) {
+        // Only a rendering that starts with a capital is a name's: the lexicon's common-noun renderings (господар) are
+        // meant to be inflected and are never held to their spelling.
         final List<String> stems = renderings.stream()
-                .flatMap(rendering ->
-                        Arrays.stream(rendering.toLowerCase(Locale.ROOT).split("[^\\p{L}]+")))
-                .filter(word -> word.length() >= MIN_NAME_LETTERS)
+                .flatMap(rendering -> Arrays.stream(rendering.split("[^\\p{L}]+")))
+                .filter(word -> word.length() >= MIN_NAME_LETTERS && Character.isUpperCase(word.codePointAt(0)))
+                .map(word -> word.toLowerCase(Locale.ROOT))
                 .map(word -> word.substring(0, Math.max(MIN_NAME_STEM, word.length() - NAME_ENDING_LETTERS)))
                 .distinct()
                 .toList();

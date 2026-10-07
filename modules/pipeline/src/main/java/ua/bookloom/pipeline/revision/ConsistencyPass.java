@@ -128,11 +128,12 @@ public final class ConsistencyPass {
         final ConsistencyReport report = tally.report(stillOpen);
         log.info(
                 "Backward revision ended project={} segmentsChanged={} termSubstitutions={} genderReRenders={} "
-                        + "proposals={} openDeferrals={}",
+                        + "neighbourFixes={} proposals={} openDeferrals={}",
                 projectId,
                 tally.segmentsChanged(),
                 report.termSubstitutions(),
                 report.genderReRenders(),
+                report.neighbourFixes(),
                 report.proposals(),
                 stillOpen);
         return report;

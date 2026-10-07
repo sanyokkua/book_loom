@@ -167,38 +167,48 @@ public final class LexiconServiceImpl implements LexiconService {
                 .filter(term -> !Objects.requireNonNull(held.data(), "held").contains(LexiconEntry.keyOf(term)))
                 .toList();
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
-        return modelScans.chooseTerms(projectId, candidates, model, progress).flatMap(kept -> {
-            for (final String term : candidates) {
-                if (kept.contains(LexiconEntry.keyOf(term))) {
-                    final Result<LexiconEntry> stored = lexicon.put(LexiconEntry.of(projectId, term));
-                    if (stored.isErr()) {
-                        return Result.err(Objects.requireNonNull(stored.error(), "error"));
-                    }
+        return modelScans
+                .chooseTerms(projectId, candidates, model, progress)
+                .flatMap(choice -> addChosen(projectId, candidates, choice.kept()))
+                .flatMap(added -> {
+                    log.info("Lexicon model scan project={} added={}", projectId, added);
+                    return lexicon.all(projectId);
+                });
+    }
+
+    private Result<Integer> addChosen(final String projectId, final List<String> candidates, final Set<String> kept) {
+        int added = 0;
+        for (final String term : candidates) {
+            if (kept.contains(LexiconEntry.keyOf(term))) {
+                final Result<LexiconEntry> stored = lexicon.put(LexiconEntry.of(projectId, term));
+                if (stored.isErr()) {
+                    return Result.err(Objects.requireNonNull(stored.error(), "error"));
                 }
+                added++;
             }
-            log.info("Lexicon model scan project={} added={}", projectId, kept.size());
-            return lexicon.all(projectId);
-        });
+        }
+        return Result.ok(added);
     }
 
     private Result<List<LexiconEntry>> runReview(
             final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         return lexicon.all(projectId).flatMap(all -> {
-            final List<LexiconEntry> asked = all.stream()
-                    .filter(entry -> entry.chosen() == null || entry.chosen().isBlank())
-                    .toList();
+            // A term with a rendering — typed, verified in a draft or learned from the text — has earned its place.
+            final List<LexiconEntry> asked =
+                    all.stream().filter(entry -> entry.established().isEmpty()).toList();
             log.info("Lexicon review project={} terms={} asked={}", projectId, all.size(), asked.size());
             return modelScans
                     .chooseTerms(
                             projectId, asked.stream().map(LexiconEntry::term).toList(), model, progress)
-                    .flatMap(kept -> dropUnkept(projectId, asked, kept));
+                    .flatMap(choice -> dropRejected(projectId, asked, choice.dropped()));
         });
     }
 
-    private Result<List<LexiconEntry>> dropUnkept(
-            final String projectId, final List<LexiconEntry> asked, final Set<String> kept) {
+    // Only a term the model explicitly answered keep:false goes; one it left out of its answer stays.
+    private Result<List<LexiconEntry>> dropRejected(
+            final String projectId, final List<LexiconEntry> asked, final Set<String> dropped) {
         for (final LexiconEntry entry : asked) {
-            if (!kept.contains(LexiconEntry.keyOf(entry.term()))) {
+            if (dropped.contains(LexiconEntry.keyOf(entry.term()))) {
                 final Result<Boolean> removed = lexicon.remove(projectId, entry.term());
                 if (removed.isErr()) {
                     return Result.err(Objects.requireNonNull(removed.error(), "error"));

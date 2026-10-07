@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.setup;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -56,8 +57,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private static final int MIN_PARAGRAPH_CHARS = 40;
     private static final int NAME_TOKENS = 96;
     private static final int BRIEF_TOKENS = 220;
-    private static final int MAX_NAME_CHARS = 150;
-    private static final Pattern ILLEGAL = Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}]");
+    // A file name holds at most 255 bytes on the common file systems; the suffix and a margin are kept free.
+    private static final int MAX_NAME_BYTES = 200;
+    private static final Pattern RESERVED = Pattern.compile("(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\\..*)?");
+    private static final Pattern ILLEGAL = Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}\\p{Cf}]");
     private static final Pattern SPACES = Pattern.compile("\\s+");
 
     private final ProjectRepository projects;
@@ -166,14 +169,27 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return cleanFileName(raw);
     }
 
-    /** Takes a file name proposal and removes what a file name cannot hold, so no model reply can name a path. */
+    /**
+     * Takes a file name proposal and removes what a file name cannot hold, so no model reply can name a path: path
+     * separators and other reserved characters, control and invisible format characters, edge dots, a Windows device
+     * name, and anything past 200 bytes of UTF-8, cut between whole characters.
+     */
     static String cleanFileName(final String raw) {
         String name = ILLEGAL.matcher(raw).replaceAll(" ");
         name = SPACES.matcher(name).replaceAll(" ").strip();
         name = name.replaceAll("^[.\\s]+|[.\\s]+$", "").strip();
-        return name.length() > MAX_NAME_CHARS
-                ? name.substring(0, MAX_NAME_CHARS).strip()
-                : name;
+        final StringBuilder kept = new StringBuilder();
+        int bytes = 0;
+        for (final int point : name.codePoints().toArray()) {
+            final int size = new String(Character.toChars(point)).getBytes(StandardCharsets.UTF_8).length;
+            if (bytes + size > MAX_NAME_BYTES) {
+                break;
+            }
+            kept.appendCodePoint(point);
+            bytes += size;
+        }
+        final String cut = kept.toString().strip();
+        return RESERVED.matcher(cut).matches() ? cut + "_" : cut;
     }
 
     private Result<BriefSuggestion> briefFrom(final String reply) {

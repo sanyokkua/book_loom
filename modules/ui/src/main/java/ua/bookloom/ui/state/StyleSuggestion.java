@@ -96,15 +96,16 @@ public final class StyleSuggestion {
         outcome.set(StyleSuggestionOutcome.of(StyleSuggestionOutcome.Kind.DONE));
     }
 
-    // The model's tone fields replace the brief's; the policies, dial and languages are not its business.
+    // The fields the model filled replace the brief's; one it left empty keeps what the person wrote, and the policies,
+    // dial and languages are not its business.
     private static BookBrief withSuggestion(final BookBrief brief, final BriefSuggestion suggestion) {
         return new BookBrief(
                 brief.sourceLanguage(),
                 brief.targetLanguage(),
-                suggestion.genre() == null ? null : knownGenre(suggestion.genre()),
+                suggestion.genre() == null ? brief.genre() : knownGenre(suggestion.genre()),
                 suggestion.register(),
-                suggestion.voiceEra(),
-                suggestion.audience(),
+                suggestion.voiceEra() == null ? brief.voiceEra() : suggestion.voiceEra(),
+                suggestion.audience() == null ? brief.audience() : suggestion.audience(),
                 brief.names(),
                 brief.foreignPassages(),
                 brief.footnotes(),
@@ -124,9 +125,13 @@ public final class StyleSuggestion {
                 .orElse(genre.strip());
     }
 
-    /** The narrator the suggestion states, or the brief's own when the model could not tell. */
+    /**
+     * The narrator the suggestion states, but only while the brief names none: a narrator the person chose, or answered
+     * at Start, is never replaced by a guess. The brief's own when the model could not tell.
+     */
     static Narrator narratorFor(final BookBrief brief, final BriefSuggestion suggestion) {
         return suggestion.narrator() == NarratorPerson.UNSPECIFIED
+                        || brief.narrator().person() != NarratorPerson.UNSPECIFIED
                 ? brief.narrator()
                 : new Narrator(suggestion.narrator(), suggestion.narratorGender());
     }

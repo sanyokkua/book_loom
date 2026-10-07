@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.checks;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -36,7 +37,7 @@ class SentenceCountCheckTest {
             })
     void dropsSentence_targetWithFewerSentences_isFlagged(
             final String source, final String target, final boolean flagged) {
-        assertThat(SentenceCount.dropsSentence(source, target)).isEqualTo(flagged);
+        assertThat(SentenceCount.dropsSentence(source, target, "en", "uk")).isEqualTo(flagged);
     }
 
     @ParameterizedTest
@@ -47,7 +48,7 @@ class SentenceCountCheckTest {
                 "扉は開いていた。誰も出なかった。|The door was open.|false"
             })
     void dropsSentence_unspacedScript_isNeverJudged(final String source, final String target, final boolean flagged) {
-        assertThat(SentenceCount.dropsSentence(source, target)).isEqualTo(flagged);
+        assertThat(SentenceCount.dropsSentence(source, target, "en", "uk")).isEqualTo(flagged);
     }
 
     @ParameterizedTest
@@ -58,12 +59,38 @@ class SentenceCountCheckTest {
                 "You never listen, Finn!|Ти ніколи не слухаєш, Фінне!|false",
                 "You never listen, Finn!|Ти ніколи не слухаєш.|true",
                 "Finn is here.|Він тут.|false",
-                "No, master.|Ні, учителю.|false"
+                "No, master.|Ні, учителю.|false",
+                "Yes, Sir.|Так, пане.|false"
             })
     void vocative_calledOutName_mustSurviveInSomeForm(final String source, final String target, final boolean lost) {
-        final List<CheckFinding> found =
-                VocativeCheck.find(source, target, List.of("Finn → Фінн", "master → господар"), List.of("гзж"));
+        final List<CheckFinding> found = VocativeCheck.find(
+                source, target, List.of("Finn → Фінн", "master → господар", "Sir → Сер"), List.of("гзж"), "en");
 
         assertThat(!found.isEmpty()).isEqualTo(lost);
+    }
+
+    // IF a script whose sentences end in other marks were counted, THEN its every paragraph would read as one sentence.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "hi|दरवाज़ा खुला था। कोई जवाब देने नहीं आया।",
+                "ar|كان الباب مفتوحا. لم يأت أحد ليجيب.",
+                "hy|Դուռը բաց էր։ Ոչ ոք չեկավ պատասխանելու։"
+            })
+    void dropsSentence_targetInAScriptNotCounted_isNeverJudged(final String language, final String target) {
+        assertThat(SentenceCount.dropsSentence("The door was open. Nobody came to answer it.", target, "en", language))
+                .isFalse();
+    }
+
+    // A Russian source's abbreviation is no sentence end, so one sentence in is one sentence out.
+    @Test
+    void dropsSentence_russianAbbreviationBeforeACapital_isOneSentence() {
+        assertThat(SentenceCount.dropsSentence(
+                        "Он жил в г. Москве и работал там много лет.",
+                        "He lived in Moscow and worked there.",
+                        "ru",
+                        "en"))
+                .isFalse();
     }
 }

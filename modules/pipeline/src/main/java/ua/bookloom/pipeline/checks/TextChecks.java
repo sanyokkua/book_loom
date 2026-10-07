@@ -71,9 +71,13 @@ public final class TextChecks {
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
-        SentenceCountCheck.find(source, target).ifPresent(findings::add);
+        SentenceCountCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(VocativeCheck.find(
-                source, target, glossaryPairs, LanguageRules.bundled().stemAlternations(targetLanguage)));
+                source,
+                target,
+                glossaryPairs,
+                LanguageRules.bundled().stemAlternations(targetLanguage),
+                sourceLanguage));
         if (!findings.isEmpty()) {
             report(findings);
         }
