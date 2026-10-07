@@ -22,8 +22,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>Installed once high in the scene, it finds the innermost scrollable under the pointer that still has room in the
  * wheel's direction and moves that one, so a list inside a scrolling screen scrolls first and the screen takes over at
- * the list's end. Only a wheel notch is glided ({@link ScrollGlide#isDiscreteWheel}); every other scroll event, and the
- * start and end of a gesture, pass on untouched, and no state is kept between events beyond each view's own glide.
+ * the list's end. A wheel notch is glided ({@link ScrollGlide#isDiscreteWheel}); the pixel deltas of a trackpad or its momentum
+ * (macOS reports every event so) are added up and applied once per animation pulse by {@link PixelFlush}, unglided;
+ * the start and end of a gesture, a touch screen and any event with a horizontal part pass on untouched, and no state is kept between events beyond each view's own glide.
  * Pressing a mouse button over a gliding view (to drag its scroll bar, say) stops the glide where it is. The system
  * property {@code bookloom.smoothScroll=false} turns the whole thing off. Each event is logged at TRACE only.
  */
@@ -38,6 +39,7 @@ public final class SmoothScroll {
     public static final String SWITCH_PROPERTY = "bookloom.smoothScroll";
 
     private static final String GLIDE_KEY = "bookloom.smoothScroll.glide";
+    private static final String FLUSH_KEY = "bookloom.smoothScroll.flush";
     private static final double NANOS_PER_SECOND = 1e9;
     private static final double FIRST_FRAME_SECONDS = 1.0 / 60;
 
@@ -70,35 +72,41 @@ public final class SmoothScroll {
                 event.getTextDeltaYUnits(), event.getTouchCount(), event.isDirect(), event.isInertia());
         if (log.isTraceEnabled()) {
             log.trace(
-                    "scroll event: direct {}, inertia {}, touches {}, deltaY {}, textDeltaY {}, units {}, multiplier {},"
+                    "scroll event: direct {}, inertia {}, touches {}, deltaX {}, deltaY {}, textDeltaY {}, units {}, multiplier {},"
                             + " wheel {}",
                     event.isDirect(),
                     event.isInertia(),
                     event.getTouchCount(),
+                    event.getDeltaX(),
                     event.getDeltaY(),
                     event.getTextDeltaY(),
                     event.getTextDeltaYUnits(),
                     event.getMultiplierY(),
                     wheel);
         }
-        if (!wheel || event.getDeltaY() == 0) {
+        final boolean pixel = !wheel && ScrollGlide.isPixelScroll(event.getTextDeltaYUnits(), event.isDirect());
+        if (!(wheel || pixel) || event.getDeltaY() == 0 || (pixel && event.getDeltaX() != 0)) {
             return;
         }
-        final Move move = moveWithRoom(root, event.getTarget(), event);
+        final Move move = moveWithRoom(root, event.getTarget(), event, wheel);
         if (move == null) {
             return;
         }
-        log.trace("gliding {} by {} px", move.scroller().node().getClass().getSimpleName(), move.pixels());
-        glideOf(move.scroller()).add(move.pixels());
+        if (wheel) {
+            log.trace("gliding {} by {} px", move.scroller().node().getClass().getSimpleName(), move.pixels());
+            glideOf(move.scroller()).add(move.pixels());
+        } else {
+            flushOf(move.scroller()).add(move.pixels());
+        }
         event.consume();
     }
 
     private static @Nullable Move moveWithRoom(
-            final Node root, final @Nullable EventTarget target, final ScrollEvent event) {
+            final Node root, final @Nullable EventTarget target, final ScrollEvent event, final boolean wheel) {
         for (Node node = target instanceof Node start ? start : null; node != null; node = node.getParent()) {
             final Scroller scroller = scrollerOf(node);
             if (scroller != null) {
-                final double pixels = scroller.pixelsOf(event);
+                final double pixels = wheel ? scroller.pixelsOf(event) : ScrollGlide.panePixels(event.getDeltaY());
                 if (scroller.hasRoom(pixels)) {
                     return new Move(scroller, pixels);
                 }
@@ -122,10 +130,18 @@ public final class SmoothScroll {
         return (Glide) scroller.node().getProperties().computeIfAbsent(GLIDE_KEY, key -> new Glide(scroller));
     }
 
+    private static PixelFlush flushOf(final Scroller scroller) {
+        return (PixelFlush)
+                scroller.node().getProperties().computeIfAbsent(FLUSH_KEY, key -> new PixelFlush(scroller::moveBy));
+    }
+
     private static void stopGlides(final Node root, final @Nullable EventTarget target) {
         for (Node node = target instanceof Node start ? start : null; node != null; node = node.getParent()) {
             if (node.getProperties().get(GLIDE_KEY) instanceof Glide glide) {
                 glide.halt();
+            }
+            if (node.getProperties().get(FLUSH_KEY) instanceof PixelFlush flush) {
+                flush.halt();
             }
             if (node.equals(root)) {
                 return;

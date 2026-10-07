@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
  *
  * <p>A wheel notch travels exactly as far as JavaFX would have jumped it, only spread over a few frames: a list moves
  * by lines of its own row height, a scroll pane by the event's pixels. Notches that arrive while a glide still runs add
- * to what is left of it, up to a few screens, and a notch the other way replaces it. A trackpad, a touch screen and the
- * momentum after a gesture already scroll in small continuous steps, so their events are left to JavaFX.
+ * to what is left of it, up to a few screens, and a notch the other way replaces it. A trackpad's and a gesture's
+ * momentum pixels are summed per frame instead ({@link PixelFlush}), and a touch screen is left to JavaFX.
  */
 // Checkstyle's HideUtilityClassConstructor parses source text before Lombok's annotation processor runs, so it
 // cannot see the private constructor @NoArgsConstructor generates (ADR-0024).
@@ -45,6 +45,18 @@ final class ScrollGlide {
             final boolean direct,
             final boolean inertia) {
         return units == ScrollEvent.VerticalTextScrollUnits.LINES && touchCount == 0 && !direct && !inertia;
+    }
+
+    /**
+     * Whether a scroll event carries plain pixel deltas from a trackpad or a gesture's momentum, which macOS sends with
+     * no text units at all, rather than a touch screen's.
+     *
+     * @param units the event's vertical text units
+     * @param direct whether the event comes from a touch screen
+     * @return {@code true} if the deltas are pixels to add up per frame, {@code false} otherwise
+     */
+    static boolean isPixelScroll(final ScrollEvent.VerticalTextScrollUnits units, final boolean direct) {
+        return units == ScrollEvent.VerticalTextScrollUnits.NONE && !direct;
     }
 
     /**

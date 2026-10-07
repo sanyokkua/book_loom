@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.within;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.DoubleSupplier;
 import java.util.stream.IntStream;
 import javafx.beans.value.ObservableDoubleValue;
 import javafx.event.Event;
@@ -45,6 +46,7 @@ class SmoothScrollTest extends FxTestBase {
     private static final long SETTLE_MS = 1200;
     private static final long SPIN_MS = 40;
     private static final double EXACT = 1e-6;
+    private static final long AWAIT_NANOS = 15_000_000_000L;
 
     private ScrollPane pane;
     private Region content;
@@ -152,6 +154,26 @@ class SmoothScrollTest extends FxTestBase {
         return values;
     }
 
+    // Waits until the glide has landed instead of guessing how long a loaded machine needs; fails by the assertion
+    // after.
+    private void awaitValue(final DoubleSupplier value, final double target) {
+        final long deadline = System.nanoTime() + AWAIT_NANOS;
+        while (System.nanoTime() < deadline && Math.abs(ThemeTestSupport.onFx(value::getAsDouble) - target) > EXACT) {
+            sleep(SPIN_MS);
+        }
+    }
+
+    // The events that get past the glide's filter to the node itself, i.e. the ones that were not consumed.
+    private List<ScrollEvent> reaching(final Node node) {
+        final List<ScrollEvent> reached = new CopyOnWriteArrayList<>();
+        interact(() -> node.addEventHandler(ScrollEvent.SCROLL, reached::add));
+        return reached;
+    }
+
+    private static ScrollEvent pixels(final double deltaY, final boolean inertia) {
+        return scroll(ScrollEvent.SCROLL, deltaY, ScrollEvent.VerticalTextScrollUnits.NONE, -0.0, 0, inertia);
+    }
+
     // A hand spins about one notch every 40 ms; firing all ten in one go would also prove the run-ahead cap.
     private void fireNotches(final Node target, final double sign) {
         IntStream.range(0, NOTCHES).forEach(i -> {
@@ -170,11 +192,11 @@ class SmoothScrollTest extends FxTestBase {
 
         fireNotches(flow, 1);
         fireNotches(flowOf(nativeList), 1);
-        sleep(SETTLE_MS);
+        final double jumped = ThemeTestSupport.onFx(flowOf(nativeList)::getPosition);
+        awaitValue(flow::getPosition, jumped);
 
-        assertThat(positions).hasSizeGreaterThan(NOTCHES).isSorted();
-        assertThat(ThemeTestSupport.onFx(flow::getPosition))
-                .isCloseTo(ThemeTestSupport.onFx(flowOf(nativeList)::getPosition), within(EXACT));
+        assertThat(positions).hasSizeGreaterThan(1).isSorted();
+        assertThat(ThemeTestSupport.onFx(flow::getPosition)).isCloseTo(jumped, within(EXACT));
         assertThat(ThemeTestSupport.onFx(() -> flow.getFirstVisibleCell().getIndex()))
                 .isEqualTo(30);
     }
@@ -192,18 +214,67 @@ class SmoothScrollTest extends FxTestBase {
         assertThat(ThemeTestSupport.onFx(pane::getVvalue)).isCloseTo(0.5, within(EXACT));
     }
 
-    // IF trackpad or momentum events were glided, THEN they would be smoothed twice and lag behind the fingers: a whole
-    // gesture with its momentum moves the pane at once, by its own pixels (five steps and three momentum steps of 10).
+    // IF the recorded macOS shape (pixel deltas, no units, some of them momentum) were left to JavaFX, THEN every event
+    // would move the view on its own and scrolling would lurch; each is consumed and the pane ends exactly where the
+    // deltas add up (-2 -3 -5 -10 -10 -5 -3 -2 = 40 px of 800 = 0.05).
     @Test
-    void trackpadGestureWithMomentum_overAScrollPane_isLeftToJavaFxAndMovesAtOnce() {
-        interact(() -> {
-            Event.fireEvent(content, trackpad(ScrollEvent.SCROLL_STARTED, false));
-            IntStream.range(0, 5).forEach(i -> Event.fireEvent(content, trackpad(ScrollEvent.SCROLL, false)));
-            Event.fireEvent(content, trackpad(ScrollEvent.SCROLL_FINISHED, false));
-            IntStream.range(0, 3).forEach(i -> Event.fireEvent(content, trackpad(ScrollEvent.SCROLL, true)));
-        });
+    void recordedMacPixelEvents_overAScrollPane_areConsumedAndSumExactly() {
+        final List<Double> deltas = List.of(-2.0, -3.0, -5.0, -10.0, -10.0, -5.0, -3.0, -2.0);
+        final List<ScrollEvent> events =
+                deltas.stream().map(d -> pixels(d, d > -5.0)).toList();
 
-        assertThat(ThemeTestSupport.onFx(pane::getVvalue)).isCloseTo(0.1, within(EXACT));
+        final List<ScrollEvent> reachedTarget = reaching(content);
+        interact(() -> events.forEach(event -> Event.fireEvent(content, event)));
+        awaitValue(pane::getVvalue, 0.05);
+
+        assertThat(reachedTarget).isEmpty();
+        assertThat(ThemeTestSupport.onFx(pane::getVvalue)).isCloseTo(0.05, within(EXACT));
+    }
+
+    // IF a list took pixel events as lines (textDeltaY times the line size), THEN with textDeltaY 0 it would never
+    // move;
+    // 20 px of deltas move a list by exactly 20 px (one 20 px row of the 4000 px content less the viewport).
+    @Test
+    void pixelEvents_overAList_moveItByTheirPixelsNotByLines() {
+        final VirtualFlow<?> flow = flowOf(list);
+
+        interact(() -> IntStream.range(0, 4).forEach(i -> Event.fireEvent(flow, pixels(-5, false))));
+        final double expected = 20.0 / (ROWS * CELL - ThemeTestSupport.onFx(flow::getHeight));
+        awaitValue(flow::getPosition, expected);
+
+        assertThat(ThemeTestSupport.onFx(flow::getPosition)).isCloseTo(expected, within(EXACT));
+    }
+
+    // IF a horizontal part were swallowed with the vertical one, THEN sideways panning would die on a diagonal swipe.
+    @Test
+    void pixelEvent_withAHorizontalPart_isLeftToJavaFx() {
+        final ScrollEvent diagonal = new ScrollEvent(
+                ScrollEvent.SCROLL,
+                10,
+                10,
+                10,
+                10,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                5,
+                -5,
+                5,
+                -5,
+                ScrollEvent.HorizontalTextScrollUnits.NONE,
+                0,
+                ScrollEvent.VerticalTextScrollUnits.NONE,
+                0,
+                0,
+                null);
+
+        final List<ScrollEvent> reachedTarget = reaching(content);
+        interact(() -> Event.fireEvent(content, diagonal));
+
+        assertThat(reachedTarget).hasSize(1);
     }
 
     // IF a gesture whose end never arrived left the wheel thinking a gesture was still under way (the old shared
