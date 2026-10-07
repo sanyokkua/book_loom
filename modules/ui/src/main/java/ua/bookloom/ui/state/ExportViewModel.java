@@ -107,7 +107,7 @@ public final class ExportViewModel {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.statement = new ExportStatement(desk, messages, executor);
         this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
-        this.run = new ExportRun(exports, models, settings, progress, executor, activities);
+        this.run = new ExportRun(exports, models, settings, progress, executor, activities, messages);
         this.blocker = activities.blocker(ActivityKind.EXPORT);
         blocker.addListener(observed -> refreshRunNote());
         run.running().addListener((observed, was, now) -> recompute());

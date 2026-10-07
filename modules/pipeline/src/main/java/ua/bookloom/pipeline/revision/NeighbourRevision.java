@@ -58,6 +58,8 @@ final class NeighbourRevision {
         Objects.requireNonNull(read.data(), "records").forEach(record -> byId.put(record.segmentId(), record));
         final List<String> order = inputs.order();
         log.info("Neighbour check started project={} segments={}", inputs.projectId(), order.size());
+        calls.planned(ModelCalls.Stage.NEIGHBOUR_CHECK, (int)
+                order.stream().filter(id -> isRisky(byId.get(id))).count());
         int checked = 0;
         for (int at = 0; at < order.size(); at++) {
             final SegmentRecord record = byId.get(order.get(at));

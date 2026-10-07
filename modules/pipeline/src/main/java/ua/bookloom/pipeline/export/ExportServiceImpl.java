@@ -13,6 +13,7 @@ import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.project.Project;
@@ -41,10 +42,25 @@ public final class ExportServiceImpl implements ExportService {
         return newExportWith(request, model, ExportMoveOperation.nio());
     }
 
+    @Override
+    public Result<ExportJob> newExport(
+            final ExportRequest request, @Nullable final ChatModel model, final ExportProgressListener progress) {
+        return newExportWith(request, model, ExportMoveOperation.nio(), progress);
+    }
+
     /** The publication move is a seam so a test can script its failure. */
     Result<ExportJob> newExportWith(
             final ExportRequest request, @Nullable final ChatModel model, final ExportMoveOperation moves) {
+        return newExportWith(request, model, moves, ExportProgressListener.NONE);
+    }
+
+    private Result<ExportJob> newExportWith(
+            final ExportRequest request,
+            @Nullable final ChatModel model,
+            final ExportMoveOperation moves,
+            final ExportProgressListener progress) {
         Objects.requireNonNull(request, "request");
+        Objects.requireNonNull(progress, "progress");
         try {
             log.debug(
                     "newExport project={} destination={} overwrite={} sideFiles={} consistencyPass={} withModel={}",
@@ -62,7 +78,7 @@ public final class ExportServiceImpl implements ExportService {
             if (project.isEmpty()) {
                 return Result.err(ExportJobImpl.unknownProject(request.projectId()));
             }
-            return prepare(request, project.get(), model, moves);
+            return prepare(request, project.get(), model, moves, progress);
         } catch (Throwable cause) {
             return Result.err(ExportJobImpl.internalError("prepare the export", cause));
         }
@@ -72,7 +88,8 @@ public final class ExportServiceImpl implements ExportService {
             final ExportRequest request,
             final Project project,
             @Nullable final ChatModel model,
-            final ExportMoveOperation moves) {
+            final ExportMoveOperation moves,
+            final ExportProgressListener progress) {
         final Result<Boolean> checked = DestinationChecks.check(project.source(), request.destination());
         if (checked.isErr()) {
             return Result.err(Objects.requireNonNull(checked.error(), "error"));
@@ -81,6 +98,6 @@ public final class ExportServiceImpl implements ExportService {
         final ModelCalls calls = model == null ? null : (kind, segmentId, chat) -> model.chat(chat);
         final ExportParts parts =
                 new ExportParts(projects, segments, openProjects, documents, moves, consistencyPass, glossary);
-        return Result.ok(new ExportJobImpl(request, parts, calls));
+        return Result.ok(new ExportJobImpl(request, parts, calls, progress));
     }
 }

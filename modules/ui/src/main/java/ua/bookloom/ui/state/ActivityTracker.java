@@ -2,18 +2,25 @@ package ua.bookloom.ui.state;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.KeepAwake;
+import ua.bookloom.ui.i18n.MessageKey;
 
 /**
  * Every model or provider activity under way, so that one that would compete with another for the model is not
@@ -29,28 +36,17 @@ import ua.bookloom.ui.KeepAwake;
 @Singleton
 public final class ActivityTracker {
 
-    /**
-     * One activity as the title bar shows it.
-     *
-     * @param id the registration's own number, unique for the application's life
-     * @param kind what runs
-     * @param requests how many model requests it has sent so far, zero when it does not count them
-     * @param cancellable whether the title bar may offer to stop it
-     */
-    public record Activity(long id, ActivityKind kind, int requests, boolean cancellable) {
-
-        /** Rejects a missing kind. */
-        public Activity {
-            Objects.requireNonNull(kind, "kind");
-        }
-    }
-
     private final ObservableList<Activity> running = FXCollections.observableArrayList();
     private final ObservableList<Activity> runningView = FXCollections.unmodifiableObservableList(running);
     private final Map<Long, Runnable> cancels = new HashMap<>();
     private long lastId;
     private @Nullable Handle translation;
     private final KeepAwake keepAwake;
+    private final Clock clock;
+    private final BooleanBinding blocking =
+            Bindings.createBooleanBinding(() -> running.stream().anyMatch(Activity::isBlocking), running);
+    private final ObjectBinding<@Nullable Activity> blockingActivity = Bindings.createObjectBinding(
+            () -> running.stream().filter(Activity::isBlocking).findFirst().orElse(null), running);
 
     /**
      * Creates a tracker that follows the run and holds nothing awake.
@@ -69,8 +65,20 @@ public final class ActivityTracker {
      */
     @Inject
     public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake) {
+        this(mirror, keepAwake, Clock.systemUTC());
+    }
+
+    /**
+     * Creates a tracker on a given clock, so a test can move the time that elapsed time and the ETA are read from.
+     *
+     * @param mirror where the run's state is read
+     * @param keepAwake what holds the computer awake while the translation is registered
+     * @param clock where an activity's start and its elapsed time are read
+     */
+    public ActivityTracker(final StateMirror mirror, final KeepAwake keepAwake, final Clock clock) {
         Objects.requireNonNull(mirror, "mirror");
         this.keepAwake = Objects.requireNonNull(keepAwake, "keepAwake");
+        this.clock = Objects.requireNonNull(clock, "clock");
         mirror.runState().addListener((observed, was, now) -> followRun(isTranslating(mirror)));
         // The countdown republishes the recovery every second; only a change of whether it waits matters here.
         mirror.review().recovery().addListener((observed, was, now) -> {
@@ -135,9 +143,38 @@ public final class ActivityTracker {
         if (cancel != null) {
             cancels.put(id, cancel);
         }
-        running.add(new Activity(id, kind, 0, cancel != null));
+        running.add(new Activity(
+                id, kind, 0, cancel != null, kind.label(), clock.instant(), Activity.Progress.NONE, false));
         log.info("activity {} #{} started; running now {}", kind, id, kinds());
         return new Handle(id, kind);
+    }
+
+    /**
+     * Whether some running activity makes the window wait; navigation, the footer buttons and the navigation column
+     * follow it.
+     *
+     * @return a binding that is {@code true} while a blocking activity runs
+     */
+    public BooleanBinding blocking() {
+        return blocking;
+    }
+
+    /**
+     * The oldest running activity that makes the window wait, which the busy card describes.
+     *
+     * @return a binding holding it, or {@code null} while nothing blocks
+     */
+    public ObjectBinding<@Nullable Activity> blockingActivity() {
+        return blockingActivity;
+    }
+
+    /**
+     * The tracker's own time, so a card that shows elapsed time counts from the same clock the start was taken from.
+     *
+     * @return the current instant
+     */
+    public Instant now() {
+        return clock.instant();
     }
 
     /**
@@ -199,8 +236,25 @@ public final class ActivityTracker {
             log.debug("activity {} #{} cannot be stopped from outside", activity.kind(), activity.id());
             return;
         }
+        if (activity.cancelling()) {
+            log.debug("activity {} #{} is already being stopped", activity.kind(), activity.id());
+            return;
+        }
+        replace(activity.id(), Activity::asCancelling);
         log.info("activity {} #{} asked to stop", activity.kind(), activity.id());
         cancel.run();
+    }
+
+    private void replace(final long id, final UnaryOperator<Activity> change) {
+        for (int i = 0; i < running.size(); i++) {
+            final Activity shown = running.get(i);
+            if (shown.id() == id) {
+                final Activity changed = change.apply(shown);
+                if (!changed.equals(shown)) {
+                    running.set(i, changed);
+                }
+            }
+        }
     }
 
     private String kinds() {
@@ -234,14 +288,62 @@ public final class ActivityTracker {
          * @param count the requests so far
          */
         public void requests(final int count) {
-            if (ended) {
-                return;
-            }
-            for (int i = 0; i < running.size(); i++) {
-                final Activity shown = running.get(i);
-                if (shown.id() == id && shown.requests() != count) {
-                    running.set(i, new Activity(id, kind, count, shown.cancellable()));
-                }
+            update(shown -> shown.requests() == count ? shown : shown.withRequests(count));
+        }
+
+        /**
+         * Words the card's heading more closely than the kind's name; ignored once ended.
+         *
+         * @param title the heading's catalogue key; non-null
+         */
+        public void title(final MessageKey title) {
+            Objects.requireNonNull(title, "title");
+            update(shown -> shown.withTitle(title));
+        }
+
+        /**
+         * Says how far a counted step has got; the time left is the elapsed time per finished unit times the units
+         * left. Ignored once ended.
+         *
+         * @param done the units finished, from 0
+         * @param total the units in the step, at least 1 and at least {@code done}
+         * @param stepText what the step is, already worded
+         */
+        public void progress(final int done, final int total, final String stepText) {
+            Objects.requireNonNull(stepText, "stepText");
+            final double fraction = total <= 0 ? 0 : Math.min(1.0, (double) done / total);
+            update(shown -> {
+                final Duration elapsed = Duration.between(shown.startedAt(), clock.instant());
+                final Duration eta = done <= 0 || total <= done
+                        ? null
+                        : elapsed.dividedBy(done).multipliedBy(total - done);
+                return shown.withProgress(new Activity.Progress(fraction, stepText, shown.details(), eta));
+            });
+        }
+
+        /**
+         * Says what is being done when how far it has got is not known; clears any fraction and time left.
+         *
+         * @param stepText what is being done, already worded; {@code null} for none
+         */
+        public void indeterminate(final @Nullable String stepText) {
+            update(shown -> shown.withProgress(new Activity.Progress(null, stepText, shown.details(), null)));
+        }
+
+        /**
+         * Replaces the card's detail lines.
+         *
+         * @param lines the lines in the order they are shown; non-null
+         */
+        public void details(final List<Activity.Detail> lines) {
+            Objects.requireNonNull(lines, "lines");
+            update(shown ->
+                    shown.withProgress(new Activity.Progress(shown.fraction(), shown.stepText(), lines, shown.eta())));
+        }
+
+        private void update(final UnaryOperator<Activity> change) {
+            if (!ended) {
+                replace(id, change);
             }
         }
 

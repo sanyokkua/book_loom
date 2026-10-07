@@ -18,9 +18,7 @@ class ProviderWorkCancelTest extends SettingsViewModelTestBase {
     private final QueuedExecutor queued = new QueuedExecutor();
 
     private List<ActivityKind> running() {
-        return onFx(() -> activities.running().stream()
-                .map(ActivityTracker.Activity::kind)
-                .toList());
+        return onFx(() -> activities.running().stream().map(Activity::kind).toList());
     }
 
     private void fx(final Runnable action) {

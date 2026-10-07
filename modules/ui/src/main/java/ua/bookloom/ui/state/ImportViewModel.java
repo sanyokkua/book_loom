@@ -41,6 +41,8 @@ public final class ImportViewModel {
     private final Toasts toasts;
     private final ErrorPresenter errors;
     private final ExecutorService executor;
+    private final ActivityTracker activities;
+    private ActivityTracker.@Nullable Handle openingActivity;
     private final ReadOnlyObjectWrapper<ImportState> state = new ReadOnlyObjectWrapper<>(new ImportState.Idle());
     private final ReadOnlyBooleanWrapper opening = new ReadOnlyBooleanWrapper(false);
     // What was showing when the open began, for a fault that leaves the book already open untouched. FX thread only.
@@ -54,6 +56,7 @@ public final class ImportViewModel {
      * @param toasts where a successful import is announced
      * @param errors where an unexpected failure is shown; a refusal the person can act on is shown in place instead
      * @param executor the daemon executor the service runs on, never the FX thread
+     * @param activities where the opening is registered, so the window waits for it
      */
     @Inject
     public ImportViewModel(
@@ -61,12 +64,14 @@ public final class ImportViewModel {
             final CurrentProject current,
             final Toasts toasts,
             final ErrorPresenter errors,
-            @BackgroundExecutor final ExecutorService executor) {
+            @BackgroundExecutor final ExecutorService executor,
+            final ActivityTracker activities) {
         this.projects = Objects.requireNonNull(projects, "projects");
         this.current = Objects.requireNonNull(current, "current");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.errors = Objects.requireNonNull(errors, "errors");
         this.executor = Objects.requireNonNull(executor, "executor");
+        this.activities = Objects.requireNonNull(activities, "activities");
     }
 
     /**
@@ -103,6 +108,9 @@ public final class ImportViewModel {
         final String fileName = fileNameOf(source);
         stateBeforeOpen = state.get();
         opening.set(true);
+        final ActivityTracker.Handle registered = activities.begin(ActivityKind.IMPORT, null);
+        registered.indeterminate(fileName);
+        openingActivity = registered;
         state.set(new ImportState.Opening(fileName));
         log.info("opening {}", fileName);
         log.trace("opening the file at {}", source);
@@ -196,9 +204,18 @@ public final class ImportViewModel {
             }
         } finally {
             opening.set(false);
+            endActivity();
             if (replacesPrevious) {
                 release(previous);
             }
+        }
+    }
+
+    private void endActivity() {
+        final ActivityTracker.Handle registered = openingActivity;
+        openingActivity = null;
+        if (registered != null) {
+            registered.end();
         }
     }
 

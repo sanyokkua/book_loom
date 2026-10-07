@@ -56,7 +56,12 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         projects = new ScriptedProjectService();
         current = new CurrentProject();
         imports = onFx(() -> new ImportViewModel(
-                projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
+                projects,
+                current,
+                new RecordingToasts(),
+                new RecordingErrorPresenter(),
+                new DirectExecutor(),
+                new ActivityTracker(new StateMirror())));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor(), tag -> true));
         mirror = onFx(StateMirror::new);
         activities = onFx(() -> new ActivityTracker(mirror));
@@ -64,7 +69,14 @@ abstract class ExportViewModelTestBase extends FxTestBase {
         messages = new Messages((LocaleProvider) () -> Locale.ENGLISH);
         exportService = new ScriptedExportService();
         models = ScriptedChatModelFactory.ok();
-        settings = onFx(() -> new SettingsViewModel(
+        settings = onFx(this::newSettings);
+        progress = onFx(() -> new WorkflowProgress(current, mirror));
+        exports = onFx(() -> newExports(new DirectExecutor()));
+        WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    private SettingsViewModel newSettings() {
+        return new SettingsViewModel(
                 new FakeProviderConfigs(),
                 ScriptedProviderVerifier.idle(),
                 new ModelListing(
@@ -76,10 +88,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
                 new RecordingToasts(),
                 new RecordingErrorPresenter(),
                 new DirectExecutor(),
-                activities));
-        progress = onFx(() -> new WorkflowProgress(current, mirror));
-        exports = onFx(() -> newExports(new DirectExecutor()));
-        WaitForAsyncUtils.waitForFxEvents();
+                activities);
     }
 
     /** Builds an export view model over this test's collaborators and the given executor. */

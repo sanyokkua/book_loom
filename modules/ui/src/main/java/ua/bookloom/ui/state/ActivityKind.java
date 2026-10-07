@@ -15,36 +15,58 @@ import ua.bookloom.ui.i18n.MessageKey;
 public enum ActivityKind {
 
     /** A translation run while it is translating (running, pausing or stopping), not while it waits paused. */
-    TRANSLATION(MessageKey.ACTIVITY_TRANSLATION, true, false, ViewNames.TRANSLATING),
+    TRANSLATION(MessageKey.ACTIVITY_TRANSLATION, true, false, ViewNames.TRANSLATING, false),
     /** The glossary's model scan for names; abandoned work if the person leaves Names &amp; style. */
-    GLOSSARY_SCAN(MessageKey.ACTIVITY_GLOSSARY_SCAN, true, true, ViewNames.NAMES_STYLE),
+    GLOSSARY_SCAN(MessageKey.ACTIVITY_GLOSSARY_SCAN, true, true, ViewNames.NAMES_STYLE, true),
     /** The glossary's model review of its rows; abandoned work if the person leaves Names &amp; style. */
-    GLOSSARY_REVIEW(MessageKey.ACTIVITY_GLOSSARY_REVIEW, true, true, ViewNames.NAMES_STYLE),
+    GLOSSARY_REVIEW(MessageKey.ACTIVITY_GLOSSARY_REVIEW, true, true, ViewNames.NAMES_STYLE, true),
     /** One segment re-translated from the review panel. */
-    REVIEW_RETRY(MessageKey.ACTIVITY_REVIEW_RETRY, true, false, ViewNames.TRANSLATING),
+    REVIEW_RETRY(MessageKey.ACTIVITY_REVIEW_RETRY, true, false, ViewNames.TRANSLATING, true),
     /** The provider test that asks the chosen model for a short answer. */
-    PROVIDER_INFERENCE_TEST(MessageKey.ACTIVITY_PROVIDER_INFERENCE_TEST, true, true, ViewNames.SETTINGS),
+    PROVIDER_INFERENCE_TEST(MessageKey.ACTIVITY_PROVIDER_INFERENCE_TEST, true, true, ViewNames.SETTINGS, true),
     /** The provider tests that ask only whether the server answers and lists the model. */
-    PROVIDER_CHECK(MessageKey.ACTIVITY_PROVIDER_CHECK, false, false, ViewNames.SETTINGS),
+    PROVIDER_CHECK(MessageKey.ACTIVITY_PROVIDER_CHECK, false, false, ViewNames.SETTINGS, false),
     /** Reading the provider's model list for the settings. */
-    MODEL_LISTING(MessageKey.ACTIVITY_MODEL_LISTING, false, false, ViewNames.SETTINGS),
+    MODEL_LISTING(MessageKey.ACTIVITY_MODEL_LISTING, false, false, ViewNames.SETTINGS, false),
     /** Writing the translated book, whose consistency pass may ask the model. */
-    EXPORT(MessageKey.ACTIVITY_EXPORT, true, false, ViewNames.EXPORT),
+    EXPORT(MessageKey.ACTIVITY_EXPORT, true, false, ViewNames.EXPORT, true),
     /** The model's proposal of the translated book's file name. */
-    SUGGEST_NAME(MessageKey.ACTIVITY_SUGGEST_NAME, true, false, ViewNames.EXPORT),
+    SUGGEST_NAME(MessageKey.ACTIVITY_SUGGEST_NAME, true, false, ViewNames.EXPORT, true),
     /** The model's proposal of the Book Brief's tone and style. */
-    SUGGEST_STYLE(MessageKey.ACTIVITY_SUGGEST_STYLE, true, false, ViewNames.BOOK_BRIEF);
+    SUGGEST_STYLE(MessageKey.ACTIVITY_SUGGEST_STYLE, true, false, ViewNames.BOOK_BRIEF, true),
+    /** Opening a book and inspecting it, before the import screen has anything to show. */
+    IMPORT(MessageKey.ACTIVITY_IMPORT, false, false, ViewNames.IMPORT, true),
+    /** The work between pressing Start and the first segment: style sheet, name scan, chunking. */
+    RUN_PREPARATION(MessageKey.ACTIVITY_RUN_PREPARATION, false, false, ViewNames.TRANSLATING, true);
 
     private final MessageKey label;
     private final boolean exclusive;
     private final boolean leaveSensitive;
     private final ViewNames home;
+    private final boolean blocking;
 
-    ActivityKind(final MessageKey label, final boolean exclusive, final boolean leaveSensitive, final ViewNames home) {
+    ActivityKind(
+            final MessageKey label,
+            final boolean exclusive,
+            final boolean leaveSensitive,
+            final ViewNames home,
+            final boolean blocking) {
         this.label = label;
         this.exclusive = exclusive;
         this.leaveSensitive = leaveSensitive;
         this.home = home;
+        this.blocking = blocking;
+    }
+
+    /**
+     * Whether the window waits for this work behind a card with its progress: navigation and the actions that would
+     * change what it works on are refused while it runs. The translation run itself, the model listing and the light
+     * provider checks do not block, so the person can pause, browse and edit around them.
+     *
+     * @return {@code true} for work that changes or reads the book in one piece, {@code false} otherwise
+     */
+    public boolean isBlocking() {
+        return blocking;
     }
 
     /**

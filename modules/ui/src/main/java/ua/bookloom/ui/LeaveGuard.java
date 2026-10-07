@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.dialog.LeaveDialog;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 
@@ -50,7 +51,7 @@ public final class LeaveGuard {
         Objects.requireNonNull(proceed, "proceed");
         final Predicate<ActivityKind> leftBehind = kind -> kind.isLeaveSensitive() && kind.home() == source;
         final List<ActivityKind> sensitive = activities.running().stream()
-                .map(ActivityTracker.Activity::kind)
+                .map(Activity::kind)
                 .filter(leftBehind)
                 .toList();
         if (sensitive.isEmpty()) {

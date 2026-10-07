@@ -48,4 +48,23 @@ public interface ModelCalls {
     default void announce(final JobEvent event) {
         // Nothing listens.
     }
+
+    /** The stages of a backward revision whose calls are counted before the first is sent. */
+    enum Stage {
+        /** One call per segment whose character's gender became known. */
+        GENDER_RETRY,
+        /** One call per repaired or flagged paragraph, checked against its neighbours. */
+        NEIGHBOUR_CHECK
+    }
+
+    /**
+     * Announces how many calls a stage is about to send at most, so a caller can show a determinate bar. A seam that
+     * does not count ignores it.
+     *
+     * @param stage the stage about to start; non-null
+     * @param calls the most calls it will send; zero or more
+     */
+    default void planned(final Stage stage, final int calls) {
+        // Nothing counts.
+    }
 }

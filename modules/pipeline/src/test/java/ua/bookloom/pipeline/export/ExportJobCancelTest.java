@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,6 +105,20 @@ class ExportJobCancelTest {
         assertThat(destination).doesNotExist();
         assertThat(tempDir.resolve("Book.uk.report.md")).doesNotExist();
         assertThat(hiddenFiles(tempDir)).isEmpty();
+    }
+
+    // A cancel must not wait for the provider to answer: the call in flight is interrupted and the export ends.
+    @Test
+    void cancel_whileAModelCallWaits_interruptsItAndEndsCancelled() {
+        final ScriptedChatModel waiting = new ScriptedChatModel().blockNthRequest(1);
+        final ExportJob job = ok(fixture.serviceOver(port).newExport(request(), waiting));
+        final CompletableFuture<Result<ExportReport>> running = CompletableFuture.supplyAsync(job::run);
+        waiting.awaitRequests(1);
+
+        job.cancel();
+
+        assertThat(error(running.orTimeout(5, TimeUnit.SECONDS).join()).code()).isEqualTo(ErrorCode.cancelled);
+        assertThat(destination).doesNotExist();
     }
 
     // A cancel raised once the book is written and checked, before it is moved into place, says exactly that.

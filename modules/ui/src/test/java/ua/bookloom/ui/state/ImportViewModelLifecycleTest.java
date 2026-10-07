@@ -42,6 +42,29 @@ class ImportViewModelLifecycleTest extends ImportViewModelTestBase {
         assertThat(stateOf(viewModel)).isInstanceOf(ImportState.Detected.class);
     }
 
+    // IF the opening were not a registered, blocking activity, THEN the window could be navigated away from mid-open.
+    @Test
+    void open_portNotYetAnswered_isABlockingImportActivityUntilTheAnswer()
+            throws InterruptedException, TimeoutException {
+        final Path source = dir.resolve("Frankenstein.epub");
+        projects.on(source, Result.ok(BookFixtures.frankensteinImport()));
+        projects.hold();
+        useBackgroundThread();
+        final ImportViewModel viewModel = viewModel();
+
+        open(viewModel, source);
+        projects.awaitEntered();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(onFx(() -> activities.running().getFirst().kind())).isEqualTo(ActivityKind.IMPORT);
+        assertThat(onFx(() -> activities.running().getFirst().stepText())).isEqualTo("Frankenstein.epub");
+
+        projects.release();
+        awaitAnswered(viewModel);
+
+        assertThat(onFx(() -> activities.blocking().get())).isFalse();
+    }
+
     // IF a held open did not show as in progress with the file's name, THEN the person could not tell the drop had
     // been accepted; and IF the answer were not published after release, THEN the screen would stay locked.
     @Test

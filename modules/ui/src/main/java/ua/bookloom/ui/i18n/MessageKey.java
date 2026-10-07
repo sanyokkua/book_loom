@@ -83,6 +83,10 @@ public enum MessageKey {
     ACTIVITY_MODEL_LISTING("activity.modelListing"),
     /** Name of writing the translated book as running work. */
     ACTIVITY_EXPORT("activity.export"),
+    /** Name of opening and inspecting a book as running work. */
+    ACTIVITY_IMPORT("activity.import"),
+    /** Name of preparing a run (style sheet, name scan, chunking) as running work. */
+    ACTIVITY_RUN_PREPARATION("activity.runPreparation"),
     /** The title-bar chip naming running model work; arguments: 0 its name, 1 requests sent so far, 2 how many other works also run. */
     ACTIVITY_CHIP("activity.chip"),
     /** Hover explanation of the title-bar chip named by {@link #ACTIVITY_CHIP}. */
@@ -93,6 +97,22 @@ public enum MessageKey {
     ACTIVITY_STOP_TIP("activity.stop.tip"),
     /** Why a control that would ask the model is unavailable; argument 0 is the name of the work running. */
     ACTIVITY_BLOCKED("activity.blocked"),
+    /** Busy-card step: the export checks the destination and the project. */
+    EXPORT_PROGRESS_VALIDATING("export.progress.validating"),
+    /** Busy-card step: the consistency pass re-renders segments whose character's gender became known. */
+    EXPORT_PROGRESS_RETRY("export.progress.retry"),
+    /** Busy-card step: the consistency pass checks repaired paragraphs against their neighbours. */
+    EXPORT_PROGRESS_NEIGHBOUR("export.progress.neighbour"),
+    /** Busy-card step: the export writes the book and its side files. */
+    EXPORT_PROGRESS_WRITING("export.progress.writing"),
+    /** Busy-card detail label: the file being worked on. */
+    ACTIVITY_DETAIL_FILE("activity.detail.file"),
+    /** Busy-card detail label: the model being asked. */
+    ACTIVITY_DETAIL_MODEL("activity.detail.model"),
+    /** Busy-card detail label: how many model requests were sent. */
+    ACTIVITY_DETAIL_REQUESTS("activity.detail.requests"),
+    /** Busy-card detail value: a count out of a total; arguments: 0 done, 1 total. */
+    ACTIVITY_DETAIL_OF("activity.detail.of"),
     /** About dialog subtitle; argument 0 is the build version. */
     ABOUT_SUBTITLE("about.subtitle"),
     /** About dialog description of the product. */

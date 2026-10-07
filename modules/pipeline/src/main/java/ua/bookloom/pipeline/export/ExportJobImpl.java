@@ -18,6 +18,8 @@ import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportProgress;
+import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.SideFile;
@@ -43,13 +45,19 @@ final class ExportJobImpl implements ExportJob {
 
     private final ExportRequest request;
     private final ExportParts parts;
-    private final @Nullable ModelCalls calls;
+    private final @Nullable ExportCalls calls;
+    private final ExportProgressListener progress;
     private final AtomicBoolean cancelled = new AtomicBoolean();
 
-    ExportJobImpl(final ExportRequest request, final ExportParts parts, @Nullable final ModelCalls calls) {
+    ExportJobImpl(
+            final ExportRequest request,
+            final ExportParts parts,
+            @Nullable final ModelCalls calls,
+            final ExportProgressListener progress) {
         this.request = Objects.requireNonNull(request, "request");
         this.parts = Objects.requireNonNull(parts, "parts");
-        this.calls = calls;
+        this.progress = Objects.requireNonNull(progress, "progress");
+        this.calls = calls == null ? null : new ExportCalls(calls, cancelled, progress);
     }
 
     @Override
@@ -75,9 +83,14 @@ final class ExportJobImpl implements ExportJob {
     public void cancel() {
         log.debug("export cancel requested project={}", request.projectId());
         cancelled.set(true);
+        final ExportCalls inFlight = calls;
+        if (inFlight != null) {
+            inFlight.interrupt();
+        }
     }
 
     private Result<ExportReport> write() {
+        progress.onProgress(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
         final Result<Project> found = findProject();
         if (found.isErr()) {
             return Result.err(errorOf(found));
@@ -169,18 +182,7 @@ final class ExportJobImpl implements ExportJob {
         if (!request.consistencyPass()) {
             return Result.ok(Optional.empty());
         }
-        return parts.consistencyPass().run(projectId, cancellableCalls()).map(Optional::of);
-    }
-
-    // A cancel raised while the pass waits on the model stops every later revision call, which ends the pass.
-    private @Nullable ModelCalls cancellableCalls() {
-        final ModelCalls model = calls;
-        if (model == null) {
-            return null;
-        }
-        return (kind, segmentId, chat) -> isCancelledBefore("model-call")
-                ? Result.err(BookExporter.cancelledBeforeWriting())
-                : model.call(kind, segmentId, chat);
+        return parts.consistencyPass().run(projectId, calls).map(Optional::of);
     }
 
     private boolean isCancelledBefore(final String step) {
@@ -246,6 +248,7 @@ final class ExportJobImpl implements ExportJob {
         if (isCancelledBefore("write")) {
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
+        progress.onProgress(new ExportProgress(ExportProgress.Step.WRITING, 0, 1));
         final Result<BookExporter.Exported> written =
                 new BookExporter(parts.documents(), parts.moves()).exportReporting(plan, targets, cancelled::get);
         if (written.isErr()) {
@@ -284,8 +287,11 @@ final class ExportJobImpl implements ExportJob {
                         book.glossary(),
                         suspicious));
         return SideFiles.write(sideFiles, request.overwrite(), parts.moves(), () -> isCancelledBefore("side-file"))
-                .map(paths -> fallen.counts()
-                        .report(exported.path(), paths, summary(book.pass()), fallen.listed(), suspicious));
+                .map(paths -> {
+                    progress.onProgress(new ExportProgress(ExportProgress.Step.WRITING, 1, 1));
+                    return fallen.counts()
+                            .report(exported.path(), paths, summary(book.pass()), fallen.listed(), suspicious);
+                });
     }
 
     // On demand, over the records as they stand now, nothing stored: the run's own audit may be older than an edit.

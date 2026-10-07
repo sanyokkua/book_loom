@@ -65,9 +65,7 @@ class ActivityTrackerTest {
         scan.end();
         scan.end();
 
-        assertThat(tracker.running())
-                .extracting(ActivityTracker.Activity::kind)
-                .containsExactly(ActivityKind.MODEL_LISTING);
+        assertThat(tracker.running()).extracting(Activity::kind).containsExactly(ActivityKind.MODEL_LISTING);
         assertThat(tracker.blocker(ActivityKind.TRANSLATION).get()).isNull();
     }
 
@@ -104,6 +102,7 @@ class ActivityTrackerTest {
         review.requests(4);
 
         assertThat(tracker.running())
-                .containsExactly(new ActivityTracker.Activity(review.id(), ActivityKind.GLOSSARY_REVIEW, 4, true));
+                .extracting(Activity::id, Activity::requests)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(review.id(), 4));
     }
 }

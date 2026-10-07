@@ -46,9 +46,7 @@ class ActivityGuardsTest extends ReviewViewModelTestBase {
 
         setRunState(RunState.RUNNING);
 
-        assertThat(onFx(() -> activities.running().stream()
-                        .map(ActivityTracker.Activity::kind)
-                        .toList()))
+        assertThat(onFx(() -> activities.running().stream().map(Activity::kind).toList()))
                 .containsExactly(ActivityKind.TRANSLATION);
         assertThat(onFx(() -> viewModel.otherWork().get())).isNull();
         assertThat(controls().pause()).isEqualTo(ControlState.ENABLED);

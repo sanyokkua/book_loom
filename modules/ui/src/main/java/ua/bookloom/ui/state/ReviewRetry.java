@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
@@ -91,21 +93,32 @@ public final class ReviewRetry {
                     MessageKey.ACTIVITY_BLOCKED, messages.get(conflict.get().label())));
             return null;
         }
+        logRetry(segmentId, note, lowerTemperature);
+        mirror.review().publishRetryInFlight(true);
+        final InterruptibleWork running = new InterruptibleWork();
+        final ActivityTracker.Handle handle = activities.begin(ActivityKind.REVIEW_RETRY, running::stop);
+        return (projectId, id) -> {
+            try {
+                return running.run(() -> call(projectId, id, chosen.get(), note, lowerTemperature), () -> stopped(id));
+            } finally {
+                Platform.runLater(handle::end);
+            }
+        };
+    }
+
+    private static void logRetry(final String segmentId, final @Nullable String note, final boolean lowerTemperature) {
         log.info(
                 "retrying segment {} with lower temperature {}, note given {}",
                 segmentId,
                 lowerTemperature,
                 note != null);
         log.trace("retry note of segment {}: {}", segmentId, note);
-        mirror.review().publishRetryInFlight(true);
-        final ActivityTracker.Handle handle = activities.begin(ActivityKind.REVIEW_RETRY, null);
-        return (projectId, id) -> {
-            try {
-                return call(projectId, id, chosen.get(), note, lowerTemperature);
-            } finally {
-                Platform.runLater(handle::end);
-            }
-        };
+    }
+
+    private Result<SegmentRecord> stopped(final String segmentId) {
+        log.info("retry of segment {} stopped before it began", segmentId);
+        mirror.review().publishRetryInFlight(false);
+        return Result.err(AppError.of(ErrorCode.cancelled, "Retry stopped", "It was stopped before it began."));
     }
 
     private Result<SegmentRecord> call(

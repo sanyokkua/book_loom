@@ -69,7 +69,12 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
         queued = new QueuedExecutor();
         prepExecutor = queued;
         imports = onFx(() -> new ImportViewModel(
-                projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
+                projects,
+                current,
+                new RecordingToasts(),
+                new RecordingErrorPresenter(),
+                new DirectExecutor(),
+                new ActivityTracker(new StateMirror())));
         brief = onFx(() -> new BookBriefViewModel(current, projects, new DirectExecutor(), tag -> true));
         settings = onFx(() -> newSettings(activities));
     }
@@ -101,7 +106,8 @@ abstract class TranslatingViewModelTestBase extends RunnerTestBase {
                 new SessionReporter(new SessionInfo(), current, new FakeProviderConfigs()),
                 prepExecutor,
                 ScriptedProviderVerifier.idle(),
-                (providerId, modelId) -> Result.ok(ContextLength.unknown()));
+                (providerId, modelId) -> Result.ok(ContextLength.unknown()),
+                activities);
         viewModel = onFx(() -> new TranslatingViewModel(
                 mirror, runner, current, settings, starter, toasts, errors, desk, new DirectExecutor(), activities));
         WaitForAsyncUtils.waitForFxEvents();

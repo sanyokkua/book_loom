@@ -11,6 +11,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.project.BookBrief;
@@ -86,6 +87,10 @@ public final class StyleSuggestion {
             return;
         }
         final AppError failure = answer.error();
+        if (failure != null && failure.code() == ErrorCode.cancelled) {
+            log.info("the style suggestion was stopped by the person");
+            return;
+        }
         if (failure != null) {
             log.warn("the style suggestion failed with {}", failure.code());
             outcome.set(new StyleSuggestionOutcome(StyleSuggestionOutcome.Kind.FAILED, failure.message()));

@@ -2,6 +2,7 @@ package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.util.List;
 import java.util.Set;
@@ -40,6 +41,26 @@ class TranslatingViewModelStartTest extends TranslatingViewModelTestBase {
         assertThat(models.selections()).isEmpty();
         assertThat(engine.requests()).isEmpty();
         assertThat(preparing()).isTrue();
+    }
+
+    // IF the preparation were not a registered, blocking activity, THEN the person could leave or change the book
+    // while the model loads.
+    @Test
+    void start_preparing_isABlockingActivityUntilThePreparationEnds() {
+        openBookAndChooseModel();
+        buildViewModel();
+
+        press(viewModel::start);
+
+        assertThat(onFx(() -> activities.running().stream().map(Activity::kind).toList()))
+                .contains(ActivityKind.RUN_PREPARATION);
+        assertThat(onFx(() -> activities.blocking().get())).isTrue();
+
+        queued.runAll();
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(onFx(() -> activities.running().stream().map(Activity::kind).toList()))
+                .doesNotContain(ActivityKind.RUN_PREPARATION);
     }
 
     // IF the run were assembled from anything but the brief's request and the chosen model, THEN the run would

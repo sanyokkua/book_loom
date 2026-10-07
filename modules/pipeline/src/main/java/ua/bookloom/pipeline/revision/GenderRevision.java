@@ -53,6 +53,7 @@ final class GenderRevision {
             final PassInputs inputs, final List<Deferral> open, final ModelCalls calls, final PassTally tally) {
         final Map<String, List<Deferral>> bySegment = genderDeferrals(open);
         log.debug("Revising gender deferrals project={} segments={}", inputs.projectId(), bySegment.size());
+        calls.planned(ModelCalls.Stage.GENDER_RETRY, bySegment.size());
         for (final Map.Entry<String, List<Deferral>> segment : bySegment.entrySet()) {
             final Result<Boolean> revised =
                     reviseSegment(inputs, segment.getKey(), segment.getValue(), open, calls, tally);

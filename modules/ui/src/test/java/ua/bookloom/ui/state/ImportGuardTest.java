@@ -48,7 +48,12 @@ class ImportGuardTest extends RunnerTestBase {
         prompt = new RecordingReplaceRunPrompt();
         final CurrentProject current = new CurrentProject();
         final ImportViewModel imports = onFx(() -> new ImportViewModel(
-                projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
+                projects,
+                current,
+                new RecordingToasts(),
+                new RecordingErrorPresenter(),
+                new DirectExecutor(),
+                new ActivityTracker(new StateMirror())));
         guard = new ImportGuard(mirror, runner, imports, current, prompt);
         onFx(() -> {
             imports.open(FRANKENSTEIN);

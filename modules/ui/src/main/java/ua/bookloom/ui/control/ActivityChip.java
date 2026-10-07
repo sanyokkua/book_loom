@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
 
@@ -34,7 +35,7 @@ public final class ActivityChip {
     private final HBox view = new HBox(SPACING);
     private final Label text = new Label();
     private final Button stop = new Button();
-    private ActivityTracker.@Nullable Activity shown;
+    private @Nullable Activity shown;
 
     /**
      * Builds the chip and follows the tracker; it stays hidden while nothing but the run is under way.
@@ -58,7 +59,7 @@ public final class ActivityChip {
         view.getStyleClass().add("activity-chip");
         view.setAlignment(Pos.CENTER_LEFT);
         Tips.install(messages, text, MessageKey.ACTIVITY_CHIP_TIP);
-        activities.running().addListener((ListChangeListener<ActivityTracker.Activity>) change -> redraw());
+        activities.running().addListener((ListChangeListener<Activity>) change -> redraw());
         redraw();
     }
 
@@ -72,10 +73,10 @@ public final class ActivityChip {
     }
 
     private void redraw() {
-        final List<ActivityTracker.Activity> others = activities.running().stream()
+        final List<Activity> others = activities.running().stream()
                 .filter(activity -> activity.kind() != ActivityKind.TRANSLATION)
                 .toList();
-        final ActivityTracker.Activity first = others.isEmpty() ? null : others.getFirst();
+        final Activity first = others.isEmpty() ? null : others.getFirst();
         shown = first;
         view.setVisible(first != null);
         view.setManaged(first != null);
@@ -90,7 +91,7 @@ public final class ActivityChip {
     }
 
     private void stopShown() {
-        final ActivityTracker.Activity activity = shown;
+        final Activity activity = shown;
         if (activity != null) {
             log.info("stop pressed in the title bar for {} #{}", activity.kind(), activity.id());
             activities.stop(activity.id());

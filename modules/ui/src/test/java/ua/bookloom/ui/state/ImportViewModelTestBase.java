@@ -32,6 +32,7 @@ abstract class ImportViewModelTestBase extends FxTestBase {
     RecordingToasts toasts;
     RecordingErrorPresenter errors;
     ExecutorService executor;
+    ActivityTracker activities;
 
     @Override
     public final void start(final Stage stage) {
@@ -45,6 +46,7 @@ abstract class ImportViewModelTestBase extends FxTestBase {
         toasts = new RecordingToasts();
         errors = new RecordingErrorPresenter();
         executor = new DirectExecutor();
+        activities = onFx(() -> new ActivityTracker(new StateMirror()));
     }
 
     @AfterEach
@@ -63,7 +65,7 @@ abstract class ImportViewModelTestBase extends FxTestBase {
 
     /** A view model over whatever {@link #projects} and {@link #executor} the test set up before calling this. */
     ImportViewModel viewModel() {
-        return onFx(() -> new ImportViewModel(projects, current, toasts, errors, executor));
+        return onFx(() -> new ImportViewModel(projects, current, toasts, errors, executor, activities));
     }
 
     /** Opens {@code source} on the FX thread and waits until everything published back to it has run. */

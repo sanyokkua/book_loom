@@ -7,6 +7,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -23,11 +25,13 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.i18n.Messages;
 
 /**
  * One export at a time: builds the job, runs it and reads the written file's size off the FX thread, and keeps the
@@ -45,6 +49,9 @@ final class ExportRun {
     private final WorkflowProgress progress;
     private final ExecutorService executor;
     private final ActivityTracker activities;
+    private final Messages messages;
+    private final AtomicReference<@Nullable ExportJob> job = new AtomicReference<>();
+    private final AtomicBoolean stopped = new AtomicBoolean();
     private ActivityTracker.@Nullable Handle handle;
     private final ReadOnlyBooleanWrapper running = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyObjectWrapper<@Nullable ExportOutcome> outcome = new ReadOnlyObjectWrapper<>();
@@ -56,13 +63,15 @@ final class ExportRun {
             final SettingsViewModel settings,
             final WorkflowProgress progress,
             final ExecutorService executor,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final Messages messages) {
         this.service = Objects.requireNonNull(service, "service");
         this.models = Objects.requireNonNull(models, "models");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.executor = Objects.requireNonNull(executor, "executor");
         this.activities = Objects.requireNonNull(activities, "activities");
+        this.messages = Objects.requireNonNull(messages, "messages");
     }
 
     ReadOnlyBooleanProperty running() {
@@ -93,11 +102,13 @@ final class ExportRun {
                 request.consistencyPass(),
                 selection.isPresent());
         running.set(true);
-        handle = activities.begin(ActivityKind.EXPORT, null);
+        stopped.set(false);
+        job.set(null);
+        final ExportActivity shown = register(request, selection);
         outcome.set(null);
         failure.set("");
         try {
-            executor.execute(() -> work(request, selection.orElse(null)));
+            executor.execute(() -> work(request, selection.orElse(null), shown));
         } catch (RejectedExecutionException rejected) {
             log.error("the export could not be submitted", rejected);
             finish(null, AppError.of(ErrorCode.internal, "Export failed", "The export could not be started."));
@@ -127,11 +138,34 @@ final class ExportRun {
         failure.set("");
     }
 
-    private void work(final ExportRequest request, final @Nullable ModelSelection selection) {
+    private ExportActivity register(final ExportRequest request, final Optional<ModelSelection> selection) {
+        final ActivityTracker.Handle registered = activities.begin(ActivityKind.EXPORT, this::stop);
+        handle = registered;
+        final ExportActivity shown = new ExportActivity(
+                registered,
+                messages,
+                request.destination(),
+                selection.map(ModelSelection::modelId).orElse(null));
+        shown.announce(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
+        return shown;
+    }
+
+    // The job exists only once the background thread has built it, so a stop pressed before then is replayed on it.
+    private void stop() {
+        stopped.set(true);
+        final ExportJob created = job.get();
+        log.info("export stop requested, job exists: {}", created != null);
+        if (created != null) {
+            created.cancel();
+        }
+    }
+
+    private void work(
+            final ExportRequest request, final @Nullable ModelSelection selection, final ExportActivity shown) {
         ExportOutcome result = null;
         AppError error = null;
         try {
-            final Result<ExportReport> ran = run(request, selection);
+            final Result<ExportReport> ran = run(request, selection, shown);
             if (ran.isOk()) {
                 final ExportReport report = Objects.requireNonNull(ran.data(), "report");
                 result = new ExportOutcome(report, sizeOf(report.destination()));
@@ -147,16 +181,22 @@ final class ExportRun {
         Platform.runLater(() -> finish(published, failed));
     }
 
-    private Result<ExportReport> run(final ExportRequest request, final @Nullable ModelSelection selection) {
+    private Result<ExportReport> run(
+            final ExportRequest request, final @Nullable ModelSelection selection, final ExportActivity shown) {
         ChatModel model = null;
         if (selection != null) {
             model = modelOrNull(selection);
         }
-        final Result<ExportJob> job = service.newExport(request, model);
-        if (job.isErr()) {
-            return Result.err(Objects.requireNonNull(job.error(), "error"));
+        final Result<ExportJob> built = service.newExport(request, model, shown::announceLater);
+        if (built.isErr()) {
+            return Result.err(Objects.requireNonNull(built.error(), "error"));
         }
-        return Objects.requireNonNull(job.data(), "job").run();
+        final ExportJob created = Objects.requireNonNull(built.data(), "job");
+        job.set(created);
+        if (stopped.get()) {
+            created.cancel();
+        }
+        return created.run();
     }
 
     // The pass's name sweep needs no model, so a provider that is down must not stop the book being written.

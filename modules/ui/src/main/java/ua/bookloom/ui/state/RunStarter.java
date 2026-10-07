@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
+import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -50,6 +51,7 @@ public final class RunStarter {
     private final ExecutorService executor;
     private final ProviderVerifier verifier;
     private final ModelCapabilities capabilities;
+    private final ActivityTracker activities;
 
     /**
      * Creates the starter.
@@ -63,6 +65,7 @@ public final class RunStarter {
      * @param executor the daemon executor a run is prepared on, never the FX thread
      * @param verifier the port a run paused on a provider error probes the provider with before resuming by itself
      * @param capabilities the port the model's context length is read through when a run is prepared
+     * @param activities where the preparation is registered, so the window waits for it
      */
     @Inject
     public RunStarter(
@@ -74,7 +77,8 @@ public final class RunStarter {
             final SessionReporter reporter,
             @BackgroundExecutor final ExecutorService executor,
             final ProviderVerifier verifier,
-            final ModelCapabilities capabilities) {
+            final ModelCapabilities capabilities,
+            final ActivityTracker activities) {
         this.current = Objects.requireNonNull(current, "current");
         this.models = Objects.requireNonNull(models, "models");
         this.engine = Objects.requireNonNull(engine, "engine");
@@ -84,6 +88,7 @@ public final class RunStarter {
         this.executor = Objects.requireNonNull(executor, "executor");
         this.verifier = Objects.requireNonNull(verifier, "verifier");
         this.capabilities = Objects.requireNonNull(capabilities, "capabilities");
+        this.activities = Objects.requireNonNull(activities, "activities");
     }
 
     /**
@@ -108,11 +113,17 @@ public final class RunStarter {
         Objects.requireNonNull(whenPrepared, "whenPrepared");
         final OpenedBook book = Objects.requireNonNull(current.book().get(), "an open book, checked by the caller");
         log.debug("run requested: project {}, review mode {}", book.projectId(), reviewMode);
+        final ActivityTracker.Handle preparing = activities.begin(ActivityKind.RUN_PREPARATION, null);
+        preparing.indeterminate(fileNameOf(book));
+        final Consumer<@Nullable AppError> ending = failure -> {
+            Platform.runLater(preparing::end);
+            whenPrepared.accept(failure);
+        };
         try {
-            executor.execute(() -> prepareOffThread(book, selection, whenPrepared));
+            executor.execute(() -> prepareOffThread(book, selection, ending));
         } catch (RejectedExecutionException rejected) {
             log.error("the run could not be submitted for preparation", rejected);
-            whenPrepared.accept(internalError(rejected));
+            ending.accept(internalError(rejected));
         }
     }
 

@@ -55,9 +55,7 @@ class ActivityTrackerKeepAwakeTest extends FxTestBase {
 
         // The pause and its recovery reach the mirror one after the other, so the hold may be let go for a moment.
         assertThat(calls).last().isEqualTo("start");
-        assertThat(onFx(tracker::running))
-                .extracting(ActivityTracker.Activity::kind)
-                .containsExactly(ActivityKind.TRANSLATION);
+        assertThat(onFx(tracker::running)).extracting(Activity::kind).containsExactly(ActivityKind.TRANSLATION);
     }
 
     @Test

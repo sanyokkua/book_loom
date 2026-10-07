@@ -9,13 +9,19 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.Platform;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
+import ua.bookloom.api.pipeline.ExportProgress;
+import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
@@ -26,12 +32,17 @@ import ua.bookloom.api.pipeline.ExportService;
  */
 public final class ScriptedExportService implements ExportService {
 
+    private static final long HOLD_SECONDS = 10;
+
     private final List<ExportRequest> requests = new CopyOnWriteArrayList<>();
     private final List<@Nullable ChatModel> models = new CopyOnWriteArrayList<>();
     private final List<Boolean> ranOnFxThread = new CopyOnWriteArrayList<>();
     private volatile @Nullable AppError failure;
     private volatile @Nullable ExportReport report;
     private volatile boolean isWritingFiles;
+    private final List<ExportProgress> scriptedProgress = new CopyOnWriteArrayList<>();
+    private final AtomicInteger cancels = new AtomicInteger();
+    private volatile @Nullable CountDownLatch hold;
 
     /** Makes every successful export answer with {@code scripted}; {@code null} answers a one-segment report. */
     public void reportWith(@Nullable final ExportReport scripted) {
@@ -50,9 +61,39 @@ public final class ScriptedExportService implements ExportService {
 
     @Override
     public Result<ExportJob> newExport(final ExportRequest request, @Nullable final ChatModel model) {
+        return newExport(request, model, ExportProgressListener.NONE);
+    }
+
+    @Override
+    public Result<ExportJob> newExport(
+            final ExportRequest request, @Nullable final ChatModel model, final ExportProgressListener progress) {
         requests.add(Objects.requireNonNull(request, "request"));
         models.add(model);
-        return Result.ok(new ScriptedExportJob(request));
+        return Result.ok(new ScriptedExportJob(request, progress));
+    }
+
+    /** Makes every job announce {@code events} when it runs, in order, before it answers. */
+    public void announce(final ExportProgress... events) {
+        scriptedProgress.clear();
+        scriptedProgress.addAll(List.of(events));
+    }
+
+    /** Makes every job wait, after announcing, until it is cancelled or {@link #release} is called. */
+    public void holdRuns() {
+        hold = new CountDownLatch(1);
+    }
+
+    /** Lets a held job finish normally. */
+    public void release() {
+        final CountDownLatch gate = hold;
+        if (gate != null) {
+            gate.countDown();
+        }
+    }
+
+    /** How many times a job was cancelled. */
+    public int cancels() {
+        return cancels.get();
     }
 
     /** Every request asked for, in order. */
@@ -73,14 +114,22 @@ public final class ScriptedExportService implements ExportService {
     private final class ScriptedExportJob implements ExportJob {
 
         private final ExportRequest request;
+        private final ExportProgressListener progress;
+        private volatile boolean isCancelled;
 
-        ScriptedExportJob(final ExportRequest request) {
+        ScriptedExportJob(final ExportRequest request, final ExportProgressListener progress) {
             this.request = request;
+            this.progress = progress;
         }
 
         @Override
         public Result<ExportReport> run() {
             ranOnFxThread.add(Platform.isFxApplicationThread());
+            scriptedProgress.forEach(progress::onProgress);
+            final CountDownLatch gate = hold;
+            if (gate != null && !awaits(gate) && isCancelled) {
+                return Result.err(AppError.of(ErrorCode.cancelled, "Export cancelled", "Nothing was written."));
+            }
             final AppError error = failure;
             if (error != null) {
                 return Result.err(error);
@@ -106,9 +155,20 @@ public final class ScriptedExportService implements ExportService {
             }
         }
 
+        private boolean awaits(final CountDownLatch gate) {
+            try {
+                return gate.await(HOLD_SECONDS, TimeUnit.SECONDS) && !isCancelled;
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+
         @Override
         public void cancel() {
-            // A scripted export finishes at once, so there is nothing to interrupt.
+            cancels.incrementAndGet();
+            isCancelled = true;
+            release();
         }
     }
 }

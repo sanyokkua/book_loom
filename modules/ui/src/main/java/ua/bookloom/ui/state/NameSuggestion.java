@@ -9,6 +9,7 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -90,6 +91,10 @@ public final class NameSuggestion {
             return;
         }
         final AppError failure = answer.error();
+        if (failure != null && failure.code() == ErrorCode.cancelled) {
+            log.info("the file name suggestion was stopped by the person");
+            return;
+        }
         if (failure != null) {
             log.warn("the file name suggestion failed with {}", failure.code());
             notice.set(failure.message());

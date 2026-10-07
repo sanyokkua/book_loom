@@ -97,9 +97,11 @@ public final class SetupHelper {
                 "setup proposal {} started with provider {}",
                 kind,
                 selection.get().providerId());
-        final ActivityTracker.Handle handle = activities.begin(kind, null);
+        final InterruptibleWork running = new InterruptibleWork();
+        final ActivityTracker.Handle handle = activities.begin(kind, running::stop);
         try {
-            executor.execute(() -> deliver(kind, handle, answer(selection.get(), work), done));
+            executor.execute(() -> deliver(
+                    kind, handle, running.run(() -> answer(selection.get(), work), SetupHelper::stopped), done));
         } catch (RejectedExecutionException rejected) {
             log.error("the setup proposal {} could not be submitted", kind, rejected);
             handle.end();
@@ -118,6 +120,10 @@ public final class SetupHelper {
             log.info("setup proposal {} ended ok={}", kind, answer.isOk());
             done.accept(answer);
         });
+    }
+
+    private static <T> Result<T> stopped() {
+        return Result.err(AppError.of(ErrorCode.cancelled, "Suggestion stopped", "It was stopped before it finished."));
     }
 
     private <T> Result<T> answer(final ModelSelection selection, final Function<ChatModel, Result<T>> work) {

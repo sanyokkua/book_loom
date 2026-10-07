@@ -17,4 +17,17 @@ public interface ExportService {
      * @return the created job, ready to {@link ExportJob#run()}
      */
     Result<ExportJob> newExport(ExportRequest request, @Nullable ChatModel model);
+
+    /**
+     * Creates a job that also announces its progress.
+     *
+     * @param request the non-null export request
+     * @param model the model the consistency pass calls, or null when {@code request.consistencyPass()} is false
+     * @param progress told of each step and finished unit from the thread that runs the job; never null
+     * @return the created job; a service that does not report progress ignores {@code progress}
+     */
+    default Result<ExportJob> newExport(
+            ExportRequest request, @Nullable ChatModel model, ExportProgressListener progress) {
+        return newExport(request, model);
+    }
 }

@@ -40,7 +40,12 @@ abstract class BookBriefViewModelTestBase extends FxTestBase {
         current = new CurrentProject();
         saves = new QueuedExecutor();
         imports = onFx(() -> new ImportViewModel(
-                projects, current, new RecordingToasts(), new RecordingErrorPresenter(), new DirectExecutor()));
+                projects,
+                current,
+                new RecordingToasts(),
+                new RecordingErrorPresenter(),
+                new DirectExecutor(),
+                new ActivityTracker(new StateMirror())));
         brief = onFx(() -> new BookBriefViewModel(current, projects, saves, tag -> !"xx".equals(tag)));
         WaitForAsyncUtils.waitForFxEvents();
     }
