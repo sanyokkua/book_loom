@@ -107,6 +107,7 @@ final class TextCheckGates {
             case ALPHABET -> CheckName.ALPHABET;
             case SENTENCE_MISSING -> CheckName.SENTENCE_COUNT;
             case VOCATIVE_MISSING -> CheckName.VOCATIVE;
+            case PROTOCOL_LEAK -> CheckName.PROTOCOL_LEAK;
         };
     }
 }

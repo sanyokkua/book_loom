@@ -31,5 +31,8 @@ public enum FindingKind {
     SENTENCE_MISSING,
 
     /** A glossary name the source calls out that the target no longer has. */
-    VOCATIVE_MISSING
+    VOCATIVE_MISSING,
+
+    /** Reply structure (braces, brackets, a wrapper label) the model wrote into the text. */
+    PROTOCOL_LEAK
 }

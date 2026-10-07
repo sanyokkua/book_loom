@@ -49,6 +49,9 @@ public enum CheckName {
     /** Text check, blocking: a glossary name the source calls out that the target has lost. */
     VOCATIVE(0.0, "omission", "vocative", true),
 
+    /** Text check, blocking: reply structure (braces, brackets, a wrapper label) left inside the text. */
+    PROTOCOL_LEAK(0.0, "meaning", "protocol-leak", true),
+
     /** Text check, soft: the same word twice in a row. */
     DUPLICATE_WORD(0.0, "fluency", "duplicate-word", false),
 
