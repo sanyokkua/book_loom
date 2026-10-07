@@ -607,6 +607,22 @@ from the first occurrence; the reviewer edits clean short lines (short-line/revi
 words on e4b (0 %), and 26b batches still fall back on missing ids (10 %). Speed work (a larger window and
 re-asking only missing ids, task 15e.15) is not started.
 
+### Quality round 3: the Burning Chrome review (15f) {#15f-results}
+
+The owner's 26b run of *Burning Chrome* (Balanced, 21 min, 229 segments) showed a dropped last sentence, a lost vocative name, 10 false "suspicious" audits of 11 and a consistency pass that changed nothing. After 15f.A0–A9, the same book on `gemma4:e4b-mlx` (Ollama, 16k window), measured by `build/…/run1` and `run2` of one session:
+
+| | 26b, before (owner) | e4b, Balanced | e4b, Max |
+|---|---|---|---|
+| time | 21 min | 14 min 53 s | 27 min 29 s |
+| accepted / flagged | 228 / 1 | 228 / 1 | 225 / 4 |
+| suspicious (audit) | 11 (10 false) | 1 | – |
+| "We were partners." (ch4 p14) | missing | present | – |
+| vocative *Finn* (ch4 p26) | missing | present | – |
+| paragraphs ending `.»` (wrong attribution) | 22 of 217 | 1 of 206 | – |
+| consistency pass, paragraphs corrected | 0 (byte-identical export) | – | 35 of 91 checked |
+
+The models differ, so the time column compares nothing about speed; it shows the new run costs no more than the old one. What the Max run's 35 corrections were, read from the TRACE log: narrator gender (шукала, знайшла, щасливий), a wrong ending (дивитеся → дивишся), a lower-case sentence start, a doubled full stop after a closing quote — and one doubtful swap (база даних → вежа даних). Not measured: the 26b with the new checks, the Russian→Ukrainian book, and the speed effect of the 16k window alone (15e.15 asks for a first-300 A/B).
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run

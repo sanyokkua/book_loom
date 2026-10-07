@@ -1587,8 +1587,33 @@ The 6 h 17 min GUI run of Bartimaeus 1 (LM Studio, gemma-4-26b, Balanced) beat t
 
   - **Measured (2026-10-07):** 26b with the narrator unset in the brief and a male Start answer (`--narrator detect`): 0 gender slips (target ≤ 5), 4 flagged, 0 without target, name variants 0 (docs/DEVELOPMENT.md#15e-final).
 
-- [ ] 15e.15 Speed, one change at a time with a first-300 A/B: use the detected window up to a cap (16k, then 32k) with larger batch and reviewer caps, re-ask only the missing ids of a batch before falling back (133 fallbacks cost about 1,080 s), and cut log noise (WorkList 29 % and ForeignMarking 7 % of the lines) while keeping TRACE evidence for flagged segments. → `:pipeline`, `:app`
+- [ ] 15e.15 (the 16k window is done in 15f.A1; the missing-id re-ask is 15f.A6; the log noise is 15f.A9) Speed, one change at a time with a first-300 A/B: use the detected window up to a cap (16k, then 32k) with larger batch and reviewer caps, re-ask only the missing ids of a batch before falling back (133 fallbacks cost about 1,080 s), and cut log noise (WorkList 29 % and ForeignMarking 7 % of the lines) while keeping TRACE evidence for flagged segments. → `:pipeline`, `:app`
   - **Done when:** the 26b whole book takes at most 5 h with no quality metric worse.
+
+## 15f. Quality round 3 and the UI round — after the owner's review of a 26b Burning Chrome run (after group 15e)
+
+The owner translated Burning Chrome (en→uk, gemma-4-26b, Balanced, 21 min) and read the result in the window: a last sentence and a vocative name were dropped (the review desk's Retry fixed both), 10 of 11 "suspicious" segments were audit false positives, the final consistency pass changed nothing, and the screens had gaps (buttons below the fold, unexplained brief options, no way to see speed, uneven scrolling). Evals first: the defects of that run are cases in `eval/realrun/text.json` before the checks that catch them exist.
+
+- [x] 15f.A0 Corpus: omission (a dropped sentence) and vocative (a called-out glossary name lost) cases in the real-run corpus, red before 15f.A2. → `:pipeline` tests
+- [x] 15f.A1 The default window is 16,384 tokens (chunk 2,000, dynamic ceiling 2,000); every call is still sized against the one constant and its reply cap is half the window. The Settings → Providers choice of a different window is a later change. → `:pipeline`
+- [x] 15f.A2 Two blocking text checks: `SentenceCountCheck` (a source with two or more sentences of three words or more may not come back with fewer sentences — also a batch-item problem that re-asks the segment on its own) and `VocativeCheck` (a capitalised glossary name set off by a comma at a sentence's start or end must be in the target, in any case form). → `:pipeline`
+- [x] 15f.A3 A meaning, gender or agreement edit of the reviewer may not change the spelling of a glossary name's word. → `:pipeline`
+- [x] 15f.A5 The consistency pass checks every repaired, flagged or noted machine-owned paragraph against the translated paragraph before and after it, the glossary names it holds and its source (`NeighbourRevision`, prompt `consistency`); the person's own edits are never touched; the export line counts the corrections. → `:pipeline`, `:api`, `:ui`
+- [x] 15f.A7a The en→uk prompt example puts the speech attribution outside the guillemets (22 of 217 paragraphs ended `.»` in the run; 1 does now).
+- [x] 15f.A8 `NameMissingCheck` holds a hyphenated rendering part by part and ignores a lower-case verb that spells a name (`jack into`). → `:pipeline`
+- [x] 15f.A9 The four per-item repeats that were a third of the DEBUG lines are TRACE. → `:pipeline`, `:document`
+- [x] 15f.B1 The model suggests the Book Brief's genre, register, voice, audience and narrator from the opening of the book (`SetupAssistant.suggestBrief`); a button on the tone card, only a proposal. → `:api`, `:pipeline`, `:ui`
+- [x] 15f.B2 The model suggests the translated book's file name (`SetupAssistant.suggestFileName`), kept in the destination's folder and with its suffix. → `:api`, `:pipeline`, `:ui`
+- [x] 15f.B3 Recurring terms get "Model scan" and "Review with model" (`TermChoice`), and a note that says how they differ from the glossary. → `:api`, `:pipeline`, `:ui`
+- [x] 15f.C1 Back and Continue sit in the window's toolbar, always reachable (`StepFooter` moves its buttons into `#shell-actions`).
+- [x] 15f.C2 Every Book Brief option explains itself under its choice and on hover.
+- [x] 15f.C3 The export card says what the consistency pass does.
+- [x] 15f.C4 The live panel's second row is the segment being worked on; the Review button looks like a button; the title bar shows the run's average tokens per second.
+- [x] 15f.C5c A glossary switch rebinds without sliding when the table recycles its rows.
+- [ ] 15f.A4 Infer an unstated narrator's gender from the majority of «я + past verb» forms and flag the minority.
+- [ ] 15f.A6 Re-ask only the missing ids of a short batch reply before falling back one by one.
+- [ ] 15f.A7b A deterministic normaliser for dialogue structure (attribution inside the quote, an unclosed nested quote, a dropped full stop).
+- [ ] 15f.C5ab Scrolling on macOS: wheel and trackpad momentum and the Activity log's one-row step. The code paths are in `SmoothScroll`/`ScrollGlide`; the real events a Mac sends are unknown, so first read the TRACE lines of `ua.bookloom.ui.control.SmoothScroll` from a real scroll.
 
 ## 16. The gate — after every group above
 
