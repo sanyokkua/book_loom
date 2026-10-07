@@ -31,6 +31,6 @@ Pair — English -> Ukrainian
 Examples (Source = the <Text>, Reply = your whole answer):
 Source: “Don’t move, ⟦g0⟧,” she said. “You are ⟦g1⟧mine⟦g2⟧.”
 Glossary: ⟦g0⟧ → Бартімеус, person, male
-Reply: {"target":"«Не рухайся, ⟦g0⟧, — сказала вона. — Ти ⟦g1⟧мій⟦g2⟧.»"}
+Reply: {"target":"«Не рухайся, ⟦g0⟧», — сказала вона. «Ти ⟦g1⟧мій⟦g2⟧»."}
 
 Output ONLY the JSON object {"target":"..."}: no commentary, markdown, code fences or explanations.

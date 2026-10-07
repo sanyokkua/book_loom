@@ -135,7 +135,7 @@ class DraftPromptBuilderTest {
         assertThat(system)
                 .contains("Examples (Source = the <Text>, Reply = your whole answer):\n")
                 .contains("Source: “Don’t move, ⟦g0⟧,” she said. “You are ⟦g1⟧mine⟦g2⟧.”\nGlossary: ⟦g0⟧ → Бартімеус")
-                .contains("Reply: {\"target\":\"«Не рухайся, ⟦g0⟧, — сказала вона. — Ти ⟦g1⟧мій⟦g2⟧.»\"}")
+                .contains("Reply: {\"target\":\"«Не рухайся, ⟦g0⟧», — сказала вона. «Ти ⟦g1⟧мій⟦g2⟧».\"}")
                 .doesNotContain(".pairs");
     }
 

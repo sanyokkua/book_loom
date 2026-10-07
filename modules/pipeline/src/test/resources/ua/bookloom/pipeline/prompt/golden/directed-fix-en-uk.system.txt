@@ -17,7 +17,7 @@ Neutral, faithful literary prose: keep the author's register, sentence rhythm an
 Examples of correct translations:
 Source: “Don’t move, ⟦g0⟧,” she said. “You are ⟦g1⟧mine⟦g2⟧.”
 Glossary: ⟦g0⟧ → Бартімеус, person, male
-Reply: {"target":"«Не рухайся, ⟦g0⟧, — сказала вона. — Ти ⟦g1⟧мій⟦g2⟧.»"}
+Reply: {"target":"«Не рухайся, ⟦g0⟧», — сказала вона. «Ти ⟦g1⟧мій⟦g2⟧»."}
 
 Worked example (English → Ukrainian; write yours in Ukrainian (uk)):
 <Source>He opened the ⟦g0⟧old⟦g1⟧ door.</Source>
