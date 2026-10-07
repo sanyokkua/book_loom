@@ -25,5 +25,11 @@ public enum ItemProblem {
     LEAKED,
 
     /** The target holds control characters, such as a model's raw quote marks written as U+001C-U+001F. */
-    CONTROL_CHARACTERS
+    CONTROL_CHARACTERS,
+
+    /**
+     * The target's quote marks do not pair up while the source's do: a closing mark with no opening one at the start
+     * of an item is the tail of the neighbour's sentence, which the model moved across the id.
+     */
+    QUOTES
 }

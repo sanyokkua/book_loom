@@ -55,12 +55,26 @@ final class BatchEntries {
         if (root == null) {
             return salvaged(reply);
         }
-        final JsonNode items = root.isArray() ? root : root.path("items");
         final List<Entry> entries = new ArrayList<>();
-        if (items.isArray()) {
-            items.forEach(node -> entry(node, entries));
-        }
+        collect(root, entries);
         return entries;
+    }
+
+    // Every {"id", "target"} object counts wherever the model put it: a small model sometimes writes "items_2",
+    // "items_3" beside "items", one object each, and each of them is a good draft.
+    private static void collect(final JsonNode node, final List<Entry> entries) {
+        if (isEntry(node)) {
+            entry(node, entries);
+        } else if (node.isContainerNode()) {
+            node.forEach(child -> collect(child, entries));
+        }
+    }
+
+    private static boolean isEntry(final JsonNode node) {
+        final JsonNode id = node.path("id");
+        return node.isObject()
+                && (id.isTextual() || id.isNumber())
+                && node.path("target").isTextual();
     }
 
     /** The complete entries of a reply cut off before its JSON closed, as a model stopped by its cap leaves it. */
@@ -79,11 +93,10 @@ final class BatchEntries {
     }
 
     private static void entry(final JsonNode node, final List<Entry> entries) {
-        final JsonNode id = node.path("id");
-        final JsonNode target = node.path("target");
-        if ((id.isTextual() || id.isNumber()) && target.isTextual()) {
-            entries.add(new Entry(id.asText().strip(), target.textValue().strip(), termsOf(node.path("terms"))));
-        }
+        entries.add(new Entry(
+                node.path("id").asText().strip(),
+                node.path("target").textValue().strip(),
+                termsOf(node.path("terms"))));
     }
 
     /**

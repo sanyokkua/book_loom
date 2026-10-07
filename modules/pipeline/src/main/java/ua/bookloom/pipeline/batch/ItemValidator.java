@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.checks.QuoteConventions;
 import ua.bookloom.pipeline.checks.SentenceCount;
 import ua.bookloom.pipeline.qa.LengthBand;
 
@@ -58,8 +59,13 @@ final class ItemValidator {
         if (ControlCharacters.containsControl(target)) {
             problems.add(ItemProblem.CONTROL_CHARACTERS);
         }
-        if (ProtocolLeak.leaks(target)) {
+        final boolean leaks = ProtocolLeak.leaks(target);
+        if (leaks) {
             problems.add(ItemProblem.LEAKED);
+        }
+        // A target that leaks reply text has broken quotes of its own; the leak already names it.
+        if (!leaks && shiftsQuotes(item.masked(), target, sourceTag, targetTag)) {
+            problems.add(ItemProblem.QUOTES);
         }
         lengthProblem(item.masked(), target, sourceTag, targetTag).ifPresent(problems::add);
         if (SentenceCount.dropsSentence(DisplayText.of(item.masked()), DisplayText.of(target), sourceTag, targetTag)) {
@@ -67,6 +73,13 @@ final class ItemValidator {
         }
         log.debug("Validated batch item id={} problems={}", item.id(), problems);
         return problems;
+    }
+
+    // A source that is itself open (a quotation running on into the next paragraph) lets the target be open too.
+    private static boolean shiftsQuotes(
+            final String masked, final String target, @Nullable final String sourceTag, final String targetTag) {
+        return QuoteConventions.isBalanced(masked, sourceTag)
+                && !QuoteConventions.isBalancedAllowingEnglish(target, targetTag);
     }
 
     private static List<String> markers(final String text) {
