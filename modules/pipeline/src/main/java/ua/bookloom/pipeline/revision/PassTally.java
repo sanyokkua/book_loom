@@ -18,6 +18,7 @@ final class PassTally {
     private int termSubstitutions;
     private int genderReRenders;
     private int proposals;
+    private int neighbourFixes;
 
     /** Records a machine target the sweep replaced, with the number of term deferrals it swept into it. */
     void swept(final String segmentId, final String locator, final int terms) {
@@ -29,6 +30,12 @@ final class PassTally {
     void reRendered(final String segmentId, final String locator) {
         genderReRenders++;
         changed(segmentId, locator, "revised for gender");
+    }
+
+    /** Records a machine target the check against its neighbours corrected. */
+    void neighbourFixed(final String segmentId, final String locator) {
+        neighbourFixes++;
+        changed(segmentId, locator, "fixed against its neighbours");
     }
 
     /** Records a proposal stored for a segment the person edited. */
@@ -43,7 +50,8 @@ final class PassTally {
     }
 
     ConsistencyReport report(final Map<DeferralReason, Integer> openDeferrals) {
-        return new ConsistencyReport(termSubstitutions, genderReRenders, proposals, notes, openDeferrals);
+        return new ConsistencyReport(
+                termSubstitutions, genderReRenders, proposals, notes, openDeferrals, neighbourFixes);
     }
 
     private void changed(final String segmentId, final String locator, final String what) {

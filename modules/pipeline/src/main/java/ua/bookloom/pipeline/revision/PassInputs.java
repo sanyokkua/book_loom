@@ -22,6 +22,7 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param sources each segment of the opened book by id
  * @param locators each segment's locator by id, which the report's notes name
  * @param glossary every glossary entry as the pass starts
+ * @param order the opened book's segment ids in reading order, which the neighbours of a paragraph are read from
  */
 record PassInputs(
         String projectId,
@@ -30,7 +31,8 @@ record PassInputs(
         GateFunction gate,
         Map<String, Segment> sources,
         Map<String, SegmentLocator> locators,
-        List<GlossaryEntry> glossary) {
+        List<GlossaryEntry> glossary,
+        List<String> order) {
 
     /** Rejects a missing component and copies the collections. */
     PassInputs {
@@ -41,6 +43,7 @@ record PassInputs(
         sources = Map.copyOf(Objects.requireNonNull(sources, "sources"));
         locators = Map.copyOf(Objects.requireNonNull(locators, "locators"));
         glossary = List.copyOf(Objects.requireNonNull(glossary, "glossary"));
+        order = List.copyOf(Objects.requireNonNull(order, "order"));
     }
 
     /**

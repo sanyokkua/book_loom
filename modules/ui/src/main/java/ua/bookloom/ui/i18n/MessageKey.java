@@ -1338,6 +1338,8 @@ public enum MessageKey {
     EXPORT_CHECK_SIDE_FILE("export.check.sideFile"),
     /** Check line after an export: the consistency pass adjusted segments; argument 0 is the count. */
     EXPORT_CHECK_CONSISTENCY_ADJUSTED("export.check.consistency.adjusted"),
+    /** Consistency pass result; argument 0 is how many paragraphs were corrected against their neighbours. */
+    EXPORT_CHECK_CONSISTENCY_NEIGHBOURS("export.check.consistency.neighbours"),
     /** Check line after an export: the consistency pass ran and changed nothing. */
     EXPORT_CHECK_CONSISTENCY_NOTHING("export.check.consistency.nothing"),
     /** Check line after an export: segments still wait for a character's gender; argument 0 is their count. */

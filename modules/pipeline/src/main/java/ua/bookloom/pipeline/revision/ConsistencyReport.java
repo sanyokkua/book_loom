@@ -13,18 +13,30 @@ import ua.bookloom.api.project.DeferralReason;
  * @param proposals how many segments the person edited got a proposal instead of a change
  * @param notes one line per change, naming the segment by its locator; never null, empty when nothing changed
  * @param openDeferrals the deferrals still open once the pass ended, counted by reason; never null, empty when none
+ * @param neighbourFixes how many segments the check against the neighbouring paragraphs corrected
  */
 public record ConsistencyReport(
         int termSubstitutions,
         int genderReRenders,
         int proposals,
         List<String> notes,
-        Map<DeferralReason, Integer> openDeferrals) {
+        Map<DeferralReason, Integer> openDeferrals,
+        int neighbourFixes) {
 
     /** Copies the notes and the counts so the report can never change after construction. */
     public ConsistencyReport {
         notes = List.copyOf(Objects.requireNonNull(notes, "notes"));
         openDeferrals = Map.copyOf(Objects.requireNonNull(openDeferrals, "openDeferrals"));
+    }
+
+    /** A report with no neighbour check. */
+    public ConsistencyReport(
+            final int termSubstitutions,
+            final int genderReRenders,
+            final int proposals,
+            final List<String> notes,
+            final Map<DeferralReason, Integer> openDeferrals) {
+        this(termSubstitutions, genderReRenders, proposals, notes, openDeferrals, 0);
     }
 
     /** A report that left no deferral open. */

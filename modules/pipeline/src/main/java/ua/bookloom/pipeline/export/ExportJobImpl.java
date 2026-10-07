@@ -220,7 +220,8 @@ final class ExportJobImpl implements ExportJob {
                 pass.termSubstitutions(),
                 pass.genderReRenders(),
                 pass.openDeferrals());
-        return new ConsistencySummary(status, pass.termSubstitutions(), pass.genderReRenders(), pass.openDeferrals());
+        return new ConsistencySummary(
+                status, pass.termSubstitutions(), pass.genderReRenders(), pass.openDeferrals(), pass.neighbourFixes());
     }
 
     private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {

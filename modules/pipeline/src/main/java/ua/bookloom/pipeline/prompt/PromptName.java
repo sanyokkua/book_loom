@@ -119,6 +119,21 @@ public enum PromptName {
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
             new Slots(Set.of("source", "text"), Set.of("resolvedFacts", "tokens"))),
 
+    /**
+     * The consistency pass's check of one decided paragraph against the translated paragraph before it and after it, the
+     * names and terms the book holds and the source: it fixes what disagrees and returns the rest unchanged.
+     */
+    CONSISTENCY(
+            "consistency",
+            CallKind.REVISION,
+            "consistency",
+            DraftSchema.SCHEMA,
+            0.1,
+            null,
+            new Slots(
+                    Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
+            new Slots(Set.of("source", "text"), Set.of("resolvedFacts", "previous", "next", "tokens"))),
+
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(
             "prescan",

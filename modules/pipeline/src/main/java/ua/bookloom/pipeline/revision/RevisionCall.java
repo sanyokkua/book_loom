@@ -61,7 +61,54 @@ final class RevisionCall {
             final String maskedTarget,
             final String facts,
             final ModelCalls calls) {
-        final ChatRequest request = request(inputs, segment, maskedTarget, facts);
+        final Map<String, String> user = new HashMap<>();
+        user.put("source", segment.masked());
+        user.put("text", maskedTarget);
+        user.put("resolvedFacts", facts);
+        user.put("tokens", SelfHealCalls.immutableTokens(segment.masked()));
+        return send(PromptName.REVISION, inputs, segment, user, calls);
+    }
+
+    /**
+     * Checks one paragraph against the translated paragraphs around it.
+     *
+     * @param inputs what the pass read as it started
+     * @param segment the opened book's segment
+     * @param maskedTarget the target to check, the document's own tokens in place
+     * @param facts one line per name or term of the paragraph and the rendering the book holds for it; may be empty
+     * @param previous the translated paragraph before it, or empty at the start of the book
+     * @param next the translated paragraph after it, or empty at the end of the book
+     * @param calls the seam the call is sent through
+     * @return the checked target restored through the gate, equal to the given one when nothing needed to change;
+     *     empty when the reply was unreadable or refused by a gate or a check; or the call's own error
+     */
+    Result<Optional<GateResult.Restored>> checkAgainstNeighbours(
+            final PassInputs inputs,
+            final Segment segment,
+            final String maskedTarget,
+            final String facts,
+            final String previous,
+            final String next,
+            final ModelCalls calls) {
+        final Map<String, String> user = new HashMap<>();
+        user.put("source", segment.masked());
+        user.put("text", maskedTarget);
+        user.put("resolvedFacts", facts);
+        user.put("previous", previous);
+        user.put("next", next);
+        user.put("tokens", SelfHealCalls.immutableTokens(segment.masked()));
+        return send(PromptName.CONSISTENCY, inputs, segment, user, calls);
+    }
+
+    private Result<Optional<GateResult.Restored>> send(
+            final PromptName name,
+            final PassInputs inputs,
+            final Segment segment,
+            final Map<String, String> user,
+            final ModelCalls calls) {
+        final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, inputs.frame(), user);
+        final ChatRequest request =
+                ChatRequests.build(name, messages, SelfHealCalls.outputLimit(segment.masked(), inputs.frame()), false);
         SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.call(CallKind.REVISION, segment.id(), request);
         SelfHealCalls.logTraceReply(log, LABEL, reply);
@@ -75,19 +122,6 @@ final class RevisionCall {
             case RepairReply.Malformed malformed -> Result.ok(Optional.empty());
             case RepairReply.FlagNow flagNow -> Result.ok(Optional.empty());
         };
-    }
-
-    private ChatRequest request(
-            final PassInputs inputs, final Segment segment, final String maskedTarget, final String facts) {
-        final Map<String, String> user = new HashMap<>();
-        user.put("source", segment.masked());
-        user.put("text", maskedTarget);
-        user.put("resolvedFacts", facts);
-        user.put("tokens", SelfHealCalls.immutableTokens(segment.masked()));
-        final List<ChatMessage> messages =
-                SelfHealCalls.messagesFor(templates, PromptName.REVISION, inputs.frame(), user);
-        return ChatRequests.build(
-                PromptName.REVISION, messages, SelfHealCalls.outputLimit(segment.masked(), inputs.frame()), false);
     }
 
     private static Result<Optional<GateResult.Restored>> gated(

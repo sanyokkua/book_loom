@@ -31,17 +31,18 @@ class PromptShapeTest {
             new ObjectMapper().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
     /** The top-level key a literal reply of each response format holds. */
-    private static final Map<String, String> REPLY_KEYS = Map.of(
-            "draft", "target",
-            "structural-repair", "target",
-            "placeholder-repair", "target",
-            "directed-fix", "target",
-            "improve", "target",
-            "polish", "target",
-            "revision", "target",
-            "reviewer", "results",
-            "reflect", "issues",
-            "prescan", "terms");
+    private static final Map<String, String> REPLY_KEYS = Map.ofEntries(
+            Map.entry("draft", "target"),
+            Map.entry("structural-repair", "target"),
+            Map.entry("placeholder-repair", "target"),
+            Map.entry("directed-fix", "target"),
+            Map.entry("improve", "target"),
+            Map.entry("polish", "target"),
+            Map.entry("revision", "target"),
+            Map.entry("reviewer", "results"),
+            Map.entry("reflect", "issues"),
+            Map.entry("prescan", "terms"),
+            Map.entry("consistency", "target"));
 
     private static final Map<String, String> OTHER_REPLY_KEYS = Map.of(
             "review-terms", "verdicts",

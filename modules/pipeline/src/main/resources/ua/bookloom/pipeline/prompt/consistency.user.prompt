@@ -1,0 +1,29 @@
+{{#resolvedFacts}}
+[Names and terms]
+{{resolvedFacts}}
+
+{{/resolvedFacts}}
+{{#previous}}
+[Previous paragraph, translated]
+{{previous}}
+
+{{/previous}}
+{{#next}}
+[Next paragraph, translated]
+{{next}}
+
+{{/next}}
+<Source>
+{{source}}
+</Source>
+
+{{#tokens}}
+[Immutable tokens]
+Copy this exact ordered sequence unchanged: {{tokens}}
+{{/tokens}}
+
+<Translation>
+{{text}}
+</Translation>
+
+Return one JSON object: {"target":"<the checked translation, or the same text if nothing changes>"}

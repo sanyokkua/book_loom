@@ -86,6 +86,8 @@ class ConsistencyPassGenderTest {
                 SAM_DOOR,
                 record -> record.withStatus(SegmentStatus.FLAGGED).withFindings(List.of(glossary)));
         book.model().answerTo(REVISION, reply(DOOR_REVISED));
+        // The segment stays flagged, so the neighbour check reads it too and finds nothing to change.
+        book.model().answerTo("consistency", reply(DOOR_REVISED));
 
         ok(book.run(true));
 

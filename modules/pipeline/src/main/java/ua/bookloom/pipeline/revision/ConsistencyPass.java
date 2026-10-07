@@ -40,7 +40,8 @@ import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * Backward revision, shared by the Max run's last stage and by Export: first the deterministic sweep of every renamed
- * locked term, then one revision call per segment whose characters' gender became known. A machine target is replaced
+ * locked term, then one revision call per segment whose characters' gender became known, then a check of every repaired, flagged or
+ * noted paragraph against the translated paragraphs around it. A machine target is replaced
  * and the segment becomes REVISED; the person's own edit is never overwritten — it gets a proposal instead. The sweep makes no model call, so a pause asked for during it
  * waits for the first revision call, where the caller's model seam answers it.
  */
@@ -117,7 +118,9 @@ public final class ConsistencyPass {
             return Result.ok(false);
         }
         final RevisionCall call = new RevisionCall(templates, new DraftReplyParser(mapper));
-        return new GenderRevision(glossary, segments, deferrals, writer, call).revise(inputs, open, calls, tally);
+        return new GenderRevision(glossary, segments, deferrals, writer, call)
+                .revise(inputs, open, calls, tally)
+                .flatMap(revised -> new NeighbourRevision(segments, writer, call).revise(inputs, calls, tally));
     }
 
     private static ConsistencyReport ended(
@@ -176,7 +179,8 @@ public final class ConsistencyPass {
                 TypographyGate.around(GateFunction.of(documents, document.format()), target),
                 sources,
                 SegmentLocators.of(document),
-                entries);
+                entries,
+                List.copyOf(sources.keySet()));
     }
 
     // Counted by segment: a segment naming two unknown-gender characters holds two deferrals but is one segment that

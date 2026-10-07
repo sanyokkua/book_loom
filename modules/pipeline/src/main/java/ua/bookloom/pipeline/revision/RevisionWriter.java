@@ -53,7 +53,10 @@ final class RevisionWriter {
         NAME_SWAP(true),
 
         /** A re-render for a character's now-known gender. Agreement is never a recorded finding, so it fixes none. */
-        GENDER(false);
+        GENDER(false),
+
+        /** A fix made against the neighbouring paragraphs. It is a repair of unnamed defects, so it fixes no finding. */
+        NEIGHBOUR(false);
 
         private static final String GLOSSARY_KIND = "glossary";
 
@@ -159,6 +162,10 @@ final class RevisionWriter {
 
     // The carrier is resolved and added again with the proposal, since an open deferral is never changed in place.
     private Result<Stored> propose(final GateResult.Restored revised, final List<Deferral> answered) {
+        if (answered.isEmpty()) {
+            log.debug("A revision with no deferral to carry it is dropped: the segment is the person's now");
+            return Result.ok(Stored.STALE);
+        }
         final Deferral carrier = answered.getFirst();
         final Deferral withProposal = new Deferral(
                 carrier.id(),

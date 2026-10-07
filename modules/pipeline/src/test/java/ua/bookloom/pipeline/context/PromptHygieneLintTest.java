@@ -61,6 +61,8 @@ class PromptHygieneLintTest {
             Map.entry("keyTerms", "master, imp"),
             Map.entry("memoryHint", "He left. → Він пішов."),
             Map.entry("precedingTargets", "Один."),
+            Map.entry("previous", "Двері були відчинені."),
+            Map.entry("next", "Вона чекала."),
             Map.entry("extraInstruction", "Keep the dialogue tone."),
             Map.entry("passFocus", "This is a second pass over text already reviewed once."),
             Map.entry("rejectedReply", "not json"),

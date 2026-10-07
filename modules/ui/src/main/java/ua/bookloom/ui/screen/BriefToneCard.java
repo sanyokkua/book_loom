@@ -50,23 +50,7 @@ final class BriefToneCard {
     BriefToneCard(final BookBriefViewModel viewModel, final Messages messages) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.genre = genreBox(viewModel);
-        this.register = new BriefChoice<>(
-                "brief-tone-register",
-                messages,
-                List.of(
-                        new BriefChoice.Option<>(
-                                Register.FORMAL_LITERARY,
-                                MessageKey.BRIEF_REGISTER_FORMAL,
-                                MessageKey.BRIEF_HELP_REGISTER_FORMAL),
-                        new BriefChoice.Option<>(
-                                Register.NEUTRAL,
-                                MessageKey.BRIEF_REGISTER_NEUTRAL,
-                                MessageKey.BRIEF_HELP_REGISTER_NEUTRAL),
-                        new BriefChoice.Option<>(
-                                Register.CASUAL,
-                                MessageKey.BRIEF_REGISTER_CASUAL,
-                                MessageKey.BRIEF_HELP_REGISTER_CASUAL)),
-                viewModel::setRegister);
+        this.register = registerChoice(viewModel, messages);
         Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
         this.narrator = narratorChoice(viewModel, messages);
         this.narratorGender = narratorGenderChoice(viewModel, messages);
@@ -83,6 +67,26 @@ final class BriefToneCard {
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR, narrator.withHelp()),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.withHelp()),
                 notice);
+    }
+
+    private static BriefChoice<Register> registerChoice(final BookBriefViewModel viewModel, final Messages messages) {
+        return new BriefChoice<>(
+                "brief-tone-register",
+                messages,
+                List.of(
+                        new BriefChoice.Option<>(
+                                Register.FORMAL_LITERARY,
+                                MessageKey.BRIEF_REGISTER_FORMAL,
+                                MessageKey.BRIEF_HELP_REGISTER_FORMAL),
+                        new BriefChoice.Option<>(
+                                Register.NEUTRAL,
+                                MessageKey.BRIEF_REGISTER_NEUTRAL,
+                                MessageKey.BRIEF_HELP_REGISTER_NEUTRAL),
+                        new BriefChoice.Option<>(
+                                Register.CASUAL,
+                                MessageKey.BRIEF_REGISTER_CASUAL,
+                                MessageKey.BRIEF_HELP_REGISTER_CASUAL)),
+                viewModel::setRegister);
     }
 
     private static Label narratorNotice(final BookBriefViewModel viewModel, final Messages messages) {

@@ -56,6 +56,9 @@ public final class ExportReportLines {
         if (summary.adjusted() > 0) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_ADJUSTED, summary.adjusted()));
         }
+        if (summary.neighbourFixes() > 0) {
+            lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NEIGHBOURS, summary.neighbourFixes()));
+        }
         if (summary.status() == ConsistencySummary.Status.RAN_WITHOUT_MODEL) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NO_MODEL));
         } else if (summary.openGenderDeferrals() > 0) {

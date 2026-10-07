@@ -15,7 +15,11 @@ import ua.bookloom.api.project.DeferralReason;
  *     say what it is waiting for
  */
 public record ConsistencySummary(
-        Status status, int termSubstitutions, int genderReRenders, Map<DeferralReason, Integer> openDeferrals) {
+        Status status,
+        int termSubstitutions,
+        int genderReRenders,
+        Map<DeferralReason, Integer> openDeferrals,
+        int neighbourFixes) {
 
     /** The summary of an export whose pass was switched off: nothing ran, nothing is to be said. */
     public static final ConsistencySummary NOT_RUN = new ConsistencySummary(Status.NOT_RUN, 0, 0);
@@ -30,6 +34,15 @@ public record ConsistencySummary(
         RAN_WITHOUT_MODEL
     }
 
+    /** A summary with no check against the neighbouring paragraphs. */
+    public ConsistencySummary(
+            final Status status,
+            final int termSubstitutions,
+            final int genderReRenders,
+            final Map<DeferralReason, Integer> openDeferrals) {
+        this(status, termSubstitutions, genderReRenders, openDeferrals, 0);
+    }
+
     /** A summary that left no deferral open. */
     public ConsistencySummary(final Status status, final int termSubstitutions, final int genderReRenders) {
         this(status, termSubstitutions, genderReRenders, Map.of());
@@ -39,7 +52,7 @@ public record ConsistencySummary(
     public ConsistencySummary {
         Objects.requireNonNull(status, "status");
         openDeferrals = Map.copyOf(Objects.requireNonNull(openDeferrals, "openDeferrals"));
-        if (termSubstitutions < 0 || genderReRenders < 0) {
+        if (termSubstitutions < 0 || genderReRenders < 0 || neighbourFixes < 0) {
             throw new IllegalArgumentException(
                     "no count may be negative: " + termSubstitutions + ", " + genderReRenders);
         }
@@ -47,7 +60,7 @@ public record ConsistencySummary(
 
     /** Segments the pass changed. */
     public int adjusted() {
-        return termSubstitutions + genderReRenders;
+        return termSubstitutions + genderReRenders + neighbourFixes;
     }
 
     /** Segments still waiting for a character's gender, which no pass can render until it is set. */
