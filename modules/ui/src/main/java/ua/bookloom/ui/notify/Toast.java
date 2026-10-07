@@ -9,6 +9,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -89,6 +90,7 @@ final class Toast {
 
     private Label counter() {
         counter.getStyleClass().add("toast-count");
+        counter.setMinWidth(Region.USE_PREF_SIZE);
         counter.setManaged(false);
         counter.setVisible(false);
         return counter;
