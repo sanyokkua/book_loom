@@ -130,7 +130,7 @@ public final class PrepStage {
         }
         log.debug("Name scan runs project={}: the glossary is empty", projectId);
         return FrequencyScan.newTerms(projectId, bodySegments(document), sourceLanguage, glossary)
-                .map(proposals -> GivenNames.seeded(proposals, sourceLanguage, true))
+                .map(proposals -> GivenNames.seeded(proposals, sourceLanguage))
                 .flatMap(proposals -> addAll(glossary, proposals))
                 .map(added -> new Prepared(styleSheet, true, added));
     }

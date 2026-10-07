@@ -335,7 +335,7 @@ public final class ReviewViewModel {
             return;
         }
         log.info("review {} of segment {} left it {}", name, segment.segmentId(), stored.status());
-        final int remaining = queries.flagged(projectId, flaggedCount.get());
+        final int remaining = queries.refreshed(projectId, flaggedCount.get(), mirror.live());
         final List<SegmentView> listed = Objects.requireNonNullElse(queries.list(projectId, filter.get()), List.of());
         final String nextId = ReviewNext.after(name, segment.segmentId(), stored.segmentId(), order, listed);
         final SegmentView next = nextId == null ? null : queries.segment(projectId, nextId);

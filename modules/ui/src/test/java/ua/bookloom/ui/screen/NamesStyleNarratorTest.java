@@ -91,6 +91,38 @@ class NamesStyleNarratorTest extends TranslatingScreenTestBase {
         assertThat(ThemeTestSupport.onFx(() -> navigator.currentView().get())).isEqualTo(ViewNames.TRANSLATING);
     }
 
+    // IF the run started before the save landed, THEN the engine would read the old, unstated narrator from the
+    // project.
+    @Test
+    void male_pressedWhileTheBriefSaveIsSlow_startsTheRunOnlyAfterTheStoredBriefHasTheNarrator() throws Exception {
+        showNamesStyle(BookFixtures.firstPersonHint());
+        final int savedBefore = projects.briefs().size();
+        projects.holdBriefSaves();
+        onFx(() -> button("names-style-start").fire());
+
+        onFx(() -> button("narrator-male").fire());
+
+        assertThat(engine.requests()).isEmpty();
+        assertThat(projects.briefs()).hasSize(savedBefore);
+        projects.releaseBriefSaves();
+        job.awaitRunStarted();
+        assertThat(projects.briefs().getLast().narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE));
+    }
+
+    @Test
+    void enter_onTheQuestion_defaultsToNotStatedNeverToMale() throws Exception {
+        showNamesStyle(BookFixtures.firstPersonHint());
+        onFx(() -> button("names-style-start").fire());
+
+        final boolean[] defaults = ThemeTestSupport.onFx(() -> new boolean[] {
+            ((javafx.scene.control.Button) scene.getRoot().lookup("#narrator-unknown")).isDefaultButton(),
+            ((javafx.scene.control.Button) scene.getRoot().lookup("#narrator-male")).isDefaultButton(),
+            ((javafx.scene.control.Button) scene.getRoot().lookup("#narrator-female")).isDefaultButton()
+        });
+
+        assertThat(defaults).containsExactly(true, false, false);
+    }
+
     @Test
     void female_pressed_setsAFirstPersonFemaleNarratorAndStartsTheRun() throws Exception {
         showNamesStyle(BookFixtures.firstPersonHint());

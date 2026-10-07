@@ -139,7 +139,7 @@ public final class GlossaryServiceImpl implements GlossaryService {
         final String language = sourceLanguage(projectId, document);
         final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(
                         projectId, bodySegments(document), language, glossary)
-                .map(proposals -> GivenNames.seeded(proposals, language, true))
+                .map(proposals -> GivenNames.seeded(proposals, language))
                 .flatMap(this::addAll);
         log.info(
                 "Glossary scan finished project={} ok={} entriesAdded={}",

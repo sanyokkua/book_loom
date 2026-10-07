@@ -3,11 +3,13 @@ package ua.bookloom.pipeline.revision;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -177,9 +179,14 @@ public final class ConsistencyPass {
                 entries);
     }
 
+    // Counted by segment: a segment naming two unknown-gender characters holds two deferrals but is one segment that
+    // waits, and the export message says "segments".
     private static Map<DeferralReason, Integer> byReason(final List<Deferral> open) {
+        final Map<DeferralReason, Set<String>> segments = new EnumMap<>(DeferralReason.class);
+        open.forEach(deferral -> segments.computeIfAbsent(deferral.reason(), reason -> new HashSet<>())
+                .add(deferral.segmentId()));
         final Map<DeferralReason, Integer> counts = new EnumMap<>(DeferralReason.class);
-        open.forEach(deferral -> counts.merge(deferral.reason(), 1, Integer::sum));
+        segments.forEach((reason, ids) -> counts.put(reason, ids.size()));
         return counts;
     }
 }

@@ -70,22 +70,21 @@ public final class GivenNames {
     }
 
     /**
-     * Suggests a gender for a person's entry that has none: a character, or an entry the scan has not typed yet, whose
-     * first word is a listed first name becomes a character with that gender marked as a suggestion. Anything else is
-     * returned as it is, so a gender somebody set, a locked entry and a place are never touched.
+     * Suggests a gender for a person's entry that has none: a character whose first word is a listed first name gets
+     * that gender marked as a suggestion. It never types an entry — a place or an untyped entry named like a person
+     * (Victoria Station, Florence) stays what it is — and it never touches a gender somebody set, a locked entry, or an
+     * entry the list was already tried on, so a gender the person reset to unknown stays unknown.
      *
      * @param entry the non-null entry
      * @param languageTag the source language's tag, or null when it is not known
-     * @param retype {@code true} to also make an untyped entry a character, as the first scan does; {@code false} to
-     *     seed characters only
      * @return the entry with a suggested gender, or {@code entry} itself when nothing is to be suggested
      */
-    public static GlossaryEntry seeded(
-            final GlossaryEntry entry, @Nullable final String languageTag, final boolean retype) {
+    public static GlossaryEntry seeded(final GlossaryEntry entry, @Nullable final String languageTag) {
         Objects.requireNonNull(entry, "entry");
         final boolean eligible = entry.gender() == Gender.UNKNOWN
                 && !entry.locked()
-                && (entry.type() == TermType.CHARACTER || (retype && entry.type() == TermType.OTHER));
+                && !entry.genderSeedTried()
+                && entry.type() == TermType.CHARACTER;
         if (!eligible) {
             return entry;
         }
@@ -94,25 +93,25 @@ public final class GivenNames {
             return entry;
         }
         log.debug("Glossary entry {} gets the suggested gender {} from the given-name list", entry.id(), listed.get());
-        return entry.withType(TermType.CHARACTER).withSuggestedGender(listed.get());
+        return entry.withSuggestedGender(listed.get());
     }
 
     /**
-     * The entries as {@link #seeded} would leave them, in order.
+     * The entries as {@link #seeded(GlossaryEntry, String)} would leave them, in order.
      *
      * @param entries the non-null entries
      * @param languageTag the source language's tag, or null when it is not known
-     * @param retype whether an untyped entry may become a character, as for the entries of a first scan
      * @return a list of the same size; never null
      */
-    public static List<GlossaryEntry> seeded(
-            final List<GlossaryEntry> entries, @Nullable final String languageTag, final boolean retype) {
+    public static List<GlossaryEntry> seeded(final List<GlossaryEntry> entries, @Nullable final String languageTag) {
         Objects.requireNonNull(entries, "entries");
-        return entries.stream().map(entry -> seeded(entry, languageTag, retype)).toList();
+        return entries.stream().map(entry -> seeded(entry, languageTag)).toList();
     }
 
     /**
-     * Writes a suggested gender to every held character that has none and whose first word is a listed first name.
+     * Writes a suggested gender to every held character that has none, was never tried and whose first word is a
+     * listed first name. Each entry is changed in one atomic step against its current state, so a person's edit made
+     * meanwhile is not overwritten.
      *
      * @param glossary the non-null glossary to read and update
      * @param projectId the non-null project whose entries are read
@@ -126,11 +125,11 @@ public final class GivenNames {
         return glossary.all(projectId).flatMap(held -> {
             int changed = 0;
             for (final GlossaryEntry entry : held) {
-                final GlossaryEntry seeded = seeded(entry, languageTag, false);
-                if (seeded.equals(entry)) {
+                if (seeded(entry, languageTag).equals(entry)) {
                     continue;
                 }
-                final Result<GlossaryEntry> stored = glossary.update(seeded);
+                final Result<Optional<GlossaryEntry>> stored =
+                        glossary.update(projectId, entry.term(), current -> seeded(current, languageTag));
                 if (stored.isErr()) {
                     return Result.err(Objects.requireNonNull(stored.error(), "error"));
                 }

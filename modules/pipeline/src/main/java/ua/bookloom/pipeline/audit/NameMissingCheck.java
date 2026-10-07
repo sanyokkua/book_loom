@@ -29,6 +29,7 @@ final class NameMissingCheck {
 
     static final String NAME = "name-missing";
     private static final int MIN_VARIANT_LETTERS = 4;
+    private static final List<String> VARIANT_VOWELS = List.of("иіїы", "еє");
 
     /**
      * Looks for names the target lost.
@@ -56,7 +57,8 @@ final class NameMissingCheck {
         if (lost.isEmpty()) {
             return Optional.empty();
         }
-        log.debug("Name check: {} glossary name(s) are in the source and not in the target: {}", lost.size(), lost);
+        log.debug("Name check: {} glossary name(s) are in the source and not in the target", lost.size());
+        log.trace("Name check lost: {}", lost);
         return Optional.of(new QaFinding(
                 "glossary",
                 Severity.LOW,
@@ -74,19 +76,32 @@ final class NameMissingCheck {
                 .anyMatch(other -> isNearlyAlike(target, Objects.requireNonNull(other.target(), "target")));
     }
 
+    // Only a duplicate spelling: one vowel written two ways (Моріс, Морис) or one doubled letter (Нел, Нелл). A
+    // different consonant (Марта, Марка) is a different name.
     private static boolean isNearlyAlike(final String first, final String second) {
         final String a = first.strip().toLowerCase(Locale.ROOT);
         final String b = second.strip().toLowerCase(Locale.ROOT);
-        if (Math.abs(a.length() - b.length()) > 1 || a.length() < MIN_VARIANT_LETTERS) {
+        if (Math.max(a.length(), b.length()) < MIN_VARIANT_LETTERS || Math.abs(a.length() - b.length()) > 1) {
             return false;
         }
-        final int common = commonPrefix(a, b);
-        if (common == a.length() || common == b.length()) {
-            return true;
-        }
-        final int skipA = a.length() >= b.length() ? 1 : 0;
-        final int skipB = b.length() >= a.length() ? 1 : 0;
-        return a.substring(common + skipA).equals(b.substring(common + skipB));
+        return a.length() == b.length() ? differsByVariantVowel(a, b) : differsByDoubledLetter(a, b);
+    }
+
+    private static boolean differsByVariantVowel(final String a, final String b) {
+        final int at = commonPrefix(a, b);
+        return at < a.length()
+                && a.substring(at + 1).equals(b.substring(at + 1))
+                && VARIANT_VOWELS.stream()
+                        .anyMatch(group -> group.indexOf(a.charAt(at)) >= 0 && group.indexOf(b.charAt(at)) >= 0);
+    }
+
+    private static boolean differsByDoubledLetter(final String a, final String b) {
+        final String shorter = a.length() < b.length() ? a : b;
+        final String longer = a.length() < b.length() ? b : a;
+        final int at = commonPrefix(shorter, longer);
+        return at > 0
+                && longer.charAt(at) == longer.charAt(at - 1)
+                && longer.substring(at + 1).equals(shorter.substring(at));
     }
 
     private static int commonPrefix(final String a, final String b) {

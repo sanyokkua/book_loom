@@ -199,14 +199,13 @@ final class TermLearning {
         }
     }
 
+    // One atomic step against the entry as it is now: a person's edit made on another thread meanwhile is never lost.
     private void suggest(final GlossaryEntry entry, final CooccurrenceLearner.Learned found) {
-        final Optional<GlossaryEntry> current =
-                glossary.findByTerm(projectId, entry.term()).data();
-        if (current == null || current.isEmpty() || !lacksSpelling(current.get())) {
-            return;
-        }
-        if (glossary.update(current.get().withSuggestedTarget(found.rendering()))
-                .isErr()) {
+        final Result<Optional<GlossaryEntry>> stored = glossary.update(
+                projectId,
+                entry.term(),
+                current -> lacksSpelling(current) ? current.withSuggestedTarget(found.rendering()) : current);
+        if (stored.isErr()) {
             log.warn("A learned spelling could not be stored project={}", projectId);
             return;
         }

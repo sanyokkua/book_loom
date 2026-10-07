@@ -489,7 +489,8 @@ the share of narration sentences with the first-person subject pronoun, and the 
 book. A chapter is first person when at least a tenth of its narration sentences contain the source language's
 `firstPersonPronouns` (`I`, `я`, `ich`, `je`; a language that drops its subject lists none and gets no hint) and it has at
 least six such sentences; the book is `FIRST` when every judged chapter is, `THIRD` when none is and `MIXED` otherwise.
-The hint SHALL never change the brief by itself. WHILE the hint is `FIRST` or `MIXED` and the narrator's gender is not
+The hint SHALL never set the narrator's gender; its only effect on the brief is the preselection of `First person` below,
+which the person can change. WHILE the hint is `FIRST` or `MIXED` and the narrator's gender is not
 chosen and the narrator is not third person, the Tone & style card SHALL show a notice (`The book is narrated in the first
 person — choose the narrator's gender.`, with a hover explanation, in English and Ukrainian), and a narrator still
 `Not stated` SHALL be preselected as `First person` without a gender. WHEN Start translation is pressed (on Names &
@@ -497,7 +498,11 @@ style or on Translating) under the same conditions and the question has not been
 the application SHALL ask once `Who narrates?` with `Male`, `Female`, `Not stated — start anyway` and `Back`: a gender
 SHALL be written to the brief as a first-person narrator of that gender and the run SHALL start, `Not stated` SHALL start
 as before, and `Back` or Escape SHALL start nothing and change nothing; any answer other than going back is remembered
-for the book, so the question is not asked again.
+for the book, so the question is not asked again. The hint is read once, at import, with the source language preselected
+then (it is read again in the run's preparation with the brief's language); choosing another source language in the brief
+does not recompute the notice, and a book whose preselected language has no pronoun data (`UNRECOGNIZED`) shows none.
+Known limitation (2026-10-07 review): the screens would need a port that re-reads the book's text, which is not worth
+it while the person can still choose the narrator by hand.
 
 **Source:** FR-BRIEF-02, ADR-0038; tasks 15e.14.
 In plain words: a first-person book told by a man and translated with no narrator gender came out with feminine verbs

@@ -57,6 +57,7 @@ final class PromptEvalRunner {
     private final DraftReplyParser parser = new DraftReplyParser(new ObjectMapper());
     private final DirectedFix directedFix = new DirectedFix(templates, parser);
     private final ReviewerEval reviews;
+    private final int window;
 
     PromptEvalRunner(final ModelCalls calls) {
         this(calls, PromptEvalCases.SOURCE_LANGUAGE, PromptEvalCases.TARGET_LANGUAGE);
@@ -64,6 +65,13 @@ final class PromptEvalRunner {
 
     /** A runner for one language pair; the language corpora run one of these per target language. */
     PromptEvalRunner(final ModelCalls calls, final String sourceLanguage, final String targetLanguage) {
+        this(calls, sourceLanguage, targetLanguage, EvalProject.window());
+    }
+
+    /** A runner whose requests are sized against a given window instead of the environment's. */
+    PromptEvalRunner(
+            final ModelCalls calls, final String sourceLanguage, final String targetLanguage, final int window) {
+        this.window = window;
         this.calls = Objects.requireNonNull(calls, "calls");
         this.sourceLanguage = Objects.requireNonNull(sourceLanguage, "sourceLanguage");
         this.targetLanguage = Objects.requireNonNull(targetLanguage, "targetLanguage");
@@ -71,7 +79,8 @@ final class PromptEvalRunner {
     }
 
     private EvalProject project(final String text, final List<EvalTerm> glossary, final EvalContext context) {
-        return EvalProject.of(EvalProject.Setup.single(sourceLanguage, targetLanguage, glossary, context, text), calls);
+        return EvalProject.of(
+                EvalProject.Setup.single(sourceLanguage, targetLanguage, glossary, context, text), calls, window);
     }
 
     private EvalProject project(final String text) {

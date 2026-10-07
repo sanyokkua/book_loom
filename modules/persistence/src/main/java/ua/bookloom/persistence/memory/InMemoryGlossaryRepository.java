@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -65,6 +66,21 @@ public final class InMemoryGlossaryRepository implements GlossaryRepository {
             glossary.put(entry);
             log.debug("Glossary term replaced projectId={} entryId={}", entry.projectId(), entry.id());
             return Result.ok(entry);
+        } catch (Throwable cause) {
+            return Result.err(internalError(cause));
+        }
+    }
+
+    @Override
+    public Result<Optional<GlossaryEntry>> update(
+            final String projectId, final String term, final UnaryOperator<GlossaryEntry> change) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(term, "term");
+        Objects.requireNonNull(change, "change");
+        try {
+            final Optional<GlossaryEntry> stored = store.glossary(projectId).update(GlossaryKeys.of(term), change);
+            log.debug("Glossary atomic update projectId={} present={}", projectId, stored.isPresent());
+            return Result.ok(stored);
         } catch (Throwable cause) {
             return Result.err(internalError(cause));
         }

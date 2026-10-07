@@ -5,6 +5,9 @@ import com.google.inject.Singleton;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -29,7 +32,8 @@ import ua.bookloom.ui.state.OpenedBook;
  * The question asked once at Start translation when the source was found to be told in the first person and the brief
  * does not say the narrator's gender: male, female, or not stated (start anyway). The choice is written to the brief,
  * and any answer is remembered for the book, so the question is never asked twice in a session. Back, and Escape,
- * which the host guarantees for every card, return without starting and without remembering anything.
+ * which the host guarantees for every card, return without starting and without remembering anything. Enter chooses
+ * "not stated", never a gender, and the run starts only after the chosen gender has been stored in the project.
  */
 @Slf4j
 @Singleton
@@ -113,22 +117,22 @@ public final class NarratorDialog {
         final ButtonType backType =
                 new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_BACK), ButtonBar.ButtonData.CANCEL_CLOSE);
         final ButtonType unknownType =
-                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_UNKNOWN), ButtonBar.ButtonData.OTHER);
+                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_UNKNOWN), ButtonBar.ButtonData.OK_DONE);
         final ButtonType femaleType =
                 new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_FEMALE), ButtonBar.ButtonData.OTHER);
         final ButtonType maleType =
-                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_MALE), ButtonBar.ButtonData.OK_DONE);
+                new ButtonType(messages.get(MessageKey.DIALOG_NARRATOR_MALE), ButtonBar.ButtonData.OTHER);
         card.getButtonTypes().setAll(backType, unknownType, femaleType, maleType);
         final Button back = button(card, backType, BACK_ID, MessageKey.DIALOG_NARRATOR_BACK_TIP, "btn-secondary");
         back.setOnAction(event -> {
             log.debug("going back without starting");
             modalHost.hide();
         });
-        button(card, unknownType, UNKNOWN_ID, MessageKey.DIALOG_NARRATOR_UNKNOWN_TIP, "btn-secondary")
+        button(card, unknownType, UNKNOWN_ID, MessageKey.DIALOG_NARRATOR_UNKNOWN_TIP, "btn-primary")
                 .setOnAction(event -> answer(projectId, Gender.UNKNOWN, start));
         button(card, femaleType, FEMALE_ID, MessageKey.DIALOG_NARRATOR_FEMALE_TIP, "btn-secondary")
                 .setOnAction(event -> answer(projectId, Gender.FEMALE, start));
-        button(card, maleType, MALE_ID, MessageKey.DIALOG_NARRATOR_MALE_TIP, "btn-primary")
+        button(card, maleType, MALE_ID, MessageKey.DIALOG_NARRATOR_MALE_TIP, "btn-secondary")
                 .setOnAction(event -> answer(projectId, Gender.MALE, start));
     }
 
@@ -148,6 +152,27 @@ public final class NarratorDialog {
             brief.setFirstPersonNarrator(gender);
         }
         modalHost.hide();
-        start.run();
+        startWhenSaved(start);
+    }
+
+    // The run reads the stored brief, and the save is asynchronous: starting before it lands would draft with the old
+    // narrator while the window shows the new one.
+    private void startWhenSaved(final Runnable start) {
+        final ReadOnlyBooleanProperty saving = brief.saving();
+        if (!saving.get()) {
+            start.run();
+            return;
+        }
+        log.debug("the narrator is being saved; the run starts when the brief is stored");
+        saving.addListener(new ChangeListener<>() {
+            @Override
+            public void changed(
+                    final ObservableValue<? extends Boolean> property, final Boolean was, final Boolean now) {
+                if (!now) {
+                    property.removeListener(this);
+                    start.run();
+                }
+            }
+        });
     }
 }

@@ -22,8 +22,9 @@ import ua.bookloom.api.project.LexiconEntry;
  *
  * <p>The stem is a prefix, since the target language is open and no morphology is bundled: a long word may lose its
  * last three letters, a short one fewer, and the target word may be at most three letters longer than the rendering's.
- * For a target language that gives alternation data (15e.9) a stem of at least four letters also matches a longer
- * derived form, and its last letter may swap within a group ({@code Прага}, {@code Празькі}).
+ * For a target language that gives alternation data (15e.9) the last letter of a stem of at least four letters may
+ * swap within a group ({@code Прага}, {@code Празькі}), within the same three-letter bound, and a rendering of at least six
+ * letters also matches a longer derived form ({@code Лондон}, {@code лондонського}).
  * A rendering whose stem changes inside the word ({@code кінь}, {@code коня}) is dropped, which only costs a count.
  */
 @Slf4j
@@ -49,7 +50,8 @@ public final class TermMappingVerifier {
     private static final int LONG_CUT = 3;
     private static final int MEDIUM_CUT = 2;
     private static final int STEM_FLOOR = 3;
-    private static final int DERIVED_STEM_FLOOR = 4;
+    private static final int SWAP_STEM_FLOOR = 4;
+    private static final int DERIVED_WORD_FLOOR = 6;
     private static final int MAX_EXTRA_LETTERS = 3;
     private static final int MAX_RENDERING_WORDS = 5;
 
@@ -137,9 +139,14 @@ public final class TermMappingVerifier {
         if (targetWord.startsWith(stem) && targetWord.length() <= length + MAX_EXTRA_LETTERS) {
             return true;
         }
-        return !alternations.isEmpty()
-                && stem.length() >= DERIVED_STEM_FLOOR
-                && swappedStems(stem, alternations).anyMatch(targetWord::startsWith);
+        if (alternations.isEmpty()
+                || stem.length() < SWAP_STEM_FLOOR
+                || swappedStems(stem, alternations).noneMatch(targetWord::startsWith)) {
+            return false;
+        }
+        // A short name matches any longer word (Остап, остаточно): only a name of six letters or more is trusted past
+        // the plain bound.
+        return length >= DERIVED_WORD_FLOOR || targetWord.length() <= length + MAX_EXTRA_LETTERS;
     }
 
     // A name's adjective or oblique form (лондонського, Празькі for Прага) keeps the stem but may swap its last letter.

@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
@@ -151,6 +152,10 @@ final class InMemoryStore {
             } else {
                 insertionOrder.add(entry.id());
             }
+        }
+
+        Optional<GlossaryEntry> update(final String key, final UnaryOperator<GlossaryEntry> change) {
+            return findByKey(key).map(found -> byId.computeIfPresent(found.id(), (id, held) -> change.apply(held)));
         }
 
         Optional<GlossaryEntry> removeById(final String entryId) {

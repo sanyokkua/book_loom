@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.ReviewFilter;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
@@ -337,9 +338,13 @@ final class TranslatingView {
                         review.flaggedCount(),
                         mirror.live().suspicious()));
         button.setOnAction(event -> {
+            final int flagged = review.flaggedCount().get();
+            final int suspicious = mirror.live().suspicious().get();
             log.debug(
-                    "review flagged pressed with {} flagged segments: opening the panel",
-                    review.flaggedCount().get());
+                    "review pressed with {} flagged and {} suspicious segments: opening the panel",
+                    flagged,
+                    suspicious);
+            review.selectFilter(flagged == 0 && suspicious > 0 ? ReviewFilter.SUSPICIOUS : ReviewFilter.ALL_FLAGGED);
             panel.setOpen(true);
         });
         return StateVisibility.shownIn(button, mirror.runState(), REVIEWABLE);

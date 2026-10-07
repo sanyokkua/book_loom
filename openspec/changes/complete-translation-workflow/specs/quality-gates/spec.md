@@ -378,6 +378,10 @@ only while its target keeps at least 0.40 of the source's characters and either 
 0.30 of its words (`Then, without a word, the old man left the room.` → `Старий мовчки вийшов.` is complete). A space
 left before a full stop still fails a compact line.
 
+Known tradeoff (2026-10-07 review): the extended range also passes a real omission, `He looked at her for a long time, then
+left.` → `Він подивився на неї.` (45 characters of 10 words kept as 4, ratio 0.47); the six short-line cases of the real run
+(10 words to 3 or 4) were the reason for it. On the Fast dial no reviewer is there to catch such a line.
+
 **Source:** FR-QA-01 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#qa-thresholds`.
 In plain words: a translation far shorter than its source has usually dropped content, and one far longer has usually
@@ -809,8 +813,10 @@ cap SHALL be sized from the batch: 128 tokens, plus for each pair 70, the pair's
 120 for a possible edit, bounded by half the window. The complete entries of the cut reply SHALL be kept, the pairs left
 unread SHALL be asked about once more in one smaller call of the same pass, and a pair still unread after that SHALL be
 taken as `ok` with a warning in the log: the deterministic checks have passed it, and a flag would hand the person a
-segment nothing is known to be wrong with (the draft stays unreviewed but accepted by the checks). A re-ask that fails
-with a provider error is not waited for; its pairs are taken as `ok` the same way.
+segment nothing is known to be wrong with (the draft stays unreviewed but accepted by the checks). A re-ask
+answered with an unreadable reply (an empty completion, a context-window refusal, a stalled call) takes its pairs as `ok`
+the same way; a re-ask that fails with a cancellation (Pause or Stop) or a provider outage fails the whole review as the
+first call does, so the step is redone on resume and no unreviewed pair is stored as accepted.
 
 **Source:** FR-QA-02 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-qa`),
 `docs/specification/02_Architecture/05_PIPELINE_ENGINE.md#tiered-loop`; tasks 15b, 15d.6, 15e.7.
@@ -1024,9 +1030,13 @@ the book is written.
 When the only blocker of a restored candidate is `quote-balance`, the application SHALL repair its quote marks without a
 model call before any round or reviewer reads it: it collapses a doubled mark (`»»`), writes straight marks as the
 language's pairs, replaces a closer that crosses the open mark with the open mark's own closer, opens a paragraph whose
-first mark is a stray closer when the source opens with a quote, drops a stray closer at a paragraph edge, and closes
-one unclosed opener before the dash clause that follows it or at the paragraph's end, before a single final full stop.
-It SHALL change quote marks only, never a word, a protected span or a `⟦gN⟧` token, SHALL return the text unchanged when
+first mark is a stray closer when the source opens with a quote (also when the closer ends the paragraph; otherwise it
+drops a stray closer at a paragraph edge), and closes one unclosed opener before the dash clause that follows it, only
+when the source's own quote closes before its dash, or else at the paragraph's end, before a single final full stop
+(`He said, "I'll come — maybe tomorrow."` → `«Я прийду — можливо, завтра».`). English curly quotes `“…”` inside a
+target whose language writes `“` as a closer (uk, ru, be, de, cs, sk, sl, hr, bg) are a pair of their own, never a
+closer of the open mark: `«Він сказав “так” і пішов.` becomes `«Він сказав “так” і пішов».`, and a text balanced with
+English quotes alone is left as it is. It SHALL change quote marks only, never a word, a protected span or a `⟦gN⟧` token, SHALL return the text unchanged when
 the source's own quotes are open, a placeholder token sits inside a word, a language has no quote line of its own, or
 any step would be a guess, and SHALL repeat to the same text. The repaired candidate goes through the gate and the checks
 again and replaces the original only when the quote blocker is gone; the change is recorded as a low `normalised`

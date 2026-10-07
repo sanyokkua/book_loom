@@ -288,16 +288,32 @@ class ReviewerCallTest {
     }
 
     @Test
-    void review_reAskFailsWithAnError_keepsTheSalvagedAnswers() {
+    void review_reAskAnsweredWithAnUnreadableCode_keepsTheSalvagedAnswers() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(cut(fiveThenACutSixth()))
-                .answer(Result.err(AppError.of(ErrorCode.upstream, "Model failure", "down")));
+                .answer(Result.err(AppError.of(ErrorCode.emptyCompletion, "Empty", "nothing")));
 
         final Result<ReviewVerdict> result =
                 CALL.review(eightPairs(), FRAME, List.of(), ReviewPass.FIRST, calls(model));
 
         assertThat(result.isOk()).isTrue();
         assertThat(Objects.requireNonNull(result.data()).items()).hasSize(5);
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = ErrorCode.class,
+            names = {"cancelled", "upstream", "unreachable", "rateLimited", "auth"})
+    void review_reAskFailsWithAPauseOrOutageCode_failsTheWholeReview(final ErrorCode code) {
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(cut(fiveThenACutSixth()))
+                .answer(Result.err(AppError.of(code, "Failed", "stopped")));
+
+        final Result<ReviewVerdict> result =
+                CALL.review(eightPairs(), FRAME, List.of(), ReviewPass.FIRST, calls(model));
+
+        assertThat(result.isErr()).isTrue();
+        assertThat(Objects.requireNonNull(result.error()).code()).isEqualTo(code);
     }
 
     @Test

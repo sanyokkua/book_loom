@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.glossary;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
@@ -266,6 +267,44 @@ class TermReviewTest {
 
         assertThat(report.error()).isEqualTo(failure);
         assertThat(glossary.all(PROJECT).data()).isEqualTo(before);
+    }
+
+    @Test
+    void review_placeNamedLikeAPerson_staysAPlaceAfterTheModelsVerdictAndSeeding() {
+        glossary.add(entry("p1:vs", "Victoria Station", null, TermType.OTHER, Gender.UNKNOWN, false));
+        glossary.add(entry("p1:fl", "Florence", null, TermType.OTHER, Gender.UNKNOWN, false));
+        final String verdicts = "{\"verdicts\":["
+                + "{\"term\":\"Victoria Station\",\"verdict\":\"name\",\"type\":\"place\",\"gender\":\"unknown\"},"
+                + "{\"term\":\"Florence\",\"verdict\":\"name\",\"type\":\"place\",\"gender\":\"unknown\"}]}";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+
+        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::type, GlossaryEntry::gender)
+                .containsExactly(
+                        tuple("Victoria Station", TermType.PLACE, Gender.UNKNOWN),
+                        tuple("Florence", TermType.PLACE, Gender.UNKNOWN));
+    }
+
+    @Test
+    void review_suggestedGender_staysSuggestedAndAConfirmedOneIsNeverOverwritten() {
+        glossary.add(entry("p1:jo", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.MALE));
+        glossary.add(entry("p1:ma", "Mary", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withGender(Gender.MALE));
+        final String verdicts = "{\"verdicts\":["
+                + "{\"term\":\"John\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"male\"},"
+                + "{\"term\":\"Mary\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\"}]}";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+
+        review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
+
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
+                .containsExactly(tuple("John", Gender.MALE, true), tuple("Mary", Gender.MALE, false));
     }
 
     private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";

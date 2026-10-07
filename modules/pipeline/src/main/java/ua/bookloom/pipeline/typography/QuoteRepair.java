@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,10 @@ public final class QuoteRepair {
     private static final Pattern MID_WORD_TOKEN = Pattern.compile("\\p{L}⟦g\\d+⟧\\p{L}");
     private static final Pattern DASH_CLAUSE = Pattern.compile("(,)?[\\s\\u00A0]+[—–][\\s\\u00A0]");
     private static final String SOURCE_OPENERS = "\"«„“‹";
+    private static final String ANY_MARK = "\"«»„“”‹›";
     private static final char STRAIGHT = '"';
+    private static final char ENGLISH_OPEN = '“';
+    private static final char ENGLISH_CLOSE = '”';
 
     /**
      * What a repair did.
@@ -89,6 +93,7 @@ public final class QuoteRepair {
         final Optional<List<QuotePair>> pairs = QuoteConventions.ownLine(targetLanguage);
         if (pairs.isEmpty()
                 || QuoteConventions.isBalanced(maskedTarget, targetLanguage)
+                || QuoteConventions.isBalancedAllowingEnglish(maskedTarget, targetLanguage)
                 || !QuoteConventions.isBalanced(maskedSource, sourceLanguage)
                 || MID_WORD_TOKEN.matcher(maskedTarget).find()) {
             log.debug("Quote repair skipped: nothing to repair or not certain enough");
@@ -96,7 +101,7 @@ public final class QuoteRepair {
         }
         final Optional<Repaired> repaired = attempt(maskedSource, maskedTarget, pairs.get());
         if (repaired.isEmpty()
-                || !QuoteConventions.isBalanced(repaired.get().text(), targetLanguage)
+                || !QuoteConventions.isBalancedAllowingEnglish(repaired.get().text(), targetLanguage)
                 || !sameWords(maskedTarget, repaired.get().text())) {
             log.debug("Quote repair gave up: no certain repair");
             return unchanged;
@@ -109,9 +114,26 @@ public final class QuoteRepair {
         final String collapsed = collapseDoubled(target, pairs);
         final Edit styled = QuoteStyler.apply(collapsed, pairs);
         final int collapsedMarks = target.length() - collapsed.length();
-        return new Fixer(styled.text(), pairs, opensWithQuote(source))
+        return new Fixer(styled.text(), pairs, opensWithQuote(source), hasDashInsideSpeech(source))
                 .run()
                 .map(fixed -> new Repaired(fixed.text(), collapsedMarks + styled.count() + fixed.count()));
+    }
+
+    // The source speaks across a spaced dash ("I'll come — maybe tomorrow."): no quote mark sits between its first
+    // opening mark and its first dash clause, so a target's dash is part of the speech, not a tag that follows it.
+    private static boolean hasDashInsideSpeech(final String source) {
+        final int opener = IntStream.range(0, source.length())
+                .filter(i -> SOURCE_OPENERS.indexOf(source.charAt(i)) >= 0)
+                .findFirst()
+                .orElse(-1);
+        if (opener < 0) {
+            return false;
+        }
+        final Matcher dash = DASH_CLAUSE.matcher(source);
+        if (!dash.find(opener)) {
+            return false;
+        }
+        return source.substring(opener + 1, dash.start()).chars().noneMatch(c -> ANY_MARK.indexOf(c) >= 0);
     }
 
     private static String collapseDoubled(final String text, final List<QuotePair> pairs) {
@@ -165,14 +187,20 @@ public final class QuoteRepair {
         private final String text;
         private final List<QuotePair> pairs;
         private final boolean sourceOpensWithQuote;
+        private final boolean dashInsideSpeech;
         private final StringBuilder out = new StringBuilder();
         private final Deque<Open> stack = new ArrayDeque<>();
         private int changed;
 
-        Fixer(final String text, final List<QuotePair> pairs, final boolean sourceOpensWithQuote) {
+        Fixer(
+                final String text,
+                final List<QuotePair> pairs,
+                final boolean sourceOpensWithQuote,
+                final boolean dashInsideSpeech) {
             this.text = text;
             this.pairs = pairs;
             this.sourceOpensWithQuote = sourceOpensWithQuote;
+            this.dashInsideSpeech = dashInsideSpeech;
         }
 
         Optional<Edit> run() {
@@ -186,8 +214,7 @@ public final class QuoteRepair {
 
         private boolean step(final char c, final int index) {
             final boolean closesTop = !stack.isEmpty() && stack.peek().pair().close() == c;
-            final Optional<QuotePair> opened =
-                    pairs.stream().filter(pair -> pair.open() == c).findFirst();
+            final Optional<QuotePair> opened = openerOf(c, index);
             if (!closesTop && opened.isEmpty() && pairs.stream().anyMatch(pair -> pair.close() == c)) {
                 return mended(c, index);
             }
@@ -200,6 +227,17 @@ public final class QuoteRepair {
             return true;
         }
 
+        // A language that writes “ as a closer (uk, de, cs…) still sees English “…” quotes: a “ with a ” after it
+        // opens.
+        private Optional<QuotePair> openerOf(final char c, final int index) {
+            final Optional<QuotePair> own =
+                    pairs.stream().filter(pair -> pair.open() == c).findFirst();
+            if (own.isEmpty() && c == ENGLISH_OPEN && text.indexOf(ENGLISH_CLOSE, index + 1) >= 0) {
+                return Optional.of(new QuotePair(ENGLISH_OPEN, ENGLISH_CLOSE));
+            }
+            return own;
+        }
+
         // A closer that closes nothing: crossed with the open mark, or stray.
         private boolean mended(final char c, final int index) {
             if (!stack.isEmpty()) {
@@ -207,13 +245,13 @@ public final class QuoteRepair {
                 changed++;
                 return true;
             }
-            if (isAtEdge(index)) {
+            if (sourceOpensWithQuote && noMarkBefore() && firstVisible(text) != index) {
+                out.insert(firstVisible(out.toString()), pairs.getFirst().open());
+                out.append(c);
                 changed++;
                 return true;
             }
-            if (sourceOpensWithQuote && noMarkBefore()) {
-                out.insert(firstVisible(out.toString()), pairs.getFirst().open());
-                out.append(c);
+            if (isAtEdge(index)) {
                 changed++;
                 return true;
             }
@@ -244,7 +282,7 @@ public final class QuoteRepair {
         private int closingPoint(final int openedAt) {
             final String rest = out.substring(openedAt + 1);
             final Matcher dash = DASH_CLAUSE.matcher(rest);
-            if (dash.find() && noMarkIn(rest.substring(0, dash.start()))) {
+            if (!dashInsideSpeech && dash.find() && noMarkIn(rest.substring(0, dash.start()))) {
                 return openedAt + 1 + dash.start();
             }
             int end = out.length();

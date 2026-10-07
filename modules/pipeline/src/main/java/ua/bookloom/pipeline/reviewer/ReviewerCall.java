@@ -96,14 +96,7 @@ public final class ReviewerCall {
             final Result<ChatResponse> reply = ask(pairs, frame, glossaryPairs, characters, pass, calls);
             return reply.isErr()
                     ? routeFailure(segmentIds, Objects.requireNonNull(reply.error()))
-                    : Result.ok(read(
-                            Objects.requireNonNull(reply.data()),
-                            pairs,
-                            frame,
-                            glossaryPairs,
-                            characters,
-                            pass,
-                            calls));
+                    : read(Objects.requireNonNull(reply.data()), pairs, frame, glossaryPairs, characters, pass, calls);
         } catch (Throwable cause) {
             return internalFailure(cause);
         }
@@ -116,7 +109,7 @@ public final class ReviewerCall {
         return Result.err(error);
     }
 
-    private ReviewVerdict read(
+    private Result<ReviewVerdict> read(
             final ChatResponse response,
             final List<ReviewedPair> pairs,
             final CallFrame frame,
@@ -126,7 +119,8 @@ public final class ReviewerCall {
             final ModelCalls calls) {
         return response.finishReason() == FinishReason.LENGTH
                 ? readCut(pairs, response, frame, glossaryPairs, characters, pass, calls)
-                : readVerdict(pairs.stream().map(ReviewedPair::segmentId).toList(), pairs, response);
+                : Result.ok(
+                        readVerdict(pairs.stream().map(ReviewedPair::segmentId).toList(), pairs, response));
     }
 
     private Result<ChatResponse> ask(
@@ -146,7 +140,7 @@ public final class ReviewerCall {
      * asked about once more in a smaller batch, and any pair still unread is taken as {@code ok} — the deterministic
      * checks already passed it, and a flag would hand the person a segment nothing is known to be wrong with.
      */
-    private ReviewVerdict readCut(
+    private Result<ReviewVerdict> readCut(
             final List<ReviewedPair> pairs,
             final ChatResponse response,
             final CallFrame frame,
@@ -162,12 +156,11 @@ public final class ReviewerCall {
                 first.items().size(),
                 unread.size());
         if (unread.isEmpty()) {
-            return first;
+            return Result.ok(first);
         }
         final Result<ChatResponse> again = ask(unread, frame, glossaryPairs, characters, pass, calls);
         if (again.isErr()) {
-            log.warn("Re-asking the unread pairs failed; they are taken as ok count={}", unread.size());
-            return first;
+            return reAskFailed(first, unread, Objects.requireNonNull(again.error()));
         }
         final ChatResponse second = Objects.requireNonNull(again.data());
         logTraceReply(second.content());
@@ -177,7 +170,25 @@ public final class ReviewerCall {
         log.warn(
                 "Pairs still unread after the re-ask are taken as ok count={}",
                 unread.size() - rest.items().size());
-        return ReviewVerdict.answered(items);
+        return Result.ok(ReviewVerdict.answered(items));
+    }
+
+    // Only a reply that cannot be read leaves the unread pairs ok. A pause, a stop or an outage fails the whole call,
+    // as it does for the first call, so the step is redone on resume instead of storing unreviewed pairs as accepted.
+    private static Result<ReviewVerdict> reAskFailed(
+            final ReviewVerdict first, final List<ReviewedPair> unread, final AppError error) {
+        final boolean isUnreadable = error.code() == ErrorCode.emptyCompletion
+                || error.code() == ErrorCode.contextWindow
+                || error.code() == ErrorCode.timeout;
+        if (!isUnreadable) {
+            log.debug("Re-asking the unread pairs failed code={}; the review fails as a whole", error.code());
+            return Result.err(error);
+        }
+        log.warn(
+                "Re-asking the unread pairs failed code={}; they are taken as ok count={}",
+                error.code(),
+                unread.size());
+        return Result.ok(first);
     }
 
     private static List<ReviewedPair> unreadOf(final List<ReviewedPair> pairs, final ReviewVerdict verdict) {

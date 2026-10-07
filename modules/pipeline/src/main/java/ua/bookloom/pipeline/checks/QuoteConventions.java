@@ -56,7 +56,7 @@ public final class QuoteConventions {
      * @param pairs a language's own pairs
      * @return {@code pairs}, with the “ ” pair added when none of them opens with “
      */
-    static List<QuotePair> withEnglish(final List<QuotePair> pairs) {
+    public static List<QuotePair> withEnglish(final List<QuotePair> pairs) {
         if (pairs.stream().anyMatch(pair -> pair.open() == ENGLISH.open())) {
             return pairs;
         }
@@ -86,6 +86,18 @@ public final class QuoteConventions {
     public static boolean isBalanced(final String text, @Nullable final String languageTag) {
         Objects.requireNonNull(text, "text");
         return QuoteBalanceCheck.isBalanced(text, forLanguage(languageTag));
+    }
+
+    /**
+     * Whether a text's marks pair up once English curly quotes count as a pair too: a style note, not a defect.
+     *
+     * @param text any text; tokens and unlisted marks are ignored
+     * @param languageTag a BCP 47 tag, or null when the language is not known
+     * @return {@code true} when the text is balanced under the language's table plus the English pair
+     */
+    public static boolean isBalancedAllowingEnglish(final String text, @Nullable final String languageTag) {
+        Objects.requireNonNull(text, "text");
+        return QuoteBalanceCheck.isBalanced(text, withEnglish(forLanguage(languageTag)));
     }
 
     private static Map<String, List<QuotePair>> load() {

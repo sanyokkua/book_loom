@@ -182,11 +182,17 @@ anything is written.
 
 ### Requirement: Suggest a character's gender from a short list of first names
 
-WHEN the deterministic name scan, a preparation, or a model review gives a glossary entry that is unlocked, has no gender
-and is a character (or, for the first scan, an untyped entry) whose first word, of an entry of at most three words, is a
+WHEN a preparation or a model review finds a glossary entry that is unlocked, has no gender, was never tried and is
+already typed as a character (by the person, the scan's model typing or the review) whose first word, of an entry of at most three words, is a
 common given name that the source language's bundled list (`given-names-<language>.txt`, "seed, not exhaustive":
-English, Ukrainian and Russian) holds for one gender, the application SHALL set that gender, make an untyped entry of the
-first scan a character, and mark the gender as a suggestion (`GlossaryEntry.genderSuggested`). A name that either gender
+English, Ukrainian and Russian) holds for one gender, the application SHALL set that gender and mark it as a suggestion (`GlossaryEntry.genderSuggested`). Seeding SHALL
+NEVER change an entry's type: a place or an untyped entry named like a person (`Victoria Station`, `Florence`) stays what
+it is, and the model's verdict types it. An entry is seeded at most once (`GlossaryEntry.genderSeedTried`, set when
+the list proposed a gender or when the person set the gender in any way, even back to unknown), so a gender the
+person reset to unknown stays unknown. A model review that re-applies an unchanged gender SHALL keep it marked as a
+suggestion, and a person SHALL be able to confirm a suggestion by choosing the same value. Seeding and the term
+learning SHALL change an entry in one atomic step against its current state (`GlossaryRepository.update(projectId,
+term, change)`), so an edit made meanwhile is never overwritten. A name that either gender
 uses and a name that is also a common word are not listed. The table SHALL show a suggested gender as `male (suggested)`
 and the column's hover explanation SHALL say so; a person's edit of the gender, or locking the entry, SHALL confirm it,
 and a gender already set SHALL never be overwritten. A language with no list SHALL suggest nothing.
@@ -198,8 +204,13 @@ a model call, marked so the person can see and change it.
 
 #### Scenario: A listed name gets a suggested gender
 
-- **WHEN** the scan proposes `Hermione` for an English book
-- **THEN** the entry is a character with gender female, marked as suggested and not locked
+- **WHEN** a held character `Hermione` has gender unknown in an English book and a run is prepared
+- **THEN** the entry has gender female, marked as suggested and not locked
+
+#### Scenario: Seeding never retypes
+
+- **WHEN** a held entry `Victoria Station` of type other is prepared and the model's review calls it a place
+- **THEN** the entry is a place with gender unknown
 
 #### Scenario: A unisex name gets nothing
 

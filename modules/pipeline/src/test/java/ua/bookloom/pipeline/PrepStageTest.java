@@ -139,7 +139,7 @@ class PrepStageTest {
     }
 
     @Test
-    void run_emptyGlossaryWithAListedFirstName_proposesItAsACharacterWithASuggestedGender() {
+    void run_emptyGlossaryWithAListedFirstName_proposesItUntypedWithNoGender() {
         final String text =
                 "We met Hermione.\n\nThen Hermione left.\n\nLater Hermione ran.\n\nSo Hermione won.\n\nAnd Hermione slept.";
         final TestProject project = project(TestBooks.markdown(tempDir.resolve("H.md"), text), brief("en", "uk"));
@@ -155,7 +155,7 @@ class PrepStageTest {
                         GlossaryEntry::gender,
                         GlossaryEntry::isGenderSuggested,
                         GlossaryEntry::locked)
-                .containsExactly("Hermione", TermType.CHARACTER, Gender.FEMALE, true, false);
+                .containsExactly("Hermione", TermType.OTHER, Gender.UNKNOWN, false, false);
     }
 
     @Test
@@ -179,5 +179,30 @@ class PrepStageTest {
                 .singleElement()
                 .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
                 .containsExactly(Gender.MALE, true);
+    }
+
+    // A person set Harry back to unknown on purpose; a run start must not suggest the list's gender again.
+    @Test
+    void run_genderResetToUnknownByThePerson_staysUnknownAtPreparation() {
+        final TestProject project = project(book(), brief("en", "uk"));
+        project.stores()
+                .glossary()
+                .add(new GlossaryEntry(
+                                project.id() + ":harry",
+                                project.id(),
+                                "Harry",
+                                null,
+                                TermType.CHARACTER,
+                                Gender.MALE,
+                                false)
+                        .withGender(Gender.UNKNOWN));
+
+        report(job(project, replies(HALE_REPLIES)).run());
+
+        assertThat(glossary(project))
+                .filteredOn(entry -> entry.term().equals("Harry"))
+                .singleElement()
+                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
+                .containsExactly(Gender.UNKNOWN, false);
     }
 }

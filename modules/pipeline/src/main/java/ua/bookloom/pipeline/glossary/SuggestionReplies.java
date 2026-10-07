@@ -48,7 +48,7 @@ final class SuggestionReplies {
          */
         GlossaryEntry onto(final GlossaryEntry now) {
             final boolean takesGender = now.gender() == Gender.UNKNOWN && now.type() == TermType.CHARACTER;
-            return now.withSuggestedTarget(target).withGender(takesGender ? gender : now.gender());
+            return now.withSuggestedTarget(target).withInferredGender(takesGender ? gender : now.gender());
         }
     }
 

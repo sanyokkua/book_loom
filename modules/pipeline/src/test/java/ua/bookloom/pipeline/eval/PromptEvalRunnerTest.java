@@ -23,6 +23,8 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 /** The runner against a scripted model: the requests it sends are the run's, so they can be read here. */
 class PromptEvalRunnerTest {
 
+    private static final int DEFAULT_WINDOW = 8192;
+
     private static final String TARGET_REPLY = "{\"target\":\"Старий чоловік пішов до гавані.\"}";
 
     private record Sent(CallKind kind, ChatRequest request) {}
@@ -111,17 +113,23 @@ class PromptEvalRunnerTest {
     }
 
     @Test
-    void runAll_draftCallThroughTheRunsSeam_isSizedToTheEvalWindow() {
+    void window_noneAsked_isTheProductionDefault() {
+        assertThat(EvalProject.window(null)).isEqualTo(DEFAULT_WINDOW);
+    }
+
+    @Test
+    void runAll_draftCallThroughTheRunsSeam_isSizedToTheWindowItWasGiven() {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(Result.ok(new ChatResponse(TARGET_REPLY, FinishReason.STOP)));
         final JobModelCalls calls =
-                new JobModelCalls(onSent -> model, event -> {}, Clock.systemUTC(), "uk", EvalProject.window());
+                new JobModelCalls(onSent -> model, event -> {}, Clock.systemUTC(), "uk", DEFAULT_WINDOW);
 
-        new PromptEvalRunner(calls).runAll(List.of(named("plain-short")));
+        new PromptEvalRunner(calls, PromptEvalCases.SOURCE_LANGUAGE, PromptEvalCases.TARGET_LANGUAGE, DEFAULT_WINDOW)
+                .runAll(List.of(named("plain-short")));
 
         assertThat(model.requests()).singleElement().satisfies(request -> {
-            assertThat(request.contextWindow()).isEqualTo(EvalProject.window());
-            assertThat(request.maxOutputTokens()).isLessThanOrEqualTo(EvalProject.window() / 2);
+            assertThat(request.contextWindow()).isEqualTo(DEFAULT_WINDOW);
+            assertThat(request.maxOutputTokens()).isLessThanOrEqualTo(DEFAULT_WINDOW / 2);
         });
     }
 }

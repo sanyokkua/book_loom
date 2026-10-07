@@ -153,7 +153,7 @@ public final class PreScan {
     private static GlossaryEntry withVerdict(final Verdict verdict) {
         final GlossaryEntry entry = verdict.entry();
         return entry.withType(entry.type() == TermType.OTHER ? verdict.type() : entry.type())
-                .withGender(entry.gender() == Gender.UNKNOWN ? verdict.gender() : entry.gender());
+                .withInferredGender(entry.gender() == Gender.UNKNOWN ? verdict.gender() : entry.gender());
     }
 
     private Result<List<GlossaryEntry>> addAll(final List<GlossaryEntry> entries) {

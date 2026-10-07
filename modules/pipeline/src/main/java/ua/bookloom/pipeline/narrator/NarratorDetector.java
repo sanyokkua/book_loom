@@ -1,7 +1,9 @@
 package ua.bookloom.pipeline.narrator;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -46,6 +48,31 @@ public final class NarratorDetector {
     private static final Pattern SENTENCE_END = Pattern.compile("[.!?…]+\\s+|\\R+");
     private static final Pattern WORD = Pattern.compile("\\p{L}+");
     private static final char STRAIGHT_QUOTE = '"';
+    private static final char SINGLE_OPEN = '‘';
+    private static final char SINGLE_CLOSE = '’';
+    private static final String ROMAN_I = "I";
+    private static final Set<String> NUMERAL_CONTEXT = Set.of(
+            "part",
+            "chapter",
+            "book",
+            "act",
+            "volume",
+            "scene",
+            "section",
+            "canto",
+            "henry",
+            "louis",
+            "charles",
+            "george",
+            "richard",
+            "william",
+            "edward",
+            "james",
+            "john",
+            "elizabeth",
+            "napoleon",
+            "peter",
+            "alexander");
 
     /** What one chapter's narration holds. */
     private record Tally(int sentences, int firstPerson) {
@@ -146,11 +173,38 @@ public final class NarratorDetector {
                 final List<String> words = words(sentence);
                 if (words.size() >= MIN_WORDS) {
                     sentences++;
-                    firstPerson += words.stream().anyMatch(pronouns::contains) ? 1 : 0;
+                    firstPerson += hasFirstPerson(sentence, pronouns) ? 1 : 0;
                 }
             }
         }
         return new Tally(sentences, firstPerson);
+    }
+
+    // The English "I" is also a Roman numeral (Henry I, Part I, King Henry I); a pronoun is never the numeral of a
+    // name or a heading, which is what stands right before it with no punctuation between.
+    private static boolean hasFirstPerson(final String sentence, final Set<String> pronouns) {
+        final Matcher matcher = WORD.matcher(sentence);
+        String previous = "";
+        int previousEnd = 0;
+        int index = 0;
+        while (matcher.find()) {
+            final String word = matcher.group();
+            final boolean adjacent = index > 0
+                    && sentence.substring(previousEnd, matcher.start()).isBlank();
+            final boolean isNumeral = ROMAN_I.equals(word) && adjacent && followsNumeralContext(previous, index);
+            if (pronouns.contains(word) && !isNumeral) {
+                return true;
+            }
+            previous = word;
+            previousEnd = matcher.end();
+            index++;
+        }
+        return false;
+    }
+
+    private static boolean followsNumeralContext(final String previous, final int numeralIndex) {
+        final boolean isCapitalised = Character.isUpperCase(previous.codePointAt(0));
+        return NUMERAL_CONTEXT.contains(previous.toLowerCase(Locale.ROOT)) || (isCapitalised && numeralIndex > 1);
     }
 
     private static List<String> words(final String sentence) {
@@ -175,7 +229,35 @@ public final class NarratorDetector {
                 chars[index] = ' ';
             }
         }
+        return blankSingleQuotes(new String(chars));
+    }
+
+    // British ‘…’ dialogue: a balanced pair is speech. A ’ between two letters is an apostrophe and closes nothing, and
+    // an opener that is never closed is left alone rather than blank the rest of the paragraph.
+    private static String blankSingleQuotes(final String text) {
+        final char[] chars = text.toCharArray();
+        int index = text.indexOf(SINGLE_OPEN);
+        while (index >= 0) {
+            final int close = closerAfter(text, index);
+            if (close < 0) {
+                break;
+            }
+            Arrays.fill(chars, index, close + 1, ' ');
+            index = text.indexOf(SINGLE_OPEN, close + 1);
+        }
         return new String(chars);
+    }
+
+    private static int closerAfter(final String text, final int open) {
+        for (int at = text.indexOf(SINGLE_CLOSE, open + 1); at >= 0; at = text.indexOf(SINGLE_CLOSE, at + 1)) {
+            final boolean isApostrophe = Character.isLetterOrDigit(text.charAt(at - 1))
+                    && at + 1 < text.length()
+                    && Character.isLetterOrDigit(text.charAt(at + 1));
+            if (!isApostrophe) {
+                return at;
+            }
+        }
+        return -1;
     }
 
     private static List<List<String>> chaptersOf(final Document document) {

@@ -6,6 +6,7 @@ import java.util.function.Function;
 import javafx.collections.FXCollections;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.util.StringConverter;
@@ -107,10 +108,13 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
                 close();
             }
         });
+        made.setCellFactory(list -> new ChoiceListCell());
         made.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ENTER && !made.isShowing()) {
                 made.show();
                 event.consume();
+            } else if (event.getCode() == KeyCode.ENTER) {
+                confirm(made.getSelectionModel().getSelectedItem());
             }
         });
         combo = made;
@@ -125,6 +129,16 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
         write.accept(entry.id(), value);
     }
 
+    // The combo box fires nothing when the value it already holds is chosen again, which is how a suggested gender is
+    // confirmed; the choice is written anyway and the row's edit drops it when nothing changes.
+    private void confirm(final @Nullable T value) {
+        final GlossaryEntry entry = getItem();
+        if (value == null || entry == null || !Objects.equals(value, read.apply(entry))) {
+            return;
+        }
+        write.accept(entry.id(), value);
+    }
+
     private void close() {
         final GlossaryEntry entry = getItem();
         if (entry == null) {
@@ -132,6 +146,20 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
         }
         show(control(), entry);
         setGraphic(control());
+    }
+
+    /** A row of the popup list, which reports a click even on the value already held. */
+    private final class ChoiceListCell extends ListCell<T> {
+
+        ChoiceListCell() {
+            setOnMouseClicked(event -> confirm(getItem()));
+        }
+
+        @Override
+        protected void updateItem(final @Nullable T item, final boolean empty) {
+            super.updateItem(item, empty);
+            setText(empty || item == null ? null : label.apply(item));
+        }
     }
 
     /** Shows each value by its catalogue label; the combo box is never editable, so text is never parsed back. */

@@ -74,6 +74,39 @@ class NarratorDetectorTest {
     }
 
     @Test
+    void detect_thirdPersonWithBritishSingleQuoteDialogue_isThirdPerson() {
+        final List<String> britishDialogue = List.of(
+                "‘I will not go,’ said the boy. ‘I told you so, and I mean it.’",
+                "‘I saw it myself,’ the old man answered. ‘I was there when it fell.’",
+                "He shrugged and looked at the fire. The room was quiet for a long while.",
+                "She said, ‘I am tired, and I don’t want to talk.’ Then she left the room.",
+                "‘I know,’ he said. ‘I know I should have told you.’",
+                "The door closed behind them. Nobody spoke again until morning.");
+
+        assertThat(detect(List.of(britishDialogue)).orElseThrow().person()).isEqualTo(Person.THIRD);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "Henry I ruled the land well.",
+                "King Henry I ruled the land well.",
+                "Part I begins in the north.",
+                "Chapter I was short and grey."
+            })
+    void detect_romanNumeralI_isNotAFirstPersonPronoun(final String sentence) {
+        final List<String> chapter = List.of(
+                sentence,
+                "The old road ran along the river.",
+                "The town lay quiet under the snow.",
+                "The market opened at dawn each day.",
+                "The bells rang across the hills.",
+                "The fields were white until spring.");
+
+        assertThat(detect(List.of(chapter)).orElseThrow().person()).isEqualTo(Person.THIRD);
+    }
+
+    @Test
     void detect_alternatingChapters_isMixedNamingTheFirstPersonOnes() {
         final NarratorHint hint = detect(List.of(THIRD_PERSON, FIRST_PERSON, THIRD_PERSON, FIRST_PERSON))
                 .orElseThrow();

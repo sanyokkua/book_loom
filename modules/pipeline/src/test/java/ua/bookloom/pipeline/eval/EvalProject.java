@@ -118,11 +118,19 @@ public final class EvalProject {
 
     /** The window every eval request is sized against: {@code BOOKLOOM_EVAL_WINDOW}, else what an app run uses. */
     public static int window() {
-        final String asked = System.getenv("BOOKLOOM_EVAL_WINDOW");
+        return window(System.getenv("BOOKLOOM_EVAL_WINDOW"));
+    }
+
+    /** The window for an asked-for value: that number, else what an app run uses. */
+    static int window(@Nullable final String asked) {
         return asked == null || asked.isBlank() ? ContextBudget.windowFor(null, null) : Integer.parseInt(asked.strip());
     }
 
     public static EvalProject of(final Setup setup, final ModelCalls calls) {
+        return of(setup, calls, window());
+    }
+
+    public static EvalProject of(final Setup setup, final ModelCalls calls, final int window) {
         Objects.requireNonNull(setup, "setup");
         Objects.requireNonNull(calls, "calls");
         final BookBrief brief = briefOf(setup);
@@ -135,7 +143,7 @@ public final class EvalProject {
                 brief.narrator(),
                 WordValidator.none());
         final RunSettings settings = new RunSettings(
-                PROJECT, ReviewMode.UNATTENDED, DialParameters.of(brief.dial()), frame, brief.names(), window());
+                PROJECT, ReviewMode.UNATTENDED, DialParameters.of(brief.dial()), frame, brief.names(), window);
         final List<Segment> chunk = segments(setup.chunk(), 0);
         final List<Segment> unit = new ArrayList<>(chunk);
         unit.addAll(segments(setup.after(), chunk.size()));

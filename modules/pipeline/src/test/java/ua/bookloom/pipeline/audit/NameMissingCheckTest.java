@@ -113,4 +113,25 @@ class NameMissingCheckTest {
         assertThat(NameMissingCheck.find(glossary, "Prague came.", "Празькі газети надійшли.", "xx"))
                 .isPresent();
     }
+
+    @ParameterizedTest
+    @CsvSource({"Марта,Марка", "Тарас,Тамас", "Олена,Олега"})
+    void find_missingNameHiddenOnlyByADifferentConsonant_isStillReported(final String lost, final String other) {
+        final List<GlossaryEntry> glossary = List.of(
+                entry("Martha", lost, TermType.CHARACTER, false), entry("Mark", other, TermType.CHARACTER, false));
+
+        final QaFinding finding = NameMissingCheck.find(glossary, "Martha and Mark came.", other + " прийшов.", "uk")
+                .orElseThrow();
+
+        assertThat(finding.note()).contains("\"Martha\" → \"" + lost + "\"");
+    }
+
+    @Test
+    void find_doubledLetterSpelling_isOneName() {
+        final List<GlossaryEntry> glossary = List.of(
+                entry("Nell", "Нелл", TermType.CHARACTER, false), entry("Nel", "Нел", TermType.CHARACTER, false));
+
+        assertThat(NameMissingCheck.find(glossary, "Nell and Nel came.", "Нелл прийшла.", "uk"))
+                .isEmpty();
+    }
 }

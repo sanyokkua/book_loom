@@ -136,6 +136,43 @@ public abstract class GlossaryTmSummaryDeferralRunContractTest extends Repositor
     }
 
     @Test
+    void updateByTerm_changeSeesAPersonsEarlierEdit_andKeepsIt() {
+        final GlossaryRepository repository = glossaryRepository();
+        repository.add(glossaryEntry("e1", "Hale"));
+        repository.update(glossaryEntry("e1", "Hale").withTarget("Гейл"));
+
+        final Result<Optional<GlossaryEntry>> stored =
+                repository.update("p1", "hale", held -> held.target() == null ? held.withSuggestedTarget("X") : held);
+
+        assertThat(stored.data())
+                .isPresent()
+                .hasValueSatisfying(entry -> assertThat(entry.target()).isEqualTo("Гейл"));
+    }
+
+    @Test
+    void updateByTerm_unknownTerm_answersEmptyAndNeverCallsTheChange() {
+        final Result<Optional<GlossaryEntry>> stored = glossaryRepository().update("p1", "Nobody", held -> {
+            throw new AssertionError("the change must not run");
+        });
+
+        assertThat(stored.data()).isEmpty();
+    }
+
+    @Test
+    void updateByTerm_manyConcurrentChanges_loseNone() {
+        final GlossaryRepository repository = glossaryRepository();
+        repository.add(glossaryEntry("e1", "Hale").withTarget(""));
+        final int writers = 64;
+        java.util.stream.IntStream.range(0, writers)
+                .parallel()
+                .forEach(i -> repository.update("p1", "Hale", held -> held.withTarget(held.target() + "x")));
+
+        assertThat(repository.findByTerm("p1", "Hale").data())
+                .isPresent()
+                .hasValueSatisfying(entry -> assertThat(entry.target()).hasSize(writers));
+    }
+
+    @Test
     void update_unknownEntry_answersValidation() {
         final Result<GlossaryEntry> updated = glossaryRepository().update(glossaryEntry("unknown", "Hale"));
 

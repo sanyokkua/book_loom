@@ -2,6 +2,7 @@ package ua.bookloom.api.persistence;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.GlossaryEntry;
 
@@ -30,6 +31,18 @@ public interface GlossaryRepository {
      * @return the updated entry, or {@code validation} when no entry holds that id
      */
     Result<GlossaryEntry> update(GlossaryEntry entry);
+
+    /**
+     * Changes the entry held for a term in one atomic step, so a change another thread made to the same entry a moment
+     * earlier is never overwritten by a stale copy: the change is applied to the entry as it is at that instant.
+     *
+     * @param projectId the non-null project id
+     * @param term the non-null term, matched as {@link #add} compares terms
+     * @param change the non-null change; it receives the held entry and returns the entry to keep, with the same id,
+     *     or its argument itself to leave the entry as it is
+     * @return the entry now held, or empty when no entry holds the term
+     */
+    Result<Optional<GlossaryEntry>> update(String projectId, String term, UnaryOperator<GlossaryEntry> change);
 
     /**
      * Removes a glossary entry and remembers its term as removed for the session.

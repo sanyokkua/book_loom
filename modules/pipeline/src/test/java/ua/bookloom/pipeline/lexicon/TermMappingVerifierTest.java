@@ -93,4 +93,23 @@ class TermMappingVerifierTest {
 
         assertThat(pairs).containsExactly(new TermMappingVerifier.Pair("Bartimaeus", "Бартімей"));
     }
+
+    @ParameterizedTest
+    @CsvSource({"Остап,Остаточно він пішов.", "Тарас,Тарасовими були всі."})
+    void verify_longUnrelatedWordSharingTheStem_isDroppedWithAlternationData(
+            final String rendering, final String target) {
+        final var pairs = TermMappingVerifier.verify(
+                Map.of("Name", rendering), List.of("Name"), "Name came.", target, List.of("гзж", "кцч", "хсш"));
+
+        assertThat(pairs).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"Лондон,Лондонського поліцейського викликали.", "Прага,Празькі газети надійшли."})
+    void verify_derivedFormOfALongStemOrWithinTheBound_isKept(final String rendering, final String target) {
+        final var pairs = TermMappingVerifier.verify(
+                Map.of("Name", rendering), List.of("Name"), "Name came.", target, List.of("гзж", "кцч", "хсш"));
+
+        assertThat(pairs).hasSize(1);
+    }
 }

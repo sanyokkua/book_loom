@@ -52,7 +52,7 @@ class GivenNamesTest {
 
     @Test
     void seeded_characterWithUnknownGender_getsASuggestedGender() {
-        final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en", false);
+        final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.gender()).isEqualTo(Gender.MALE);
         assertThat(seeded.isGenderSuggested()).isTrue();
@@ -63,14 +63,14 @@ class GivenNamesTest {
     void seeded_unisexName_isReturnedUnchanged() {
         final GlossaryEntry alex = entry("Alex", TermType.CHARACTER, Gender.UNKNOWN);
 
-        assertThat(GivenNames.seeded(alex, "en", true)).isSameAs(alex);
+        assertThat(GivenNames.seeded(alex, "en")).isSameAs(alex);
     }
 
     @Test
     void seeded_genderAlreadySet_isNeverOverwritten() {
         final GlossaryEntry set = entry("John", TermType.CHARACTER, Gender.FEMALE);
 
-        assertThat(GivenNames.seeded(set, "en", true)).isSameAs(set);
+        assertThat(GivenNames.seeded(set, "en")).isSameAs(set);
     }
 
     @Test
@@ -78,29 +78,52 @@ class GivenNamesTest {
         final GlossaryEntry locked =
                 entry("John", TermType.CHARACTER, Gender.UNKNOWN).withLocked(true);
 
-        assertThat(GivenNames.seeded(locked, "en", true)).isSameAs(locked);
+        assertThat(GivenNames.seeded(locked, "en")).isSameAs(locked);
     }
 
     @Test
     void seeded_placeNamedLikeAPerson_isLeftAlone() {
         final GlossaryEntry place = entry("Victoria", TermType.PLACE, Gender.UNKNOWN);
 
-        assertThat(GivenNames.seeded(place, "en", true)).isSameAs(place);
+        assertThat(GivenNames.seeded(place, "en")).isSameAs(place);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Florence", "Victoria Station", "George Street", "Austin", "Hermione"})
+    void seeded_untypedEntryNamedLikeAPerson_isNeverRetyped(final String term) {
+        final GlossaryEntry untyped = entry(term, TermType.OTHER, Gender.UNKNOWN);
+
+        assertThat(GivenNames.seeded(untyped, "en")).isSameAs(untyped);
     }
 
     @Test
-    void seeded_untypedEntryOfAFirstScan_becomesACharacterOnlyWhenRetypingIsAsked() {
-        final GlossaryEntry untyped = entry("Hermione", TermType.OTHER, Gender.UNKNOWN);
+    void seeded_genderTheListAlreadyTriedOrThePersonResetToUnknown_isNotSeededAgain() {
+        final GlossaryEntry reset =
+                entry("Tom", TermType.CHARACTER, Gender.MALE).withGender(Gender.UNKNOWN);
 
-        assertThat(GivenNames.seeded(untyped, "en", false)).isSameAs(untyped);
-        assertThat(GivenNames.seeded(untyped, "en", true))
-                .extracting(GlossaryEntry::type, GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
-                .containsExactly(TermType.CHARACTER, Gender.FEMALE, true);
+        assertThat(reset.genderSeedTried()).isTrue();
+        assertThat(GivenNames.seeded(reset, "en")).isSameAs(reset);
+    }
+
+    @Test
+    void seeded_aSeededEntry_isMarkedAsTriedSoTheListNeverRunsTwice() {
+        final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
+
+        assertThat(seeded.genderSeedTried()).isTrue();
+    }
+
+    @Test
+    void withInferredGender_sameGender_keepsASuggestionSuggested() {
+        final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
+
+        assertThat(seeded.withInferredGender(Gender.MALE)).isSameAs(seeded);
+        assertThat(seeded.withInferredGender(Gender.MALE).isGenderSuggested()).isTrue();
+        assertThat(seeded.withGender(Gender.MALE).isGenderSuggested()).isFalse();
     }
 
     @Test
     void seeded_aPersonsGenderEditOrLock_confirmsItButATargetEditDoesNot() {
-        final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en", false);
+        final GlossaryEntry seeded = GivenNames.seeded(entry("John", TermType.CHARACTER, Gender.UNKNOWN), "en");
 
         assertThat(seeded.withGender(Gender.MALE).isGenderSuggested()).isFalse();
         assertThat(seeded.withLocked(true).isGenderSuggested()).isFalse();

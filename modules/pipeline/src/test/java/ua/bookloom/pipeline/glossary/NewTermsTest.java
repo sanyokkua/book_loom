@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -148,6 +149,12 @@ class NewTermsTest {
 
         @Override
         public Result<GlossaryEntry> update(final GlossaryEntry entry) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Result<Optional<GlossaryEntry>> update(
+                final String projectId, final String term, final UnaryOperator<GlossaryEntry> change) {
             throw new UnsupportedOperationException();
         }
 

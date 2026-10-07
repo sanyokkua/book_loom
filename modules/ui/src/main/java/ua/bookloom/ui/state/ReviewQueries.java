@@ -22,6 +22,19 @@ final class ReviewQueries {
         this.desk = Objects.requireNonNull(desk, "desk");
     }
 
+    /**
+     * The flagged count, or {@code shown} when it could not be read; the suspicious count read with it is published, so
+     * the Review button's second number follows what the person does at the desk.
+     */
+    int refreshed(final String projectId, final int shown, final LiveSection live) {
+        final ReviewCounts counts = desk.counts(projectId).data();
+        if (counts == null) {
+            return shown;
+        }
+        live.publishSuspicious(counts.suspicious());
+        return counts.flagged();
+    }
+
     /** The flagged count, or {@code shown} when it could not be read. */
     int flagged(final String projectId, final int shown) {
         final ReviewCounts counts = desk.counts(projectId).data();

@@ -186,6 +186,6 @@ final class ReviewCommit {
 
     private static GlossaryEntry guessed(final GlossaryEntry now, final Verdict verdict) {
         return now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type())
-                .withGender(now.gender() == Gender.UNKNOWN ? verdict.gender() : now.gender());
+                .withInferredGender(now.gender() == Gender.UNKNOWN ? verdict.gender() : now.gender());
     }
 }

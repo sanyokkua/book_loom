@@ -568,7 +568,7 @@ as it was.
 |---|---:|---:|
 | Flagged of 328 | 7 | 6 (1.8 %) |
 | Hard-gate failures at round 0 | 5 | 9 |
-| Narrator gender slips | 8 | 10 (random, 0-16 between identical runs; the Start question removes them) |
+| Narrator gender slips | 8 | 10 (random, 0-16 between identical runs; 0 only when the brief names the narrator; 26b with the narrator detected, i.e. the Start question answered, was not measured) |
 | Dominant share / renderings per term | 0.90 / 1.6 | 0.91 / 1.7 |
 | Name spelling variants | 2 | 0 |
 | Batch fallback rate | 0.07 | 0.10 |

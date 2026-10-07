@@ -3,7 +3,14 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import javafx.event.Event;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.Gender;
@@ -34,5 +41,64 @@ class GlossaryGenderSuggestedTest extends TranslatingScreenTestBase {
     @Test
     void table_suggestedAndConfirmedGenders_markOnlyTheSuggestedOne() throws Exception {
         assertThat(genderLabels()).contains("male (suggested)", "female").doesNotContain("female (suggested)");
+    }
+
+    // IF choosing the shown value did nothing, THEN "choose a value to confirm it" would be false for the value the
+    // person agrees with; the suggestion is stored as the person's.
+    @Test
+    void suggestedGender_theSameValueChosenAgain_isStoredAsConfirmed() throws Exception {
+        genderLabels();
+        final Label shown =
+                ThemeTestSupport.onFx(() -> required("names-style-table").lookupAll(".glossary-choice").stream()
+                        .map(label -> (Label) label)
+                        .filter(label -> label.getText().equals("male (suggested)"))
+                        .findFirst()
+                        .orElseThrow());
+        final TableCell<?, ?> row = (TableCell<?, ?>) shown.getParent();
+        onFx(() -> Event.fireEvent(shown, click()));
+        final ComboBox<?> combo = (ComboBox<?>) ThemeTestSupport.onFx(row::getGraphic);
+
+        onFx(() -> {
+            final ListCell<?> cell = popupCells(combo).stream()
+                    .filter(candidate -> "male".equals(candidate.getText()))
+                    .findFirst()
+                    .orElseThrow();
+            Event.fireEvent(cell, click());
+        });
+        awaitFx(() -> !glossary.updated().isEmpty());
+
+        assertThat(glossary.updated())
+                .singleElement()
+                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
+                .containsExactly(Gender.MALE, false);
+    }
+
+    private static java.util.List<ListCell<?>> popupCells(final ComboBox<?> combo) {
+        final javafx.scene.Node content = ((ComboBoxListViewSkin<?>) combo.getSkin()).getPopupContent();
+        return content.lookupAll(".list-cell").stream()
+                .<ListCell<?>>map(node -> (ListCell<?>) node)
+                .toList();
+    }
+
+    private static MouseEvent click() {
+        return new MouseEvent(
+                MouseEvent.MOUSE_CLICKED,
+                5,
+                5,
+                5,
+                5,
+                MouseButton.PRIMARY,
+                1,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                true,
+                false,
+                false,
+                null);
     }
 }

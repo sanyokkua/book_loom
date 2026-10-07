@@ -17,8 +17,8 @@ import ua.bookloom.api.project.NarratorHint;
  * @param inspection what the pre-open inspection found
  * @param profile the opened book's profile, or {@code null} when the import answered without one
  * @param brief the brief the project was created with
- * @param narratorHint what the source text suggests about the narrator, or {@code null} when nothing was found; it is
- *     never applied to the brief by itself
+ * @param narratorHint what the source text suggests about the narrator, or {@code null} when nothing was found; the Book Brief
+ *     preselects "First person" from it (the person can change it), and it never sets the narrator's gender
  */
 public record OpenedBook(
         String projectId,

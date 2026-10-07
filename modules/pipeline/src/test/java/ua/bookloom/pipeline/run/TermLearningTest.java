@@ -311,6 +311,25 @@ class TermLearningTest {
     }
 
     @Test
+    void committed_nameTheCurrentEntryAlreadyHasATargetFor_isLeftAsThePersonSetIt() {
+        stores.glossary()
+                .add(new GlossaryEntry("g1", PROJECT, "Bartimaeus", null, TermType.CHARACTER, Gender.MALE, false));
+        stores.glossary()
+                .update(new GlossaryEntry(
+                        "g1", PROJECT, "Bartimaeus", "Бартимей", TermType.CHARACTER, Gender.FEMALE, false));
+        learning = new TermLearning(stores, PROJECT, "en", "uk");
+        learnFrom(companyBook(new String[][] {
+            {"Bartimaeus walked on.", "Бартімей ішов далі."},
+            {"Bartimaeus sat.", "Бартімей сидів."},
+            {"Bartimaeus slept.", "Бартімей спав."}
+        }));
+
+        assertThat(Objects.requireNonNull(stores.glossary().all(PROJECT).data()).getFirst())
+                .extracting(GlossaryEntry::target, GlossaryEntry::gender)
+                .containsExactly("Бартимей", Gender.FEMALE);
+    }
+
+    @Test
     void committed_nameWithALockedTarget_isLeftAlone() {
         stores.glossary()
                 .add(new GlossaryEntry("g1", PROJECT, "Bartimaeus", "Бартимей", TermType.CHARACTER, Gender.MALE, true));

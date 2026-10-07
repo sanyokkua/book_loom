@@ -89,7 +89,7 @@ if sys.argv[2] == "batch":
     print("%-36s %4s %5s %8s %8s %8s %8s %8s %8s %8s" % ("model", "size", "calls", "idValid", "tokGate", "omit", "merge", "tooShort", "leaked", "outTok/i"))
     for r in (r for r in reports if r.get("suite") == "batch"):
         for c in r["cells"]:
-            print("%-36s %4d %5d %7.0f%% %7.0f%% %7.1f%% %7.1f%% %7.1f%% %7.1f%% %8.1f" % (r["model"], c["size"], c["calls"], 100 * c["idValidity"], 100 * c["tokenGate"], 100 * c["omission"], 100 * c["merge"], c.get("tooShort", 0), c.get("leaked", 0), c["outputTokensPerItem"]))
+            print("%-36s %4d %5d %7.0f%% %7.0f%% %7.1f%% %7.1f%% %7.1f%% %7.1f%% %8.1f" % (r["model"], c["size"], c["calls"], 100 * c["idValidity"], 100 * c["tokenGate"], 100 * c["omission"], 100 * c["merge"], 100 * c.get("tooShort", 0), 100 * c.get("leaked", 0), c["outputTokensPerItem"]))
     sys.exit(0)
 if sys.argv[2] == "realrun":
     runs = [r for r in reports if r.get("suite") == "realrun"]
@@ -104,18 +104,19 @@ if sys.argv[2] == "realrun":
     print()
     print("%-36s %9s %8s %7s %9s" % ("model", "truncated", "tooShort", "leaked", "stability"))
     for r in runs:
-        print("%-36s %9d %7.1f%% %6.1f%% %8.0f%%" % (r["model"], r["truncated"], 100 * r["tooShort"], 100 * r["leaked"], 100 * r["stability"]))
+        print("%-36s %9d %7.1f%% %6.1f%% %8.0f%%" % (r["model"], r.get("truncated", 0), 100 * r.get("tooShort", 0), 100 * r.get("leaked", 0), 100 * r.get("stability", 0)))
     print("(+Nk: N known failures reported beside the rate, see tasks.md 15e.2)")
     sys.exit(0)
 if sys.argv[2] == "sequence":
-    runs = sorted((r for r in reports if r.get("suite") == "sequence"), key=lambda r: (r["model"], r.get("narrator", "")))
+    runs = sorted((r for r in reports if r.get("suite") == "sequence"), key=lambda r: (r.get("model", ""), r.get("narrator", "")))
     print("%-30s %-6s %-8s %5s %7s %6s %7s %7s %6s %6s %6s %6s %7s %7s %6s %7s" % ("model", "narr", "dial", "segs", "rend/tm", "nameV", "gender", "english", "quote", "ascii", "mixed", "flag%", "noTgt", "fallbk%", "calls", "sec/seg"))
     for r in runs:
-        print("%-30s %-6s %-8s %5d %7.2f %6d %7d %7d %6d %6d %6d %5.1f%% %7d %6.1f%% %6.2f %7.2f" % (r["model"], r.get("narrator", "?"), r["dial"], r["segments"], r["renderingsPerTerm"], r["nameVariants"], r["genderSlips"], r["englishLeftovers"], r["quoteFailures"], r["asciiQuotes"], r["mixedScript"], 100.0 * r["flagged"] / max(1, r["segments"]), r["flaggedWithoutTarget"], 100 * r["batchFallbackRate"], r["callsPerSegment"], r["secondsPerSegment"]))
+        g = lambda k, r=r: r.get(k, 0)
+        print("%-30s %-6s %-8s %5d %7.2f %6d %7d %7d %6d %6d %6d %5.1f%% %7d %6.1f%% %6.2f %7.2f" % (r.get("model", "?"), r.get("narrator", "?"), r.get("dial", "?"), g("segments"), g("renderingsPerTerm"), g("nameVariants"), g("genderSlips"), g("englishLeftovers"), g("quoteFailures"), g("asciiQuotes"), g("mixedScript"), 100.0 * g("flagged") / max(1, g("segments")), g("flaggedWithoutTarget"), 100 * g("batchFallbackRate"), g("callsPerSegment"), g("secondsPerSegment")))
     print()
     print("%-30s %-6s %7s %7s %8s %8s %8s %8s %8s  %s" % ("model", "narr", "hard0", "leaked", "revTrunc", "claimed", "domin%", "learned", "cover", "per term: distinct renderings (dominant share)"))
     for r in runs:
-        print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%%  %s" % (r["model"], r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r["learned"], 100 * r["learnedCoverage"], " ".join("%s=%d(%.0f%%)" % (t["term"], t["distinct"], 100 * t.get("dominantShare", 0)) for t in r["terms"])))
+        print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%%  %s" % (r.get("model", "?"), r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r.get("learned", 0), 100 * r.get("learnedCoverage", 0), " ".join("%s=%d(%.0f%%)" % (t.get("term", "?"), t.get("distinct", 0), 100 * t.get("dominantShare", 0)) for t in r.get("terms", []))))
     print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering)")
     sys.exit(0)
 if sys.argv[2] == "words":

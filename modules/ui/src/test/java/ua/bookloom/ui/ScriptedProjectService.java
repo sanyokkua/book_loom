@@ -54,6 +54,7 @@ public final class ScriptedProjectService implements ProjectService {
             Result.err(AppError.of(ErrorCode.internal, "Not scripted", "The test scripted no answer for this file."));
     private volatile @Nullable RuntimeException failure;
     private volatile @Nullable CountDownLatch gate;
+    private volatile @Nullable CountDownLatch briefGate;
 
     /** From now on answers an import of {@code source} with {@code answer}; other paths keep the default. */
     public void on(final Path source, final Result<ImportedBook> answer) {
@@ -79,6 +80,19 @@ public final class ScriptedProjectService implements ProjectService {
     /** Lets the held imports answer. */
     public void release() {
         final CountDownLatch held = gate;
+        if (held != null) {
+            held.countDown();
+        }
+    }
+
+    /** From now on blocks each brief save until {@link #releaseBriefSaves()}, the way a slow disk would. */
+    public void holdBriefSaves() {
+        briefGate = new CountDownLatch(1);
+    }
+
+    /** Lets the held brief saves finish. */
+    public void releaseBriefSaves() {
+        final CountDownLatch held = briefGate;
         if (held != null) {
             held.countDown();
         }
@@ -148,7 +162,9 @@ public final class ScriptedProjectService implements ProjectService {
     @Override
     public Result<Project> updateBrief(final String projectId, final BookBrief brief) {
         Objects.requireNonNull(projectId, "projectId");
-        briefs.add(Objects.requireNonNull(brief, "brief"));
+        Objects.requireNonNull(brief, "brief");
+        awaitGate(briefGate);
+        briefs.add(brief);
         briefsOnFxThread.add(Platform.isFxApplicationThread());
         return Result.ok(new Project(projectId, imports.getLast(), BookFormat.TXT, "hash", brief));
     }

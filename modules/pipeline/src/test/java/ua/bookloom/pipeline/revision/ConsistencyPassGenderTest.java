@@ -183,6 +183,20 @@ class ConsistencyPassGenderTest {
         assertThat(report.openGenderDeferrals()).isEqualTo(1);
     }
 
+    // Two unknown-gender characters of one segment are one waiting segment, not two.
+    @Test
+    void run_twoUnknownGenderDeferralsOnOneSegment_countAsOneWaitingSegment() {
+        book.add(book.character("Sam", "Сем", Gender.UNKNOWN, false));
+        book.add(book.character("Hale", "Хейл", Gender.UNKNOWN, false));
+        book.decide(SAM_MET_HALE, "Сем зустрів Хейла.", "Сем зустрів Хейла.");
+        book.recordUnknownGender(SAM_MET_HALE);
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        assertThat(book.openDeferrals()).hasSize(2);
+        assertThat(report.openGenderDeferrals()).isEqualTo(1);
+    }
+
     // The person's edit is never overwritten: the re-render waits as a proposal until the desk applies it.
     @Test
     void run_personEditedGenderSegment_proposalAppliedOnlyOnAcceptance() {

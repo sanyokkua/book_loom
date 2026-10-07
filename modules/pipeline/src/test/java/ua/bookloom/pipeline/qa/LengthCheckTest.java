@@ -109,6 +109,16 @@ class LengthCheckTest {
         assertThat(result.passed()).isFalse();
     }
 
+    // Known tradeoff (2026-10-07 review): the extended compact range lets a real omission through. The six realrun
+    // short-line cases (10 words to 3 or 4) were the reason; Fast has no reviewer to catch it.
+    @Test
+    void run_tenWordLineCutToAShortSentence_passesAsAKnownTradeoff() {
+        final CheckResult result = LengthCheck.run(SoftCheckFixtures.length(
+                "He looked at her for a long time, then left.", "Він подивився на неї.", "en", "uk"));
+
+        assertThat(result.passed()).isTrue();
+    }
+
     @Test
     void run_longerLineCutToAFragment_stillFailsAsAnOmission() {
         final CheckResult result = LengthCheck.run(
