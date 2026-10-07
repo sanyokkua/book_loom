@@ -161,6 +161,19 @@ class FinalAuditJobTest {
                         tuple("Book.md:3", List.of("name-missing")));
     }
 
+    // IF no check read the whole book, THEN one name spelled two ways would never be seen: no single segment shows it.
+    @Test
+    void audit_nameSpelledTwoWaysAcrossTheBook_isReportedOnceOnTheOddSpelling() {
+        final TestProject run = finished(Map.of());
+        damage(run, "Book.md:0", "Гавань на світанку була тихою, як Нел.");
+
+        final List<SuspiciousSegment> suspicious = audited(run);
+
+        assertThat(suspicious)
+                .extracting(SuspiciousSegment::segmentId, SuspiciousSegment::checks)
+                .containsExactly(tuple("Book.md:0", List.of("name-variants")));
+    }
+
     @Test
     void audit_damagedBook_listsThemUnderTheSuspiciousFilterAndCountsThem() {
         final TestProject run = finished(Map.of());

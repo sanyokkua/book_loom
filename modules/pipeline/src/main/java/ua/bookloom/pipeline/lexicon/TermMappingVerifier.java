@@ -43,6 +43,7 @@ public final class TermMappingVerifier {
     }
 
     private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{M}\\p{N}]+(?:['’ʼ-][\\p{L}\\p{M}\\p{N}]+)*");
+    private static final Pattern DOUBLED = Pattern.compile("(\\p{L})\\1");
     private static final int MIN_SIGNIFICANT_LETTERS = 3;
     private static final int LONG_WORD = 8;
     private static final int MEDIUM_WORD = 6;
@@ -129,7 +130,24 @@ public final class TermMappingVerifier {
                 .allMatch(word -> targetWords.stream().anyMatch(held -> sameWord(word, held, alternations)));
     }
 
+    // One name written with a doubled letter or not (Боббі, Бобі) is the same word: both sides are judged alike.
     private static boolean sameWord(
+            final String renderingWord, final String targetWord, final List<String> alternations) {
+        return sameStem(renderingWord, targetWord, alternations)
+                || startsWithWhole(undoubled(targetWord), undoubled(renderingWord));
+    }
+
+    // The doubled letter is the only licence here, so the whole rendering must open the word, not just its stem.
+    private static boolean startsWithWhole(final String targetWord, final String renderingWord) {
+        return targetWord.startsWith(renderingWord)
+                && targetWord.length() <= renderingWord.length() + MAX_EXTRA_LETTERS;
+    }
+
+    private static String undoubled(final String word) {
+        return DOUBLED.matcher(word).replaceAll("$1");
+    }
+
+    private static boolean sameStem(
             final String renderingWord, final String targetWord, final List<String> alternations) {
         if (renderingWord.equals(targetWord)) {
             return true;

@@ -79,16 +79,19 @@ public final class FinalAudit {
         Objects.requireNonNull(records, "records");
         final Map<String, Segment> sources = sourcesOf(book.document());
         final Map<String, List<QaFinding>> doubted = new LinkedHashMap<>();
+        final Map<String, String> targets = new LinkedHashMap<>();
         final Set<SegmentKind> kept = book.brief().alsoTranslate().keptKinds();
         for (final SegmentRecord record : records) {
             final Segment source = sources.get(record.segmentId());
             if (source != null && isAudited(record, kept)) {
+                targets.put(record.segmentId(), DisplayText.of(maskedTarget(record)));
                 final List<QaFinding> findings = findingsOf(book, source, record);
                 if (!findings.isEmpty()) {
                     doubted.put(record.segmentId(), findings);
                 }
             }
         }
+        addNameVariants(book, targets, doubted);
         log.debug("Final audit looked at {} record(s) and doubts {}", records.size(), doubted.size());
         return doubted;
     }
@@ -112,6 +115,26 @@ public final class FinalAudit {
         return named;
     }
 
+    // One name spelled two ways is a fact about the whole book, so it is found after every segment has been read.
+    private static void addNameVariants(
+            final Book book, final Map<String, String> targets, final Map<String, List<QaFinding>> doubted) {
+        NameVariants.find(
+                        book.glossary(),
+                        targets,
+                        Objects.requireNonNull(book.brief().targetLanguage(), "target"))
+                .forEach((segmentId, variants) -> {
+                    final List<QaFinding> merged = new ArrayList<>(doubted.getOrDefault(segmentId, List.of()));
+                    variants.stream().map(AuditFindings::of).forEach(merged::add);
+                    doubted.put(segmentId, List.copyOf(merged));
+                });
+    }
+
+    private static String maskedTarget(final SegmentRecord record) {
+        return record.maskedUserTarget() != null
+                ? record.maskedUserTarget()
+                : Objects.requireNonNull(record.maskedMachineTarget(), "masked target");
+    }
+
     private static boolean isAudited(final SegmentRecord record, final Set<SegmentKind> kept) {
         return record.status() == SegmentStatus.ACCEPTED
                 && !record.reviewed()
@@ -122,9 +145,7 @@ public final class FinalAudit {
     }
 
     private static List<QaFinding> findingsOf(final Book book, final Segment source, final SegmentRecord record) {
-        final String masked = record.maskedUserTarget() != null
-                ? record.maskedUserTarget()
-                : Objects.requireNonNull(record.maskedMachineTarget(), "masked target");
+        final String masked = maskedTarget(record);
         final String sourceText = DisplayText.of(source.masked());
         final String target = DisplayText.of(masked);
         final List<QaFinding> found = new ArrayList<>();

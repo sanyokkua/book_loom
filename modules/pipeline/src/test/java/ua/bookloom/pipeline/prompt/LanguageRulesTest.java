@@ -248,4 +248,16 @@ class LanguageRulesTest {
     void functionWords_languageWithoutAList_isEmpty(final String tag) {
         assertThat(LanguageRules.bundled().functionWords(tag)).isEmpty();
     }
+
+    @ParameterizedTest
+    @CsvSource({"uk,зс", "ru,зс"})
+    void voicingPairs_languageWithAList_holdsItsPairs(final String tag, final String pair) {
+        assertThat(LanguageRules.bundled().voicingPairs(tag)).contains(pair);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "xx"})
+    void voicingPairs_languageWithoutAList_isEmpty(final String tag) {
+        assertThat(LanguageRules.bundled().voicingPairs(tag)).isEmpty();
+    }
 }

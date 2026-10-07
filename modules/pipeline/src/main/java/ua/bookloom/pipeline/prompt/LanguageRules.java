@@ -55,28 +55,6 @@ public final class LanguageRules implements LanguageSupport {
             "names.terms",
             "names.convention");
 
-    /** The prose rules a language or pair file may state, in the order they are shown, each under its label. */
-    private enum RuleKey {
-        QUOTES("quotes", "Quotes"),
-        DIALOGUE("dialogue", "Dialogue"),
-        APOSTROPHE("apostrophe", "Apostrophe"),
-        HYPHEN("hyphen", "Dashes"),
-        ELLIPSIS("ellipsis", "Ellipsis"),
-        AGREEMENT("agreement", "Agreement"),
-        ADDRESS("address", "Address"),
-        NUMBERS("numbers", "Numbers"),
-        DATES("dates", "Dates"),
-        NAMES("names", "Names");
-
-        private final String key;
-        private final String label;
-
-        RuleKey(final String key, final String label) {
-            this.key = key;
-            this.label = label;
-        }
-    }
-
     private static final class Holder {
         static final LanguageRules NORMAL = new LanguageRules(LanguageRules::openBundled, false);
         static final LanguageRules GENERIC_ONLY = new LanguageRules(LanguageRules::openBundled, true);
@@ -197,9 +175,9 @@ public final class LanguageRules implements LanguageSupport {
     private static String block(final String header, final LanguageFile file, final boolean reviewing) {
         final List<String> lines = new ArrayList<>();
         for (final RuleKey rule : RuleKey.values()) {
-            final String value = file.get(rule.key);
+            final String value = file.get(rule.key());
             if (value != null) {
-                lines.add(rule.label + ": " + value);
+                lines.add(rule.label() + ": " + value);
             }
         }
         file.indexed(PITFALLS).forEach(pitfall -> lines.add("Watch: " + pitfall));
@@ -298,8 +276,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the groups, such as {@code гзж}; never null, empty when the language names none
      */
     public List<String> stemAlternations(final String targetTag) {
-        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "stemAlternations");
-        return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
+        return wordsOf(targetTag, "stemAlternations");
     }
 
     /**
@@ -310,8 +287,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the endings, such as {@code і} and {@code ів}; never null, empty when the language lists none
      */
     public List<String> obliqueEndings(final String targetTag) {
-        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "obliqueEndings");
-        return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
+        return wordsOf(targetTag, "obliqueEndings");
     }
 
     /**
@@ -327,6 +303,17 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /**
+     * The voiced and voiceless consonant pairs of a target language, from its {@code voicingPairs} key, so the audit can
+     * tell two spellings of one name (Майлз, Майлс) apart from two names without hard-coding a language.
+     *
+     * @param targetTag the non-null target language tag
+     * @return pairs of two letters each, such as {@code зс}; never null, empty when the language lists none
+     */
+    public List<String> voicingPairs(final String targetTag) {
+        return wordsOf(targetTag, "voicingPairs");
+    }
+
+    /**
      * The particles and negations of a target language that carry mood or polarity, from its {@code functionWords} key,
      * so a reviewer edit that only fixes agreement can be held to leaving them alone without hard-coding a language.
      *
@@ -334,10 +321,7 @@ public final class LanguageRules implements LanguageSupport {
      * @return the lower-case words; never null, empty when the language lists none
      */
     public Set<String> functionWords(final String targetTag) {
-        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "functionWords");
-        return value == null || value.isBlank()
-                ? Set.of()
-                : Set.copyOf(List.of(value.toLowerCase(Locale.ROOT).split("\\s+")));
+        return Set.copyOf(wordsOf(targetTag, "functionWords"));
     }
 
     /**
@@ -349,8 +333,13 @@ public final class LanguageRules implements LanguageSupport {
      *     none, which is how a language that drops its subject says detection cannot work
      */
     public Set<String> firstPersonPronouns(final String languageTag) {
-        final String value = targetValue(Objects.requireNonNull(languageTag, "languageTag"), "firstPersonPronouns");
-        return value == null || value.isBlank() ? Set.of() : Set.copyOf(List.of(value.split("\\s+")));
+        return Set.copyOf(wordsOf(languageTag, "firstPersonPronouns"));
+    }
+
+    // The whitespace-separated words of a language file's key, as written; empty when the language lacks the key.
+    private List<String> wordsOf(final String tag, final String key) {
+        final String value = targetValue(Objects.requireNonNull(tag, "tag"), key);
+        return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
     }
 
     private LanguageFile languageFile(@Nullable final String tag) {

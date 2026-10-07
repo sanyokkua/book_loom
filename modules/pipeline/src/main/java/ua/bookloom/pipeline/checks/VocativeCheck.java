@@ -24,6 +24,11 @@ final class VocativeCheck {
 
     private static final String ARROW = " → ";
     private static final String CLOSERS = "[\\s.!?…»”\"’)]*";
+    // The mark that closes a quoted word before the name (Boys,' Bobby), the one that closes the speech after it,
+    // and the short dialogue tag that may follow it (I said).
+    private static final String BEFORE_NAME = "[,;][’'”\"]*\\s+";
+    private static final String SPEECH_END = "[,.!?…]*[»”\"’')]+";
+    private static final String TAG = "(?:[\\s,]+\\p{L}+){1,6}[\\s.!?…]*$";
 
     static List<CheckFinding> find(
             final String source,
@@ -68,9 +73,11 @@ final class VocativeCheck {
     private static boolean isCalledOut(final String source, final String term) {
         final String name = Pattern.quote(term);
         final Pattern atEnd = Pattern.compile("[,;]\\s+" + name + CLOSERS + "$");
+        final Pattern beforeTag = Pattern.compile(BEFORE_NAME + name + SPEECH_END + TAG);
         final Pattern atStart = Pattern.compile("^[“\"«—–-]?\\s*" + name + "\\s*,");
         return Sentences.split(source).stream()
                 .anyMatch(sentence -> atEnd.matcher(sentence).find()
+                        || beforeTag.matcher(sentence).find()
                         || atStart.matcher(sentence).find());
     }
 }

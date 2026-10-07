@@ -112,4 +112,32 @@ class TermMappingVerifierTest {
 
         assertThat(pairs).hasSize(1);
     }
+
+    // IF the stem rule were one-sided, THEN a glossary Боббі would be "missing" from a text that writes Бобі, and the
+    // reverse would pass: the two spellings of one name must be judged alike.
+    @ParameterizedTest
+    @CsvSource({
+        "Боббі,Бобі сказав це.",
+        "Бобі,Боббі сказав це.",
+        "Майлз,Майлс сказав це.",
+        "Майлс,Майлз сказав це.",
+        "Боббі,Боббі сказав це."
+    })
+    void verify_nameSpelledWithDoubledLetterOrVoicedFinal_holdsBothWays(final String rendering, final String target) {
+        final var pairs = TermMappingVerifier.verify(
+                Map.of("Bobby", rendering), List.of("Bobby"), "Bobby said it.", target, List.of("гзж", "кцч", "хсш"));
+
+        assertThat(pairs).hasSize(1);
+    }
+
+    @Test
+    void verify_unrelatedNameSharingAStart_isStillDropped() {
+        assertThat(TermMappingVerifier.verify(
+                        Map.of("Bobby", "Боббі"),
+                        List.of("Bobby"),
+                        "Bobby said it.",
+                        "Бобер сказав це.",
+                        List.of("гзж")))
+                .isEmpty();
+    }
 }
