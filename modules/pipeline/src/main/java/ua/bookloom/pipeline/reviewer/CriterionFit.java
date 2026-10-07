@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.reviewer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import lombok.AccessLevel;
@@ -20,6 +21,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class CriterionFit {
 
+    private static final int MIN_NAME_LETTERS = 4;
+    private static final int MIN_NAME_STEM = 3;
+    private static final int NAME_ENDING_LETTERS = 2;
     private static final String PAIR_MARKS = "«»„“”\"()[]{}‹›‘’'";
 
     /**
@@ -40,9 +44,32 @@ final class CriterionFit {
             case LANGUAGE -> hasForeignScriptLetter(quote, candidate);
             case TERMINOLOGY ->
                 keepsMostOfQuote(quote, replacement) && known(quote, replacement, candidate, renderings);
-            case MEANING, GENDER, AGREEMENT -> keepsMostOfQuote(quote, replacement);
+            case MEANING, GENDER, AGREEMENT ->
+                keepsMostOfQuote(quote, replacement) && !changesNameForm(quote, replacement, renderings);
             default -> true;
         };
+    }
+
+    // A name's form is the glossary's and the sentence's business: a meaning, gender or agreement edit that re-inflects
+    // a
+    // name (Джеку → Джек, Хром → Хромів) made the text worse in a real run, so only a terminology edit may touch one.
+    private static boolean changesNameForm(
+            final String quote, final String replacement, final Collection<String> renderings) {
+        final List<String> stems = renderings.stream()
+                .flatMap(rendering ->
+                        Arrays.stream(rendering.toLowerCase(Locale.ROOT).split("[^\\p{L}]+")))
+                .filter(word -> word.length() >= MIN_NAME_LETTERS)
+                .map(word -> word.substring(0, Math.max(MIN_NAME_STEM, word.length() - NAME_ENDING_LETTERS)))
+                .distinct()
+                .toList();
+        return !stems.isEmpty() && !nameWords(quote, stems).equals(nameWords(replacement, stems));
+    }
+
+    private static List<String> nameWords(final String text, final List<String> stems) {
+        return Arrays.stream(text.toLowerCase(Locale.ROOT).split("[^\\p{L}]+"))
+                .filter(word -> stems.stream().anyMatch(word::startsWith))
+                .sorted()
+                .toList();
     }
 
     private static boolean keepsMostOfQuote(final String quote, final String replacement) {
