@@ -23,6 +23,12 @@ Toasts are transient, native token-styled JavaFX nodes in four types (FR-NOTIF-0
 | warn | warning (ochre)     | A non-blocking concern (e.g. language mismatch confirmed, segment left flagged on export).  |
 | err  | danger (terracotta) | A recoverable failure that does not warrant a modal (e.g. a single retry failed).           |
 
+Placement and behaviour: toasts stack at the bottom centre of the content area (never over the title bar, the toolbar
+or the navigation), the newest lowest, at most four at once; each fades and slides in and out over about 160 ms. A
+success or info toast leaves after 5 s, a warn or err toast after 12 s; the timer pauses while the pointer is over the
+toast. Every toast has a ✕ button (with a hover explanation); an identical message raised again folds into the toast
+showing and counts it (×2, ×3). A toast may carry one action button, and then a click on its body no longer dismisses it.
+
 Toasts must not be the sole channel for critical information (FR-A11Y-8). An export's success is reported by its own
 dialog alone (`08_UI_SCREENS_AND_STATES.md#dialog-export-complete`), not an `ok` toast.
 

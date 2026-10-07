@@ -95,7 +95,7 @@ class UiModuleTest extends ShellTestBase {
     void toasts_view_isTheNodeTheShellHolds() {
         // IF the shell built its own toast host, THEN a toast raised through Toasts would never appear on screen.
         // (uses the shell the test base built, which needs the FX toolkit)
-        assertThat(shell.root().getChildrenUnmodifiable())
-                .contains(injector.getInstance(ToastStack.class).view());
+        assertThat(shell.root().lookup("#shell-toast-host"))
+                .isSameAs(injector.getInstance(ToastStack.class).view());
     }
 }

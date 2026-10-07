@@ -70,20 +70,7 @@ public final class SmoothScroll {
     private static void onScroll(final Node root, final ScrollEvent event) {
         final boolean wheel = ScrollGlide.isDiscreteWheel(
                 event.getTextDeltaYUnits(), event.getTouchCount(), event.isDirect(), event.isInertia());
-        if (log.isTraceEnabled()) {
-            log.trace(
-                    "scroll event: direct {}, inertia {}, touches {}, deltaX {}, deltaY {}, textDeltaY {}, units {}, multiplier {},"
-                            + " wheel {}",
-                    event.isDirect(),
-                    event.isInertia(),
-                    event.getTouchCount(),
-                    event.getDeltaX(),
-                    event.getDeltaY(),
-                    event.getTextDeltaY(),
-                    event.getTextDeltaYUnits(),
-                    event.getMultiplierY(),
-                    wheel);
-        }
+        traceEvent(event, wheel);
         final boolean pixel = !wheel && ScrollGlide.isPixelScroll(event.getTextDeltaYUnits(), event.isDirect());
         if (!(wheel || pixel) || event.getDeltaY() == 0 || (pixel && event.getDeltaX() != 0)) {
             return;
@@ -99,6 +86,23 @@ public final class SmoothScroll {
             flushOf(move.scroller()).add(move.pixels());
         }
         event.consume();
+    }
+
+    private static void traceEvent(final ScrollEvent event, final boolean wheel) {
+        if (log.isTraceEnabled()) {
+            log.trace(
+                    "scroll event: direct {}, inertia {}, touches {}, deltaX {}, deltaY {}, textDeltaY {}, units {},"
+                            + " multiplier {}, wheel {}",
+                    event.isDirect(),
+                    event.isInertia(),
+                    event.getTouchCount(),
+                    event.getDeltaX(),
+                    event.getDeltaY(),
+                    event.getTextDeltaY(),
+                    event.getTextDeltaYUnits(),
+                    event.getMultiplierY(),
+                    wheel);
+        }
     }
 
     private static @Nullable Move moveWithRoom(

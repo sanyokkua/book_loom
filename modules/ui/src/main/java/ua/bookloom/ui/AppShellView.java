@@ -96,7 +96,7 @@ public final class AppShellView {
      * @param messages the catalogue every label comes from
      * @param themeController what the theme control reads and drives, and what {@link #createScene} attaches
      * @param modalHost the overlay the About dialog is shown in; shared so other dialogs use the same one
-     * @param toasts the transient-message surface whose host the shell places above everything else
+     * @param toasts the transient-message surface whose host the shell places over the content area
      * @param runStatus the run's status and control, placed between the product name and the theme control
      * @param activityChip the other model work under way, with its Stop, placed before the run's status
      * @param progress the completed steps the navigation marks
@@ -193,7 +193,7 @@ public final class AppShellView {
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
-        final StackPane shell = new StackPane(frame, modalHost.view(), toasts.view());
+        final StackPane shell = new StackPane(frame, modalHost.view());
         // Once at the top: a wheel notch glides whichever pane, list, table or tree is under the pointer.
         SmoothScroll.install(shell);
         navigator.currentView().addListener((observed, old, current) -> showCurrent(current));
@@ -242,8 +242,10 @@ public final class AppShellView {
         toolbar.getStyleClass().add("shell-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
         final ScrollPane scroll = configuredContentScroll();
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        return new VBox(toolbar, scroll);
+        // The toasts sit over the content only, so none can cover the title bar, a toolbar button or the navigation.
+        final StackPane contentArea = new StackPane(scroll, toasts.view());
+        VBox.setVgrow(contentArea, Priority.ALWAYS);
+        return new VBox(toolbar, contentArea);
     }
 
     private ScrollPane configuredContentScroll() {

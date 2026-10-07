@@ -259,6 +259,10 @@ public enum MessageKey {
     TOAST_RUN_STARTED("toast.runStarted"),
     /** Transient message raised when a provider's model list could not be read. */
     TOAST_MODEL_LIST_UNREADABLE("toast.modelListUnreadable"),
+    /** Accessible name of a message's dismiss button, which shows only a cross. */
+    TOAST_DISMISS("toast.dismiss"),
+    /** Hover explanation of the control named by {@link #TOAST_DISMISS}. */
+    TOAST_DISMISS_TIP("toast.dismiss.tip"),
     /** Heading of the settings screen. */
     SETTINGS_TITLE("settings.title"),
     /** Tab of the providers area. */

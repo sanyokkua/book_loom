@@ -1354,9 +1354,11 @@
 
         /* ============================================================ TOASTS  (ControlsFX Notifications) */
         .toasts {
+            /* Bottom centre of the content area (right of the 236px sidebar), the newest lowest; never over the title bar. */
             position: fixed;
-            top: 52px;
-            right: 18px;
+            bottom: 18px;
+            left: calc(236px + (100% - 236px) / 2);
+            transform: translateX(-50%);
             z-index: 60;
             display: flex;
             flex-direction: column;
@@ -1380,7 +1382,7 @@
         @keyframes tin {
             from {
                 opacity: 0;
-                transform: translateX(12px)
+                transform: translateY(12px)
             }
             to {
                 opacity: 1;
@@ -1939,7 +1941,7 @@ ${dlgCard('about', 'About', 'Version + licenses', 'info', 'ⓘ')}
 
     S.toasts_ref = () => `
 <h2 class="page-h">Notifications</h2>
-<p class="page-sub">Transient toasts (auto-dismiss, top-right). In JavaFX: ControlsFX <span class="mono">Notifications</span> or a custom overlay pane.</p>
+<p class="page-sub">Transient toasts (bottom centre of the content area; success and info 5s, warning and error stay until dismissed or 12s; hover pauses; identical messages fold into one with ×N). In JavaFX: ControlsFX <span class="mono">Notifications</span> or a custom overlay pane.</p>
 <div class="row">
   <div class="col card pad"><h3 style="font-size:13.5px">Triggers</h3>
     <div class="stack" style="margin-top:10px">

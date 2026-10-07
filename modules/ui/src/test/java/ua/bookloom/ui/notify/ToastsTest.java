@@ -3,16 +3,11 @@ package ua.bookloom.ui.notify;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import org.junit.jupiter.api.Named;
@@ -22,7 +17,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.kordamp.ikonli.javafx.FontIcon;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.ui.ShellTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -33,9 +27,8 @@ import ua.bookloom.ui.theme.ThemeMode;
  * occasions this build raises, the cap on how many show at once, and how a message goes away. Every check raises the
  * message through the real stack and reads what the scene shows.
  */
-class ToastsTest extends ShellTestBase {
+class ToastsTest extends ToastsTestBase {
 
-    private static final long WAIT_SECONDS = 5;
     private static final int MOST_VISIBLE = 4;
 
     /** A severity, the style class marking it, how to raise it, and the role value hand-copied from the catalogue. */
@@ -86,45 +79,6 @@ class ToastsTest extends ShellTestBase {
         return Stream.of(Level.values())
                 .flatMap(level -> Stream.of(ThemeMode.LIGHT, ThemeMode.DARK)
                         .map(block -> Arguments.of(Named.of(level.name(), level), block)));
-    }
-
-    private Toasts toasts() {
-        return injector.getInstance(Toasts.class);
-    }
-
-    private List<Node> shownToasts() {
-        return List.copyOf(scene.getRoot().lookupAll(".toast"));
-    }
-
-    private static String textOf(final Node toast) {
-        return ((Label) toast.lookup(".toast-text")).getText();
-    }
-
-    private static MouseEvent click() {
-        return new MouseEvent(
-                MouseEvent.MOUSE_CLICKED,
-                4,
-                4,
-                4,
-                4,
-                MouseButton.PRIMARY,
-                1,
-                false,
-                false,
-                false,
-                false,
-                true,
-                false,
-                false,
-                false,
-                false,
-                true,
-                null);
-    }
-
-    private void raiseBooks(final int count) {
-        onFx(() -> IntStream.rangeClosed(1, count)
-                .forEach(number -> toasts().success(MessageKey.TOAST_BOOK_OPENED, "Book" + number + ".epub")));
     }
 
     // IF a severity took a colour of its own instead of its status role, THEN the same colour would mean different
@@ -221,6 +175,7 @@ class ToastsTest extends ShellTestBase {
         final Node first = shownToasts().get(0);
 
         onFx(() -> first.fireEvent(click()));
+        awaitToasts(1);
 
         assertThat(shownToasts()).hasSize(1).doesNotContain(first);
     }
@@ -228,7 +183,8 @@ class ToastsTest extends ShellTestBase {
     // IF a toast stayed forever, THEN messages would accumulate until the person cleared each by hand.
     @Test
     void toast_leftAlone_disappearsByItself() throws TimeoutException {
-        final ToastStack stack = new ToastStack(injector.getInstance(Messages.class), Duration.ofMillis(50));
+        final ToastStack stack =
+                new ToastStack(injector.getInstance(Messages.class), Duration.ofMillis(50), Duration.ofMillis(50));
         final Pane view = (Pane) stack.view();
 
         ThemeTestSupport.onFx(() -> {
