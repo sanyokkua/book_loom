@@ -26,6 +26,7 @@ import ua.bookloom.ui.control.LiveChunkPanel;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TaggedLog;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -134,7 +135,8 @@ final class TranslatingView {
             RetryWithNoteDialog retryDialog,
             ReviewPauseFollower pauses,
             RunInterventions interventions,
-            SectionMemory sections) {}
+            SectionMemory sections,
+            NarratorDialog narratorDialog) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
@@ -160,7 +162,7 @@ final class TranslatingView {
         final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
-                head(banner, actions(viewModel, mirror, exits.review(), review, messages)),
+                head(banner, actions(viewModel, mirror, exits.review(), review, exits.narratorDialog(), messages)),
                 review,
                 StateVisibility.shownIn(
                         TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
@@ -273,11 +275,12 @@ final class TranslatingView {
             final StateMirror mirror,
             final ReviewViewModel review,
             final ReviewPanel panel,
+            final NarratorDialog narratorDialog,
             final Messages messages) {
         final ReadOnlyObjectProperty<Controls> controls = viewModel.controls();
         final HBox row = new HBox(
                 ACTION_SPACING,
-                control(START, viewModel::start, controls, messages),
+                control(START, () -> narratorDialog.startAfterAsking(viewModel::start), controls, messages),
                 control(PAUSE, viewModel::pause, controls, messages),
                 retryNowWhileRecovering(control(RESUME, viewModel::resume, controls, messages), mirror, messages),
                 control(STOP, viewModel::stop, controls, messages),

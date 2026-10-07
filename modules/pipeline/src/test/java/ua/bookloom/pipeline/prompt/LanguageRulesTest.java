@@ -224,4 +224,16 @@ class LanguageRulesTest {
         assertThat(rules.genderCheck("en")).isNull();
         assertThat(rules.genderCheck("xx")).isNull();
     }
+
+    @ParameterizedTest
+    @CsvSource({"en,I", "uk,я", "ru,Я", "de,ich", "fr,je"})
+    void firstPersonPronouns_bundledLanguage_listsItsSubjectPronoun(final String tag, final String pronoun) {
+        assertThat(LanguageRules.bundled().firstPersonPronouns(tag)).contains(pronoun);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"es", "pl", "xx"})
+    void firstPersonPronouns_languageThatDropsItsSubjectOrHasNoFile_isEmpty(final String tag) {
+        assertThat(LanguageRules.bundled().firstPersonPronouns(tag)).isEmpty();
+    }
 }

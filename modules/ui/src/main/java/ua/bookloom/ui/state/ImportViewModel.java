@@ -217,7 +217,8 @@ public final class ImportViewModel {
                 answer.source(),
                 imported.inspection(),
                 imported.profile(),
-                Objects.requireNonNull(imported.brief()));
+                Objects.requireNonNull(imported.brief()),
+                imported.narratorHint());
         final ImportState detected = ImportStates.of(fileName, imported);
         current.open(opened);
         state.set(detected);

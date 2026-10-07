@@ -52,6 +52,7 @@ public final class BookBriefViewModel {
     private final ReadOnlyBooleanWrapper targetUntested = new ReadOnlyBooleanWrapper(false);
     private final LanguageSupport languages;
     private final ReadOnlyBooleanWrapper canContinue = new ReadOnlyBooleanWrapper(false);
+    private final NarratorNotice narratorNotice;
 
     /**
      * Follows the open book's brief.
@@ -73,6 +74,7 @@ public final class BookBriefViewModel {
                 Objects.requireNonNull(projects, "projects"), Objects.requireNonNull(executor, "executor"));
         project.brief().addListener((observed, was, now) -> derive(now));
         derive(project.brief().get());
+        this.narratorNotice = new NarratorNotice(project, this::setNarratorPerson);
         log.debug(
                 "book brief created, a book is already open: {}", project.book().get() != null);
     }
@@ -121,6 +123,16 @@ public final class BookBriefViewModel {
      */
     public ReadOnlyBooleanProperty canContinue() {
         return canContinue.getReadOnlyProperty();
+    }
+
+    /**
+     * Whether the source was found to be narrated in the first person while the brief does not say the narrator's
+     * gender, so the Book Brief offers a notice. It is a suggestion only: the person's choice is never overridden.
+     *
+     * @return a read-only property
+     */
+    public ReadOnlyBooleanProperty narratorNotice() {
+        return narratorNotice.shown();
     }
 
     /**
@@ -293,6 +305,19 @@ public final class BookBriefViewModel {
                 "narrator gender",
                 gender.name(),
                 brief -> brief.withNarrator(new Narrator(brief.narrator().person(), gender)));
+    }
+
+    /**
+     * Sets a first-person narrator of the given gender in one change, as the Start translation question does.
+     *
+     * @param gender the narrator's gender
+     */
+    public void setFirstPersonNarrator(final Gender gender) {
+        Objects.requireNonNull(gender, "gender");
+        change(
+                "first-person narrator",
+                gender.name(),
+                brief -> brief.withNarrator(new Narrator(NarratorPerson.FIRST, gender)));
     }
 
     /**

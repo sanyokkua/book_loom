@@ -481,6 +481,52 @@ uses it.
 - **WHEN** a first-person male narrator is set and the register, the genre and the dial are then changed
 - **THEN** the brief still holds the first-person male narrator
 
+### Requirement: Suggest the narrator from the source and ask once at Start translation
+
+WHEN a book is opened, the application SHALL read its running text outside quotes and dialogue, chapter by chapter
+(a heading or a body unit starts a chapter), and SHALL keep a `NarratorHint` (the person `FIRST`, `THIRD` or `MIXED`,
+the share of narration sentences with the first-person subject pronoun, and the first-person chapters) with the open
+book. A chapter is first person when at least a tenth of its narration sentences contain the source language's
+`firstPersonPronouns` (`I`, `я`, `ich`, `je`; a language that drops its subject lists none and gets no hint) and it has at
+least six such sentences; the book is `FIRST` when every judged chapter is, `THIRD` when none is and `MIXED` otherwise.
+The hint SHALL never change the brief by itself. WHILE the hint is `FIRST` or `MIXED` and the narrator's gender is not
+chosen and the narrator is not third person, the Tone & style card SHALL show a notice (`The book is narrated in the first
+person — choose the narrator's gender.`, with a hover explanation, in English and Ukrainian), and a narrator still
+`Not stated` SHALL be preselected as `First person` without a gender. WHEN Start translation is pressed (on Names &
+style or on Translating) under the same conditions and the question has not been answered for the book in this session,
+the application SHALL ask once `Who narrates?` with `Male`, `Female`, `Not stated — start anyway` and `Back`: a gender
+SHALL be written to the brief as a first-person narrator of that gender and the run SHALL start, `Not stated` SHALL start
+as before, and `Back` or Escape SHALL start nothing and change nothing; any answer other than going back is remembered
+for the book, so the question is not asked again.
+
+**Source:** FR-BRIEF-02, ADR-0038; tasks 15e.14.
+In plain words: a first-person book told by a man and translated with no narrator gender came out with feminine verbs
+(`я була`), because nothing told the model or the checks who "I" is. The source shows that the book says "I" but not the
+gender, so the application notices the first, shows a note, and asks the second question once, at the moment it
+matters, without ever blocking the start.
+
+#### Scenario: A first-person book shows the notice and preselects the person
+
+- **WHEN** a book whose narration says "I" is opened and its brief is shown
+- **THEN** the notice is shown, the narrator choice is `First person`, the gender choice is `Not stated` and the brief's
+  gender is unchanged
+
+#### Scenario: A third-person book with "I" only in quotes shows nothing
+
+- **WHEN** the only "I" of the book is inside quotation marks and the brief is shown
+- **THEN** no notice is shown and the narrator is `Not stated`
+
+#### Scenario: The answer reaches the brief and the run
+
+- **WHEN** Start translation is pressed on a first-person book with no narrator gender and `Male` is chosen
+- **THEN** the brief holds a first-person male narrator, the run starts and every call's style sheet carries the male
+  narrator line
+
+#### Scenario: Going back starts nothing
+
+- **WHEN** the question is shown and Escape is pressed
+- **THEN** no run starts, the brief is unchanged and the next Start asks again
+
 ## REMOVED Requirements
 
 ### Requirement: Choose the target language and show the source the book declares

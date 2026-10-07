@@ -173,6 +173,7 @@ final class GlossaryTable {
                 TermType.values(),
                 type -> GlossaryLabels.type(messages, type),
                 GlossaryEntry::type,
+                entry -> GlossaryLabels.type(messages, entry.type()),
                 model::setType);
     }
 
@@ -183,7 +184,13 @@ final class GlossaryTable {
                 Gender.values(),
                 gender -> GlossaryLabels.gender(messages, gender),
                 GlossaryEntry::gender,
+                entry -> genderLabel(messages, entry),
                 model::setGender);
+    }
+
+    private static String genderLabel(final Messages messages, final GlossaryEntry entry) {
+        final String label = GlossaryLabels.gender(messages, entry.gender());
+        return entry.isGenderSuggested() ? messages.get(MessageKey.NAMES_STYLE_GENDER_SUGGESTED, label) : label;
     }
 
     private static TableColumn<GlossaryEntry, GlossaryEntry> column(

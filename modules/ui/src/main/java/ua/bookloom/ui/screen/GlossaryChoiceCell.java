@@ -23,6 +23,9 @@ import ua.bookloom.ui.i18n.Messages;
  * or Enter or Space is pressed on it; the choice is written as soon as it is made, and the label comes back once the
  * combo box loses focus or the cell moves to another row. The combo box is made once per cell, on first use.
  *
+ * <p>What the label says may differ from the value's own name, so a gender the first-name list only suggested can be
+ * marked as such.
+ *
  * @param <T> the enum the column chooses from
  */
 final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
@@ -32,6 +35,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
     private final T[] values;
     private final Function<T, String> label;
     private final Function<GlossaryEntry, T> read;
+    private final Function<GlossaryEntry, String> shownLabel;
     private final BiConsumer<String, T> write;
     private @Nullable ComboBox<T> combo;
     private boolean filling;
@@ -42,6 +46,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
             final T[] values,
             final Function<T, String> label,
             final Function<GlossaryEntry, T> read,
+            final Function<GlossaryEntry, String> shownLabel,
             final BiConsumer<String, T> write) {
         super(Tips.installOnHover(messages, new Label(), tip));
         this.messages = messages;
@@ -49,6 +54,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
         this.values = values.clone();
         this.label = label;
         this.read = read;
+        this.shownLabel = shownLabel;
         this.write = write;
         final Label shown = control();
         shown.getStyleClass().add("glossary-choice");
@@ -64,7 +70,7 @@ final class GlossaryChoiceCell<T> extends GlossaryCells.EntryCell<Label> {
 
     @Override
     void show(final Label shown, final GlossaryEntry entry) {
-        shown.setText(label.apply(read.apply(entry)));
+        shown.setText(shownLabel.apply(entry));
     }
 
     private void open(final boolean showList) {

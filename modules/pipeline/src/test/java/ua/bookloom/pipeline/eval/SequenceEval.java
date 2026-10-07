@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
@@ -26,9 +27,13 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
@@ -36,6 +41,7 @@ import ua.bookloom.pipeline.eval.SequenceFixture.Chapter;
 import ua.bookloom.pipeline.eval.SequenceFixture.GlossarySeed;
 import ua.bookloom.pipeline.eval.SequenceRun.Decided;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
+import ua.bookloom.pipeline.narrator.NarratorDetector;
 
 /**
  * The sequence eval (15e.3): the fixture book through the real batched job — preparation, batches, reviewer, repair path,
@@ -52,6 +58,7 @@ final class SequenceEval {
     private final QualityDial dial;
     private final @Nullable Integer window;
     private final SequenceNarratorMode narrator;
+    private final Gender detectedGender;
 
     /**
      * Creates the eval.
@@ -66,6 +73,21 @@ final class SequenceEval {
             final QualityDial dial,
             @Nullable final Integer window,
             final SequenceNarratorMode narrator) {
+        this(fixture, dial, window, narrator, Gender.MALE);
+    }
+
+    /**
+     * Creates the eval with the answer the Start question gets when the mode is {@code detect}.
+     *
+     * @param detectedGender the gender a detected first-person narrator is given; ignored in the other modes
+     */
+    SequenceEval(
+            final SequenceFixture fixture,
+            final QualityDial dial,
+            @Nullable final Integer window,
+            final SequenceNarratorMode narrator,
+            final Gender detectedGender) {
+        this.detectedGender = Objects.requireNonNull(detectedGender, "detectedGender");
         this.fixture = Objects.requireNonNull(fixture, "fixture");
         this.dial = Objects.requireNonNull(dial, "dial");
         this.window = window;
@@ -85,6 +107,7 @@ final class SequenceEval {
         final BookBrief brief = SequenceJobs.brief(fixture.source(), fixture.target(), dial, narrator.narrator());
         final Prepared prepared = SequenceJobs.importBook(book, brief);
         seedGlossary(prepared);
+        applyDetectedNarrator(prepared);
         log.info(
                 "Sequence eval start project={} dial={} window={} narrator={}",
                 prepared.projectId(),
@@ -143,6 +166,25 @@ final class SequenceEval {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    // What the Start question does in the application: a detected first-person narration plus the person's answer.
+    void applyDetectedNarrator(final Prepared prepared) {
+        if (narrator != SequenceNarratorMode.DETECT) {
+            return;
+        }
+        final Optional<NarratorHint> hint = NarratorDetector.detect(prepared.document(), fixture.source());
+        log.info("Sequence eval narrator hint={} answer={}", hint.orElse(null), detectedGender);
+        if (hint.isEmpty() || !hint.get().suggestsFirstPerson()) {
+            return;
+        }
+        final Project project = Objects.requireNonNull(
+                        prepared.stores().projects().find(prepared.projectId()).data())
+                .orElseThrow();
+        prepared.stores()
+                .projects()
+                .save(project.withBrief(
+                        project.brief().withNarrator(new Narrator(NarratorPerson.FIRST, detectedGender))));
     }
 
     private void seedGlossary(final Prepared prepared) {

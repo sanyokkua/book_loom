@@ -18,6 +18,7 @@ import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NarratorHint;
 
 /**
  * Hand-built import answers for the screen tests: real {@link ImportedBook} records, never mocks, whose node and
@@ -131,6 +132,22 @@ public final class BookFixtures {
                 book.inspection(),
                 book.profile(),
                 Objects.requireNonNull(book.brief()).withLanguages(sourceLanguage, null));
+    }
+
+    /**
+     * The same book with what the project service found about its narrator.
+     *
+     * @param book the imported book
+     * @param hint the narrator hint the import carries
+     * @return the book with that hint
+     */
+    public static ImportedBook withNarratorHint(final ImportedBook book, final NarratorHint hint) {
+        return new ImportedBook(book.projectId(), book.inspection(), book.profile(), book.brief(), hint);
+    }
+
+    /** A hint that says a book is told in the first person throughout. */
+    public static NarratorHint firstPersonHint() {
+        return new NarratorHint(NarratorHint.Person.FIRST, 0.31, List.of(1, 2, 3));
     }
 
     /** The book the specification's first scenario opens: project {@code p1}, an EPUB in English, three nodes, nine segments. */

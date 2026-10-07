@@ -576,6 +576,12 @@ The narrator and the gender sheet (15d.10) keep who-is-who out of the model's gu
   same with masculine; a first-person narrator with no gender asks to keep one gender throughout; third person says
   `Narrator: third person, outside the story; do not turn the narration into "I".`). An unstated narrator adds nothing, so
   the style sheet and its hash are what they were.
+- **Where the narrator comes from** (15e.14). Detection (`NarratorDetector`, from `firstPersonPronouns` in the source
+  language's file) only suggests: a first-person or mixed book shows a notice on the Book Brief, preselects "first person"
+  and asks once at Start translation (`Male` / `Female` / `Not stated — start anyway`); the answer is written to the brief, so
+  the line above and the reviewer's gender check (`reviewerChecks` of the target language) then reach every call. The
+  hint itself is never sent to a model. Glossary genders seeded from the bundled first-name list are shown as
+  `suggested` and feed the character sheet like any other gender.
 - **Character sheet** (draft, batch draft; reviewer). `[Characters in this text — keep their gender and agreement]` and
   one `name — gender` line for each glossary character of known gender the segment names; in a batch the lines of all the
   items, once each, under `[Characters in these items — context only; keep their gender and agreement]`; in the reviewer

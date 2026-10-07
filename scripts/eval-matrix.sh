@@ -16,8 +16,9 @@
 # -sequence-<narrator>.json) through the real job and prints one row per model and narrator mode: distinct renderings per
 # term, name variants, narrator-gender slips, English leftovers, quote failures, flagged rate, first-round hard-gate
 # failures, leaked protocol, truncated reviewer replies, wrongly shared renderings, batch fallback rate, calls and seconds per
-# segment. --narrator unset|set|both (default unset = the real run's brief with no narrator; set = first-person male)
-# chooses the brief; both runs each model twice. BOOKLOOM_EVAL_DIAL (default BALANCED) and BOOKLOOM_EVAL_WINDOW pass
+# segment. --narrator unset|set|detect|both (default unset = the real run's brief with no narrator; set = first-person male;
+# detect = the unset brief plus what Start translation does: the narrator detector reads the source and the answer to "who
+# narrates" is --narrator-gender male|female, male by default) chooses the brief; both runs each model with unset and set. BOOKLOOM_EVAL_DIAL (default BALANCED) and BOOKLOOM_EVAL_WINDOW pass
 # through. A run takes about 15-25 min on a small model and 40-70 min on a 26B class model, so the per-model timeout
 # (MODEL_TIMEOUT, seconds) defaults to 5400 for this suite and 1500 for the others, per narrator mode; set it to override.
 set -uo pipefail
@@ -33,6 +34,7 @@ LANGS=""
 SUITE=""
 BATCH_SIZES=""
 NARRATOR=unset
+NARRATOR_GENDER=male
 MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | tr '\n' ' ')
 
 while [ $# -gt 0 ]; do
@@ -46,6 +48,7 @@ while [ $# -gt 0 ]; do
     --suite) SUITE=$2; shift 2 ;;
     --batch-sizes) BATCH_SIZES=$2; shift 2 ;;
     --narrator) NARRATOR=$2; shift 2 ;;
+    --narrator-gender) NARRATOR_GENDER=$2; shift 2 ;;
     *) echo "unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -63,7 +66,7 @@ run_one() {
   fi
   echo "== $provider $model narrator=$narrator"
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_BATCH_SIZES=${BATCH_SIZES:-4,8,12,16} ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=${BATCH_SIZES:-4,8,12,16} ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
   local pid=$!
   ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
   local dog=$!

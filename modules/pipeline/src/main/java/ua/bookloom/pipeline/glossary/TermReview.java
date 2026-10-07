@@ -129,8 +129,15 @@ public final class TermReview {
             log.warn("Glossary review project={} changed nothing: a suggestion call failed", projectId);
             return Result.err(Objects.requireNonNull(suggested.error(), "error"));
         }
-        return ReviewCommit.apply(
-                glossary, projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"));
+        return commit(projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"), in.frame());
+    }
+
+    private Result<GlossaryReviewReport> commit(
+            final String projectId,
+            final List<Verdict> verdicts,
+            final List<Suggestion> suggestions,
+            final CallFrame frame) {
+        return ReviewCommit.apply(glossary, projectId, verdicts, suggestions, frame.sourceLanguage());
     }
 
     /**

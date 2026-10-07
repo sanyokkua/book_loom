@@ -20,6 +20,8 @@ import org.jspecify.annotations.Nullable;
  * @param gender the term's grammatical gender
  * @param locked whether the term's rendering is locked against automatic revision
  * @param origin who chose the target; {@link TargetOrigin#PERSON} unless the entry is unlocked and has a target
+ * @param genderSuggested whether the gender came from the bundled first-name list and nobody has confirmed it; false
+ *     whenever the gender is {@link Gender#UNKNOWN} or the entry is locked, because a lock confirms what it holds
  */
 public record GlossaryEntry(
         String id,
@@ -29,7 +31,8 @@ public record GlossaryEntry(
         TermType type,
         Gender gender,
         boolean locked,
-        TargetOrigin origin) {
+        TargetOrigin origin,
+        boolean genderSuggested) {
 
     /**
      * Validates the invariants a caller is entitled to assume.
@@ -44,6 +47,20 @@ public record GlossaryEntry(
         if (locked || target == null || target.isBlank()) {
             origin = TargetOrigin.PERSON;
         }
+        genderSuggested = genderSuggested && !locked && gender != Gender.UNKNOWN;
+    }
+
+    /** An entry whose gender, if any, is the person's or the model's. */
+    public GlossaryEntry(
+            final String id,
+            final String projectId,
+            final String term,
+            @Nullable final String target,
+            final TermType type,
+            final Gender gender,
+            final boolean locked,
+            final TargetOrigin origin) {
+        this(id, projectId, term, target, type, gender, locked, origin, false);
     }
 
     /** An entry whose target, if any, is the person's. */
@@ -55,7 +72,16 @@ public record GlossaryEntry(
             final TermType type,
             final Gender gender,
             final boolean locked) {
-        this(id, projectId, term, target, type, gender, locked, TargetOrigin.PERSON);
+        this(id, projectId, term, target, type, gender, locked, TargetOrigin.PERSON, false);
+    }
+
+    /**
+     * Whether the gender is the first-name list's guess nobody has confirmed.
+     *
+     * @return {@code true} if the gender was seeded from a given name and not yet confirmed, {@code false} otherwise
+     */
+    public boolean isGenderSuggested() {
+        return genderSuggested;
     }
 
     /**
@@ -74,7 +100,8 @@ public record GlossaryEntry(
      * @return a copy whose target is the person's
      */
     public GlossaryEntry withTarget(@Nullable final String chosen) {
-        return new GlossaryEntry(id, projectId, term, chosen, type, gender, locked, TargetOrigin.PERSON);
+        return new GlossaryEntry(
+                id, projectId, term, chosen, type, gender, locked, TargetOrigin.PERSON, genderSuggested);
     }
 
     /**
@@ -85,7 +112,8 @@ public record GlossaryEntry(
      */
     public GlossaryEntry withSuggestedTarget(final String suggested) {
         Objects.requireNonNull(suggested, "suggested");
-        return new GlossaryEntry(id, projectId, term, suggested, type, gender, locked, TargetOrigin.SUGGESTED);
+        return new GlossaryEntry(
+                id, projectId, term, suggested, type, gender, locked, TargetOrigin.SUGGESTED, genderSuggested);
     }
 
     /**
@@ -95,7 +123,8 @@ public record GlossaryEntry(
      * @return a copy with the lock set
      */
     public GlossaryEntry withLocked(final boolean lock) {
-        return new GlossaryEntry(id, projectId, term, target, type, gender, lock, lock ? TargetOrigin.PERSON : origin);
+        return new GlossaryEntry(
+                id, projectId, term, target, type, gender, lock, lock ? TargetOrigin.PERSON : origin, genderSuggested);
     }
 
     /**
@@ -105,7 +134,7 @@ public record GlossaryEntry(
      * @return a copy with the type set
      */
     public GlossaryEntry withType(final TermType changed) {
-        return new GlossaryEntry(id, projectId, term, target, changed, gender, locked, origin);
+        return new GlossaryEntry(id, projectId, term, target, changed, gender, locked, origin, genderSuggested);
     }
 
     /**
@@ -115,7 +144,19 @@ public record GlossaryEntry(
      * @return a copy with the gender set
      */
     public GlossaryEntry withGender(final Gender changed) {
-        return new GlossaryEntry(id, projectId, term, target, type, changed, locked, origin);
+        return new GlossaryEntry(id, projectId, term, target, type, changed, locked, origin, false);
+    }
+
+    /**
+     * This entry with a gender the bundled first-name list proposes; the person can change it, and a lock or an edit
+     * confirms it.
+     *
+     * @param proposed the non-null gender the list holds for the term's first name
+     * @return a copy whose gender is marked as a suggestion
+     */
+    public GlossaryEntry withSuggestedGender(final Gender proposed) {
+        Objects.requireNonNull(proposed, "proposed");
+        return new GlossaryEntry(id, projectId, term, target, type, proposed, locked, origin, true);
     }
 
     /**
@@ -124,6 +165,7 @@ public record GlossaryEntry(
      * @return a copy whose target is the person's
      */
     public GlossaryEntry accepted() {
-        return new GlossaryEntry(id, projectId, term, target, type, gender, locked, TargetOrigin.PERSON);
+        return new GlossaryEntry(
+                id, projectId, term, target, type, gender, locked, TargetOrigin.PERSON, genderSuggested);
     }
 }

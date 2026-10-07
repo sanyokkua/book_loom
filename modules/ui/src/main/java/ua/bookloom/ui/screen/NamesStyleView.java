@@ -27,6 +27,7 @@ import ua.bookloom.ui.control.Banner;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.AddTermDialog;
+import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.NoTargetDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -63,6 +64,7 @@ final class NamesStyleView {
     private final ModalHost modalHost;
     private final Toasts toasts;
     private final NoTargetDialog noTargetDialog;
+    private final NarratorDialog narratorDialog;
 
     NamesStyleView(
             final Messages messages,
@@ -71,7 +73,8 @@ final class NamesStyleView {
             final NamesStyleViewModel glossary,
             final ModalHost modalHost,
             final Toasts toasts,
-            final NoTargetDialog noTargetDialog) {
+            final NoTargetDialog noTargetDialog,
+            final NarratorDialog narratorDialog) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.translating = Objects.requireNonNull(translating, "translating");
@@ -79,6 +82,7 @@ final class NamesStyleView {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.noTargetDialog = Objects.requireNonNull(noTargetDialog, "noTargetDialog");
+        this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
     }
 
     Node build(final String projectId) {
@@ -321,6 +325,10 @@ final class NamesStyleView {
     }
 
     private void begin() {
+        narratorDialog.startAfterAsking(this::startRun);
+    }
+
+    private void startRun() {
         noteUnconfirmedSuggestions();
         translating.start();
         navigator.navigate(ViewNames.TRANSLATING);

@@ -1411,6 +1411,17 @@ verb ending from a name, and a character who is not in the scene costs no tokens
 - **WHEN** the brief's narrator is not stated
 - **THEN** the style sheet is the default sheet and no narrator line is sent
 
+#### Scenario: The narrator line reaches every call
+
+- **WHEN** the brief holds a first-person male narrator and a book is run with batches and the reviewer
+- **THEN** the system message of the batch draft, the single draft, the reviewer and the directed fix each carries
+  `Narrator: first person, male.` and the reviewer's also carries the target language's gender check
+
+#### Scenario: Preparation reads the narrator without touching the brief
+
+- **WHEN** a run prepares a first-person English book whose brief states no narrator
+- **THEN** the preparation result holds a first-person `NarratorHint` and the stored brief still has no narrator
+
 ## MODIFIED Requirements
 
 ### Requirement: Send each pending segment to the model in document order

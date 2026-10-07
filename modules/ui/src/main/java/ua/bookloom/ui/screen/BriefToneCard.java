@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
@@ -61,6 +62,7 @@ final class BriefToneCard {
         this.narrator = narratorChoice(viewModel, messages);
         this.narratorGender = narratorGenderChoice(viewModel, messages);
         configureInputs(viewModel);
+        final Label notice = narratorNotice(viewModel, messages);
         this.node = BriefCards.card(
                 "brief-tone-card",
                 messages,
@@ -70,7 +72,17 @@ final class BriefToneCard {
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_VOICE, voice),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_AUDIENCE, audience),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR, narrator.node()),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.node()));
+                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.node()),
+                notice);
+    }
+
+    private static Label narratorNotice(final BookBriefViewModel viewModel, final Messages messages) {
+        final Label notice = BriefCards.hint(messages, MessageKey.BRIEF_NARRATOR_NOTICE);
+        notice.setId("brief-tone-narrator-notice");
+        Tips.install(messages, notice, MessageKey.BRIEF_NARRATOR_NOTICE_TIP);
+        notice.visibleProperty().bind(viewModel.narratorNotice());
+        notice.managedProperty().bind(notice.visibleProperty());
+        return notice;
     }
 
     private static BriefChoice<NarratorPerson> narratorChoice(

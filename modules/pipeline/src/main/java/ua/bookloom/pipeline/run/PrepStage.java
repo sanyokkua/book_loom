@@ -16,8 +16,11 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
+import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
+import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
+import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
 /**
@@ -39,12 +42,27 @@ public final class PrepStage {
      * @param styleSheet the style sheet every call of the run carries
      * @param scanned whether the glossary was empty, so the scan ran
      * @param proposed how many names the scan added; 0 when it did not run
+     * @param narratorHint what the source text suggests about the narrator, or null when the language has no pronoun
+     *     data or the book has nothing to judge; it never changes the brief
      */
-    public record Prepared(StyleSheet styleSheet, boolean scanned, int proposed) {
+    public record Prepared(
+            StyleSheet styleSheet,
+            boolean scanned,
+            int proposed,
+            @Nullable NarratorHint narratorHint) {
 
         /** Rejects a missing style sheet. */
         public Prepared {
             Objects.requireNonNull(styleSheet, "styleSheet");
+        }
+
+        /** What preparation settled before the narrator was read. */
+        public Prepared(final StyleSheet styleSheet, final boolean scanned, final int proposed) {
+            this(styleSheet, scanned, proposed, null);
+        }
+
+        Prepared withNarratorHint(@Nullable final NarratorHint hint) {
+            return new Prepared(styleSheet, scanned, proposed, hint);
         }
     }
 
@@ -77,7 +95,7 @@ public final class PrepStage {
                             glossary, projectId, document, sourceLanguageOf(brief, document), held, styleSheet))
                     .flatMap(done -> scanKeyTermsIfEmpty(
                                     glossary, lexicon, projectId, document, sourceLanguageOf(brief, document))
-                            .map(terms -> done));
+                            .map(terms -> done.withNarratorHint(narratorOf(brief, document))));
             if (prepared.isOk()) {
                 logPrepared(projectId, Objects.requireNonNull(prepared.data(), "prepared"));
             }
@@ -93,6 +111,11 @@ public final class PrepStage {
         }
     }
 
+    private static @Nullable NarratorHint narratorOf(final BookBrief brief, final Document document) {
+        return NarratorDetector.detect(document, sourceLanguageOf(brief, document))
+                .orElse(null);
+    }
+
     private static Result<Prepared> scanIfEmpty(
             final GlossaryRepository glossary,
             final String projectId,
@@ -102,10 +125,12 @@ public final class PrepStage {
             final StyleSheet styleSheet) {
         if (!held.isEmpty()) {
             log.debug("Name scan skipped project={}: the glossary holds {} entries", projectId, held.size());
-            return Result.ok(new Prepared(styleSheet, false, 0));
+            return GivenNames.seedHeld(glossary, projectId, sourceLanguage)
+                    .map(seeded -> new Prepared(styleSheet, false, 0));
         }
         log.debug("Name scan runs project={}: the glossary is empty", projectId);
         return FrequencyScan.newTerms(projectId, bodySegments(document), sourceLanguage, glossary)
+                .map(proposals -> GivenNames.seeded(proposals, sourceLanguage, true))
                 .flatMap(proposals -> addAll(glossary, proposals))
                 .map(added -> new Prepared(styleSheet, true, added));
     }
@@ -158,10 +183,11 @@ public final class PrepStage {
 
     private static void logPrepared(final String projectId, final Prepared prepared) {
         log.info(
-                "Prepared run project={} styleSheetHash={} glossaryScanned={} namesProposed={}",
+                "Prepared run project={} styleSheetHash={} glossaryScanned={} namesProposed={} narratorHint={}",
                 projectId,
                 prepared.styleSheet().hash(),
                 prepared.scanned(),
-                prepared.proposed());
+                prepared.proposed(),
+                prepared.narratorHint());
     }
 }

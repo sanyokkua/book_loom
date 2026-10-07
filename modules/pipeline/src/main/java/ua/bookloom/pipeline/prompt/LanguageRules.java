@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
@@ -323,6 +324,19 @@ public final class LanguageRules implements LanguageSupport {
     public String forbiddenLetters(final String targetTag) {
         final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "forbiddenLetters");
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * The words that are a first-person subject in a language's narration, from its {@code firstPersonPronouns} key,
+     * so the narrator detector is chosen by data and never by a hard-coded tag.
+     *
+     * @param languageTag the non-null language tag
+     * @return the pronouns exactly as written (capitalised forms listed too); never null, empty when the language lists
+     *     none, which is how a language that drops its subject says detection cannot work
+     */
+    public Set<String> firstPersonPronouns(final String languageTag) {
+        final String value = targetValue(Objects.requireNonNull(languageTag, "languageTag"), "firstPersonPronouns");
+        return value == null || value.isBlank() ? Set.of() : Set.copyOf(List.of(value.split("\\s+")));
     }
 
     private LanguageFile languageFile(@Nullable final String tag) {

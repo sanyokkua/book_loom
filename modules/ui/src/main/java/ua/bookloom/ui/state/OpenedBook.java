@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NarratorHint;
 
 /**
  * The book the window has open: the stored project it became, with what the import found about it. The source path is
@@ -16,13 +17,16 @@ import ua.bookloom.api.project.BookBrief;
  * @param inspection what the pre-open inspection found
  * @param profile the opened book's profile, or {@code null} when the import answered without one
  * @param brief the brief the project was created with
+ * @param narratorHint what the source text suggests about the narrator, or {@code null} when nothing was found; it is
+ *     never applied to the brief by itself
  */
 public record OpenedBook(
         String projectId,
         Path source,
         BookInspection inspection,
         @Nullable BookProfile profile,
-        BookBrief brief) {
+        BookBrief brief,
+        @Nullable NarratorHint narratorHint) {
 
     /** Rejects a missing id, source, inspection or brief. */
     public OpenedBook {
@@ -30,5 +34,15 @@ public record OpenedBook(
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(inspection, "inspection");
         Objects.requireNonNull(brief, "brief");
+    }
+
+    /** A book that came with no hint about its narrator. */
+    public OpenedBook(
+            final String projectId,
+            final Path source,
+            final BookInspection inspection,
+            @Nullable final BookProfile profile,
+            final BookBrief brief) {
+        this(projectId, source, inspection, profile, brief, null);
     }
 }

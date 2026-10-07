@@ -180,6 +180,37 @@ anything is written.
 - **WHEN** a run prepares a book whose glossary is empty
 - **THEN** the deterministic scan proposes the names and no model scan call is made
 
+### Requirement: Suggest a character's gender from a short list of first names
+
+WHEN the deterministic name scan, a preparation, or a model review gives a glossary entry that is unlocked, has no gender
+and is a character (or, for the first scan, an untyped entry) whose first word, of an entry of at most three words, is a
+common given name that the source language's bundled list (`given-names-<language>.txt`, "seed, not exhaustive":
+English, Ukrainian and Russian) holds for one gender, the application SHALL set that gender, make an untyped entry of the
+first scan a character, and mark the gender as a suggestion (`GlossaryEntry.genderSuggested`). A name that either gender
+uses and a name that is also a common word are not listed. The table SHALL show a suggested gender as `male (suggested)`
+and the column's hover explanation SHALL say so; a person's edit of the gender, or locking the entry, SHALL confirm it,
+and a gender already set SHALL never be overwritten. A language with no list SHALL suggest nothing.
+
+**Source:** FR-GLOSS-02, FR-ALGO-D1; tasks 15e.14.
+In plain words: 176 of 277 glossary entries of a real run ended with gender unknown, so the gender sheet, the agreement
+fix and the consistency pass had nothing to act on; a short list of unambiguous first names fills most of them without
+a model call, marked so the person can see and change it.
+
+#### Scenario: A listed name gets a suggested gender
+
+- **WHEN** the scan proposes `Hermione` for an English book
+- **THEN** the entry is a character with gender female, marked as suggested and not locked
+
+#### Scenario: A unisex name gets nothing
+
+- **WHEN** the scan proposes `Alex`
+- **THEN** the entry has gender unknown
+
+#### Scenario: A person's choice is never overwritten
+
+- **WHEN** the entry `John` already has gender female
+- **THEN** preparation leaves it female and not marked
+
 ### Requirement: Show the glossary as an editable table on Names & style
 
 The Names & style screen SHALL show the glossary as a table with the columns Source term, Type (character, place,

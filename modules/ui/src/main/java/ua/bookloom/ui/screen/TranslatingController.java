@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
@@ -49,6 +50,7 @@ public final class TranslatingController {
     private final ReviewPauseFollower pauses;
     private final RunInterventions interventions;
     private final SectionMemory sections;
+    private final NarratorDialog narratorDialog;
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
@@ -75,6 +77,7 @@ public final class TranslatingController {
      * @param pauses what opens the review panel on a review pause and continues the run after the person's decision
      * @param interventions what skips a stuck or failed segment and sends a stuck request again
      * @param sections the session's memory of which sections the person left open
+     * @param narratorDialog the question asked before a start when the book is told in the first person
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -90,7 +93,8 @@ public final class TranslatingController {
             final RetryWithNoteDialog retryDialog,
             final ReviewPauseFollower pauses,
             final RunInterventions interventions,
-            final SectionMemory sections) {
+            final SectionMemory sections,
+            final NarratorDialog narratorDialog) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -102,20 +106,19 @@ public final class TranslatingController {
         this.pauses = Objects.requireNonNull(pauses, "pauses");
         this.interventions = Objects.requireNonNull(interventions, "interventions");
         this.sections = Objects.requireNonNull(sections, "sections");
+        this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
+    }
+
+    private TranslatingView.Exits exits() {
+        return new TranslatingView.Exits(
+                navigator, this::openSettings, review, retryDialog, pauses, interventions, sections, narratorDialog);
     }
 
     @FXML
     void initialize() {
         log.debug(
                 "building the translating screen in state {}", mirror.runState().get());
-        dashboard = TranslatingView.build(
-                viewModel,
-                mirror,
-                current,
-                names,
-                messages,
-                new TranslatingView.Exits(
-                        navigator, this::openSettings, review, retryDialog, pauses, interventions, sections));
+        dashboard = TranslatingView.build(viewModel, mirror, current, names, messages, exits());
         viewModel.refreshPending();
         review.refreshCount();
         host.getChildren().setAll(dashboard.root());

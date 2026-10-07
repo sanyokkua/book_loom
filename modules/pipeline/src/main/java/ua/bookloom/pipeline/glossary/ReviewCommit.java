@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
@@ -65,7 +66,8 @@ final class ReviewCommit {
             final GlossaryRepository glossary,
             final String projectId,
             final List<Verdict> verdicts,
-            final List<Suggestion> suggestions) {
+            final List<Suggestion> suggestions,
+            @Nullable final String sourceLanguage) {
         final Result<List<GlossaryEntry>> current = glossary.all(projectId);
         if (current.isErr()) {
             return Result.err(Objects.requireNonNull(current.error(), "error"));
@@ -73,7 +75,9 @@ final class ReviewCommit {
         final Map<String, GlossaryEntry> byId = new HashMap<>(Objects.requireNonNull(current.data(), "current").stream()
                 .collect(Collectors.toMap(GlossaryEntry::id, Function.identity())));
         final Tally tally = Tally.empty();
-        final Result<Boolean> applied = applyAll(glossary, byId, verdicts, suggestions, tally);
+        final Result<Boolean> applied = applyAll(glossary, byId, verdicts, suggestions, tally)
+                .flatMap(done ->
+                        GivenNames.seedHeld(glossary, projectId, sourceLanguage).map(seeded -> done));
         if (applied.isErr()) {
             return Result.err(Objects.requireNonNull(applied.error(), "error"));
         }

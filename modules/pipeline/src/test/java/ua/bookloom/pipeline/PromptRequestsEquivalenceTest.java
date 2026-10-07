@@ -268,4 +268,28 @@ class PromptRequestsEquivalenceTest {
         assertThat(findings).isNotEmpty();
         assertThat(sent(recording, 0)).isEqualTo(sent(job, PARAGRAPHS + 1));
     }
+
+    private static final String NARRATOR_LINE = "Narrator: first person, male.";
+    private static final String GENDER_CHECK = "matches its subject's gender and number";
+
+    private static String system(final ChatRequest request) {
+        return request.messages().get(0).content();
+    }
+
+    @Test
+    void narratorLine_batchedRunWithAFirstPersonMaleNarrator_isInTheBatchAndTheReviewerPrompts() {
+        final ScriptedChatModel job = runBatchedJob(false);
+
+        assertThat(system(sent(job, 0))).contains(NARRATOR_LINE);
+        assertThat(system(sent(job, 1))).contains(NARRATOR_LINE);
+        assertThat(system(sent(job, 2))).contains(NARRATOR_LINE).contains(GENDER_CHECK);
+    }
+
+    @Test
+    void narratorLine_singleDraftRunWithAFirstPersonMaleNarrator_isInTheDraftAndTheDirectedFixPrompts() {
+        final ScriptedChatModel job = runSingleDraftJobWithAnEchoedLastSegment();
+
+        assertThat(system(sent(job, 0))).contains(NARRATOR_LINE);
+        assertThat(system(sent(job, PARAGRAPHS + 1))).contains(NARRATOR_LINE);
+    }
 }

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 
 class SequenceFixtureTest {
@@ -196,5 +197,23 @@ class SequenceFixtureTest {
     void narrator_setMode_isAFirstPersonMale() {
         assertThat(SequenceNarratorMode.SET.narrator().hasCheckableGender()).isTrue();
         assertThat(SequenceNarratorMode.UNSET.narrator().hasCheckableGender()).isFalse();
+    }
+
+    @Test
+    void parse_detectValue_namesTheDetectModeWithAnUnsetStartingBrief() {
+        assertThat(SequenceNarratorMode.parse("detect").label()).isEqualTo("detect");
+        assertThat(SequenceNarratorMode.DETECT.narrator().isSpecified()).isFalse();
+    }
+
+    @ParameterizedTest
+    @CsvSource({",MALE", "male,MALE", "' Female ',FEMALE"})
+    void parseGender_value_namesTheGenderOrDefaultsToMale(final String value, final Gender expected) {
+        assertThat(SequenceNarratorMode.parseGender(value)).isEqualTo(expected);
+    }
+
+    @Test
+    void parseGender_unknownValue_isRefused() {
+        assertThatThrownBy(() -> SequenceNarratorMode.parseGender("neuter"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

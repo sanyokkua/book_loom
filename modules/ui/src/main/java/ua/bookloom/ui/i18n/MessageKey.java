@@ -518,6 +518,10 @@ public enum MessageKey {
     BRIEF_TONE_NARRATOR_GENDER("brief.tone.narrator.gender"),
     /** Hover explanation of the control labelled by {@link #BRIEF_TONE_NARRATOR_GENDER}. */
     BRIEF_TONE_NARRATOR_GENDER_TIP("brief.tone.narrator.gender.tip"),
+    /** Notice on the tone card: the source is told in the first person and the narrator's gender is not chosen. */
+    BRIEF_NARRATOR_NOTICE("brief.narrator.notice"),
+    /** Hover explanation of the notice labelled by {@link #BRIEF_NARRATOR_NOTICE}. */
+    BRIEF_NARRATOR_NOTICE_TIP("brief.narrator.notice.tip"),
     /** Narrator gender option: not stated. */
     BRIEF_NARRATOR_GENDER_UNKNOWN("brief.narrator.gender.unknown"),
     /** Narrator gender option: male. */
@@ -763,6 +767,8 @@ public enum MessageKey {
     NAMES_STYLE_COLUMN_GENDER("namesStyle.column.gender"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_GENDER}. */
     NAMES_STYLE_COLUMN_GENDER_TIP("namesStyle.column.gender.tip"),
+    /** A glossary gender that came from the bundled first-name list and is not confirmed; argument 0 is the gender. */
+    NAMES_STYLE_GENDER_SUGGESTED("namesStyle.gender.suggested"),
     /** Glossary column of the lock switch. */
     NAMES_STYLE_COLUMN_LOCKED("namesStyle.column.locked"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_COLUMN_LOCKED}. */
@@ -1408,6 +1414,26 @@ public enum MessageKey {
     DIALOG_NO_TARGET_START("dialog.noTarget.start"),
     /** Hover explanation of the control labelled by {@link #DIALOG_NO_TARGET_START}. */
     DIALOG_NO_TARGET_START_TIP("dialog.noTarget.start.tip"),
+    /** Title of the question asked at Start translation when the book is told in the first person. */
+    DIALOG_NARRATOR_TITLE("dialog.narrator.title"),
+    /** Body of that question. */
+    DIALOG_NARRATOR_TEXT("dialog.narrator.text"),
+    /** Button that sets a male narrator and starts. */
+    DIALOG_NARRATOR_MALE("dialog.narrator.male"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_NARRATOR_MALE}. */
+    DIALOG_NARRATOR_MALE_TIP("dialog.narrator.male.tip"),
+    /** Button that sets a female narrator and starts. */
+    DIALOG_NARRATOR_FEMALE("dialog.narrator.female"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_NARRATOR_FEMALE}. */
+    DIALOG_NARRATOR_FEMALE_TIP("dialog.narrator.female.tip"),
+    /** Button that starts without stating the narrator's gender. */
+    DIALOG_NARRATOR_UNKNOWN("dialog.narrator.unknown"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_NARRATOR_UNKNOWN}. */
+    DIALOG_NARRATOR_UNKNOWN_TIP("dialog.narrator.unknown.tip"),
+    /** Button that closes that question and stays on the screen. */
+    DIALOG_NARRATOR_BACK("dialog.narrator.back"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_NARRATOR_BACK}. */
+    DIALOG_NARRATOR_BACK_TIP("dialog.narrator.back.tip"),
     /** Title of the question asked before leaving a screen whose model work is still running. */
     DIALOG_LEAVE_TITLE("dialog.leave.title"),
     /** Body of the leave question; argument 0 is the name of the running work. */

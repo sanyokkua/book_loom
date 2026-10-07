@@ -33,6 +33,7 @@ import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.RoundTripReport;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
@@ -40,6 +41,7 @@ import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.chunk.ChunkPacker;
 import ua.bookloom.pipeline.chunk.TokenBudget;
 import ua.bookloom.pipeline.dial.DialParameters;
+import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.util.hash.HashUtil;
 import ua.bookloom.util.lang.LanguageTags;
 
@@ -185,7 +187,10 @@ public final class ProjectServiceImpl implements ProjectService {
                 document.units().size(),
                 segmentCount,
                 id);
-        return new ImportedBook(id, inspection, profile, brief);
+        final NarratorHint hint = NarratorDetector.detect(
+                        document, brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage())
+                .orElse(null);
+        return new ImportedBook(id, inspection, profile, brief, hint);
     }
 
     private static @Nullable String preselectSource(final LanguageEvidence evidence) {

@@ -302,4 +302,29 @@ class ProjectServiceImplTest {
                 switches,
                 brief.dial());
     }
+
+    @Test
+    void importBook_englishBookToldInTheFirstPerson_carriesAFirstPersonHintAndLeavesTheBriefAlone() {
+        final String chapter = String.join(
+                " ",
+                "I walked home through the cold rain. I did not look back.",
+                "The street was empty, and I counted the lamps as I passed them.",
+                "I had left the letter on the table. I knew that I would regret it.",
+                "When I reached the gate, I stopped and listened for a long time.");
+        final Path book = TestBooks.epub(tempDir.resolve("first.epub"), List.of(List.of(chapter)), "en");
+
+        final ImportedBook imported = importOk(book);
+
+        assertThat(imported.narratorHint()).isNotNull();
+        assertThat(Objects.requireNonNull(imported.narratorHint()).person())
+                .isEqualTo(ua.bookloom.api.project.NarratorHint.Person.FIRST);
+        assertThat(briefOf(imported).narrator()).isEqualTo(ua.bookloom.api.project.Narrator.unspecified());
+    }
+
+    @Test
+    void importBook_bookWithNothingToJudge_carriesNoHint() {
+        assertThat(importOk(TestBooks.epub(tempDir.resolve("short.epub"), TWO_CHAPTERS, "en"))
+                        .narratorHint())
+                .isNull();
+    }
 }

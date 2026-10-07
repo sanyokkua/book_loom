@@ -136,8 +136,10 @@ public final class GlossaryServiceImpl implements GlossaryService {
             return Result.ok(List.of());
         }
         log.info("Glossary scan started project={}", projectId);
+        final String language = sourceLanguage(projectId, document);
         final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(
-                        projectId, bodySegments(document), sourceLanguage(projectId, document), glossary)
+                        projectId, bodySegments(document), language, glossary)
+                .map(proposals -> GivenNames.seeded(proposals, language, true))
                 .flatMap(this::addAll);
         log.info(
                 "Glossary scan finished project={} ok={} entriesAdded={}",

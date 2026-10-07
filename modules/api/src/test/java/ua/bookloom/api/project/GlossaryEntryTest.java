@@ -61,4 +61,32 @@ class GlossaryEntryTest {
         assertThat(new GlossaryEntry("e1", "p1", "Wales", "Уельс", TermType.PLACE, Gender.UNKNOWN, false).origin())
                 .isEqualTo(TargetOrigin.PERSON);
     }
+
+    @Test
+    void withSuggestedGender_unlockedEntry_isMarkedAsSuggested() {
+        final GlossaryEntry seeded = new GlossaryEntry(
+                        "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.MALE);
+
+        assertThat(seeded.isGenderSuggested()).isTrue();
+        assertThat(seeded.gender()).isEqualTo(Gender.MALE);
+    }
+
+    @Test
+    void genderEditedOrEntryLocked_confirmsTheSuggestedGender() {
+        final GlossaryEntry seeded = new GlossaryEntry(
+                        "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.MALE);
+
+        assertThat(seeded.withGender(Gender.FEMALE).isGenderSuggested()).isFalse();
+        assertThat(seeded.withLocked(true).isGenderSuggested()).isFalse();
+    }
+
+    @Test
+    void new_unknownGender_isNeverMarkedAsSuggested() {
+        final GlossaryEntry entry = new GlossaryEntry(
+                "e1", "p1", "John", null, TermType.CHARACTER, Gender.UNKNOWN, false, TargetOrigin.PERSON, true);
+
+        assertThat(entry.isGenderSuggested()).isFalse();
+    }
 }
