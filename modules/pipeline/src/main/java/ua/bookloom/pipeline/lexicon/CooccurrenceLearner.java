@@ -62,9 +62,6 @@ public final class CooccurrenceLearner {
 
     private static final double RIVAL_MARGIN = 2.0;
 
-    /** A form is common when it is used in at least this share of the most used form's uses (the inverse: times). */
-    private static final int COMMON_FORM_SHARE = 4;
-
     /**
      * A rendering the evidence supports.
      *
@@ -364,7 +361,7 @@ public final class CooccurrenceLearner {
         if (counts.capitals) {
             names.formsOf(stem).forEach((form, uses) -> forms.merge(form, uses, Integer::sum));
         }
-        final Optional<String> base = baseOf(forms);
+        final Optional<String> base = BaseForms.of(forms, obliqueEndings);
         if (base.isEmpty()) {
             log.debug("Learner refuses a cut-off rendering among {} forms of one stem", forms.size());
         }
@@ -376,36 +373,5 @@ public final class CooccurrenceLearner {
                 ? word
                 : word.substring(0, word.offsetByCodePoints(0, 1)).toUpperCase(Locale.ROOT)
                         + word.substring(word.offsetByCodePoints(0, 1));
-    }
-
-    private Optional<String> baseOf(final Map<String, Integer> forms) {
-        final int most =
-                forms.values().stream().mapToInt(Integer::intValue).max().orElse(0);
-        return forms.keySet().stream()
-                .filter(form -> !isCutOff(form, forms))
-                .filter(form -> forms.getOrDefault(form, 0) * COMMON_FORM_SHARE >= most)
-                .max(Comparator.comparingInt((String form) -> isOblique(form) ? 0 : 1)
-                        .thenComparingInt(form -> extendedByOne(form, forms))
-                        .thenComparing(Comparator.comparingInt(String::length).reversed())
-                        .thenComparingInt(form -> forms.get(form))
-                        .thenComparing(Comparator.<String>naturalOrder().reversed()));
-    }
-
-    private boolean isOblique(final String form) {
-        return obliqueEndings.stream().anyMatch(form::endsWith);
-    }
-
-    private static int extendedByOne(final String form, final Map<String, Integer> forms) {
-        return forms.entrySet().stream()
-                .filter(other -> other.getKey().length() == form.length() + 1
-                        && other.getKey().startsWith(form))
-                .mapToInt(Map.Entry::getValue)
-                .sum();
-    }
-
-    private static boolean isCutOff(final String form, final Map<String, Integer> forms) {
-        final boolean longer = forms.keySet().stream()
-                .anyMatch(other -> other.length() >= form.length() + 2 && other.startsWith(form));
-        return longer && extendedByOne(form, forms) == 0;
     }
 }
