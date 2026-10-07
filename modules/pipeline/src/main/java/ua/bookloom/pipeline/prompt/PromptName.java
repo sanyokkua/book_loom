@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.glossary.TermChoiceSchema;
 import ua.bookloom.pipeline.setup.BriefSuggestionSchema;
 
 /**
@@ -134,6 +135,17 @@ public enum PromptName {
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
             new Slots(Set.of("source", "text"), Set.of("resolvedFacts", "previous", "next", "tokens"))),
+
+    /** The choice among recurring words the Recurring terms section asks for: keep or drop, a batch of candidates a call. */
+    TERM_CHOICE(
+            "term-choice",
+            CallKind.REVIEW_TERMS,
+            "term-choice",
+            TermChoiceSchema.SCHEMA,
+            0.1,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("terms"), Set.of())),
 
     /** The proposal of the translated book's file name, asked for on the Export screen; one small call. */
     FILE_NAME(

@@ -79,14 +79,7 @@ final class RecurringTermsCard {
         final RecurringTerms recurring = names.recurring();
         final Button find = action(
                 messages, "recurring-find", MessageKey.RECURRING_FIND, MessageKey.RECURRING_FIND_TIP, recurring::find);
-        final Button suggest = action(
-                messages,
-                "recurring-suggest",
-                MessageKey.RECURRING_SUGGEST,
-                MessageKey.RECURRING_SUGGEST_TIP,
-                recurring::suggestRenderings);
-        suggest.disableProperty()
-                .bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
+        final List<Button> modelActions = modelActions(messages, names);
         final TextField typed = typedTerm(messages);
         final Runnable add = () -> {
             recurring.add(typed.getText());
@@ -95,10 +88,41 @@ final class RecurringTermsCard {
         typed.setOnAction(event -> add.run());
         final Button addButton =
                 action(messages, "recurring-add", MessageKey.RECURRING_ADD, MessageKey.RECURRING_ADD_TIP, add);
-        final FlowPane toolbar = new FlowPane(ACTION_SPACING, ACTION_SPACING, find, suggest, typed, addButton);
+        final FlowPane toolbar = new FlowPane(ACTION_SPACING, ACTION_SPACING, find);
+        toolbar.getChildren().addAll(modelActions);
+        toolbar.getChildren().addAll(typed, addButton);
         toolbar.setId("recurring-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
         return toolbar;
+    }
+
+    // The model's three actions on the recurring terms, offered and blocked as the glossary's model actions are.
+    private static List<Button> modelActions(final Messages messages, final NamesStyleViewModel names) {
+        final RecurringTerms recurring = names.recurring();
+        final Button suggest = action(
+                messages,
+                "recurring-suggest",
+                MessageKey.RECURRING_SUGGEST,
+                MessageKey.RECURRING_SUGGEST_TIP,
+                recurring::suggestRenderings);
+        final Button modelScan = action(
+                messages,
+                "recurring-model-scan",
+                MessageKey.RECURRING_MODEL_SCAN,
+                MessageKey.RECURRING_MODEL_SCAN_TIP,
+                recurring::scanWithModel);
+        final Button modelReview = action(
+                messages,
+                "recurring-model-review",
+                MessageKey.RECURRING_MODEL_REVIEW,
+                MessageKey.RECURRING_MODEL_REVIEW_TIP,
+                recurring::reviewWithModel);
+        final List<Button> actions = List.of(modelScan, modelReview, suggest);
+        for (final Button model : actions) {
+            model.disableProperty()
+                    .bind(names.busy().or(names.modelBlockedReason().isNotEmpty()));
+        }
+        return actions;
     }
 
     // Escape empties the field, as it does the glossary's search.

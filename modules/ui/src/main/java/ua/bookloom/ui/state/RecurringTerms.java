@@ -18,18 +18,27 @@ public final class RecurringTerms {
     private final ObservableList<LexiconEntry> rows;
     private final Supplier<String> project;
     private final Supplier<Consumer<Runnable>> current;
-    private final Runnable suggest;
+    private final ModelActions model;
+
+    /**
+     * The screen's model actions on the recurring terms; each runs through the glossary's one-at-a-time model runs.
+     *
+     * @param suggest asks for a rendering of each term that has none
+     * @param scan asks the model to choose recurring terms among the book's frequent words
+     * @param review asks the model which held terms are worth keeping consistent
+     */
+    record ModelActions(Runnable suggest, Runnable scan, Runnable review) {}
 
     RecurringTerms(
             final LexiconActions actions,
             final Supplier<String> project,
             final Supplier<Consumer<Runnable>> current,
-            final Runnable suggest) {
+            final ModelActions model) {
         this.actions = Objects.requireNonNull(actions, "actions");
         this.rows = actions.rows();
         this.project = Objects.requireNonNull(project, "project");
         this.current = Objects.requireNonNull(current, "current");
-        this.suggest = Objects.requireNonNull(suggest, "suggest");
+        this.model = Objects.requireNonNull(model, "model");
     }
 
     /**
@@ -48,7 +57,17 @@ public final class RecurringTerms {
 
     /** Asks the chosen model for a rendering of each term that has none. */
     public void suggestRenderings() {
-        suggest.run();
+        model.suggest().run();
+    }
+
+    /** Asks the chosen model to choose recurring terms among the book's frequent words and adds them. */
+    public void scanWithModel() {
+        model.scan().run();
+    }
+
+    /** Asks the chosen model which held terms are worth keeping consistent and removes the others. */
+    public void reviewWithModel() {
+        model.review().run();
     }
 
     /**

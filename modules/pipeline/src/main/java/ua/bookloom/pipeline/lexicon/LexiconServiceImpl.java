@@ -1,9 +1,11 @@
 package ua.bookloom.pipeline.lexicon;
 
 import com.google.inject.Inject;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
+import ua.bookloom.pipeline.glossary.NameCandidate;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /**
@@ -46,6 +49,7 @@ public final class LexiconServiceImpl implements LexiconService {
     private final ProjectRepository projects;
     private final OpenProjects openProjects;
     private final GlossaryModelScans modelScans;
+    private static final int MAX_CANDIDATES = 120;
 
     @Override
     public Result<List<LexiconEntry>> entries(final String projectId) {
@@ -66,6 +70,24 @@ public final class LexiconServiceImpl implements LexiconService {
         Objects.requireNonNull(model, "model");
         Objects.requireNonNull(progress, "progress");
         return guarded("suggest", projectId, () -> runSuggest(projectId, model, progress));
+    }
+
+    @Override
+    public Result<List<LexiconEntry>> scanWithModel(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
+        return guarded("model scan", projectId, () -> runModelScan(projectId, model, progress));
+    }
+
+    @Override
+    public Result<List<LexiconEntry>> review(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
+        return guarded("review", projectId, () -> runReview(projectId, model, progress));
     }
 
     @Override
@@ -125,6 +147,75 @@ public final class LexiconServiceImpl implements LexiconService {
         }
         log.info("Lexicon scan project={} added={}", projectId, proposed.data().size());
         return lexicon.all(projectId);
+    }
+
+    private Result<List<LexiconEntry>> runModelScan(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        final Document document = openProjects.get(projectId);
+        if (document == null) {
+            return Result.err(
+                    AppError.of(ErrorCode.validation, "No book is open", "Open the book before looking for terms."));
+        }
+        final Result<Set<String>> held = heldKeys(projectId);
+        if (held.isErr()) {
+            return Result.err(Objects.requireNonNull(held.error(), "error"));
+        }
+        final List<String> candidates = KeyTermScan.frequentWords(
+                        FrequencyScan.storyText(document), sourceLanguage(projectId, document), MAX_CANDIDATES)
+                .stream()
+                .map(NameCandidate::term)
+                .filter(term -> !Objects.requireNonNull(held.data(), "held").contains(LexiconEntry.keyOf(term)))
+                .toList();
+        log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
+        return modelScans.chooseTerms(projectId, candidates, model, progress).flatMap(kept -> {
+            for (final String term : candidates) {
+                if (kept.contains(LexiconEntry.keyOf(term))) {
+                    final Result<LexiconEntry> stored = lexicon.put(LexiconEntry.of(projectId, term));
+                    if (stored.isErr()) {
+                        return Result.err(Objects.requireNonNull(stored.error(), "error"));
+                    }
+                }
+            }
+            log.info("Lexicon model scan project={} added={}", projectId, kept.size());
+            return lexicon.all(projectId);
+        });
+    }
+
+    private Result<List<LexiconEntry>> runReview(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        return lexicon.all(projectId).flatMap(all -> {
+            final List<LexiconEntry> asked = all.stream()
+                    .filter(entry -> entry.chosen() == null || entry.chosen().isBlank())
+                    .toList();
+            log.info("Lexicon review project={} terms={} asked={}", projectId, all.size(), asked.size());
+            return modelScans
+                    .chooseTerms(
+                            projectId, asked.stream().map(LexiconEntry::term).toList(), model, progress)
+                    .flatMap(kept -> dropUnkept(projectId, asked, kept));
+        });
+    }
+
+    private Result<List<LexiconEntry>> dropUnkept(
+            final String projectId, final List<LexiconEntry> asked, final Set<String> kept) {
+        for (final LexiconEntry entry : asked) {
+            if (!kept.contains(LexiconEntry.keyOf(entry.term()))) {
+                final Result<Boolean> removed = lexicon.remove(projectId, entry.term());
+                if (removed.isErr()) {
+                    return Result.err(Objects.requireNonNull(removed.error(), "error"));
+                }
+            }
+        }
+        return lexicon.all(projectId);
+    }
+
+    private Result<Set<String>> heldKeys(final String projectId) {
+        return glossary.all(projectId)
+                .flatMap(names -> lexicon.all(projectId).map(terms -> {
+                    final Set<String> keys = new HashSet<>();
+                    names.forEach(entry -> keys.add(LexiconEntry.keyOf(entry.term())));
+                    terms.forEach(entry -> keys.add(LexiconEntry.keyOf(entry.term())));
+                    return keys;
+                }));
     }
 
     private Result<List<LexiconEntry>> runSuggest(

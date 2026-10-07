@@ -31,6 +31,29 @@ public interface LexiconService {
     Result<List<LexiconEntry>> scan(String projectId);
 
     /**
+     * Shows the model the book's frequent words and adds the ones it says a translator must render the same way every
+     * time (titles, roles, objects and terms of the book's world), which the deterministic scan cannot tell from any
+     * other lower-case word. Nothing is added unless every request answered.
+     *
+     * @param projectId the non-null project id
+     * @param model the non-null model to call
+     * @param progress the non-null receiver of each call's start and finish, on the calling thread
+     * @return the lexicon as it now stands
+     */
+    Result<List<LexiconEntry>> scanWithModel(String projectId, ChatModel model, Consumer<JobEvent> progress);
+
+    /**
+     * Asks the model whether each held term is worth keeping consistent and removes the ones it drops, never a term
+     * whose rendering the person chose. Nothing is removed unless every request answered.
+     *
+     * @param projectId the non-null project id
+     * @param model the non-null model to call
+     * @param progress the non-null receiver of each call's start and finish, on the calling thread
+     * @return the lexicon as it now stands
+     */
+    Result<List<LexiconEntry>> review(String projectId, ChatModel model, Consumer<JobEvent> progress);
+
+    /**
      * Asks the model for a rendering of each term that has none yet, by the same call the glossary's suggestions use;
      * nothing is written unless every request answered.
      *

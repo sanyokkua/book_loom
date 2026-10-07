@@ -120,7 +120,8 @@ public final class NamesStyleViewModel {
                 new LexiconActions(lexicon, calls, lexiconRows, rows, messages, notice),
                 () -> projectId,
                 this::whileCurrent,
-                modelRuns::suggestRenderings);
+                new RecurringTerms.ModelActions(
+                        modelRuns::suggestRenderings, modelRuns::scanTerms, modelRuns::reviewTerms));
         this.edits = new GlossaryRowEdits(glossary, calls, rows, messages, notice, restorations);
         this.files = new GlossaryFiles(glossary, calls, rows, notice, new ImportSummary(messages));
         this.additions = new GlossaryAdditions(

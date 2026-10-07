@@ -149,6 +149,32 @@ final class GlossaryModelRuns {
                 this::renderingsSuggested);
     }
 
+    void scanTerms() {
+        final String project = screen.project().get();
+        final int before = screen.lexiconRows().size();
+        start(
+                ActivityKind.GLOSSARY_SCAN,
+                MessageKey.RECURRING_NO_MODEL_TERMS,
+                (model, progress) -> screen.lexicon().scanWithModel(project, model, progress),
+                all -> termsChanged(all, all.size() - before, MessageKey.RECURRING_MODEL_SCANNED));
+    }
+
+    void reviewTerms() {
+        final String project = screen.project().get();
+        final int before = screen.lexiconRows().size();
+        start(
+                ActivityKind.GLOSSARY_REVIEW,
+                MessageKey.RECURRING_NO_MODEL_TERMS,
+                (model, progress) -> screen.lexicon().review(project, model, progress),
+                all -> termsChanged(all, before - all.size(), MessageKey.RECURRING_MODEL_REVIEWED));
+    }
+
+    private void termsChanged(final List<LexiconEntry> all, final int changed, final MessageKey line) {
+        log.info("model action on recurring terms changed {} of {}", changed, all.size());
+        screen.lexiconRows().setAll(all);
+        line(GlossaryNotice.Level.INFO, screen.messages().get(line, Math.max(0, changed)));
+    }
+
     /** Stops the action under way, if any; the glossary keeps what it had. */
     void stop() {
         final Future<?> current = running;

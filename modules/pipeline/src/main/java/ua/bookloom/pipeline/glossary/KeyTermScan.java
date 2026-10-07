@@ -53,6 +53,10 @@ public final class KeyTermScan {
     /** The most terms one scan proposes. */
     static final int MAX_PROPOSALS = 30;
 
+    /** The fewest uses a word needs before it is shown to the model as a candidate. */
+    static final int FREQUENT_MIN_COUNT = 6;
+
+    private static final int FREQUENT_MIN_LETTERS = 4;
     private static final int MIN_WORD_LETTERS = 3;
     private static final String TITLES_DIRECTORY = "titles/";
     private static final String FALLBACK_LANGUAGE = "en";
@@ -82,6 +86,35 @@ public final class KeyTermScan {
         log.debug("Key-term scan counted {} words, {} proposed", seen.size(), kept.size());
         kept.forEach(candidate -> log.trace("Key term {} x{}", candidate.term(), candidate.count()));
         return kept;
+    }
+
+    /**
+     * The words of the segments the model may choose recurring terms among: every word the book writes mostly in lower
+     * case and often enough, that is no function word. The model, not a frequency list, decides which are terms.
+     *
+     * @param segments the non-null segments to read, by their masked text
+     * @param sourceLanguage the book's BCP 47 tag, choosing the stop-word list; null reads English
+     * @param limit the most words returned; positive
+     * @return the words in lower case with their counts, most frequent first; never null
+     */
+    public static List<NameCandidate> frequentWords(
+            final List<Segment> segments, @Nullable final String sourceLanguage, final int limit) {
+        Objects.requireNonNull(segments, "segments");
+        final List<Occurrences.Read> read = ScanText.of(segments, sourceLanguage).stream()
+                .map(Occurrences::read)
+                .toList();
+        final WordCounts counts = WordCounts.of(read);
+        final Set<String> stopWords = StopWords.of(sourceLanguage);
+        final List<NameCandidate> frequent = tally(read).values().stream()
+                .filter(tally -> tally.count() >= FREQUENT_MIN_COUNT)
+                .filter(tally -> tally.term().codePointCount(0, tally.term().length()) >= FREQUENT_MIN_LETTERS)
+                .filter(tally -> !stopWords.contains(tally.term()))
+                .filter(tally -> counts.lowerShare(tally.term()) >= FrequencyScan.LOWER_SHARE_LIMIT)
+                .sorted(Comparator.comparingInt(NameCandidate::count).reversed())
+                .limit(limit)
+                .toList();
+        log.debug("Frequent words {} of {} kept", frequent.size(), read.size());
+        return frequent;
     }
 
     /**

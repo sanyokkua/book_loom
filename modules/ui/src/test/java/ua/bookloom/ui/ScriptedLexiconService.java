@@ -26,6 +26,8 @@ public final class ScriptedLexiconService implements LexiconService {
     private final List<LexiconEntry> held = new CopyOnWriteArrayList<>();
     private final List<LexiconEntry> scanFinds = new CopyOnWriteArrayList<>();
     private final List<LexiconEntry> suggestions = new CopyOnWriteArrayList<>();
+    private final List<LexiconEntry> modelFinds = new CopyOnWriteArrayList<>();
+    private final List<String> reviewDrops = new CopyOnWriteArrayList<>();
 
     /** Puts entries in the list the service holds. */
     public void holds(final LexiconEntry... entries) {
@@ -40,6 +42,16 @@ public final class ScriptedLexiconService implements LexiconService {
     /** Names the entries, with their suggested renderings, the next suggestion answers with. */
     public void willSuggest(final LexiconEntry... entries) {
         suggestions.addAll(List.of(entries));
+    }
+
+    /** Names what the next model scan adds. */
+    public void modelWillFind(final LexiconEntry... entries) {
+        modelFinds.addAll(List.of(entries));
+    }
+
+    /** Names the terms the next model review drops. */
+    public void reviewWillDrop(final String... terms) {
+        reviewDrops.addAll(List.of(terms));
     }
 
     /** Every call as {@code method(arguments)}, in order. */
@@ -63,6 +75,24 @@ public final class ScriptedLexiconService implements LexiconService {
         calls.add("scan(" + projectId + ")");
         held.addAll(scanFinds);
         scanFinds.clear();
+        return Result.ok(List.copyOf(held));
+    }
+
+    @Override
+    public Result<List<LexiconEntry>> scanWithModel(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        calls.add("scanWithModel(" + projectId + ")");
+        held.addAll(modelFinds);
+        modelFinds.clear();
+        return Result.ok(List.copyOf(held));
+    }
+
+    @Override
+    public Result<List<LexiconEntry>> review(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
+        calls.add("review(" + projectId + ")");
+        held.removeIf(entry -> reviewDrops.contains(entry.term()));
+        reviewDrops.clear();
         return Result.ok(List.copyOf(held));
     }
 

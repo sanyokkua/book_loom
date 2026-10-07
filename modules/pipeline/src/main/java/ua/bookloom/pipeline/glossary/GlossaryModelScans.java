@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public final class GlossaryModelScans {
     private final PreScan preScan;
     private final TermReview termReview;
     private final SuggestTargets suggestTargets;
+    private final TermChoice termChoice;
     private final Clock clock;
 
     /** What a model action of the glossary runs on. */
@@ -77,6 +79,24 @@ public final class GlossaryModelScans {
         return book(projectId)
                 .flatMap(book -> suggestTargets.suggestOnto(
                         entries, book.segments(), book.frame(), book.names(), calls(model, progress, book)));
+    }
+
+    /**
+     * Asks the model which of the recurring-term candidates a translator must render consistently; nothing is written.
+     *
+     * @param projectId the non-null project whose book gives each term its example sentence
+     * @param terms the non-null candidate terms
+     * @param model the non-null model to call
+     * @param progress the non-null receiver of each call's start and finish
+     * @return the terms to keep, as lexicon keys, or the first failed call's error
+     */
+    public Result<Set<String>> chooseTerms(
+            final String projectId,
+            final List<String> terms,
+            final ChatModel model,
+            final Consumer<JobEvent> progress) {
+        return book(projectId)
+                .flatMap(book -> termChoice.choose(terms, book.segments(), book.frame(), calls(model, progress, book)));
     }
 
     private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {

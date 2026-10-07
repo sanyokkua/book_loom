@@ -51,7 +51,8 @@ class PromptShapeTest {
             "summary", "summary",
             "draft-batch-json", "items",
             "suspicious-words", "words",
-            "brief-suggestion", "genre");
+            "brief-suggestion", "genre",
+            "term-choice", "terms");
 
     // The draft system measured 698 before the language-rules map replaced the per-language example files.
     private static final int DRAFT_SYSTEM_BUDGET = 697;
@@ -84,7 +85,8 @@ class PromptShapeTest {
                 "SUMMARY",
                 "SUSPICIOUS_WORDS",
                 "FILE_NAME",
-                "BRIEF_SUGGESTION"
+                "BRIEF_SUGGESTION",
+                "TERM_CHOICE"
             },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {

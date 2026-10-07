@@ -851,6 +851,16 @@ public enum MessageKey {
     RECURRING_FIND("namesStyle.recurring.find"),
     /** Hover explanation of the control labelled by {@link #RECURRING_FIND}. */
     RECURRING_FIND_TIP("namesStyle.recurring.find.tip"),
+    /** Button that asks the model to choose recurring terms among the book's frequent words. */
+    RECURRING_MODEL_SCAN("namesStyle.recurring.modelScan"),
+    /** Line shown when a model scan or review of recurring terms is asked for and no model is chosen. */
+    RECURRING_NO_MODEL_TERMS("namesStyle.recurring.noModelTerms"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_MODEL_SCAN}. */
+    RECURRING_MODEL_SCAN_TIP("namesStyle.recurring.modelScan.tip"),
+    /** Button that asks the model which recurring terms to keep. */
+    RECURRING_MODEL_REVIEW("namesStyle.recurring.modelReview"),
+    /** Hover explanation of the control labelled by {@link #RECURRING_MODEL_REVIEW}. */
+    RECURRING_MODEL_REVIEW_TIP("namesStyle.recurring.modelReview.tip"),
     /** Button that asks the model for a rendering of each term that has none. */
     RECURRING_SUGGEST("namesStyle.recurring.suggest"),
     /** Hover explanation of the control labelled by {@link #RECURRING_SUGGEST}. */
@@ -895,6 +905,10 @@ public enum MessageKey {
     RECURRING_NO_MODEL("namesStyle.recurring.noModel"),
     /** Result of the suggestion of renderings; argument 0 is how many terms now have a rendering, as an Integer. */
     RECURRING_SUGGESTED("namesStyle.recurring.suggested"),
+    /** Line after the model scan of recurring terms; argument 0 is how many terms were added. */
+    RECURRING_MODEL_SCANNED("namesStyle.recurring.modelScanned"),
+    /** Line after the model review of recurring terms; argument 0 is how many terms were removed. */
+    RECURRING_MODEL_REVIEWED("namesStyle.recurring.modelReviewed"),
     /** Refusal of a term the glossary or the list already holds; argument 0 is the typed term. */
     RECURRING_DUPLICATE("namesStyle.recurring.duplicate"),
     /** Refusal of a lock on a term that has no target. */
