@@ -141,10 +141,49 @@ public enum MessageKey {
     SHELL_RUN_ELAPSED("shell.run.elapsed"),
     /** Title-bar time left; argument 0 is the formatted duration. */
     SHELL_RUN_LEFT("shell.run.left"),
-    /** Title-bar dial and review mode of the run; argument 0 is the dial's name, argument 1 the review mode's. */
+    /** What the names.translate option does, shown under its choice and on hover. */
+    BRIEF_HELP_NAMES_TRANSLATE("brief.help.names.translate"),
+    /** What the names.transliterate option does, shown under its choice and on hover. */
+    BRIEF_HELP_NAMES_TRANSLITERATE("brief.help.names.transliterate"),
+    /** What the names.keepOriginal option does, shown under its choice and on hover. */
+    BRIEF_HELP_NAMES_KEEP_ORIGINAL("brief.help.names.keepOriginal"),
+    /** What the foreign.keep option does, shown under its choice and on hover. */
+    BRIEF_HELP_FOREIGN_KEEP("brief.help.foreign.keep"),
+    /** What the foreign.translate option does, shown under its choice and on hover. */
+    BRIEF_HELP_FOREIGN_TRANSLATE("brief.help.foreign.translate"),
+    /** What the foreign.translateNote option does, shown under its choice and on hover. */
+    BRIEF_HELP_FOREIGN_TRANSLATE_NOTE("brief.help.foreign.translateNote"),
+    /** What the footnotes.translate option does, shown under its choice and on hover. */
+    BRIEF_HELP_FOOTNOTES_TRANSLATE("brief.help.footnotes.translate"),
+    /** What the footnotes.keep option does, shown under its choice and on hover. */
+    BRIEF_HELP_FOOTNOTES_KEEP("brief.help.footnotes.keep"),
+    /** What the units.keep option does, shown under its choice and on hover. */
+    BRIEF_HELP_UNITS_KEEP("brief.help.units.keep"),
+    /** What the units.metric option does, shown under its choice and on hover. */
+    BRIEF_HELP_UNITS_METRIC("brief.help.units.metric"),
+    /** What the register.formal option does, shown under its choice and on hover. */
+    BRIEF_HELP_REGISTER_FORMAL("brief.help.register.formal"),
+    /** What the register.neutral option does, shown under its choice and on hover. */
+    BRIEF_HELP_REGISTER_NEUTRAL("brief.help.register.neutral"),
+    /** What the register.casual option does, shown under its choice and on hover. */
+    BRIEF_HELP_REGISTER_CASUAL("brief.help.register.casual"),
+    /** What the narrator.unspecified option does, shown under its choice and on hover. */
+    BRIEF_HELP_NARRATOR_UNSPECIFIED("brief.help.narrator.unspecified"),
+    /** What the narrator.first option does, shown under its choice and on hover. */
+    BRIEF_HELP_NARRATOR_FIRST("brief.help.narrator.first"),
+    /** What the narrator.third option does, shown under its choice and on hover. */
+    BRIEF_HELP_NARRATOR_THIRD("brief.help.narrator.third"),
+    /** What the gender.unknown option does, shown under its choice and on hover. */
+    BRIEF_HELP_GENDER_UNKNOWN("brief.help.gender.unknown"),
+    /** What the gender.male option does, shown under its choice and on hover. */
+    BRIEF_HELP_GENDER_MALE("brief.help.gender.male"),
+    /** What the gender.female option does, shown under its choice and on hover. */
+    BRIEF_HELP_GENDER_FEMALE("brief.help.gender.female"),
+    /** Title-bar average generation speed; argument 0 is the rounded tokens per second, with a leading ~ if estimated. */
     SHELL_RUN_RATE("shell.run.rate"),
     /** Hover explanation of the text shown by {@link #SHELL_RUN_RATE}. */
     SHELL_RUN_RATE_TIP("shell.run.rate.tip"),
+    /** Title-bar dial and review mode of the run; argument 0 is the dial's name, argument 1 the review mode's. */
     SHELL_RUN_MODE("shell.run.mode"),
     /** Hover explanation of the text shown by {@link #SHELL_RUN_MODE}. */
     SHELL_RUN_MODE_TIP("shell.run.mode.tip"),

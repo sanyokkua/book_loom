@@ -48,11 +48,11 @@ final class BriefPoliciesCard {
                 "brief-policies-card",
                 messages,
                 MessageKey.BRIEF_CARD_POLICIES,
-                BriefCards.field(messages, MessageKey.BRIEF_POLICY_NAMES, names.node()),
+                BriefCards.field(messages, MessageKey.BRIEF_POLICY_NAMES, names.withHelp()),
                 BriefCards.field(
                         messages,
                         MessageKey.BRIEF_POLICY_FOREIGN,
-                        foreign.node(),
+                        foreign.withHelp(),
                         MessageKey.BRIEF_POLICY_FOREIGN_HINT),
                 footnotesAndUnits(messages),
                 BriefCards.field(
@@ -65,8 +65,14 @@ final class BriefPoliciesCard {
                 "brief-policy-footnotes",
                 messages,
                 List.of(
-                        new BriefChoice.Option<>(FootnotePolicy.TRANSLATE, MessageKey.BRIEF_OPTION_TRANSLATE),
-                        new BriefChoice.Option<>(FootnotePolicy.KEEP, MessageKey.BRIEF_OPTION_KEEP)),
+                        new BriefChoice.Option<>(
+                                FootnotePolicy.TRANSLATE,
+                                MessageKey.BRIEF_OPTION_TRANSLATE,
+                                MessageKey.BRIEF_HELP_FOOTNOTES_TRANSLATE),
+                        new BriefChoice.Option<>(
+                                FootnotePolicy.KEEP,
+                                MessageKey.BRIEF_OPTION_KEEP,
+                                MessageKey.BRIEF_HELP_FOOTNOTES_KEEP)),
                 viewModel::setFootnotes);
     }
 
@@ -75,8 +81,10 @@ final class BriefPoliciesCard {
                 "brief-policy-units",
                 messages,
                 List.of(
-                        new BriefChoice.Option<>(UnitPolicy.KEEP, MessageKey.BRIEF_OPTION_KEEP),
-                        new BriefChoice.Option<>(UnitPolicy.METRIC, MessageKey.BRIEF_OPTION_METRIC)),
+                        new BriefChoice.Option<>(
+                                UnitPolicy.KEEP, MessageKey.BRIEF_OPTION_KEEP, MessageKey.BRIEF_HELP_UNITS_KEEP),
+                        new BriefChoice.Option<>(
+                                UnitPolicy.METRIC, MessageKey.BRIEF_OPTION_METRIC, MessageKey.BRIEF_HELP_UNITS_METRIC)),
                 viewModel::setUnits);
     }
 
@@ -85,9 +93,18 @@ final class BriefPoliciesCard {
                 "brief-policy-names",
                 messages,
                 List.of(
-                        new BriefChoice.Option<>(NamePolicy.TRANSLATE, MessageKey.BRIEF_OPTION_TRANSLATE),
-                        new BriefChoice.Option<>(NamePolicy.TRANSLITERATE, MessageKey.BRIEF_OPTION_TRANSLITERATE),
-                        new BriefChoice.Option<>(NamePolicy.KEEP_ORIGINAL, MessageKey.BRIEF_OPTION_KEEP_ORIGINAL)),
+                        new BriefChoice.Option<>(
+                                NamePolicy.TRANSLATE,
+                                MessageKey.BRIEF_OPTION_TRANSLATE,
+                                MessageKey.BRIEF_HELP_NAMES_TRANSLATE),
+                        new BriefChoice.Option<>(
+                                NamePolicy.TRANSLITERATE,
+                                MessageKey.BRIEF_OPTION_TRANSLITERATE,
+                                MessageKey.BRIEF_HELP_NAMES_TRANSLITERATE),
+                        new BriefChoice.Option<>(
+                                NamePolicy.KEEP_ORIGINAL,
+                                MessageKey.BRIEF_OPTION_KEEP_ORIGINAL,
+                                MessageKey.BRIEF_HELP_NAMES_KEEP_ORIGINAL)),
                 viewModel::setNames);
     }
 
@@ -97,10 +114,18 @@ final class BriefPoliciesCard {
                 "brief-policy-foreign",
                 messages,
                 List.of(
-                        new BriefChoice.Option<>(ForeignPassagePolicy.KEEP, MessageKey.BRIEF_OPTION_KEEP_AS_IS),
-                        new BriefChoice.Option<>(ForeignPassagePolicy.TRANSLATE, MessageKey.BRIEF_OPTION_TRANSLATE),
                         new BriefChoice.Option<>(
-                                ForeignPassagePolicy.TRANSLATE_WITH_NOTE, MessageKey.BRIEF_OPTION_TRANSLATE_NOTE)),
+                                ForeignPassagePolicy.KEEP,
+                                MessageKey.BRIEF_OPTION_KEEP_AS_IS,
+                                MessageKey.BRIEF_HELP_FOREIGN_KEEP),
+                        new BriefChoice.Option<>(
+                                ForeignPassagePolicy.TRANSLATE,
+                                MessageKey.BRIEF_OPTION_TRANSLATE,
+                                MessageKey.BRIEF_HELP_FOREIGN_TRANSLATE),
+                        new BriefChoice.Option<>(
+                                ForeignPassagePolicy.TRANSLATE_WITH_NOTE,
+                                MessageKey.BRIEF_OPTION_TRANSLATE_NOTE,
+                                MessageKey.BRIEF_HELP_FOREIGN_TRANSLATE_NOTE)),
                 viewModel::setForeignPassages);
     }
 
@@ -124,8 +149,8 @@ final class BriefPoliciesCard {
     }
 
     private Node footnotesAndUnits(final Messages messages) {
-        final VBox left = BriefCards.field(messages, MessageKey.BRIEF_POLICY_FOOTNOTES, footnotes.node());
-        final VBox right = BriefCards.field(messages, MessageKey.BRIEF_POLICY_UNITS, units.node());
+        final VBox left = BriefCards.field(messages, MessageKey.BRIEF_POLICY_FOOTNOTES, footnotes.withHelp());
+        final VBox right = BriefCards.field(messages, MessageKey.BRIEF_POLICY_UNITS, units.withHelp());
         HBox.setHgrow(left, Priority.ALWAYS);
         HBox.setHgrow(right, Priority.ALWAYS);
         return new HBox(PAIR_SPACING, left, right);

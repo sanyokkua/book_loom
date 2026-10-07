@@ -54,9 +54,18 @@ final class BriefToneCard {
                 "brief-tone-register",
                 messages,
                 List.of(
-                        new BriefChoice.Option<>(Register.FORMAL_LITERARY, MessageKey.BRIEF_REGISTER_FORMAL),
-                        new BriefChoice.Option<>(Register.NEUTRAL, MessageKey.BRIEF_REGISTER_NEUTRAL),
-                        new BriefChoice.Option<>(Register.CASUAL, MessageKey.BRIEF_REGISTER_CASUAL)),
+                        new BriefChoice.Option<>(
+                                Register.FORMAL_LITERARY,
+                                MessageKey.BRIEF_REGISTER_FORMAL,
+                                MessageKey.BRIEF_HELP_REGISTER_FORMAL),
+                        new BriefChoice.Option<>(
+                                Register.NEUTRAL,
+                                MessageKey.BRIEF_REGISTER_NEUTRAL,
+                                MessageKey.BRIEF_HELP_REGISTER_NEUTRAL),
+                        new BriefChoice.Option<>(
+                                Register.CASUAL,
+                                MessageKey.BRIEF_REGISTER_CASUAL,
+                                MessageKey.BRIEF_HELP_REGISTER_CASUAL)),
                 viewModel::setRegister);
         Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
         this.narrator = narratorChoice(viewModel, messages);
@@ -68,11 +77,11 @@ final class BriefToneCard {
                 messages,
                 MessageKey.BRIEF_CARD_TONE,
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_GENRE, genre),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_REGISTER, register.node()),
+                BriefCards.field(messages, MessageKey.BRIEF_TONE_REGISTER, register.withHelp()),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_VOICE, voice),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_AUDIENCE, audience),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR, narrator.node()),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.node()),
+                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR, narrator.withHelp()),
+                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.withHelp()),
                 notice);
     }
 
@@ -91,9 +100,18 @@ final class BriefToneCard {
                 "brief-tone-narrator",
                 messages,
                 List.of(
-                        new BriefChoice.Option<>(NarratorPerson.UNSPECIFIED, MessageKey.BRIEF_NARRATOR_UNSPECIFIED),
-                        new BriefChoice.Option<>(NarratorPerson.FIRST, MessageKey.BRIEF_NARRATOR_FIRST),
-                        new BriefChoice.Option<>(NarratorPerson.THIRD, MessageKey.BRIEF_NARRATOR_THIRD)),
+                        new BriefChoice.Option<>(
+                                NarratorPerson.UNSPECIFIED,
+                                MessageKey.BRIEF_NARRATOR_UNSPECIFIED,
+                                MessageKey.BRIEF_HELP_NARRATOR_UNSPECIFIED),
+                        new BriefChoice.Option<>(
+                                NarratorPerson.FIRST,
+                                MessageKey.BRIEF_NARRATOR_FIRST,
+                                MessageKey.BRIEF_HELP_NARRATOR_FIRST),
+                        new BriefChoice.Option<>(
+                                NarratorPerson.THIRD,
+                                MessageKey.BRIEF_NARRATOR_THIRD,
+                                MessageKey.BRIEF_HELP_NARRATOR_THIRD)),
                 viewModel::setNarratorPerson);
         Tips.install(messages, choice.node(), MessageKey.BRIEF_TONE_NARRATOR_TIP);
         return choice;
@@ -105,9 +123,16 @@ final class BriefToneCard {
                 "brief-tone-narrator-gender",
                 messages,
                 List.of(
-                        new BriefChoice.Option<>(Gender.UNKNOWN, MessageKey.BRIEF_NARRATOR_GENDER_UNKNOWN),
-                        new BriefChoice.Option<>(Gender.MALE, MessageKey.BRIEF_NARRATOR_GENDER_MALE),
-                        new BriefChoice.Option<>(Gender.FEMALE, MessageKey.BRIEF_NARRATOR_GENDER_FEMALE)),
+                        new BriefChoice.Option<>(
+                                Gender.UNKNOWN,
+                                MessageKey.BRIEF_NARRATOR_GENDER_UNKNOWN,
+                                MessageKey.BRIEF_HELP_GENDER_UNKNOWN),
+                        new BriefChoice.Option<>(
+                                Gender.MALE, MessageKey.BRIEF_NARRATOR_GENDER_MALE, MessageKey.BRIEF_HELP_GENDER_MALE),
+                        new BriefChoice.Option<>(
+                                Gender.FEMALE,
+                                MessageKey.BRIEF_NARRATOR_GENDER_FEMALE,
+                                MessageKey.BRIEF_HELP_GENDER_FEMALE)),
                 viewModel::setNarratorGender);
         Tips.install(messages, choice.node(), MessageKey.BRIEF_TONE_NARRATOR_GENDER_TIP);
         return choice;

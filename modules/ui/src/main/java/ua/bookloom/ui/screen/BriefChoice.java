@@ -8,12 +8,15 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.Label;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.controlsfx.control.SegmentedButton;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -31,23 +34,40 @@ import ua.bookloom.ui.i18n.Messages;
 @Slf4j
 final class BriefChoice<E> {
 
-    /** One segment: the value it stands for and the words on it. */
-    record Option<E>(E value, MessageKey label) {}
+    private static final double HELP_SPACING = 4;
+
+    /**
+     * One segment: the value it stands for, the words on it and, when it has one, what choosing it does.
+     *
+     * @param value the value the segment stands for
+     * @param label the words on the segment
+     * @param help what the option does, shown on hover and under the choice while it is selected; or null
+     */
+    record Option<E>(E value, MessageKey label, @Nullable MessageKey help) {
+
+        Option(final E value, final MessageKey label) {
+            this(value, label, null);
+        }
+    }
 
     private final SegmentedButton node;
     private final Map<E, ToggleButton> buttons = new HashMap<>();
     private final Map<ToggleButton, E> values = new HashMap<>();
     private final Map<ToggleButton, String> labels = new LinkedHashMap<>();
     private final Consumer<E> onPick;
+    private final Map<E, String> helps = new HashMap<>();
+    private final Label help = new Label();
     // True while a value from the view model is written into the segments. FX thread only.
     private boolean applying;
 
     BriefChoice(final String id, final Messages messages, final List<Option<E>> options, final Consumer<E> onPick) {
         Objects.requireNonNull(id, "id");
         this.onPick = Objects.requireNonNull(onPick, "onPick");
-        final ToggleButton[] segments = options.stream()
-                .map(option -> segment(messages.get(option.label()), option.value()))
-                .toArray(ToggleButton[]::new);
+        final ToggleButton[] segments =
+                options.stream().map(option -> segment(messages, option)).toArray(ToggleButton[]::new);
+        help.getStyleClass().add("hint");
+        help.setWrapText(true);
+        help.setId(id + "-help");
         this.node = new SegmentedButton(segments);
         node.setId(id);
         node.parentProperty().addListener((observed, was, now) -> watchRoom(now));
@@ -56,6 +76,16 @@ final class BriefChoice<E> {
 
     Node node() {
         return node;
+    }
+
+    /** The choice with a line under it that says what the selected option does; the choice alone when none has help. */
+    Node withHelp() {
+        if (helps.isEmpty()) {
+            return node;
+        }
+        final VBox box = new VBox(HELP_SPACING, node, help);
+        box.setId(node.getId() + "-box");
+        return box;
     }
 
     void show(final E value) {
@@ -70,10 +100,24 @@ final class BriefChoice<E> {
         } finally {
             applying = false;
         }
+        showHelp(value);
     }
 
-    private ToggleButton segment(final String text, final E value) {
+    private void showHelp(final E value) {
+        final String text = helps.get(value);
+        help.setText(text == null ? "" : text);
+        help.setVisible(text != null);
+        help.setManaged(text != null);
+    }
+
+    private ToggleButton segment(final Messages messages, final Option<E> option) {
+        final String text = messages.get(option.label());
+        final E value = option.value();
         final ToggleButton button = new ToggleButton(text);
+        if (option.help() != null) {
+            helps.put(value, messages.get(option.help()));
+            Tips.install(messages, button, option.help());
+        }
         button.setWrapText(true);
         button.setMinWidth(Region.USE_PREF_SIZE);
         buttons.put(value, button);
@@ -127,6 +171,7 @@ final class BriefChoice<E> {
         }
         final E value = Objects.requireNonNull(values.get(now), "a segment of this choice");
         log.debug("choice {} picked {}", node.getId(), value);
+        showHelp(value);
         onPick.accept(value);
     }
 }

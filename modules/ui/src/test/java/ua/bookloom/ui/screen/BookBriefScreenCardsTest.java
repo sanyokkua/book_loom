@@ -295,4 +295,17 @@ class BookBriefScreenCardsTest extends BookBriefScreenTestBase {
             parent.getChildrenUnmodifiable().forEach(child -> collectTexts(child, texts));
         }
     }
+
+    // IF a choice only had a group tooltip, THEN nobody would learn what Transliterate does before picking it.
+    @Test
+    void namePolicy_eachOption_isExplainedUnderTheChoiceWhileSelected() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+
+        final String first = textOf("brief-policy-names-help");
+        onFx(() -> segmented("brief-policy-names").getButtons().get(2).setSelected(true));
+        final String second = textOf("brief-policy-names-help");
+
+        assertThat(first).contains("by its sound");
+        assertThat(second).contains("exactly as written");
+    }
 }
