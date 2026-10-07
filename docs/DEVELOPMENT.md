@@ -494,6 +494,42 @@ target, round-0 hard-gate failures, magician/pentacle/sir/boy splits, name spell
 slips that appear only on 26b with the narrator unset (16 against 0 with it set). It does not reproduce leaked protocol
 text or truncated reviewer replies at this size; the realrun corpus carries those shapes.
 
+### Quality round 2: after the Phase 2 fixes (15e.5–15e.12) {#15e-after2}
+
+Same eval, models and window as the "before" table above; each cell is before → **after**. The fixes: keep the usable
+draft and repair quotes instead of exporting English (15e.5), leaked protocol text (15e.6), reviewer truncation (15e.7),
+compact-line length (15e.8), name-missing precision (15e.9), honest counts (15e.10), target-alphabet check and key-term
+noise (15e.11), lexicon precision (15e.12).
+
+| metric | e4b unset | e4b set | 26b unset | 26b set |
+|---|---:|---:|---:|---:|
+| Flagged of 328 | 19 → **17** | 15 → **12** | 12 → **7** | 18 → **4** |
+| Flagged with no stored target | 2 → **0** | 2 → **0** | 7 → **0** | 11 → **0** |
+| Hard-gate failures at round 0 | 12 → **8** | 16 → **8** | 36 → **5** | 31 → **4** |
+| Narrator gender slips | 1 → **0** | 0 → **0** | 16 → **8** | 0 → **0** |
+| Dominant rendering share | 0.87 → **0.89** | 0.87 → **0.87** | 0.92 → **0.90** | 0.92 → **0.90** |
+| Distinct renderings per term | 1.8 → **2.1** | 1.8 → **1.9** | 1.6 → **1.6** | 1.5 → **1.6** |
+| Name spelling variants | 3 → **3** | 2 → **3** | 2 → **2** | 1 → **2** |
+| Batch fallback rate | 0.01 → **0.02** | 0.01 → **0.01** | 0.07 → **0.07** | 0.05 → **0.09** |
+| Calls per segment | 0.35 → **0.35** | 0.36 → **0.33** | 0.62 → **0.44** | 0.48 → **0.54** |
+| Seconds per segment | 3.8 → **3.7** | 4.0 → **3.6** | 6.3 → **5.0** | 5.6 → **5.2** |
+
+Reading it: segments flagged without a stored target (the 23 English paragraphs of the 6-hour run) are 0 in every run;
+first-round hard-gate failures fall by 33–86 %; leaked protocol text and truncated reviewer replies are 0. Gender slips
+with the narrator unset are the open problem on 26b (8; 0 when the brief names the narrator), and recurring terms still
+split (dominant share 0.89–0.91, 1.6–2.1 renderings per term): the next task, prompting for consistency (15e.13/15e.14).
+
+| realrun kind / call | e4b | 26b |
+|---|---|---|
+| `short-line/draft` | 100 % (6/6) | 100 % (6/6) |
+| `short-line/review` | 33 % (2/6) | 50 % (3/6) |
+| `russian-letters/draft` | 100 % (3/3) | 100 % (3/3) |
+| `russian-letters/review` | 40 % (2/5) | 80 % (4/5) |
+| `invented-word/review` | 0 % (0/3) | 100 % (3/3) |
+| `batch-terms/batch` | 100 % (1/1) | 100 % (1/1) |
+| `reviewer-long/review-batch` | 92 % (11/12) | 92 % (11/12) |
+| `repair/repair-placeholder` | 50 % (2/4) | 100 % (4/4) |
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run
