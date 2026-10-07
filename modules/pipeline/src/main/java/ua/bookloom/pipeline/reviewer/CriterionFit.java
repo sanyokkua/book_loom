@@ -6,6 +6,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -13,8 +14,10 @@ import lombok.NoArgsConstructor;
  * Whether an edit does what its criterion says, for the criteria whose meaning code can read off the change: an
  * omission fix adds words, an addition fix removes them, a quotes fix touches a quotation mark or bracket, a language fix
  * touches a letter of another script than the candidate's own, a terminology fix renders a name the way the candidate
- * or the glossary already does, and a meaning, terminology, gender or agreement fix does not delete more than half of its
- * quote. A small model that cannot find a defect still fills the
+ * or the glossary already does, a meaning, terminology, gender or agreement fix does not delete more than half of its
+ * quote, a gender or agreement fix changes only word endings and never adds or drops a function word, and a meaning fix
+ * brings in one new word, words the text and the glossary already hold, or words of the candidate's own script —
+ * a replacement in another script is an invention, not a correction. A small model that cannot find a defect still fills the
  * slot with a paraphrase under one of these names; such an edit is a false alarm, not evidence, and is ignored.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -35,6 +38,21 @@ final class CriterionFit {
      * @return {@code true} when the change fits the criterion or the criterion is one code cannot read off the change
      */
     static boolean fits(final ReviewEdit edit, final String candidate, final Collection<String> renderings) {
+        return fits(edit, candidate, renderings, Set.of());
+    }
+
+    /**
+     * Checks one edit against its criterion, knowing the target language's function words.
+     *
+     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     *     language lists none, which skips that one rule
+     * @return {@code true} when the change fits the criterion or the criterion is one code cannot read off the change
+     */
+    static boolean fits(
+            final ReviewEdit edit,
+            final String candidate,
+            final Collection<String> renderings,
+            final Set<String> functionWords) {
         final String quote = edit.quote().strip();
         final String replacement = edit.replacement().strip();
         return switch (edit.criterion()) {
@@ -44,8 +62,17 @@ final class CriterionFit {
             case LANGUAGE -> hasForeignScriptLetter(quote, candidate);
             case TERMINOLOGY ->
                 keepsMostOfQuote(quote, replacement) && known(quote, replacement, candidate, renderings);
-            case MEANING, GENDER, AGREEMENT ->
-                keepsMostOfQuote(quote, replacement) && !changesNameForm(quote, replacement, renderings);
+            case GENDER, AGREEMENT ->
+                keepsMostOfQuote(quote, replacement)
+                        && !changesNameForm(quote, replacement, renderings)
+                        && WordChange.changesOnlyEndings(quote, replacement)
+                        && !WordChange.changesFunctionWords(quote, replacement, functionWords);
+            case MEANING ->
+                keepsMostOfQuote(quote, replacement)
+                        && !changesNameForm(quote, replacement, renderings)
+                        && (WordChange.bringsInKnownWords(
+                                        quote, replacement, candidate + " " + String.join(" ", renderings))
+                                || !hasForeignScriptLetter(replacement, candidate));
             default -> true;
         };
     }

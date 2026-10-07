@@ -11,6 +11,7 @@ import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.project.AppliedEdit;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.reviewer.EditApplier;
@@ -70,14 +71,23 @@ final class ReviewResolver {
         };
     }
 
+    private Set<String> functionWords() {
+        return LanguageRules.bundled().functionWords(settings.frame().targetLanguage());
+    }
+
     private Result<Resolution> applyEdits(
             final DraftOutcome.Drafted outcome,
             final QaResult initialQa,
             final MachineTarget draft,
             final List<ReviewEdit> edits) {
         final Set<String> baseline = Blockers.of(initialQa);
-        final EditOutcome applied =
-                applier.apply(outcome.maskedReply(), edits, text -> blockersOf(outcome, text), baseline, renderings());
+        final EditOutcome applied = applier.apply(
+                outcome.maskedReply(),
+                edits,
+                text -> blockersOf(outcome, text),
+                baseline,
+                renderings(),
+                functionWords());
         final List<QaFinding> findings = recordedEdits(applied);
         final Edited edited = evaluateEdited(outcome, initialQa, draft, applied);
         final int rounds = applied.applied().isEmpty() ? 0 : 1;

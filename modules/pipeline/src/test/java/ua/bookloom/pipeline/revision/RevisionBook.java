@@ -32,6 +32,7 @@ import ua.bookloom.pipeline.review.ReviewFixtures.Desk;
  */
 final class RevisionBook {
 
+    static final String RUN_HALE = "ch01.xhtml:1";
     static final String HALE_LEFT = "ch01.xhtml:3";
     static final String HALE_CAME = "ch01.xhtml:5";
     static final String SAM_MET_HALE = "ch01.xhtml:7";
@@ -175,6 +176,7 @@ final class RevisionBook {
 
     private static String paragraph(final int chapter, final int index) {
         return switch (chapter + ":" + index) {
+            case "1:1" -> "Run, Hale.";
             case "1:3" -> "Hale went away.";
             case "1:5" -> "Hale came in.";
             case "1:7" -> "Sam met Hale.";

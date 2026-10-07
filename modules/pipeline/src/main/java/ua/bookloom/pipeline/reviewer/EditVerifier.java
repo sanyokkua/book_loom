@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.Tokens;
 
 /**
@@ -45,6 +46,23 @@ public final class EditVerifier {
             final CandidateChecker checker,
             final Set<String> baseline,
             final List<String> renderings) {
+        return verify(candidate, edit, checker, baseline, renderings, Set.of());
+    }
+
+    /**
+     * Verifies one edit as the overload with renderings does, also knowing the target language's function words.
+     *
+     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     *     language lists none
+     * @return the verification, as above
+     */
+    public Verification verify(
+            final String candidate,
+            final ReviewEdit edit,
+            final CandidateChecker checker,
+            final Set<String> baseline,
+            final List<String> renderings,
+            final Set<String> functionWords) {
         Objects.requireNonNull(candidate, "candidate");
         Objects.requireNonNull(edit, "edit");
         Objects.requireNonNull(checker, "checker");
@@ -56,7 +74,10 @@ public final class EditVerifier {
         if (occurrences == 0) {
             return new Verification.Ignored("the quote is not in the candidate");
         }
-        if (!CriterionFit.fits(edit, candidate, renderings)) {
+        if (ControlCharacters.containsControl(edit.replacement())) {
+            return new Verification.Ignored("the replacement holds control characters");
+        }
+        if (!CriterionFit.fits(edit, candidate, renderings, functionWords)) {
             return new Verification.Ignored(
                     "the change does not fit its criterion " + edit.criterion().wire());
         }

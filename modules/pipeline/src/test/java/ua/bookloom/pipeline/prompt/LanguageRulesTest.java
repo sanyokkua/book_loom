@@ -236,4 +236,16 @@ class LanguageRulesTest {
     void firstPersonPronouns_languageThatDropsItsSubjectOrHasNoFile_isEmpty(final String tag) {
         assertThat(LanguageRules.bundled().firstPersonPronouns(tag)).isEmpty();
     }
+
+    @ParameterizedTest
+    @CsvSource({"uk,би", "uk,не", "ru,бы"})
+    void functionWords_languageWithAList_holdsItsParticles(final String tag, final String word) {
+        assertThat(LanguageRules.bundled().functionWords(tag)).contains(word);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"en", "pl", "xx"})
+    void functionWords_languageWithoutAList_isEmpty(final String tag) {
+        assertThat(LanguageRules.bundled().functionWords(tag)).isEmpty();
+    }
 }

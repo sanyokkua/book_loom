@@ -47,6 +47,23 @@ public final class EditApplier {
             final CandidateChecker checker,
             final Set<String> baseline,
             final List<String> renderings) {
+        return apply(candidate, edits, checker, baseline, renderings, Set.of());
+    }
+
+    /**
+     * Applies the verified edits of one segment, also knowing the target language's function words.
+     *
+     * @param functionWords the words an agreement or gender edit may neither add nor drop; never null, empty when the
+     *     language lists none
+     * @return the edited text and what became of every edit
+     */
+    public EditOutcome apply(
+            final String candidate,
+            final List<ReviewEdit> edits,
+            final CandidateChecker checker,
+            final Set<String> baseline,
+            final List<String> renderings,
+            final Set<String> functionWords) {
         Objects.requireNonNull(candidate, "candidate");
         Objects.requireNonNull(edits, "edits");
         String text = candidate;
@@ -59,7 +76,7 @@ public final class EditApplier {
                 notes.add(edit);
                 continue;
             }
-            switch (verifier.verify(text, edit, checker, baseline, renderings)) {
+            switch (verifier.verify(text, edit, checker, baseline, renderings, functionWords)) {
                 case Verification.Verified verified -> {
                     text = verified.edited();
                     applied.add(edit);

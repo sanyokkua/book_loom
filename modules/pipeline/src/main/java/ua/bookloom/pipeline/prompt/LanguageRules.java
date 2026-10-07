@@ -327,6 +327,20 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     /**
+     * The particles and negations of a target language that carry mood or polarity, from its {@code functionWords} key,
+     * so a reviewer edit that only fixes agreement can be held to leaving them alone without hard-coding a language.
+     *
+     * @param targetTag the non-null target language tag
+     * @return the lower-case words; never null, empty when the language lists none
+     */
+    public Set<String> functionWords(final String targetTag) {
+        final String value = targetValue(Objects.requireNonNull(targetTag, "targetTag"), "functionWords");
+        return value == null || value.isBlank()
+                ? Set.of()
+                : Set.copyOf(List.of(value.toLowerCase(Locale.ROOT).split("\\s+")));
+    }
+
+    /**
      * The words that are a first-person subject in a language's narration, from its {@code firstPersonPronouns} key,
      * so the narrator detector is chosen by data and never by a hard-coded tag.
      *

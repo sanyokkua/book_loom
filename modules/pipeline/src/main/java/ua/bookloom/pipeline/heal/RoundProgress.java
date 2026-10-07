@@ -16,7 +16,7 @@ import ua.bookloom.pipeline.qa.QaResult;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class RoundProgress {
+public final class RoundProgress {
 
     /**
      * Whether the round's candidate is better than the best one so far.
@@ -43,6 +43,22 @@ final class RoundProgress {
             log.warn("Repair rounds stopped segment={} round={} reason=no-progress", segmentId, round);
         }
         return improves;
+    }
+
+    /**
+     * Whether a changed text is worse than the one it would replace: more failed hard gates, or as many and more
+     * blockers. Equal is not worse, because a fix the checks cannot see (a gender, a name) leaves them equal.
+     *
+     * @param candidate the evaluated new text; never null
+     * @param before the evaluated text it would replace; never null
+     * @return {@code true} when the new text is worse
+     */
+    public static boolean isWorse(final QaResult candidate, final QaResult before) {
+        return beats(
+                before,
+                candidate,
+                Blockers.of(before).size(),
+                Blockers.of(candidate).size());
     }
 
     private static boolean beats(

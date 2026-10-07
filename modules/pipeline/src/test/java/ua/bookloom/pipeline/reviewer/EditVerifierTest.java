@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.reviewer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -131,6 +132,27 @@ class EditVerifierTest {
     @Test
     void verify_replacementEqualToQuote_isIgnoredAsNoChange() {
         final Verification result = VERIFIER.verify(CANDIDATE, edit("Марія", "Марія"), CLEAN, NO_BLOCKERS);
+
+        assertThat(result).isInstanceOf(Verification.Ignored.class);
+    }
+
+    // IF an agreement edit could drop "би", THEN a reviewer would change the mood of a sentence it was only checking.
+    @Test
+    void verify_agreementEditDroppingAFunctionWord_isIgnored() {
+        final ReviewEdit dropsBy =
+                new ReviewEdit(ReviewCriterion.AGREEMENT, "міг би пройти їхню охорону.", "міг пройти їхню охорону.");
+
+        final Verification result = VERIFIER.verify(
+                "Він міг би пройти їхню охорону.", dropsBy, CLEAN, NO_BLOCKERS, List.of(), Set.of("би", "не"));
+
+        assertThat(result).isInstanceOf(Verification.Ignored.class);
+    }
+
+    // IF a reply's control characters were written into the book, THEN the quote marks would be gone.
+    @Test
+    void verify_replacementWithControlCharacters_isIgnored() {
+        final Verification result =
+                VERIFIER.verify(CANDIDATE, edit("Марія сказав,", "\u001eМарія сказала\u001d,"), CLEAN, NO_BLOCKERS);
 
         assertThat(result).isInstanceOf(Verification.Ignored.class);
     }

@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.pipeline.revision.RevisionBook.RUN_HALE;
 import static ua.bookloom.pipeline.revision.RevisionBook.SAM_MET_HALE;
 import static ua.bookloom.pipeline.revision.RevisionBook.ok;
 import static ua.bookloom.pipeline.revision.RevisionBook.reply;
@@ -10,6 +11,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -98,6 +101,42 @@ class ConsistencyPassNeighbourTest {
 
         assertThat(report.neighbourFixes()).isZero();
         assertThat(book.stored(SAM_MET_HALE).machineTarget()).isEqualTo(BEFORE);
+    }
+
+    // IF an answer that is the old text worse could replace it, THEN a model's slip lands in the book: each row is a
+    // regression a real consistency pass made.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "«Сем зустрів Гейла».|Сем зустрів Гейла.",
+                "Сем зустрів Гейла для протидії забуттю.|Сем зустрів Гейла для senile amnesia.",
+                "Сем зустрів Гейла, що купив у свого знайомого двері.|Сем зустрів Гейла, що купив від.",
+                "Сем зустрів Гейла. Він пішов.|Сем зустрів Гейла, він пішов.",
+                "— Сем зустрів Гейла.|Сем зустрів Гейла."
+            })
+    void run_answerThatLosesQuotesDashesSentencesWordsOrAddsForeignWords_keepsTheOldText(
+            final String old, final String answer) {
+        repaired(SAM_MET_HALE, old);
+        book.model().answerTo(CONSISTENCY, reply(answer));
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        assertThat(report.neighbourFixes()).isZero();
+        assertThat(book.stored(SAM_MET_HALE).machineTarget()).isEqualTo(old);
+    }
+
+    // IF the glossary were not passed to the checks, THEN an answer that drops the name the source calls out would
+    // stay.
+    @Test
+    void run_answerThatDropsTheNameTheSourceCallsOut_keepsTheOldText() {
+        repaired(RUN_HALE, "Біжи, Гейле.");
+        book.model().answerTo(CONSISTENCY, reply("Біжи."));
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        assertThat(report.neighbourFixes()).isZero();
+        assertThat(book.stored(RUN_HALE).machineTarget()).isEqualTo("Біжи, Гейле.");
     }
 
     // IF clean paragraphs were checked too, THEN the pass would cost one model call per paragraph of the book.
