@@ -580,6 +580,33 @@ the `short-line` "good" lines are compact translations that leave words out, so 
 `russian-letters`/`mixed-script` good twins draw `gender` edits that swap a noun (`Стара брама → Старий замок`), which
 a model of e4b's size makes whatever the prompt says.
 
+### Quality round 2: final numbers {#15e-final}
+
+Same eval, models and window as the tables above (Ollama native, Balanced, 328-paragraph sequence fixture). Each cell is
+the "before" table → after Phase 2 → final (after prompting rounds, the narrator question and the review fixes, commit
+2b852b0). The sequence eval has run-to-run noise (about ±1.5 points of dominant share, ±3 first-round hard-gate failures,
+flagged 12–20 on e4b between identical runs), so read single cells as ranges.
+
+| metric (sequence) | e4b, narrator unset | 26b, narrator unset | 26b, narrator detected (Start answer male) |
+|---|---:|---:|---:|
+| Flagged of 328 | 19 → 17 → 20 | 12 → 7 → — | — → — → **4** |
+| Flagged with no stored target (English in the book) | 2 → 0 → **0** | 7 → 0 → — | 0 (after Phase 2 set mode) → **0** |
+| Hard-gate failures at round 0 | 12 → 8 → **0** | 36 → 5 → — | — → — → **2** |
+| Narrator gender slips | 1 → 0 → 0 | 16 → 8 → — | — → — → **0** |
+| Dominant rendering share | 0.87 → 0.89 → 0.87 | 0.92 → 0.90 → — | **0.92** |
+| Name spelling variants | 3 → 3 → **1** | 2 → 2 → — | **0** |
+| Leaked protocol text / truncated reviewer replies | 0 / 0 | 0 / 0 | 0 / 1 (re-asked, nothing flagged) |
+| Calls / seconds per segment | 0.35 / 3.8 → 0.34 / 3.75 | 0.62 / 6.3 → 0.44 / 5.0 | 0.54 / 5.7 |
+
+Real-run corpus (final, no regression against the "after Phase 2" cells): quotes/draft 100 % e4b, 89 % 26b;
+russian-letters/draft 100 % both (the target-alphabet check fixes them in the run); leaked 0 %, too short 0 %,
+truncated 0, stability 100 % / 98.5 %.
+
+What is still open, measured: `magician` and `pentacle` stay split (50–65 % one rendering) because the model splits them
+from the first occurrence; the reviewer edits clean short lines (short-line/review 33 % e4b, 50 % 26b), misses invented
+words on e4b (0 %), and 26b batches still fall back on missing ids (10 %). Speed work (a larger window and
+re-asking only missing ids, task 15e.15) is not started.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run
