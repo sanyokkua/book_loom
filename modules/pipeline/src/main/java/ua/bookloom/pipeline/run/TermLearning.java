@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.run;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,8 +25,10 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
+import ua.bookloom.pipeline.glossary.StopWords;
 import ua.bookloom.pipeline.lexicon.CooccurrenceLearner;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.prompt.LanguageRules;
@@ -36,7 +39,7 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
  * learned rendering. A pair is counted only after its record is committed, so a stop never leaves a count for a
  * decision that was not kept; a run that continues over stored decisions replays them first, which gives the same
  * counts. A term the glossary holds is never learned — the person's lock decides it — and neither is a word the
- * glossary holds as a name. The lexicon is a hint, so a store that cannot be read or written is logged and skipped.
+ * glossary holds as a name or a function word of the target language ({@code коли}). The lexicon is a hint, so a store that cannot be read or written is logged and skipped.
  *
  * <p>Used from the job thread only.
  */
@@ -55,6 +58,7 @@ final class TermLearning {
     private final LexiconRepository lexicon;
     private final GlossaryRepository glossary;
     private final String projectId;
+    private final Set<String> functionWords;
     private final List<Pair> held = new ArrayList<>();
 
     TermLearning(final RunStores stores, final String projectId) {
@@ -78,6 +82,7 @@ final class TermLearning {
         this.lexicon = stores.lexicon();
         this.glossary = stores.glossary();
         this.projectId = Objects.requireNonNull(projectId, "projectId");
+        this.functionWords = StopWords.bundled(targetLanguage).orElse(Set.of());
     }
 
     /**
@@ -145,9 +150,13 @@ final class TermLearning {
         final List<LexiconEntry> tracked = terms.data().stream()
                 .filter(entry -> !locked.contains(LexiconEntry.keyOf(entry.term())))
                 .toList();
-        tracked.forEach(entry -> learner.track(entry.term(), !KeyTermScan.isTitle(entry.term(), sourceLanguage)));
+        tracked.forEach(this::track);
+        final List<GlossaryEntry> unnamed =
+                names.data().stream().filter(TermLearning::lacksSpelling).toList();
+        unnamed.forEach(entry -> learner.trackName(entry.term()));
         pairs.forEach(pair -> learner.observe(pair.source(), pair.target()));
-        final Set<String> excluded = wordsOf(names.data());
+        final Set<String> excluded = new HashSet<>(wordsOf(names.data()));
+        excluded.addAll(functionWords);
         final List<LexiconEntry> affected = tracked.stream()
                 .filter(entry -> everyTerm || named(entry.term(), pairs))
                 .toList();
@@ -156,6 +165,62 @@ final class TermLearning {
                 .filter(entry -> publish(entry, decided.get(entry.term())))
                 .count();
         log.debug("Term learning done project={} tracked={} changed={}", projectId, tracked.size(), changed);
+        learnSpellings(unnamed, withRenderings(excluded, terms.data(), decided), everyTerm ? null : pairs);
+    }
+
+    private void track(final LexiconEntry entry) {
+        if (KeyTermScan.isTitle(entry.term(), sourceLanguage)) {
+            learner.trackTitle(entry.term());
+        } else {
+            learner.track(entry.term(), true);
+        }
+    }
+
+    // A word that renders a recurring term (a title written before every surname: Міс) is never a name's spelling.
+    private static Set<String> withRenderings(
+            final Set<String> excluded,
+            final List<LexiconEntry> terms,
+            final Map<String, LexiconEntry.Learned> learned) {
+        final Set<String> all = new HashSet<>(excluded);
+        terms.forEach(entry -> entry.established().ifPresent(all::add));
+        learned.values().forEach(found -> all.add(found.text()));
+        return all;
+    }
+
+    // A glossary name with no target gets, once the book has used one spelling for it, that spelling as a suggestion
+    // the person can change; the first spelling wins, and a target already there — the person's or the model's — is
+    // never replaced.
+    private void learnSpellings(
+            final List<GlossaryEntry> unnamed, final Set<String> excluded, final @Nullable List<Pair> pairs) {
+        for (final GlossaryEntry entry : unnamed) {
+            if (pairs == null || named(entry.term(), pairs)) {
+                learner.established(entry.term(), excluded).ifPresent(found -> suggest(entry, found));
+            }
+        }
+    }
+
+    private void suggest(final GlossaryEntry entry, final CooccurrenceLearner.Learned found) {
+        final Optional<GlossaryEntry> current =
+                glossary.findByTerm(projectId, entry.term()).data();
+        if (current == null || current.isEmpty() || !lacksSpelling(current.get())) {
+            return;
+        }
+        if (glossary.update(current.get().withSuggestedTarget(found.rendering()))
+                .isErr()) {
+            log.warn("A learned spelling could not be stored project={}", projectId);
+            return;
+        }
+        log.debug("Learned spelling of a name set project={} support={}", projectId, found.support());
+        log.trace("Learned spelling of {} is {}", entry.term(), found.rendering());
+    }
+
+    private static boolean lacksSpelling(final GlossaryEntry entry) {
+        final boolean oneWord = entry.term().strip().indexOf(' ') < 0;
+        final boolean aName = entry.type() == TermType.CHARACTER || entry.type() == TermType.PLACE;
+        return aName
+                && oneWord
+                && !entry.locked()
+                && (entry.target() == null || entry.target().isBlank());
     }
 
     // A rendering stem belongs to one term: the person's choices and the renderings already learned or most used for
@@ -168,8 +233,9 @@ final class TermLearning {
         final Map<String, String> claims = new HashMap<>();
         all.stream().filter(entry -> !affectedTerms.contains(entry.term())).forEach(entry -> claim(claims, entry));
         final Map<String, CooccurrenceLearner.Learned> found = new LinkedHashMap<>();
-        affected.forEach(entry ->
-                learner.established(entry.term(), excluded).ifPresent(learned -> found.put(entry.term(), learned)));
+        affected.forEach(entry -> learner.established(entry.term(), excluded)
+                .or(() -> retained(entry, excluded))
+                .ifPresent(learned -> found.put(entry.term(), learned)));
         final Map<String, LexiconEntry.Learned> kept = new HashMap<>();
         found.entrySet().stream()
                 .sorted(Map.Entry.<String, CooccurrenceLearner.Learned>comparingByValue(
@@ -178,6 +244,13 @@ final class TermLearning {
                         .thenComparing(Map.Entry.comparingByKey()))
                 .forEach(entry -> keepIfUnclaimed(entry.getKey(), entry.getValue(), claims, kept));
         return kept;
+    }
+
+    // A rendering that was established stays while the pairs still support it: the first decision wins, so a book
+    // whose model keeps using a second word is not left with a hint that comes and goes.
+    private Optional<CooccurrenceLearner.Learned> retained(final LexiconEntry entry, final Set<String> excluded) {
+        return Optional.ofNullable(entry.learned())
+                .flatMap(held -> learner.retained(entry.term(), held.text(), excluded));
     }
 
     private void keepIfUnclaimed(

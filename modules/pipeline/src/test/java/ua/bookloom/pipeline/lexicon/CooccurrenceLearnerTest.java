@@ -279,4 +279,118 @@ class CooccurrenceLearnerTest {
 
         assertThat(learner.established("times", NO_NAMES)).isPresent();
     }
+
+    private static void observeMaster(final CooccurrenceLearner learner, final String rendering, final int times) {
+        final List<String> verbs = List.of("прийшов", "пішов", "сів", "встав", "їв", "спав", "курив", "читав");
+        for (int i = 0; i < times; i++) {
+            learner.observe("The master " + i + " did it.", rendering + " " + verbs.get(i % verbs.size()) + ".");
+        }
+    }
+
+    @Test
+    void retained_renderingTheRivalCaughtUp_isKeptWhileTheGateSaysNothing() {
+        final CooccurrenceLearner learner = learnerWithFiller("master");
+        observeMaster(learner, "Господар", 3);
+        assertThat(established(learner, "master")).isPresent();
+        observeMaster(learner, "Учитель", 3);
+
+        assertThat(established(learner, "master")).isEmpty();
+        assertThat(learner.retained("master", "господар", NO_NAMES))
+                .hasValueSatisfying(found -> assertThat(found)
+                        .extracting(Learned::rendering, Learned::support, Learned::occurrences)
+                        .containsExactly("господар", 3, 6));
+    }
+
+    @Test
+    void retained_renderingTheRivalClearlyOvertook_isDropped() {
+        final CooccurrenceLearner learner = learnerWithFiller("master");
+        observeMaster(learner, "Господар", 3);
+        observeMaster(learner, "Учитель", 8);
+
+        assertThat(learner.retained("master", "господар", NO_NAMES)).isEmpty();
+    }
+
+    @Test
+    void retained_renderingTheBookLeftBehind_isDropped() {
+        final CooccurrenceLearner learner = learnerWithFiller("master");
+        observeMaster(learner, "Господар", 3);
+        observeMaster(learner, "Хтось", 30);
+
+        assertThat(learner.retained("master", "господар", NO_NAMES)).isEmpty();
+    }
+
+    @Test
+    void retained_termNobodyTracks_isNothing() {
+        assertThat(new CooccurrenceLearner().retained("master", "господар", NO_NAMES))
+                .isEmpty();
+    }
+
+    @Test
+    void established_nameWithTwoSpellingsOfOneStem_isOneRenderingInTheMostUsedSpelling() {
+        final CooccurrenceLearner learner = learnerWithFiller();
+        learner.trackName("Bartimaeus");
+
+        learner.observe("Bartimaeus laughed.", "Бартімей засміявся.");
+        learner.observe("Then Bartimaeus left.", "Потім пішов Бартимей.");
+        learner.observe("Bartimaeus sat down.", "Бартімей сів.");
+        learner.observe("They saw Bartimaeus.", "Вони побачили Бартімея.");
+
+        assertThat(established(learner, "Bartimaeus"))
+                .hasValueSatisfying(found -> assertThat(found)
+                        .extracting(Learned::rendering, Learned::support, Learned::occurrences)
+                        .containsExactly("Бартімей", 4, 4));
+    }
+
+    @Test
+    void established_nameWithOnlyACommonSentenceStartWord_isNothing() {
+        final CooccurrenceLearner learner = learnerWithFiller();
+        learner.trackName("Bartimaeus");
+
+        learner.observe("Bartimaeus laughed.", "Він засміявся голосно.");
+        learner.observe("Bartimaeus sat.", "Він сидів голосно.");
+        learner.observe("Bartimaeus left.", "Він пішов голосно.");
+
+        assertThat(established(learner, "Bartimaeus")).isEmpty();
+    }
+
+    @Test
+    void established_titleWrittenBesideEverySurname_isNotTheSpellingOfOneName() {
+        final CooccurrenceLearner learner = learnerWithFiller();
+        learner.trackName("Lovelace");
+
+        learner.observe("Ms Lovelace laughed.", "Міс Лавлейс засміялась.");
+        learner.observe("Ms Lovelace sat.", "Міс Лавлейс сиділа.");
+        learner.observe("Ms Lovelace left.", "Міс Лавлейс пішла.");
+        learner.observe("Ms Whitlock came.", "Міс Вітлок прийшла.");
+        learner.observe("Ms Quill spoke.", "Міс Квіл мовила.");
+        learner.observe("Ms Harrow wrote.", "Міс Гарроу писала.");
+
+        assertThat(established(learner, "Lovelace"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("Лавлейс"));
+    }
+
+    @Test
+    void established_titleWrittenWithACapitalMidSentence_isLearnedForATitleTrackedAsOne() {
+        final CooccurrenceLearner learner = learnerWithFiller();
+        learner.trackTitle("Ms");
+
+        learner.observe("Then Ms Hale spoke.", "Тоді Міс Гейл промовила.");
+        learner.observe("Ms Moore left.", "Потім Міс Мур пішла.");
+        learner.observe("They saw Ms West.", "Вони бачили Міс Вест.");
+
+        assertThat(established(learner, "Ms"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("міс"));
+    }
+
+    @Test
+    void established_sameTitleTrackedAsACommonTerm_ignoresTheCapitalisedWord() {
+        final CooccurrenceLearner learner = learnerWithFiller();
+        learner.track("Ms", false);
+
+        learner.observe("Then Ms Hale spoke.", "Тоді Міс Гейл промовила.");
+        learner.observe("Ms Moore left.", "Потім Міс Мур пішла.");
+        learner.observe("They saw Ms West.", "Вони бачили Міс Вест.");
+
+        assertThat(established(learner, "Ms")).isEmpty();
+    }
 }

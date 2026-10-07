@@ -145,6 +145,7 @@ final class SequenceEval {
         final Set<String> ids = outcome.segments().stream().map(Decided::id).collect(Collectors.toSet());
         final List<LexiconEntry> lexicon = Objects.requireNonNull(
                 prepared.stores().lexicon().all(prepared.projectId()).data());
+        logSpellings(prepared);
         final Set<String> failedFirst = capture.hardGateFailuresRound0(ids);
         return new SequenceRun(
                 outcome.report(),
@@ -158,6 +159,15 @@ final class SequenceEval {
                 capture.firstRepairKinds(failedFirst),
                 recorder.reviewerTruncated(),
                 narrator);
+    }
+
+    // The names whose spelling the run suggested, to read beside the spellings the targets carry.
+    private static void logSpellings(final Prepared prepared) {
+        Objects.requireNonNull(
+                        prepared.stores().glossary().all(prepared.projectId()).data())
+                .stream()
+                .filter(entry -> entry.isSuggested() && entry.target() != null)
+                .forEach(entry -> log.info("Sequence eval suggested spelling {} -> {}", entry.term(), entry.target()));
     }
 
     private static Path write(final Path file) {

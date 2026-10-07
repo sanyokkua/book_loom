@@ -1274,6 +1274,15 @@ loses one of them only that one is asked again.
   published to the lexicon before the next chunk's context is read; the decisions of a chunk that was not committed are not
   counted
 
+#### Scenario: The first decision wins and a name gets its spelling
+
+- **WHEN** `master` was learned as `господар` and the model then writes `учитель` as often
+- **THEN** `господар` stays established while no unrelated word has clearly overtaken it, and a stop word such as `коли` is
+  never learned as a rendering
+- **AND** WHEN the glossary holds `Bartimaeus` with no target and the decided pairs carry `Бартімей` or `Бартимей` in three
+  of its segments **THEN** the entry's target becomes the suggestion `Бартімей`, which the next draft is shown under
+  `[Suggested renderings]`, and a target already there is never replaced
+
 #### Scenario: A learned rendering belongs to one term
 
 - **WHEN** the decided pairs name `Mr` with `пан` and `Mrs` with `пані`, or two other terms would both learn `господар`

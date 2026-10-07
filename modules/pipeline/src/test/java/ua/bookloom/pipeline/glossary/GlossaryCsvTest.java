@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
+import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
@@ -255,6 +256,40 @@ class GlossaryCsvTest {
                         tuple("Hale, Margaret", "Гейл, Маргарет", TermType.CHARACTER, Gender.FEMALE, true),
                         tuple("Say \"Hi\"\nnow", "Скажи", TermType.TITLE, Gender.NEUTER, false),
                         tuple("Milton", null, TermType.PLACE, Gender.UNKNOWN, false));
+    }
+
+    // A first run's good glossary is imported into the next book: a suggestion becomes the person's own choice there,
+    // and
+    // the lock and the gender travel as they were.
+    @Test
+    void importCsv_exportedSuggestionAndLockedNames_keepLockAndGenderAndTheSuggestionBecomesTheirs()
+            throws IOException {
+        service.add(new GlossaryEntry(
+                "p1:bartimaeus",
+                PROJECT,
+                "Bartimaeus",
+                "Бартімей",
+                TermType.CHARACTER,
+                Gender.MALE,
+                false,
+                TargetOrigin.SUGGESTED));
+        service.add(new GlossaryEntry(
+                "p1:nathaniel", PROJECT, "Nathaniel", "Натаніел", TermType.CHARACTER, Gender.MALE, true));
+        final Path file = dir.resolve("glossary.csv");
+        service.exportCsv(PROJECT, file);
+
+        service.importCsv("p2", file);
+
+        assertThat(service.entries("p2").data())
+                .extracting(
+                        GlossaryEntry::term,
+                        GlossaryEntry::target,
+                        GlossaryEntry::gender,
+                        GlossaryEntry::locked,
+                        GlossaryEntry::isSuggested)
+                .containsExactly(
+                        tuple("Bartimaeus", "Бартімей", Gender.MALE, false, false),
+                        tuple("Nathaniel", "Натаніел", Gender.MALE, true, false));
     }
 
     private Path write(final String... lines) throws IOException {

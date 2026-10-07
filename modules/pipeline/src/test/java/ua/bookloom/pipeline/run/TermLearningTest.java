@@ -271,4 +271,86 @@ class TermLearningTest {
                 .filteredOn(entry -> entry.term().equals("times"))
                 .allSatisfy(entry -> assertThat(entry.learned()).isNull());
     }
+
+    private List<Map.Entry<Segment, SegmentRecord>> companyBook(final String[][] pairs) {
+        final List<Map.Entry<Segment, SegmentRecord>> book = book(0);
+        for (final String[] pair : pairs) {
+            final Segment segment = segment(book.size(), pair[0]);
+            book.add(Map.entry(segment, decided(segment, pair[1], SegmentStatus.ACCEPTED, SegmentPath.DRAFT)));
+        }
+        return book;
+    }
+
+    @Test
+    void committed_functionWordThatKeepsCompanyWithTheTerm_isNotLearnedAsItsRendering() {
+        learning = new TermLearning(stores, PROJECT, "en", "uk");
+        learnFrom(companyBook(new String[][] {
+            {"The master walked on.", "Старий, коли ішов, мовчав."},
+            {"The master sat down.", "Тоді, коли сів, він зітхнув."},
+            {"The master slept.", "Йому, коли спав, снилося море."}
+        }));
+
+        assertThat(master().learned()).isNull();
+    }
+
+    @Test
+    void committed_nameWithNoTarget_getsTheSpellingTheBookUsedAsASuggestion() {
+        stores.glossary()
+                .add(new GlossaryEntry("g1", PROJECT, "Bartimaeus", null, TermType.CHARACTER, Gender.MALE, false));
+        learning = new TermLearning(stores, PROJECT, "en", "uk");
+        learnFrom(companyBook(new String[][] {
+            {"Bartimaeus walked on.", "Бартімей ішов далі."},
+            {"They saw Bartimaeus.", "Вони бачили Бартимея."},
+            {"Bartimaeus slept.", "Бартімей спав."}
+        }));
+
+        final GlossaryEntry entry =
+                Objects.requireNonNull(stores.glossary().all(PROJECT).data()).getFirst();
+        assertThat(entry.target()).isEqualTo("Бартімей");
+        assertThat(entry.isSuggested()).isTrue();
+    }
+
+    @Test
+    void committed_nameWithALockedTarget_isLeftAlone() {
+        stores.glossary()
+                .add(new GlossaryEntry("g1", PROJECT, "Bartimaeus", "Бартимей", TermType.CHARACTER, Gender.MALE, true));
+        learning = new TermLearning(stores, PROJECT, "en", "uk");
+        learnFrom(companyBook(new String[][] {
+            {"Bartimaeus walked on.", "Бартімей ішов далі."},
+            {"Bartimaeus sat.", "Бартімей сидів."},
+            {"Bartimaeus slept.", "Бартімей спав."}
+        }));
+
+        assertThat(Objects.requireNonNull(stores.glossary().all(PROJECT).data())
+                        .getFirst()
+                        .target())
+                .isEqualTo("Бартимей");
+    }
+
+    @Test
+    void committed_titleWrittenBesideAName_isNotTheNamesSpelling() {
+        stores.lexicon().put(LexiconEntry.of(PROJECT, "Ms"));
+        stores.glossary()
+                .add(new GlossaryEntry("g1", PROJECT, "Lovelace", null, TermType.CHARACTER, Gender.FEMALE, false));
+        learning = new TermLearning(stores, PROJECT, "en", "uk");
+        learnFrom(companyBook(new String[][] {
+            {"Ms Lovelace walked on.", "Тоді Міс Лавлейс ішла далі."},
+            {"Ms Lovelace sat.", "Потім Міс Ловлейс сиділа тихо."},
+            {"Ms Lovelace slept.", "Вночі Міс Лавлис спала міцно."}
+        }));
+
+        final GlossaryEntry entry = Objects.requireNonNull(
+                        stores.glossary().all(PROJECT).data())
+                .stream()
+                .filter(held -> held.term().equals("Lovelace"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(entry.target()).isNull();
+        assertThat(Objects.requireNonNull(stores.lexicon().all(PROJECT).data()).stream()
+                        .filter(held -> held.term().equals("Ms"))
+                        .findFirst()
+                        .orElseThrow()
+                        .learned())
+                .isNotNull();
+    }
 }

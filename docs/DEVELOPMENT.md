@@ -530,6 +530,56 @@ split (dominant share 0.89–0.91, 1.6–2.1 renderings per term): the next task
 | `reviewer-long/review-batch` | 92 % (11/12) | 92 % (11/12) |
 | `repair/repair-placeholder` | 50 % (2/4) | 100 % (4/4) |
 
+### Quality round 3: prompting for consistency (15e.13) {#15e-after3}
+
+Same eval, window and dial as the tables above. Each lever was one change, one e4b sequence run (narrator unset, 20 min);
+the e4b realrun is deterministic (the same 17 groups, reviewer batches ±1 case) so one run decides it. The sequence eval
+is not: three identical runs of the baseline gave 4.3 / 4.6 / 5.2 % flagged, 3 / 6 / 8 first-round hard-gate failures,
+88.2 / 88.1 / 89.4 % dominant share and 1.9 / 1.9 / 2.1 renderings per term, so a move counts only beyond about 1.5
+points of dominant share, 0.2 renderings per term, 2 points of flagged and 3 hard-gate failures.
+
+| round | lever | e4b unset: flagged / hard0 / renderings per term / name variants / dominant / fallbacks | decision |
+|---|---|---|---|
+| 0 | baseline (twice, today's code) | 4.3, 4.6 % / 3, 6 / 1.90, 1.90 / 3, 3 / 88.2, 88.1 % / 1.8, 1.5 % | |
+| 1 | the first rendering stays (`retained`) and a name with no target learns its spelling | 3.0 % / 4 / 1.80 / 2 / 87.9 % / 2.1 % | kept; `Ms → коли` (a function word) learned, so round 3 |
+| 2 | a rendering must not be overtaken by an unrelated word; a name's competitors count every case | 3.0 % / 0 / 1.60 / 1 / 90.2 % / 2.4 % | kept |
+| 3 | stop words of the target language are never a rendering | 5.8 % / 8 / 1.70 / 2 / 90.6 % / 1.5 % | kept (noise in flagged and hard0; `коли` gone) |
+| 4 | term blocks (glossary, suggested, established) moved next to the text, "exactly as shown" | 2.7 % / 4 / 1.60 / 1 / 89.5 % / 0.6 % | **rejected** after the 26b check below |
+| 5 | a title is read with its capitals and a name never takes a word that renders a term (`Lovelace → Міс`) | 5.5 % / 2 / 1.90 / 1 / 87.0 % / 0.6 % (with round 4) | kept (the wrong suggestion is gone; dominant share is noise on `magician`, 30/30) |
+| 6 | reviewer: no noun swap for gender, a clean agreement example instead of the idiom | realrun unchanged on every group | rejected |
+| final | rounds 1-3 and 5 | 5.5 % / 4 / 1.70 / 2 / 90.6 % / 2.7 % | |
+
+What moved. Names: `Bartimaeus` has one spelling in 6 of 7 runs where the baseline split it 25/13 and 24/21 (the learned
+spelling is stored as a suggestion and the model follows it in 50-56 of 56 segments); name variants fall from 3 to 1-2 on e4b and
+from 2 to 0-1 on 26b. Terms the model renders one way first (`master`, `Mr`, `Mrs`, `Ms`, `sir`) stay at 100 % — before,
+`sir` was 77-100 % and `master` 98 % because the hint came and went. The learner no longer learns `коли` for `Ms` (rounds
+1-2 did; round 3 stopped it), and a title before a recurring surname is never that name's spelling (`Lovelace → Міс`, found in round 4).
+What did not move: terms the model splits from the first occurrence (`magician` маг/чарівник 47-64 %, `pentacle`
+пентакл/пентаграма 52-67 %) never reach three matching segments before the rival does, so there is nothing to keep; the
+only ways left are the model's own `terms` report (e4b does not give it) or choosing a winner with no evidence, which
+would also pick a sense of a word with two meanings.
+
+Rejected: moving the term blocks next to the text (round 4). On e4b it cut batch fallbacks from 1.5-2.4 % to 0.6 % in
+three runs; on 26b, one run each, it raised them from 9.7 % to 17.5 % (50 batches with a missing id against 26), calls per
+segment 0.51 to 0.77 and seconds per segment 5.7 to 6.9. 26b is the model of the owner's real run, so the layout stays
+as it was.
+
+| 26b unset | before (15e-after2) | after |
+|---|---:|---:|
+| Flagged of 328 | 7 | 6 (1.8 %) |
+| Hard-gate failures at round 0 | 5 | 9 |
+| Narrator gender slips | 8 | 10 (random, 0-16 between identical runs; the Start question removes them) |
+| Dominant share / renderings per term | 0.90 / 1.6 | 0.91 / 1.7 |
+| Name spelling variants | 2 | 0 |
+| Batch fallback rate | 0.07 | 0.10 |
+| Calls / seconds per segment | 0.44 / 5.0 | 0.51 / 5.7 |
+
+e4b with the narrator detected (final code): flagged 3.4 %, gender slips 0, dominant share 90.8 %, 1.8 renderings per term, 3 names with a stray spelling (`Bartimaeus` 54 of 56 in one, `Whitlock`, `Harrowgate`), fallbacks 1.8 %, 3.56 s per segment. Not measured in this round (time): e4b with the narrator set, 26b with the narrator detected. The realrun table is the same
+as above on e4b and 26b: the prompt levers did not touch the reviewer's weak groups. Two of them are corpus artefacts:
+the `short-line` "good" lines are compact translations that leave words out, so a reviewer that adds them is right, and
+`russian-letters`/`mixed-script` good twins draw `gender` edits that swap a noun (`Стара брама → Старий замок`), which
+a model of e4b's size makes whatever the prompt says.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run

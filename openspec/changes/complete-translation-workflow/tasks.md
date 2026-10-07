@@ -1546,7 +1546,28 @@ The 6 h 17 min GUI run of Bartimaeus 1 (LM Studio, gemma-4-26b, Balanced) beat t
   - **Test first:** the wrong learned `mr → пані` of the run.
   - **Built (box stays open, owner measures):** root cause of `mr → пані`: `TermMatch` lets `Mr` match `Mrs` through the English plural ending, so both titles counted the same segments; `CooccurrenceLearner` now counts a match another tracked term owns (`Mrs`) for that term only (new `TermMatch.matches`). Beyond that, `TermLearning` keeps one owner per rendering stem (`CooccurrenceLearner.stemOf`): other terms' chosen, learned or most-used renderings claim first, the new findings follow by strength (dice), and a finding on a claimed stem is dropped unless the two terms are one word family (equal after an English plural, 4+ letters, so `mr`/`mrs` are not). Lemma: `uk.properties` gains `obliqueEndings` (`LanguageRules.obliqueEndings`); a learner given them prefers, among the forms of the winning stem, one with no such ending (`земля`, not `землі`), and with no data the old rule stands. `слова` (nominative plural against `слово`) is not fixed by endings alone. Title-case names: a tracked non-title term written in lower case in under a fifth of the segments that name it learns nothing (`The Times`), titles of the bundled list (`KeyTermScan.isTitle`) are exempt; `ChunkRunner` passes the frame's languages. The `KeyTermScan` half (generic words) was done in 15e.11. Tests: `CooccurrenceLearnerTest` (mr/mrs, both titles in one segment, earth with and without data, The Times, a common word also in lower case), `TermLearningTest` (shared `господар`, The Times).
 
-- [ ] 15e.13 Prompt for consistency, measured with the 15e.3 sequence eval (keep a change only if a metric moves on e4b and 26b): where and how recurring-term renderings, glossary names and "Established renderings" appear in draft, batch and reviewer prompts (the first rendering the book used for Mr/Mrs/Ms shown early), uk language rules (« » only, apostrophe, dialogue dash, no Russian letters) and reviewer checklists for gender, terminology and quotes, and a glossary CSV round trip that keeps locks and genders. → `:pipeline`, `:ui`
+- [x] 15e.13 Prompt for consistency, measured with the 15e.3 sequence eval (keep a change only if a metric moves on e4b and 26b): where and how recurring-term renderings, glossary names and "Established renderings" appear in draft, batch and reviewer prompts (the first rendering the book used for Mr/Mrs/Ms shown early), uk language rules (« » only, apostrophe, dialogue dash, no Russian letters) and reviewer checklists for gender, terminology and quotes, and a glossary CSV round trip that keeps locks and genders. → `:pipeline`, `:ui`
+
+  - **Rounds** (e4b sequence, narrator unset, one run per row; baseline twice; full numbers and the 26b table in `docs/DEVELOPMENT.md#15e-after3`):
+
+    | # | lever | flagged / hard0 / rend per term / name variants / dominant / fallbacks | decision |
+    |---|---|---|---|
+    | 0 | baseline ×2 | 4.3, 4.6 % / 3, 6 / 1.90 / 3 / 88.2, 88.1 % / 1.8, 1.5 % | |
+    | 1 | lever 3, generalised: a learned rendering stays (`retained`), lever 2: a glossary name with no target learns its spelling as a suggested target | 3.0 % / 4 / 1.80 / 2 / 87.9 % / 2.1 % | kept; `Ms → коли` learned |
+    | 2 | rendering kept only while no unrelated word has clearly overtaken it | 3.0 % / 0 / 1.60 / 1 / 90.2 % / 2.4 % | kept |
+    | 3 | target-language stop words are never a rendering | 5.8 % / 8 / 1.70 / 2 / 90.6 % / 1.5 % | kept |
+    | 4 | lever 1: term blocks next to the text, "exactly as shown" | 2.7 % / 4 / 1.60 / 1 / 89.5 % / 0.6 % | rejected: 26b fallbacks 9.7 → 17.5 %, calls per segment 0.51 → 0.77 |
+    | 5 | a title is read with its capitals; a name never takes a word that renders a term | 5.5 % / 2 / 1.90 / 1 / 87.0 % / 0.6 % | kept (fixes `Lovelace → Міс`) |
+    | 6 | lever 4: reviewer false alarms (no noun swap for gender, clean example) | realrun identical | rejected |
+    | final | 1-3, 5 | 5.5 % / 4 / 1.70 / 2 / 90.6 % / 2.7 % | |
+
+  - **Not done, with reason.** Lever 3 as written (support 1 for titles): `Mr`, `Mrs`, `Ms`, `master`, `sir` are already 100 %
+    after round 1, and a single occurrence cannot name a co-occurring word. Lever 4 uk rules: ASCII quotes, mixed script and
+    Russian letters are 0 in every sequence run. The post-check "name spelling differs from the established form": the
+    learned spelling is followed in 50-56 of 56 segments, no measured gap. Lever 5: the CSV already writes and reads locks
+    and genders; a suggestion imports as the person's own choice (test added), no new columns. Still open: `magician` and
+    `pentacle` (the model splits them from the first occurrence), the reviewer's `gender` noun swaps on e4b, and e4b with the
+    narrator set and 26b with the narrator detected were not re-run for lack of time.
 
 - [x] 15e.14 Narrator: detect first-person narration from the source, ask once at Start translation for the narrator's gender (the owner's recommended default), put the line in every call's style sheet and the reviewer's checks, and seed glossary genders from a small bundled first-name list. → `:pipeline`, `:ui`
   - **Done when:** narrator gender slips in the sequence eval are at most 5.

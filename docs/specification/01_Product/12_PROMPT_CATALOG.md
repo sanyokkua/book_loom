@@ -350,6 +350,17 @@ making them glossary entries. Four prompt-facing parts:
   the suggested renderings. The counts are vocabulary only (memory grows with the book's vocabulary, not its length), a stop
   leaves no count for an undecided segment, and a run that continues over stored decisions replays them first. The
   learned rendering is shown in the Recurring terms card with its support and reaches every prompt that shows the block.
+  Three rules keep it from flapping or from learning a function word (15e.13): a rendering once established is **kept**
+  while its score stays at least 0.4 and at least three quarters of the best unrelated rival's (`retained`; the first
+  decision wins, so a term the model renders two ways keeps the one it was shown first instead of losing it when the
+  second reaches three segments); a word of the target language's bundled stop-word list (`коли`) is never a rendering;
+  and **a glossary name with no target** (a character or a place, one word, unlocked) is tracked the same way, its
+  candidates being the capitalised target words — the spellings that share a stem (`Бартімей`, `Бартимей`) count as one,
+  the most used spelling is kept, and a stem must be written mostly where the name is (at least three quarters of the
+  segments carrying it), so a title that goes before every surname (`Міс`) is never a name's spelling. The learned
+  spelling is stored as the entry's **suggested** target (never over the person's or the model's: only an empty target is
+  filled), is shown in the Names & style table with the suggested badge, and reaches the draft under `[Suggested
+  renderings]`.
 - **Verification** (`TermMappingVerifier`, no prompt): a reported pair counts only when the term is on the closed list and
   occurs as a whole word in the item's source (an English plural or possessive tolerated), and every significant word of
   the rendering (three letters or more; all words when none is that long) has its stem in the target. A stem is a prefix:

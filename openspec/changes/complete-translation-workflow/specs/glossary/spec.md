@@ -720,7 +720,13 @@ least three of its segments carry one stem, the stem's Dice association with the
 that of any unrelated rival; the rendering is the stem's base form. A term the glossary holds SHALL NOT be learned, a word
 the glossary holds SHALL NOT be a rendering, a stop SHALL leave no count for an undecided segment, and a run that continues
 over stored decisions SHALL replay them first. Where the evidence is split (a title before changing surnames, a word with
-two meanings, a term rendered several ways) nothing SHALL be established.
+two meanings, a term rendered several ways) nothing SHALL be established. A rendering once established SHALL be kept
+while its score stays at least 0.4 and at least three quarters of the best unrelated rival's, so the first decision wins;
+a word of the target language's bundled stop-word list SHALL NOT be a rendering. A glossary name of type character or
+place with one word, no target and no lock SHALL be learned the same way over the capitalised target words, the
+spellings sharing a stem counting as one (the most used kept) and the stem needing at least three quarters of its segments
+to name the term; the learned spelling SHALL be stored as the entry's suggested target, never replacing a target that is
+already there.
 
 **Source:** `tasks.md` 15d.9; `docs/specification/01_Product/12_PROMPT_CATALOG.md#recurring-terms`. In plain words: the model
 reports what it used, the app checks the claim against the text so a model cannot teach the book a word it did not write,
