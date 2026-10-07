@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +46,7 @@ final class NameMissingCheck {
         final List<String> alternations = LanguageRules.bundled().stemAlternations(targetLanguage);
         final List<GlossaryEntry> inSource = glossary.stream()
                 .filter(NameMissingCheck::isCheckable)
-                .filter(entry -> TermMatch.occursIn(entry.term(), source))
+                .filter(entry -> TermMatch.occursIn(entry.term(), source) && isWrittenAsName(entry.term(), source))
                 .toList();
         final List<GlossaryEntry> missing = inSource.stream()
                 .filter(entry -> isMissing(entry, source, target, alternations))
@@ -110,6 +111,17 @@ final class NameMissingCheck {
             index++;
         }
         return index;
+    }
+
+    // A name is written with its capital: "jack into" holds the verb, not the character Jack. A term the glossary
+    // spells in lower case is held to the plain match.
+    private static boolean isWrittenAsName(final String term, final String source) {
+        if (term.isEmpty() || !Character.isUpperCase(term.codePointAt(0))) {
+            return true;
+        }
+        return Pattern.compile("(?<![\\p{L}\\p{M}])" + Pattern.quote(term))
+                .matcher(source)
+                .find();
     }
 
     private static boolean isCheckable(final GlossaryEntry entry) {

@@ -134,4 +134,23 @@ class NameMissingCheckTest {
         assertThat(NameMissingCheck.find(glossary, "Nell and Nel came.", "Нелл прийшла.", "uk"))
                 .isEmpty();
     }
+
+    @Test
+    void find_hyphenatedRenderingDeclinedInBothParts_isNotLost() {
+        final List<GlossaryEntry> glossary =
+                List.of(entry("Gentleman Loser", "Джентльмен-Лузер", TermType.PLACE, false));
+
+        assertThat(NameMissingCheck.find(
+                        glossary, "Bobby drank in the Gentleman Loser.", "Боббі пив у Джентльмені-Лузері.", "uk"))
+                .isEmpty();
+    }
+
+    @Test
+    void find_verbThatSpellsACharactersName_isNotTheCharacter() {
+        final List<GlossaryEntry> glossary = List.of(entry("Jack", "Джек", TermType.CHARACTER, false));
+
+        assertThat(NameMissingCheck.find(
+                        glossary, "You can jack into the matrix.", "Можна підключитися до матриці.", "uk"))
+                .isEmpty();
+    }
 }

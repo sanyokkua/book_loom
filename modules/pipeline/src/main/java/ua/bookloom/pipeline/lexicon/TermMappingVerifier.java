@@ -117,7 +117,7 @@ public final class TermMappingVerifier {
 
     private static boolean renderingHolds(
             final String rendering, final List<String> targetWords, final List<String> alternations) {
-        final List<String> words = wordsOf(rendering, false);
+        final List<String> words = partsOf(rendering);
         if (words.isEmpty() || words.size() > MAX_RENDERING_WORDS) {
             return false;
         }
@@ -170,6 +170,16 @@ public final class TermMappingVerifier {
         return WORD.matcher(text.toLowerCase(Locale.ROOT))
                 .results()
                 .flatMap(match -> splitHyphens ? withParts(match.group()) : Stream.of(match.group()))
+                .toList();
+    }
+
+    // A hyphenated rendering is held part by part, because each part declines on its own: Джентльмен-Лузер stands in
+    // the
+    // target as Джентльмені-Лузері.
+    private static List<String> partsOf(final String rendering) {
+        return wordsOf(rendering, false).stream()
+                .flatMap(word -> Stream.of(word.split("-")))
+                .filter(part -> !part.isEmpty())
                 .toList();
     }
 
