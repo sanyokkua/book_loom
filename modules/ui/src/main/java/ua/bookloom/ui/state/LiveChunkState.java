@@ -16,9 +16,10 @@ import ua.bookloom.api.pipeline.SegmentStarted;
 /**
  * The two rows of the live panel, worked out from the segment announcements.
  *
- * <p>A chunk announces several segments before the first is decided, so the segments started and not yet decided are
- * kept in the order they started and the second row shows the newest of them. Not thread-safe: {@link RunSession}
- * calls it under its publish lock.
+ * <p>A chunk announces several segments before the first is decided, and decides them in the order they were announced,
+ * so the segments started and not yet decided are kept in that order and the second row shows the oldest of them: the
+ * one being worked on. When it is decided it moves to the first row and the next one takes its place. Not
+ * thread-safe: {@link RunSession} calls it under its publish lock.
  */
 @Slf4j
 final class LiveChunkState {
@@ -99,10 +100,7 @@ final class LiveChunkState {
     }
 
     LiveRows rows() {
-        LiveRow current = null;
-        for (final LiveRow row : undecided.values()) {
-            current = row;
-        }
+        final LiveRow current = undecided.values().stream().findFirst().orElse(null);
         return new LiveRows(lastDecided, current);
     }
 }

@@ -203,4 +203,23 @@ class RunSessionLiveRowsTest extends LiveSessionTestBase {
                 null,
                 null);
     }
+
+    // IF the second row showed the newest started segment, THEN a chunk of eight would show the last one while the
+    // first
+    // is being judged, and a decided segment would never be seen moving from the second row to the first.
+    @Test
+    void chunkOfSegments_decidedInOrder_secondRowIsTheOldestUndecidedAndDecidedOnesMoveUp() {
+        final RunSession session = session();
+        session.onEvent(started("s-1", "ch1 · p1", SOURCE));
+        session.onEvent(started("s-2", "ch1 · p2", SOURCE));
+        session.onEvent(started("s-3", "ch1 · p3", SOURCE));
+        tick(session);
+        assertThat(rows().current()).extracting(LiveRow::locator).isEqualTo("ch1 · p1");
+
+        session.onEvent(decidedWith("s-1", SegmentStatus.ACCEPTED, detail(0.9, SegmentPath.DRAFT)));
+        tick(session);
+
+        assertThat(rows().lastDecided()).extracting(LiveRow::locator).isEqualTo("ch1 · p1");
+        assertThat(rows().current()).extracting(LiveRow::locator).isEqualTo("ch1 · p2");
+    }
 }
