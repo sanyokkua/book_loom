@@ -1,0 +1,12 @@
+<Input>
+{{#title}}
+Title: {{title}}
+{{/title}}
+{{#author}}
+Author: {{author}}
+{{/author}}
+Opening paragraphs:
+{{opening}}
+</Input>
+
+Return one JSON object with the fields genre, register, voice, audience, narrator and narratorGender.

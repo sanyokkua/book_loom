@@ -159,7 +159,7 @@ public final class ReviewFixtures {
     }
 
     /** A Markdown book of {@code text}, whose paragraphs read {@code Book.md:0}, {@code Book.md:1}…. */
-    static Desk markdown(final Path directory, final String text) {
+    public static Desk markdown(final Path directory, final String text) {
         return open(TestBooks.markdown(directory.resolve("Book.md"), text), brief(AlsoTranslate.defaults()));
     }
 

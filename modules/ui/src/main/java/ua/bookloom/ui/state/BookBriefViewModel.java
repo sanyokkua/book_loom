@@ -53,6 +53,7 @@ public final class BookBriefViewModel {
     private final LanguageSupport languages;
     private final ReadOnlyBooleanWrapper canContinue = new ReadOnlyBooleanWrapper(false);
     private final NarratorNotice narratorNotice;
+    private final StyleSuggestion style;
 
     /**
      * Follows the open book's brief.
@@ -67,7 +68,9 @@ public final class BookBriefViewModel {
             final CurrentProject project,
             final ProjectService projects,
             @BackgroundExecutor final ExecutorService executor,
-            final LanguageSupport languages) {
+            final LanguageSupport languages,
+            final @Nullable SetupHelper setup) {
+        this.style = new StyleSuggestion(project, setup, (what, op) -> change(what, "applied", op));
         this.project = Objects.requireNonNull(project, "project");
         this.languages = Objects.requireNonNull(languages, "languages");
         this.saver = new BriefSaver(
@@ -77,6 +80,15 @@ public final class BookBriefViewModel {
         this.narratorNotice = new NarratorNotice(project, this::setNarratorPerson);
         log.debug(
                 "book brief created, a book is already open: {}", project.book().get() != null);
+    }
+
+    /** A view model that offers no model-suggested style, for a window with no setup helper. */
+    public BookBriefViewModel(
+            final CurrentProject project,
+            final ProjectService projects,
+            final ExecutorService executor,
+            final LanguageSupport languages) {
+        this(project, projects, executor, languages, null);
     }
 
     /**
@@ -205,7 +217,10 @@ public final class BookBriefViewModel {
      */
     public void setRegister(final Register register) {
         Objects.requireNonNull(register, "register");
-        change("register", register.name(), brief -> rebuild(brief, register, null, null, null, null, null, null));
+        change(
+                "register",
+                register.name(),
+                brief -> BriefRebuild.of(brief, register, null, null, null, null, null, null));
     }
 
     /**
@@ -215,7 +230,7 @@ public final class BookBriefViewModel {
      */
     public void setNames(final NamePolicy names) {
         Objects.requireNonNull(names, "names");
-        change("name policy", names.name(), brief -> rebuild(brief, null, names, null, null, null, null, null));
+        change("name policy", names.name(), brief -> BriefRebuild.of(brief, null, names, null, null, null, null, null));
     }
 
     /**
@@ -228,7 +243,7 @@ public final class BookBriefViewModel {
         change(
                 "foreign-passage policy",
                 foreign.name(),
-                brief -> rebuild(brief, null, null, foreign, null, null, null, null));
+                brief -> BriefRebuild.of(brief, null, null, foreign, null, null, null, null));
     }
 
     /**
@@ -241,7 +256,7 @@ public final class BookBriefViewModel {
         change(
                 "footnote policy",
                 footnotes.name(),
-                brief -> rebuild(brief, null, null, null, footnotes, null, null, null));
+                brief -> BriefRebuild.of(brief, null, null, null, footnotes, null, null, null));
     }
 
     /**
@@ -251,7 +266,7 @@ public final class BookBriefViewModel {
      */
     public void setUnits(final UnitPolicy units) {
         Objects.requireNonNull(units, "units");
-        change("unit policy", units.name(), brief -> rebuild(brief, null, null, null, null, units, null, null));
+        change("unit policy", units.name(), brief -> BriefRebuild.of(brief, null, null, null, null, units, null, null));
     }
 
     /**
@@ -264,7 +279,7 @@ public final class BookBriefViewModel {
         change(
                 "balance",
                 Integer.toString(clamped),
-                brief -> rebuild(brief, null, null, null, null, null, clamped, null));
+                brief -> BriefRebuild.of(brief, null, null, null, null, null, clamped, null));
     }
 
     /**
@@ -277,7 +292,7 @@ public final class BookBriefViewModel {
         change(
                 "also translate",
                 alsoTranslate.toString(),
-                brief -> rebuild(brief, null, null, null, null, null, null, alsoTranslate));
+                brief -> BriefRebuild.of(brief, null, null, null, null, null, null, alsoTranslate));
     }
 
     /**
@@ -330,32 +345,6 @@ public final class BookBriefViewModel {
         change("quality dial", dial.name(), brief -> brief.withDial(dial));
     }
 
-    private static BookBrief rebuild(
-            final BookBrief brief,
-            final @Nullable Register register,
-            final @Nullable NamePolicy names,
-            final @Nullable ForeignPassagePolicy foreign,
-            final @Nullable FootnotePolicy footnotes,
-            final @Nullable UnitPolicy units,
-            final @Nullable Integer balance,
-            final @Nullable AlsoTranslate alsoTranslate) {
-        return new BookBrief(
-                brief.sourceLanguage(),
-                brief.targetLanguage(),
-                brief.genre(),
-                register == null ? brief.register() : register,
-                brief.voiceEra(),
-                brief.audience(),
-                names == null ? brief.names() : names,
-                foreign == null ? brief.foreignPassages() : foreign,
-                footnotes == null ? brief.footnotes() : footnotes,
-                units == null ? brief.units() : units,
-                balance == null ? brief.balance() : balance,
-                alsoTranslate == null ? brief.alsoTranslate() : alsoTranslate,
-                brief.dial(),
-                brief.narrator());
-    }
-
     private static @Nullable String blankToNull(final String text) {
         Objects.requireNonNull(text, "text");
         return text.isBlank() ? null : text;
@@ -376,6 +365,15 @@ public final class BookBriefViewModel {
         }
         project.replaceBrief(changed);
         saver.enqueue(book.projectId(), changed);
+    }
+
+    /**
+     * The model's proposal of the tone and style fields.
+     *
+     * @return the proposal, whose {@code ask()} fills the fields from the opening of the book
+     */
+    public StyleSuggestion styleSuggestion() {
+        return style;
     }
 
     private void derive(final @Nullable BookBrief brief) {

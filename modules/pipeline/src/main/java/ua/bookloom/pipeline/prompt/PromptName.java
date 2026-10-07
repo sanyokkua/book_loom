@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.setup.BriefSuggestionSchema;
 
 /**
  * One owner per model call's template files, call kind, response-format name and sampling temperature, so no call
@@ -133,6 +134,28 @@ public enum PromptName {
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
             new Slots(Set.of("source", "text"), Set.of("resolvedFacts", "previous", "next", "tokens"))),
+
+    /** The proposal of the translated book's file name, asked for on the Export screen; one small call. */
+    FILE_NAME(
+            "file-name",
+            CallKind.SUMMARY,
+            "file-name",
+            DraftSchema.SCHEMA,
+            0.2,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("fileName"), Set.of("title", "author"))),
+
+    /** The proposal of the Book Brief's tone and style from the opening of the book; one small call. */
+    BRIEF_SUGGESTION(
+            "brief-suggestion",
+            CallKind.SUMMARY,
+            "brief-suggestion",
+            BriefSuggestionSchema.SCHEMA,
+            0.1,
+            null,
+            new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
+            new Slots(Set.of("opening"), Set.of("title", "author"))),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(

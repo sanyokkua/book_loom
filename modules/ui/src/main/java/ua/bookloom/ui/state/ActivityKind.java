@@ -29,7 +29,11 @@ public enum ActivityKind {
     /** Reading the provider's model list for the settings. */
     MODEL_LISTING(MessageKey.ACTIVITY_MODEL_LISTING, false, false, ViewNames.SETTINGS),
     /** Writing the translated book, whose consistency pass may ask the model. */
-    EXPORT(MessageKey.ACTIVITY_EXPORT, true, false, ViewNames.EXPORT);
+    EXPORT(MessageKey.ACTIVITY_EXPORT, true, false, ViewNames.EXPORT),
+    /** The model's proposal of the translated book's file name. */
+    SUGGEST_NAME(MessageKey.ACTIVITY_SUGGEST_NAME, true, false, ViewNames.EXPORT),
+    /** The model's proposal of the Book Brief's tone and style. */
+    SUGGEST_STYLE(MessageKey.ACTIVITY_SUGGEST_STYLE, true, false, ViewNames.BOOK_BRIEF);
 
     private final MessageKey label;
     private final boolean exclusive;

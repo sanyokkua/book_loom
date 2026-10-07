@@ -60,13 +60,34 @@ final class ExportDestinationCard {
         browse.getStyleClass().add("btn-secondary");
         browse.setOnAction(event -> browse());
         final HBox row = new HBox(ROW_SPACING, field, browse);
+        if (viewModel.nameSuggestion.isOffered()) {
+            row.getChildren().add(suggestButton());
+        }
         row.setAlignment(Pos.CENTER_LEFT);
         return new VBox(
                 ROW_SPACING,
                 BriefCards.field(messages, MessageKey.EXPORT_SAVE_TO, row),
+                nameNotice(),
                 refusal(),
                 currentNote(),
                 replaceSwitch());
+    }
+
+    private Button suggestButton() {
+        final Button suggest = new Button(messages.get(MessageKey.EXPORT_SUGGEST_NAME));
+        suggest.setId("export-suggest-name");
+        Tips.install(messages, suggest, MessageKey.EXPORT_SUGGEST_NAME_TIP);
+        suggest.getStyleClass().add("btn-secondary");
+        suggest.disableProperty().bind(viewModel.nameSuggestion.suggesting());
+        suggest.setOnAction(event -> viewModel.nameSuggestion.ask());
+        return suggest;
+    }
+
+    private Node nameNotice() {
+        final Label notice = BriefCards.hint(messages, MessageKey.EXPORT_SUGGEST_NAME_DONE);
+        notice.setId("export-name-notice");
+        notice.textProperty().bind(viewModel.nameSuggestion.notice());
+        return BriefCards.shownWhile(notice, viewModel.nameSuggestion.notice().isNotEmpty());
     }
 
     private Node refusal() {

@@ -42,14 +42,16 @@ class PromptShapeTest {
             Map.entry("reviewer", "results"),
             Map.entry("reflect", "issues"),
             Map.entry("prescan", "terms"),
-            Map.entry("consistency", "target"));
+            Map.entry("consistency", "target"),
+            Map.entry("file-name", "target"));
 
     private static final Map<String, String> OTHER_REPLY_KEYS = Map.of(
             "review-terms", "verdicts",
             "suggest-targets", "suggestions",
             "summary", "summary",
             "draft-batch-json", "items",
-            "suspicious-words", "words");
+            "suspicious-words", "words",
+            "brief-suggestion", "genre");
 
     // The draft system measured 698 before the language-rules map replaced the per-language example files.
     private static final int DRAFT_SYSTEM_BUDGET = 697;
@@ -75,7 +77,15 @@ class PromptShapeTest {
     @ParameterizedTest
     @EnumSource(
             value = PromptName.class,
-            names = {"PRESCAN", "REVIEW_TERMS", "SUGGEST_TARGETS", "SUMMARY", "SUSPICIOUS_WORDS"},
+            names = {
+                "PRESCAN",
+                "REVIEW_TERMS",
+                "SUGGEST_TARGETS",
+                "SUMMARY",
+                "SUSPICIOUS_WORDS",
+                "FILE_NAME",
+                "BRIEF_SUGGESTION"
+            },
             mode = EnumSource.Mode.EXCLUDE)
     void render_callWithTokens_statesThePlaceholderRule(final PromptName name) {
         assertThat(prompt(name)).contains("⟦gN⟧ token");

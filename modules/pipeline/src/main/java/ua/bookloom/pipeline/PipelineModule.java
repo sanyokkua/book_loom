@@ -9,6 +9,7 @@ import ua.bookloom.api.pipeline.LanguageSupport;
 import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
+import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.export.ExportServiceImpl;
@@ -18,6 +19,7 @@ import ua.bookloom.pipeline.project.ProjectServiceImpl;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.ReviewDeskImpl;
+import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 
 /**
  * Guice bindings owned by {@code :pipeline}: the {@code TranslationEngine}, {@code ExportService},
@@ -50,6 +52,7 @@ public final class PipelineModule extends AbstractModule {
         bind(GlossaryService.class).to(GlossaryServiceImpl.class);
         bind(LexiconService.class).to(LexiconServiceImpl.class);
         bind(ReviewDesk.class).to(ReviewDeskImpl.class);
+        bind(SetupAssistant.class).to(SetupAssistantImpl.class);
         // No dictionary of words is bundled or planned, so a run's word check has no opinion.
         bind(WordValidator.class).toInstance(WordValidator.none());
     }

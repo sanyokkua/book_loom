@@ -85,7 +85,7 @@ abstract class ExportViewModelTestBase extends FxTestBase {
     /** Builds an export view model over this test's collaborators and the given executor. */
     ExportViewModel newExports(final ExecutorService executor) {
         return new ExportViewModel(
-                current, desk, messages, exportService, models, settings, progress, executor, activities);
+                current, desk, messages, exportService, models, settings, progress, executor, activities, null);
     }
 
     /** Replaces the export view model with a new one over the same current project, as a later first visit would. */

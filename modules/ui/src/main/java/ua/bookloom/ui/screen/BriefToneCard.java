@@ -5,11 +5,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javafx.beans.binding.Bindings;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.BookBrief;
@@ -20,8 +23,10 @@ import ua.bookloom.ui.control.SearchableCombo;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.Genre;
+import ua.bookloom.ui.state.StyleSuggestionOutcome;
 
 /**
  * The Tone &amp; style card: a genre box that suggests the forty predefined genres and also takes free text, the
@@ -35,6 +40,7 @@ import ua.bookloom.ui.state.Genre;
 final class BriefToneCard {
 
     private static final int VOICE_ROWS = 2;
+    private static final double FIELD_SPACING = 6;
 
     private final Messages messages;
     private final SearchableCombo<String> genre;
@@ -60,6 +66,7 @@ final class BriefToneCard {
                 "brief-tone-card",
                 messages,
                 MessageKey.BRIEF_CARD_TONE,
+                suggestion(viewModel, messages),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_GENRE, genre),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_REGISTER, register.withHelp()),
                 BriefCards.field(messages, MessageKey.BRIEF_TONE_VOICE, voice),
@@ -87,6 +94,39 @@ final class BriefToneCard {
                                 MessageKey.BRIEF_REGISTER_CASUAL,
                                 MessageKey.BRIEF_HELP_REGISTER_CASUAL)),
                 viewModel::setRegister);
+    }
+
+    // The model reads the opening of the book and fills these fields; the person reviews them before going on.
+    private static Node suggestion(final BookBriefViewModel viewModel, final Messages messages) {
+        if (!viewModel.styleSuggestion().isOffered()) {
+            return new VBox();
+        }
+        final Button suggest = new Button(messages.get(MessageKey.BRIEF_SUGGEST));
+        suggest.setId("brief-suggest-style");
+        suggest.getStyleClass().add("btn-secondary");
+        Tips.install(messages, suggest, MessageKey.BRIEF_SUGGEST_TIP);
+        suggest.disableProperty().bind(viewModel.styleSuggestion().suggesting());
+        suggest.setOnAction(event -> viewModel.styleSuggestion().ask());
+        final Label outcome = new Label();
+        outcome.setId("brief-suggest-outcome");
+        outcome.getStyleClass().add("hint");
+        outcome.setWrapText(true);
+        outcome.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> outcomeText(viewModel.styleSuggestion().outcome().get(), messages),
+                        viewModel.styleSuggestion().outcome()));
+        BriefCards.shownWhile(outcome, outcome.textProperty().isNotEmpty());
+        return new VBox(FIELD_SPACING, suggest, outcome);
+    }
+
+    private static String outcomeText(final StyleSuggestionOutcome outcome, final Messages messages) {
+        return switch (outcome.kind()) {
+            case NONE -> "";
+            case DONE -> messages.get(MessageKey.BRIEF_SUGGEST_DONE);
+            case NO_MODEL -> messages.get(MessageKey.BRIEF_SUGGEST_NO_MODEL);
+            case BUSY -> messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(ActivityKind.SUGGEST_STYLE.label()));
+            case FAILED -> outcome.message();
+        };
     }
 
     private static Label narratorNotice(final BookBriefViewModel viewModel, final Messages messages) {

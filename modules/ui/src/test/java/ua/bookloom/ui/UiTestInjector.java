@@ -3,6 +3,7 @@ package ua.bookloom.ui;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -27,6 +28,7 @@ import ua.bookloom.api.pipeline.LexiconService;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewMode;
+import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
@@ -197,34 +199,47 @@ public final class UiTestInjector {
          * @return a fresh injector; never shares singletons with another call
          */
         public Injector build() {
-            final ReplaceRunPrompt replacement = prompt;
             return Guice.createInjector(Modules.override(new UiModule())
-                    .with(new ReviewPortsModule(glossary, lexicon, desk, reviewMode), new AbstractModule() {
-                        @Override
-                        protected void configure() {
-                            bind(LocaleProvider.class).toInstance(() -> locale);
-                            bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
-                            bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
-                            bind(DiagnosticLog.class).toInstance(diagnosticLog);
-                            bind(ExecutorService.class)
-                                    .annotatedWith(BackgroundExecutor.class)
-                                    .toInstance(daemonExecutor());
-                            bind(ProviderConfigs.class).toInstance(configs);
-                            bind(ProviderVerifier.class).toInstance(verifier);
-                            bind(ModelCatalog.class).toInstance(catalog);
-                            bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
-                            bind(ChatModelFactory.class).toInstance(models);
-                            bind(TranslationEngine.class).toInstance(engine);
-                            bind(ProjectService.class).toInstance(projects);
-                            bind(LanguageSupport.class).toInstance(languages);
-                            bind(ExportService.class).toInstance(exports);
-                            bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
-                            bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
-                            if (replacement != null) {
-                                bind(ReplaceRunPrompt.class).toInstance(replacement);
-                            }
-                        }
-                    }));
+                    .with(new ReviewPortsModule(glossary, lexicon, desk, reviewMode), scriptedPorts(prompt)));
+        }
+
+        private Module scriptedPorts(final @Nullable ReplaceRunPrompt replacement) {
+            return new AbstractModule() {
+                @Override
+                protected void configure() {
+                    bind(LocaleProvider.class).toInstance(() -> locale);
+                    bind(ColorSchemeProvider.class).toInstance(() -> Optional.of(ThemeBlock.LIGHT));
+                    bind(String.class).annotatedWith(BuildVersion.class).toInstance(DEV_VERSION);
+                    bind(DiagnosticLog.class).toInstance(diagnosticLog);
+                    bind(ExecutorService.class)
+                            .annotatedWith(BackgroundExecutor.class)
+                            .toInstance(daemonExecutor());
+                    bind(ProviderConfigs.class).toInstance(configs);
+                    bind(ProviderVerifier.class).toInstance(verifier);
+                    bind(ModelCatalog.class).toInstance(catalog);
+                    bind(ModelCapabilities.class).toInstance(UNKNOWN_CONTEXT);
+                    bind(ChatModelFactory.class).toInstance(models);
+                    bind(TranslationEngine.class).toInstance(engine);
+                    bind(ProjectService.class).toInstance(projects);
+                    bind(LanguageSupport.class).toInstance(languages);
+                    bind(ExportService.class).toInstance(exports);
+                    install(new ExportExtrasModule());
+                    if (replacement != null) {
+                        bind(ReplaceRunPrompt.class).toInstance(replacement);
+                    }
+                }
+            };
+        }
+    }
+
+    /** The export screen's collaborators beside the export service: the setup assistant, the revealer, the chooser. */
+    private static final class ExportExtrasModule extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(SetupAssistant.class).toInstance(new ScriptedSetupAssistant());
+            bind(FileRevealer.class).toInstance(new RecordingFileRevealer());
+            bind(DestinationChooser.class).toInstance(new RecordingDestinationChooser());
         }
     }
 

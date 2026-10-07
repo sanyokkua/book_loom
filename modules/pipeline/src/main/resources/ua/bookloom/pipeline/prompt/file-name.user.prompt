@@ -1,0 +1,11 @@
+<Input>
+File name: {{fileName}}
+{{#title}}
+Title: {{title}}
+{{/title}}
+{{#author}}
+Author: {{author}}
+{{/author}}
+</Input>
+
+Return one JSON object: {"target":"<the new file name without its extension>"}

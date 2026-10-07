@@ -71,6 +71,10 @@ public enum MessageKey {
     ACTIVITY_GLOSSARY_REVIEW("activity.glossaryReview"),
     /** Name of a review-panel segment retry as running model work. */
     ACTIVITY_REVIEW_RETRY("activity.reviewRetry"),
+    /** Name of the file name proposal as running model work. */
+    ACTIVITY_SUGGEST_NAME("activity.suggestName"),
+    /** Name of the Book Brief style proposal as running model work. */
+    ACTIVITY_SUGGEST_STYLE("activity.suggestStyle"),
     /** Name of the provider's inference test as running model work. */
     ACTIVITY_PROVIDER_INFERENCE_TEST("activity.providerInferenceTest"),
     /** Name of the provider's connection or model-list test as running work. */
@@ -491,6 +495,14 @@ public enum MessageKey {
     BRIEF_SUBTITLE("brief.subtitle"),
     /** Heading of the card holding the source and target languages. */
     BRIEF_CARD_LANGUAGES("brief.card.languages"),
+    /** Button on the tone card that asks the model to suggest the style fields. */
+    BRIEF_SUGGEST("brief.suggest"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_SUGGEST}. */
+    BRIEF_SUGGEST_TIP("brief.suggest.tip"),
+    /** Line shown after the model filled in the style fields. */
+    BRIEF_SUGGEST_DONE("brief.suggest.done"),
+    /** Line shown when a style is suggested but no model is chosen. */
+    BRIEF_SUGGEST_NO_MODEL("brief.suggest.noModel"),
     /** Heading of the tone-and-style card. */
     BRIEF_CARD_TONE("brief.card.tone"),
     /** Heading of the translation-policies card. */
@@ -1308,6 +1320,14 @@ public enum MessageKey {
     EXPORT_SAVE_TO("export.saveTo"),
     /** Hover explanation of the control labelled by {@link #EXPORT_SAVE_TO}. */
     EXPORT_SAVE_TO_TIP("export.saveTo.tip"),
+    /** Export button that asks the model for the translated book's file name. */
+    EXPORT_SUGGEST_NAME("export.suggestName"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_SUGGEST_NAME}. */
+    EXPORT_SUGGEST_NAME_TIP("export.suggestName.tip"),
+    /** Line shown when a name is suggested but no model is chosen. */
+    EXPORT_SUGGEST_NAME_NO_MODEL("export.suggestName.noModel"),
+    /** Line shown after the model's name was put in the destination. */
+    EXPORT_SUGGEST_NAME_DONE("export.suggestName.done"),
     /** Button that opens the system save dialog for the destination. */
     EXPORT_BROWSE("export.browse"),
     /** Hover explanation of the control labelled by {@link #EXPORT_BROWSE}. */

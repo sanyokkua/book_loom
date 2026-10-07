@@ -45,8 +45,9 @@ import ua.bookloom.util.paths.DestinationPath;
  * <p>Looking for a file at the destination is I/O, so it runs on the background executor and its answer is published
  * back with {@code Platform.runLater}. Each question bumps a counter and an answer is published only if the counter
  * is what it was when the question was asked, so a slow answer about a path typed earlier can never overwrite a newer
- * one. The same question covers each chosen side file's path, because the export refuses any of them being taken. While an answer is in flight {@link #destinationExists()} keeps its previous value rather than flickering
- * through a guessed one. Everything else here is touched on the FX thread only.
+ * one. The same question covers each chosen side file's path, because the export refuses any of them being taken.
+ * While an answer is in flight {@link #destinationExists()} keeps its previous value rather than flickering through a
+ * guessed one. Everything else here is touched on the FX thread only.
  */
 @Slf4j
 @Singleton
@@ -64,6 +65,7 @@ public final class ExportViewModel {
     private final ExportStatement statement;
     private final ExportOccupancy occupancy;
     private final ExportRun run;
+    public final NameSuggestion nameSuggestion; // the model's proposal of the translated book's file name
     // The dial the consistency switch last followed, so an unrelated brief change leaves the person's choice alone.
     private @Nullable QualityDial followedDial;
     private final ReadOnlyStringWrapper destination = new ReadOnlyStringWrapper("");
@@ -71,8 +73,7 @@ public final class ExportViewModel {
     private final ReadOnlyBooleanWrapper destinationExists = new ReadOnlyBooleanWrapper(false);
     // Whether the person, and not a proposal, put the text in the destination. FX thread only.
     private boolean destinationEdited;
-    // The target the last proposal was made for, so a brief change that leaves it alone proposes nothing. FX thread
-    // only.
+    // The target the last proposal was made for, so a brief change that leaves it alone proposes nothing.
     private @Nullable String proposedFor;
 
     /**
@@ -87,6 +88,7 @@ public final class ExportViewModel {
      * @param progress the workflow marks, where a written book marks the export step
      * @param executor the daemon executor the existence check and the export run on, never the FX thread
      * @param activities the model work under way; an export waits for any that would compete with it for the model
+     * @param setup the model's setup proposals, or null for a window that offers none
      */
     @Inject
     public ExportViewModel(
@@ -98,8 +100,10 @@ public final class ExportViewModel {
             final SettingsViewModel settings,
             final WorkflowProgress progress,
             @BackgroundExecutor final ExecutorService executor,
-            final ActivityTracker activities) {
+            final ActivityTracker activities,
+            final @Nullable SetupHelper setup) {
         this.project = Objects.requireNonNull(project, "project");
+        this.nameSuggestion = new NameSuggestion(project, messages, setup, this);
         this.messages = Objects.requireNonNull(messages, "messages");
         this.statement = new ExportStatement(desk, messages, executor);
         this.occupancy = new ExportOccupancy(executor, this::onOccupancyAnswered);
