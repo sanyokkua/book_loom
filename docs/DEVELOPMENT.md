@@ -200,7 +200,7 @@ Nothing before the Logback step may log (the `bootstrap-no-static-logger` ArchUn
 = another instance already runs (a refusal, not a failure), **1** = startup failed.
 
 **Log level.** `BOOKLOOM_LOG_LEVEL`, else the system property `bookloom.log.level` (`TRACE`/`DEBUG`/`INFO`/`WARN`/
-`ERROR`, any letter case), else the default: `INFO` for an installed (`prod`) app, `DEBUG` for a development run.
+`ERROR`, any letter case), else the default: `INFO` for an installed (`prod`) app, `TRACE` for a development run.
 Both the desktop app and the command line below use this same resolver. A value that names no level falls back to
 that default and logs one `WARN` line naming the rejected value; every other logger stays at `WARN` regardless, so a
 third-party library never drowns BookLoom's own lines. Book text, prompts and model replies are logged only at

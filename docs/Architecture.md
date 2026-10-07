@@ -270,7 +270,7 @@ one and two (phase two is empty by design; the order is enforced). `start` shows
 
 **Log level.** `ua.bookloom.app.bootstrap.LoggingLevelResolver` is a pure function over injected `getEnv`/
 `getProperty` (the same shape as `AppEnvironment.resolve`): `BOOKLOOM_LOG_LEVEL`, else the system property
-`bookloom.log.level` (either in any letter case), else `INFO` for an installed app and `DEBUG` for a development run;
+`bookloom.log.level` (either in any letter case), else `INFO` for an installed app and `TRACE` for a development run;
 a value that names no level falls back to that same default and is named in one `WARN` line.
 `LoggingBootstrap.configure` sets the resolved level on the `ua.bookloom` loggers and `WARN` on everything else, adds
 `%X{job}` to the log pattern, and writes one `INFO` line naming the level and where it came from. Book text, prompts

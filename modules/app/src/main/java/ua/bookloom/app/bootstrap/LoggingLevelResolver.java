@@ -55,7 +55,7 @@ public final class LoggingLevelResolver {
     }
 
     private static Level defaultFor(AppEnvironment environment) {
-        return environment.isDev() ? Level.DEBUG : Level.INFO;
+        return environment.isDev() ? Level.TRACE : Level.INFO;
     }
 
     private static @Nullable Level parse(String value) {

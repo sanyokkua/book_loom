@@ -42,7 +42,7 @@ class LoggingLevelResolverTest {
                         Map.of("bookloom.log.level", "  warn "),
                         Level.WARN,
                         ResolvedLogLevel.Source.PROPERTY),
-                Arguments.of(AppEnvironment.DEV, Map.of(), Map.of(), Level.DEBUG, ResolvedLogLevel.Source.DEFAULT),
+                Arguments.of(AppEnvironment.DEV, Map.of(), Map.of(), Level.TRACE, ResolvedLogLevel.Source.DEFAULT),
                 Arguments.of(AppEnvironment.PROD, Map.of(), Map.of(), Level.INFO, ResolvedLogLevel.Source.DEFAULT));
     }
 
@@ -67,13 +67,13 @@ class LoggingLevelResolverTest {
                         AppEnvironment.DEV,
                         Map.of("BOOKLOOM_LOG_LEVEL", " LOUD "),
                         Map.of("bookloom.log.level", "ERROR"),
-                        Level.DEBUG,
+                        Level.TRACE,
                         "LOUD"),
                 Arguments.of(
                         AppEnvironment.DEV,
                         Map.of("BOOKLOOM_LOG_LEVEL", "   "),
                         Map.of("bookloom.log.level", "ERROR"),
-                        Level.DEBUG,
+                        Level.TRACE,
                         ""),
                 Arguments.of(AppEnvironment.PROD, Map.of(), Map.of("bookloom.log.level", " \t "), Level.INFO, ""),
                 Arguments.of(AppEnvironment.PROD, Map.of(), Map.of("bookloom.log.level", "LOUD"), Level.INFO, "LOUD"));
