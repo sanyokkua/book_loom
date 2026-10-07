@@ -62,8 +62,14 @@ final class RunVerdicts {
             case LENGTH ->
                 qa(candidate).soft().stream()
                         .anyMatch(result -> result.check() == CheckName.LENGTH && !result.passed());
+            case OMISSION -> hardGateFails(candidate, CheckName.SENTENCE_COUNT);
+            case VOCATIVE -> hardGateFails(candidate, CheckName.VOCATIVE);
             case NONE -> false;
         };
+    }
+
+    private boolean hardGateFails(final String candidate, final CheckName name) {
+        return qa(candidate).hardGates().stream().anyMatch(result -> result.check() == name && !result.passed());
     }
 
     /** Whether the run would refuse {@code candidate} before any reviewer reads it: a failed hard gate or soft check. */

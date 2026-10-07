@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.prompt.LanguageRules;
 import ua.bookloom.util.lang.Languages;
 
 /**
@@ -37,9 +38,29 @@ public final class TextChecks {
             final String target,
             @Nullable final String sourceLanguage,
             final String targetLanguage) {
+        return run(source, target, sourceLanguage, targetLanguage, List.of());
+    }
+
+    /**
+     * Runs every deterministic text check on one segment, with the glossary pairs the vocative check holds the target to.
+     *
+     * @param source the source's display text
+     * @param target the candidate's display text, with kept names and protected tokens already out
+     * @param sourceLanguage the source language tag, or {@code null} when none is declared
+     * @param targetLanguage the target language tag
+     * @param glossaryPairs {@code term → target} lines of the glossary names the segment holds
+     * @return the findings; empty when the text is clean; never null
+     */
+    public static List<CheckFinding> run(
+            final String source,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<String> glossaryPairs) {
         Objects.requireNonNull(source, "source");
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
+        Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         if (NonProse.isLocatorOnly(target)) {
             log.debug("Text checks skipped: the target is only digits and locators");
             return List.of();
@@ -50,6 +71,9 @@ public final class TextChecks {
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
+        SentenceCountCheck.find(source, target).ifPresent(findings::add);
+        findings.addAll(VocativeCheck.find(
+                source, target, glossaryPairs, LanguageRules.bundled().stemAlternations(targetLanguage)));
         if (!findings.isEmpty()) {
             report(findings);
         }

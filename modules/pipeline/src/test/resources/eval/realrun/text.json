@@ -548,5 +548,85 @@
   "glossary": [],
   "context": null,
   "rationale": "a faithful compact translation (48 chars, 10 words, ratio 0.42) that LengthCheck refused before 15e.8"
+ },
+ {
+  "id": "omission-tail-partners",
+  "kind": "omission",
+  "check": "OMISSION",
+  "source": "Bobby was another one of those young-old faces you see drinking in the Gentleman Loser, the chic bar for computer cowboys, rustlers, cybernetic second-story men. We were partners.",
+  "good": "Боббі був ще одним із тих молодих-старих облич, які можна побачити за склянкою в «Джентльмені-Лузері», шикарному барі для комп'ютерних ковбоїв, розкрадачів та кібернетичних зломщиків. Ми були партнерами.",
+  "bad": "Боббі був ще одним із тих молодих-старих облич, які можна побачити за склянкою в «Джентльмені-Лузері», шикарному барі для комп'ютерних ковбоїв, розкрадачів та кібернетичних зломщиків.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Bobby",
+    "target": "Боббі",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "Burning Chrome ch4 p14: the last source sentence is gone; the length ratio stays about 1.0, so only a sentence count sees it"
+ },
+ {
+  "id": "omission-tail-short",
+  "kind": "omission",
+  "check": "OMISSION",
+  "source": "The door was open. Nobody came to answer it. She waited there.",
+  "good": "Двері були відчинені. Ніхто не прийшов відповісти. Вона чекала там.",
+  "bad": "Двері були відчинені. Ніхто не прийшов відповісти.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "three source sentences, two target sentences: the tail is dropped"
+ },
+ {
+  "id": "vocative-name-lost",
+  "kind": "vocative",
+  "check": "VOCATIVE",
+  "source": "So when'd you ever buy anything you didn't know what it was, Finn?",
+  "good": "То коли це ти купував щось, не знаючи, що це таке, Фінне?",
+  "bad": "То коли це ти купував щось, чого не знав, що це?",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Finn",
+    "target": "Фінн",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "Burning Chrome ch4 p26: the vocative name at the end of the line is missing from the target"
+ },
+ {
+  "id": "vocative-name-lost-leading",
+  "kind": "vocative",
+  "check": "VOCATIVE",
+  "source": "Finn, you never listen to anyone.",
+  "good": "Фінне, ти нікого не слухаєш.",
+  "bad": "Ти нікого не слухаєш.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Finn",
+    "target": "Фінн",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "a leading vocative dropped; the declined form Фінне counts as present"
  }
 ]

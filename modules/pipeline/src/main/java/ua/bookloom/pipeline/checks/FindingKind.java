@@ -25,5 +25,11 @@ public enum FindingKind {
     UNKNOWN_WORD,
 
     /** A word with a letter the target language's alphabet does not have. */
-    ALPHABET
+    ALPHABET,
+
+    /** A sentence of the source with no counterpart in the target. */
+    SENTENCE_MISSING,
+
+    /** A glossary name the source calls out that the target no longer has. */
+    VOCATIVE_MISSING
 }

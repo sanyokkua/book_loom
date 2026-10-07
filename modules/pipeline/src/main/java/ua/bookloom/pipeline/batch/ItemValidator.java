@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.checks.SentenceCount;
 import ua.bookloom.pipeline.qa.LengthBand;
 
 /**
@@ -57,6 +58,9 @@ final class ItemValidator {
             problems.add(ItemProblem.LEAKED);
         }
         lengthProblem(item.masked(), target, sourceTag, targetTag).ifPresent(problems::add);
+        if (SentenceCount.dropsSentence(DisplayText.of(item.masked()), DisplayText.of(target))) {
+            problems.add(ItemProblem.SENTENCES);
+        }
         log.debug("Validated batch item id={} problems={}", item.id(), problems);
         return problems;
     }

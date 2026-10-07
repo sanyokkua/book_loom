@@ -57,7 +57,8 @@ public final class QaEvaluation {
                 settings.frame(),
                 settings.namePolicy(),
                 settings.glossaryTerms(),
-                lockedRenderings);
+                lockedRenderings,
+                settings.glossaryPairs());
     }
 
     /**
@@ -85,6 +86,37 @@ public final class QaEvaluation {
             final NamePolicy namePolicy,
             final List<String> glossaryTerms,
             final List<LockedRendering> lockedRenderings) {
+        return evaluate(
+                givenHardGates,
+                segment,
+                maskedSource,
+                maskedCandidate,
+                maskedForm,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                lockedRenderings,
+                List.of());
+    }
+
+    /**
+     * Evaluates one candidate as the overload without pairs does, also holding it to the glossary renderings of the
+     * names the source calls out.
+     *
+     * @param glossaryPairs the unlocked glossary renderings of the chunk as {@code term → target} lines
+     * @see #evaluate(List, Segment, String, String, String, CallFrame, NamePolicy, List, List)
+     */
+    public static QaResult evaluate(
+            final List<CheckResult> givenHardGates,
+            final Segment segment,
+            final String maskedSource,
+            final String maskedCandidate,
+            final String maskedForm,
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<LockedRendering> lockedRenderings,
+            final List<String> glossaryPairs) {
         Objects.requireNonNull(givenHardGates, "givenHardGates");
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(maskedSource, "maskedSource");
@@ -105,7 +137,8 @@ public final class QaEvaluation {
                 segment.declaredLanguage(),
                 glossaryTerms,
                 lockedRenderings,
-                frame.narrator());
+                frame.narrator(),
+                glossaryPairs);
         return QaEvaluator.evaluate(givenHardGates, input, frame.wordValidator());
     }
 }

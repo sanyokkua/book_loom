@@ -43,6 +43,12 @@ public enum CheckName {
     /** Text check, blocking: a paragraph of at least 12 words still in the source language. */
     LANGUAGE_IDENTITY(0.0, "language", "language-identity", true),
 
+    /** Text check, blocking: a significant sentence of the source with no counterpart in the target. */
+    SENTENCE_COUNT(0.0, "omission", "sentence-count", true),
+
+    /** Text check, blocking: a glossary name the source calls out that the target has lost. */
+    VOCATIVE(0.0, "omission", "vocative", true),
+
     /** Text check, soft: the same word twice in a row. */
     DUPLICATE_WORD(0.0, "fluency", "duplicate-word", false),
 

@@ -103,7 +103,9 @@ class RealRunCorpusTest {
                 .containsEntry("invented-word", 3L)
                 .containsEntry("russian-letters", 5L)
                 .containsEntry("narrator", 6L)
-                .containsEntry("short-line", 6L);
+                .containsEntry("short-line", 6L)
+                .containsEntry("omission", 2L)
+                .containsEntry("vocative", 2L);
     }
 
     @Test

@@ -35,15 +35,15 @@ final class TextCheckGates {
             return List.of();
         }
         final String target = NameRemoval.targetWithoutNames(input);
-        final List<CheckResult> results =
-                new ArrayList<>(TextChecks.run(
-                                NameRemoval.sourceWithoutNames(input),
-                                target,
-                                input.sourceLanguage(),
-                                input.targetLanguage())
-                        .stream()
-                        .map(TextCheckGates::resultOf)
-                        .toList());
+        final List<CheckResult> results = new ArrayList<>(TextChecks.run(
+                        NameRemoval.sourceWithoutNames(input),
+                        target,
+                        input.sourceLanguage(),
+                        input.targetLanguage(),
+                        input.glossaryPairs())
+                .stream()
+                .map(TextCheckGates::resultOf)
+                .toList());
         AlphabetCheck.find(input.sourceDisplayText(), target, input.targetLanguage()).stream()
                 .map(TextCheckGates::resultOf)
                 .forEach(results::add);
@@ -105,6 +105,8 @@ final class TextCheckGates {
             case GENDER -> CheckName.GENDER;
             case UNKNOWN_WORD -> CheckName.UNKNOWN_WORD;
             case ALPHABET -> CheckName.ALPHABET;
+            case SENTENCE_MISSING -> CheckName.SENTENCE_COUNT;
+            case VOCATIVE_MISSING -> CheckName.VOCATIVE;
         };
     }
 }

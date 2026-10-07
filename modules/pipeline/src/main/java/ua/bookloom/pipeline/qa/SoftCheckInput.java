@@ -26,6 +26,8 @@ import ua.bookloom.api.project.Narrator;
  * @param lockedRenderings the locked glossary terms present in this segment, each with its entered rendering, read
  *     by {@link GlossaryCheck}; a kept foreign run is not listed, its own hard gate covers it
  * @param narrator the Book Brief's narrator, which the target language's gender check holds the text against
+ * @param glossaryPairs the unlocked glossary renderings of the chunk as {@code term → target} lines, which the vocative
+ *     check holds the target to
  */
 public record SoftCheckInput(
         String sourceDisplayText,
@@ -38,7 +40,8 @@ public record SoftCheckInput(
         @Nullable String declaredLanguage,
         List<String> glossaryTerms,
         List<LockedRendering> lockedRenderings,
-        Narrator narrator) {
+        Narrator narrator,
+        List<String> glossaryPairs) {
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies the two list components.
@@ -53,8 +56,38 @@ public record SoftCheckInput(
         Objects.requireNonNull(glossaryTerms, "glossaryTerms");
         Objects.requireNonNull(lockedRenderings, "lockedRenderings");
         Objects.requireNonNull(narrator, "narrator");
+        Objects.requireNonNull(glossaryPairs, "glossaryPairs");
+        glossaryPairs = List.copyOf(glossaryPairs);
         glossaryTerms = List.copyOf(glossaryTerms);
         lockedRenderings = List.copyOf(lockedRenderings);
+    }
+
+    /** An input that names no glossary pairs, so the vocative check has nothing to hold the target to. */
+    public SoftCheckInput(
+            final String sourceDisplayText,
+            final String targetDisplayText,
+            final String targetWithRenderings,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final ForeignPassagePolicy foreignPassagePolicy,
+            final NamePolicy namePolicy,
+            @Nullable final String declaredLanguage,
+            final List<String> glossaryTerms,
+            final List<LockedRendering> lockedRenderings,
+            final Narrator narrator) {
+        this(
+                sourceDisplayText,
+                targetDisplayText,
+                targetWithRenderings,
+                sourceLanguage,
+                targetLanguage,
+                foreignPassagePolicy,
+                namePolicy,
+                declaredLanguage,
+                glossaryTerms,
+                lockedRenderings,
+                narrator,
+                List.of());
     }
 
     /** An input for a book whose narrator is not stated, so no gender check applies. */

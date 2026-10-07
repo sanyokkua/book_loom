@@ -51,6 +51,10 @@ record RunCase(
         GENDER,
         /** A failed length check. */
         LENGTH,
+        /** A source sentence with no counterpart in the target. */
+        OMISSION,
+        /** A vocative glossary name of the source missing from the target. */
+        VOCATIVE,
         /** No production check: only the reviewer can tell. */
         NONE
     }
