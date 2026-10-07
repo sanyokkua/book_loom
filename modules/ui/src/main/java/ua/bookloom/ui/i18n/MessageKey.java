@@ -843,6 +843,12 @@ public enum MessageKey {
     NAMES_STYLE_REMOVE("namesStyle.remove"),
     /** Hover explanation of the control labelled by {@link #NAMES_STYLE_REMOVE}. */
     NAMES_STYLE_REMOVE_TIP("namesStyle.remove.tip"),
+    /** Text shown in place of the glossary rows when the book has no names yet. */
+    NAMES_STYLE_EMPTY("namesStyle.empty"),
+    /** Text shown in place of the glossary rows when the search matches none of them. */
+    NAMES_STYLE_EMPTY_FILTERED("namesStyle.empty.filtered"),
+    /** Text shown in place of the recurring-terms rows when the book has none yet. */
+    RECURRING_EMPTY("namesStyle.recurring.empty"),
     /** Heading of the recurring-terms card. */
     RECURRING_TITLE("namesStyle.recurring.title"),
     /** Line under the heading that says what the card is for. */

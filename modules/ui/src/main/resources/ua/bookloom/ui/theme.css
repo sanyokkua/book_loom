@@ -1536,9 +1536,9 @@
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 240px;
-    /* One fixed row height lets the list skip measuring every row as it scrolls: 6px + 6px padding, 1px divider and
-       the 13px monospaced line with its repeat count (31px measured), rounded up so no font clips it. */
-    -fx-fixed-cell-size: 32px;
+    /* One fixed row height lets the list skip measuring every row as it scrolls: 7px + 7px padding, 1px divider and
+       the 13px monospaced line with its repeat count (31px measured), with room so no font clips it. */
+    -fx-fixed-cell-size: 34px;
 }
 
 .activity-log .list-cell {
@@ -1548,7 +1548,7 @@
     -fx-border-width: 0 0 1px 0;
     -fx-font-family: "Monospaced";
     -fx-font-size: 13px;
-    -fx-padding: 6px 10px 6px 10px;
+    -fx-padding: 7px 10px 7px 10px;
     -fx-pref-width: 0;
     -fx-text-overrun: ellipsis;
 }
@@ -1852,11 +1852,19 @@
     -fx-text-fill: -color-muted;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 0 6px;
 }
 
+/* A row's separator is its own bottom border, so the cells carry no borders and an empty row draws none. */
 .glossary-table .table-row-cell {
     -fx-background-color: transparent;
-    -fx-table-cell-border-color: -color-divider;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.glossary-table .table-row-cell:empty {
+    -fx-border-color: transparent;
 }
 
 .glossary-table .table-row-cell:hover {
@@ -1875,8 +1883,12 @@
 .glossary-table .table-cell {
     -fx-text-fill: -color-text;
     -fx-alignment: CENTER_LEFT;
-    -fx-border-color: transparent;
-    -fx-padding: 4px 8px 4px 8px;
+    -fx-border-width: 0;
+    -fx-padding: 0 8px 0 8px;
+}
+
+.glossary-empty {
+    -fx-text-fill: -color-text;
 }
 
 /* A target the model suggested and nobody confirmed is slanted and badged until the person accepts it. */
@@ -1905,7 +1917,7 @@
     -fx-border-color: transparent;
     -fx-border-width: 1px;
     -fx-border-radius: 6px;
-    -fx-padding: 4px 8px 4px 8px;
+    -fx-padding: 4px 8px 4px 0;
     -fx-cursor: hand;
 }
 

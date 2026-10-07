@@ -193,7 +193,7 @@ class TranslatingObservabilityScreenTest extends TranslatingScreenTestBase {
     void log_shown_linesShareOneFixedHeight() {
         showTranslating();
 
-        assertThat(logList().getFixedCellSize()).isEqualTo(32.0);
+        assertThat(logList().getFixedCellSize()).isEqualTo(34.0);
     }
 
     // IF the chip did not say how the server answers, THEN a dead server would look like a slow book.

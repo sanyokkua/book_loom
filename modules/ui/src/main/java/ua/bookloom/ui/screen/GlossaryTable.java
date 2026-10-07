@@ -85,11 +85,24 @@ final class GlossaryTable {
         table.getStyleClass().add("glossary-table");
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setFixedCellSize(ROW_HEIGHT);
-        table.setPlaceholder(new Label());
+        table.setPlaceholder(emptyLabel(messages, query));
         table.setFocusTraversable(false);
         VBox.setVgrow(table, Priority.ALWAYS);
         table.getColumns().addAll(columns(messages, model));
         return table;
+    }
+
+    private static Label emptyLabel(final Messages messages, final StringProperty query) {
+        final Label empty = new Label();
+        empty.getStyleClass().add("glossary-empty");
+        empty.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                query.get() == null || query.get().isBlank()
+                                        ? MessageKey.NAMES_STYLE_EMPTY
+                                        : MessageKey.NAMES_STYLE_EMPTY_FILTERED),
+                        query));
+        return empty;
     }
 
     private static Predicate<GlossaryEntry> matching(final @Nullable String query) {

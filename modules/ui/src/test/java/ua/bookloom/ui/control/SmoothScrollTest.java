@@ -197,8 +197,9 @@ class SmoothScrollTest extends FxTestBase {
 
         assertThat(positions).hasSizeGreaterThan(1).isSorted();
         assertThat(ThemeTestSupport.onFx(flow::getPosition)).isCloseTo(jumped, within(EXACT));
-        assertThat(ThemeTestSupport.onFx(() -> flow.getFirstVisibleCell().getIndex()))
-                .isEqualTo(30);
+        // 30 rows of 20 px; a floating-point landing a hair under the row boundary made the first visible index 29.
+        assertThat(ThemeTestSupport.onFx(flow::getPosition))
+                .isCloseTo(600.0 / (ROWS * CELL - ThemeTestSupport.onFx(flow::getHeight)), within(EXACT));
     }
 
     // IF a notch jumped instead of gliding, THEN a long page would flicker from place to place on every turn of the

@@ -406,7 +406,7 @@ provider-error (err). FR-NOTIF-02. Specified in `11_NOTIFICATIONS_AND_ERRORS.md#
 ## empty-states {#empty-states}
 
 Every list screen has an empty state (FR-NOTIF-05): Projects ("No projects yet"), the Translating screen's review
-panel ("Nothing flagged"), Providers (no providers configured). P6 reference: each empty state in the mockup.
+panel ("Nothing flagged"), Providers (no providers configured), and the Names & style glossary and Recurring terms tables ("No names yet — run Model scan or add a term"; "No name matches the search" while a search hides every row). P6 reference: each empty state in the mockup.
 
 ## control-mapping-summary {#control-mapping-summary}
 

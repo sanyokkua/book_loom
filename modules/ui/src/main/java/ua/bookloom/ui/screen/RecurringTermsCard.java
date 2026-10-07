@@ -165,7 +165,9 @@ final class RecurringTermsCard {
         table.getStyleClass().add("glossary-table");
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setFixedCellSize(ROW_HEIGHT);
-        table.setPlaceholder(new Label());
+        final Label empty = new Label(messages.get(MessageKey.RECURRING_EMPTY));
+        empty.getStyleClass().add("glossary-empty");
+        table.setPlaceholder(empty);
         table.setFocusTraversable(false);
         table.setPrefHeight(HEADER_HEIGHT + VISIBLE_ROWS * ROW_HEIGHT);
         table.setMinHeight(HEADER_HEIGHT + ROW_HEIGHT);
