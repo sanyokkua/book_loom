@@ -261,7 +261,7 @@ class BatchDraftingJobTest {
     }
 
     @Test
-    void run_noDetectedWindow_sendsTheDefaultOf8192() {
+    void run_noDetectedWindow_sendsTheDefaultWindow() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answerTo(BATCH, batchReply(items(entry("1", T0), entry("2", T1), entry("3", T2), entry("4", T3))));
         final TestProject project = fourParagraphs();
@@ -270,7 +270,7 @@ class BatchDraftingJobTest {
 
         assertThat(model.requests())
                 .extracting(request -> request.contextWindow())
-                .containsOnly(8192);
+                .containsOnly(16_384);
     }
 
     private TestProject lockedNellBook() {

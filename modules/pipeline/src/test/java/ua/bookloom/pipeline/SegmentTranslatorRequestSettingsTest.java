@@ -44,6 +44,6 @@ class SegmentTranslatorRequestSettingsTest {
         assertThat(model.requests())
                 .extracting(request -> request.contextWindow(), request -> request.expectedOutputTokens())
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(8192, 16), org.assertj.core.groups.Tuple.tuple(8192, 16));
+                        org.assertj.core.groups.Tuple.tuple(16384, 16), org.assertj.core.groups.Tuple.tuple(16384, 16));
     }
 }

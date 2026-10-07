@@ -86,7 +86,7 @@ class JobModelCallsTest {
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
                 .map(event -> ((ModelCallStarted) event).request())
-                .containsExactly(new RequestSummary(12, 8192, 256));
+                .containsExactly(new RequestSummary(12, 16384, 256));
     }
 
     // A model whose window is 4096 must never be asked for the 8192 the prompt builders default to, nor for a reply

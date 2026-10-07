@@ -79,7 +79,7 @@ class OversizedSegmentTest {
     // and never sends the whole oversized segment to a directed fix.
     @Test
     void run_oversizedBalancedSegmentFailingEcho_redraftsBothPiecesWithFindings() {
-        final String text = IntStream.range(100, 300)
+        final String text = IntStream.range(100, 500)
                 .mapToObj(number -> "The night number " + number + " was calm.")
                 .collect(Collectors.joining(" "));
         final TestProject project = TranslationJobTestSupport.project(

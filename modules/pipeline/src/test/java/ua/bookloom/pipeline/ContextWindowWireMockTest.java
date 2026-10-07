@@ -25,7 +25,7 @@ class ContextWindowWireMockTest {
 
     @Test
     void translate_draftToOllama_postsNumCtxInsideOptions() {
-        assertThat(draftBody(ProviderKind.OLLAMA)).contains("\"options\":{").contains("\"num_ctx\":8192");
+        assertThat(draftBody(ProviderKind.OLLAMA)).contains("\"options\":{").contains("\"num_ctx\":16384");
     }
 
     @Test

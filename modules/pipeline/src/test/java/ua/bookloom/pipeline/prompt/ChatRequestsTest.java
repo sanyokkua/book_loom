@@ -22,7 +22,7 @@ class ChatRequestsTest {
         final ChatRequest request =
                 ChatRequests.build(PromptName.DRAFT, MESSAGES, OutputLimit.forSource(SOURCE, "en", "uk"), false);
 
-        assertThat(request.contextWindow()).isEqualTo(8192);
+        assertThat(request.contextWindow()).isEqualTo(16_384);
         assertThat(request.expectedOutputTokens()).isEqualTo(16);
         assertThat(request.temperature()).isEqualTo(0.2);
         assertThat(request.reasoningEnabled()).isFalse();

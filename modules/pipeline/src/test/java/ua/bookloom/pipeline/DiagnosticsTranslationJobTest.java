@@ -274,7 +274,7 @@ class DiagnosticsTranslationJobTest {
                         "targetLanguage=uk",
                         "mode=UNATTENDED",
                         "dial=FAST",
-                        "contextSize=8192",
+                        "contextSize=16384",
                         "pausePoints=[]",
                         "segments=1",
                         "sections=1");

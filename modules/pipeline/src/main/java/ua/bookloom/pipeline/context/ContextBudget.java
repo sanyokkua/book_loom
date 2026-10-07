@@ -26,7 +26,7 @@ public record ContextBudget(int window, int staticPrefixTokens, int dynamicToken
     public static final int SAFETY_MARGIN = 500;
 
     /** The most the dynamic context may take, however large the window. */
-    public static final int DYNAMIC_CEILING = 1100;
+    public static final int DYNAMIC_CEILING = 2000;
 
     private static final double DYNAMIC_SHARE = 0.4;
     private static final double LEXICON_SHARE = 0.2;

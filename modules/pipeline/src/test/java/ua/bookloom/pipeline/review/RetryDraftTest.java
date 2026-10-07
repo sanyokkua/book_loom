@@ -280,9 +280,9 @@ class RetryDraftTest {
 
     @Test
     void retry_segmentTheRunDraftsInPieces_draftsEachPieceWithTheNoteAndJoinsThem() {
-        // 200 sentences are above the run.s 1,200-token chunk budget: two piece drafts,
+        // 400 sentences are above the run.s 2,000-token chunk budget: two piece drafts,
         // each at the lower temperature with the note, joined into one target that the reviewer then lets stand
-        final String source = IntStream.range(100, 300)
+        final String source = IntStream.range(100, 500)
                 .mapToObj(number -> "The night number " + number + " was calm.")
                 .collect(Collectors.joining(" "));
         final Desk desk = ReviewFixtures.markdown(tempDir, source + "\n");
@@ -300,12 +300,12 @@ class RetryDraftTest {
         assertThat(model.requests.subList(0, 2))
                 .allSatisfy(draft -> assertThat(userMessage(draft)).contains("[Extra instruction]\n" + NOTE));
         assertThat(userMessage(model.requests.getFirst())).contains("The night number 100 was calm.");
-        assertThat(userMessage(model.requests.get(1))).contains("The night number 299 was calm.");
+        assertThat(userMessage(model.requests.get(1))).contains("The night number 499 was calm.");
         assertThat(record)
                 .extracting(SegmentRecord::status, SegmentRecord::path, SegmentRecord::reviewed)
                 .containsExactly(SegmentStatus.ACCEPTED, SegmentPath.DRAFT, true);
         assertThat(record.machineTarget())
-                .isEqualTo(IntStream.range(100, 300)
+                .isEqualTo(IntStream.range(100, 500)
                         .mapToObj(number -> "Ніч номер " + number + " була дуже тихою.")
                         .collect(Collectors.joining(" ")));
     }

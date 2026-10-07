@@ -23,7 +23,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 /** The runner against a scripted model: the requests it sends are the run's, so they can be read here. */
 class PromptEvalRunnerTest {
 
-    private static final int DEFAULT_WINDOW = 8192;
+    private static final int DEFAULT_WINDOW = 16_384;
 
     private static final String TARGET_REPLY = "{\"target\":\"Старий чоловік пішов до гавані.\"}";
 
