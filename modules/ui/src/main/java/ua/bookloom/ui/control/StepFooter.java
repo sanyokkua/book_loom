@@ -1,9 +1,12 @@
 package ua.bookloom.ui.control;
 
+import java.util.List;
 import java.util.Objects;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
@@ -42,21 +45,66 @@ public final class StepFooter extends HBox {
         }
     }
 
-    private final Button forward;
+    private static final String HOST_ID = "#shell-actions";
 
-    private StepFooter(final @Nullable Action back, final Action forward, final boolean forwardAvailable) {
+    private final Button forward;
+    private final @Nullable Button back;
+    private final Region spacer = new Region();
+    private @Nullable Pane host;
+
+    private StepFooter(final @Nullable Action backAction, final Action forward, final boolean forwardAvailable) {
         super(SPACING);
         Objects.requireNonNull(forward, "forward");
         setAlignment(Pos.CENTER_LEFT);
         getStyleClass().add("step-footer");
-        if (back != null) {
-            getChildren().add(button(back));
-        }
-        final Region spacer = new Region();
+        this.back = backAction == null ? null : button(backAction);
         HBox.setHgrow(spacer, Priority.ALWAYS);
         this.forward = button(forward);
         this.forward.setDisable(!forwardAvailable);
-        getChildren().addAll(spacer, this.forward);
+        restoreInPlace();
+        sceneProperty().addListener((observed, was, scene) -> {
+            if (scene == null) {
+                release();
+            } else {
+                claim(scene);
+            }
+        });
+    }
+
+    // The window's toolbar is outside the scrolling content, so the step's actions stay reachable however long the
+    // screen is. The same buttons move there while the footer is in a scene that has the toolbar's slot; a screen
+    // shown on its own keeps them in its footer.
+    private void claim(final Scene scene) {
+        if (host != null || !(scene.getRoot().lookup(HOST_ID) instanceof Pane slot)) {
+            return;
+        }
+        host = slot;
+        getChildren().clear();
+        slot.getChildren().addAll(buttons());
+        setVisible(false);
+        setManaged(false);
+        log.debug("footer actions moved to the window toolbar");
+    }
+
+    private void release() {
+        final Pane slot = host;
+        if (slot == null) {
+            return;
+        }
+        host = null;
+        slot.getChildren().removeAll(buttons());
+        restoreInPlace();
+        setVisible(true);
+        setManaged(true);
+        log.debug("footer actions returned to the footer");
+    }
+
+    private void restoreInPlace() {
+        getChildren().setAll(back == null ? List.of(spacer, forward) : List.of(back, spacer, forward));
+    }
+
+    private List<Button> buttons() {
+        return back == null ? List.of(forward) : List.of(back, forward);
     }
 
     /**

@@ -9,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
@@ -67,6 +68,7 @@ public final class AppShellView {
             .flatMapToInt(view -> view.step().stream())
             .max()
             .orElse(0);
+    private static final double ACTION_SPACING = 10;
     private static final String CRUMB_SEPARATOR = " / ";
     private static final String STEP_SEPARATOR = " · ";
 
@@ -232,6 +234,10 @@ public final class AppShellView {
         actions.setId("shell-actions");
         actions.getStyleClass().add("shell-actions");
         actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.setSpacing(ACTION_SPACING);
+        actions.setMinWidth(Region.USE_PREF_SIZE);
+        breadcrumb.setMinWidth(0);
+        breadcrumb.setTextOverrun(OverrunStyle.ELLIPSIS);
         final HBox toolbar = new HBox(breadcrumb, spacer, actions);
         toolbar.getStyleClass().add("shell-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);

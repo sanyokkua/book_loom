@@ -4,8 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.ThemeTestSupport;
@@ -77,5 +81,61 @@ class StepFooterTest extends FxTestBase {
 
         assertThat(footer.getChildren()).hasSize(2);
         assertThat(footer.forwardButton().getId()).isEqualTo("import-continue");
+    }
+
+    private static HBox slot() {
+        final HBox slot = new HBox();
+        slot.setId("shell-actions");
+        return slot;
+    }
+
+    // IF the footer stayed at the bottom of a long screen, THEN a person would have to scroll to find Continue.
+    @Test
+    void footer_inAWindowWithAToolbarSlot_movesItsButtonsThereAndHidesItself() {
+        final HBox slot = slot();
+        final StepFooter footer = ThemeTestSupport.onFx(() -> StepFooter.of(
+                action("m-back", "btn-ghost", new ArrayList<>()), action("m-next", "btn-primary", new ArrayList<>())));
+
+        ThemeTestSupport.onFx(() -> {
+            new Scene(new VBox(slot, footer));
+            return null;
+        });
+
+        assertThat(slot.getChildren()).extracting(Node::getId).containsExactly("m-back", "m-next");
+        assertThat(footer.isManaged()).isFalse();
+        assertThat(footer.isVisible()).isFalse();
+    }
+
+    // IF a replaced footer left its buttons in the toolbar, THEN the old step's actions would stay beside the new ones.
+    @Test
+    void footer_removedFromTheScene_takesItsButtonsBackFromTheToolbar() {
+        final HBox slot = slot();
+        final VBox root = ThemeTestSupport.onFx(() -> new VBox(slot));
+        final StepFooter footer = ThemeTestSupport.onFx(() -> StepFooter.of(
+                action("r-back", "btn-ghost", new ArrayList<>()), action("r-next", "btn-primary", new ArrayList<>())));
+        ThemeTestSupport.onFx(() -> {
+            new Scene(root);
+            root.getChildren().add(footer);
+            root.getChildren().remove(footer);
+            return null;
+        });
+
+        assertThat(slot.getChildren()).isEmpty();
+        assertThat(footer.getChildren()).extracting(Node::getId).containsSequence("r-back", null, "r-next");
+        assertThat(footer.isManaged()).isTrue();
+    }
+
+    // IF a screen shown with no toolbar lost its footer, THEN it would have no way onward.
+    @Test
+    void footer_inASceneWithNoToolbarSlot_keepsItsButtons() {
+        final StepFooter footer = ThemeTestSupport.onFx(() -> StepFooter.of(
+                action("k-back", "btn-ghost", new ArrayList<>()), action("k-next", "btn-primary", new ArrayList<>())));
+        ThemeTestSupport.onFx(() -> {
+            new Scene(new VBox(footer));
+            return null;
+        });
+
+        assertThat(footer.getChildren()).hasSize(3);
+        assertThat(footer.isManaged()).isTrue();
     }
 }
