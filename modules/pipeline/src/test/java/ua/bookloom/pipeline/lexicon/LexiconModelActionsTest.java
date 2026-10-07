@@ -67,7 +67,9 @@ class LexiconModelActionsTest {
     // IF the scan added every frequent word, THEN the list would fill with ordinary words and cost every batch reply.
     @Test
     void scanWithModel_modelKeepsOneWord_addsOnlyThatWord() {
-        model.answer(reply("{\"terms\":[{\"term\":\"pentacle\",\"keep\":true},{\"term\":\"table\",\"keep\":false}]}"));
+        // The twelve frequent words go in two batches of ten at most; a word nobody asked in a batch is ignored.
+        final String answer = "{\"terms\":[{\"term\":\"pentacle\",\"keep\":true},{\"term\":\"table\",\"keep\":false}]}";
+        model.answer(reply(answer)).answer(reply(answer));
 
         final List<LexiconEntry> after =
                 service.scanWithModel(desk.projectId(), model, event -> {}).data();

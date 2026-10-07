@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntPredicate;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -119,18 +121,72 @@ class TermChoiceTest {
     }
 
     @Test
-    void choose_fiftyCandidates_areSentInTwoBatchesAndEachAnnounced() {
+    void choose_twentyFiveCandidates_areSentInBatchesOfTenAndEachAnnounced() {
         final List<String> terms =
-                IntStream.range(0, 50).mapToObj(n -> "word" + n).toList();
-        final ScriptedChatModel model =
-                new ScriptedChatModel().answer(reply("{\"terms\":[]}")).answer(reply("{\"terms\":[]}"));
+                IntStream.range(0, 25).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"terms\":[]}"))
+                .answer(reply("{\"terms\":[]}"))
+                .answer(reply("{\"terms\":[]}"));
 
         choice.choose(terms, BOOK, FRAME, calls(model));
 
-        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests()).hasSize(3);
         assertThat(events)
                 .containsExactly(
-                        new BatchStarted(CallKind.REVIEW_TERMS, 1, 2), new BatchStarted(CallKind.REVIEW_TERMS, 2, 2));
+                        new BatchStarted(CallKind.REVIEW_TERMS, 1, 3),
+                        new BatchStarted(CallKind.REVIEW_TERMS, 2, 3),
+                        new BatchStarted(CallKind.REVIEW_TERMS, 3, 3));
+    }
+
+    private static String verdictsJson(final int from, final int to, final IntPredicate keep) {
+        return IntStream.range(from, to)
+                .mapToObj(n -> "{\"term\":\"word" + n + "\",\"keep\":" + keep.test(n) + "}")
+                .collect(Collectors.joining(",", "{\"terms\":[", "]}"));
+    }
+
+    // A model that says "keep" to ten words in a row is not reading them; it is asked again on half a batch.
+    @Test
+    void choose_batchAnsweredAllTrue_isAskedAgainInHalvesAndTheSecondAnswerDecides() {
+        final List<String> terms =
+                IntStream.range(0, 10).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(verdictsJson(0, 10, n -> true)))
+                .answer(reply(verdictsJson(0, 5, n -> n < 2)))
+                .answer(reply(verdictsJson(5, 10, n -> false)));
+
+        final TermChoice.Choice verdicts = ok(choice.choose(terms, BOOK, FRAME, calls(model)));
+
+        assertThat(model.requests()).hasSize(3);
+        assertThat(verdicts.kept()).containsExactlyInAnyOrder("word0", "word1");
+        assertThat(verdicts.dropped()).hasSize(8);
+    }
+
+    // IF the halves are uniform too, THEN nothing is decided: the answer is an error, as for an unreadable one.
+    @Test
+    void choose_batchStillUniformAfterHalving_isAnErrorAndDecidesNothing() {
+        final List<String> terms =
+                IntStream.range(0, 10).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(verdictsJson(0, 10, n -> false)))
+                .answer(reply(verdictsJson(0, 5, n -> false)))
+                .answer(reply(verdictsJson(5, 10, n -> false)));
+
+        final Result<TermChoice.Choice> verdicts = choice.choose(terms, BOOK, FRAME, calls(model));
+
+        assertThat(verdicts.error()).isNotNull();
+        assertThat(verdicts.error().code()).isEqualTo(ErrorCode.validation);
+    }
+
+    // Fewer than six answers can honestly be all alike.
+    @Test
+    void choose_fiveAnswersAllTrue_isTakenAsGiven() {
+        final List<String> terms =
+                IntStream.range(0, 5).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel().answer(reply(verdictsJson(0, 5, n -> true)));
+
+        assertThat(ok(choice.choose(terms, BOOK, FRAME, calls(model))).kept()).hasSize(5);
+        assertThat(model.requests()).hasSize(1);
     }
 
     @Test

@@ -393,4 +393,33 @@ class CooccurrenceLearnerTest {
 
         assertThat(established(learner, "Ms")).isEmpty();
     }
+
+    // IF the base form were the cut-off the other forms of обличчя extend, THEN every prompt would carry "облич".
+    @Test
+    void established_formThatOnlyLongerFormsExtendByTwoLetters_isNotTheRendering() {
+        final CooccurrenceLearner learner = learnerWithFiller("face");
+        learner.observe("Many a face smiled.", "Багато облич усміхалося.");
+        learner.observe("No face was seen.", "Жодного облич не було видно.");
+        learner.observe("Her face was pale.", "Її облич було бліде.");
+        learner.observe("The face grew pale.", "Обличчя зблідло.");
+        learner.observe("A face in the dark.", "Обличчя в темряві.");
+        learner.observe("She hid her face.", "Вона сховала обличчям.");
+
+        assertThat(established(learner, "face"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("обличчя"));
+    }
+
+    // Among forms no other form extends, the shorter is nearer the dictionary form, even if the longer is used more.
+    @Test
+    void established_commonFormsNothingExtends_prefersTheShorterOne() {
+        final CooccurrenceLearner learner = learnerWithFiller("console");
+        learner.observe("Two consoles hummed.", "Кілька консолей гуділо.");
+        learner.observe("The consoles blinked.", "Багато консолей блимало.");
+        learner.observe("Old consoles failed.", "Серед консолей щось трісло.");
+        learner.observe("The console glowed.", "Консоль світилася.");
+        learner.observe("A console beeped.", "Консоль пищала.");
+
+        assertThat(established(learner, "console"))
+                .hasValueSatisfying(found -> assertThat(found.rendering()).isEqualTo("консоль"));
+    }
 }

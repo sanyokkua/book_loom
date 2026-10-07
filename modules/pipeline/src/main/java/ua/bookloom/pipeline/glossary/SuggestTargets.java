@@ -162,13 +162,15 @@ public final class SuggestTargets {
                         Map.of("nameRule", NameRules.bundled().rule(policy, frame.targetLanguage())))
                 .strip();
         final Script refused = refusedScript(frame, policy);
+        final Script required = requiredScript(frame);
         final int batches = (asked.size() + BATCH_SIZE - 1) / BATCH_SIZE;
         final List<Suggestion> suggestions = new ArrayList<>();
         for (int index = 0; index < batches; index++) {
             final List<GlossaryEntry> batch =
                     asked.subList(index * BATCH_SIZE, Math.min(asked.size(), (index + 1) * BATCH_SIZE));
             calls.announce(new BatchStarted(CallKind.SUGGEST_TARGETS, index + 1, batches));
-            final Result<List<Suggestion>> answered = runBatch(index, batch, evidence, system, refused, calls);
+            final Result<List<Suggestion>> answered =
+                    runBatch(index, batch, evidence, system, refused, required, calls);
             if (answered.isErr()) {
                 return answered;
             }
@@ -183,6 +185,7 @@ public final class SuggestTargets {
             final Map<String, Evidence> evidence,
             final String system,
             @Nullable final Script refused,
+            @Nullable final Script required,
             final ModelCalls calls) {
         final String lines = String.join(
                 "\n",
@@ -209,7 +212,7 @@ public final class SuggestTargets {
         log.trace("Glossary suggestion batch {} reply {}", index, content);
         final Map<String, GlossaryEntry> byKey = new LinkedHashMap<>();
         batch.forEach(entry -> byKey.put(GlossaryKeys.of(entry.term()), entry));
-        final List<Suggestion> read = SuggestionReplies.read(mapper, content, byKey, refused);
+        final List<Suggestion> read = SuggestionReplies.read(mapper, content, byKey, refused, required);
         log.debug("Glossary suggestion batch {} answered: size={} suggestions={}", index, batch.size(), read.size());
         return Result.ok(read);
     }
@@ -227,6 +230,14 @@ public final class SuggestTargets {
         final boolean differs = source.isPresent() && target.isPresent() && source.get() != target.get();
         log.debug("Suggestion script rule source={} target={} refusesSourceScript={}", source, target, differs);
         return differs ? source.get() : null;
+    }
+
+    /** The target language's script when it has letters of its own: every letter of a suggestion must be one. */
+    private static @Nullable Script requiredScript(final CallFrame frame) {
+        final Optional<Script> target = Languages.scriptOf(frame.targetLanguage())
+                .filter(script -> !script.letterScripts().isEmpty());
+        log.debug("Suggestion required script {}", target);
+        return target.orElse(null);
     }
 
     private static String line(final GlossaryEntry entry, final Evidence evidence) {

@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.Gender;
@@ -64,7 +65,8 @@ public final class DeferralRegister {
      * @param projectId the owning project's id; never null
      * @param segment the decided segment, whose display text is searched; never null
      * @param glossary the glossary the segment was drafted with; never null
-     * @return one deferral per character entry of unknown gender whose term occurs whole-word, in glossary order;
+     * @return one deferral per character entry of unknown gender whose term occurs whole-word in a body-text segment
+     *     (a heading, title or metadata segment records none), in glossary order;
      *     never null, empty when there is none
      */
     public static List<Deferral> unknownGender(
@@ -72,6 +74,10 @@ public final class DeferralRegister {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(glossary, "glossary");
+        if (!isBodyText(segment.kind())) {
+            log.debug("Unknown-gender check skipped segmentId={} kind={}", segment.id(), segment.kind());
+            return List.of();
+        }
         final String text = DisplayText.of(segment.masked());
         final List<Deferral> deferrals = glossary.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() == Gender.UNKNOWN)
@@ -86,6 +92,21 @@ public final class DeferralRegister {
                 deferrals.size());
         deferrals.forEach(DeferralRegister::logRecorded);
         return deferrals;
+    }
+
+    // A name in a heading, a title or the book's metadata is not a place its gender is agreed with.
+    private static boolean isBodyText(final SegmentKind kind) {
+        return switch (kind) {
+            case PARAGRAPH, VERSE_LINE, LIST_ITEM, TABLE_CELL, FOOTNOTE, CAPTION -> true;
+            case HEADING,
+                    TITLE,
+                    METADATA_TITLE,
+                    METADATA_AUTHOR,
+                    METADATA_DESCRIPTION,
+                    FRONTMATTER_VALUE,
+                    ALT,
+                    NAV_LABEL -> false;
+        };
     }
 
     private static Deferral deferral(

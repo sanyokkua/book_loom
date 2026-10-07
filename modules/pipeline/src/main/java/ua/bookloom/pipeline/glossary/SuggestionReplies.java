@@ -21,7 +21,7 @@ import ua.bookloom.util.text.GlossaryKeys;
  * Reads one suggestion reply. Only a suggestion for a term of the batch survives, and only a target a glossary can hold:
  * one line, no placeholder token, at most {@value #MAX_TARGET_CHARS} characters — and, when the names are spelled in
  * another script, a target with no letter left in the source's script, since a model that copies the name has not
- * suggested anything.
+ * suggested anything. A target also has every letter in the target language's script, whatever the name policy.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -60,13 +60,16 @@ final class SuggestionReplies {
      * @param batch the batch's entries by their {@link GlossaryKeys} key
      * @param sourceScript the script the names are written in, when a target in that script must be refused; null
      *     when any script is acceptable
+     * @param targetScript the script the target language is written in, when every letter of a target must belong to
+     *     it (a model sometimes answers in Arabic or copies the Latin name); null when it is not known
      * @return the suggestions kept; empty when the reply holds none or is unreadable
      */
     static List<Suggestion> read(
             final ObjectMapper mapper,
             final String replyText,
             final Map<String, GlossaryEntry> batch,
-            @Nullable final Script sourceScript) {
+            @Nullable final Script sourceScript,
+            @Nullable final Script targetScript) {
         final JsonNode suggestions = JsonReplies.tolerant(mapper, replyText)
                 .map(root -> root.path("suggestions"))
                 .orElse(null);
@@ -76,14 +79,17 @@ final class SuggestionReplies {
         }
         final List<Suggestion> kept = new ArrayList<>();
         for (final JsonNode node : suggestions) {
-            suggestionOf(node, batch, sourceScript).ifPresent(kept::add);
+            suggestionOf(node, batch, sourceScript, targetScript).ifPresent(kept::add);
         }
         log.debug("Suggestion reply read: {} kept of {}", kept.size(), suggestions.size());
         return kept;
     }
 
     private static Optional<Suggestion> suggestionOf(
-            final JsonNode node, final Map<String, GlossaryEntry> batch, @Nullable final Script sourceScript) {
+            final JsonNode node,
+            final Map<String, GlossaryEntry> batch,
+            @Nullable final Script sourceScript,
+            @Nullable final Script targetScript) {
         final String term = node.path("term").asText("");
         final GlossaryEntry entry = batch.get(GlossaryKeys.of(term));
         if (entry == null) {
@@ -91,7 +97,7 @@ final class SuggestionReplies {
             return Optional.empty();
         }
         final String target = LookAlikes.repaired(node.path("target").asText("").strip());
-        final String refusal = refusal(target, sourceScript);
+        final String refusal = refusal(target, sourceScript, targetScript);
         if (refusal != null) {
             log.debug("Suggestion dropped: {}", refusal);
             log.trace("Suggestion dropped for term '{}' target '{}': {}", term, target, refusal);
@@ -101,7 +107,8 @@ final class SuggestionReplies {
                 new Suggestion(entry, target, genderOf(node.path("gender").asText(""))));
     }
 
-    private static @Nullable String refusal(final String target, @Nullable final Script sourceScript) {
+    private static @Nullable String refusal(
+            final String target, @Nullable final Script sourceScript, @Nullable final Script targetScript) {
         if (target.isEmpty()) {
             return "no suggestion";
         }
@@ -114,9 +121,18 @@ final class SuggestionReplies {
         if (target.length() > MAX_TARGET_CHARS) {
             return "longer than " + MAX_TARGET_CHARS + " characters";
         }
-        return sourceScript != null && hasLetterIn(target, sourceScript)
-                ? "a letter still in the source's script"
+        if (sourceScript != null && hasLetterIn(target, sourceScript)) {
+            return "a letter still in the source's script";
+        }
+        return targetScript != null && hasLetterOutside(target, targetScript)
+                ? "a letter outside the target language's script"
                 : null;
+    }
+
+    private static boolean hasLetterOutside(final String target, final Script script) {
+        return target.codePoints()
+                .filter(Character::isLetter)
+                .anyMatch(codePoint -> !script.letterScripts().contains(Character.UnicodeScript.of(codePoint)));
     }
 
     /**

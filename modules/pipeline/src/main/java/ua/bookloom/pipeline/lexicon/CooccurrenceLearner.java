@@ -62,10 +62,13 @@ public final class CooccurrenceLearner {
 
     private static final double RIVAL_MARGIN = 2.0;
 
+    /** A form is common when it is used in at least this share of the most used form's uses (the inverse: times). */
+    private static final int COMMON_FORM_SHARE = 4;
+
     /**
      * A rendering the evidence supports.
      *
-     * @param rendering the base form: the most used surface form of the winning stem, the shortest on a tie
+     * @param rendering the base form of the winning stem: the form the others extend, else the shortest common one
      * @param support how many decided segments naming the term carry the stem
      * @param occurrences how many decided segments name the term
      * @param dice the association score of the stem with the term
@@ -285,7 +288,7 @@ public final class CooccurrenceLearner {
         final boolean kept = support >= MIN_SUPPORT && dice >= KEEP_DICE && dice >= KEEP_SHARE * rival;
         log.debug("Learner retention check: support={} dice={} bestRival={} kept={}", support, dice, rival, kept);
         return kept
-                ? Optional.of(new Learned(baseForm(counts, stem), support, counts.occurrences, dice))
+                ? baseForm(counts, stem).map(base -> new Learned(base, support, counts.occurrences, dice))
                 : Optional.empty();
     }
 
@@ -343,8 +346,8 @@ public final class CooccurrenceLearner {
             log.debug("Learner gate not passed: dice={} bestRival={}", winner.dice(), rival);
             return Optional.empty();
         }
-        return Optional.of(
-                new Learned(baseForm(counts, winner.stem()), winner.support(), counts.occurrences, winner.dice()));
+        return baseForm(counts, winner.stem())
+                .map(base -> new Learned(base, winner.support(), counts.occurrences, winner.dice()));
     }
 
     private static boolean related(final String one, final String other) {
@@ -352,16 +355,20 @@ public final class CooccurrenceLearner {
     }
 
     // With language data, a form that ends like an oblique case form (землі) loses to one that does not (земля).
-    // The base form is the surface form the most uses of the stem extend ({@code господар} for {@code господаря},
-    // {@code господарю}), so a book that mostly meets the term in an oblique case still gets its dictionary form; where
-    // no form is a prefix of the others it is the most used, and the shortest on a tie.
-    private String baseForm(final Tracked counts, final String stem) {
+    // The base form is the surface form the other forms extend by one letter (господар for господаря,
+    // господарю); a form only longer forms extend by two letters or more is the cut-off of a longer word
+    // (облич of обличчя) and is no rendering. Among forms nothing extends, the shortest of the common
+    // ones is the nearest to the dictionary form (консоль, not консолей), then the most used.
+    private Optional<String> baseForm(final Tracked counts, final String stem) {
         final Map<String, Integer> forms = new HashMap<>(words.formsOf(stem));
         if (counts.capitals) {
             names.formsOf(stem).forEach((form, uses) -> forms.merge(form, uses, Integer::sum));
         }
-        final String base = baseOf(stem, forms);
-        return counts.name ? capitalised(base) : base;
+        final Optional<String> base = baseOf(forms);
+        if (base.isEmpty()) {
+            log.debug("Learner refuses a cut-off rendering among {} forms of one stem", forms.size());
+        }
+        return counts.name ? base.map(CooccurrenceLearner::capitalised) : base;
     }
 
     private static String capitalised(final String word) {
@@ -371,24 +378,34 @@ public final class CooccurrenceLearner {
                         + word.substring(word.offsetByCodePoints(0, 1));
     }
 
-    private String baseOf(final String stem, final Map<String, Integer> forms) {
+    private Optional<String> baseOf(final Map<String, Integer> forms) {
+        final int most =
+                forms.values().stream().mapToInt(Integer::intValue).max().orElse(0);
         return forms.keySet().stream()
+                .filter(form -> !isCutOff(form, forms))
+                .filter(form -> forms.getOrDefault(form, 0) * COMMON_FORM_SHARE >= most)
                 .max(Comparator.comparingInt((String form) -> isOblique(form) ? 0 : 1)
-                        .thenComparingInt(form -> extended(form, forms))
-                        .thenComparingInt(form -> forms.get(form))
+                        .thenComparingInt(form -> extendedByOne(form, forms))
                         .thenComparing(Comparator.comparingInt(String::length).reversed())
-                        .thenComparing(Comparator.<String>naturalOrder().reversed()))
-                .orElse(stem);
+                        .thenComparingInt(form -> forms.get(form))
+                        .thenComparing(Comparator.<String>naturalOrder().reversed()));
     }
 
     private boolean isOblique(final String form) {
         return obliqueEndings.stream().anyMatch(form::endsWith);
     }
 
-    private static int extended(final String form, final Map<String, Integer> forms) {
+    private static int extendedByOne(final String form, final Map<String, Integer> forms) {
         return forms.entrySet().stream()
-                .filter(other -> other.getKey().startsWith(form))
+                .filter(other -> other.getKey().length() == form.length() + 1
+                        && other.getKey().startsWith(form))
                 .mapToInt(Map.Entry::getValue)
                 .sum();
+    }
+
+    private static boolean isCutOff(final String form, final Map<String, Integer> forms) {
+        final boolean longer = forms.keySet().stream()
+                .anyMatch(other -> other.length() >= form.length() + 2 && other.startsWith(form));
+        return longer && extendedByOne(form, forms) == 0;
     }
 }

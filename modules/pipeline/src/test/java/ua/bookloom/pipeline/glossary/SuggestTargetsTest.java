@@ -72,9 +72,10 @@ class SuggestTargetsTest {
                 .containsExactly("- Amulet — term — \"The Amulet glowed in the dark.\"");
     }
 
-    // Under Transliterate a name the model only copied is no suggestion; under Translate a kept name can be right.
+    // A name the model only copied is no suggestion under either policy: a target is written in the target's script
+    // (15g A5; a Latin copy of a common noun and an Arabic transliteration were both seen in a real run).
     @ParameterizedTest
-    @CsvSource({"TRANSLITERATE,'Milton,Amulet'", "TRANSLATE,'Hale,Milton,Amulet'"})
+    @CsvSource({"TRANSLITERATE,'Milton,Amulet'", "TRANSLATE,'Milton,Amulet'"})
     void suggest_policy_keepsWhatTheRuleAllows(final NamePolicy policy, final String kept) {
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply(REPLY));
 

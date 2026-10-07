@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.Gender;
@@ -113,5 +114,19 @@ class KeyTermScanTest {
                 KeyTermScan.newTerms("p1", segments, "en", glossary, lexicon).data());
 
         assertThat(proposed).extracting(LexiconEntry::term).containsExactly("sir");
+    }
+
+    // IF contractions, reflexive pronouns and ordinals were offered as terms, THEN the model would be asked to keep
+    // "itself" and "first" the same way across a book.
+    @ParameterizedTest
+    @ValueSource(strings = {"we'd", "she'd", "don't", "myself", "itself", "himself", "first", "second"})
+    void frequentWords_functionWordClass_isNeverACandidate(final String word) {
+        final List<String> lines = join(copies("He saw the " + word + " furnace today.", 8));
+
+        final List<String> terms = KeyTermScan.frequentWords(GlossaryTestSegments.of(lines), "en", 20).stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).contains("furnace").doesNotContain(word);
     }
 }

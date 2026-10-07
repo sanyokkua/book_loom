@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.LoggerFactory;
 import ua.bookloom.api.document.ByteSpanAnchor;
@@ -199,6 +200,37 @@ class DeferralRegisterTest {
         assertThat(deferrals).extracting(Deferral::waitingOn).containsExactlyElementsOf(waitingOn);
     }
 
+    // IF a title naming a character counted, THEN a book with the name in every heading would wait on one gender
+    // 28 times over (the "Chrome" headings of a real run).
+    @ParameterizedTest
+    @EnumSource(
+            value = SegmentKind.class,
+            names = {
+                "HEADING",
+                "TITLE",
+                "METADATA_TITLE",
+                "METADATA_AUTHOR",
+                "METADATA_DESCRIPTION",
+                "FRONTMATTER_VALUE",
+                "ALT",
+                "NAV_LABEL"
+            })
+    void unknownGender_segmentThatIsNotBodyText_recordsNothing(final SegmentKind kind) {
+        assertThat(DeferralRegister.unknownGender(
+                        PROJECT, samAs(kind), List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN))))
+                .isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = SegmentKind.class,
+            names = {"PARAGRAPH", "VERSE_LINE", "LIST_ITEM", "TABLE_CELL", "FOOTNOTE", "CAPTION"})
+    void unknownGender_bodyTextSegment_recordsTheDeferral(final SegmentKind kind) {
+        assertThat(DeferralRegister.unknownGender(
+                        PROJECT, samAs(kind), List.of(entry("Sam", TermType.CHARACTER, Gender.UNKNOWN))))
+                .hasSize(1);
+    }
+
     private static List<ILoggingEvent> loggedAtTrace(final Supplier<List<Deferral>> producer) {
         final Logger logger = (Logger) LoggerFactory.getLogger(DeferralRegister.class);
         final Level previous = logger.getLevel();
@@ -218,12 +250,16 @@ class DeferralRegisterTest {
 
     /** A segment naming Sam and Alex at the Harbour, with a footnote marker glued to Sam's name. */
     private static Segment sam() {
+        return samAs(SegmentKind.PARAGRAPH);
+    }
+
+    private static Segment samAs(final SegmentKind kind) {
         final String masked = "Sam⟦g0⟧ met Alex at the Harbour.";
         return new Segment(
                 "ch01.xhtml:9",
                 "ch01.xhtml",
                 9,
-                SegmentKind.PARAGRAPH,
+                kind,
                 masked,
                 masked,
                 Map.of("g0", "<sup>1</sup>"),

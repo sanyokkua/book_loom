@@ -28,7 +28,8 @@ class SuggestionRepliesTest {
                 MAPPER,
                 "{\"suggestions\":[{\"term\":\"Hale\",\"target\":\"" + target + "\",\"gender\":\"male\"}]}",
                 BATCH,
-                Script.LATIN);
+                Script.LATIN,
+                null);
     }
 
     @Test
@@ -60,7 +61,11 @@ class SuggestionRepliesTest {
     @Test
     void read_anyScriptAllowed_keepsALatinRendering() {
         final List<Suggestion> kept = SuggestionReplies.read(
-                MAPPER, "{\"suggestions\":[{\"term\":\"hale\",\"target\":\"Hale\",\"gender\":\"x\"}]}", BATCH, null);
+                MAPPER,
+                "{\"suggestions\":[{\"term\":\"hale\",\"target\":\"Hale\",\"gender\":\"x\"}]}",
+                BATCH,
+                null,
+                null);
 
         assertThat(kept)
                 .extracting(Suggestion::target, Suggestion::gender)
@@ -75,6 +80,29 @@ class SuggestionRepliesTest {
                 "not json at all"
             })
     void read_termOutsideTheBatchOrNoSuggestions_keepsNothing(final String reply) {
-        assertThat(SuggestionReplies.read(MAPPER, reply, BATCH, null)).isEmpty();
+        assertThat(SuggestionReplies.read(MAPPER, reply, BATCH, null, null)).isEmpty();
+    }
+
+    private static List<Suggestion> readIn(final String target, final Script targetScript) {
+        return SuggestionReplies.read(
+                MAPPER,
+                "{\"suggestions\":[{\"term\":\"Hale\",\"target\":\"" + target + "\",\"gender\":\"male\"}]}",
+                BATCH,
+                null,
+                targetScript);
+    }
+
+    // IF a suggestion in another script were kept, THEN the glossary would hold a name no draft can match.
+    @ParameterizedTest
+    @ValueSource(strings = {"والدو", "Hale", "Гейлs"})
+    void read_letterOutsideTheTargetScript_isDropped(final String target) {
+        assertThat(readIn(target, Script.CYRILLIC)).isEmpty();
+    }
+
+    @Test
+    void read_renderingInTheTargetScript_isKept() {
+        assertThat(readIn("Гейл-Мак'Грегор", Script.CYRILLIC))
+                .extracting(Suggestion::target)
+                .containsExactly("Гейл-Мак'Грегор");
     }
 }

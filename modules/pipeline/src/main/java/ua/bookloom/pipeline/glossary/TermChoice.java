@@ -55,7 +55,8 @@ public final class TermChoice {
         }
     }
 
-    private static final int BATCH_SIZE = 40;
+    private static final int BATCH_SIZE = 10;
+    private static final int UNIFORM_MIN = 6;
     private static final int TOKENS_PER_VERDICT = 24;
     private static final int BASE_TOKENS = 96;
     private static final int MAX_EXAMPLE_CHARS = 140;
@@ -105,6 +106,43 @@ public final class TermChoice {
     }
 
     private Result<Choice> runBatch(
+            final List<String> batch,
+            final Map<String, Evidence> evidence,
+            final String system,
+            final ModelCalls calls) {
+        final Result<Choice> first = ask(batch, evidence, system, calls);
+        if (first.isErr() || !isUniform(Objects.requireNonNull(first.data(), "choice"))) {
+            return first;
+        }
+        log.warn("Term choice batch of {} answered all alike; asking again in halves", batch.size());
+        final int middle = batch.size() / 2;
+        final Result<Choice> head = ask(batch.subList(0, middle), evidence, system, calls);
+        if (head.isErr()) {
+            return head;
+        }
+        final Result<Choice> tail = ask(batch.subList(middle, batch.size()), evidence, system, calls);
+        if (tail.isErr()) {
+            return tail;
+        }
+        final Set<String> kept =
+                new HashSet<>(Objects.requireNonNull(head.data(), "head").kept());
+        final Set<String> dropped = new HashSet<>(head.data().dropped());
+        kept.addAll(Objects.requireNonNull(tail.data(), "tail").kept());
+        dropped.addAll(tail.data().dropped());
+        final Choice merged = new Choice(kept, dropped);
+        if (isUniform(merged)) {
+            log.warn("Term choice batch of {} is still answered all alike; nothing is decided", batch.size());
+            return unreadable();
+        }
+        return Result.ok(merged);
+    }
+
+    private static boolean isUniform(final Choice choice) {
+        return choice.kept().size() + choice.dropped().size() >= UNIFORM_MIN
+                && (choice.kept().isEmpty() || choice.dropped().isEmpty());
+    }
+
+    private Result<Choice> ask(
             final List<String> batch,
             final Map<String, Evidence> evidence,
             final String system,
