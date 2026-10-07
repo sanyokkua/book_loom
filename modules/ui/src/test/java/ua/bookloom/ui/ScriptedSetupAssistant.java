@@ -7,6 +7,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.SetupAssistant;
 
 /** A setup assistant whose answers a test sets, and which records the projects it was asked about. */
@@ -42,9 +43,9 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     }
 
     @Override
-    public Result<String> suggestFileName(final String projectId, final ChatModel model) {
+    public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
         asked.add(projectId);
-        return fileName;
+        return fileName.map(name -> new FileNameSuggestion(name, false));
     }
 
     @Override

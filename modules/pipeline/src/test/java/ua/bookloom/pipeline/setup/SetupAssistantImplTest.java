@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatMessage;
@@ -16,8 +17,11 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -63,9 +67,9 @@ class SetupAssistantImplTest {
     void suggestFileName_modelReply_isShownTheOriginalNameAndReturnedCleaned() {
         model.answer(reply("{\"target\":\"Джордж Орвел. Ферма тварин. 1945\"}"));
 
-        final Result<String> result = assistant.suggestFileName(desk.projectId(), model);
+        final Result<FileNameSuggestion> result = assistant.suggestFileName(desk.projectId(), model);
 
-        assertThat(result.data()).isEqualTo("Джордж Орвел. Ферма тварин. 1945");
+        assertThat(result.data()).isEqualTo(new FileNameSuggestion("Джордж Орвел. Ферма тварин. 1945", false));
         assertThat(userMessage()).contains("File name: Book");
     }
 
@@ -73,14 +77,15 @@ class SetupAssistantImplTest {
     void suggestFileName_replyWithPathCharacters_isMadeASafeName() {
         model.answer(reply("{\"target\":\"../etc/Книга: частина *1*?\"}"));
 
-        assertThat(assistant.suggestFileName(desk.projectId(), model).data()).isEqualTo("etc Книга частина 1");
+        assertThat(assistant.suggestFileName(desk.projectId(), model).data().name())
+                .isEqualTo("etc Книга частина 1");
     }
 
     @Test
     void suggestFileName_replyThatIsNoName_isAValidationError() {
         model.answer(reply("{\"target\":\"///\"}"));
 
-        final Result<String> result = assistant.suggestFileName(desk.projectId(), model);
+        final Result<FileNameSuggestion> result = assistant.suggestFileName(desk.projectId(), model);
 
         assertThat(result.error()).isNotNull();
         assertThat(result.error().code()).isEqualTo(ErrorCode.validation);
@@ -165,5 +170,60 @@ class SetupAssistantImplTest {
         assertThat(result.error()).isNotNull();
         assertThat(result.error().code()).isEqualTo(ErrorCode.validation);
         assertThat(model.requests()).isEmpty();
+    }
+
+    private static final String LATIN_AUTHOR = "{\"target\":\"William Gibson. Палаючий хром. 1986\"}";
+    private static final String UKRAINIAN_AUTHOR = "{\"target\":\"Вільям Гібсон. Палаючий хром. 1986\"}";
+
+    // IF an author left in Latin letters were offered as it is, THEN every Ukrainian file name would need a hand fix.
+    @Test
+    void suggestFileName_authorLeftInLatinForACyrillicTarget_isAskedOnceMoreNamingThePart() {
+        model.answer(reply(LATIN_AUTHOR)).answer(reply(UKRAINIAN_AUTHOR));
+
+        final Result<FileNameSuggestion> result = assistant.suggestFileName(desk.projectId(), model);
+
+        assertThat(result.data()).isEqualTo(new FileNameSuggestion("Вільям Гібсон. Палаючий хром. 1986", false));
+        assertThat(model.requests()).hasSize(2);
+        assertThat(model.requests().getLast().messages().getLast().content())
+                .contains("Correction:", "William Gibson")
+                .contains("Latin letters");
+    }
+
+    @Test
+    void suggestFileName_authorStillLatinAfterTheCorrection_isKeptAndFlagged() {
+        model.answer(reply(LATIN_AUTHOR)).answer(reply(LATIN_AUTHOR));
+
+        final FileNameSuggestion suggestion =
+                assistant.suggestFileName(desk.projectId(), model).data();
+
+        assertThat(suggestion).isEqualTo(new FileNameSuggestion("William Gibson. Палаючий хром. 1986", true));
+        assertThat(model.requests()).hasSize(2);
+    }
+
+    @Test
+    void suggestFileName_correctionCallFails_keepsTheFirstNameFlagged() {
+        model.answer(reply(LATIN_AUTHOR))
+                .answer(Result.err(AppError.of(ErrorCode.unreachable, "Down", "The server is not answering.")));
+
+        assertThat(assistant.suggestFileName(desk.projectId(), model).data())
+                .isEqualTo(new FileNameSuggestion("William Gibson. Палаючий хром. 1986", true));
+    }
+
+    // IF a first-person book carried a "third-person limited" voice note, THEN every prompt would contradict itself.
+    @Test
+    void suggestBrief_narratorAlreadySet_isKeptAndAContradictingVoiceNoteIsDropped() {
+        final Project stored = desk.projects().find(desk.projectId()).data().orElseThrow();
+        desk.projects()
+                .save(stored.withBrief(stored.brief().withNarrator(new Narrator(NarratorPerson.FIRST, Gender.MALE))));
+        model.answer(reply("{\"genre\":\"noir\",\"register\":\"casual\",\"voice\":\"third-person limited, terse\","
+                + "\"audience\":\"adults\",\"narrator\":\"third\",\"narratorGender\":\"unknown\"}"));
+
+        final BriefSuggestion suggestion =
+                assistant.suggestBrief(desk.projectId(), model).data();
+
+        assertThat(suggestion.narrator()).isEqualTo(NarratorPerson.FIRST);
+        assertThat(suggestion.narratorGender()).isEqualTo(Gender.MALE);
+        assertThat(suggestion.voiceEra()).isNull();
+        assertThat(suggestion.genre()).isEqualTo("noir");
     }
 }

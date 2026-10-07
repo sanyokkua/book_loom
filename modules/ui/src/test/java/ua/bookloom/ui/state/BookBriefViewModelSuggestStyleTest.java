@@ -100,6 +100,25 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
         assertThat(stored().narrator().gender()).isEqualTo(Gender.MALE);
     }
 
+    // IF the voice note named the other person, THEN the prompt would say "first person" and "third-person limited".
+    @Test
+    void suggestStyle_voiceContradictsTheSetNarrator_isNotWrittenIntoTheBrief() {
+        chooseModel();
+        onFx(() -> {
+            brief.setFirstPersonNarrator(Gender.MALE);
+            return null;
+        });
+        final String voiceBefore = stored().voiceEra();
+        assistant.answersBrief(Result.ok(new BriefSuggestion(
+                "noir", Register.NEUTRAL, "third-person limited", null, NarratorPerson.THIRD, Gender.UNKNOWN)));
+
+        suggest();
+
+        assertThat(stored().voiceEra()).isEqualTo(voiceBefore);
+        assertThat(stored().genre()).isEqualTo("noir");
+        assertThat(stored().narrator().person()).isEqualTo(NarratorPerson.FIRST);
+    }
+
     @Test
     void suggestStyle_noModelChosen_saysSoAndChangesNothing() {
         final BookBrief before = stored();

@@ -156,7 +156,7 @@ public enum PromptName {
             0.2,
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("fileName"), Set.of("title", "author"))),
+            new Slots(Set.of("fileName"), Set.of("title", "author", "correction"))),
 
     /** The proposal of the Book Brief's tone and style from the opening of the book; one small call. */
     BRIEF_SUGGESTION(

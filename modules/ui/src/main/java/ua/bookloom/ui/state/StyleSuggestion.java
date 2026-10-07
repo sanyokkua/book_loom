@@ -98,7 +98,8 @@ public final class StyleSuggestion {
 
     // The fields the model filled replace the brief's; one it left empty keeps what the person wrote, and the policies,
     // dial and languages are not its business.
-    private static BookBrief withSuggestion(final BookBrief brief, final BriefSuggestion suggestion) {
+    private static BookBrief withSuggestion(final BookBrief brief, final BriefSuggestion guess) {
+        final BriefSuggestion suggestion = guess.alignedTo(brief.narrator());
         return new BookBrief(
                 brief.sourceLanguage(),
                 brief.targetLanguage(),

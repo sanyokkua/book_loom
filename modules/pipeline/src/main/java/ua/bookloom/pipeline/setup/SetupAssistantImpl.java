@@ -25,9 +25,11 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.Register;
@@ -69,7 +71,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private final ObjectMapper mapper;
 
     @Override
-    public Result<String> suggestFileName(final String projectId, final ChatModel model) {
+    public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
         log.debug("File name suggestion requested project={}", projectId);
@@ -109,18 +111,41 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return Result.ok(new Book(project, document, target));
     }
 
-    private Result<String> askName(final Book book, final ChatModel model) {
+    private Result<FileNameSuggestion> askName(final Book book, final ChatModel model) {
         final String stem = stemOf(book.project().source().getFileName().toString());
         final Map<String, String> user = new HashMap<>();
         user.put("fileName", stem);
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
         metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
-        return ask(book, PromptName.FILE_NAME, user, NAME_TOKENS, model)
-                .flatMap(reply -> Result.ok(fileNameFrom(reply)))
+        return askFileName(book, user, model)
                 .flatMap(name -> name.isEmpty()
-                        ? Result.<String>err(AppError.of(
+                        ? Result.<FileNameSuggestion>err(AppError.of(
                                 ErrorCode.validation, "No name", "The model did not suggest a usable name."))
-                        : Result.ok(name));
+                        : Result.ok(checkedAuthor(book, user, name, model)));
+    }
+
+    private Result<String> askFileName(final Book book, final Map<String, String> user, final ChatModel model) {
+        return ask(book, PromptName.FILE_NAME, user, NAME_TOKENS, model).map(this::fileNameFrom);
+    }
+
+    // A non-Latin target with the author still in Latin letters is asked once more, naming the part; when the second
+    // answer fails or keeps the Latin author too, the name is still offered, with the flag the screen can word.
+    private FileNameSuggestion checkedAuthor(
+            final Book book, final Map<String, String> user, final String name, final ChatModel model) {
+        if (!FileNameAuthor.isLeftInAnotherScript(name, book.target())) {
+            return new FileNameSuggestion(name, false);
+        }
+        log.warn("The suggested file name keeps its author in another script than the target's; asking once more");
+        final Map<String, String> again = new HashMap<>(user);
+        again.put("correction", FileNameAuthor.correction(name));
+        final String second = askFileName(book, again, model).data();
+        if (second == null || second.isEmpty()) {
+            log.debug("The corrected file name is unusable; the first one is kept and flagged");
+            return new FileNameSuggestion(name, true);
+        }
+        final boolean stillLeft = FileNameAuthor.isLeftInAnotherScript(second, book.target());
+        log.debug("The corrected file name author still in another script: {}", stillLeft);
+        return new FileNameSuggestion(second, stillLeft);
     }
 
     private Result<BriefSuggestion> askBrief(final Book book, final ChatModel model) {
@@ -133,7 +158,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
         user.put("opening", opening);
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
         metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
-        return ask(book, PromptName.BRIEF_SUGGESTION, user, BRIEF_TOKENS, model).flatMap(this::briefFrom);
+        return ask(book, PromptName.BRIEF_SUGGESTION, user, BRIEF_TOKENS, model)
+                .flatMap(reply -> briefFrom(reply, book.project().brief().narrator()));
     }
 
     private Result<String> ask(
@@ -192,19 +218,24 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return RESERVED.matcher(cut).matches() ? cut + "_" : cut;
     }
 
-    private Result<BriefSuggestion> briefFrom(final String reply) {
+    private Result<BriefSuggestion> briefFrom(final String reply, final Narrator current) {
         final JsonNode node = json(reply);
         if (node == null) {
             return Result.err(AppError.of(
                     ErrorCode.validation, "Unreadable answer", "The model's suggestion could not be read."));
         }
-        return Result.ok(new BriefSuggestion(
+        final BriefSuggestion read = new BriefSuggestion(
                 text(node, "genre"),
                 register(text(node, "register")),
                 text(node, "voice"),
                 text(node, "audience"),
                 narrator(text(node, "narrator")),
-                narratorGender(text(node, "narratorGender"))));
+                narratorGender(text(node, "narratorGender")));
+        final BriefSuggestion aligned = read.alignedTo(current);
+        log.debug(
+                "Brief suggestion aligned to the set narrator: voiceDropped={}",
+                !Objects.equals(aligned.voiceEra(), read.voiceEra()));
+        return Result.ok(aligned);
     }
 
     private @Nullable JsonNode json(final String reply) {

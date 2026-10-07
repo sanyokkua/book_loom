@@ -15,10 +15,10 @@ public interface SetupAssistant {
      * @param projectId the project whose book is open
      * @param model the model to ask
      * @return the file name without its extension and without any character a file name cannot hold, in the target
-     *     language; {@code validation} when the project is not stored or its book is not open; the model's own error
+     *     language, with whether its author part was left in Latin letters for a non-Latin target; {@code validation} when the project is not stored or its book is not open; the model's own error
      *     otherwise
      */
-    Result<String> suggestFileName(String projectId, ChatModel model);
+    Result<FileNameSuggestion> suggestFileName(String projectId, ChatModel model);
 
     /**
      * Proposes the tone and style of the Book Brief from the opening of the book.

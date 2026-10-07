@@ -1,8 +1,10 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.Objects;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 
@@ -25,10 +27,39 @@ public record BriefSuggestion(
         NarratorPerson narrator,
         Gender narratorGender) {
 
+    private static final Pattern THIRD_PERSON = Pattern.compile("(?iU)third[- ]person|\\bтрет\\p{L}*\\s+особ");
+    private static final Pattern FIRST_PERSON = Pattern.compile("(?iU)first[- ]person|\\bперш\\p{L}*\\s+особ");
+
     /** Rejects a missing choice. */
     public BriefSuggestion {
         Objects.requireNonNull(register, "register");
         Objects.requireNonNull(narrator, "narrator");
         Objects.requireNonNull(narratorGender, "narratorGender");
+    }
+
+    /**
+     * This suggestion held to a narrator that is already set: a person who chose the narrator, or the detector that
+     * read it from the text, is never contradicted by a guess. The narrator and its gender are the set ones, and a
+     * voice note that names the other grammatical person ("third-person limited" for a first-person book) is dropped.
+     *
+     * @param current the brief's narrator now; {@link Narrator#unspecified()} when nothing is set
+     * @return this suggestion when the brief names no narrator person, else the aligned one
+     */
+    public BriefSuggestion alignedTo(final Narrator current) {
+        Objects.requireNonNull(current, "current");
+        if (current.person() == NarratorPerson.UNSPECIFIED) {
+            return this;
+        }
+        final boolean contradicts = voiceEra != null && contradicts(current.person(), voiceEra);
+        return new BriefSuggestion(
+                genre, register, contradicts ? null : voiceEra, audience, current.person(), current.gender());
+    }
+
+    private static boolean contradicts(final NarratorPerson person, final String voice) {
+        return switch (person) {
+            case FIRST -> THIRD_PERSON.matcher(voice).find();
+            case THIRD -> FIRST_PERSON.matcher(voice).find();
+            case UNSPECIFIED -> false;
+        };
     }
 }

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 
@@ -81,7 +82,7 @@ public final class NameSuggestion {
                         : messages.get(MessageKey.ACTIVITY_BLOCKED, messages.get(ActivityKind.SUGGEST_NAME.label())));
     }
 
-    private void answered(final String projectId, final Result<String> answer) {
+    private void answered(final String projectId, final Result<FileNameSuggestion> answer) {
         suggesting.set(false);
         final OpenedBook now = project.book().get();
         if (now == null || !now.projectId().equals(projectId)) {
@@ -98,7 +99,7 @@ public final class NameSuggestion {
             log.debug("the file name suggestion is dropped: the person changed the destination while it waited");
             return;
         }
-        final String stem = Objects.requireNonNull(answer.data(), "data");
+        final String stem = Objects.requireNonNull(answer.data(), "data").name();
         destination.destinationPath().ifPresent(current -> {
             log.debug("the suggested file name is taken as the destination");
             destination.editDestination(

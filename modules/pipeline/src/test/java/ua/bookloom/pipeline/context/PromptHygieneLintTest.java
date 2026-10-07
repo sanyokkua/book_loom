@@ -65,6 +65,7 @@ class PromptHygieneLintTest {
             Map.entry("fileName", "George Orwell. Animal Farm. 1945"),
             Map.entry("title", "Animal Farm"),
             Map.entry("author", "George Orwell"),
+            Map.entry("correction", "Correction: your previous answer kept \"George Orwell\" in Latin letters."),
             Map.entry("opening", "It was a bright cold day in April, and the clocks were striking thirteen."),
             Map.entry("next", "Вона чекала."),
             Map.entry("extraInstruction", "Keep the dialogue tone."),
