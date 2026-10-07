@@ -1248,6 +1248,12 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,.3), 2, 0, 0, 1);
 }
 
+/* A pooled glossary row is rebound to another entry while it scrolls: the thumb must be where the state says at once,
+   not slide there over 200 ms, or a row shows the previous row's switch for a moment. */
+.glossary-table .toggle-switch {
+    -thumb-move-animation-time: 1;
+}
+
 .toggle-switch:focused .thumb-area {
     -fx-border-color: -color-focus;
     -fx-border-width: 1px;

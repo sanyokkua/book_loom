@@ -213,4 +213,17 @@ class RunStatusBarTest extends TranslatingScreenTestBase {
 
         awaitFx(() -> engine.requests().size() == 2);
     }
+
+    // IF the average generation speed were left out of the title bar, THEN a person could not see how fast the run is.
+    @Test
+    void bar_runAverageKnown_showsTokensPerSecondAndHidesItBefore() {
+        runAt78(RunState.RUNNING);
+        assertThat(barText()).doesNotContain("tok/s");
+
+        mirror().live()
+                .publishThroughput(new Throughput(21.4, false, Duration.ofMinutes(80), Duration.ofMinutes(62), 21.5));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(barText()).contains("22 tok/s");
+    }
 }

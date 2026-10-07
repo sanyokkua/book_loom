@@ -142,6 +142,9 @@ public enum MessageKey {
     /** Title-bar time left; argument 0 is the formatted duration. */
     SHELL_RUN_LEFT("shell.run.left"),
     /** Title-bar dial and review mode of the run; argument 0 is the dial's name, argument 1 the review mode's. */
+    SHELL_RUN_RATE("shell.run.rate"),
+    /** Hover explanation of the text shown by {@link #SHELL_RUN_RATE}. */
+    SHELL_RUN_RATE_TIP("shell.run.rate.tip"),
     SHELL_RUN_MODE("shell.run.mode"),
     /** Hover explanation of the text shown by {@link #SHELL_RUN_MODE}. */
     SHELL_RUN_MODE_TIP("shell.run.mode.tip"),

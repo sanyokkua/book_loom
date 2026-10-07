@@ -60,6 +60,7 @@ public final class RunStatusBar {
     private final Label modeText = new Label();
     private final Label elapsed = new Label();
     private final Label timeLeft = new Label();
+    private final Label rate = new Label();
     private final Button control = new Button();
     private final Button connection = new Button();
     private final Tooltip connectionTip = new Tooltip();
@@ -118,9 +119,11 @@ public final class RunStatusBar {
         Tips.install(messages, modeText, MessageKey.SHELL_RUN_MODE_TIP);
         name(elapsed, "shell-run-elapsed", "run-status-detail");
         name(timeLeft, "shell-run-left", "run-status-detail");
+        name(rate, "shell-run-rate", "run-status-detail");
+        Tips.install(messages, rate, MessageKey.SHELL_RUN_RATE_TIP);
         fileName.setMinWidth(0);
         fileName.setTextOverrun(OverrunStyle.ELLIPSIS);
-        for (final Label part : new Label[] {stateText, modeText, elapsed, timeLeft}) {
+        for (final Label part : new Label[] {stateText, modeText, elapsed, timeLeft, rate}) {
             part.setMinWidth(Region.USE_PREF_SIZE);
         }
         control.setId("shell-run-control");
@@ -130,7 +133,7 @@ public final class RunStatusBar {
         control.setOnAction(event -> press());
         Tips.install(messages, control, MessageKey.SHELL_RUN_PAUSE_TIP);
         buildConnection();
-        view.getChildren().addAll(fileName, stateText, modeText, elapsed, timeLeft, connection, control);
+        view.getChildren().addAll(fileName, stateText, modeText, elapsed, timeLeft, rate, connection, control);
     }
 
     private void buildConnection() {
@@ -225,6 +228,13 @@ public final class RunStatusBar {
         timeLeft.setManaged(left != null);
         if (left != null) {
             timeLeft.setText(messages.get(MessageKey.SHELL_RUN_LEFT, DurationText.format(messages, left)));
+        }
+        final Double average = figures.averageTokensPerSecond();
+        rate.setVisible(average != null);
+        rate.setManaged(average != null);
+        if (average != null) {
+            rate.setText(
+                    messages.get(MessageKey.SHELL_RUN_RATE, (figures.estimated() ? "~" : "") + Math.round(average)));
         }
     }
 

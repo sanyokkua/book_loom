@@ -27,6 +27,9 @@ final class ThroughputMeter {
 
     private final Deque<Sample> samples = new ArrayDeque<>();
     private final CallKind counted;
+    private long runTokens;
+    private long runNanos;
+    private boolean runEstimated;
 
     /** A meter of the drafts, which the pace figures are taken from. */
     ThroughputMeter() {
@@ -43,17 +46,20 @@ final class ThroughputMeter {
     }
 
     void finished(final ModelCallFinished event) {
-        if (event.kind() != counted) {
-            return;
-        }
         final TokenUsage usage = event.usage();
         final Integer tokens = usage == null ? null : usage.completion();
         if (usage == null || tokens == null) {
-            log.debug("throughput: a {} call reported no completion tokens, not counted", counted);
+            log.debug("throughput: a {} call reported no completion tokens, not counted", event.kind());
             return;
         }
         final Duration reported = usage.generation();
         final Duration generation = reported == null ? event.elapsed() : reported;
+        runTokens += tokens;
+        runNanos += generation.toNanos();
+        runEstimated |= event.usageEstimated();
+        if (event.kind() != counted) {
+            return;
+        }
         samples.addLast(new Sample(tokens, generation, event.usageEstimated()));
         if (samples.size() > WINDOW) {
             samples.removeFirst();
@@ -72,12 +78,23 @@ final class ThroughputMeter {
         return nanos <= 0 ? null : tokens * (double) Duration.ofSeconds(1).toNanos() / nanos;
     }
 
+    /** Tokens per second over every call of the run so far, whatever its kind; null before one is known. */
+    @Nullable
+    Double averageTokensPerSecond() {
+        return runNanos <= 0 ? null : runTokens * (double) Duration.ofSeconds(1).toNanos() / runNanos;
+    }
+
     boolean isEstimated() {
-        return samples.stream().anyMatch(Sample::estimated);
+        return runEstimated || samples.stream().anyMatch(Sample::estimated);
     }
 
     /** Builds the figure for a snapshot; {@code timeLeft} and {@code elapsed} come from the run clock. */
     Throughput snapshot(final @Nullable Duration timeLeft, final Duration elapsed) {
-        return new Throughput(tokensPerSecond(), isEstimated(), timeLeft, Objects.requireNonNull(elapsed, "elapsed"));
+        return new Throughput(
+                tokensPerSecond(),
+                isEstimated(),
+                timeLeft,
+                Objects.requireNonNull(elapsed, "elapsed"),
+                averageTokensPerSecond());
     }
 }

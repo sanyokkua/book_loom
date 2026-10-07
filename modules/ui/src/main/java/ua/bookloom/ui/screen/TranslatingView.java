@@ -328,7 +328,7 @@ final class TranslatingView {
         final Button button = new Button();
         button.setId("translating-review-flagged");
         Tips.install(messages, button, MessageKey.TRANSLATING_REVIEW_FLAGGED_TIP);
-        button.getStyleClass().add("btn-ghost");
+        button.getStyleClass().add("btn-secondary");
         button.textProperty()
                 .bind(Bindings.createStringBinding(
                         () -> reviewLabel(
