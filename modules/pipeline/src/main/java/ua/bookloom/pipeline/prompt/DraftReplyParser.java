@@ -7,12 +7,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.pipeline.ControlCharacters;
 
 /** Reads only the strict one-segment response object so wrapper prose never becomes translated book text. */
 @Slf4j
 public final class DraftReplyParser {
 
     private static final String INVALID_OBJECT = "was not one JSON object with exactly a nonblank target field";
+    private static final String CONTROL_CHARACTERS =
+            "held control characters; write quote marks and dashes as « » “ ” — themselves";
     private final ObjectMapper mapper;
 
     /** Creates a parser with the application's tolerant JSON mapper; Guice builds it for the self-heal calls. */
@@ -29,6 +32,10 @@ public final class DraftReplyParser {
             final JsonNode root = mapper.reader()
                     .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                     .readTree(replyText);
+            if (validTarget(root)
+                    && ControlCharacters.containsControl(root.path("target").textValue())) {
+                return logged(invalid(CONTROL_CHARACTERS));
+            }
             return logged(validTarget(root) ? structured(root.path("target").textValue()) : invalid(INVALID_OBJECT));
         } catch (JsonProcessingException ignored) {
             return logged(invalid("was not valid JSON"));

@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.checks.SentenceCount;
@@ -53,6 +54,9 @@ final class ItemValidator {
         }
         if (isEcho(item.masked(), target)) {
             problems.add(ItemProblem.ECHO);
+        }
+        if (ControlCharacters.containsControl(target)) {
+            problems.add(ItemProblem.CONTROL_CHARACTERS);
         }
         if (ProtocolLeak.leaks(target)) {
             problems.add(ItemProblem.LEAKED);

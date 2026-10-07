@@ -22,5 +22,8 @@ public enum ItemProblem {
     SENTENCES,
 
     /** The target carries protocol text of the reply — a {@code terms} object, an id entry, a code fence. */
-    LEAKED
+    LEAKED,
+
+    /** The target holds control characters, such as a model's raw quote marks written as U+001C-U+001F. */
+    CONTROL_CHARACTERS
 }

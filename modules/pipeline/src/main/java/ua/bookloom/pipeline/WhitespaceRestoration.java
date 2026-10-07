@@ -28,11 +28,11 @@ public final class WhitespaceRestoration {
         Objects.requireNonNull(trimmed, "trimmed");
         log.debug("Restoring whitespace sourceLength={} trimmedLength={}", source.length(), trimmed.length());
         int leadingEnd = 0;
-        while (leadingEnd < source.length() && Character.isWhitespace(source.charAt(leadingEnd))) {
+        while (leadingEnd < source.length() && isSpacing(source.charAt(leadingEnd))) {
             leadingEnd++;
         }
         int trailingStart = source.length();
-        while (trailingStart > leadingEnd && Character.isWhitespace(source.charAt(trailingStart - 1))) {
+        while (trailingStart > leadingEnd && isSpacing(source.charAt(trailingStart - 1))) {
             trailingStart--;
         }
         final String restored = source.substring(0, leadingEnd) + trimmed + source.substring(trailingStart);
@@ -42,5 +42,10 @@ public final class WhitespaceRestoration {
                 source.length() - trailingStart,
                 restored.length());
         return restored;
+    }
+
+    // U+001C-U+001F count as whitespace to Java but are a model's raw quote marks and dashes, never the book's spacing.
+    private static boolean isSpacing(final char c) {
+        return Character.isWhitespace(c) && !ControlCharacters.isControl(c);
     }
 }

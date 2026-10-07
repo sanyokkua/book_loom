@@ -202,8 +202,8 @@ class RetryDraftTest {
 
     @Test
     void retry_flaggedDraftFailingTheGate_keepsThePreviousMachineTarget() {
-        // a retry whose reply never passes the gate — a control character no book can hold, which no placeholder
-        // repair touches — has no target of its own, so the earlier one stays
+        // a retry whose reply is refused as unusable — a control character no book can hold is rejected whole at the
+        // reply, never stripped — has no target of its own, so the earlier one stays
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(reply("Чудовисько\u0008 зустріло мене опівночі."))
@@ -213,7 +213,7 @@ class RetryDraftTest {
 
         assertThat(record.status()).isEqualTo(SegmentStatus.FLAGGED);
         assertThat(record.machineTarget()).isEqualTo("Чудовисько зустріло мене.");
-        assertThat(record.findings()).extracting(QaFinding::raisedBy).contains("placeholder");
+        assertThat(record.findings()).extracting(QaFinding::raisedBy).contains("reply");
     }
 
     @Test

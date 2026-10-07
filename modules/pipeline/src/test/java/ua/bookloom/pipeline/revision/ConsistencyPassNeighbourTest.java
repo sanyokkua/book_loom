@@ -88,6 +88,18 @@ class ConsistencyPassNeighbourTest {
                 .containsExactly(BEFORE, SegmentStatus.ACCEPTED);
     }
 
+    // IF a reply that writes « » as U+001C-U+001F were trimmed or kept, THEN the dialogue loses its quote marks.
+    @Test
+    void run_answerWithControlCharactersForQuotes_keepsTheOldText() {
+        repaired(SAM_MET_HALE, BEFORE);
+        book.model().answerTo(CONSISTENCY, reply("\\u001eСем зустрів Гейла\\u001d, \\u0013сказав я."));
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        assertThat(report.neighbourFixes()).isZero();
+        assertThat(book.stored(SAM_MET_HALE).machineTarget()).isEqualTo(BEFORE);
+    }
+
     // IF clean paragraphs were checked too, THEN the pass would cost one model call per paragraph of the book.
     @Test
     void run_cleanAcceptedDraft_isNotSentToTheModel() {

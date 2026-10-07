@@ -44,7 +44,12 @@ class DraftReplyParserTest {
                 Arguments.of("blank target", "{\"target\":\"   \"}"),
                 Arguments.of("malformed json", "{\"target\":"),
                 Arguments.of("wrapper prose", "Here is {\"target\":\"Привіт\"}"),
-                Arguments.of("plain text", "Привіт, світе."));
+                Arguments.of("plain text", "Привіт, світе."),
+                Arguments.of(
+                        "controls written for quotes and dash",
+                        "{\"target\":\"\\u001eДавай\\u001d, \\u0013сказав я\"}"),
+                Arguments.of("control at the end", "{\"target\":\"Цюрих і Джек\\u001f\"}"),
+                Arguments.of("control at the start", "{\"target\":\"\\u001cЦюрих і Джек\"}"));
     }
 
     private static DraftReplyParser parser() {
