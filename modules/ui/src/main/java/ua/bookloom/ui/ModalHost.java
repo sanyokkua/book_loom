@@ -9,6 +9,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.TraversalDirection;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
@@ -187,7 +188,23 @@ public final class ModalHost {
         final int at = stops.indexOf(scene.getFocusOwner());
         final int step = backwards ? -1 : 1;
         final int next = at < 0 ? 0 : Math.floorMod(at + step, stops.size());
-        stops.get(next).requestFocus();
+        focusFromKeyboard(stops, next);
+    }
+
+    // A focus moved by requestFocus() counts as a click and shows no ring; moved by traversal it shows one. So the
+    // target is reached by traversing from its neighbour inside the card: forwards from the stop before it, or, for the
+    // first stop (which has no stop before it inside the card), backwards from the stop after it.
+    private static void focusFromKeyboard(final List<Node> stops, final int target) {
+        final Node wanted = stops.get(target);
+        if (stops.size() > 1) {
+            final boolean fromBefore = target > 0;
+            final Node neighbour = stops.get(fromBefore ? target - 1 : target + 1);
+            neighbour.requestFocusTraversal(fromBefore ? TraversalDirection.NEXT : TraversalDirection.PREVIOUS);
+        }
+        if (wanted.getScene() != null && !wanted.isFocused()) {
+            log.debug("traversal did not land on stop {} of the card; focusing it directly", target);
+            wanted.requestFocus();
+        }
     }
 
     private void focusFirstIn(final Node dialog) {

@@ -35,6 +35,9 @@ import ua.bookloom.ui.theme.ThemeMode;
  */
 class AboutDialogTest extends ShellTestBase {
 
+    // More presses than the card has controls, so focus wraps round at least once.
+    private static final int WRAPPING_PRESSES = 8;
+
     private static final double CLICK_X = 4;
     private static final double CLICK_Y = 4;
 
@@ -207,6 +210,22 @@ class AboutDialogTest extends ShellTestBase {
         assertThat(owner).isNotNull();
         assertThat(ancestorsOf(owner)).contains(required("about-card"));
         assertThat(ancestorsOf(owner)).doesNotContain(required("shell-nav"));
+    }
+
+    // IF Tab inside a dialog moved focus the way a click does, THEN no focus ring would show and a keyboard user would
+    // not see which control is next; and Tab past the last control comes round to the first, still showing the ring.
+    @Test
+    void tab_insideTheCard_showsTheFocusRingEvenWhenItWrapsRound() {
+        openAbout();
+        final List<Boolean> visible = new ArrayList<>();
+
+        for (int press = 0; press < WRAPPING_PRESSES; press++) {
+            pressTab();
+            visible.add(scene.getFocusOwner().isFocusVisible());
+        }
+
+        assertThat(visible).containsOnly(true);
+        assertThat(ancestorsOf(scene.getFocusOwner())).contains(required("about-card"));
     }
 
     private static List<Node> ancestorsOf(final Node node) {
