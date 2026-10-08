@@ -107,7 +107,7 @@ Edges point downward only; `:pipeline` sees the three services, services see onl
 | Rule | Enforced by |
 |---|---|
 | FX-free core — only `:ui`/`:app` see JavaFX | ArchUnit `fx-free-core` |
-| Skeleton never regenerated; only text nodes and the attribute values DD-47 lists (image alt text) change — plus, in the EPUB package, the language rewrite and the removal of stale sort keys (`opf:file-as`, `calibre:title_sort`, file-as refines) of a changed title or creator | per-format golden round-trip test |
+| Skeleton never regenerated; only text nodes and the attribute values DD-47 lists (image alt text) change — plus, in the EPUB package, the language rewrite and the sort keys of a changed title or creator (a title's `opf:file-as`, `calibre:title_sort` and file-as refine are removed; a creator's `file-as` is rewritten from the translated name when it has two words or more in an alphabetic script and the source key was surname-first, else removed) | per-format golden round-trip test |
 | Records for data, Lombok only on services | ArchUnit `records-first` |
 | Opening a book never needs the network; provider calls are user-triggered; anything else must be optional, safe, and degrade without an error | ArchUnit `no-http-in-core-except-llm` |
 | `Result<T>` + typed `AppError` at every port; no exception crosses a module edge | advisory |

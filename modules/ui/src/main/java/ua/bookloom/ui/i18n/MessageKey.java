@@ -732,6 +732,22 @@ public enum MessageKey {
     BRIEF_AUX_FRONTMATTER_TIP("brief.aux.frontmatter.tip"),
     /** Hint under the front-matter switch. */
     BRIEF_AUX_FRONTMATTER_HINT("brief.aux.frontmatter.hint"),
+    /** Heading of the card holding the translated title and author. */
+    BRIEF_CARD_TITLE("brief.card.title"),
+    /** Label of the translated title field. */
+    BRIEF_BOOK_TITLE("brief.bookTitle"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_BOOK_TITLE}. */
+    BRIEF_BOOK_TITLE_TIP("brief.bookTitle.tip"),
+    /** Label of the translated author field. */
+    BRIEF_BOOK_AUTHOR("brief.bookAuthor"),
+    /** Hover explanation of the control labelled by {@link #BRIEF_BOOK_AUTHOR}. */
+    BRIEF_BOOK_AUTHOR_TIP("brief.bookAuthor.tip"),
+    /** Line under a title or author field naming the text the book carries, with that text as the argument. */
+    BRIEF_BOOK_TITLE_SOURCE("brief.bookTitle.source"),
+    /** Hint under the title and author fields saying when they fill and that an edit reaches every place. */
+    BRIEF_BOOK_TITLE_HINT("brief.bookTitle.hint"),
+    /** Hint on the Export screen pointing to where the translated title and author are edited. */
+    EXPORT_TITLE_HINT("export.title.hint"),
     /** Quality option: fastest. */
     BRIEF_QUALITY_FAST("brief.quality.fast"),
     /** Quality option: balanced. */

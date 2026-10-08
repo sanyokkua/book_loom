@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -100,18 +101,26 @@ record EffectiveTargets(
                 records.size(),
                 opened.id(),
                 keptKinds);
-        final Decision decision = Decision.fresh(keptKinds, unmask, new Languages(sourceLanguage, targetLanguage));
+        final Decision decision = Decision.fresh(
+                keptKinds,
+                unmask,
+                new Languages(sourceLanguage, targetLanguage),
+                TitleConsistency.of(opened, byId, keptKinds));
         final List<Unit> units = decideAll(opened, byId, decision);
+        logApplied(opened, decision);
+        return new EffectiveTargets(
+                opened.withUnits(units),
+                decision.masked(),
+                decision.fallbacks(),
+                decision.noTarget(),
+                decision.candidates());
+    }
+
+    private static void logApplied(final Document opened, final Decision decision) {
         log.debug(
                 "Effective targets applied document={} writtenWithTarget={} sourceFallbacks={} noTarget={} candidates={}",
                 opened.id(),
                 decision.masked().size(),
-                decision.fallbacks(),
-                decision.noTarget(),
-                decision.candidates());
-        return new EffectiveTargets(
-                opened.withUnits(units),
-                decision.masked(),
                 decision.fallbacks(),
                 decision.noTarget(),
                 decision.candidates());
@@ -134,6 +143,7 @@ record EffectiveTargets(
             Set<SegmentKind> keptKinds,
             BiFunction<Segment, String, Result<String>> unmask,
             Languages languages,
+            TitleConsistency titles,
             Map<String, String> masked,
             List<String> fallbacks,
             List<String> noTarget,
@@ -142,11 +152,13 @@ record EffectiveTargets(
         static Decision fresh(
                 final Set<SegmentKind> keptKinds,
                 final BiFunction<Segment, String, Result<String>> unmask,
-                final Languages languages) {
+                final Languages languages,
+                final TitleConsistency titles) {
             return new Decision(
                     keptKinds,
                     unmask,
                     languages,
+                    titles,
                     new LinkedHashMap<>(),
                     new ArrayList<>(),
                     new ArrayList<>(),
@@ -159,6 +171,10 @@ record EffectiveTargets(
         if (record == null || record.isKeptAsSource(decision.keptKinds())) {
             log.trace("segment={} written as source: {}", segment.id(), record == null ? "no record" : "kept");
             return segment;
+        }
+        final Optional<TitleConsistency.Replacement> title = decision.titles().forSegment(segment, record);
+        if (title.isPresent()) {
+            return titled(segment, record, title.get(), decision);
         }
         final String target = writtenTarget(record);
         if (target == null) {
@@ -180,6 +196,16 @@ record EffectiveTargets(
         }
         decision.masked().put(segment.id(), maskedTarget);
         return segment.withDecision(record.status(), target);
+    }
+
+    private static Segment titled(
+            final Segment segment,
+            final SegmentRecord record,
+            final TitleConsistency.Replacement title,
+            final Decision decision) {
+        log.debug("segment={} takes the book's one translated title or author", segment.id());
+        decision.masked().put(segment.id(), title.masked());
+        return segment.withDecision(record.status(), title.target());
     }
 
     // The order for a segment with no target of its own: the model's refused reply when it passes every blocking check,

@@ -46,15 +46,32 @@ class EpubWriterSortKeyTest {
         assertThat(opf).doesNotContain("title-sort-key");
     }
 
-    // IF only the title were handled, THEN the translated author would still sort under the source-language spelling.
+    // IF the old key were only dropped, THEN the translated book would lose its surname-first shelving.
     @Test
-    void write_authorTranslated_dropsTheAuthorsFileAsAttributeAndRefinement() {
+    void write_authorTranslated_rewritesTheFileAsAttributeAndRefinementFromTheTranslatedName() {
         final Path output = writeWithAuxiliaryTarget("aux:creator:0", "Джонатан Страуд");
 
         final String opf = rawOpfTextOf(output);
-        assertThat(opf).contains("Джонатан Страуд");
-        assertThat(opf).doesNotContain("Stroud, Jonathan").doesNotContain("author-sort-key");
+        assertThat(opf).contains("opf:file-as=\"Страуд, Джонатан\"");
+        assertThat(opf).contains(">Страуд, Джонатан</meta>");
+        assertThat(opf).doesNotContain("Stroud, Jonathan");
         assertThat(opf).contains("calibre:title_sort");
+    }
+
+    // IF a name in han script were split on spaces, THEN the key would be nonsense; absent is right.
+    @Test
+    void write_authorTranslatedToANonAlphabeticScript_leavesNoFileAs() {
+        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "乔纳森 斯特劳德");
+
+        assertThat(rawOpfTextOf(output)).doesNotContain("Stroud, Jonathan").doesNotContain("author-sort-key");
+    }
+
+    // IF a one-word author were given a key, THEN it would read "Name, " — no key at all is right.
+    @Test
+    void write_authorTranslatedToOneWord_leavesNoFileAs() {
+        final Path output = writeWithAuxiliaryTarget("aux:creator:0", "Страуд");
+
+        assertThat(rawOpfTextOf(output)).doesNotContain("Stroud, Jonathan").doesNotContain("author-sort-key");
     }
 
     // IF a book written with no translated title lost its keys, THEN a no-op export would no longer equal its source.

@@ -564,7 +564,15 @@ visible defect, and a page title or a description reads like the kind of short t
 governs. **Consequences:** New segment kinds + toggle group + nav/NCX handling; a switched-off kind's segments still
 exist and are counted apart from pending, never silently dropped. Auxiliary text repeats (one book's alt texts read
 `image` 58 times and its page titles the series name 80 times), so a run asks for each distinct auxiliary source once
-and gives an identical one the same answer, each slot keeping its own record. **ADR:** ADR-0004, ADR-0041
+and gives an identical one the same answer, each slot keeping its own record. The book has **one translated title and
+one translated author**: the metadata segments' targets (the person's edit, else the model's answer — edited on the Book
+Brief) are written wherever the source title or author stands alone as a title, heading or navigation label (the NCX
+`docTitle`, the nav/NCX entry, a title page heading, a page `<title>`), and a suggested file name spells them as the
+book does. The EPUB package's sort keys follow the translated text: a title's `opf:file-as`, `calibre:title_sort` and
+file-as refine are removed (they described the old text); a creator's `file-as` is rewritten `Last, First` from the
+translated name when the source key was surname-first and the name has two or more words in an alphabetic script, and
+removed otherwise. Fixed labels (cover, contents, about, copyright, notes) are resolved from a per-language-pair table
+and cost no model call; a pair with no table is translated by the model. **ADR:** ADR-0004, ADR-0041
 **Requirements:** FR-DOC-07, FR-BRIEF-04, FR-BRIEF-09.
 
 ## dd-48-icu-i18n-messages {#dd-48-icu-i18n-messages}

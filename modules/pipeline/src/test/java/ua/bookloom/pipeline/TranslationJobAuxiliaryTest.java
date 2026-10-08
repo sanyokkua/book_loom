@@ -107,6 +107,26 @@ class TranslationJobAuxiliaryTest {
         assertThat(recordOfKind(project, SegmentKind.TITLE).status()).isEqualTo(SegmentStatus.PENDING);
     }
 
+    // IF "Cover" went to the model it came back as a wrong word; the pair's table answers it and no call is made.
+    @Test
+    void run_coverAltText_takesTheFixedLabelWithoutCall() {
+        final Path source = TestBooks.epub(
+                tempDir.resolve("Book.epub"),
+                List.of(List.of("He left. <img src=\"cover.png\" alt=\"Cover\"/>")),
+                "en");
+        final TestProject project = project(source, briefWith(new AlsoTranslate(false, true, false, false)));
+        final ScriptedChatModel model = replies("HE LEFT. ⟦g0⟧");
+
+        final JobReport report = report(job(project, model).run());
+
+        assertThat(report.end()).isEqualTo(JobState.COMPLETED);
+        assertThat(requestText(model)).doesNotContain("Cover");
+        assertThat(model.requests()).hasSize(1);
+        assertThat(recordOfKind(project, SegmentKind.ALT))
+                .extracting(SegmentRecord::status, SegmentRecord::machineTarget)
+                .containsExactly(SegmentStatus.ACCEPTED, "Обкладинка");
+    }
+
     // The switch is judged when the counts are read, so a label accepted earlier counts as kept and is not sent again.
     @Test
     void run_switchTurnedOffAfterRun_keepsAcceptedTitleAsSource() {

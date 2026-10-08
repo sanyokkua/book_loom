@@ -24,6 +24,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.persistence.ProjectRepository;
+import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.SetupAssistant;
@@ -66,6 +67,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private static final Pattern SPACES = Pattern.compile("\\s+");
 
     private final ProjectRepository projects;
+    private final SegmentRepository segments;
     private final OpenProjects openProjects;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
@@ -117,11 +119,19 @@ public final class SetupAssistantImpl implements SetupAssistant {
         user.put("fileName", stem);
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
         metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
+        final FileNameTargets targets =
+                FileNameTargets.of(segments, book.project().id());
+        Optional.ofNullable(targets.title()).ifPresent(title -> user.put("titleTarget", title));
+        Optional.ofNullable(targets.author()).ifPresent(author -> user.put("authorTarget", author));
         return askFileName(book, user, model)
                 .flatMap(name -> name.isEmpty()
                         ? Result.<FileNameSuggestion>err(AppError.of(
                                 ErrorCode.validation, "No name", "The model did not suggest a usable name."))
-                        : Result.ok(checkedAuthor(book, user, name, model)));
+                        : Result.ok(spelled(checkedAuthor(book, user, name, model), targets)));
+    }
+
+    private static FileNameSuggestion spelled(final FileNameSuggestion suggestion, final FileNameTargets targets) {
+        return new FileNameSuggestion(targets.spell(suggestion.name()), suggestion.authorKeptInSourceScript());
     }
 
     private Result<String> askFileName(final Book book, final Map<String, String> user, final ChatModel model) {

@@ -6,6 +6,12 @@ Title: {{title}}
 {{#author}}
 Author: {{author}}
 {{/author}}
+{{#titleTarget}}
+Translated title (use exactly as written): {{titleTarget}}
+{{/titleTarget}}
+{{#authorTarget}}
+Translated author (use exactly as written): {{authorTarget}}
+{{/authorTarget}}
 </Input>
 {{#correction}}
 {{correction}}

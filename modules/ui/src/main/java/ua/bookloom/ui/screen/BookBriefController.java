@@ -13,6 +13,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.BookBriefViewModel;
+import ua.bookloom.ui.state.BookTitleViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.SettingsViewModel;
@@ -30,6 +31,7 @@ import ua.bookloom.ui.state.WorkflowProgress;
 public final class BookBriefController {
 
     private final BookBriefViewModel viewModel;
+    private final BookTitleViewModel titles;
     private final CurrentProject project;
     private final Messages messages;
     private final Navigator navigator;
@@ -45,6 +47,7 @@ public final class BookBriefController {
      * Receives the collaborators the injector owns.
      *
      * @param viewModel the choices the brief assembles
+     * @param titles the translated title and author the brief shows
      * @param project the holder of the open book they are about
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Back, Continue and the route from the no-book state lead
@@ -57,6 +60,7 @@ public final class BookBriefController {
     @Inject
     public BookBriefController(
             final BookBriefViewModel viewModel,
+            final BookTitleViewModel titles,
             final CurrentProject project,
             final Messages messages,
             final Navigator navigator,
@@ -64,6 +68,7 @@ public final class BookBriefController {
             final SettingsViewModel settings,
             final WorkflowProgress progress) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.titles = Objects.requireNonNull(titles, "titles");
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
@@ -84,7 +89,7 @@ public final class BookBriefController {
     private void show(final boolean bookOpen) {
         log.debug("showing the {}", bookOpen ? "brief" : "no-book state");
         final Node content = bookOpen
-                ? new BriefView(viewModel, messages, navigator, names, settings, progress).root()
+                ? new BriefView(viewModel, titles, messages, navigator, names, settings, progress).root()
                 : NoBookView.build(messages, navigator);
         stateHost.getChildren().setAll(content);
     }

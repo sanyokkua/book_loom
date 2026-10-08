@@ -23,6 +23,7 @@ import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.heal.ChunkDecider;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
+import ua.bookloom.pipeline.labels.FixedLabels;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TranslationMemory;
 
@@ -83,7 +84,10 @@ public final class ChunkRunner {
         this.followUp = new DecisionFollowUp(
                 settings.projectId(), settings.frame().sourceLanguage(), steps.summary(), stores, sinks, calls);
         this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
-        this.shortcuts = new DraftShortcuts(settings.frame().styleSheet().text());
+        this.shortcuts = new DraftShortcuts(
+                settings.frame().styleSheet().text(),
+                FixedLabels.forPair(
+                        settings.frame().sourceLanguage(), settings.frame().targetLanguage()));
         this.batches =
                 new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls());
         this.learning = new TermLearning(

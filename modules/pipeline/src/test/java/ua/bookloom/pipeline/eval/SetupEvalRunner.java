@@ -52,6 +52,7 @@ final class SetupEvalRunner {
                             setupCase.source(), setupCase.target(), QualityDial.FAST, Narrator.unspecified()));
             final SetupAssistantImpl assistant = new SetupAssistantImpl(
                     prepared.stores().projects(),
+                    prepared.stores().segments(),
                     prepared.stores().openProjects(),
                     new PromptTemplates(),
                     new ObjectMapper());

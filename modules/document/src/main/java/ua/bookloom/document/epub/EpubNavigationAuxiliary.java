@@ -14,6 +14,7 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.document.epub.NavigationParser.NavEntry;
 import ua.bookloom.document.model.AuxiliarySlots;
 import ua.bookloom.document.model.CorruptContainerException;
+import ua.bookloom.document.model.ElementPaths;
 import ua.bookloom.document.model.Jdom2TreeNode;
 import ua.bookloom.document.model.JsoupTreeNode;
 import ua.bookloom.document.model.RawEntry;
@@ -32,6 +33,9 @@ import ua.bookloom.util.text.VisibleText;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class EpubNavigationAuxiliary {
+
+    /** The id of the NCX's {@code docTitle} segment, named by what it is like every other slot. */
+    static final String DOC_TITLE_ID = "aux:ncx-doctitle";
 
     /**
      * Adds the navigation and NCX slots to {@code builder}.
@@ -89,6 +93,7 @@ final class EpubNavigationAuxiliary {
             return null;
         }
         final TreeNode root = Jdom2TreeNode.of(tree.getRootElement());
+        addDocTitle(builder, ncxEntry.name(), tree.getRootElement(), root);
         final Set<String> written = new HashSet<>();
         for (final NavEntry entry : flatten(NavigationParser.parseNcx(tree, ncxEntry.name()))) {
             if (!VisibleText.isBlank(entry.label()) && !entry.anchorPath().isEmpty()) {
@@ -97,6 +102,38 @@ final class EpubNavigationAuxiliary {
         }
         log.debug("NCX {} own label segments={}", ncxEntry.name(), written.size());
         return tree;
+    }
+
+    // The NCX's own book title is a label like any other: left out, it stays in the source language beside a translated
+    // dc:title.
+    private static void addDocTitle(
+            AuxiliarySlots.Builder builder, String ncxPath, org.jdom2.Element ncxRoot, TreeNode root) {
+        final org.jdom2.Element text = docTitleText(ncxRoot);
+        if (text == null || VisibleText.isBlank(text.getTextNormalize())) {
+            log.debug("NCX {} has no readable docTitle", ncxPath);
+            return;
+        }
+        builder.addText(
+                ncxPath,
+                DOC_TITLE_ID,
+                SegmentKind.NAV_LABEL,
+                root,
+                ElementPaths.below(ncxRoot, text),
+                TreeDialect.FICTION_BOOK);
+        log.debug("NCX {} docTitle is segment {}", ncxPath, DOC_TITLE_ID);
+    }
+
+    private static org.jdom2.@Nullable Element docTitleText(org.jdom2.Element ncxRoot) {
+        for (final org.jdom2.Element child : ncxRoot.getChildren()) {
+            if ("docTitle".equals(child.getName())) {
+                for (final org.jdom2.Element text : child.getChildren()) {
+                    if ("text".equals(text.getName())) {
+                        return text;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private static void addNcxLabel(

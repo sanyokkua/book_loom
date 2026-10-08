@@ -52,12 +52,28 @@ class EpubReaderNavigationTest {
 
         final Unit auxiliary = auxiliaryOf(support.open(support.epub("book.epub", entries)));
 
-        assertThat(kindCount(auxiliary, SegmentKind.NAV_LABEL)).isEqualTo(11);
+        assertThat(kindCount(auxiliary, SegmentKind.NAV_LABEL)).isEqualTo(12);
         assertThat(kindCount(auxiliary, SegmentKind.ALT)).isEqualTo(7);
         assertThat(auxiliary.segments())
                 .filteredOn(segment -> segment.kind() == SegmentKind.NAV_LABEL)
                 .extracting(Segment::id)
-                .allMatch(id -> id.startsWith("aux:nav:"));
+                .allMatch(id -> id.startsWith("aux:nav:") || id.equals("aux:ncx-doctitle"));
+    }
+
+    // IF the NCX's own docTitle were no segment, THEN a translated book kept its English title in toc.ncx.
+    @Test
+    void read_ncxWithDocTitle_yieldsOneDocTitleNavLabelSegmentWithItsText() {
+        final Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("OEBPS/content.opf", opf(NCX_ITEM + chapterItem("c01"), "c01"));
+        entries.put("OEBPS/toc.ncx", ncx("", List.of("Chapter I")));
+        entries.put("OEBPS/c01.xhtml", chapter("<p>Prose.</p>"));
+
+        final Unit auxiliary = auxiliaryOf(support.open(support.epub("book.epub", entries)));
+
+        assertThat(auxiliary.segments())
+                .filteredOn(segment -> segment.id().equals("aux:ncx-doctitle"))
+                .extracting(Segment::kind, Segment::masked)
+                .containsExactly(tuple(SegmentKind.NAV_LABEL, "Book"));
     }
 
     @Test
@@ -73,7 +89,10 @@ class EpubReaderNavigationTest {
         assertThat(auxiliary.segments())
                 .filteredOn(segment -> segment.kind() == SegmentKind.NAV_LABEL)
                 .extracting(Segment::id, Segment::masked)
-                .containsExactly(tuple("aux:nav:1", "Chapter 1"), tuple("aux:ncx:np0", "Chapter I"));
+                .containsExactly(
+                        tuple("aux:nav:1", "Chapter 1"),
+                        tuple("aux:ncx-doctitle", "Book"),
+                        tuple("aux:ncx:np0", "Chapter I"));
     }
 
     @Test
@@ -120,7 +139,7 @@ class EpubReaderNavigationTest {
         assertThat(auxiliary.segments())
                 .filteredOn(segment -> segment.kind() == SegmentKind.NAV_LABEL)
                 .extracting(Segment::id)
-                .containsExactly("aux:ncx:np0", "aux:ncx:np1");
+                .containsExactly("aux:ncx-doctitle", "aux:ncx:np0", "aux:ncx:np1");
     }
 
     @Test
@@ -143,7 +162,10 @@ class EpubReaderNavigationTest {
                 .filteredOn(segment -> segment.kind() == SegmentKind.NAV_LABEL)
                 .extracting(Segment::id, Segment::sourceInner)
                 .containsExactly(
-                        tuple("aux:ncx:np", "One"), tuple("aux:ncx:np:2", "Two"), tuple("aux:ncx:np:3", "Three"));
+                        tuple("aux:ncx-doctitle", "Book"),
+                        tuple("aux:ncx:np", "One"),
+                        tuple("aux:ncx:np:2", "Two"),
+                        tuple("aux:ncx:np:3", "Three"));
     }
 
     @Test

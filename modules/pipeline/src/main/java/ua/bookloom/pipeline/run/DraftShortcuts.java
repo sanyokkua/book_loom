@@ -4,21 +4,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.heal.LoopSettings;
 import ua.bookloom.pipeline.heal.ReuseCheck;
 import ua.bookloom.pipeline.heal.VerbatimCheck;
+import ua.bookloom.pipeline.labels.FixedLabels;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
 
@@ -34,15 +38,21 @@ import ua.bookloom.pipeline.memory.ProtectedSpans;
 @Slf4j
 final class DraftShortcuts {
 
+    private static final Set<SegmentKind> LABEL_KINDS =
+            Set.of(SegmentKind.NAV_LABEL, SegmentKind.ALT, SegmentKind.TITLE, SegmentKind.HEADING);
+
     private final Map<String, String> acceptedAuxiliary = new HashMap<>();
     private final ContextSnapshot noContext;
+    private final FixedLabels labels;
 
     /**
      * Creates the shortcuts of one run.
      *
      * @param styleSheet the non-null style sheet of the run, which a segment that saw no other context still records
+     * @param labels the fixed labels of the run's language pair
      */
-    DraftShortcuts(final String styleSheet) {
+    DraftShortcuts(final String styleSheet, final FixedLabels labels) {
+        this.labels = Objects.requireNonNull(labels, "labels");
         this.noContext = new ContextSnapshot(
                 List.of(), List.of(), List.of(), null, Objects.requireNonNull(styleSheet, "styleSheet"));
     }
@@ -69,6 +79,10 @@ final class DraftShortcuts {
         if (verbatim != null) {
             drafts.drafted(verbatim, noContext);
             return verbatim;
+        }
+        final DraftOutcome fixed = fixedLabel(segment, mask, gate, loop, drafts);
+        if (fixed != null) {
+            return fixed;
         }
         if (!Unit.AUXILIARY_ID.equals(segment.unit())) {
             return null;
@@ -128,6 +142,27 @@ final class DraftShortcuts {
         return copy;
     }
 
+    // A navigation label, heading, page title or image description that is only "Cover" or "Contents" is the same word
+    // in
+    // every book: the pair's table answers it, through the same checks a memory reuse passes, and no call is made.
+    private @Nullable DraftOutcome fixedLabel(
+            final Segment segment,
+            final ProtectedMask mask,
+            final GateFunction gate,
+            final LoopSettings loop,
+            final ChunkDrafts drafts) {
+        if (!LABEL_KINDS.contains(segment.kind())
+                || !Tokens.inOrder(segment.masked()).isEmpty()) {
+            return null;
+        }
+        final String label = labels.resolve(segment.masked()).orElse(null);
+        if (label == null) {
+            return null;
+        }
+        log.debug("Segment segmentId={} kind={} is a fixed label, no call", segment.id(), segment.kind());
+        return reuse(label, segment, mask, gate, loop, drafts);
+    }
+
     private @Nullable DraftOutcome reused(
             final Segment segment,
             final ProtectedMask mask,
@@ -139,6 +174,16 @@ final class DraftShortcuts {
             log.debug("Auxiliary segmentId={} drafted: no identical text decided yet", segment.id());
             return null;
         }
+        return reuse(stored, segment, mask, gate, loop, drafts);
+    }
+
+    private @Nullable DraftOutcome reuse(
+            final String stored,
+            final Segment segment,
+            final ProtectedMask mask,
+            final GateFunction gate,
+            final LoopSettings loop,
+            final ChunkDrafts drafts) {
         final Result<DraftOutcome.Reused> checked = ProtectedSpans.checkRestored(stored, mask)
                 .flatMap(remasked ->
                         ReuseCheck.check(segment, mask.maskedText(), mask.presentLocked(), remasked, gate, loop));

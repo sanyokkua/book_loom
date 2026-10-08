@@ -7,13 +7,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Keeps a translated book from sorting under its source-language title or author: when a {@code dc:title} or
  * {@code dc:creator} was written with a different text, the sort keys that described the old text are removed — the
  * {@code opf:file-as} attribute, a {@code file-as} refinement naming the element, and, for a title, Calibre's
- * {@code calibre:title_sort} meta. Dropping rather than rewriting is deliberate: no key the book carries is derived from
- * the new text, and a reader that finds none sorts by the text itself, which is right in the target language.
+ * {@code calibre:title_sort} meta. A title's keys are dropped: a reader that finds none sorts by the text itself, which
+ * is right in the target language. A creator's key is rewritten instead when it can be derived from the translated name
+ * ({@link FileAsDerivation}), so the book still shelves under the author's surname.
  *
  * <p>An element whose text did not change keeps every key, so a book written with no translated title or author stays
  * canonical-equal to its source.
@@ -68,17 +70,41 @@ final class EpubSortKeys {
     }
 
     private static void dropKeysOf(final Element metadata, final Element changed) {
-        log.debug("{} was translated: dropping the sort keys of its old text", changed.getName());
-        changed.removeAttribute(FILE_AS, OPF_NS);
+        log.debug("{} was translated: replacing the sort keys of its old text", changed.getName());
         final String id = changed.getAttributeValue("id");
-        if (id != null) {
-            metadata.getChildren("meta", OPF_NS)
-                    .removeIf(meta -> ("#" + id).equals(meta.getAttributeValue("refines"))
-                            && FILE_AS.equals(meta.getAttributeValue("property")));
+        final List<Element> refinements = id == null ? List.of() : fileAsRefinements(metadata, id);
+        final String derived = CREATOR.equals(changed.getName()) ? derivedKey(changed, refinements) : null;
+        if (derived == null) {
+            changed.removeAttribute(FILE_AS, OPF_NS);
+            metadata.getChildren("meta", OPF_NS).removeAll(refinements);
+        } else {
+            keepDerived(changed, refinements, derived);
         }
         if (TITLE.equals(changed.getName())) {
             metadata.getChildren("meta", OPF_NS).removeIf(meta -> TITLE_SORT.equals(meta.getAttributeValue("name")));
         }
+    }
+
+    private static List<Element> fileAsRefinements(final Element metadata, final String id) {
+        return metadata.getChildren("meta", OPF_NS).stream()
+                .filter(meta -> ("#" + id).equals(meta.getAttributeValue("refines"))
+                        && FILE_AS.equals(meta.getAttributeValue("property")))
+                .toList();
+    }
+
+    private static @Nullable String derivedKey(final Element creator, final List<Element> refinements) {
+        final String attribute = creator.getAttributeValue(FILE_AS, OPF_NS);
+        final String old = attribute != null
+                ? attribute
+                : refinements.stream().map(Element::getText).findFirst().orElse(null);
+        return old == null ? null : FileAsDerivation.derive(old, creator.getText());
+    }
+
+    private static void keepDerived(final Element creator, final List<Element> refinements, final String derived) {
+        if (creator.getAttribute(FILE_AS, OPF_NS) != null) {
+            creator.setAttribute(FILE_AS, derived, OPF_NS);
+        }
+        refinements.forEach(refinement -> refinement.setText(derived));
     }
 
     private static List<Element> namedElements(final org.jdom2.Document opf) {
