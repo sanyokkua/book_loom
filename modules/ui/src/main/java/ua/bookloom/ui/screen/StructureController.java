@@ -15,10 +15,12 @@ import ua.bookloom.api.document.BookProfile;
 import ua.bookloom.api.document.BookStats;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.CurrentProject;
 import ua.bookloom.ui.state.OpenedBook;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 import ua.bookloom.ui.state.StructureListing;
+import ua.bookloom.ui.state.StructureSegmentsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
@@ -40,6 +42,8 @@ public final class StructureController {
     private final Navigator navigator;
     private final WorkflowProgress progress;
     private final StructureChecksViewModel checks;
+    private final StructureSegmentsViewModel segments;
+    private final BookBriefViewModel brief;
     private final ChangeListener<@Nullable OpenedBook> onBook = (observed, was, now) -> show(now);
 
     @FXML
@@ -53,6 +57,8 @@ public final class StructureController {
      * @param navigator where the route from the no-book state leads
      * @param progress where Continue records that the structure step is done
      * @param checks the background round-trip and chunk-budget checks the screen shows
+     * @param segments the listing of the picked part's segments
+     * @param brief the brief, whose finished save makes the segment listing stale
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -62,12 +68,16 @@ public final class StructureController {
             final Messages messages,
             final Navigator navigator,
             final WorkflowProgress progress,
-            final StructureChecksViewModel checks) {
+            final StructureChecksViewModel checks,
+            final StructureSegmentsViewModel segments,
+            final BookBriefViewModel brief) {
         this.project = Objects.requireNonNull(project, "project");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.checks = Objects.requireNonNull(checks, "checks");
+        this.segments = Objects.requireNonNull(segments, "segments");
+        this.brief = Objects.requireNonNull(brief, "brief");
     }
 
     @FXML
@@ -90,6 +100,7 @@ public final class StructureController {
         final StructureListing listing =
                 profile == null ? new StructureListing(List.of()) : StructureListing.of(profile);
         final BookStats stats = profile == null ? EMPTY_STATS : profile.stats();
-        return new StructureView(messages, navigator, progress, checks).build(listing, stats, book.projectId());
+        return new StructureView(messages, navigator, progress, checks, segments, brief)
+                .build(listing, stats, book.projectId());
     }
 }

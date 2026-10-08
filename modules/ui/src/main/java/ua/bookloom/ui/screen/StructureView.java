@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javafx.beans.binding.Bindings;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TreeItem;
@@ -14,6 +16,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookStats;
 import ua.bookloom.api.document.StructureNode;
 import ua.bookloom.ui.Navigator;
@@ -22,14 +25,16 @@ import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.StructureChecks;
 import ua.bookloom.ui.state.StructureChecksViewModel;
 import ua.bookloom.ui.state.StructureListing;
+import ua.bookloom.ui.state.StructureSegmentsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The structure screen's content for an open book: the tree of the book's own structure with the segment total beneath
- * it, the statistics and the background checks beside it, and the Back and Continue actions under them.
+ * it and, beside it, the segment browser of the part picked in the tree, the statistics and the background checks beside it, and the Back and Continue actions under them.
  *
  * <p>The tree is a {@link TreeView} because it virtualizes its rows: a book with thousands of units materialises only
  * the cells the viewport shows. The screen is read-only, and Continue is never held back by a check.
@@ -41,22 +46,35 @@ final class StructureView {
     private static final double SCREEN_SPACING = 14;
     private static final double COLUMN_SPACING = 14;
     private static final double SIDE_WIDTH = 420;
+    private static final double TREE_MIN_HEIGHT = 204;
 
     private final Messages messages;
     private final Navigator navigator;
     private final WorkflowProgress progress;
     private final StructureChecksViewModel checks;
+    private final StructureSegmentsViewModel segments;
     private final NumberFormat numbers;
+    // The weak listener on the brief's save state needs a strong reference, since the brief outlives this view.
+    private final ChangeListener<Boolean> onBriefSaved;
 
     StructureView(
             final Messages messages,
             final Navigator navigator,
             final WorkflowProgress progress,
-            final StructureChecksViewModel checks) {
+            final StructureChecksViewModel checks,
+            final StructureSegmentsViewModel segments,
+            final BookBriefViewModel brief) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.progress = Objects.requireNonNull(progress, "progress");
         this.checks = Objects.requireNonNull(checks, "checks");
+        this.segments = Objects.requireNonNull(segments, "segments");
+        this.onBriefSaved = (observed, was, now) -> {
+            if (was && !now) {
+                segments.refresh();
+            }
+        };
+        Objects.requireNonNull(brief, "brief").saving().addListener(new WeakChangeListener<>(onBriefSaved));
         this.numbers = NumberFormat.getIntegerInstance(messages.locale());
     }
 
@@ -74,22 +92,31 @@ final class StructureView {
                 new StructureChecksCard(checks, messages, numbers));
         side.setPrefWidth(SIDE_WIDTH);
         side.setMinWidth(SIDE_WIDTH);
-        final Node treeCard = card(listing);
+        final Node treeCard = card(listing, projectId);
         HBox.setHgrow(treeCard, Priority.ALWAYS);
         final HBox columns = new HBox(COLUMN_SPACING, treeCard, side);
-        VBox.setVgrow(columns, Priority.ALWAYS);
-        return new VBox(SCREEN_SPACING, columns, actions());
+        return new VBox(SCREEN_SPACING, columns, segmentsCard(), actions());
     }
 
-    private Node card(final StructureListing listing) {
+    private Node card(final StructureListing listing, final String projectId) {
         final Label heading = new Label(messages.get(MessageKey.STRUCTURE_READING_ORDER));
         heading.getStyleClass().add("card-title");
         Tips.install(messages, heading, MessageKey.STRUCTURE_READING_ORDER_TIP);
         final Label total = new Label(messages.get(MessageKey.STRUCTURE_TOTAL, listing.totalSegments()));
         total.setId("structure-total");
         total.getStyleClass().add("muted");
-        final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots()), total, runTotal(listing));
+        final VBox card = new VBox(CARD_SPACING, heading, tree(listing.roots(), projectId), total, runTotal(listing));
         card.setId("structure-card");
+        card.getStyleClass().add("card");
+        return card;
+    }
+
+    private Node segmentsCard() {
+        final Label heading = new Label(messages.get(MessageKey.STRUCTURE_SEGMENTS_TITLE));
+        heading.getStyleClass().add("card-title");
+        Tips.install(messages, heading, MessageKey.STRUCTURE_SEGMENTS_TITLE_TIP);
+        final VBox card = new VBox(CARD_SPACING, heading, new StructureSegmentsPane(segments, messages));
+        card.setId("structure-segments-card");
         card.getStyleClass().add("card");
         return card;
     }
@@ -119,7 +146,7 @@ final class StructureView {
         return line;
     }
 
-    private TreeView<StructureNode> tree(final List<StructureNode> roots) {
+    private TreeView<StructureNode> tree(final List<StructureNode> roots, final String projectId) {
         final TreeItem<StructureNode> root = new TreeItem<>();
         roots.forEach(node -> root.getChildren().add(itemOf(node)));
         final TreeView<StructureNode> tree = new TreeView<>(root);
@@ -129,7 +156,30 @@ final class StructureView {
         tree.setEditable(false);
         tree.setCellFactory(view -> new StructureNodeCell(messages, numbers));
         VBox.setVgrow(tree, Priority.ALWAYS);
+        tree.setMinHeight(TREE_MIN_HEIGHT);
+        tree.getSelectionModel().selectedItemProperty().addListener((observed, was, now) -> picked(projectId, now));
+        segments.clear();
+        firstWithUnits(root).ifPresent(tree.getSelectionModel()::select);
         return tree;
+    }
+
+    private void picked(final String projectId, final @Nullable TreeItem<StructureNode> item) {
+        final List<String> units = item == null ? List.of() : StructureListing.unitsOf(item.getValue());
+        log.debug("structure node picked, {} unit(s) to list", units.size());
+        segments.show(projectId, units);
+    }
+
+    private static Optional<TreeItem<StructureNode>> firstWithUnits(final TreeItem<StructureNode> parent) {
+        for (final TreeItem<StructureNode> child : parent.getChildren()) {
+            if (!StructureListing.unitsOf(child.getValue()).isEmpty()) {
+                return Optional.of(child);
+            }
+            final Optional<TreeItem<StructureNode>> deeper = firstWithUnits(child);
+            if (deeper.isPresent()) {
+                return deeper;
+            }
+        }
+        return Optional.empty();
     }
 
     // Expanded so that the chapters a person recognises are visible without opening each part.

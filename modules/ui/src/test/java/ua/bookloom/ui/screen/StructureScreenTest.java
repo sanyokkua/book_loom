@@ -72,11 +72,11 @@ class StructureScreenTest extends StructureScreenTestBase {
         assertThat(renderedRows()).containsExactlyElementsOf(ELEVEN_ROWS);
     }
 
-    // IF a long chapter name were cut in its middle ("Chapter Three: ...Gravity Formula"), THEN the person could not
-    // read
-    // which chapter a row is; at the window minimum the name wraps whole onto a taller row and is its own hover text.
+    // IF a long chapter name made its row taller, THEN the tree would measure rows while scrolling and rows would
+    // differ
+    // in height from the segment list beside it; the name ends in an ellipsis and is read whole in its hover text.
     @Test
-    void row_longChapterNameAtTheMinimumWidth_wrapsWholeOntoATallerRow() throws TimeoutException {
+    void row_longChapterNameAtTheMinimumWidth_staysOnOneFixedHeightRowAndIsItsOwnHoverText() throws TimeoutException {
         openBookThenShowStructure(
                 dir.resolve("book.epub"), bookOf(BookFormat.EPUB, 27, node("Notes", 4), node(LONG_TITLE, 23)));
 
@@ -89,9 +89,10 @@ class StructureScreenTest extends StructureScreenTestBase {
                 .toList());
         assertThat(titles).hasSize(2);
         final Label longOne = titles.get(1);
-        assertThat(ThemeTestSupport.onFx(() -> drawn(longOne))).isEqualTo(LONG_TITLE);
         assertThat(ThemeTestSupport.onFx(() -> longOne.getHeight()))
-                .isGreaterThan(ThemeTestSupport.onFx(() -> titles.get(0).getHeight()) * 1.5);
+                .isEqualTo(ThemeTestSupport.onFx(() -> titles.get(0).getHeight()));
+        assertThat(ThemeTestSupport.onFx(() -> drawn(longOne))).endsWith("...").isNotEqualTo(LONG_TITLE);
+        assertThat(ThemeTestSupport.onFx(() -> tree().getFixedCellSize())).isEqualTo(34.0);
         assertThat(TooltipProbe.tipText(longOne)).isEqualTo(LONG_TITLE);
     }
 
@@ -283,7 +284,9 @@ class StructureScreenTest extends StructureScreenTestBase {
 
         assertThat(descendantsOf("structure-card"))
                 .noneMatch(node -> node instanceof ButtonBase)
-                .noneMatch(node -> node instanceof ToggleSwitch)
+                .noneMatch(node -> node instanceof ToggleSwitch);
+        // The text field and the kind choice in the card filter the segment list; the tree itself offers no edit.
+        assertThat(descendantsOf("structure-tree"))
                 .noneMatch(node -> node instanceof TextInputControl)
                 .noneMatch(node -> node instanceof ComboBoxBase);
         assertThat(tree().isEditable()).isFalse();

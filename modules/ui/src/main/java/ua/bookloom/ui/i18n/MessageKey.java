@@ -783,6 +783,86 @@ public enum MessageKey {
     STRUCTURE_READING_ORDER("structure.readingOrder"),
     /** Hover explanation of the control labelled by {@link #STRUCTURE_READING_ORDER}. */
     STRUCTURE_READING_ORDER_TIP("structure.readingOrder.tip"),
+    /** Heading of the card holding the segment browser. */
+    STRUCTURE_SEGMENTS_TITLE("structure.segments.title"),
+    /** Hover explanation of the control labelled by {@link #STRUCTURE_SEGMENTS_TITLE}. */
+    STRUCTURE_SEGMENTS_TITLE_TIP("structure.segments.title.tip"),
+    /** The list's summary; argument 0 is the segment count and 1 the planned chunk count, each an Integer. */
+    STRUCTURE_SEGMENTS_HEADER("structure.segments.header"),
+    /** Hover explanation of the segment list. */
+    STRUCTURE_SEGMENTS_HINT("structure.segments.hint"),
+    /** Shown in place of the list while no part with segments is picked. */
+    STRUCTURE_SEGMENTS_PICK("structure.segments.pick"),
+    /** Shown in place of the list while the segments are being listed. */
+    STRUCTURE_SEGMENTS_LOADING("structure.segments.loading"),
+    /** Shown in place of the list when the segments could not be listed. */
+    STRUCTURE_SEGMENTS_FAILED("structure.segments.failed"),
+    /** Shown in place of the list when the picked part has no segments. */
+    STRUCTURE_SEGMENTS_NONE("structure.segments.none"),
+    /** Shown in place of the list when the filters keep no segment. */
+    STRUCTURE_SEGMENTS_NO_MATCH("structure.segments.noMatch"),
+    /** Beside the filters while they hide segments; argument 0 is the number shown and 1 the number listed, each an Integer. */
+    STRUCTURE_SEGMENTS_SHOWN("structure.segments.shown"),
+    /** Prompt of the field that filters the segment list by text. */
+    STRUCTURE_SEARCH_PROMPT("structure.search.prompt"),
+    /** Hover explanation of the field labelled by {@link #STRUCTURE_SEARCH_PROMPT}. */
+    STRUCTURE_SEARCH_HINT("structure.search.hint"),
+    /** Choice of the kind filter that keeps every kind. */
+    STRUCTURE_KIND_ALL("structure.kind.all"),
+    /** Hover explanation of the kind filter. */
+    STRUCTURE_KIND_HINT("structure.kind.hint"),
+    /** Chip on a segment a run copies unchanged without asking the model. */
+    STRUCTURE_KEPT_VERBATIM("structure.kept.verbatim"),
+    /** Hover explanation of the chip labelled by {@link #STRUCTURE_KEPT_VERBATIM}. */
+    STRUCTURE_KEPT_VERBATIM_TIP("structure.kept.verbatim.tip"),
+    /** Chip on a segment of text the brief leaves untranslated. */
+    STRUCTURE_KEPT_SOURCE("structure.kept.source"),
+    /** Hover explanation of the chip labelled by {@link #STRUCTURE_KEPT_SOURCE}. */
+    STRUCTURE_KEPT_SOURCE_TIP("structure.kept.source.tip"),
+    /** Hover explanation of a segment's planned chunk badge. */
+    STRUCTURE_CHUNK_HINT("structure.chunk.hint"),
+    /** Hover explanation of a segment's token estimate. */
+    STRUCTURE_TOKENS_HINT("structure.tokens.hint"),
+    /** Shown in the reading pane while no segment is picked. */
+    STRUCTURE_PREVIEW_EMPTY("structure.preview.empty"),
+    /** Hover explanation of the reading pane. */
+    STRUCTURE_PREVIEW_HINT("structure.preview.hint"),
+    /** The reading pane's caption; arguments: 0 locator, 1 kind, 2 token count (an Integer), 3 the chunk phrase. */
+    STRUCTURE_PREVIEW_META("structure.preview.meta"),
+    /** The chunk phrase of the reading pane's caption; arguments: 0 the chunk, 1 the chunk count, each an Integer. */
+    STRUCTURE_PREVIEW_CHUNK("structure.preview.chunk"),
+    /** The chunk phrase for a segment no chunk holds. */
+    STRUCTURE_PREVIEW_UNCHUNKED("structure.preview.unchunked"),
+    /** Added to the caption for a segment too long for one chunk. */
+    STRUCTURE_PREVIEW_OVERSIZED("structure.preview.oversized"),
+    /** The name of the segment kind {@code PARAGRAPH} in the segment list. */
+    STRUCTURE_KIND_PARAGRAPH("structure.kind.paragraph"),
+    /** The name of the segment kind {@code HEADING} in the segment list. */
+    STRUCTURE_KIND_HEADING("structure.kind.heading"),
+    /** The name of the segment kind {@code VERSE_LINE} in the segment list. */
+    STRUCTURE_KIND_VERSE_LINE("structure.kind.verse_line"),
+    /** The name of the segment kind {@code LIST_ITEM} in the segment list. */
+    STRUCTURE_KIND_LIST_ITEM("structure.kind.list_item"),
+    /** The name of the segment kind {@code TABLE_CELL} in the segment list. */
+    STRUCTURE_KIND_TABLE_CELL("structure.kind.table_cell"),
+    /** The name of the segment kind {@code FOOTNOTE} in the segment list. */
+    STRUCTURE_KIND_FOOTNOTE("structure.kind.footnote"),
+    /** The name of the segment kind {@code CAPTION} in the segment list. */
+    STRUCTURE_KIND_CAPTION("structure.kind.caption"),
+    /** The name of the segment kind {@code TITLE} in the segment list. */
+    STRUCTURE_KIND_TITLE("structure.kind.title"),
+    /** The name of the segment kind {@code METADATA_TITLE} in the segment list. */
+    STRUCTURE_KIND_METADATA_TITLE("structure.kind.metadata_title"),
+    /** The name of the segment kind {@code METADATA_AUTHOR} in the segment list. */
+    STRUCTURE_KIND_METADATA_AUTHOR("structure.kind.metadata_author"),
+    /** The name of the segment kind {@code METADATA_DESCRIPTION} in the segment list. */
+    STRUCTURE_KIND_METADATA_DESCRIPTION("structure.kind.metadata_description"),
+    /** The name of the segment kind {@code FRONTMATTER_VALUE} in the segment list. */
+    STRUCTURE_KIND_FRONTMATTER_VALUE("structure.kind.frontmatter_value"),
+    /** The name of the segment kind {@code ALT} in the segment list. */
+    STRUCTURE_KIND_ALT("structure.kind.alt"),
+    /** The name of the segment kind {@code NAV_LABEL} in the segment list. */
+    STRUCTURE_KIND_NAV_LABEL("structure.kind.nav_label"),
     /** Caption of the translatable-segment count in the statistics card. */
     STRUCTURE_STAT_SEGMENTS("structure.stat.segments"),
     /** Caption of the word count in the statistics card. */

@@ -1,6 +1,7 @@
 package ua.bookloom.api.pipeline;
 
 import java.nio.file.Path;
+import java.util.List;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
@@ -34,6 +35,16 @@ public interface ProjectService {
      * @return the computed plan
      */
     Result<BookPlan> plan(String projectId);
+
+    /**
+     * Lists one unit's source segments with the chunk a run would pack each into, from the current brief; it makes no
+     * model call and works before any run.
+     *
+     * @param projectId the non-null project id
+     * @param unitId the non-null id of one unit of the project's book; a whole-book listing is not offered
+     * @return the unit's segments in document order; a {@code validation} error for an unknown project or unit
+     */
+    Result<List<SegmentPreview>> segments(String projectId, String unitId);
 
     /**
      * Compares a no-op reassembly of the project's source against the source itself.

@@ -19,8 +19,8 @@ import ua.bookloom.ui.i18n.Messages;
  *
  * <p>The cell logs nothing, since it is refreshed on every scroll, and builds its nodes once, only changing their text
  * as it is reused. It is given no width of its own, because a cell never narrows below its preferred width: the title
- * label, the only one allowed to shrink, then wraps onto further lines, so a long chapter name is read whole rather
- * than cut in its middle, and the whole name is also its hover text. A node without a count of its own, one that only
+ * label, the only one allowed to shrink, then ends in an ellipsis on its one line, because the tree's rows have one
+ * fixed height like the segment list beside it, and the whole name is its hover text. A node without a count of its own, one that only
  * points into a unit another node counts, shows no pill rather than a misleading zero.
  */
 final class StructureNodeCell extends TreeCell<StructureNode> {
@@ -38,10 +38,8 @@ final class StructureNodeCell extends TreeCell<StructureNode> {
         this.numbers = numbers;
         setPrefWidth(0);
         title.getStyleClass().add("structure-row-title");
-        title.setWrapText(true);
         title.setTextOverrun(OverrunStyle.ELLIPSIS);
         title.setMinWidth(0);
-        title.setMinHeight(Region.USE_PREF_SIZE);
         Tips.install(title, "");
         HBox.setHgrow(title, Priority.ALWAYS);
         title.setMaxWidth(Double.MAX_VALUE);

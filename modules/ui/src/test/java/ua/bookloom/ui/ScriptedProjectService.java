@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
 
@@ -44,6 +45,10 @@ public final class ScriptedProjectService implements ProjectService {
     private final List<Boolean> roundTripsOnFxThread = new CopyOnWriteArrayList<>();
     private final List<String> plans = new CopyOnWriteArrayList<>();
     private final List<Boolean> plansOnFxThread = new CopyOnWriteArrayList<>();
+    private final Map<String, Result<List<SegmentPreview>>> segmentAnswers = new ConcurrentHashMap<>();
+    private final Map<String, CountDownLatch> segmentGates = new ConcurrentHashMap<>();
+    private final List<String> segmentCalls = new CopyOnWriteArrayList<>();
+    private final List<Boolean> segmentsOnFxThread = new CopyOnWriteArrayList<>();
     private final CountDownLatch entered = new CountDownLatch(1);
     private final CountDownLatch roundTripEntered = new CountDownLatch(1);
     private volatile Result<RoundTripReport> roundTripAnswer = notScripted();
@@ -174,6 +179,44 @@ public final class ScriptedProjectService implements ProjectService {
         plans.add(Objects.requireNonNull(projectId, "projectId"));
         plansOnFxThread.add(Platform.isFxApplicationThread());
         return planAnswer;
+    }
+
+    @Override
+    public Result<List<SegmentPreview>> segments(final String projectId, final String unitId) {
+        segmentCalls.add(
+                Objects.requireNonNull(projectId, "projectId") + "/" + Objects.requireNonNull(unitId, "unitId"));
+        segmentsOnFxThread.add(Platform.isFxApplicationThread());
+        awaitGate(segmentGates.get(unitId));
+        final Result<List<SegmentPreview>> scripted = segmentAnswers.get(unitId);
+        return scripted != null ? scripted : notScripted();
+    }
+
+    /** From now on answers a segment listing of {@code unitId} with {@code answer}. */
+    public void onSegments(final String unitId, final Result<List<SegmentPreview>> answer) {
+        segmentAnswers.put(Objects.requireNonNull(unitId, "unitId"), Objects.requireNonNull(answer, "answer"));
+    }
+
+    /** From now on blocks each listing of {@code unitId} until {@link #releaseSegments}. */
+    public void holdSegments(final String unitId) {
+        segmentGates.put(unitId, new CountDownLatch(1));
+    }
+
+    /** Lets the held listings of {@code unitId} answer. */
+    public void releaseSegments(final String unitId) {
+        final CountDownLatch held = segmentGates.get(unitId);
+        if (held != null) {
+            held.countDown();
+        }
+    }
+
+    /** Every segment listing asked for, as {@code projectId/unitId}, in call order. */
+    public List<String> segmentCalls() {
+        return List.copyOf(segmentCalls);
+    }
+
+    /** For each segment listing, in call order, whether it arrived on the FX Application Thread. */
+    public List<Boolean> segmentCallsOnFxThread() {
+        return List.copyOf(segmentsOnFxThread);
     }
 
     @Override

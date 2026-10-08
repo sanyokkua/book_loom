@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -23,7 +22,6 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.persistence.ProjectRepository;
@@ -32,15 +30,13 @@ import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.ProjectService;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NarratorHint;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.chunk.Chunk;
-import ua.bookloom.pipeline.chunk.ChunkPacker;
-import ua.bookloom.pipeline.chunk.TokenBudget;
-import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.util.hash.HashUtil;
 import ua.bookloom.util.lang.LanguageTags;
@@ -113,6 +109,30 @@ public final class ProjectServiceImpl implements ProjectService {
             return findProject(projectId).map(project -> plan(projectId, document, project.brief()));
         } catch (Throwable cause) {
             return Result.err(internalError("plan the book", cause));
+        }
+    }
+
+    @Override
+    public Result<List<SegmentPreview>> segments(final String projectId, final String unitId) {
+        Objects.requireNonNull(projectId, "projectId");
+        Objects.requireNonNull(unitId, "unitId");
+        try {
+            log.debug("segments project={} unit={}", projectId, unitId);
+            final Document document = openProjects.get(projectId);
+            if (document == null) {
+                return Result.err(unknownProject(projectId));
+            }
+            final Unit unit = document.units().stream()
+                    .filter(candidate -> candidate.id().equals(unitId))
+                    .findFirst()
+                    .orElse(null);
+            if (unit == null) {
+                return Result.err(unknownUnit(unitId));
+            }
+            return findProject(projectId)
+                    .map(project -> UnitChunks.previews(unit, project.brief(), SegmentLocators.of(document)));
+        } catch (Throwable cause) {
+            return Result.err(internalError("list the segments", cause));
         }
     }
 
@@ -238,16 +258,10 @@ public final class ProjectServiceImpl implements ProjectService {
     }
 
     private static BookPlan plan(final String projectId, final Document document, final BookBrief brief) {
-        final Set<SegmentKind> kept = brief.alsoTranslate().keptKinds();
-        final int cap = DialParameters.of(brief.dial()).chunkCap();
         final Map<String, Integer> perUnit = new LinkedHashMap<>();
         final List<String> oversized = new ArrayList<>();
         for (final Unit unit : document.units()) {
-            final List<Segment> translated = unit.segments().stream()
-                    .filter(segment -> !(unit.isAuxiliary() && kept.contains(segment.kind())))
-                    .toList();
-            final List<Chunk> chunks =
-                    ChunkPacker.pack(translated, brief.sourceLanguage(), TokenBudget.MAX_CHUNK_TOKENS, cap);
+            final List<Chunk> chunks = UnitChunks.pack(unit, brief);
             perUnit.put(unit.id(), chunks.size());
             chunks.stream()
                     .filter(Chunk::oversized)
@@ -258,7 +272,7 @@ public final class ProjectServiceImpl implements ProjectService {
                 projectId,
                 perUnit.values().stream().mapToInt(Integer::intValue).sum(),
                 oversized.size(),
-                kept);
+                brief.alsoTranslate().keptKinds());
         return new BookPlan(perUnit, oversized);
     }
 
@@ -282,6 +296,12 @@ public final class ProjectServiceImpl implements ProjectService {
                 ErrorCode.validation,
                 "This project is not open",
                 "No open project has this id; import the book again.");
+    }
+
+    private static AppError unknownUnit(final String unitId) {
+        log.warn("unknown unit={}", unitId);
+        return AppError.of(
+                ErrorCode.validation, "This part of the book is not known", "The book has no part with this id.");
     }
 
     private static AppError internalError(final String action, final Throwable cause) {

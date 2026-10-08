@@ -17,6 +17,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.InspectionVerdict;
 import ua.bookloom.api.document.LanguageEvidence;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
@@ -25,6 +26,7 @@ import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
+import ua.bookloom.api.pipeline.SegmentPreview;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
@@ -87,6 +89,7 @@ final class ConformancePreparations {
     private void checkABook() throws TimeoutException {
         projects.onRoundTrip(Result.ok(new RoundTripReport(true, true, List.of(), 9, 9)));
         projects.onPlan(Result.ok(new BookPlan(Map.of("unit-0", 3), List.of("s-4"))));
+        scriptSegments();
         openABook();
         final StructureChecksViewModel checks = injector.getInstance(StructureChecksViewModel.class);
         WaitForAsyncUtils.waitFor(
@@ -94,6 +97,26 @@ final class ConformancePreparations {
                 TimeUnit.SECONDS,
                 () -> onFx(() -> checks.state().get() instanceof StructureChecks.Finished));
         WaitForAsyncUtils.waitForFxEvents();
+    }
+
+    // The segment browser lists the first chapter: a heading, a paragraph and a numeral kept as is, in two chunks.
+    private void scriptSegments() {
+        projects.onSegments(
+                "unit-0",
+                Result.ok(List.of(
+                        row("s-1", "ch1 · p01", SegmentKind.HEADING, "Letter 1", false, 1),
+                        row("s-2", "ch1 · p02", SegmentKind.PARAGRAPH, "You will rejoice to hear.", false, 1),
+                        row("s-3", "ch1 · p03", SegmentKind.PARAGRAPH, "2", true, 2))));
+    }
+
+    private static SegmentPreview row(
+            final String id,
+            final String locator,
+            final SegmentKind kind,
+            final String text,
+            final boolean verbatim,
+            final int chunk) {
+        return new SegmentPreview(id, locator, kind, text, text, 3, verbatim, false, chunk, 2, false);
     }
 
     // The names screen loads the stored glossary as the book opens; one row is enough to show a term cell.

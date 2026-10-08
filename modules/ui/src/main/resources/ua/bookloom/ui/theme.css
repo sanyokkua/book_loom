@@ -1813,8 +1813,9 @@
     -fx-background-insets: 0;
     -fx-padding: 0;
     -fx-min-height: 140px;
-    /* No fixed row height: a long chapter name wraps onto a second line instead of being cut, so each row takes the
-       height of its title. The tree still builds only the rows its viewport shows. */
+    /* One fixed row height, like the segment list beside it: 6px + 6px padding, 1px divider and a 13px title,
+       rounded up. A long chapter name ends in an ellipsis and is read whole in its hover text. */
+    -fx-fixed-cell-size: 34px;
 }
 
 .structure-tree .tree-cell {
@@ -1824,7 +1825,7 @@
     -fx-border-width: 0 0 1px 0;
     -fx-text-fill: -color-text;
     -fx-font-size: 13px;
-    -fx-padding: 7px 10px 7px 10px;
+    -fx-padding: 6px 10px 6px 10px;
 }
 
 .structure-tree .tree-cell:filled:hover {
@@ -1852,6 +1853,87 @@
 
 .structure-row-title {
     -fx-text-fill: -color-text-strong;
+}
+
+/* --- Structure: the segment browser beside the tree (ui-mockup.html: the chapter tree and its segment list) --- */
+.structure-segments {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-fixed-cell-size: 34px;
+}
+
+.structure-segments .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-text-fill: -color-text;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 6px 6px 6px;
+}
+
+/* A planned chunk opens with a rule in the accent role, so the boundary is seen without reading the badges. */
+.structure-segments .list-cell.chunk-start {
+    -fx-border-color: -color-primary transparent -color-divider transparent;
+    -fx-border-width: 2px 0 1px 0;
+    -fx-padding: 5px 6px 6px 6px;
+}
+
+.structure-segments .list-cell:filled:hover {
+    -fx-background-color: -color-surface-alt;
+}
+
+.structure-segments .list-cell:filled:selected,
+.structure-segments .list-cell:filled:selected:hover {
+    -fx-background-color: -color-selected;
+}
+
+.structure-segments .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.structure-segments .scroll-bar > .thumb {
+    -fx-background-color: -color-border-cool;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+}
+
+.structure-segments .scroll-bar > .track {
+    -fx-background-color: transparent;
+}
+
+.structure-seg-text {
+    -fx-text-fill: -color-text;
+}
+
+.chip-chunk-a {
+    -fx-background-color: -color-info-bg;
+    -fx-border-color: -color-info-bd;
+    -fx-text-fill: -color-info;
+}
+
+.chip-chunk-b {
+    -fx-background-color: -color-sand-soft;
+    -fx-border-color: -color-sand-strong;
+    -fx-text-fill: -color-text;
+}
+
+.structure-preview {
+    -fx-background-color: -color-surface-alt;
+    -fx-background-insets: 0;
+    -fx-background-radius: 6px;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+}
+
+.structure-preview > .viewport {
+    -fx-background-color: transparent;
+}
+
+.structure-preview-flow {
+    -fx-padding: 8px 10px 8px 10px;
 }
 
 .count-pill {

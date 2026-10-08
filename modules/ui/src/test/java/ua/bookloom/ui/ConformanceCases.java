@@ -222,6 +222,8 @@ final class ConformanceCases {
                     List.of(
                             new Part("#structure-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#structure-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#structure-segments-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            new Part("#structure-segments-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#structure-stats-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#structure-checks-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part(".count-pill", Kind.BACKGROUND, "surface-2", "#f6f1e8", "#2e3b41"),

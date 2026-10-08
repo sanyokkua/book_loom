@@ -79,4 +79,29 @@ class StructureListingTest {
         assertThat(listing.roots()).containsExactly(node("a", 3));
         assertThatThrownBy(() -> listing.roots().add(node("c", 1))).isInstanceOf(UnsupportedOperationException.class);
     }
+
+    // IF a grouping node listed nothing, THEN picking a part would show an empty list although its chapters have text.
+    @Test
+    void unitsOf_groupingNodeWithoutAUnit_listsItsDescendantsUnitsOnceInOrder() {
+        final StructureNode part = new StructureNode(
+                "Part I",
+                null,
+                null,
+                List.of(
+                        new StructureNode("Chapter 1", "u1", 3, List.of()),
+                        new StructureNode(
+                                "Chapter 2", "u2", 4, List.of(new StructureNode("Scene", "u2", null, List.of()))),
+                        new StructureNode("Notes", null, null, List.of())));
+
+        assertThat(StructureListing.unitsOf(part)).containsExactly("u1", "u2");
+    }
+
+    // IF a chapter with a unit also listed its children's units, THEN a picked chapter would show other chapters' text.
+    @Test
+    void unitsOf_nodeWithItsOwnUnit_listsOnlyThatUnit() {
+        final StructureNode chapter =
+                new StructureNode("Chapter", "u1", 3, List.of(new StructureNode("Section", "u9", null, List.of())));
+
+        assertThat(StructureListing.unitsOf(chapter)).containsExactly("u1");
+    }
 }
