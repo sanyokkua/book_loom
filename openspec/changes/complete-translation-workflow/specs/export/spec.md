@@ -305,6 +305,21 @@ is a plain text substitution, so it can only find a spelling it knew: the one th
   gender of a character; set it in Names & style and run the pass again" (the pass records the open deferrals by
   reason in its summary)
 - **AND** with the switch off neither mentions the pass
+- **AND** after a pass whose fresh drafts improved 4 flagged or doubtful segments and kept 2, whose neighbour check
+  left 27 paragraphs unchanged, refused 3 answers (2 by `quotes`, 1 by `worse`) and skipped 1 failed call, they also
+  read "Consistency pass: a fresh draft improved 4 flagged or doubtful segments; 2 were no better and stayed as
+  before", "Consistency pass: 27 paragraphs checked against their neighbours needed no change", "Consistency pass: 3
+  answers were refused because they would make the text worse (quotes: 2, worse: 1)" and "Consistency pass: 1 segment
+  was skipped — the model call failed"
+
+#### Scenario: The busy card shows the pass's current model call
+
+- **WHEN** the export's neighbour check is waiting on the model for `ch1 · p08`
+- **THEN** the busy card's step reads "Checking paragraphs against their neighbours", its facts read `Requests 1 of 4`,
+  and its folded "Model calls" section holds the call labelled `consistency`, waiting, with the paragraph it was sent
+  and its prompt in the order it was sent
+- **AND** while the pass drafts doubted segments again the step reads "Drafting flagged and doubtful segments again"
+  and the facts count `Segments 3 of 8`
 
 #### Scenario: A model that cannot be created does not stop the export
 

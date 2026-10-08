@@ -3,11 +3,13 @@ package ua.bookloom.ui.state;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.SourceFallback;
@@ -42,9 +44,10 @@ public final class ExportReportLines {
      *
      * @param messages the catalogue the lines are worded from
      * @param summary the pass's summary from the report
-     * @return the lines to show; empty when the pass was off, otherwise the count of segments it adjusted, the note
-     *     that the gender step was skipped without a model or the count of segments that await a character's gender,
-     *     or, when none of these applies, that it ran and changed nothing
+     * @return the lines to show; empty when the pass was off, otherwise the count of segments it adjusted, what its
+     *     retry and neighbour check came to (improved, kept, unchanged, refused by rule, skipped), the note that the
+     *     gender step was skipped without a model or the count of segments that await a character's gender, or, when
+     *     none of these applies, that it ran and changed nothing
      */
     public static List<String> consistency(final Messages messages, final ConsistencySummary summary) {
         Objects.requireNonNull(messages, "messages");
@@ -59,6 +62,7 @@ public final class ExportReportLines {
         if (summary.neighbourFixes() > 0) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NEIGHBOURS, summary.neighbourFixes()));
         }
+        lines.addAll(checks(messages, summary.checks()));
         if (summary.status() == ConsistencySummary.Status.RAN_WITHOUT_MODEL) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NO_MODEL));
         } else if (summary.openGenderDeferrals() > 0) {
@@ -66,6 +70,29 @@ public final class ExportReportLines {
         }
         if (lines.isEmpty()) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NOTHING));
+        }
+        return lines;
+    }
+
+    // What the model steps came to besides their fixes, so a pass that read thirty paragraphs and changed none says so.
+    private static List<String> checks(final Messages messages, final ConsistencyChecks checks) {
+        final List<String> lines = new ArrayList<>();
+        if (checks.retriedImproved() + checks.retriedKept() > 0) {
+            lines.add(messages.get(
+                    MessageKey.EXPORT_CHECK_CONSISTENCY_RETRIED, checks.retriedImproved(), checks.retriedKept()));
+        }
+        if (checks.neighbourUnchanged() > 0) {
+            lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_UNCHANGED, checks.neighbourUnchanged()));
+        }
+        if (checks.refusedTotal() > 0) {
+            final String rules = checks.refused().entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(rule -> rule.getKey() + ": " + rule.getValue())
+                    .collect(Collectors.joining(", "));
+            lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_REFUSED, checks.refusedTotal(), rules));
+        }
+        if (checks.skipped() > 0) {
+            lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_SKIPPED, checks.skipped()));
         }
         return lines;
     }

@@ -3,6 +3,8 @@ package ua.bookloom.ui;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import javafx.animation.Animation;
@@ -10,6 +12,7 @@ import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -21,6 +24,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -31,18 +35,25 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.control.DurationText;
+import ua.bookloom.ui.control.LiveCallView;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.Activity;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.LiveCalls;
 
 /**
  * The shell's layer for work the window waits for: a scrim that swallows clicks and a card that says what runs, how far
  * it has got, how long it has taken and what is left, with Cancel when the work can be stopped. It sits between the
  * frame and the {@link ModalHost}, so an error dialog arriving while it is up is shown above it and leaves it intact.
+ *
+ * <p>Work that makes model calls, such as the export's consistency pass, also shows its current call in a folded
+ * "Model calls" section, the same view the Translating screen's live panel uses.
  *
  * <p>The card appears only after {@link #DELAY} so work that ends at once never flashes it, and fades in and out. It
  * cannot be dismissed from the keyboard or by a click: Escape is swallowed, Tab stays on the card, and the card goes
@@ -62,6 +73,8 @@ public final class BusyHost {
     static final String ETA_ID = "busy-eta";
     static final String DETAILS_ID = "busy-details";
     static final String CANCEL_ID = "busy-cancel";
+    static final String CALLS_ID = "busy-calls";
+    static final String CALL_ID = "busy-call";
 
     /** How long work runs before the card appears, so a quick action does not flash it. */
     static final javafx.util.Duration DELAY = javafx.util.Duration.millis(400);
@@ -81,6 +94,8 @@ public final class BusyHost {
     private final Label elapsed = new Label();
     private final Label eta = new Label();
     private final VBox details = new VBox();
+    private final LiveCallView call;
+    private final TitledPane calls;
     private final ButtonType cancelType;
     private final Button cancel;
     private final PauseTransition delay = new PauseTransition(DELAY);
@@ -105,6 +120,13 @@ public final class BusyHost {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         cancelType = new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
+        call = new LiveCallView(
+                CALL_ID,
+                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_CALL_CURRENT)),
+                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_SOURCE_FALLBACK)),
+                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_TARGET_FALLBACK)),
+                messages);
+        calls = new TitledPane(messages.get(MessageKey.BUSY_CALLS), call);
         buildCard();
         cancel = (Button) card.lookupButton(cancelType);
         wireCancel();
@@ -152,11 +174,18 @@ public final class BusyHost {
         final HBox times = new HBox(elapsed, gap, eta);
         times.setAlignment(Pos.CENTER_LEFT);
         details.setId(DETAILS_ID);
-        final VBox body = new VBox(bar, times, details);
+        buildCalls();
+        final VBox body = new VBox(bar, times, details, calls);
         body.getStyleClass().add("busy-body");
         card.setContent(body);
         card.getButtonTypes().setAll(cancelType);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+    }
+
+    private void buildCalls() {
+        calls.setId(CALLS_ID);
+        calls.setExpanded(false);
+        Tips.install(messages, calls, MessageKey.BUSY_CALLS_TIP);
     }
 
     private void wireCancel() {
@@ -232,7 +261,16 @@ public final class BusyHost {
         eta.setText(left == null ? "" : messages.get(MessageKey.BUSY_ETA, DurationText.format(messages, left)));
         eta.setVisible(left != null);
         showDetails(now);
+        showCalls(now.calls());
         showCancel(now);
+    }
+
+    // The work's model calls, folded away until the person opens them; work that makes none shows no section.
+    private void showCalls(final LiveCalls live) {
+        final CallSnapshot current = live.current();
+        calls.setVisible(current != null);
+        calls.setManaged(current != null);
+        call.show(current, live);
     }
 
     private String stepText(final Activity now) {
@@ -283,9 +321,16 @@ public final class BusyHost {
         if (now == null) {
             return;
         }
-        final long seconds =
-                Math.max(0, Duration.between(now.startedAt(), activities.now()).toSeconds());
+        final Instant at = activities.now();
+        final long seconds = Math.max(0, Duration.between(now.startedAt(), at).toSeconds());
         elapsed.setText(messages.get(MessageKey.BUSY_ELAPSED, DurationText.clock((int) seconds)));
+        final LiveCalls live = now.calls();
+        final CallSnapshot current = live.current();
+        if (current != null && current.state() == CallState.WAITING) {
+            call.show(
+                    current,
+                    new LiveCalls(current, live.previous(), live.segments(), at.truncatedTo(ChronoUnit.SECONDS)));
+        }
     }
 
     private void capture() {

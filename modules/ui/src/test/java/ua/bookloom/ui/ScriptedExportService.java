@@ -18,6 +18,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgress;
@@ -41,6 +42,7 @@ public final class ScriptedExportService implements ExportService {
     private volatile @Nullable ExportReport report;
     private volatile boolean isWritingFiles;
     private final List<ExportProgress> scriptedProgress = new CopyOnWriteArrayList<>();
+    private final List<CallSnapshot> scriptedCalls = new CopyOnWriteArrayList<>();
     private final AtomicInteger cancels = new AtomicInteger();
     private volatile @Nullable CountDownLatch hold;
 
@@ -76,6 +78,12 @@ public final class ScriptedExportService implements ExportService {
     public void announce(final ExportProgress... events) {
         scriptedProgress.clear();
         scriptedProgress.addAll(List.of(events));
+    }
+
+    /** Makes every job show {@code calls} when it runs, in order, after its progress and before it answers. */
+    public void announceCalls(final CallSnapshot... calls) {
+        scriptedCalls.clear();
+        scriptedCalls.addAll(List.of(calls));
     }
 
     /** Makes every job wait, after announcing, until it is cancelled or {@link #release} is called. */
@@ -126,6 +134,7 @@ public final class ScriptedExportService implements ExportService {
         public Result<ExportReport> run() {
             ranOnFxThread.add(Platform.isFxApplicationThread());
             scriptedProgress.forEach(progress::onProgress);
+            scriptedCalls.forEach(progress::onCall);
             final CountDownLatch gate = hold;
             if (gate != null && !awaits(gate) && isCancelled) {
                 return Result.err(AppError.of(ErrorCode.cancelled, "Export cancelled", "Nothing was written."));

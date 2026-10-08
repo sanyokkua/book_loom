@@ -317,7 +317,8 @@ public final class ActivityTracker {
                 final Duration eta = done <= 0 || total <= done
                         ? null
                         : elapsed.dividedBy(done).multipliedBy(total - done);
-                return shown.withProgress(new Activity.Progress(fraction, stepText, shown.details(), eta));
+                return shown.withProgress(
+                        new Activity.Progress(fraction, stepText, shown.details(), eta, shown.calls()));
             });
         }
 
@@ -327,7 +328,8 @@ public final class ActivityTracker {
          * @param stepText what is being done, already worded; {@code null} for none
          */
         public void indeterminate(final @Nullable String stepText) {
-            update(shown -> shown.withProgress(new Activity.Progress(null, stepText, shown.details(), null)));
+            update(shown ->
+                    shown.withProgress(new Activity.Progress(null, stepText, shown.details(), null, shown.calls())));
         }
 
         /**
@@ -337,8 +339,19 @@ public final class ActivityTracker {
          */
         public void details(final List<Activity.Detail> lines) {
             Objects.requireNonNull(lines, "lines");
-            update(shown ->
-                    shown.withProgress(new Activity.Progress(shown.fraction(), shown.stepText(), lines, shown.eta())));
+            update(shown -> shown.withProgress(
+                    new Activity.Progress(shown.fraction(), shown.stepText(), lines, shown.eta(), shown.calls())));
+        }
+
+        /**
+         * Replaces the model calls the card shows; ignored once ended.
+         *
+         * @param calls the calls as the live call view shows them; non-null
+         */
+        public void calls(final LiveCalls calls) {
+            Objects.requireNonNull(calls, "calls");
+            update(shown -> shown.withProgress(
+                    new Activity.Progress(shown.fraction(), shown.stepText(), shown.details(), shown.eta(), calls)));
         }
 
         private void update(final UnaryOperator<Activity> change) {

@@ -13,6 +13,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
@@ -65,6 +66,24 @@ class BusyHostTest extends ShellTestBase {
         awaitCard();
 
         assertThat(text(BusyHost.TITLE_ID)).isEqualTo("Export");
+    }
+
+    // IF the card hid the export's calls, THEN a long consistency pass would be a spinner with no way to see the model.
+    @Test
+    void card_workShowsACall_offersTheFoldedCallSectionWithTheCall() throws TimeoutException {
+        final ActivityTracker.Handle export = begin(ActivityKind.EXPORT, true);
+        awaitCard();
+        assertThat(required(BusyHost.CALLS_ID).isVisible()).isFalse();
+
+        onFx(() -> export.calls(
+                LiveCallFixtures.calls(LiveCallFixtures.waiting(4, 1, "One.", LiveCallFixtures.smallPrompt()), null)));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        final TitledPane calls = (TitledPane) required(BusyHost.CALLS_ID);
+        assertThat(calls.isVisible()).isTrue();
+        assertThat(calls.isExpanded()).isFalse();
+        assertThat(calls.getText()).isEqualTo("Model calls");
+        assertThat(text(BusyHost.CALL_ID + "-label")).isEqualTo("draft-batch-json");
     }
 
     // IF the delay were not cancelled by the end of the work, THEN a card would appear for work that already finished.

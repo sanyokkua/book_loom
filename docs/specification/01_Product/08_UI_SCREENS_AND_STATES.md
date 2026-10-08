@@ -62,7 +62,10 @@ While a blocking activity runs: the navigation column and the toolbar actions ar
 navigation, and — after 400 ms, so work that ends at once never flashes it — a **busy card** (`#busy-card`) fades in
 (160 ms) over a scrim (`#shell-busy-scrim`) that swallows clicks. It shows the title, the current step
 (`#busy-step`), a progress bar (`#busy-bar`, determinate when a fraction is known, else indeterminate), the elapsed time
-and the time left (the average of the units finished so far), the facts as key/value rows, and **Cancel**
+and the time left (the average of the units finished so far), the facts as key/value rows, a folded **Model calls** section (`#busy-calls`) holding the
+live call view of the call the work is making now (shown only for work that makes described model calls, such as the
+export's consistency pass: its label, kind, state, clock, the paragraph sent, the reply and the prompt context in the
+order it was sent), and **Cancel**
 (`#busy-cancel`) when the work can be stopped; work that cannot be stopped shows no Cancel and says so. A press of
 Cancel disables the button and the step reads "Cancelling…" until the work ends. Escape does not close the card and
 Tab stays on it; the card goes when the work ends. The layer sits between the frame and the dialog layer, so an error

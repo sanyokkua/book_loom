@@ -145,7 +145,8 @@ final class ExportRun {
                 registered,
                 messages,
                 request.destination(),
-                selection.map(ModelSelection::modelId).orElse(null));
+                selection.map(ModelSelection::modelId).orElse(null),
+                activities::now);
         shown.announce(new ExportProgress(ExportProgress.Step.VALIDATING, 0, 1));
         return shown;
     }
@@ -187,7 +188,7 @@ final class ExportRun {
         if (selection != null) {
             model = modelOrNull(selection);
         }
-        final Result<ExportJob> built = service.newExport(request, model, shown::announceLater);
+        final Result<ExportJob> built = service.newExport(request, model, shown);
         if (built.isErr()) {
             return Result.err(Objects.requireNonNull(built.error(), "error"));
         }

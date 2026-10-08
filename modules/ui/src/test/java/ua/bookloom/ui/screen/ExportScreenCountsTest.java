@@ -6,9 +6,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportService;
@@ -22,6 +25,7 @@ import ua.bookloom.ui.state.ExportViewModel;
 class ExportScreenCountsTest extends TranslatingScreenTestBase {
 
     private static final Path EPUB = Path.of("Frankenstein.epub");
+    private static final int CONSISTENCY_LINES = 6;
 
     private void exportBook(final ExportReport report) throws TimeoutException {
         projects.on(EPUB, Result.ok(BookFixtures.frankensteinImport()));
@@ -58,6 +62,38 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
         assertThat(textOf("export-check-consistency"))
                 .contains("142 segments await the gender of a character; set it in Names & style")
                 .doesNotContain("nothing needed changing");
+    }
+
+    // IF the pass reported only its fixes, THEN a pass that drafted 6 segments again and read 30 paragraphs would read
+    // like one that did nothing.
+    @Test
+    void screen_afterConsistencyPassWithRetryAndChecks_saysWhatEachStepCameTo() throws TimeoutException {
+        exportBook(reportWith(new ConsistencySummary(
+                ConsistencySummary.Status.RAN,
+                0,
+                0,
+                Map.of(),
+                1,
+                new ConsistencyChecks(4, 2, 27, Map.of("quotes", 2, "worse", 1), 1))));
+
+        assertThat(consistencyLines())
+                .contains(
+                        "Consistency pass: 5 segments adjusted",
+                        "a fresh draft improved 4 flagged or doubtful segments; 2 were no better and stayed as before",
+                        "27 paragraphs checked against their neighbours needed no change",
+                        "3 answers were refused because they would make the text worse (quotes: 2, worse: 1)",
+                        "1 segment was skipped — the model call failed")
+                .doesNotContain("nothing needed changing");
+    }
+
+    private String consistencyLines() {
+        return IntStream.range(0, CONSISTENCY_LINES)
+                .mapToObj(index -> textOf("export-check-consistency" + (index == 0 ? "" : "-" + index)))
+                .collect(Collectors.joining("\n"));
+    }
+
+    private static ExportReport reportWith(final ConsistencySummary summary) {
+        return new ExportReport(Path.of("Frankenstein.uk.epub"), 10, 0, 0, 0, 10, 0, List.of(), 10, summary, 0);
     }
 
     // The run's 84.2 % counted the 72 lines kept as they are, which no model decided, in the denominator.

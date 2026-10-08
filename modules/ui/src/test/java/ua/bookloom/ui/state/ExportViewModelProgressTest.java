@@ -14,9 +14,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.testfx.util.WaitForAsyncUtils;
+import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgress.Step;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.LiveCallFixtures;
 
 /** An export is a blocking, stoppable activity that shows the step and the call count its job announces. */
 class ExportViewModelProgressTest extends ExportViewModelTestBase {
@@ -68,6 +70,44 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         assertThat(shown.fraction()).isEqualTo(0.25);
         assertThat(shown.stepText()).isEqualTo("Checking paragraphs against their neighbours");
         assertThat(shown.details()).extracting(Activity.Detail::value).contains("1 of 4", "Frankenstein.uk.epub");
+        exportService.release();
+    }
+
+    // IF the pass's calls never reached the activity, THEN the busy card could not show what the model is asked.
+    @Test
+    void export_jobShowsACall_theActivityCarriesItForTheCallView() throws Exception {
+        exportService.announceCalls(LiveCallFixtures.waiting(3, 1, "Two.", LiveCallFixtures.smallPrompt()));
+        exportService.holdRuns();
+
+        export();
+        WaitForAsyncUtils.waitFor(
+                5,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> activities.running().getFirst().calls().current() != null));
+
+        final Activity shown = onFx(() -> activities.running().getFirst());
+        assertThat(shown.calls().current())
+                .isNotNull()
+                .extracting(CallSnapshot::callId)
+                .isEqualTo(3L);
+        exportService.release();
+    }
+
+    // IF the retry step were counted as requests, THEN "3 of 8 requests" would describe eight segments.
+    @Test
+    void export_jobAnnouncesTheRetryStep_theActivityCountsSegments() throws Exception {
+        exportService.announce(new ExportProgress(Step.RETRY_DOUBTED, 3, 8));
+        exportService.holdRuns();
+
+        export();
+        WaitForAsyncUtils.waitFor(
+                5,
+                TimeUnit.SECONDS,
+                () -> onFx(() -> activities.running().getFirst().fraction() != null));
+
+        final Activity shown = onFx(() -> activities.running().getFirst());
+        assertThat(shown.stepText()).isEqualTo("Drafting flagged and doubtful segments again");
+        assertThat(shown.details()).contains(new Activity.Detail("Segments", "3 of 8"));
         exportService.release();
     }
 

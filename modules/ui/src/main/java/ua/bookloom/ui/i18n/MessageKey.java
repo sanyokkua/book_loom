@@ -117,6 +117,8 @@ public enum MessageKey {
     ACTIVITY_DETAIL_MODEL("activity.detail.model"),
     /** Busy-card detail label: how many model requests were sent. */
     ACTIVITY_DETAIL_REQUESTS("activity.detail.requests"),
+    /** Busy-card detail label: how many segments of a step counted by segment are done. */
+    ACTIVITY_DETAIL_SEGMENTS("activity.detail.segments"),
     /** Busy-card detail value: a count out of a total; arguments: 0 done, 1 total. */
     ACTIVITY_DETAIL_OF("activity.detail.of"),
     /** Busy card: time since the work began; argument 0 is a clock such as 1:15. */
@@ -133,6 +135,10 @@ public enum MessageKey {
     BUSY_CANCELLING_TIP("busy.cancelling.tip"),
     /** Busy card: shown instead of a Cancel button for work that cannot be stopped. */
     BUSY_NOT_CANCELLABLE("busy.notCancellable"),
+    /** Busy card: heading of the folded section that shows the work's current model call. */
+    BUSY_CALLS("busy.calls"),
+    /** Hover explanation of the busy card's model-call section. */
+    BUSY_CALLS_TIP("busy.calls.tip"),
     /** Title of the question asked before the run is stopped. */
     CONFIRM_STOP_TITLE("confirm.stop.title"),
     /** Body of the stop-the-run question. */
@@ -1522,6 +1528,20 @@ public enum MessageKey {
     EXPORT_CHECK_CONSISTENCY_AWAITING_GENDER("export.check.consistency.awaitingGender"),
     /** Check line after an export: the consistency pass skipped its gender step because no model was available. */
     EXPORT_CHECK_CONSISTENCY_NO_MODEL("export.check.consistency.noModel"),
+    /**
+     * Check line after an export: argument 0 is how many flagged or doubtful segments a fresh draft improved, argument
+     * 1 how many were drafted again and kept because the new draft was no better.
+     */
+    EXPORT_CHECK_CONSISTENCY_RETRIED("export.check.consistency.retried"),
+    /** Check line after an export: argument 0 is how many paragraphs the neighbour check found nothing to change in. */
+    EXPORT_CHECK_CONSISTENCY_UNCHANGED("export.check.consistency.unchanged"),
+    /**
+     * Check line after an export: argument 0 is how many model answers the pass refused, argument 1 the rules they
+     * broke with their counts ({@code quotes: 2, worse: 1}).
+     */
+    EXPORT_CHECK_CONSISTENCY_REFUSED("export.check.consistency.refused"),
+    /** Check line after an export: argument 0 is how many segments were skipped because their model call failed. */
+    EXPORT_CHECK_CONSISTENCY_SKIPPED("export.check.consistency.skipped"),
     /** The forward action of the last step, always unavailable. */
     EXPORT_NEXT("export.next"),
     /** Hover explanation of the control labelled by {@link #EXPORT_NEXT}. */

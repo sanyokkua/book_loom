@@ -74,6 +74,15 @@ public record Activity(
     }
 
     /**
+     * The model calls it is making.
+     *
+     * @return the calls as the live call view shows them; {@link LiveCalls#EMPTY} when it shows none
+     */
+    public LiveCalls calls() {
+        return progress.calls();
+    }
+
+    /**
      * The time left.
      *
      * @return the estimate, or {@code null} when not known
@@ -120,19 +129,23 @@ public record Activity(
      * @param stepText what it is doing now, already worded, or {@code null} for none
      * @param details its facts in the order they are shown; never null
      * @param eta the time left by the average of the units finished so far, or {@code null} when not known
+     * @param calls the model calls the work is making, as the live call view shows them; {@link LiveCalls#EMPTY}
+     *     for work that shows none
      */
     public record Progress(
             @Nullable Double fraction,
             @Nullable String stepText,
             List<Detail> details,
-            @Nullable Duration eta) {
+            @Nullable Duration eta,
+            LiveCalls calls) {
 
-        /** Freezes the details. */
+        /** Freezes the details and rejects missing calls. */
         public Progress {
             details = List.copyOf(details);
+            Objects.requireNonNull(calls, "calls");
         }
 
         /** What an activity shows before it says anything: indeterminate, no step, no facts. */
-        static final Progress NONE = new Progress(null, null, List.of(), null);
+        static final Progress NONE = new Progress(null, null, List.of(), null, LiveCalls.EMPTY);
     }
 }
