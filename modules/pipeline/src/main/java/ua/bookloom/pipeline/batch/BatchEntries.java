@@ -32,8 +32,11 @@ final class BatchEntries {
         }
     }
 
+    // The string body is written unrolled with possessive runs ([^"\\]*+ then \\. and another run) rather than as a
+    // loop over an alternation: Java matches a looped alternation by recursion, one frame per character, so a long
+    // target (a capped model's 10,000 characters of one repeated phrase) overflowed the stack and failed the whole run.
     private static final Pattern JSON_ENTRY = Pattern.compile(
-            "\\{\\s*\"id\"\\s*:\\s*(\"?)([^\",}\\s]+)\\1\\s*,\\s*\"target\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*[,}]");
+            "\\{\\s*\"id\"\\s*:\\s*(\"?)([^\",}\\s]+)\\1\\s*,\\s*\"target\"\\s*:\\s*\"([^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+)\"\\s*[,}]");
 
     private final ObjectMapper mapper;
 

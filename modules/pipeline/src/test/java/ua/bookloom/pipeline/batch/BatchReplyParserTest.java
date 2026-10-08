@@ -235,6 +235,19 @@ class BatchReplyParserTest {
         assertThat(reply.acceptedIds()).containsExactly("1", "2", "3");
     }
 
+    // A small model stopped by its cap left a 10,000-character reply of one phrase repeated, cut inside its first entry
+    // (the real run's "сільському сільському …"): reading it overflowed the stack and failed the whole run.
+    @Test
+    void parse_replyCutOffInsideAVeryLongRepeatedEntry_failsTheCutIdsWithoutOverflowing() {
+        final String cut = "{\"items\":[{\"id\":\"1\",\"target\":\"" + T1 + "\"},{\"id\":\"2\",\"target\":\""
+                + "у сільському ".repeat(1_000);
+
+        final BatchReply reply = parse(cut);
+
+        assertThat(reply.acceptedIds()).containsExactly("1");
+        assertThat(reply.failingIds()).containsExactly("2", "3", "4");
+    }
+
     @Test
     void parse_entriesOutOfOrder_areStillReadById() {
         final List<Map.Entry<String, String>> reversed = new java.util.ArrayList<>(clean().entrySet());
