@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -106,26 +105,43 @@ final class NeighbourRevision {
         final String previous = shown(at > 0 ? byId.get(order.get(at - 1)) : null);
         final String next = shown(at + 1 < order.size() ? byId.get(order.get(at + 1)) : null);
         log.debug("Neighbour check segmentId={} previous={} next={}", id, !previous.isEmpty(), !next.isEmpty());
-        final Result<Optional<GateResult.Restored>> revised = call.checkAgainstNeighbours(
+        final Result<RevisionAnswer> answered = call.checkAgainstNeighbours(
                 inputs, source, masked, facts(inputs, source, at, order), previous, next, calls);
-        if (revised.isErr()) {
+        if (answered.isErr()) {
             // One paragraph's failed call (a timeout, an unreadable reply) is no reason to lose the whole pass or the
             // book's export; only the person's stop ends it.
-            final AppError error = Objects.requireNonNull(revised.error(), "error");
+            final AppError error = Objects.requireNonNull(answered.error(), "error");
             if (error.code() == ErrorCode.cancelled) {
                 return Result.err(error);
             }
             log.warn("Neighbour check segmentId={} skipped: the call failed code={}", id, error.code());
+            tally.skipped();
             return Result.ok(false);
         }
-        final GateResult.Restored restored = Objects.requireNonNull(revised.data(), "revised")
-                .filter(answer -> !answer.maskedForm().equals(masked))
-                .orElse(null);
-        if (restored == null) {
-            log.debug("Neighbour check segmentId={} found nothing to change", id);
-            return Result.ok(false);
-        }
-        return storeFix(inputs, record, masked, restored, tally);
+        return settle(inputs, record, masked, Objects.requireNonNull(answered.data(), "answered"), tally);
+    }
+
+    private Result<Boolean> settle(
+            final PassInputs inputs,
+            final SegmentRecord record,
+            final String masked,
+            final RevisionAnswer answer,
+            final PassTally tally) {
+        final String id = record.segmentId();
+        return switch (answer) {
+            case RevisionAnswer.Refused refused -> {
+                log.debug("Neighbour check segmentId={} refused rule={}", id, refused.reason());
+                tally.refused(refused.reason());
+                yield Result.ok(false);
+            }
+            case RevisionAnswer.Revised revised
+            when revised.restored().maskedForm().equals(masked) -> {
+                log.debug("Neighbour check segmentId={} found nothing to change", id);
+                tally.neighbourUnchanged();
+                yield Result.ok(false);
+            }
+            case RevisionAnswer.Revised revised -> storeFix(inputs, record, masked, revised.restored(), tally);
+        };
     }
 
     private Result<Boolean> storeFix(

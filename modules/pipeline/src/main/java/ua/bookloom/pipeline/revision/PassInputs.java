@@ -8,6 +8,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.SegmentLocator;
+import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.prompt.CallFrame;
 
@@ -23,6 +24,8 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param locators each segment's locator by id, which the report's notes name
  * @param glossary every glossary entry as the pass starts
  * @param order the opened book's segment ids in reading order, which the neighbours of a paragraph are read from
+ * @param book the brief, the opened book and the glossary as the audit reads them, so a new text is never one the
+ *     audit doubts more than the old
  */
 record PassInputs(
         String projectId,
@@ -32,7 +35,8 @@ record PassInputs(
         Map<String, Segment> sources,
         Map<String, SegmentLocator> locators,
         List<GlossaryEntry> glossary,
-        List<String> order) {
+        List<String> order,
+        FinalAudit.Book book) {
 
     /** Rejects a missing component and copies the collections. */
     PassInputs {
@@ -44,6 +48,7 @@ record PassInputs(
         locators = Map.copyOf(Objects.requireNonNull(locators, "locators"));
         glossary = List.copyOf(Objects.requireNonNull(glossary, "glossary"));
         order = List.copyOf(Objects.requireNonNull(order, "order"));
+        Objects.requireNonNull(book, "book");
     }
 
     /**

@@ -115,6 +115,34 @@ public final class FinalAudit {
         return named;
     }
 
+    /**
+     * The checks the audit would doubt one target by, read off the text alone: what a pass that replaces a target
+     * compares before and after, so a new text never brings a doubt the old one did not have.
+     *
+     * @param book the non-null book
+     * @param source the non-null segment the target translates
+     * @param maskedTarget the non-null target, masked
+     * @return the names of the checks that fire, in order and without repeats; empty when none does
+     */
+    public static List<String> checksOf(final Book book, final Segment source, final String maskedTarget) {
+        Objects.requireNonNull(book, "book");
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(maskedTarget, "maskedTarget");
+        final String sourceText = DisplayText.of(source.masked());
+        final String target = DisplayText.of(maskedTarget);
+        final List<QaFinding> found = new ArrayList<>(textChecks(book, source, sourceText, target));
+        NameMissingCheck.find(
+                        book.glossary(),
+                        sourceText,
+                        target,
+                        Objects.requireNonNull(book.brief().targetLanguage(), "target language"))
+                .ifPresent(found::add);
+        final List<String> checks =
+                found.stream().map(QaFinding::raisedBy).distinct().toList();
+        log.debug("Audit checks of segment {}: {}", source.id(), checks);
+        return checks;
+    }
+
     // One name spelled two ways is a fact about the whole book, so it is found after every segment has been read.
     private static void addNameVariants(
             final Book book, final Map<String, String> targets, final Map<String, List<QaFinding>> doubted) {

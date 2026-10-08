@@ -26,6 +26,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
+import ua.bookloom.pipeline.ReviewModeTestModule;
 import ua.bookloom.pipeline.TestBooks;
 
 /** A refused export is one failure, so the log holds one warning for it. */
@@ -41,7 +42,8 @@ class ExportJobLogTest {
 
     @BeforeEach
     void setUp() {
-        final var injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        final var injector =
+                Guice.createInjector(new DocumentModule(), new PersistenceModule(), new ReviewModeTestModule());
         service = injector.getInstance(ExportServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
         appender.start();

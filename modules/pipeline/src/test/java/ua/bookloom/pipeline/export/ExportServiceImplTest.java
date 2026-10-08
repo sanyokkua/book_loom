@@ -65,7 +65,7 @@ class ExportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        injector = Guice.createInjector(new DocumentModule(), new PersistenceModule());
+        injector = Guice.createInjector(new DocumentModule(), new PersistenceModule(), new ReviewModeTestModule());
         service = injector.getInstance(ExportServiceImpl.class);
         projectService = injector.getInstance(ProjectServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);

@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.revision;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,6 +29,9 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.audit.FinalAudit;
+import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
@@ -36,6 +40,7 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.review.RetryDraft;
 import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
@@ -57,6 +62,7 @@ public final class ConsistencyPass {
     private final GlossaryRepository glossary;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
+    private final RetryDraft retryDraft;
 
     /**
      * Runs the pass over a project's open deferrals.
@@ -68,10 +74,30 @@ public final class ConsistencyPass {
      *     is not open; a storage error; or the error a revision call answered other than an unreadable reply
      */
     public Result<ConsistencyReport> run(final String projectId, @Nullable final ModelCalls calls) {
+        return run(projectId, calls, PassOptions.BACKWARD_REVISION);
+    }
+
+    /**
+     * Runs the pass with the chosen model steps.
+     *
+     * @param projectId the project to revise; never null
+     * @param calls the seam every call goes through, or null when no model is at hand — then only the sweep runs
+     * @param options which model steps run besides the gender re-render; never null
+     * @return as {@link #run(String, ModelCalls)}; a cancel ends it with {@code cancelled}, every change stored
+     *     before it kept
+     */
+    public Result<ConsistencyReport> run(
+            final String projectId, @Nullable final ModelCalls calls, final PassOptions options) {
         Objects.requireNonNull(projectId, "projectId");
-        log.debug("Backward revision requested project={} withModel={}", projectId, calls != null);
+        Objects.requireNonNull(options, "options");
+        log.debug(
+                "Backward revision requested project={} withModel={} retryDoubted={} everySegment={}",
+                projectId,
+                calls != null,
+                options.retryDoubted(),
+                options.everySegment());
         try {
-            return inputs(projectId).flatMap(inputs -> runWith(inputs, calls));
+            return inputs(projectId).flatMap(inputs -> runWith(inputs, calls, options));
         } catch (Throwable cause) {
             final AppError error = AppError.of(
                     ErrorCode.internal,
@@ -84,7 +110,8 @@ public final class ConsistencyPass {
         }
     }
 
-    private Result<ConsistencyReport> runWith(final PassInputs inputs, @Nullable final ModelCalls calls) {
+    private Result<ConsistencyReport> runWith(
+            final PassInputs inputs, @Nullable final ModelCalls calls, final PassOptions options) {
         final Result<List<Deferral>> read = deferrals.open(inputs.projectId());
         if (read.isErr()) {
             return Result.err(Objects.requireNonNull(read.error(), "error"));
@@ -96,7 +123,7 @@ public final class ConsistencyPass {
         return new TermSweep(glossary, segments, writer)
                 .sweep(inputs, open, tally)
                 .flatMap(swept -> deferrals.open(inputs.projectId()))
-                .flatMap(afterSweep -> revise(inputs, afterSweep, calls, writer, tally))
+                .flatMap(afterSweep -> revise(inputs, afterSweep, calls, writer, tally, options))
                 .flatMap(done -> deferrals.open(inputs.projectId()))
                 .map(stillOpen -> ended(inputs.projectId(), tally, byReason(stillOpen)));
     }
@@ -106,7 +133,8 @@ public final class ConsistencyPass {
             final List<Deferral> open,
             @Nullable final ModelCalls calls,
             final RevisionWriter writer,
-            final PassTally tally) {
+            final PassTally tally,
+            final PassOptions options) {
         if (calls == null) {
             final long waiting = open.stream()
                     .filter(deferral -> deferral.reason() == DeferralReason.GENDER_UNKNOWN)
@@ -120,7 +148,36 @@ public final class ConsistencyPass {
         final RevisionCall call = new RevisionCall(templates, new DraftReplyParser(mapper));
         return new GenderRevision(glossary, segments, deferrals, writer, call)
                 .revise(inputs, open, calls, tally)
-                .flatMap(revised -> new NeighbourRevision(segments, writer, call).revise(inputs, calls, tally));
+                .flatMap(revised -> retryDoubted(inputs, calls, tally, options))
+                .flatMap(retried -> new NeighbourRevision(segments, writer, call).revise(inputs, calls, tally));
+    }
+
+    // The audit reads the records as they stand once the gender step has run, so a segment it re-rendered is judged
+    // on its new text.
+    private Result<Boolean> retryDoubted(
+            final PassInputs inputs, final ModelCalls calls, final PassTally tally, final PassOptions options) {
+        if (!options.retryDoubted()) {
+            log.debug("Retry of doubted segments not asked for project={}", inputs.projectId());
+            return Result.ok(false);
+        }
+        return inOrder(inputs)
+                .flatMap(records -> new RetryPass(segments, retryDraft)
+                        .retry(
+                                inputs,
+                                RetryPass.doubted(records, FinalAudit.scan(inputs.book(), records)),
+                                calls,
+                                tally));
+    }
+
+    private Result<List<SegmentRecord>> inOrder(final PassInputs inputs) {
+        return segments.all(inputs.projectId()).map(records -> {
+            final Map<String, SegmentRecord> byId = new HashMap<>();
+            records.forEach(record -> byId.put(record.segmentId(), record));
+            return inputs.order().stream()
+                    .map(byId::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+        });
     }
 
     private static ConsistencyReport ended(
@@ -181,7 +238,8 @@ public final class ConsistencyPass {
                 sources,
                 SegmentLocators.of(document),
                 entries,
-                List.copyOf(sources.keySet()));
+                List.copyOf(sources.keySet()),
+                new FinalAudit.Book(brief, document, entries, WordValidator.none()));
     }
 
     // Counted by segment: a segment naming two unknown-gender characters holds two deferrals but is one segment that

@@ -13,6 +13,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -38,6 +39,10 @@ final class RevisionBook {
     static final String SAM_MET_HALE = "ch01.xhtml:7";
     static final String SAM_DOOR = "ch01.xhtml:9";
     static final String SAM_LEFT = "ch02.xhtml:6";
+    static final String BOBBY = "ch02.xhtml:2";
+    static final String BOBBY_SOURCE = "Bobby came in. He sat down.";
+    static final String RUN_BOBBY = "ch02.xhtml:4";
+    static final String RUN_BOBBY_SOURCE = "“Run, Bobby,” I said. He ran.";
     static final String DOOR_MASKED = "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.";
     static final String DOOR_PLAIN = "Сем відчинив <em>старі</em> двері.";
     static final String DOOR_REVISED = "Сем відчинила ⟦g0⟧старі⟦g1⟧ двері.";
@@ -70,7 +75,22 @@ final class RevisionBook {
 
     /** Runs the pass with every revision call sent through {@code calls}, or with no model when it is null. */
     Result<ConsistencyReport> runWith(@Nullable final ModelCalls calls) {
-        final ConsistencyPass pass = new ConsistencyPass(
+        return pass().run(desk.projectId(), calls);
+    }
+
+    /** Runs the pass as an export does, with the scripted model and {@code options}. */
+    Result<ConsistencyReport> runExport(final PassOptions options) {
+        final ModelCalls calls = (kind, segmentId, request) -> model.chat(request);
+        return runExport(calls, options);
+    }
+
+    /** Runs the pass as an export does, with every call sent through {@code calls}. */
+    Result<ConsistencyReport> runExport(final ModelCalls calls, final PassOptions options) {
+        return pass().run(desk.projectId(), calls, options);
+    }
+
+    private ConsistencyPass pass() {
+        return new ConsistencyPass(
                 desk.documents(),
                 desk.openProjects(),
                 desk.projects(),
@@ -78,8 +98,8 @@ final class RevisionBook {
                 desk.deferrals(),
                 desk.glossary(),
                 new PromptTemplates(),
-                new ObjectMapper());
-        return pass.run(desk.projectId(), calls);
+                new ObjectMapper(),
+                desk.retryDraft(ReviewMode.UNATTENDED));
     }
 
     GlossaryEntry character(
@@ -182,6 +202,8 @@ final class RevisionBook {
             case "1:7" -> "Sam met Hale.";
             case "1:9" -> "Sam opened the <em>old</em> door.";
             case "2:6" -> "Sam went away.";
+            case "2:2" -> BOBBY_SOURCE;
+            case "2:4" -> RUN_BOBBY_SOURCE;
             default -> "Chapter " + chapter + " line " + index + ".";
         };
     }

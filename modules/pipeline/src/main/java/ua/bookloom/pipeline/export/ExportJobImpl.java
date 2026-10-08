@@ -31,6 +31,7 @@ import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.revision.ConsistencyReport;
+import ua.bookloom.pipeline.revision.PassOptions;
 
 /**
  * Writes what a project stores: each segment record's effective target laid over a fresh read of the source by
@@ -182,7 +183,9 @@ final class ExportJobImpl implements ExportJob {
         if (!request.consistencyPass()) {
             return Result.ok(Optional.empty());
         }
-        return parts.consistencyPass().run(projectId, calls).map(Optional::of);
+        return parts.consistencyPass()
+                .run(projectId, calls, new PassOptions(true, false))
+                .map(Optional::of);
     }
 
     private boolean isCancelledBefore(final String step) {

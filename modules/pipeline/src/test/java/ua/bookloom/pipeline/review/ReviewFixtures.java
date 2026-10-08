@@ -85,7 +85,7 @@ public final class ReviewFixtures {
         }
 
         /** The retry over the same stores, deciding with {@code mode}'s threshold. */
-        RetryDraft retryDraft(final ReviewMode mode) {
+        public RetryDraft retryDraft(final ReviewMode mode) {
             return new RetryDraft(
                     documents,
                     openProjects,
@@ -208,7 +208,7 @@ public final class ReviewFixtures {
     }
 
     /** Stores {@code id} with the snapshot of what its first draft saw. */
-    static void withContext(final Desk desk, final String id, final ContextSnapshot context) {
+    public static void withContext(final Desk desk, final String id, final ContextSnapshot context) {
         update(
                 desk,
                 id,

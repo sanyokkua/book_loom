@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.project.DeferralReason;
 
 /**
@@ -19,6 +21,11 @@ final class PassTally {
     private int genderReRenders;
     private int proposals;
     private int neighbourFixes;
+    private int retriedImproved;
+    private int retriedKept;
+    private int neighbourUnchanged;
+    private int skipped;
+    private final Map<String, Integer> refused = new TreeMap<>();
 
     /** Records a machine target the sweep replaced, with the number of term deferrals it swept into it. */
     void swept(final String segmentId, final String locator, final int terms) {
@@ -38,6 +45,32 @@ final class PassTally {
         changed(segmentId, locator, "fixed against its neighbours");
     }
 
+    /** Records a doubted segment whose fresh draft was better and replaced its machine target. */
+    void retryImproved(final String segmentId, final String locator) {
+        retriedImproved++;
+        changed(segmentId, locator, "drafted again and improved");
+    }
+
+    /** Records a doubted segment whose fresh draft was no better, so the old text stayed. */
+    void retryKept() {
+        retriedKept++;
+    }
+
+    /** Records a paragraph the check against its neighbours found nothing to change in. */
+    void neighbourUnchanged() {
+        neighbourUnchanged++;
+    }
+
+    /** Records an answer the pass did not keep because it broke {@code rule}. */
+    void refused(final String rule) {
+        refused.merge(rule, 1, Integer::sum);
+    }
+
+    /** Records a segment whose call failed, so it was left as it was. */
+    void skipped() {
+        skipped++;
+    }
+
     /** Records a proposal stored for a segment the person edited. */
     void proposed(final String segmentId, final String locator) {
         proposals++;
@@ -51,7 +84,13 @@ final class PassTally {
 
     ConsistencyReport report(final Map<DeferralReason, Integer> openDeferrals) {
         return new ConsistencyReport(
-                termSubstitutions, genderReRenders, proposals, notes, openDeferrals, neighbourFixes);
+                termSubstitutions,
+                genderReRenders,
+                proposals,
+                notes,
+                openDeferrals,
+                neighbourFixes,
+                new ConsistencyChecks(retriedImproved, retriedKept, neighbourUnchanged, refused, skipped));
     }
 
     private void changed(final String segmentId, final String locator, final String what) {

@@ -64,6 +64,7 @@ final class ExportActivity {
         return switch (step) {
             case VALIDATING -> MessageKey.EXPORT_PROGRESS_VALIDATING;
             case CONSISTENCY_RETRY -> MessageKey.EXPORT_PROGRESS_RETRY;
+            case RETRY_DOUBTED -> MessageKey.EXPORT_PROGRESS_RETRY_DOUBTED;
             case CONSISTENCY_NEIGHBOUR -> MessageKey.EXPORT_PROGRESS_NEIGHBOUR;
             case WRITING -> MessageKey.EXPORT_PROGRESS_WRITING;
         };

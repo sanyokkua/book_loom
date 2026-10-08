@@ -83,7 +83,12 @@ public interface ModelCalls {
     enum Stage {
         /** One call per segment whose character's gender became known. */
         GENDER_RETRY,
-        /** One call per repaired or flagged paragraph, checked against its neighbours. */
+        /**
+         * One fresh draft per flagged or doubted segment; a draft may take several calls (pieces, the reviewer), so
+         * the stage counts segments through {@link ModelCalls#advanced}, not calls.
+         */
+        RETRY_DOUBTED,
+        /** One call per paragraph checked against its neighbours. */
         NEIGHBOUR_CHECK
     }
 
@@ -95,6 +100,17 @@ public interface ModelCalls {
      * @param calls the most calls it will send; zero or more
      */
     default void planned(final Stage stage, final int calls) {
+        // Nothing counts.
+    }
+
+    /**
+     * Announces how many units of a stage whose unit is not one call are finished. A seam that does not count ignores
+     * it.
+     *
+     * @param stage the stage the units belong to; non-null
+     * @param done the units finished so far; zero or more
+     */
+    default void advanced(final Stage stage, final int done) {
         // Nothing counts.
     }
 }

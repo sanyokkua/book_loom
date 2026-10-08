@@ -28,6 +28,7 @@ final class ExportCalls implements ModelCalls {
     private ExportProgress.Step step = ExportProgress.Step.CONSISTENCY_RETRY;
     private int done;
     private int total;
+    private boolean countsCalls = true;
 
     ExportCalls(final ModelCalls delegate, final AtomicBoolean cancelled, final ExportProgressListener progress) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
@@ -56,14 +57,26 @@ final class ExportCalls implements ModelCalls {
 
     @Override
     public void planned(final Stage stage, final int calls) {
-        step = stage == Stage.GENDER_RETRY
-                ? ExportProgress.Step.CONSISTENCY_RETRY
-                : ExportProgress.Step.CONSISTENCY_NEIGHBOUR;
+        step = switch (stage) {
+            case GENDER_RETRY -> ExportProgress.Step.CONSISTENCY_RETRY;
+            case RETRY_DOUBTED -> ExportProgress.Step.RETRY_DOUBTED;
+            case NEIGHBOUR_CHECK -> ExportProgress.Step.CONSISTENCY_NEIGHBOUR;
+        };
+        countsCalls = stage != Stage.RETRY_DOUBTED;
         done = 0;
         total = calls;
         log.debug("export pass stage={} plannedCalls={}", stage, calls);
         if (total > 0) {
             progress.onProgress(new ExportProgress(step, 0, total));
+        }
+    }
+
+    @Override
+    public void advanced(final Stage stage, final int units) {
+        log.debug("export pass stage={} advanced done={} of {}", stage, units, total);
+        if (total > 0 && !countsCalls) {
+            done = Math.min(units, total);
+            progress.onProgress(new ExportProgress(step, done, total));
         }
     }
 
@@ -77,7 +90,7 @@ final class ExportCalls implements ModelCalls {
     }
 
     private void finished() {
-        if (total == 0) {
+        if (total == 0 || !countsCalls) {
             return;
         }
         done = Math.min(done + 1, total);

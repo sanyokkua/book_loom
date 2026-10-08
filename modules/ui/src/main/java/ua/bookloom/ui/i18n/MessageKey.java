@@ -105,6 +105,8 @@ public enum MessageKey {
     EXPORT_PROGRESS_VALIDATING("export.progress.validating"),
     /** Busy-card step: the consistency pass re-renders segments whose character's gender became known. */
     EXPORT_PROGRESS_RETRY("export.progress.retry"),
+    /** Busy-card step: the consistency pass drafts flagged and doubted segments again, keeping only a better text. */
+    EXPORT_PROGRESS_RETRY_DOUBTED("export.progress.retryDoubted"),
     /** Busy-card step: the consistency pass checks repaired paragraphs against their neighbours. */
     EXPORT_PROGRESS_NEIGHBOUR("export.progress.neighbour"),
     /** Busy-card step: the export writes the book and its side files. */

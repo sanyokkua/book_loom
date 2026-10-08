@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.revision;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.project.DeferralReason;
 
 /**
@@ -14,6 +15,7 @@ import ua.bookloom.api.project.DeferralReason;
  * @param notes one line per change, naming the segment by its locator; never null, empty when nothing changed
  * @param openDeferrals the deferrals still open once the pass ended, counted by reason; never null, empty when none
  * @param neighbourFixes how many segments the check against the neighbouring paragraphs corrected
+ * @param checks what the retry of doubted segments and the check against the neighbours came to besides the fixes
  */
 public record ConsistencyReport(
         int termSubstitutions,
@@ -21,12 +23,32 @@ public record ConsistencyReport(
         int proposals,
         List<String> notes,
         Map<DeferralReason, Integer> openDeferrals,
-        int neighbourFixes) {
+        int neighbourFixes,
+        ConsistencyChecks checks) {
 
     /** Copies the notes and the counts so the report can never change after construction. */
     public ConsistencyReport {
         notes = List.copyOf(Objects.requireNonNull(notes, "notes"));
         openDeferrals = Map.copyOf(Objects.requireNonNull(openDeferrals, "openDeferrals"));
+        Objects.requireNonNull(checks, "checks");
+    }
+
+    /** A report with no model step besides the gender re-render and the neighbour fixes it counts. */
+    public ConsistencyReport(
+            final int termSubstitutions,
+            final int genderReRenders,
+            final int proposals,
+            final List<String> notes,
+            final Map<DeferralReason, Integer> openDeferrals,
+            final int neighbourFixes) {
+        this(
+                termSubstitutions,
+                genderReRenders,
+                proposals,
+                notes,
+                openDeferrals,
+                neighbourFixes,
+                ConsistencyChecks.NONE);
     }
 
     /** A report with no neighbour check. */
