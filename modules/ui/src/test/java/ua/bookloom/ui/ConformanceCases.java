@@ -79,9 +79,9 @@ final class ConformanceCases {
     private static final Part BOX_FILL =
             new Part("#export-aux-bilingual .box", Kind.BACKGROUND, "surface", "#ffffff", "#33424a");
     private static final Part BOX_EDGE =
-            new Part("#export-aux-bilingual .box", Kind.BORDER, "border-cool", "#cdd2d3", "#48585f");
+            new Part("#export-aux-bilingual .box", Kind.BORDER, "input-border", "#988462", "#7d949e");
     private static final Part SWITCH_TRACK =
-            new Part("#export-aux-consistency .thumb-area", Kind.BACKGROUND, "toggle-off", "#b2babd", "#b2babd");
+            new Part("#export-aux-consistency .thumb-area", Kind.BACKGROUND, "toggle-off", "#87939a", "#87939a");
     private static final Part SWITCH_THUMB =
             new Part("#export-aux-consistency .thumb", Kind.BACKGROUND, "toggle-thumb", "#ffffff", "#ffffff");
 
@@ -145,7 +145,7 @@ final class ConformanceCases {
                     List.of(
                             new Part("#settings-provider-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#settings-provider-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#settings-model", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
+                            new Part("#settings-model", Kind.BORDER, "input-border", "#988462", "#7d949e"),
                             // The selected tab is an underline of the primary role, not a filled tab.
                             new Part("#settings-tab-providers", Kind.BORDER, "primary", "#a58075", "#c4917e"))),
             // The drop zone is the mockup's dashed sand box: sand-soft fill, sand-strong line.

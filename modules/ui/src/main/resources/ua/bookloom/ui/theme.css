@@ -5,8 +5,8 @@
  * declaring the role set once, with the value blocks applied on `.root`. Never add a second one beside it.
  *
  * The full published token catalogue (01_Product/09_THEMING.md#token-catalog and #status-colours) is carried here:
- * 41 looked-up colour roles as `-color-<role>`, plus the three elevation roles. The light values sit on `.root`;
- * `.root.theme-dark` overrides the same 41 names, so switching theme is one style-class toggle on the Scene root
+ * 49 looked-up colour roles as `-color-<role>` (and three switch roles), plus the three elevation roles. The light values sit on `.root`;
+ * `.root.theme-dark` overrides the same names, so switching theme is one style-class toggle on the Scene root
  * (`Theme.DARK_STYLE_CLASS`) and never a second stylesheet. Colours may hold `rgba(...)`, but a box-shadow is not a
  * colour: `shadow-sm`, `shadow` and `shadow-lg` are drop-shadow effects on the `.elevation-sm`, `.elevation` and
  * `.elevation-lg` style classes, because a looked-up colour holding a shadow triple is silently dropped and the
@@ -37,14 +37,15 @@
     /* Text */
     -color-text: #2c3941;
     -color-text-strong: #22303a;
-    -color-muted: #6f7c82;
-    -color-muted-2: #95928a;
+    -color-muted: #5d686d;
+    -color-muted-2: #6f6c65;
 
     /* Primary (Cognac) and warm tints */
     -color-primary: #a58075;
-    -color-primary-hover: #916b60;
-    -color-primary-press: #7e5b51;
-    -color-primary-fg: #ffffff;
+    /* Charcoal words on Cognac (4.7:1): white measured 3.5:1. The hover and pressed fills lighten, as the dark block's do. */
+    -color-primary-hover: #b58f83;
+    -color-primary-press: #c39e92;
+    -color-primary-fg: #241c19;
     -color-primary-soft: #f0e5dd;
     -color-sand-soft: #f2e9db;
     -color-sand-strong: #dcc4a3;
@@ -54,12 +55,16 @@
     -color-nav-bg: #3a4a52;
     -color-nav-bg-2: #324148;
     -color-nav-fg: #cdd5d8;
-    -color-nav-fg-muted: #859399;
+    -color-nav-fg-muted: #b0b9bd;
     -color-nav-active-bg: rgba(231,214,192,.13);
     -color-nav-active-fg: #f3ede3;
     -color-nav-accent: #c99a86;
+    -color-nav-accent-fg: #1c2429;
     -color-title-bg: #324148;
     -color-title-fg: #dfe4e6;
+    /* The connection chip's words on the title bar, which is dark in both blocks. */
+    -color-title-ok-fg: #9cc4a6;
+    -color-title-warn-fg: #e0b56f;
 
     /* Keyboard focus */
     -color-focus: #a58075;
@@ -67,9 +72,14 @@
     -fx-focus-color: -color-focus;
     -fx-faint-focus-color: transparent;
 
-    /* Switch: the off track and the thumb are the mockup's slate and white in both themes. */
-    -color-toggle-off: #b2babd;
+    /* Switch: a darker slate off track and a Cognac on track, each 3:1 against both the white thumb and the surface. */
+    -color-toggle-off: #87939a;
+    -color-toggle-on: #a58075;
     -color-toggle-thumb: #ffffff;
+
+    /* An input's edge (text field, combo box, check box, segmented picker): 3:1 against its fill and the card. Cards and
+       dividers keep the quieter border roles; they are decoration, told apart by their fill. */
+    -color-input-border: #988462;
 
     /* Modena re-based on the roles: every control it derives from these (labels, cells, text fields, scroll panes,
        selection) follows the active value block instead of staying near-white with near-black text. */
@@ -95,11 +105,17 @@
     -color-info: #4d6b78;
     -color-info-bg: #e5edf0;
     -color-info-bd: #b7cbd2;
+    /* A status as WORDS: the brand hues above are for fills, edges and icons; as text they measure under 4.5:1, so
+       text takes these darker shades (4.5:1 on the surfaces, the selected row and the status's own -bg). */
+    -color-ok-fg: #4a6c54;
+    -color-warn-fg: #835d27;
+    -color-err-fg: #a04f45;
+    -color-info-fg: #4d6b78;
 
     -fx-background-color: -color-bg;
 }
 
-/* --- The dark value block: the same 41 names, applied when the root carries `theme-dark` ------------------ */
+/* --- The dark value block: the same names, applied when the root carries `theme-dark` ------------------ */
 .root.theme-dark {
     /* Surfaces and borders */
     -color-bg: #283237;
@@ -113,8 +129,8 @@
     /* Text */
     -color-text: #e6ebed;
     -color-text-strong: #f4f7f8;
-    -color-muted: #9fb0b7;
-    -color-muted-2: #7f9098;
+    -color-muted: #bdc9cd;
+    -color-muted-2: #a2afb4;
 
     /* Primary (Cognac) and warm tints */
     -color-primary: #c4917e;
@@ -130,16 +146,22 @@
     -color-nav-bg: #20292e;
     -color-nav-bg-2: #1c2429;
     -color-nav-fg: #cdd6da;
-    -color-nav-fg-muted: #7d8f97;
+    -color-nav-fg-muted: #8d9ea6;
     -color-nav-active-bg: rgba(231,214,192,.10);
     -color-nav-active-fg: #f3ede3;
     -color-nav-accent: #c99a86;
+    -color-nav-accent-fg: #1c2429;
     -color-title-bg: #1c2429;
     -color-title-fg: #dfe4e6;
+    -color-title-ok-fg: #9cc4a6;
+    -color-title-warn-fg: #e0b56f;
 
-    /* Switch: the same slate and white as the light block */
-    -color-toggle-off: #b2babd;
+    /* Switch: the light block's slate and white; the on track a darker Cognac so the white thumb keeps 3:1 */
+    -color-toggle-off: #87939a;
+    -color-toggle-on: #ad8679;
     -color-toggle-thumb: #ffffff;
+
+    -color-input-border: #7d949e;
 
     /* Keyboard focus */
     -color-focus: #c4917e;
@@ -157,6 +179,10 @@
     -color-info: #7a9dab;
     -color-info-bg: #293940;
     -color-info-bd: #3d525b;
+    -color-ok-fg: #b0d0b7;
+    -color-warn-fg: #e6c086;
+    -color-err-fg: #edbbb4;
+    -color-info-fg: #b3cbd4;
 }
 
 /* --- Elevation roles: light ---------------------------------------------------------------------------------- */
@@ -383,7 +409,7 @@
 
 .nav-brand-sub {
     -fx-text-fill: -color-nav-fg-muted;
-    -fx-font-size: 10.5px;
+    -fx-font-size: 12px;
 }
 
 .nav-group {
@@ -392,7 +418,7 @@
 
 .nav-label {
     -fx-text-fill: -color-nav-fg-muted;
-    -fx-font-size: 10px;
+    -fx-font-size: 12px;
     -fx-padding: 6px 8px 4px 8px;
 }
 
@@ -426,16 +452,16 @@
 
 .nav-step {
     -fx-background-color: -color-nav-bg-2;
-    -fx-background-radius: 8px;
+    -fx-background-radius: 9px;
     -fx-text-fill: -color-nav-fg-muted;
-    -fx-font-size: 10px;
+    -fx-font-size: 11px;
     -fx-alignment: center;
-    -fx-min-width: 16px;
-    -fx-pref-width: 16px;
-    -fx-max-width: 16px;
-    -fx-min-height: 16px;
-    -fx-pref-height: 16px;
-    -fx-max-height: 16px;
+    -fx-min-width: 18px;
+    -fx-pref-width: 18px;
+    -fx-max-width: 18px;
+    -fx-min-height: 18px;
+    -fx-pref-height: 18px;
+    -fx-max-height: 18px;
 }
 
 .nav-step-done .nav-step {
@@ -452,12 +478,12 @@
 }
 
 .nav-item-current.nav-step-done .nav-step .ikonli-font-icon {
-    -fx-icon-color: -color-nav-bg;
+    -fx-icon-color: -color-nav-accent-fg;
 }
 
 .nav-footer {
     -fx-text-fill: -color-nav-fg-muted;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-padding: 10px 18px 12px 18px;
 }
 
@@ -475,7 +501,7 @@
 
 .nav-item-current .nav-step {
     -fx-background-color: -color-nav-accent;
-    -fx-text-fill: -color-nav-bg;
+    -fx-text-fill: -color-nav-accent-fg;
     -fx-font-weight: bold;
 }
 
@@ -632,7 +658,7 @@
 /* The "×3" of identical messages folded into one. */
 .toast-count {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
@@ -689,7 +715,7 @@
 
 .dialog-sub {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 .dialog-text {
@@ -812,7 +838,7 @@
 
 .hint {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 /* Modena draws the tab strip with its own greys; the strip is reset so only roles show through. */
@@ -906,7 +932,7 @@
 
 .provider-endpoint {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 /* --- Chips: a status is told by its own glyph and words as well as by these roles ------------------------ */
@@ -915,25 +941,25 @@
     -fx-border-width: 1px;
     -fx-border-radius: 10px;
     -fx-padding: 2px 9px 2px 9px;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 .chip-ok {
     -fx-background-color: -color-ok-bg;
     -fx-border-color: -color-ok-bd;
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
 }
 
 .chip-warn {
     -fx-background-color: -color-warn-bg;
     -fx-border-color: -color-warn-bd;
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .chip-err {
     -fx-background-color: -color-err-bg;
     -fx-border-color: -color-err-bd;
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
 }
 
 .chip-neutral {
@@ -969,7 +995,7 @@
     -fx-border-color: -color-err-bd;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
     -fx-cursor: hand;
 }
 
@@ -996,7 +1022,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 7px;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
     -fx-text-fill: -color-text;
@@ -1016,7 +1042,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 7px;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
     -fx-font-size: 13px;
@@ -1096,7 +1122,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 0;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px 0 1px 1px;
     -fx-border-radius: 0;
     -fx-text-fill: -color-muted;
@@ -1114,7 +1140,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 0 7px 7px 0;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 0 7px 7px 0;
     -fx-text-fill: -color-muted;
@@ -1184,7 +1210,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 7px;
-    -fx-border-color: -color-border;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 7px;
     -fx-text-fill: -color-text;
@@ -1245,7 +1271,7 @@
 }
 
 .toggle-switch:selected .thumb-area {
-    -fx-background-color: -color-primary;
+    -fx-background-color: -color-toggle-on;
 }
 
 /* The thumb box is the whole height of the track and the painted circle is inset 2px inside it, so the skin's own
@@ -1321,7 +1347,7 @@
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 4px;
-    -fx-border-color: -color-border-cool;
+    -fx-border-color: -color-input-border;
     -fx-border-width: 1px;
     -fx-border-radius: 4px;
 }
@@ -1371,7 +1397,7 @@
     -fx-border-width: 1px;
     -fx-border-radius: 5px;
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-padding: 2px 7px 2px 7px;
 }
 
@@ -1444,12 +1470,12 @@
 }
 
 .banner-err .banner-icon {
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
     -fx-font-size: 15px;
 }
 
 .banner-warn .banner-icon {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
     -fx-font-size: 15px;
 }
 
@@ -1466,19 +1492,19 @@
 
 /* --- Status roles: the text colour of a log entry, told apart by its glyph as well (LogKind#mark) ------------- */
 .status-ok {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
 }
 
 .status-info {
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
 }
 
 .status-warn {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .status-err {
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
 }
 
 /* --- Banner roles the translating dashboard adds: neutral information and success ---------------------------- */
@@ -1493,12 +1519,12 @@
 }
 
 .banner-info .banner-icon {
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
     -fx-font-size: 15px;
 }
 
 .banner-ok .banner-icon {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
     -fx-font-size: 15px;
 }
 
@@ -1551,12 +1577,12 @@
 }
 
 .stat-number-warn {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .stat-caption {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
 }
 
 /* A cell's colour comes from its status class, so the cell rule sets none: an author rule of two classes would */
@@ -1639,19 +1665,19 @@
 }
 
 .activity-log .list-cell.status-ok:filled:selected {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
 }
 
 .activity-log .list-cell.status-info:filled:selected {
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
 }
 
 .activity-log .list-cell.status-warn:filled:selected {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .activity-log .list-cell.status-err:filled:selected {
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
 }
 
 .activity-log .scroll-bar {
@@ -1684,19 +1710,19 @@
 }
 
 .activity-log .list-cell .log-tag.status-ok {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
 }
 
 .activity-log .list-cell .log-tag.status-info {
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
 }
 
 .activity-log .list-cell .log-tag.status-warn {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .activity-log .list-cell .log-tag.status-err {
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
 }
 
 .activity-log .list-cell .log-repeats {
@@ -1764,7 +1790,7 @@
 
 .context-heading {
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
@@ -1796,11 +1822,11 @@
 
 /* The connection chip in the title bar: its dot and words in the role of how the server has been answering. */
 .connection-chip.conn-steady {
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-title-ok-fg;
 }
 
 .connection-chip.conn-unsteady {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-title-warn-fg;
 }
 
 .connection-chip.conn-unknown {
@@ -1910,7 +1936,7 @@
 .chip-chunk-a {
     -fx-background-color: -color-info-bg;
     -fx-border-color: -color-info-bd;
-    -fx-text-fill: -color-info;
+    -fx-text-fill: -color-info-fg;
 }
 
 .chip-chunk-b {
@@ -1944,7 +1970,7 @@
     -fx-border-radius: 11px;
     -fx-padding: 1px 9px 1px 9px;
     -fx-text-fill: -color-text;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
@@ -2024,8 +2050,8 @@
 .glossary-suggested-badge {
     -fx-background-color: -color-info-bg;
     -fx-border-color: -color-info-bd;
-    -fx-text-fill: -color-info;
-    -fx-font-size: 10.5px;
+    -fx-text-fill: -color-info-fg;
+    -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-padding: 1px 6px 1px 6px;
 }
@@ -2056,7 +2082,7 @@
 
 /* A field that must be filled says so in the warning role while it is empty. */
 .hint.field-required {
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .field-label {
@@ -2074,7 +2100,7 @@
     -fx-border-width: 1px;
     -fx-border-radius: 10px;
     -fx-text-fill: -color-muted;
-    -fx-font-size: 11.5px;
+    -fx-font-size: 12px;
     -fx-padding: 2px 9px 2px 9px;
     -fx-cursor: hand;
 }
@@ -2117,19 +2143,19 @@
     -fx-background-radius: 4px;
     -fx-border-radius: 4px;
     -fx-padding: 0px 3px 0px 3px;
-    -fx-text-fill: -color-warn;
+    -fx-text-fill: -color-warn-fg;
 }
 
 .diff-removed {
     -fx-background-color: -color-err-bg;
-    -fx-text-fill: -color-err;
+    -fx-text-fill: -color-err-fg;
     -fx-background-radius: 4px;
     -fx-padding: 2px 6px 2px 6px;
 }
 
 .diff-added {
     -fx-background-color: -color-ok-bg;
-    -fx-text-fill: -color-ok;
+    -fx-text-fill: -color-ok-fg;
     -fx-background-radius: 4px;
     -fx-padding: 2px 6px 2px 6px;
 }

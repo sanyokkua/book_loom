@@ -44,12 +44,12 @@
             --divider: #eae4d8;
             --text: #2c3941;
             --text-strong: #22303a;
-            --muted: #6f7c82;
-            --muted-2: #95928a;
+            --muted: #5d686d;
+            --muted-2: #6f6c65;
             --primary: #a58075;
-            --primary-hover: #916b60;
-            --primary-press: #7e5b51;
-            --primary-fg: #ffffff;
+            --primary-hover: #b58f83;
+            --primary-press: #c39e92;
+            --primary-fg: #241c19;
             --primary-soft: #f0e5dd;
             --sand-soft: #f2e9db;
             --sand-strong: #dcc4a3;
@@ -57,7 +57,7 @@
             --nav-bg: #3a4a52;
             --nav-bg-2: #324148;
             --nav-fg: #cdd5d8;
-            --nav-fg-muted: #859399;
+            --nav-fg-muted: #b0b9bd;
             --nav-active-bg: rgba(231, 214, 192, .13);
             --nav-active-fg: #f3ede3;
             --nav-accent: #c99a86;
@@ -75,6 +75,14 @@
             --info: #4d6b78;
             --info-bg: #e5edf0;
             --info-bd: #b7cbd2;
+            --nav-accent-fg: #1c2429;
+            --title-ok-fg: #9cc4a6;
+            --title-warn-fg: #e0b56f;
+            --input-border: #988462;
+            --ok-fg: #4a6c54;
+            --warn-fg: #835d27;
+            --err-fg: #a04f45;
+            --info-fg: #4d6b78;
             --shadow-sm: 0 1px 2px rgba(58, 74, 82, .10);
             --shadow: 0 3px 10px rgba(58, 74, 82, .12);
             --shadow-lg: 0 12px 34px rgba(35, 45, 50, .22);
@@ -91,8 +99,8 @@
             --divider: #3c4a51;
             --text: #e6ebed;
             --text-strong: #f4f7f8;
-            --muted: #9fb0b7;
-            --muted-2: #7f9098;
+            --muted: #bdc9cd;
+            --muted-2: #a2afb4;
             --primary: #c4917e;
             --primary-hover: #d4a593;
             --primary-press: #b47e6b;
@@ -104,7 +112,7 @@
             --nav-bg: #20292e;
             --nav-bg-2: #1c2429;
             --nav-fg: #cdd6da;
-            --nav-fg-muted: #7d8f97;
+            --nav-fg-muted: #8d9ea6;
             --nav-active-bg: rgba(231, 214, 192, .10);
             --nav-active-fg: #f3ede3;
             --nav-accent: #c99a86;
@@ -122,6 +130,14 @@
             --info: #7a9dab;
             --info-bg: #293940;
             --info-bd: #3d525b;
+            --nav-accent-fg: #1c2429;
+            --title-ok-fg: #9cc4a6;
+            --title-warn-fg: #e0b56f;
+            --input-border: #7d949e;
+            --ok-fg: #b0d0b7;
+            --warn-fg: #e6c086;
+            --err-fg: #edbbb4;
+            --info-fg: #b3cbd4;
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3);
             --shadow: 0 4px 14px rgba(0, 0, 0, .35);
             --shadow-lg: 0 16px 40px rgba(0, 0, 0, .5);
@@ -285,7 +301,7 @@
         }
 
         .nav-brand .s {
-            font-size: 10.5px;
+            font-size: 12px;
             color: var(--nav-fg-muted);
         }
 
@@ -294,7 +310,7 @@
         }
 
         .nav-label {
-            font-size: 10px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: .9px;
             color: var(--nav-fg-muted);
@@ -340,7 +356,7 @@
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            font-size: 10px;
+            font-size: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -366,7 +382,7 @@
         .nav-foot {
             padding: 10px 14px;
             border-top: 1px solid rgba(255, 255, 255, .07);
-            font-size: 11px;
+            font-size: 12px;
             color: var(--nav-fg-muted);
             display: flex;
             align-items: center;
@@ -583,7 +599,7 @@
 
         .btn-danger-outline {
             background: transparent;
-            color: var(--err);
+            color: var(--err-fg);
             border-color: var(--err-bd);
         }
 
@@ -631,7 +647,7 @@
         /* ============================================================ INPUTS  (JavaFX TextField / TextArea / ComboBox) */
         label.fld {
             display: block;
-            font-size: 11.5px;
+            font-size: 12px;
             color: var(--muted);
             margin: 0 0 5px;
             font-weight: 500;
@@ -643,7 +659,7 @@
             font-size: 13px;
             color: var(--text);
             background: var(--surface);
-            border: 1px solid var(--border-cool);
+            border: 1px solid var(--input-border);
             border-radius: var(--r);
             padding: 8px 10px;
             transition: border-color .12s, box-shadow .12s;
@@ -666,8 +682,8 @@
         }
 
         .field-err {
-            color: var(--err);
-            font-size: 11px;
+            color: var(--err-fg);
+            font-size: 12px;
             margin-top: 4px;
             display: flex;
             gap: 5px;
@@ -679,7 +695,7 @@
         }
 
         .hint {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--muted-2);
             margin-top: 5px;
         }
@@ -722,7 +738,7 @@
 
         .seg span.on {
             background: var(--primary);
-            color: #fff;
+            color: var(--primary-fg);
             font-weight: 500;
         }
 
@@ -737,7 +753,8 @@
             width: 38px;
             height: 22px;
             border-radius: var(--r-pill);
-            background: var(--slate);
+            /* A darker slate than the brand anchor: 3:1 against both the white thumb and the surface. */
+            background: #87939a;
             cursor: pointer;
             transition: background .15s;
             flex: none;
@@ -760,6 +777,11 @@
             background: var(--primary);
         }
 
+        /* The dark block's on track is a darker Cognac than its primary, so the white thumb keeps 3:1. */
+        [data-theme="dark"] .switch.on {
+            background: #ad8679;
+        }
+
         .switch.on::after {
             left: 18px;
         }
@@ -778,7 +800,7 @@
         .toggle-row .tx small {
             display: block;
             color: var(--muted);
-            font-size: 11.5px;
+            font-size: 12px;
         }
 
         /* checkbox / radio (JavaFX CheckBox / RadioButton) */
@@ -802,7 +824,7 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             padding: 3px 9px;
             border-radius: var(--r-pill);
@@ -811,31 +833,31 @@
 
         .b-ok {
             background: var(--ok-bg);
-            color: var(--ok);
+            color: var(--ok-fg);
             border-color: var(--ok-bd);
         }
 
         .b-warn {
             background: var(--warn-bg);
-            color: var(--warn);
+            color: var(--warn-fg);
             border-color: var(--warn-bd);
         }
 
         .b-err {
             background: var(--err-bg);
-            color: var(--err);
+            color: var(--err-fg);
             border-color: var(--err-bd);
         }
 
         .b-info {
             background: var(--info-bg);
-            color: var(--info);
+            color: var(--info-fg);
             border-color: var(--info-bd);
         }
 
         .b-run {
             background: var(--info-bg);
-            color: var(--info);
+            color: var(--info-fg);
             border-color: var(--info-bd);
         }
 
@@ -902,7 +924,7 @@
             background: var(--surface-2);
             padding: 8px 12px;
             border-bottom: 1px solid var(--border);
-            font-size: 11.5px;
+            font-size: 12px;
         }
 
         table.tbl td {
@@ -1037,7 +1059,7 @@
         }
 
         .stat .l {
-            font-size: 11.5px;
+            font-size: 12px;
             color: var(--muted);
             margin-top: 2px;
         }
@@ -1082,15 +1104,15 @@
         }
 
         :root[data-theme=dark] .banner-warn {
-            color: var(--warn);
+            color: var(--warn-fg);
         }
 
         :root[data-theme=dark] .banner-err {
-            color: var(--err);
+            color: var(--err-fg);
         }
 
         :root[data-theme=dark] .banner-info {
-            color: var(--info);
+            color: var(--info-fg);
         }
 
         /* compare panes (two JavaFX TextArea, scroll-synced) */
@@ -1108,7 +1130,7 @@
         }
 
         .pane .ph {
-            font-size: 10.5px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: .6px;
             color: var(--muted);
@@ -1131,7 +1153,7 @@
         /* log */
         .log {
             font-family: ui-monospace, Menlo, Consolas, monospace;
-            font-size: 11.5px;
+            font-size: 12px;
             background: #26313a;
             color: #cfd8dd;
             border-radius: var(--r);
@@ -1208,7 +1230,7 @@
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: 10px;
+            font-size: 12px;
             flex: none;
             box-shadow: var(--shadow-sm);
             text-align: center;
@@ -1311,22 +1333,22 @@
 
         .di.ok {
             background: var(--ok-bg);
-            color: var(--ok);
+            color: var(--ok-fg);
         }
 
         .di.warn {
             background: var(--warn-bg);
-            color: var(--warn);
+            color: var(--warn-fg);
         }
 
         .di.err {
             background: var(--err-bg);
-            color: var(--err);
+            color: var(--err-fg);
         }
 
         .di.info {
             background: var(--info-bg);
-            color: var(--info);
+            color: var(--info-fg);
         }
 
         .di.brand {
@@ -1339,7 +1361,7 @@
         }
 
         .dialog-h .sub {
-            font-size: 11.5px;
+            font-size: 12px;
             color: var(--muted);
         }
 
@@ -1463,7 +1485,7 @@
 
         .sw .m {
             padding: 7px 9px;
-            font-size: 11px;
+            font-size: 12px;
         }
 
         .sw .m b {
@@ -1472,7 +1494,7 @@
         }
 
         .tag-note {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--muted);
             background: var(--surface-2);
             border: 1px solid var(--border);
@@ -1482,7 +1504,7 @@
         }
 
         .section-title {
-            font-size: 11px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: .8px;
             color: var(--muted-2);
@@ -1498,7 +1520,7 @@
         .tt-bub {
             background: var(--charcoal);
             color: #fff;
-            font-size: 11px;
+            font-size: 12px;
             padding: 4px 8px;
             border-radius: 5px;
             display: inline-block;

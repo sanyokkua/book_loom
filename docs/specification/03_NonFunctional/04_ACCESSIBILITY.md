@@ -29,10 +29,11 @@ _Advisory guidance, not requirements in the gating sense:_
 
 ## color-and-theming {#color-and-theming}
 
-Both light and dark themes derive from one token set (`07_UI_ARCHITECTURE_JAVAFX.md#theming`). Contrast should be
-checked per token pairing (text-on-surface, accent-on-surface, status-on-surface) in both themes; a token change that
-breaks a ratio warrants an advisory finding (not a build failure). Selected rows, chips, and draft/warm surfaces (Sand
-Dollar) are checked against their text color.
+Both light and dark themes derive from one token set (`07_UI_ARCHITECTURE_JAVAFX.md#theming`). Contrast is checked on
+what each conformance screen really paints, in both themes (`09_THEMING.md#contrast`, FR-THEME-11): text 4.5:1, icons and
+control edges 3:1, informative text at least 12px. Unlike the other checks below, this one is a **gate** — a token change
+that breaks a ratio fails the `:ui` tests. Selected rows, chips, and draft/warm surfaces (Sand Dollar) are covered, since
+the check reads the surface behind each piece of text.
 
 ## keyboard-and-focus {#keyboard-and-focus}
 

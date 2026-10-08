@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 class ThemeTest extends FxTestBase {
 
     /** The published light value of the {@code muted} role (09_THEMING.md#token-catalog). */
-    private static final String EXPECTED_MUTED = "#6f7c82";
+    private static final String EXPECTED_MUTED = "#5d686d";
 
     /** The published light value of the {@code title-fg} role. */
     private static final String EXPECTED_TITLE_FG = "#dfe4e6";

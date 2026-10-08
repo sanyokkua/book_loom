@@ -199,8 +199,8 @@ class TranslatingScreenTest extends TranslatingScreenTestBase {
 
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("741")), new LogEntry(LogKind.SEGMENT_ERROR, List.of("742")));
 
-        ThemeTestSupport.assertSameColour(partOf(0, ".log-tag").getTextFill(), "#5f8a6b", "accepted entry tag");
-        ThemeTestSupport.assertSameColour(partOf(1, ".log-tag").getTextFill(), "#b0574c", "segment-error entry tag");
+        ThemeTestSupport.assertSameColour(partOf(0, ".log-tag").getTextFill(), "#4a6c54", "accepted entry tag");
+        ThemeTestSupport.assertSameColour(partOf(1, ".log-tag").getTextFill(), "#a04f45", "segment-error entry tag");
         ThemeTestSupport.assertSameColour(partOf(0, ".log-text").getTextFill(), "#2c3941", "accepted entry words");
     }
 
