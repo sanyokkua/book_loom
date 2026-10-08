@@ -30,6 +30,11 @@ import lombok.Builder;
  * @param asciiQuotes targets that still hold a straight {@code "}, which the target language never uses (an eval-side
  *     count: the quote check balances pairs and does not read the kind)
  * @param mixedScript targets holding a word of two alphabets
+ * @param controlCharacters targets holding a control character the source does not
+ * @param closerResidue targets ending in reply residue: a label such as {@code Translation:}, a brace or an explanation
+ * @param vocativeMissing targets that lost a vocative name the source addresses
+ * @param wastedCallRate the share of finished calls that failed or were a repeat attempt
+ * @param costByKind the attempts, failures, tokens and seconds per call kind
  * @param learned terms whose rendering the lexicon learned from the text
  * @param learnedCoverage the share of those terms' occurrences that carry the learned rendering
  * @param lexiconDistinct the lexicon's own distinct renderings per term
@@ -71,6 +76,11 @@ record SequenceMetrics(
         int quoteFailures,
         int asciiQuotes,
         int mixedScript,
+        int controlCharacters,
+        int closerResidue,
+        int vocativeMissing,
+        double wastedCallRate,
+        Map<String, KindCost> costByKind,
         int learned,
         double learnedCoverage,
         double lexiconDistinct,
@@ -111,6 +121,17 @@ record SequenceMetrics(
      * @param variants how many spellings were seen
      */
     record NameStat(String name, int segments, Map<String, Integer> spellings, int variants) {}
+
+    /**
+     * What the calls of one kind cost.
+     *
+     * @param attempts attempts sent
+     * @param failed attempts that failed
+     * @param promptTokens prompt tokens the provider reported
+     * @param completionTokens completion tokens reported or estimated
+     * @param seconds wall seconds of all attempts
+     */
+    record KindCost(int attempts, int failed, long promptTokens, long completionTokens, double seconds) {}
 
     /** The flagged share of the segments. */
     double flaggedRate() {

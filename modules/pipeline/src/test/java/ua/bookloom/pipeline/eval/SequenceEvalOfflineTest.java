@@ -304,6 +304,14 @@ class SequenceEvalOfflineTest {
                         "termClaimedWrong",
                         "dominantShare");
         assertThat(report.json())
-                .contains("\"suite\" : \"sequence\"", "\"narrator\" : \"unset\"", "\"genderSlips\" : 1");
+                .contains(
+                        "\"suite\" : \"sequence\"",
+                        "\"narrator\" : \"unset\"",
+                        "\"genderSlips\" : 1",
+                        "\"controlCharacters\" : ",
+                        "\"closerResidue\" : ",
+                        "\"vocativeMissing\" : ",
+                        "\"wastedCallRate\" : ",
+                        "\"costByKind\" : ");
     }
 }

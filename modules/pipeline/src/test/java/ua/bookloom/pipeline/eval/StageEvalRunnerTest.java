@@ -197,7 +197,8 @@ class StageEvalRunnerTest {
         assertThat(report.passRate()).isEqualTo(0.5);
         assertThat(report.json())
                 .isEqualTo("{\"suite\":\"terms\",\"model\":\"m\",\"cases\":2,\"passRate\":0.500,\"calls\":5,"
-                        + "\"failed\":1,\"repeated\":1,\"refused\":2}");
+                        + "\"failed\":1,\"repeated\":1,\"refused\":2,\"wastedCallRate\":0.400,"
+                        + "\"callsPerCase\":2.500}");
     }
 
     @Test

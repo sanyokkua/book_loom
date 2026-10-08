@@ -6,9 +6,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
@@ -120,11 +117,9 @@ class PromptEvalTest {
 
     private static void write(final EvalReport report) throws IOException {
         final String name = safeName(report.model()) + ("generic".equals(report.rules()) ? "-generic" : "");
-        final Path file = Path.of("build", "reports", "promptEval", name + ".txt");
-        Files.createDirectories(Objects.requireNonNull(file.getParent()));
-        Files.writeString(file, report.table() + "\n", StandardCharsets.UTF_8);
-        Files.writeString(file.resolveSibling(name + ".json"), report.json() + "\n", StandardCharsets.UTF_8);
-        log.info("Prompt eval report {} window={}\n{}", file.toAbsolutePath(), EvalProject.window(), report.table());
+        EvalOutput.write(
+                EvalProvenance.capture("prompt", report.model(), report.rules()), name, report.table(), report.json());
+        log.info("Prompt eval report {} window={}\n{}", name, EvalProject.window(), report.table());
     }
 
     private static String safeName(final String model) {

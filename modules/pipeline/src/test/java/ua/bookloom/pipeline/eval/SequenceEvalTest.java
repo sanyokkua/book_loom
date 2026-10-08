@@ -3,10 +3,7 @@ package ua.bookloom.pipeline.eval;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -57,10 +54,8 @@ class SequenceEvalTest {
     private static void write(final String model, final SequenceNarratorMode narrator, final SequenceReport report)
             throws IOException {
         final String name = model.replaceAll("[^A-Za-z0-9._-]", "_") + "-sequence-" + narrator.label();
-        final Path file = Path.of("build", "reports", "promptEval", name + ".txt");
-        Files.createDirectories(Objects.requireNonNull(file.getParent()));
-        Files.writeString(file, report.table() + "\n", StandardCharsets.UTF_8);
-        Files.writeString(file.resolveSibling(name + ".json"), report.json() + "\n", StandardCharsets.UTF_8);
-        log.info("Sequence eval report {}\n{}", file.toAbsolutePath(), report.table());
+        EvalOutput.write(
+                EvalProvenance.capture("sequence", model, narrator.label()), name, report.table(), report.json());
+        log.info("Sequence eval report {}\n{}", name, report.table());
     }
 }

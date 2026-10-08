@@ -54,7 +54,7 @@ record StageReport(String suite, String model, List<StageRow> rows) {
         return String.format(
                 Locale.ROOT,
                 "{\"suite\":\"%s\",\"model\":\"%s\",\"cases\":%d,\"passRate\":%.3f,\"calls\":%d,\"failed\":%d,"
-                        + "\"repeated\":%d,\"refused\":%d}",
+                        + "\"repeated\":%d,\"refused\":%d,\"wastedCallRate\":%.3f,\"callsPerCase\":%.3f}",
                 suite,
                 model,
                 rows.size(),
@@ -62,7 +62,14 @@ record StageReport(String suite, String model, List<StageRow> rows) {
                 calls(),
                 failed(),
                 repeated(),
-                refused());
+                refused(),
+                wastedCallRate(),
+                rows.isEmpty() ? 0.0 : (double) calls() / rows.size());
+    }
+
+    /** The share of calls that failed or repeated a request an earlier call had sent. */
+    double wastedCallRate() {
+        return calls() == 0 ? 0.0 : (double) (failed() + repeated()) / calls();
     }
 
     /** The table printed to the log and written beside the JSON. */

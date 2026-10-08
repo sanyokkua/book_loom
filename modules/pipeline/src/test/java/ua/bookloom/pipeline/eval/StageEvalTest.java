@@ -3,8 +3,6 @@ package ua.bookloom.pipeline.eval;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -42,10 +40,8 @@ class StageEvalTest {
 
     private static void write(final StageReport report) throws IOException {
         final String name = report.model().replaceAll("[^A-Za-z0-9._-]", "_") + "-" + report.suite();
-        final Path file = Path.of("build", "reports", "promptEval", name + ".txt");
-        Files.createDirectories(Objects.requireNonNull(file.getParent()));
-        Files.writeString(file, report.table() + "\n", StandardCharsets.UTF_8);
-        Files.writeString(file.resolveSibling(name + ".json"), report.json() + "\n", StandardCharsets.UTF_8);
-        log.info("Stage eval report {}\n{}", file.toAbsolutePath(), report.table());
+        EvalOutput.write(
+                EvalProvenance.capture(report.suite(), report.model(), ""), name, report.table(), report.json());
+        log.info("Stage eval report {}\n{}", name, report.table());
     }
 }

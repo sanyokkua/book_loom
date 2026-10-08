@@ -18,6 +18,8 @@ import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.pipeline.CallKindTotals;
+import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.RenderingConsistency;
 import ua.bookloom.pipeline.batch.ProtocolLeak;
 import ua.bookloom.pipeline.checks.CheckFinding;
@@ -96,7 +98,12 @@ final class SequenceMeasure {
                 .asciiQuotes((int) segments.stream()
                         .filter(s -> s.target() != null && s.target().indexOf('"') >= 0)
                         .count())
-                .mixedScript(findings(segments, FindingKind.MIXED_SCRIPT));
+                .mixedScript(findings(segments, FindingKind.MIXED_SCRIPT))
+                .controlCharacters((int) segments.stream()
+                        .filter(s -> s.target() != null && ControlCharacters.addsControl(s.source(), s.target()))
+                        .count())
+                .closerResidue(findings(segments, FindingKind.PROTOCOL_LEAK))
+                .vocativeMissing(findings(segments, FindingKind.VOCATIVE_MISSING));
     }
 
     private static void realRun(
@@ -162,7 +169,32 @@ final class SequenceMeasure {
                 .editsApplied(
                         run.segments().stream().mapToInt(Decided::editsApplied).sum())
                 .editsRefused(run.editsRefused())
-                .callsByKind(callsByKind(run.calls()));
+                .callsByKind(callsByKind(run.calls()))
+                .wastedCallRate(wastedRate(run.calls()))
+                .costByKind(costByKind(run.calls()));
+    }
+
+    private static double wastedRate(final List<ModelCallFinished> calls) {
+        final long wasted = calls.stream()
+                .filter(call -> !call.isAnswered() || call.attempt() > 1)
+                .count();
+        return calls.isEmpty() ? 0 : (double) wasted / calls.size();
+    }
+
+    private static Map<String, SequenceMetrics.KindCost> costByKind(final List<ModelCallFinished> calls) {
+        final CallKindTotals totals = new CallKindTotals();
+        calls.forEach(totals::record);
+        final Map<String, SequenceMetrics.KindCost> byName = new LinkedHashMap<>();
+        totals.totals()
+                .forEach((kind, t) -> byName.put(
+                        kind.name(),
+                        new SequenceMetrics.KindCost(
+                                t.attempts(),
+                                t.failed(),
+                                t.promptTokens(),
+                                t.completionTokens(),
+                                t.elapsed().toMillis() / 1000.0)));
+        return byName;
     }
 
     private static String learnedLine(final LexiconEntry entry) {

@@ -53,3 +53,6 @@ jpackage/
 
 # Isolated agent worktrees
 .worktrees/
+
+# Prompt-eval runs kept for comparison (scripts/eval-score.py)
+/eval-history/

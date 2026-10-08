@@ -6,9 +6,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -86,10 +83,7 @@ class WordsEvalTest {
 
     private static void write(final WordsEvalReport report) throws IOException {
         final String name = report.model().replaceAll("[^A-Za-z0-9._-]", "_") + "-words";
-        final Path file = Path.of("build", "reports", "promptEval", name + ".txt");
-        Files.createDirectories(Objects.requireNonNull(file.getParent()));
-        Files.writeString(file, report.table() + "\n", StandardCharsets.UTF_8);
-        Files.writeString(file.resolveSibling(name + ".json"), report.json() + "\n", StandardCharsets.UTF_8);
-        log.info("Words eval report {}\n{}", file.toAbsolutePath(), report.table());
+        EvalOutput.write(EvalProvenance.capture("words", report.model(), ""), name, report.table(), report.json());
+        log.info("Words eval report {}\n{}", name, report.table());
     }
 }

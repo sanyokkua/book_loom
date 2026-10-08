@@ -874,6 +874,30 @@ answers the class read and refused (`ConsistencyChecks.refused`, undecided term 
 `StageEvalRunnerTest` (a fake model answering like a good one, and a silent one), which also compares the recorded request with
 the production prompt for the stage.
 
+**Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
+ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,
+model, `BOOKLOOM_EVAL_LABEL`, provider, window, dial, brief preset and overrides, suite). Besides `build/reports/promptEval`
+(overwritten by the next run) each report is kept as `report.txt` and `report.json` in
+`eval-history/<yyyyMMdd-HHmmss>-<suite>-<model[-label]>/` at the repository root (git-ignored; `BOOKLOOM_EVAL_HISTORY_DIR`
+moves it, `off` disables it; a name that exists gets `-2`). Only what the report holds is written. The JSON carries, where the
+suite has the data: pass rates, defect counts (mixed script, source-language leftover, protocol or closer residue, control
+characters, missing vocative, quote findings, gender slips, name variants), `wastedCallRate` (failed or repeated calls per call),
+calls per segment or case and, for the sequence suite, tokens and seconds per call kind (`costByKind`).
+
+```bash
+BOOKLOOM_EVAL_LABEL=round7 BOOKLOOM_EVAL_SUITE=terms ./gradlew :pipeline:promptEval   # a run, kept in eval-history
+scripts/eval-score.py list                                                          # the kept runs
+scripts/eval-score.py diff previous:terms:e4b latest:terms:e4b                      # or two directories or globs
+scripts/eval-score.py diff A B --noise 3                                            # noise band, default 5
+```
+
+`diff` prints what changed first (SHA, prompt hash, model, window, brief), then each metric as A, B, delta and `+` (better),
+`-` (worse), `~` (inside the noise band), `=` (same), `?` (no direction known). The band is 5 percentage points for rates and
+5 % of A for counts and costs, because the documented run-to-run noise is prose, not machine-readable (about 1.5 points of
+dominant share and 2 points of flagged in the sequence eval, see 15e.13). The fast loop for a prompt round: edit the prompt,
+run the offline `StageEvalRunnerTest` and `scripts/test-focused.sh`, then one `:pipeline:promptEval` run with a label, then `diff`.
+`python3 scripts/eval-score.py selftest` and `python3 -m unittest discover -s scripts/tests` check the script.
+
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
 prompt eval plus 19 labelled reviewer cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
 « », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints
