@@ -82,7 +82,8 @@ a defect (checked by the palette-token conformance assertion,
 | `shadow-sm`     | Small elevation shadow                    | `0 1px 2px rgba(58,74,82,.10)`   | `0 1px 2px rgba(0,0,0,.3)`   |
 | `shadow`        | Default elevation shadow                  | `0 3px 10px rgba(58,74,82,.12)`  | `0 4px 14px rgba(0,0,0,.35)` |
 | `shadow-lg`     | Large elevation shadow                    | `0 12px 34px rgba(35,45,50,.22)` | `0 16px 40px rgba(0,0,0,.5)` |
-| `focus`         | Keyboard focus ring                       | `#a58075`                        | `#c4917e`                    |
+| `focus` | Keyboard focus ring: 2px, drawn 1px outside the control, only for keyboard focus (a field being typed in always); never the primary colour, so it shows around a primary button; 3:1 against the surface around the control | `#3d6b80` | `#8cc0d6` |
+| `nav-focus` | Keyboard focus ring in the navigation column and the title bar (dark in both blocks) | `#9fd0e4` | `#9fd0e4` |
 | `toggle-off`    | Switch track when off (3:1 against the white thumb and the surface) | `#87939a`      | `#87939a`                    |
 | `toggle-on` | Switch track when on (3:1 against the white thumb) | `#a58075` | `#ad8679` |
 | `toggle-thumb`  | Switch thumb (white, with a small shadow) | `#ffffff`                        | `#ffffff`                    |

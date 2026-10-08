@@ -18,6 +18,7 @@ import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.api.AppError;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.TabMovesFocus;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -155,7 +156,7 @@ final class ErrorDialog {
     }
 
     private TextArea detailsArea() {
-        final TextArea details = new TextArea(error.details());
+        final TextArea details = TabMovesFocus.install(new TextArea(error.details()));
         details.setId(DETAILS_ID);
         details.setEditable(false);
         details.setWrapText(true);

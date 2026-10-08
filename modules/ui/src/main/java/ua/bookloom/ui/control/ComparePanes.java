@@ -80,7 +80,7 @@ public final class ComparePanes extends HBox {
     }
 
     private static TextArea area(final String id, final boolean editable) {
-        final TextArea area = new TextArea();
+        final TextArea area = TabMovesFocus.install(new TextArea());
         area.setId(id);
         area.setEditable(editable);
         area.setWrapText(true);

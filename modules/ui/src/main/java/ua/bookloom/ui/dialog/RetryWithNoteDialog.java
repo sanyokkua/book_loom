@@ -16,6 +16,7 @@ import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.ModalHost;
+import ua.bookloom.ui.control.TabMovesFocus;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -69,7 +70,7 @@ public final class RetryWithNoteDialog {
         Objects.requireNonNull(locator, "locator");
         Objects.requireNonNull(onRetry, "onRetry");
         log.debug("asking for a note to retry segment at {}", locator);
-        final TextArea note = new TextArea();
+        final TextArea note = TabMovesFocus.install(new TextArea());
         note.setId(NOTE_ID);
         Tips.install(messages, note, MessageKey.DIALOG_RETRY_NOTE_TIP);
         note.setPrefRowCount(NOTE_ROWS);

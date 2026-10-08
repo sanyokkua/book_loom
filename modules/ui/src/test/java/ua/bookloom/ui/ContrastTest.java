@@ -9,11 +9,9 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.Background;
 import javafx.scene.layout.Border;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -49,15 +47,6 @@ class ContrastTest extends ConformanceTestBase {
     // a point smaller than informative text.
     private static final Set<String> BADGES = Set.of("nav-step", "glossary-suggested-badge", "placeholder-chip");
     private static final double SIZE_TOLERANCE = 0.01;
-    private static final double LINEAR_CUTOFF = 0.03928;
-    private static final double LINEAR_DIVISOR = 12.92;
-    private static final double GAMMA_OFFSET = 0.055;
-    private static final double GAMMA_SCALE = 1.055;
-    private static final double GAMMA = 2.4;
-    private static final double RED_WEIGHT = 0.2126;
-    private static final double GREEN_WEIGHT = 0.7152;
-    private static final double BLUE_WEIGHT = 0.0722;
-    private static final double FLARE = 0.05;
 
     static Stream<Arguments> screensInEachBlock() {
         return ConformanceCases.SCREENS.stream()
@@ -114,9 +103,9 @@ class ContrastTest extends ConformanceTestBase {
 
     private static List<String> faintText(final Node root) {
         final List<String> faint = new ArrayList<>();
-        for (final Node node : shown(root)) {
+        for (final Node node : Contrast.shown(root)) {
             fillOfText(node).ifPresent(fill -> {
-                final double ratio = ratio(fill, surfaceBehind(node));
+                final double ratio = Contrast.ratio(fill, Contrast.surfaceBehind(node));
                 final double required = node instanceof FontIcon ? UI_RATIO : TEXT_RATIO;
                 if (ratio < required) {
                     faint.add("%s ratio %.2f".formatted(describe(node), ratio));
@@ -128,7 +117,7 @@ class ContrastTest extends ConformanceTestBase {
 
     private static List<String> smallText(final Node root) {
         final List<String> small = new ArrayList<>();
-        for (final Node node : shown(root)) {
+        for (final Node node : Contrast.shown(root)) {
             if (fillOfText(node).isEmpty() || node instanceof FontIcon) {
                 continue;
             }
@@ -143,7 +132,7 @@ class ContrastTest extends ConformanceTestBase {
 
     private static List<String> mergedEdges(final Node root) {
         final List<String> merged = new ArrayList<>();
-        for (final Node node : shown(root)) {
+        for (final Node node : Contrast.shown(root)) {
             if (node instanceof ToggleSwitch toggle) {
                 checkSwitch(toggle, merged);
             } else if (isInput(node)) {
@@ -165,9 +154,9 @@ class ContrastTest extends ConformanceTestBase {
 
     private static void checkSwitch(final ToggleSwitch toggle, final List<String> merged) {
         final Region track = (Region) toggle.lookup(".thumb-area");
-        final Color trackFill = surfaceBehind(track);
-        final double thumb = ratio(surfaceBehind((Region) toggle.lookup(".thumb")), trackFill);
-        final double surface = ratio(trackFill, surfaceBehind(toggle.getParent()));
+        final Color trackFill = Contrast.surfaceBehind(track);
+        final double thumb = Contrast.ratio(Contrast.surfaceBehind((Region) toggle.lookup(".thumb")), trackFill);
+        final double surface = Contrast.ratio(trackFill, Contrast.surfaceBehind(toggle.getParent()));
         if (Math.min(thumb, surface) < UI_RATIO) {
             merged.add("%s thumb/track %.2f track/surface %.2f".formatted(describe(toggle), thumb, surface));
         }
@@ -178,8 +167,9 @@ class ContrastTest extends ConformanceTestBase {
         if (edge.isEmpty() || region.isFocused()) {
             return;
         }
-        final double inside = againstFill ? ratio(edge.get(), surfaceBehind(region)) : Double.MAX_VALUE;
-        final double outside = ratio(edge.get(), surfaceBehind(region.getParent()));
+        final double inside =
+                againstFill ? Contrast.ratio(edge.get(), Contrast.surfaceBehind(region)) : Double.MAX_VALUE;
+        final double outside = Contrast.ratio(edge.get(), Contrast.surfaceBehind(region.getParent()));
         if (Math.min(inside, outside) < UI_RATIO) {
             merged.add("%s border/fill %.2f border/surface %.2f".formatted(describe(region), inside, outside));
         }
@@ -217,25 +207,6 @@ class ContrastTest extends ConformanceTestBase {
         return node instanceof Labeled labeled ? labeled.getFont() : ((Text) node).getFont();
     }
 
-    /** Every node that is drawn: visible, at full opacity all the way up, and with a size. */
-    private static List<Node> shown(final Node root) {
-        final List<Node> nodes = new ArrayList<>();
-        collect(root, nodes);
-        return nodes;
-    }
-
-    private static void collect(final Node node, final List<Node> into) {
-        if (!node.isVisible() || node.getOpacity() < 1) {
-            return;
-        }
-        if (node.getLayoutBounds().getWidth() > 0 && node.getLayoutBounds().getHeight() > 0) {
-            into.add(node);
-        }
-        if (node instanceof Parent parent) {
-            parent.getChildrenUnmodifiable().forEach(child -> collect(child, into));
-        }
-    }
-
     private static boolean hasClassUp(final Node node, final Set<String> names) {
         Node walk = node;
         while (walk != null) {
@@ -252,60 +223,5 @@ class ContrastTest extends ConformanceTestBase {
                 ? " \"" + labeled.getText() + "\""
                 : node instanceof Text t ? " \"" + t.getText() + "\"" : "";
         return "%s#%s%s%s".formatted(node.getClass().getSimpleName(), node.getId(), node.getStyleClass(), text);
-    }
-
-    private static Color surfaceBehind(final Node node) {
-        final List<Color> fills = new ArrayList<>();
-        Node walk = node;
-        while (walk != null && !opaque(fills)) {
-            if (walk instanceof Region region) {
-                fillOf(region.getBackground()).ifPresent(fills::add);
-            }
-            walk = walk.getParent();
-        }
-        return flatten(fills);
-    }
-
-    private static Optional<Color> fillOf(final Background background) {
-        if (background == null || background.getFills().isEmpty()) {
-            return Optional.empty();
-        }
-        final Paint fill =
-                background.getFills().get(background.getFills().size() - 1).getFill();
-        return fill instanceof Color color && color.getOpacity() > 0 ? Optional.of(color) : Optional.empty();
-    }
-
-    private static boolean opaque(final List<Color> fills) {
-        return !fills.isEmpty() && fills.get(fills.size() - 1).getOpacity() >= 1;
-    }
-
-    private static Color flatten(final List<Color> topDown) {
-        Color result = Color.WHITE;
-        for (int i = topDown.size() - 1; i >= 0; i--) {
-            final Color over = topDown.get(i);
-            final double a = over.getOpacity();
-            result = new Color(
-                    over.getRed() * a + result.getRed() * (1 - a),
-                    over.getGreen() * a + result.getGreen() * (1 - a),
-                    over.getBlue() * a + result.getBlue() * (1 - a),
-                    1);
-        }
-        return result;
-    }
-
-    private static double ratio(final Color first, final Color second) {
-        final double a = luminance(first);
-        final double b = luminance(second);
-        return (Math.max(a, b) + FLARE) / (Math.min(a, b) + FLARE);
-    }
-
-    private static double luminance(final Color colour) {
-        return RED_WEIGHT * channel(colour.getRed())
-                + GREEN_WEIGHT * channel(colour.getGreen())
-                + BLUE_WEIGHT * channel(colour.getBlue());
-    }
-
-    private static double channel(final double value) {
-        return value <= LINEAR_CUTOFF ? value / LINEAR_DIVISOR : Math.pow((value + GAMMA_OFFSET) / GAMMA_SCALE, GAMMA);
     }
 }

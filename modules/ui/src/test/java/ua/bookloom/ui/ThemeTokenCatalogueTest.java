@@ -38,7 +38,7 @@ class ThemeTokenCatalogueTest extends FxTestBase {
     private static final Pattern MOCKUP_DECLARATION = Pattern.compile("--([a-z0-9-]+)\\s*:");
     private static final Pattern STATUS_ROLE = Pattern.compile("(ok|warn|err|info)(-bg|-bd|-fg)?");
 
-    /** The 49 roles that are looked-up colours, exactly as published. */
+    /** The 50 roles that are looked-up colours, exactly as published. */
     private static final Set<String> COLOUR_ROLES = Set.of(
             "bg",
             "surface",
@@ -73,6 +73,7 @@ class ThemeTokenCatalogueTest extends FxTestBase {
             "title-warn-fg",
             "input-border",
             "focus",
+            "nav-focus",
             "ok",
             "ok-bg",
             "ok-bd",
@@ -112,17 +113,17 @@ class ThemeTokenCatalogueTest extends FxTestBase {
 
     // ===== the role names ================================================================================
 
-    // IF the stylesheet is read for its role names, THEN there are 52 published (49 colours, 3 elevations) plus 3
+    // IF the stylesheet is read for its role names, THEN there are 53 published (50 colours, 3 elevations) plus 3
     // switch.
     @Test
-    void catalogue_declaredRoles_areFiftyTwoPublishedPlusThreeSwitchRoles() {
-        assertThat(catalogueNames()).hasSize(55);
+    void catalogue_declaredRoles_areFiftyThreePublishedPlusThreeSwitchRoles() {
+        assertThat(catalogueNames()).hasSize(56);
     }
 
-    // IF the colour roles are counted on .root without the brand anchors, THEN there are 49 published plus 3 switch.
+    // IF the colour roles are counted on .root without the brand anchors, THEN there are 50 published plus 3 switch.
     @Test
-    void catalogue_colourRolesOnRoot_areFortyNinePublishedPlusThreeSwitchRoles() {
-        assertThat(colourNames(rootBlock())).hasSize(52);
+    void catalogue_colourRolesOnRoot_areFiftyPublishedPlusThreeSwitchRoles() {
+        assertThat(colourNames(rootBlock())).hasSize(53);
     }
 
     // IF the catalogue's roles are classified, THEN exactly 16 are status roles (4 statuses x 4 shades).
@@ -148,13 +149,13 @@ class ThemeTokenCatalogueTest extends FxTestBase {
     void catalogue_names_equalTheMockupLightBlockDeclarations() throws IOException {
         final Set<String> mockup = mockupLightNames();
 
-        assertThat(mockup).as("the mockup's light block declares 52 roles").hasSize(52);
+        assertThat(mockup).as("the mockup's light block declares 53 roles").hasSize(53);
         final Set<String> withoutSwitchRoles = new TreeSet<>(catalogueNames());
         withoutSwitchRoles.removeAll(SWITCH_ROLES);
         assertThat(withoutSwitchRoles).containsExactlyInAnyOrderElementsOf(mockup);
     }
 
-    // IF the dark block is read, THEN it defines the same 52 colour names as the light block, no more, no fewer.
+    // IF the dark block is read, THEN it defines the same 53 colour names as the light block, no more, no fewer.
     @Test
     void darkBlock_colourNames_equalTheLightBlockNames() {
         assertThat(colourNames(darkBlock())).containsExactlyInAnyOrderElementsOf(colourNames(rootBlock()));
@@ -255,7 +256,8 @@ class ThemeTokenCatalogueTest extends FxTestBase {
             toggle-off    | #87939a                 | #87939a
             toggle-on     | #a58075                 | #ad8679
             toggle-thumb  | #ffffff                 | #ffffff
-            focus         | #a58075                 | #c4917e
+            focus         | #3d6b80                 | #8cc0d6
+            nav-focus     | #9fd0e4                 | #9fd0e4
             ok            | #5f8a6b                 | #7faa8a
             ok-bg         | #e7efe8                 | #2b3a33
             ok-bd         | #bcd4c1                 | #3f5a49
@@ -281,14 +283,14 @@ class ThemeTokenCatalogueTest extends FxTestBase {
         ThemeTestSupport.assertSameColour(ThemeTestSupport.resolveRole(scene, role), dark, role + " under dark");
     }
 
-    /** Guards the hard-coded lists themselves: 49 colours, 3 elevations, 16 statuses among them. */
+    /** Guards the hard-coded lists themselves: 50 colours, 3 elevations, 16 statuses among them. */
     @Test
     void publishedLists_asTranscribed_haveTheSpecifiedSizes() {
         final List<String> statuses = COLOUR_ROLES.stream()
                 .filter(name -> STATUS_ROLE.matcher(name).matches())
                 .toList();
 
-        assertThat(COLOUR_ROLES).hasSize(49);
+        assertThat(COLOUR_ROLES).hasSize(50);
         assertThat(ELEVATION_ROLES).hasSize(3);
         assertThat(statuses).hasSize(16);
     }

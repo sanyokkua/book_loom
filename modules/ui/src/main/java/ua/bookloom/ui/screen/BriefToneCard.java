@@ -20,6 +20,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.control.SearchableCombo;
+import ua.bookloom.ui.control.TabMovesFocus;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -47,7 +48,7 @@ final class BriefToneCard {
     private final BriefChoice<Register> register;
     private final BriefChoice<NarratorPerson> narrator;
     private final BriefChoice<Gender> narratorGender;
-    private final TextArea voice = new TextArea();
+    private final TextArea voice = TabMovesFocus.install(new TextArea());
     private final TextField audience = new TextField();
     private final Node node;
     // True while a value from the view model is written into a control, so it is not handed back as a person's choice.

@@ -66,8 +66,11 @@
     -color-title-ok-fg: #9cc4a6;
     -color-title-warn-fg: #e0b56f;
 
-    /* Keyboard focus */
-    -color-focus: #a58075;
+    /* Keyboard focus: a slate-blue ring, never the primary colour, so it shows around a primary button too. It is drawn
+       outside the control with a gap, so it is held to 3:1 against the surface around the control, not the control. The
+       navigation column and the title bar are dark in both blocks and take a light ring of their own. */
+    -color-focus: #3d6b80;
+    -color-nav-focus: #9fd0e4;
     /* Modena's own focus colours, pointed at the role so no blue ring leaks on a control the rules below miss. */
     -fx-focus-color: -color-focus;
     -fx-faint-focus-color: transparent;
@@ -164,7 +167,8 @@
     -color-input-border: #7d949e;
 
     /* Keyboard focus */
-    -color-focus: #c4917e;
+    -color-focus: #8cc0d6;
+    -color-nav-focus: #9fd0e4;
 
     /* Status (desaturated): success, warning, danger, info */
     -color-ok: #7faa8a;
@@ -342,8 +346,11 @@
     -fx-opacity: 1;
 }
 
-.shell-title-button:focused {
-    -fx-border-color: -color-focus;
+.shell-title-button:focus-visible {
+    -fx-border-color: -color-nav-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 9px, 6px;
     -fx-opacity: 1;
 }
 
@@ -441,8 +448,11 @@
     -fx-background-color: -color-nav-bg-2;
 }
 
-.nav-item:focused {
-    -fx-border-color: -color-focus;
+.nav-item:focus-visible {
+    -fx-border-color: -color-nav-focus, transparent;
+    -fx-border-width: 2px, 1px 1px 1px 3px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 9px, 7px;
 }
 
 .nav-item .ikonli-font-icon {
@@ -495,8 +505,11 @@
     -fx-font-weight: bold;
 }
 
-.nav-item-current:focused {
-    -fx-border-color: -color-focus -color-focus -color-focus -color-nav-accent;
+.nav-item-current:focus-visible {
+    -fx-border-color: -color-nav-focus, transparent transparent transparent -color-nav-accent;
+    -fx-border-width: 2px, 1px 1px 1px 3px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 9px, 7px;
 }
 
 .nav-item-current .nav-step {
@@ -761,8 +774,13 @@
     -fx-background-color: -color-primary-press;
 }
 
-.btn-primary:focused {
-    -fx-border-color: -color-focus;
+/* Keyboard focus is a 2px ring 1px outside the control (a second border layer at negative insets), shown only when
+   focus came from the keyboard, so a click leaves no ring behind. */
+.btn-primary:focus-visible {
+    -fx-border-color: -color-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .btn-secondary {
@@ -784,8 +802,11 @@
     -fx-background-color: -color-sand-soft;
 }
 
-.btn-secondary:focused {
-    -fx-border-color: -color-focus;
+.btn-secondary:focus-visible {
+    -fx-border-color: -color-focus, -color-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 /* --- Error dialog ------------------------------------------------------------------------------------------ */
@@ -892,6 +913,8 @@
 /* Modena paints a blue ring on the selected tab while the pane has focus; it is recoloured to the focus role. */
 .tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
     -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px;
     -fx-background-color: transparent;
 }
 
@@ -910,8 +933,11 @@
     -fx-background-color: -color-surface-2;
 }
 
-.list-item:focused {
-    -fx-border-color: -color-focus;
+.list-item:focus-visible {
+    -fx-border-color: -color-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .list-item-selected,
@@ -920,8 +946,11 @@
     -fx-border-color: -color-sand-strong;
 }
 
-.list-item-selected:focused {
-    -fx-border-color: -color-focus;
+.list-item-selected:focus-visible {
+    -fx-border-color: -color-focus, -color-sand-strong;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .provider-name {
@@ -984,8 +1013,16 @@
     -fx-background-color: -color-surface-2;
 }
 
-.btn-ghost:focused {
-    -fx-border-color: -color-focus;
+.btn-ghost:pressed {
+    -fx-background-color: -color-sand-soft;
+    -fx-border-color: -color-sand-strong;
+}
+
+.btn-ghost:focus-visible {
+    -fx-border-color: -color-focus, transparent;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .btn-danger-outline {
@@ -1003,8 +1040,16 @@
     -fx-background-color: -color-err-bg;
 }
 
-.btn-danger-outline:focused {
-    -fx-border-color: -color-focus;
+.btn-danger-outline:pressed {
+    -fx-background-color: -color-err-bd;
+    -fx-text-fill: -color-text-strong;
+}
+
+.btn-danger-outline:focus-visible {
+    -fx-border-color: -color-focus, -color-err-bd;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 /* An unavailable button is dimmed, not recoloured, so its role stays readable and no colour is invented. */
@@ -1033,8 +1078,12 @@
     -fx-padding: 7px 10px 7px 10px;
 }
 
+/* A field being typed in shows the ring however it got focus. */
 .text-field:focused {
-    -fx-border-color: -color-focus;
+    -fx-border-color: -color-focus, -color-focus;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .combo-box,
@@ -1057,7 +1106,10 @@
 .combo-box:focused,
 .combo-box:editable:focused {
     -fx-background-color: -color-surface;
-    -fx-border-color: -color-focus;
+    -fx-border-color: -color-focus, -color-focus;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 /* The editor sits inside the combo's own border, so it draws none of its own. */
@@ -1067,6 +1119,8 @@
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
     -fx-padding: 7px 10px 7px 10px;
 }
 
@@ -1169,11 +1223,30 @@
     -fx-font-weight: bold;
 }
 
-.segmented-button .toggle-button:focused,
-.segmented-button .toggle-button.left-pill:focused,
-.segmented-button .toggle-button.center-pill:focused,
-.segmented-button .toggle-button.right-pill:focused {
-    -fx-border-color: -color-focus;
+/* A pill's ring is drawn above its neighbours (view order), which would otherwise paint over its outer edge. */
+.segmented-button .toggle-button:focus-visible,
+.segmented-button .toggle-button.center-pill:focus-visible {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px 0 1px 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 4px, 0;
+    -fx-view-order: -1;
+}
+
+.segmented-button .toggle-button.left-pill:focus-visible {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px 0 1px 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px 4px 4px 10px, 7px 0 0 7px;
+    -fx-view-order: -1;
+}
+
+.segmented-button .toggle-button.right-pill:focus-visible {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 4px 10px 10px 4px, 0 7px 7px 0;
+    -fx-view-order: -1;
 }
 
 /* --- Screen scroll host (book brief, import), the multi-line input, the switch and the slider ------------ */
@@ -1240,7 +1313,10 @@
 }
 
 .text-area.brief-input:focused {
-    -fx-border-color: -color-focus;
+    -fx-border-color: -color-focus, -color-focus;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 10px, 7px;
 }
 
 .text-area.brief-input:focused .content {
@@ -1310,9 +1386,11 @@
     -thumb-move-animation-time: 1;
 }
 
-.toggle-switch:focused .thumb-area {
+.toggle-switch:focus-visible .thumb-area {
     -fx-border-color: -color-focus;
-    -fx-border-width: 1px;
+    -fx-border-width: 2px;
+    -fx-border-insets: -3px;
+    -fx-border-radius: 14px;
 }
 
 .slider .track {
@@ -1334,6 +1412,13 @@
     -fx-background-color: -color-primary;
     -fx-background-insets: 0;
     -fx-background-radius: 1em;
+}
+
+.slider:focus-visible .thumb {
+    -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
+    -fx-border-insets: -3px;
+    -fx-border-radius: 1em;
 }
 
 /* An unavailable box is dimmed, not recoloured, like a button; a chosen one is the primary role with a light tick. */
@@ -1367,11 +1452,25 @@
     -fx-background-color: -color-primary-fg;
 }
 
-.check-box:focused .box {
-    -fx-border-color: -color-focus;
+.check-box:focus-visible .box {
+    -fx-border-color: -color-focus, -color-input-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 7px, 4px;
 }
 
-.check-box:disabled {
+.check-box:selected:focus-visible .box {
+    -fx-border-color: -color-focus, -color-primary;
+}
+
+/* Every unavailable input is dimmed alike, as an unavailable button is (Modena's own 0.4 is replaced). */
+.check-box:disabled,
+.text-field:disabled,
+.text-area:disabled,
+.combo-box:disabled,
+.toggle-switch:disabled,
+.slider:disabled,
+.segmented-button .toggle-button:disabled {
     -fx-opacity: 0.45;
 }
 
@@ -2078,6 +2177,7 @@
 
 .glossary-choice:focused {
     -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
 }
 
 /* A field that must be filled says so in the warning role while it is empty. */
@@ -2109,6 +2209,17 @@
     -fx-background-color: -color-primary-soft;
     -fx-border-color: -color-primary;
     -fx-text-fill: -color-text-strong;
+}
+
+.review-chip:focus-visible {
+    -fx-border-color: -color-focus, -color-border;
+    -fx-border-width: 2px, 1px;
+    -fx-border-insets: -3px, 0;
+    -fx-border-radius: 13px, 10px;
+}
+
+.review-chip:selected:focus-visible {
+    -fx-border-color: -color-focus, -color-primary;
 }
 
 .finding-kind {
@@ -2201,4 +2312,14 @@
 
 .review-list .scroll-bar > .track {
     -fx-background-color: transparent;
+}
+
+/* --- Keyboard focus inside lists, tables and trees: the focused row is framed in the focus role, inside its own
+   edges (a row is clipped by its list), once the list was reached with the keyboard. --------------------------- */
+.list-view:focus-visible .list-cell:filled:focused,
+.table-view:focus-visible .table-row-cell:filled:focused,
+.tree-view:focus-visible .tree-cell:filled:focused {
+    -fx-border-color: -color-focus;
+    -fx-border-width: 2px;
+    -fx-border-insets: 0;
 }
