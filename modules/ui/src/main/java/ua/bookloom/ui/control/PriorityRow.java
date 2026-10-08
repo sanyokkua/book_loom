@@ -74,7 +74,7 @@ final class PriorityRow extends HBox {
         int count = 0;
         for (final Node part : getChildren()) {
             if (isWanted(part)) {
-                sum += part.prefWidth(height);
+                sum += snapSizeX(part.prefWidth(height));
                 count++;
             }
         }
@@ -87,7 +87,7 @@ final class PriorityRow extends HBox {
         int count = 0;
         for (final Node part : getChildren()) {
             if (isWanted(part) && !wanted.containsKey(part)) {
-                sum += part.minWidth(height);
+                sum += snapSizeX(part.minWidth(height));
                 count++;
             }
         }
@@ -110,7 +110,9 @@ final class PriorityRow extends HBox {
         int count = 0;
         for (final Node part : getChildren()) {
             if (isWanted(part)) {
-                need += part.equals(elastic) ? Math.min(part.prefWidth(-1), comfort) : part.prefWidth(-1);
+                need += part.equals(elastic)
+                        ? Math.min(snapSizeX(part.prefWidth(-1)), comfort)
+                        : snapSizeX(part.prefWidth(-1));
                 count++;
             }
         }
@@ -122,7 +124,7 @@ final class PriorityRow extends HBox {
             }
             if (isWanted(part)) {
                 drop.add(part);
-                need -= part.prefWidth(-1) + getSpacing();
+                need -= snapSizeX(part.prefWidth(-1)) + snapSpaceX(getSpacing());
             }
         }
         return drop;
@@ -140,6 +142,8 @@ final class PriorityRow extends HBox {
     }
 
     private double gaps(final int count) {
-        return count > 1 ? getSpacing() * (count - 1) : 0;
+        // Sized as HBox sizes its own children (each width and gap snapped to whole pixels), so the room asked for is
+        // exactly the room the row's layout needs and the elastic part is never shortened by a rounding difference.
+        return count > 1 ? snapSpaceX(getSpacing()) * (count - 1) : 0;
     }
 }

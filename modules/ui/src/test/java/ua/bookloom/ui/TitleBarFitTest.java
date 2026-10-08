@@ -108,6 +108,10 @@ class TitleBarFitTest extends ShellTestBase {
 
         assertThat(DROP_ORDER.stream().map(id -> required(id).isVisible()).toList())
                 .containsOnly(true);
+        final Node file = required("shell-run-file");
+        assertThat(file.getLayoutBounds().getWidth())
+                .as("a wide window shows the whole book name")
+                .isGreaterThanOrEqualTo(file.prefWidth(-1) - PART_TOLERANCE);
     }
 
     // IF the chip's words kept the body text colour, THEN they would be dark on the dark title bar of the light theme.
