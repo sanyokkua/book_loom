@@ -241,4 +241,28 @@ class ChatContractsTest {
     void modelSelection_nullModelId_isRejected() {
         assertThatNullPointerException().isThrownBy(() -> new ModelSelection("provider", null));
     }
+
+    @Test
+    void withSampling_everyCopyingMethod_keepsTheControls() {
+        final SamplingParams sampling = new SamplingParams(0.9, 40, 0.05, 1.0);
+        final ChatRequest request =
+                new ChatRequest(List.of(new ChatMessage(ChatRole.USER, "hello"))).withSampling(sampling);
+
+        assertThat(request.sampling()).isEqualTo(sampling);
+        assertThat(request.withSeed(3).sampling()).isEqualTo(sampling);
+        assertThat(request.sizedTo(4096, 512).sampling()).isEqualTo(sampling);
+        assertThat(request.forRetry(5, null).sampling()).isEqualTo(sampling);
+        assertThat(request.withoutReasoning().sampling()).isEqualTo(sampling);
+        assertThat(request.withoutResponseFormat().sampling()).isEqualTo(sampling);
+    }
+
+    @Test
+    void samplingOrNone_unset_isEmptyControls() {
+        assertThat(new ChatRequest(List.of()).samplingOrNone()).isSameAs(SamplingParams.NONE);
+    }
+
+    @Test
+    void samplingParams_nonPositiveTopK_isRejected() {
+        assertThatThrownBy(() -> new SamplingParams(null, 0, null, null)).isInstanceOf(IllegalArgumentException.class);
+    }
 }

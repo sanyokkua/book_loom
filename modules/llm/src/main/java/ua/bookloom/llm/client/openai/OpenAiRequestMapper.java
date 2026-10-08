@@ -87,7 +87,11 @@ final class OpenAiRequestMapper {
                     responseFormat,
                     request.maxOutputTokens(),
                     request.seed(),
-                    Boolean.FALSE.equals(request.reasoningEnabled()) ? REASONING_OFF : null);
+                    Boolean.FALSE.equals(request.reasoningEnabled()) ? REASONING_OFF : null,
+                    request.samplingOrNone().topP(),
+                    request.samplingOrNone().topK(),
+                    request.samplingOrNone().minP(),
+                    request.samplingOrNone().repeatPenalty());
             return Result.ok(mapper.writeValueAsString(payload));
         } catch (JsonProcessingException failure) {
             return Result.err(serializationFailure.apply(modelId, failure));

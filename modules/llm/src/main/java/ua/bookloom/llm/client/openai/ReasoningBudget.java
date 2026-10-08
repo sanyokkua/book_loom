@@ -85,6 +85,7 @@ final class ReasoningBudget {
                 request.expectedOutputTokens(),
                 cap,
                 request.seed(),
-                request.callKind());
+                request.callKind(),
+                request.sampling());
     }
 }

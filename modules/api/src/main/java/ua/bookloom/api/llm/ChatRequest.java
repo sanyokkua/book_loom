@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.CallKind;
  *     replay the reply that stalled
  * @param callKind what the call is for, which chooses its timeout, or null when it is not a run's call (a
  *     verification probe)
+ * @param sampling the sampling controls beyond temperature, or null when the server's defaults should apply
  */
 public record ChatRequest(
         List<ChatMessage> messages,
@@ -32,7 +33,44 @@ public record ChatRequest(
         @Nullable Integer expectedOutputTokens,
         @Nullable Integer maxOutputTokens,
         @Nullable Integer seed,
-        @Nullable CallKind callKind) {
+        @Nullable CallKind callKind,
+        @Nullable SamplingParams sampling) {
+
+    /**
+     * Preserves the nine-argument construction form, with the server's own sampling.
+     *
+     * @param messages the conversation in wire order; never null and defensively copied
+     * @param temperature the sampling temperature for this call, or null when provider defaults should apply
+     * @param responseFormat the requested structured response format, or null when no format is requested
+     * @param reasoningEnabled null when the provider should use its default
+     * @param contextWindow the provider context-window size to request, or null when the provider default applies
+     * @param expectedOutputTokens the expected completion length used to scale the request timeout, or null
+     * @param maxOutputTokens the hard cap on the completion length, or null
+     * @param seed the sampling seed, or null
+     * @param callKind what the call is for, or null
+     */
+    public ChatRequest(
+            List<ChatMessage> messages,
+            @Nullable Double temperature,
+            @Nullable ResponseFormat responseFormat,
+            @Nullable Boolean reasoningEnabled,
+            @Nullable Integer contextWindow,
+            @Nullable Integer expectedOutputTokens,
+            @Nullable Integer maxOutputTokens,
+            @Nullable Integer seed,
+            @Nullable CallKind callKind) {
+        this(
+                messages,
+                temperature,
+                responseFormat,
+                reasoningEnabled,
+                contextWindow,
+                expectedOutputTokens,
+                maxOutputTokens,
+                seed,
+                callKind,
+                null);
+    }
 
     /**
      * Preserves the original message-only construction form, with no per-call settings.
@@ -124,6 +162,7 @@ public record ChatRequest(
                 expectedOutputTokens,
                 maxOutputTokens,
                 null,
+                null,
                 null);
     }
 
@@ -160,7 +199,8 @@ public record ChatRequest(
                 expectedOutputTokens,
                 maxOutputTokens,
                 seed,
-                callKind);
+                callKind,
+                sampling);
     }
 
     /**
@@ -178,7 +218,8 @@ public record ChatRequest(
                 expectedOutputTokens,
                 maxOutputTokens,
                 seed,
-                callKind);
+                callKind,
+                sampling);
     }
 
     /**
@@ -197,7 +238,8 @@ public record ChatRequest(
                 expectedOutputTokens,
                 maxOutputTokens,
                 fixedSeed,
-                callKind);
+                callKind,
+                sampling);
     }
 
     /**
@@ -218,7 +260,8 @@ public record ChatRequest(
                 expectedOutputTokens,
                 maxOutputTokens == null ? null : Math.min(maxOutputTokens, outputCapLimit),
                 seed,
-                callKind);
+                callKind,
+                sampling);
     }
 
     /**
@@ -238,6 +281,36 @@ public record ChatRequest(
                 expectedOutputTokens,
                 retryCap,
                 retrySeed,
-                callKind);
+                callKind,
+                sampling);
+    }
+
+    /**
+     * Copies this request with the given sampling controls.
+     *
+     * @param params the controls to send, or null to leave the server's defaults in force
+     * @return a copy with {@code sampling} replaced and every other field unchanged
+     */
+    public ChatRequest withSampling(@Nullable SamplingParams params) {
+        return new ChatRequest(
+                messages,
+                temperature,
+                responseFormat,
+                reasoningEnabled,
+                contextWindow,
+                expectedOutputTokens,
+                maxOutputTokens,
+                seed,
+                callKind,
+                params);
+    }
+
+    /**
+     * Returns the sampling controls with null standing for none, so a client reads each control without a guard.
+     *
+     * @return {@code sampling}, or {@link SamplingParams#NONE} when it is null
+     */
+    public SamplingParams samplingOrNone() {
+        return sampling == null ? SamplingParams.NONE : sampling;
     }
 }

@@ -25,7 +25,8 @@ public final class ChatRequests {
      * @param limit the expected completion length and its cap, or null when the call states no expected output
      * @param lowerTemperature whether a retry asks for the name's lower temperature
      * @return the request, with reasoning off, the effective context size, the output limit and the name's call kind,
-     *     which chooses the call's timeout; no response format when the call's schema is empty
+     *     which chooses the call's timeout, and the sampling controls of the current {@link SamplingMode}; no
+     *     response format when the call's schema is empty
      */
     public static ChatRequest build(
             final PromptName name,
@@ -37,6 +38,8 @@ public final class ChatRequests {
                 "Prompt breakdown call={} {}",
                 name.callKind(),
                 PromptBreakdown.of(messages).describe());
+        final SamplingMode mode = SamplingMode.current();
+        log.debug("Sampling call={} mode={}", name.callKind(), mode.token());
         return new ChatRequest(
                 messages,
                 name.temperature(lowerTemperature),
@@ -48,6 +51,7 @@ public final class ChatRequests {
                 limit == null ? null : limit.expectedTokens(),
                 limit == null ? null : limit.capTokens(),
                 null,
-                name.callKind());
+                name.callKind(),
+                SamplingProfile.paramsFor(name, mode));
     }
 }

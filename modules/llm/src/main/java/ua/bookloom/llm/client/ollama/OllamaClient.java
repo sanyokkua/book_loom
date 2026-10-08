@@ -191,7 +191,11 @@ public final class OllamaClient implements ProviderClient {
                 request.temperature(),
                 request.contextWindow(),
                 withReasoningHeadroom(modelId, request.maxOutputTokens()),
-                request.seed());
+                request.seed(),
+                request.samplingOrNone().topP(),
+                request.samplingOrNone().topK(),
+                request.samplingOrNone().minP(),
+                request.samplingOrNone().repeatPenalty());
         try {
             final OllamaChatRequest payload = new OllamaChatRequest(
                     modelId, messages, true, options, schema, thinkControl(modelId, request.reasoningEnabled()));

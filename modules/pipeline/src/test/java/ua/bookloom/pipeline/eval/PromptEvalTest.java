@@ -52,7 +52,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 @EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_URL", matches = ".+")
 @DisabledIfEnvironmentVariable(
         named = "BOOKLOOM_EVAL_SUITE",
-        matches = "batch|words|realrun|sequence|prescan|terms|setup|consistency|retry")
+        matches = "batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay")
 class PromptEvalTest {
 
     static final String DEFAULT_MODEL = "gemma4:e4b-mlx";

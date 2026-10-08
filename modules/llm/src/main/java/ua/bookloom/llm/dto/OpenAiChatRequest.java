@@ -19,6 +19,10 @@ import org.jspecify.annotations.Nullable;
  * @param seed optional sampling seed, omitted when absent
  * @param reasoningEffort optional reasoning control, {@code none} to turn a thinking model's reasoning off; omitted
  *     when absent. Ollama's and LM Studio's OpenAI-compatible endpoints both honour {@code none}.
+ * @param topP optional nucleus mass, omitted when absent
+ * @param topK optional number of kept tokens, omitted when absent
+ * @param minP optional minimum relative probability, omitted when absent
+ * @param repeatPenalty optional penalty on recently seen tokens, omitted when absent
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record OpenAiChatRequest(
@@ -29,7 +33,36 @@ public record OpenAiChatRequest(
         @JsonProperty("response_format") @Nullable ResponseFormatDto responseFormat,
         @JsonProperty("max_tokens") @Nullable Integer maxTokens,
         @JsonProperty("seed") @Nullable Integer seed,
-        @JsonProperty("reasoning_effort") @Nullable String reasoningEffort) {
+        @JsonProperty("reasoning_effort") @Nullable String reasoningEffort,
+        @JsonProperty("top_p") @Nullable Double topP,
+        @JsonProperty("top_k") @Nullable Integer topK,
+        @JsonProperty("min_p") @Nullable Double minP,
+        @JsonProperty("repeat_penalty") @Nullable Double repeatPenalty) {
+
+    /** A request with no sampling controls beyond temperature, so the server's own defaults apply. */
+    public OpenAiChatRequest(
+            String model,
+            List<Message> messages,
+            boolean stream,
+            @Nullable Double temperature,
+            @Nullable ResponseFormatDto responseFormat,
+            @Nullable Integer maxTokens,
+            @Nullable Integer seed,
+            @Nullable String reasoningEffort) {
+        this(
+                model,
+                messages,
+                stream,
+                temperature,
+                responseFormat,
+                maxTokens,
+                seed,
+                reasoningEffort,
+                null,
+                null,
+                null,
+                null);
+    }
 
     /** Rejects incomplete requests and protects the message order from caller mutation. */
     public OpenAiChatRequest {
