@@ -1,10 +1,13 @@
 package ua.bookloom.ui.control;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
@@ -50,6 +53,8 @@ public final class StepFooter extends HBox {
     private final Button forward;
     private final @Nullable Button back;
     private final Region spacer = new Region();
+    private final Label hint = new Label();
+    private boolean hinting;
     private @Nullable Pane host;
 
     private StepFooter(final @Nullable Action backAction, final Action forward, final boolean forwardAvailable) {
@@ -61,6 +66,8 @@ public final class StepFooter extends HBox {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         this.forward = button(forward);
         this.forward.setDisable(!forwardAvailable);
+        hint.setId(forward.id() + "-hint");
+        hint.getStyleClass().add("muted");
         restoreInPlace();
         sceneProperty().addListener((observed, was, scene) -> {
             if (scene == null) {
@@ -80,7 +87,7 @@ public final class StepFooter extends HBox {
         }
         host = slot;
         getChildren().clear();
-        slot.getChildren().addAll(buttons());
+        slot.getChildren().addAll(hostedNodes());
         setVisible(false);
         setManaged(false);
         log.debug("footer actions moved to the window toolbar");
@@ -92,7 +99,7 @@ public final class StepFooter extends HBox {
             return;
         }
         host = null;
-        slot.getChildren().removeAll(buttons());
+        slot.getChildren().removeAll(hostedNodes());
         restoreInPlace();
         setVisible(true);
         setManaged(true);
@@ -100,11 +107,50 @@ public final class StepFooter extends HBox {
     }
 
     private void restoreInPlace() {
-        getChildren().setAll(back == null ? List.of(spacer, forward) : List.of(back, spacer, forward));
+        final List<Node> nodes = new ArrayList<>();
+        if (back != null) {
+            nodes.add(back);
+        }
+        nodes.add(spacer);
+        nodes.addAll(forwardNodes());
+        getChildren().setAll(nodes);
     }
 
-    private List<Button> buttons() {
-        return back == null ? List.of(forward) : List.of(back, forward);
+    private List<Node> forwardNodes() {
+        return hinting ? List.of(hint, forward) : List.of(forward);
+    }
+
+    private List<Node> hostedNodes() {
+        final List<Node> nodes = new ArrayList<>();
+        if (back != null) {
+            nodes.add(back);
+        }
+        nodes.addAll(forwardNodes());
+        return nodes;
+    }
+
+    /**
+     * Says why the forward action cannot be pressed. A disabled button shows no tooltip, so the reason is a visible
+     * line beside it, in the footer or in the toolbar wherever the buttons are.
+     *
+     * @param reason the already translated reason, or {@code null} to remove the line because the action can be pressed
+     */
+    public void explainDisabledForward(final @Nullable String reason) {
+        final Pane parent = host != null ? host : this;
+        final boolean shown = reason != null;
+        log.debug("forward {} hint {}", forward.getId(), shown ? "shown" : "removed");
+        if (shown) {
+            hint.setText(reason);
+        }
+        if (shown == hinting) {
+            return;
+        }
+        hinting = shown;
+        if (shown) {
+            parent.getChildren().add(parent.getChildren().indexOf(forward), hint);
+        } else {
+            parent.getChildren().remove(hint);
+        }
     }
 
     /**

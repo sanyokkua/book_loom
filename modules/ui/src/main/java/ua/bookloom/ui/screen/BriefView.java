@@ -70,11 +70,15 @@ final class BriefView {
         this.footer = footer();
         this.root = build();
         viewModel.brief().addListener(new WeakChangeListener<>(onBrief));
-        viewModel
-                .canContinue()
-                .addListener((observed, was, now) -> footer.forwardButton().setDisable(!now));
-        footer.forwardButton().setDisable(!viewModel.canContinue().get());
+        viewModel.canContinue().addListener((observed, was, now) -> allowContinue(now));
+        allowContinue(viewModel.canContinue().get());
         show(viewModel.brief().get());
+    }
+
+    // A disabled button shows no tooltip, so the footer says on a line beside it what is missing.
+    private void allowContinue(final boolean allowed) {
+        footer.forwardButton().setDisable(!allowed);
+        footer.explainDisabledForward(allowed ? null : messages.get(MessageKey.NAV_LOCKED_NO_LANGUAGES));
     }
 
     Node root() {

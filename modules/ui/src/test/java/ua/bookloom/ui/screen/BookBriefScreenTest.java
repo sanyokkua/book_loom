@@ -184,11 +184,14 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         assertThat(isShown("brief-languages-same")).isTrue();
         assertThat(textOf("brief-languages-same")).contains("The source and target languages are the same.");
         assertThat(button("brief-continue").isDisabled()).isTrue();
+        // A disabled button shows no tooltip, so the toolbar says what is missing beside it.
+        assertThat(((Label) required("brief-continue-hint")).getText()).isEqualTo("Choose the languages in Book Brief");
 
         onFx(() -> box("brief-target").select("uk"));
 
         assertThat(isShown("brief-languages-same")).isFalse();
         assertThat(button("brief-continue").isDisabled()).isFalse();
+        assertThat(scene.getRoot().lookup("#brief-continue-hint")).isNull();
     }
 
     // IF Back were not wired, THEN a person could not return to the book they opened.

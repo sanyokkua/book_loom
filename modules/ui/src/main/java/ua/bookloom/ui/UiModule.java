@@ -40,6 +40,8 @@ import ua.bookloom.ui.state.RunStarter;
 import ua.bookloom.ui.state.SessionReporter;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.StepAvailability;
+import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.SystemDestinationChooser;
 import ua.bookloom.ui.state.TranslatingViewModel;
 import ua.bookloom.ui.state.TranslationRunner;
@@ -113,6 +115,7 @@ public final class UiModule extends AbstractModule {
         bind(LanguageNames.class);
         bind(ToastStack.class);
         bind(Toasts.class).to(ToastStack.class);
+        bind(StepLocks.class).to(StepAvailability.class);
         bindDialogs();
         bindShell();
         bindState();

@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.SetChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -25,14 +26,16 @@ import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.screen.ProviderNames;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The navigation column, generated from {@link ViewNames} and {@link NavGroup} so that a screen added to the enum
  * appears here without anyone editing a second list.
  *
- * <p>An entry without a screen is greyed but deliberately not disabled: a disabled button would swallow the click, and
- * the refusal — with its reason — is the {@link Navigator}'s to log.
+ * <p>An entry without a screen, or one whose step is locked, is greyed but deliberately not disabled: a disabled
+ * button would swallow the click, and the refusal — with its reason — is the {@link Navigator}'s to log and to tell
+ * the person.
  */
 @Slf4j
 final class NavColumn {
@@ -43,10 +46,12 @@ final class NavColumn {
     private static final String LOGO_TEXT = "BL";
 
     private static final String UNAVAILABLE_STYLE_CLASS = "nav-item-unavailable";
+    private static final String LOCKED_STYLE_CLASS = "nav-item-locked";
     private static final String DONE_STYLE_CLASS = "nav-step-done";
     private static final String NO_TEXT = "";
 
     private final Messages messages;
+    private final StepLocks locks;
     private final Consumer<ViewNames> activation;
     private final Map<ViewNames, Button> entries = new EnumMap<>(ViewNames.class);
     private final Map<ViewNames, Label> badges = new EnumMap<>(ViewNames.class);
@@ -61,16 +66,19 @@ final class NavColumn {
      * @param activation told which entry was activated, available or not
      * @param progress the steps to mark as done
      * @param settings the chosen provider and model the footer names
+     * @param locks which steps are closed, and why, so a locked entry is drawn so and explains itself
      */
     NavColumn(
             final Messages messages,
             final Consumer<ViewNames> activation,
             final WorkflowProgress progress,
-            final SettingsViewModel settings) {
+            final SettingsViewModel settings,
+            final StepLocks locks) {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.activation = Objects.requireNonNull(activation, "activation");
         Objects.requireNonNull(progress, "progress");
         Objects.requireNonNull(settings, "settings");
+        this.locks = Objects.requireNonNull(locks, "locks");
         column.getChildren().add(brand());
         for (final NavGroup group : NavGroup.values()) {
             column.getChildren().add(group(group));
@@ -167,7 +175,27 @@ final class NavColumn {
         button.setMaxWidth(Double.MAX_VALUE);
         button.setOnAction(event -> activation.accept(view));
         entries.put(view, button);
+        final ReadOnlyObjectProperty<@Nullable MessageKey> lock = locks.lock(view);
+        lock.addListener((observed, old, reason) -> showLock(view, reason));
+        showLock(view, lock.get());
         return button;
+    }
+
+    // The entry stays enabled so a click still reaches the navigator, which answers with the reason; a disabled
+    // button would swallow it and, with it, its tooltip.
+    private void showLock(final ViewNames view, final @Nullable MessageKey reason) {
+        final Button button = entries.get(view);
+        if (button == null) {
+            return;
+        }
+        log.debug("navigation entry {} lock {}", view, reason);
+        button.getStyleClass().remove(LOCKED_STYLE_CLASS);
+        if (reason == null) {
+            Tips.install(messages, button, view.tipKey());
+        } else {
+            button.getStyleClass().add(LOCKED_STYLE_CLASS);
+            Tips.install(messages, button, reason);
+        }
     }
 
     private @Nullable Node badge(final ViewNames view) {

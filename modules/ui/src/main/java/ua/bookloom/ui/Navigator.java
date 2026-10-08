@@ -13,8 +13,11 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.notify.Toasts;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.StepLocks;
 
 /**
  * Swaps the content region by {@link ViewNames} constant and answers which step follows another.
@@ -24,7 +27,8 @@ import ua.bookloom.ui.state.ActivityTracker;
  * view in place: a screen that cannot be built must not blank the window. Both properties change only here, so the
  * shell can observe them without being able to fake a navigation. Leaving a screen whose model work would be left
  * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer. While work the
- * window waits for runs (a blocking activity) every navigation is refused.
+ * window waits for runs (a blocking activity) every navigation is refused, and a screen whose step is still locked
+ * ({@link StepLocks}) is refused with a message that says what is missing.
  */
 @Slf4j
 @Singleton
@@ -35,6 +39,8 @@ public final class Navigator {
     private final Messages messages;
     private final LeaveGuard leaveGuard;
     private final ActivityTracker activities;
+    private final StepLocks locks;
+    private final Toasts toasts;
     private final ReadOnlyObjectWrapper<ViewNames> currentView = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<Parent> content = new ReadOnlyObjectWrapper<>();
 
@@ -63,7 +69,7 @@ public final class Navigator {
      * @param target the screen to show
      * @return {@code true} if the screen is now current; {@code false} if the entry is inert, is already current, its
      *     view failed to load, or leaving the current screen first asks the person, in each of which nothing changes
-     *     now, or blocking work is running
+     *     now, its step is locked, or blocking work is running
      */
     public boolean navigate(final ViewNames target) {
         Objects.requireNonNull(target, "target");
@@ -77,6 +83,9 @@ public final class Navigator {
             log.debug("refused {}: it has no screen", target);
             return false;
         }
+        if (isLocked(target)) {
+            return false;
+        }
         if (target == source) {
             log.debug("refused {}: it is already current", target);
             return false;
@@ -86,6 +95,15 @@ public final class Navigator {
             return false;
         }
         return show(source, target);
+    }
+
+    private boolean isLocked(final ViewNames target) {
+        final Optional<MessageKey> reason = locks.lockReason(target);
+        reason.ifPresent(key -> {
+            log.debug("refused {}: it is locked, {}", target, key);
+            toasts.info(key);
+        });
+        return reason.isPresent();
     }
 
     private boolean show(final ViewNames source, final ViewNames target) {

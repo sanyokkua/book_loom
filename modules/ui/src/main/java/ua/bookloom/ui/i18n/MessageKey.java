@@ -45,6 +45,10 @@ public enum MessageKey {
     NAV_SETTINGS("nav.settings"),
     /** Hover explanation of the control labelled by {@link #NAV_SETTINGS}. */
     NAV_SETTINGS_TIP("nav.settings.tip"),
+    /** Why a workflow step cannot be opened yet: no book is open. Also the hover text of the locked entry and Continue. */
+    NAV_LOCKED_NO_BOOK("nav.locked.noBook"),
+    /** Why a workflow step cannot be opened yet: the languages are unset or identical. */
+    NAV_LOCKED_NO_LANGUAGES("nav.locked.noLanguages"),
     /** The navigation footer naming the chosen provider and model: provider, model. */
     NAV_FOOTER_SELECTION("nav.footer.selection"),
     /** The navigation footer while no model is chosen. */

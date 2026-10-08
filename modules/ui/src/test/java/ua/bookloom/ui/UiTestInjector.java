@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -32,8 +33,10 @@ import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.pipeline.TranslationEngine;
 import ua.bookloom.ui.dialog.ReplaceRunPrompt;
 import ua.bookloom.ui.i18n.LocaleProvider;
+import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.FileRevealer;
+import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.theme.ColorSchemeProvider;
 import ua.bookloom.ui.theme.ThemeBlock;
 
@@ -103,6 +106,7 @@ public final class UiTestInjector {
         private ScriptedReviewDesk desk = new ScriptedReviewDesk();
         private ReviewMode reviewMode = ReviewMode.UNATTENDED;
         private @Nullable ReplaceRunPrompt prompt;
+        private boolean gated;
         private DiagnosticLog diagnosticLog = new DiagnosticLog(TEST_LOG_DIR, false);
 
         private Builder(final Locale locale) {
@@ -194,13 +198,23 @@ public final class UiTestInjector {
         }
 
         /**
+         * Keeps the real step gating. By default every step is open, so a screen test can show a screen without
+         * first opening a book and choosing languages; only a test of the gating itself asks for it.
+         */
+        public Builder gated() {
+            gated = true;
+            return this;
+        }
+
+        /**
          * Makes the graph.
          *
          * @return a fresh injector; never shares singletons with another call
          */
         public Injector build() {
+            final Module open = gated ? Modules.EMPTY_MODULE : new OpenStepsModule();
             return Guice.createInjector(Modules.override(new UiModule())
-                    .with(new ReviewPortsModule(glossary, lexicon, desk, reviewMode), scriptedPorts(prompt)));
+                    .with(new ReviewPortsModule(glossary, lexicon, desk, reviewMode), scriptedPorts(prompt), open));
         }
 
         private Module scriptedPorts(final @Nullable ReplaceRunPrompt replacement) {
@@ -229,6 +243,16 @@ public final class UiTestInjector {
                     }
                 }
             };
+        }
+    }
+
+    /** Every workflow step open, whatever the book and its languages. */
+    private static final class OpenStepsModule extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(StepLocks.class)
+                    .toInstance(step -> new ReadOnlyObjectWrapper<@Nullable MessageKey>().getReadOnlyProperty());
         }
     }
 

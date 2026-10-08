@@ -34,6 +34,7 @@ import ua.bookloom.ui.notify.ToastStack;
 import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.SettingsViewModel;
+import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.WorkflowProgress;
 import ua.bookloom.ui.theme.ThemeBlock;
 import ua.bookloom.ui.theme.ThemeController;
@@ -106,6 +107,7 @@ public final class AppShellView {
      * @param activityChip the other model work under way, with its Stop, placed before the run's status
      * @param progress the completed steps the navigation marks
      * @param settings the chosen provider and model the navigation footer names
+     * @param locks which steps are closed, for the navigation to draw
      * @param diagnostics the log settings and actions the About dialog offers
      * @param version the build version the About dialog reports
      */
@@ -122,6 +124,7 @@ public final class AppShellView {
             final ActivityChip activityChip,
             final WorkflowProgress progress,
             final SettingsViewModel settings,
+            final StepLocks locks,
             final DiagnosticActions diagnostics,
             final @BuildVersion String version) {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
@@ -135,7 +138,7 @@ public final class AppShellView {
         this.activityChip = Objects.requireNonNull(activityChip, "activityChip");
         this.diagnostics = Objects.requireNonNull(diagnostics, "diagnostics");
         this.version = Objects.requireNonNull(version, "version");
-        this.navColumn = new NavColumn(messages, this::activate, progress, settings);
+        this.navColumn = new NavColumn(messages, this::activate, progress, settings, locks);
     }
 
     /**

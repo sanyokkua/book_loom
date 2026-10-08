@@ -90,6 +90,16 @@ entry in this build: it is listed but has no screen yet, so "Continue" skips it.
 Brief, Structure, Names & style, Translating, Export — has a live screen; the Review entry from the mockup is gone,
 because review is a panel inside Translating, not a step of its own.
 
+**Step gating.** A step opens only when what it needs exists. Import and Settings are always open. Book Brief, Structure,
+Names & style, Translating and Export are **locked** while no book is open (`Open a book first`); Structure, Names &
+style and Translating are also locked while the source or target language is unset or the two are the same (`Choose the
+languages in Book Brief`). Export needs only a book, because a stopped or running book can be exported at any time. A locked entry is
+drawn muted (`nav-item-locked`) but stays clickable: the click is refused and an information toast gives the reason, and
+its hover text states the same reason. Every route to a screen — the column, Back and Continue — goes through the same
+refusal. While Continue on Book Brief cannot be pressed, a line beside it names what is missing, because a disabled button
+shows no hover text. Book Brief is marked done once Continue was pressed with usable languages, or a run exists;
+Translating is also marked done for a stopped or failed run with no segment left undecided.
+
 ### Navigation footer {#navigation-footer}
 
 The navigation column's footer reads the chosen provider's display name and model id, for example `Ollama · gemma4:26b`, or `No model chosen` when none is configured. It shows **no readiness dot** — readiness is not tracked in this build.

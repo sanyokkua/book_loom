@@ -8,6 +8,7 @@ import java.util.Set;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.ViewNames;
 
 /**
@@ -17,6 +18,10 @@ import ua.bookloom.ui.ViewNames;
  * steps (the brief, the structure and the export) have no state of their own, so their actions say so through
  * {@link #markDone}; those marks belong to the open project and are dropped when it changes or clears. The
  * set is touched on the FX Application Thread only.
+ *
+ * <p>The brief's mark also needs usable languages, so a mark never outlives the choice it vouched for; a started run
+ * marks it, because a run could not have started otherwise. A stopped or failed run counts as translated when no segment
+ * is left undecided.
  */
 @Slf4j
 @Singleton
@@ -45,6 +50,8 @@ public final class WorkflowProgress {
         });
         mirror.runFileName().addListener((observed, old, current) -> refresh());
         mirror.runState().addListener((observed, old, current) -> refresh());
+        mirror.remaining().addListener((observed, old, current) -> refresh());
+        project.brief().addListener((observed, old, current) -> refresh());
         refresh();
     }
 
@@ -79,13 +86,31 @@ public final class WorkflowProgress {
             wanted.add(ViewNames.IMPORT);
             wanted.addAll(marked);
         }
+        if (!hasUsableLanguages()) {
+            wanted.remove(ViewNames.BOOK_BRIEF);
+        }
         if (mirror.runFileName().get() != null) {
+            wanted.add(ViewNames.BOOK_BRIEF);
             wanted.add(ViewNames.NAMES_STYLE);
         }
-        if (mirror.runState().get() == RunState.COMPLETED) {
+        if (isTranslated()) {
             wanted.add(ViewNames.TRANSLATING);
         }
         apply(wanted);
+    }
+
+    private boolean hasUsableLanguages() {
+        final BookBrief brief = project.brief().get();
+        return brief != null && BriefLanguages.isUsable(brief.sourceLanguage(), brief.targetLanguage());
+    }
+
+    // A run that ended early still translated the book when nothing is left to decide; a stop half way did not.
+    private boolean isTranslated() {
+        final RunState state = mirror.runState().get();
+        final boolean endedEarly = state == RunState.STOPPED || state == RunState.FAILED;
+        final boolean nothingLeft =
+                mirror.total().get() > 0 && mirror.remaining().get() == 0;
+        return state == RunState.COMPLETED || (endedEarly && nothingLeft);
     }
 
     private void apply(final Set<ViewNames> wanted) {

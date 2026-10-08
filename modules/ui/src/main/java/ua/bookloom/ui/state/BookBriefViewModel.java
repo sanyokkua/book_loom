@@ -383,7 +383,7 @@ public final class BookBriefViewModel {
         sourceUndeclared.set(brief != null && source == null);
         sameLanguage.set(same);
         targetUntested.set(target != null && !languages.hasTestedRules(target));
-        canContinue.set(source != null && target != null && !same);
+        canContinue.set(BriefLanguages.isUsable(source, target));
         log.debug("languages {} -> {}: same {}, untested {}", source, target, same, targetUntested.get());
     }
 }

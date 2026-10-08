@@ -7,6 +7,7 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -137,5 +138,66 @@ class StepFooterTest extends FxTestBase {
 
         assertThat(footer.getChildren()).hasSize(3);
         assertThat(footer.isManaged()).isTrue();
+    }
+
+    // IF a disabled Continue gave no reason, THEN the person would see a dead button and not know what to fix: a
+    // disabled button shows no tooltip, so the reason is a visible hint beside it.
+    @Test
+    void explainDisabledForward_inPlace_showsTheReasonBesideForwardAndClearsIt() {
+        final StepFooter footer = ThemeTestSupport.onFx(() -> StepFooter.of(
+                action("h-back", "btn-ghost", new ArrayList<>()), action("h-next", "btn-primary", new ArrayList<>())));
+
+        ThemeTestSupport.onFx(() -> {
+            footer.explainDisabledForward("Choose the languages");
+            return null;
+        });
+        assertThat(footer.getChildren())
+                .extracting(Node::getId)
+                .containsExactly("h-back", null, "h-next-hint", "h-next");
+        assertThat(((Label) footer.getChildren().get(2)).getText()).isEqualTo("Choose the languages");
+
+        ThemeTestSupport.onFx(() -> {
+            footer.explainDisabledForward(null);
+            return null;
+        });
+        assertThat(footer.getChildren()).hasSize(3);
+    }
+
+    @Test
+    void explainDisabledForward_inTheToolbar_putsTheHintBeforeForward() {
+        final HBox slot = slot();
+        final StepFooter footer = ThemeTestSupport.onFx(() -> StepFooter.of(
+                action("t-back", "btn-ghost", new ArrayList<>()), action("t-next", "btn-primary", new ArrayList<>())));
+        ThemeTestSupport.onFx(() -> {
+            new Scene(new VBox(slot, footer));
+            footer.explainDisabledForward("Why not");
+            return null;
+        });
+
+        assertThat(slot.getChildren()).extracting(Node::getId).containsExactly("t-back", "t-next-hint", "t-next");
+
+        ThemeTestSupport.onFx(() -> {
+            footer.explainDisabledForward(null);
+            return null;
+        });
+        assertThat(slot.getChildren()).extracting(Node::getId).containsExactly("t-back", "t-next");
+    }
+
+    @Test
+    void footer_hintShownThenRemovedFromTheScene_takesTheHintBackToo() {
+        final HBox slot = slot();
+        final VBox root = ThemeTestSupport.onFx(() -> new VBox(slot));
+        final StepFooter footer = ThemeTestSupport.onFx(() -> StepFooter.of(
+                action("g-back", "btn-ghost", new ArrayList<>()), action("g-next", "btn-primary", new ArrayList<>())));
+        ThemeTestSupport.onFx(() -> {
+            new Scene(root);
+            root.getChildren().add(footer);
+            footer.explainDisabledForward("Why not");
+            root.getChildren().remove(footer);
+            return null;
+        });
+
+        assertThat(slot.getChildren()).isEmpty();
+        assertThat(footer.getChildren()).extracting(Node::getId).contains("g-next-hint");
     }
 }

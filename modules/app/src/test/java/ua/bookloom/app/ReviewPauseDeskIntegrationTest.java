@@ -100,7 +100,6 @@ class ReviewPauseDeskIntegrationTest {
             final Scene scene = shell.createScene(1280, 800);
             stage.setScene(scene);
             stage.show();
-            shell.activate(ViewNames.TRANSLATING);
         });
     }
 
@@ -144,6 +143,8 @@ class ReviewPauseDeskIntegrationTest {
         });
         waitUntil(() -> !brief.saving().get());
         onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("fake"));
+        // Translating opens only once a book with usable languages is open.
+        onFx(() -> injector.getInstance(AppShellView.class).activate(ViewNames.TRANSLATING));
         onFx(() -> injector.getInstance(TranslatingViewModel.class).start());
     }
 

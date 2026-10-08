@@ -484,13 +484,16 @@
 }
 
 .nav-item-unavailable,
-.nav-item-unavailable:hover {
+.nav-item-unavailable:hover,
+.nav-item-locked,
+.nav-item-locked:hover {
     -fx-background-color: transparent;
     -fx-text-fill: -color-nav-fg-muted;
     -fx-cursor: default;
 }
 
-.nav-item-unavailable .ikonli-font-icon {
+.nav-item-unavailable .ikonli-font-icon,
+.nav-item-locked .ikonli-font-icon {
     -fx-icon-color: -color-nav-fg-muted;
 }
 

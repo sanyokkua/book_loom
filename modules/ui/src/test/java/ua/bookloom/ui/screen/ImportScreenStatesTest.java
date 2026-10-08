@@ -274,7 +274,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
         openBook(source);
-        onFx(() -> injector.getInstance(WorkflowProgress.class).markDone(ViewNames.BOOK_BRIEF));
+        onFx(() -> injector.getInstance(WorkflowProgress.class).markDone(ViewNames.STRUCTURE));
 
         onFx(() -> button("import-cancel").fire());
         final boolean asked = isShown("confirm-card");
@@ -294,7 +294,7 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
         openImport();
         openBook(source);
-        onFx(() -> injector.getInstance(WorkflowProgress.class).markDone(ViewNames.BOOK_BRIEF));
+        onFx(() -> injector.getInstance(WorkflowProgress.class).markDone(ViewNames.STRUCTURE));
 
         onFx(() -> button("import-cancel").fire());
         onFx(() -> button("confirm-cancel").fire());
