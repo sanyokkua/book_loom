@@ -62,7 +62,8 @@ public final class DraftRequests {
      */
     public ChatRequest structuralRepair(
             final Segment segment, final DraftContext context, final ProtectedMask mask, final String rejectedReply) {
-        final String diagnostic = replyParser.parse(rejectedReply).diagnostic();
+        final String diagnostic =
+                replyParser.parse(rejectedReply, segment.masked()).diagnostic();
         return build(DraftAttempt.of(segment, context, mask), DraftStep.STRUCTURAL_REPAIR, rejectedReply, diagnostic);
     }
 

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javafx.event.Event;
 import javafx.event.EventType;
@@ -23,6 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.ui.state.DestinationChooser;
 import ua.bookloom.ui.state.FileRevealer;
 import ua.bookloom.ui.theme.ThemeMode;
@@ -214,18 +216,19 @@ class AboutDialogTest extends ShellTestBase {
 
     // IF Tab inside a dialog moved focus the way a click does, THEN no focus ring would show and a keyboard user would
     // not see which control is next; and Tab past the last control comes round to the first, still showing the ring.
-    @Test
-    void tab_insideTheCard_showsTheFocusRingEvenWhenItWrapsRound() {
+    @ParameterizedTest(name = "after {0} presses")
+    @ValueSource(ints = {1, 2, 3, 4, 5, 6, 7, WRAPPING_PRESSES})
+    void tab_insideTheCard_showsTheFocusRingEvenWhenItWrapsRound(final int presses) {
         openAbout();
-        final List<Boolean> visible = new ArrayList<>();
 
-        for (int press = 0; press < WRAPPING_PRESSES; press++) {
-            pressTab();
-            visible.add(scene.getFocusOwner().isFocusVisible());
-        }
+        pressTab(presses);
 
-        assertThat(visible).containsOnly(true);
+        assertThat(scene.getFocusOwner().isFocusVisible()).isTrue();
         assertThat(ancestorsOf(scene.getFocusOwner())).contains(required("about-card"));
+    }
+
+    private void pressTab(final int times) {
+        IntStream.range(0, times).forEach(press -> pressTab());
     }
 
     private static List<Node> ancestorsOf(final Node node) {

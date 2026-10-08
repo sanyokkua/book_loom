@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.pipeline.revision.RevisionBook.BOBBY;
 import static ua.bookloom.pipeline.revision.RevisionBook.RUN_HALE;
 import static ua.bookloom.pipeline.revision.RevisionBook.SAM_MET_HALE;
 import static ua.bookloom.pipeline.revision.RevisionBook.ok;
@@ -55,6 +56,30 @@ class ConsistencyPassNeighbourTest {
                 record -> record.withStatus(SegmentStatus.ACCEPTED)
                         .withMachineTarget(text, text)
                         .withPath(SegmentPath.REPAIRED));
+    }
+
+    // IF a flagged paragraph's fix were held to the same counts as a word fix, THEN a fix restoring the sentence the
+    // draft dropped would always be refused and the call wasted.
+    @Test
+    void run_flaggedParagraphWhoseFixRestoresADroppedSentence_isStored() {
+        final String dropped = "Боббі зайшов.";
+        final String whole = "Боббі зайшов. Він сів.";
+        ReviewFixtures.update(
+                book.desk(),
+                BOBBY,
+                record -> record.withStatus(SegmentStatus.FLAGGED)
+                        .withMachineTarget(dropped, dropped)
+                        .withFindings(List.of(new QaFinding("completeness", Severity.HIGH, "a sentence", "dropped"))));
+        book.model().answerTo(CONSISTENCY, reply(whole));
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        // A neighbour fix repairs unnamed defects, so the recorded finding keeps the segment FLAGGED for the person.
+        assertThat(book.stored(BOBBY))
+                .extracting(record -> record.machineTarget(), record -> record.status())
+                .containsExactly(whole, SegmentStatus.FLAGGED);
+        assertThat(report.neighbourFixes()).isEqualTo(1);
+        assertThat(report.checks().refused()).isEmpty();
     }
 
     // IF the check did not show the neighbours and the names, THEN it could not tell a drifted name from a right one.

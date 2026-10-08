@@ -157,6 +157,16 @@ class EditVerifierTest {
         assertThat(result).isInstanceOf(Verification.Ignored.class);
     }
 
+    // IF an edit could never keep a control character the book's own text holds (an old TXT's page break), THEN no
+    // segment holding one could ever be fixed.
+    @Test
+    void verify_replacementKeepingTheQuotesControlCharacter_isVerified() {
+        final Verification result = VERIFIER.verify(
+                "Марія сказав,\fі пішла.", edit("Марія сказав,\fі", "Марія сказала,\fі"), CLEAN, NO_BLOCKERS);
+
+        assertThat(result).isEqualTo(new Verification.Verified("Марія сказала,\fі пішла."));
+    }
+
     @Test
     void occursIn_quoteThatOnlyMatchesAfterNormalising_isTrue() {
         assertThat(EditVerifier.occursIn("м’яч", "м'яч")).isTrue();

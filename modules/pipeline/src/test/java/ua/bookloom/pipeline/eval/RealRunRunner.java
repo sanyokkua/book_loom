@@ -109,8 +109,9 @@ final class RealRunRunner {
                     runCase.knownFailure(),
                     "call failed: " + Objects.requireNonNull(reply.error()).code());
         }
-        final ParsedReply parsed =
-                parser.parse(Objects.requireNonNull(reply.data()).content());
+        final ParsedReply parsed = parser.parse(
+                Objects.requireNonNull(reply.data()).content(),
+                project.segment(0).masked());
         if (parsed.kind() != ReplyKind.STRUCTURED) {
             return RealRunRow.of(runCase.id(), runCase.kind(), "draft", false, runCase.knownFailure(), "unparsed");
         }
@@ -272,7 +273,7 @@ final class RealRunRunner {
                     "call failed: " + Objects.requireNonNull(reply.error()).code());
         }
         final ParsedReply parsed =
-                parser.parse(Objects.requireNonNull(reply.data()).content());
+                parser.parse(Objects.requireNonNull(reply.data()).content(), real.masked());
         final boolean restored = parsed.kind() == ReplyKind.STRUCTURED && restores(real, parsed.translation());
         return RealRunRow.of(repairCase.id(), "repair", call, restored, false, parsed.translation());
     }

@@ -6,6 +6,8 @@ import static ua.bookloom.ui.ThemeTestSupport.onFx;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +52,40 @@ class ExportViewModelProgressTest extends ExportViewModelTestBase {
         });
         WaitForAsyncUtils.waitFor(
                 5, TimeUnit.SECONDS, () -> onFx(() -> !activities.running().isEmpty()));
+    }
+
+    // IF an Error thrown by the export (a stack overflow deep in a pass) left the activity registered, THEN the scrim
+    // and
+    // the disabled navigation would stay until the app was closed.
+    @Test
+    void export_jobThrowsAnError_theActivityEndsAndTheFailureIsShown() throws Exception {
+        exportService.throwOnRun(new StackOverflowError("deep"));
+        // The Error goes on to the worker thread's uncaught handler, as in the application, where it is logged.
+        final List<Throwable> uncaught = new CopyOnWriteArrayList<>();
+        final ExecutorService dying = Executors.newSingleThreadExecutor(work -> {
+            final Thread thread = new Thread(work, "export-error-test");
+            thread.setUncaughtExceptionHandler((where, error) -> uncaught.add(error));
+            return thread;
+        });
+        try {
+            exports = onFx(() -> newExports(dying));
+            setOverwrite(true);
+            onFx(() -> {
+                exports.export();
+                return null;
+            });
+            WaitForAsyncUtils.waitFor(
+                    5,
+                    TimeUnit.SECONDS,
+                    () -> onFx(() -> !exports.failure().get().isEmpty()));
+
+            assertThat(onFx(() -> activities.running().isEmpty())).isTrue();
+            assertThat(onFx(() -> activities.blocking().get())).isFalse();
+            WaitForAsyncUtils.waitFor(5, TimeUnit.SECONDS, () -> !uncaught.isEmpty());
+            assertThat(uncaught).singleElement().isInstanceOf(StackOverflowError.class);
+        } finally {
+            dying.shutdownNow();
+        }
     }
 
     // IF the job's announcements never reached the activity, THEN the busy card would spin through a long pass.

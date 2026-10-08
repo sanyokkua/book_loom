@@ -171,6 +171,14 @@ public enum MessageKey {
     CONFIRM_QUIT_YES("confirm.quit.yes"),
     /** Hover explanation of the control labelled by {@link #CONFIRM_QUIT_YES}. */
     CONFIRM_QUIT_YES_TIP("confirm.quit.yes.tip"),
+    /** Title of the question asked before the window closes on a translation that was never exported. */
+    CONFIRM_QUIT_UNEXPORTED_TITLE("confirm.quitUnexported.title"),
+    /** Body of the quit-without-exporting question. */
+    CONFIRM_QUIT_UNEXPORTED_TEXT("confirm.quitUnexported.text"),
+    /** Confirming button of the quit-without-exporting question. */
+    CONFIRM_QUIT_UNEXPORTED_YES("confirm.quitUnexported.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_QUIT_UNEXPORTED_YES}. */
+    CONFIRM_QUIT_UNEXPORTED_YES_TIP("confirm.quitUnexported.yes.tip"),
     /** About dialog subtitle; argument 0 is the build version. */
     ABOUT_SUBTITLE("about.subtitle"),
     /** About dialog description of the product. */

@@ -47,6 +47,12 @@ final class ReviewRefusals {
         }
     }
 
+    /** Shows that an action's desk call could not be handed to the background executor. */
+    void notStarted(final String action, final String segmentId, final RuntimeException rejected) {
+        log.error("review {} of segment {} could not be submitted", action, segmentId, rejected);
+        show(action, segmentId, AppError.of(ErrorCode.internal, "Not started", "The action could not start."));
+    }
+
     void show(final String action, final String segmentId, final AppError error) {
         switch (FailureSurface.of(error.code())) {
             case WARNING_TOAST -> {

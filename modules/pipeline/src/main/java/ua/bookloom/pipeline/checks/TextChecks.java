@@ -66,7 +66,7 @@ public final class TextChecks {
             return List.of();
         }
         final List<CheckFinding> findings = new ArrayList<>();
-        ResidueCheck.find(source, target).ifPresent(findings::add);
+        ResidueCheck.find(source, target, targetLanguage).ifPresent(findings::add);
         findings.addAll(ScriptPurityCheck.find(target, Languages.scriptOf(targetLanguage)));
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));

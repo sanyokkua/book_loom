@@ -43,6 +43,8 @@ final class RevisionBook {
     static final String BOBBY_SOURCE = "Bobby came in. He sat down.";
     static final String RUN_BOBBY = "ch02.xhtml:4";
     static final String RUN_BOBBY_SOURCE = "“Run, Bobby,” I said. He ran.";
+    static final String OLD_MAN = "ch02.xhtml:1";
+    static final String OLD_MAN_SOURCE = "The old man looked at the sea and smiled.";
     static final String DOOR_MASKED = "Сем відчинив ⟦g0⟧старі⟦g1⟧ двері.";
     static final String DOOR_PLAIN = "Сем відчинив <em>старі</em> двері.";
     static final String DOOR_REVISED = "Сем відчинила ⟦g0⟧старі⟦g1⟧ двері.";
@@ -204,6 +206,7 @@ final class RevisionBook {
             case "1:7" -> "Sam met Hale.";
             case "1:9" -> "Sam opened the <em>old</em> door.";
             case "2:6" -> "Sam went away.";
+            case "2:1" -> OLD_MAN_SOURCE;
             case "2:2" -> BOBBY_SOURCE;
             case "2:4" -> RUN_BOBBY_SOURCE;
             default -> "Chapter " + chapter + " line " + index + ".";

@@ -74,7 +74,8 @@ public final class ToastStack implements Toasts {
     }
 
     /**
-     * The node the shell places over the content area, so a toast never covers the title bar, toolbar or navigation.
+     * The node the shell places above the busy layer and over the content area's width, so an error raised while the
+     * window waits is seen and a toast never covers the navigation.
      *
      * @return the host; empty while no toast is showing
      */

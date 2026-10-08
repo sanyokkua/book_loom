@@ -31,6 +31,14 @@ import ua.bookloom.ui.i18n.Messages;
 @Slf4j
 public final class ReviewRetry {
 
+    /**
+     * A retry that holds the run and is registered as an activity, waiting to be dispatched.
+     *
+     * @param call the desk call taking the project id and the segment id; it ends the activity and the hold itself
+     * @param abandon ends the activity and the hold when the call is never dispatched; FX thread only
+     */
+    record Pending(BiFunction<String, String, Result<SegmentRecord>> call, Runnable abandon) {}
+
     private final ReviewDesk desk;
     private final ChatModelFactory models;
     private final StateMirror mirror;
@@ -72,10 +80,11 @@ public final class ReviewRetry {
      * @param note the person's guidance, or null for none
      * @param lowerTemperature whether the retry samples at a lower temperature
      * @param inPlace where the refusal is shown
-     * @return the call taking the project id and the segment id, or null when the retry was refused
+     * @return the pending retry, whose call takes the project id and the segment id and which must be abandoned when
+     *     that call is never dispatched; or null when the retry was refused
      */
     @Nullable
-    BiFunction<String, String, Result<SegmentRecord>> begin(
+    Pending begin(
             final String segmentId,
             final @Nullable String note,
             final boolean lowerTemperature,
@@ -97,13 +106,20 @@ public final class ReviewRetry {
         mirror.review().publishRetryInFlight(true);
         final InterruptibleWork running = new InterruptibleWork();
         final ActivityTracker.Handle handle = activities.begin(ActivityKind.REVIEW_RETRY, running::stop);
-        return (projectId, id) -> {
+        final BiFunction<String, String, Result<SegmentRecord>> call = (projectId, id) -> {
             try {
                 return running.run(() -> call(projectId, id, chosen.get(), note, lowerTemperature), () -> stopped(id));
             } finally {
                 Platform.runLater(handle::end);
             }
         };
+        return new Pending(call, () -> abandon(segmentId, handle));
+    }
+
+    private void abandon(final String segmentId, final ActivityTracker.Handle handle) {
+        log.warn("retry of segment {} was never dispatched; its activity and hold end", segmentId);
+        handle.end();
+        mirror.review().publishRetryInFlight(false);
     }
 
     private static void logRetry(final String segmentId, final @Nullable String note, final boolean lowerTemperature) {

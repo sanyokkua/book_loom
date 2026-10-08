@@ -28,6 +28,13 @@ final class WordChange {
     /** A pronoun (він → вона) shares no stem with its other gender; the function-word rule watches particles. */
     private static final int PRONOUN = 3;
 
+    /**
+     * The reflexive particle Ukrainian and Russian verbs end in (дивився, дивилась). A gender fix changes the ending
+     * in front of it (дивився → дивилася), so the particle is set aside before the stems are compared; otherwise the
+     * longer word's 60% reaches into the changed ending.
+     */
+    private static final Pattern REFLEXIVE = Pattern.compile("(?<=\\p{L}{3})(?:ся|сь)$");
+
     private static final Pattern NON_LETTERS = Pattern.compile("[^\\p{L}]+");
 
     static List<String> words(final String text) {
@@ -73,15 +80,21 @@ final class WordChange {
         return words(text).stream().filter(functionWords::contains).sorted().toList();
     }
 
-    private static boolean sharesStem(final String before, final String after) {
-        if (before.equals(after)) {
+    private static boolean sharesStem(final String quoted, final String replaced) {
+        if (quoted.equals(replaced)) {
             return true;
         }
+        final String before = withoutReflexive(quoted);
+        final String after = withoutReflexive(replaced);
         int common = 0;
         final int shorter = Math.min(before.length(), after.length());
         while (common < shorter && before.charAt(common) == after.charAt(common)) {
             common++;
         }
         return shorter <= PRONOUN || common >= (shorter <= SHORT_WORD ? SHORT_WORD_STEM : MIN_STEM_SHARE * shorter);
+    }
+
+    private static String withoutReflexive(final String word) {
+        return REFLEXIVE.matcher(word).replaceFirst("");
     }
 }

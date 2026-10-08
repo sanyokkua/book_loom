@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.inject.Injector;
 import java.util.Locale;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -81,5 +82,43 @@ class NavLockingTest extends ShellTestBase {
         useLocale(Locale.forLanguageTag("uk"));
 
         assertThat(TooltipProbe.tipText(required("nav-export"))).isEqualTo("Спершу відкрийте книгу");
+    }
+
+    private void show(final ViewNames view) {
+        onFx(() -> navigator.navigate(view));
+    }
+
+    private void press(final String id) {
+        onFx(() -> ((Button) required(id)).fire());
+    }
+
+    // IF a footer's Continue could step into a locked screen, THEN it would bypass the lock the navigation column
+    // keeps; it stands disabled beside the same reason, pressing it goes nowhere, and the footer's Back always leads
+    // out.
+    @Test
+    void footer_continueIntoALockedStep_isDisabledWithTheReasonAndBackLeadsOut() {
+        openBook("en", null);
+        show(ViewNames.BOOK_BRIEF);
+
+        press("brief-continue");
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
+        assertThat(required("brief-continue").isDisabled()).isTrue();
+        assertThat(((Label) required("brief-continue-hint")).getText()).isEqualTo("Choose the languages in Book Brief");
+        press("brief-back");
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.IMPORT);
+    }
+
+    // IF the lock outlived the choice it waited for, THEN Continue would stay refused after the languages were set.
+    @Test
+    void footer_continueOnceTheLanguagesAreChosen_opensTheNextStepAndItsBackReturns() {
+        openBook("en", "uk");
+        show(ViewNames.BOOK_BRIEF);
+
+        press("brief-continue");
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.STRUCTURE);
+
+        press("structure-back");
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.BOOK_BRIEF);
     }
 }

@@ -74,7 +74,8 @@ public final class EditVerifier {
         if (occurrences == 0) {
             return new Verification.Ignored("the quote is not in the candidate");
         }
-        if (ControlCharacters.containsControl(edit.replacement())) {
+        // The quote is the candidate's own text: an edit may keep a control character the book holds, never bring one.
+        if (ControlCharacters.addsControl(edit.quote(), edit.replacement())) {
             return new Verification.Ignored("the replacement holds control characters");
         }
         if (!CriterionFit.fits(edit, candidate, renderings, functionWords)) {

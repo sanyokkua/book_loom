@@ -32,6 +32,7 @@ import ua.bookloom.pipeline.glossary.GlossaryIds;
 import ua.bookloom.pipeline.glossary.GlossaryModelScans;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
 import ua.bookloom.pipeline.glossary.NameCandidate;
+import ua.bookloom.pipeline.glossary.TermChoice;
 import ua.bookloom.pipeline.project.OpenProjects;
 
 /**
@@ -169,14 +170,20 @@ public final class LexiconServiceImpl implements LexiconService {
         log.info("Lexicon model scan project={} candidates={}", projectId, candidates.size());
         return modelScans
                 .chooseTerms(projectId, candidates, model, progress)
-                .flatMap(choice -> addChosen(projectId, candidates, choice.kept()))
+                .flatMap(choice -> addChosen(projectId, candidates, choice))
                 .flatMap(added -> {
                     log.info("Lexicon model scan project={} added={}", projectId, added);
                     return lexicon.all(projectId);
                 });
     }
 
-    private Result<Integer> addChosen(final String projectId, final List<String> candidates, final Set<String> kept) {
+    private Result<Integer> addChosen(
+            final String projectId, final List<String> candidates, final TermChoice.Choice choice) {
+        log.info(
+                "Lexicon model scan project={} undecided={}",
+                projectId,
+                choice.undecided().size());
+        final Set<String> kept = choice.kept();
         int added = 0;
         for (final String term : candidates) {
             if (kept.contains(LexiconEntry.keyOf(term))) {
@@ -200,7 +207,13 @@ public final class LexiconServiceImpl implements LexiconService {
             return modelScans
                     .chooseTerms(
                             projectId, asked.stream().map(LexiconEntry::term).toList(), model, progress)
-                    .flatMap(choice -> dropRejected(projectId, asked, choice.dropped()));
+                    .flatMap(choice -> {
+                        log.info(
+                                "Lexicon review project={} undecided={}",
+                                projectId,
+                                choice.undecided().size());
+                        return dropRejected(projectId, asked, choice.dropped());
+                    });
         });
     }
 

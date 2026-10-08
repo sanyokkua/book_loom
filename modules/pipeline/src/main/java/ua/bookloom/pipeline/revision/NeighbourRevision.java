@@ -120,7 +120,12 @@ final class NeighbourRevision {
         }
         final Map<String, String> user = NeighbourPrompt.slots(
                 inputs, source, masked, neighbour(inputs, order, at - 1, byId), neighbour(inputs, order, at + 1, byId));
-        final Result<RevisionAnswer> answered = call.checkAgainstNeighbours(inputs, source, masked, user, calls);
+        // A flagged paragraph's text failed a check, often a lost sentence or quote mark: its fix may add one back.
+        final RevisionGuards.Mode mode = record.status() == SegmentStatus.FLAGGED
+                ? RevisionGuards.Mode.NO_LOSS
+                : RevisionGuards.Mode.SAME_COUNTS;
+        log.debug("Neighbour check segmentId={} status={} guards={}", id, record.status(), mode);
+        final Result<RevisionAnswer> answered = call.checkAgainstNeighbours(inputs, source, masked, user, mode, calls);
         if (answered.isErr()) {
             // One paragraph's failed call (a timeout, an unreadable reply) is no reason to lose the whole pass or the
             // book's export; only the person's stop ends it.

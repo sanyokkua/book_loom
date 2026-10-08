@@ -45,6 +45,7 @@ public final class ScriptedExportService implements ExportService {
     private final List<CallSnapshot> scriptedCalls = new CopyOnWriteArrayList<>();
     private final AtomicInteger cancels = new AtomicInteger();
     private volatile @Nullable CountDownLatch hold;
+    private volatile @Nullable Error thrown;
 
     /** Makes every successful export answer with {@code scripted}; {@code null} answers a one-segment report. */
     public void reportWith(@Nullable final ExportReport scripted) {
@@ -72,6 +73,11 @@ public final class ScriptedExportService implements ExportService {
         requests.add(Objects.requireNonNull(request, "request"));
         models.add(model);
         return Result.ok(new ScriptedExportJob(request, progress));
+    }
+
+    /** Makes every job throw {@code error} after announcing, as a stack overflow deep in a pass would. */
+    public void throwOnRun(@Nullable final Error error) {
+        thrown = error;
     }
 
     /** Makes every job announce {@code events} when it runs, in order, before it answers. */
@@ -135,13 +141,17 @@ public final class ScriptedExportService implements ExportService {
             ranOnFxThread.add(Platform.isFxApplicationThread());
             scriptedProgress.forEach(progress::onProgress);
             scriptedCalls.forEach(progress::onCall);
+            final Error error = thrown;
+            if (error != null) {
+                throw error;
+            }
             final CountDownLatch gate = hold;
             if (gate != null && !awaits(gate) && isCancelled) {
                 return Result.err(AppError.of(ErrorCode.cancelled, "Export cancelled", "Nothing was written."));
             }
-            final AppError error = failure;
-            if (error != null) {
-                return Result.err(error);
+            final AppError refused = failure;
+            if (refused != null) {
+                return Result.err(refused);
             }
             writeDestination();
             final ExportReport scripted = report;

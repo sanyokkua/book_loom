@@ -106,6 +106,22 @@ class CriterionFitTest {
                 .isTrue();
     }
 
+    // IF a reflexive verb's -ся counted against its stem, THEN дивився → дивилася read as a new word and every gender
+    // fix of a reflexive verb was thrown away; a dropped function word is still refused.
+    @ParameterizedTest
+    @CsvSource({
+        "GENDER,дивився на море,дивилася на море,true",
+        "GENDER,сміявся тихо,сміялася тихо,true",
+        "GENDER,звівся на ноги,звелася на ноги,true",
+        "AGREEMENT,вмився холодною водою,вмилася холодною водою,true",
+        "AGREEMENT,міг би пройти їхню охорону.,міг пройти їхню охорону.,false"
+    })
+    void fits_genderOrAgreementEditOfAReflexiveVerb_fitsUnlessAFunctionWordGoes(
+            final ReviewCriterion criterion, final String quote, final String replacement, final boolean expected) {
+        assertThat(fitsWithFunctionWords(criterion, quote, replacement, UK_FUNCTION_WORDS))
+                .isEqualTo(expected);
+    }
+
     // IF a meaning edit could bring in words from nowhere, THEN a model's invention replaced the translator's word.
     @ParameterizedTest
     @CsvSource({

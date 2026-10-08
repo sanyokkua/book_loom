@@ -24,16 +24,24 @@ public final class DraftReplyParser {
         this.mapper = Objects.requireNonNull(mapper, "mapper");
     }
 
-    /** Parses the complete reply as the sole documented target object. */
-    public ParsedReply parse(final String replyText) {
+    /**
+     * Parses the complete reply as the sole documented target object.
+     *
+     * @param replyText the model's whole reply
+     * @param source the masked source text the reply translates; a control character it holds may come back as often
+     *     as it holds it (an old TXT's form feed), any other is refused
+     * @return the parsed target, or the diagnostic of a reply outside the contract
+     */
+    public ParsedReply parse(final String replyText, final String source) {
         Objects.requireNonNull(replyText, "replyText");
+        Objects.requireNonNull(source, "source");
         log.debug("Parsing draft reply replyLength={}", replyText.length());
         try {
             final JsonNode root = mapper.reader()
                     .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                     .readTree(replyText);
             if (validTarget(root)
-                    && ControlCharacters.containsControl(root.path("target").textValue())) {
+                    && ControlCharacters.addsControl(source, root.path("target").textValue())) {
                 return logged(invalid(CONTROL_CHARACTERS));
             }
             return logged(validTarget(root) ? structured(root.path("target").textValue()) : invalid(INVALID_OBJECT));

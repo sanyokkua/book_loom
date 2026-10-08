@@ -130,6 +130,15 @@ class ContextWindowBudgetTest {
         assertThat(small).isLessThan(large).isLessThanOrEqualTo(allowance);
     }
 
+    // IF the default window gave a chunk less than the ceiling, THEN the Structure screen's planned chunks (packed at
+    // the
+    // ceiling before any model is known) would disagree with the run's for every model that reports no window.
+    @Test
+    void chunkTokens_defaultWindow_reachesTheCeilingTheStructurePreviewPacksBy() {
+        assertThat(ChunkBudget.budget(FRAME, ContextBudget.DEFAULT_WINDOW).chunkTokens())
+                .isEqualTo(2000);
+    }
+
     @Test
     void staticPrefix_draftSystemMessage_fitsTheReservedPrefix() {
         final int actual = PromptBreakdown.of(new DraftPromptBuilder(TEMPLATES, FRAME).messagesFor(unit().getFirst()))

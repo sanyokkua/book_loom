@@ -92,6 +92,37 @@ final class RevisionGuards {
         return broken;
     }
 
+    /**
+     * The first rule a new draft breaks against the source, for an old text that was never translated: the source's
+     * quote marks, dialogue dashes and sentences may grow but never shrink. Words and Latin runs are not compared — a
+     * translation has fewer words than the English it replaces, and the source is Latin throughout.
+     *
+     * @param source the source text, masked
+     * @param after the new text, masked
+     * @return the broken rule's name ({@code quotes}, {@code dashes} or {@code sentences}), or empty when the new text
+     *     keeps every one
+     */
+    static Optional<String> violationOfSource(final String source, final String after) {
+        final String origin = DisplayText.of(source);
+        final String fresh = DisplayText.of(after);
+        final Optional<String> broken = Stream.of(
+                        broken(QUOTES, count(origin, QUOTE_MARKS), count(fresh, QUOTE_MARKS), Mode.NO_LOSS),
+                        broken(DASH_RULE, count(origin, DASHES), count(fresh, DASHES), Mode.NO_LOSS),
+                        broken(SENTENCES, Sentences.countLenient(origin), Sentences.countLenient(fresh), Mode.NO_LOSS))
+                .filter(Objects::nonNull)
+                .findFirst();
+        log.debug(
+                "Revision guards against the source quotes={}->{} dashes={}->{} sentences={}->{} broken={}",
+                count(origin, QUOTE_MARKS),
+                count(fresh, QUOTE_MARKS),
+                count(origin, DASHES),
+                count(fresh, DASHES),
+                Sentences.countLenient(origin),
+                Sentences.countLenient(fresh),
+                broken.orElse("none"));
+        return broken;
+    }
+
     private static @Nullable String broken(final String rule, final long old, final long fresh, final Mode mode) {
         final boolean kept = mode == Mode.SAME_COUNTS ? old == fresh : fresh >= old;
         return kept ? null : rule;

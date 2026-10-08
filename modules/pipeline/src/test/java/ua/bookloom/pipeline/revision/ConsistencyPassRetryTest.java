@@ -3,6 +3,8 @@ package ua.bookloom.pipeline.revision;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static ua.bookloom.pipeline.revision.RevisionBook.BOBBY;
+import static ua.bookloom.pipeline.revision.RevisionBook.OLD_MAN;
+import static ua.bookloom.pipeline.revision.RevisionBook.OLD_MAN_SOURCE;
 import static ua.bookloom.pipeline.revision.RevisionBook.RUN_BOBBY;
 import static ua.bookloom.pipeline.revision.RevisionBook.ok;
 import static ua.bookloom.pipeline.revision.RevisionBook.reply;
@@ -84,6 +86,23 @@ class ConsistencyPassRetryTest {
                 .containsExactly(WHOLE, SegmentStatus.REVISED);
         assertThat(report.checks().retriedImproved()).isEqualTo(1);
         assertThat(report.notes()).contains("ch2 · p03: drafted again and improved");
+    }
+
+    // IF a flagged echo were held to the word count of the English it copied, THEN it could never be repaired: the
+    // Ukrainian sentence has six words where the English has nine.
+    @Test
+    void run_flaggedEchoOfTheSource_isDraftedAgainAndTheTranslationStored() {
+        final String translated = "Старий подивився на море й усміхнувся.";
+        flagged(OLD_MAN, OLD_MAN_SOURCE);
+        book.model().answerTo(DRAFT, reply(translated));
+        neighbourKeeps(translated);
+
+        final ConsistencyReport report = ok(book.runExport(EXPORT));
+
+        assertThat(book.stored(OLD_MAN))
+                .extracting(record -> record.machineTarget(), record -> record.status())
+                .containsExactly(translated, SegmentStatus.REVISED);
+        assertThat(report.checks().refused()).isEmpty();
     }
 
     // IF a retry that strips the quote marks were kept, THEN the dialogue of seg 102 would lose its « » again.

@@ -5,7 +5,6 @@ import com.google.inject.Singleton;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Objects;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
@@ -14,10 +13,8 @@ import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -25,8 +22,6 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -57,8 +52,9 @@ import ua.bookloom.ui.state.LiveCalls;
  * "Model calls" section, the same view the Translating screen's live panel uses.
  *
  * <p>The card appears only after {@link #DELAY} so work that ends at once never flashes it, and fades in and out. It
- * cannot be dismissed from the keyboard or by a click: Escape is swallowed, Tab stays on the card, and the card goes
- * when the work ends. FX thread only.
+ * cannot be dismissed from the keyboard or by a click: Escape is swallowed, Tab stays on the card, the focus moves onto
+ * the card (its Cancel, or the card itself for work that cannot be stopped), no key reaches the window behind, and the
+ * card goes when the work ends. FX thread only.
  */
 @Slf4j
 @Singleton
@@ -85,7 +81,6 @@ public final class BusyHost {
 
     private final ActivityTracker activities;
     private final Messages messages;
-    private final ModalHost modalHost;
     private final StackPane host = new StackPane();
     private final Region scrim = new Region();
     private final DialogPane card = new ModalCard();
@@ -102,11 +97,9 @@ public final class BusyHost {
     private final PauseTransition delay = new PauseTransition(DELAY);
     private final FadeTransition fade = new FadeTransition(FADE, host);
     private final Timeline clock = new Timeline(new KeyFrame(TICK, event -> updateClock()));
-    private final EventHandler<KeyEvent> keyFilter = this::filterKey;
     private long shownId = -1;
     private boolean revealed;
-    private @Nullable Scene filteredScene;
-    private @Nullable Node previousFocus;
+    private final BusyKeyboard keyboard;
 
     /**
      * Builds the hidden layer and follows the tracker.
@@ -119,7 +112,6 @@ public final class BusyHost {
     public BusyHost(final ActivityTracker activities, final Messages messages, final ModalHost modalHost) {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
-        this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         cancelType = new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
         call = new LiveCallView(
                 CALL_ID,
@@ -131,6 +123,7 @@ public final class BusyHost {
         buildCard();
         cancel = (Button) card.lookupButton(cancelType);
         wireCancel();
+        keyboard = new BusyKeyboard(host, card, cancel, Objects.requireNonNull(modalHost, "modalHost"));
         host.setId(HOST_ID);
         host.getStyleClass().add("shell-modal-host");
         scrim.setId(SCRIM_ID);
@@ -230,9 +223,8 @@ public final class BusyHost {
             fade.setOnFinished(null);
             fade.playFromStart();
         }
-        capture();
+        keyboard.capture();
         clock.playFromStart();
-        cancel.requestFocus();
     }
 
     private void conceal() {
@@ -241,7 +233,7 @@ public final class BusyHost {
         }
         revealed = false;
         clock.stop();
-        release();
+        keyboard.release();
         fade.stop();
         if (Motion.isReduced()) {
             host.setOpacity(0);
@@ -340,43 +332,6 @@ public final class BusyHost {
             call.show(
                     current,
                     new LiveCalls(current, live.previous(), live.segments(), at.truncatedTo(ChronoUnit.SECONDS)));
-        }
-    }
-
-    private void capture() {
-        final Scene scene = host.getScene();
-        if (scene != null && filteredScene == null) {
-            previousFocus = scene.getFocusOwner();
-            scene.addEventFilter(KeyEvent.KEY_PRESSED, keyFilter);
-            filteredScene = scene;
-        }
-    }
-
-    private void release() {
-        final Scene scene = filteredScene;
-        if (scene != null) {
-            scene.removeEventFilter(KeyEvent.KEY_PRESSED, keyFilter);
-            filteredScene = null;
-        }
-        final Node restore = previousFocus;
-        previousFocus = null;
-        if (restore != null && restore.getScene() != null) {
-            restore.requestFocus();
-        }
-    }
-
-    // A dialog above the card owns the keyboard; otherwise Escape does nothing and Tab never leaves the card.
-    private void filterKey(final KeyEvent event) {
-        if (modalHost.isShowing()) {
-            return;
-        }
-        final List<KeyCode> swallowed = List.of(KeyCode.ESCAPE, KeyCode.TAB);
-        if (swallowed.contains(event.getCode())) {
-            log.debug("busy card swallows {}", event.getCode());
-            event.consume();
-            if (event.getCode() == KeyCode.TAB && cancel.isVisible() && !cancel.isDisabled()) {
-                cancel.requestFocus();
-            }
         }
     }
 }

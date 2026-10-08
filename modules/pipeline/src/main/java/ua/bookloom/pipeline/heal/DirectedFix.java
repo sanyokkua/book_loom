@@ -111,7 +111,7 @@ public final class DirectedFix {
                 request,
                 SelfHealCalls.descriptor(templates, PromptName.DIRECTED_FIX, frame, maskedSource, userValues));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
-        final Result<RepairReply> outcome = RepairReplies.read(reply, replyParser);
+        final Result<RepairReply> outcome = RepairReplies.read(reply, replyParser, maskedSource);
         SelfHealCalls.logOutcome(log, LABEL, segmentId, outcome);
         return outcome;
     }

@@ -56,7 +56,7 @@ final class ItemValidator {
         if (isEcho(item.masked(), target)) {
             problems.add(ItemProblem.ECHO);
         }
-        if (ControlCharacters.containsControl(target)) {
+        if (ControlCharacters.addsControl(item.masked(), target)) {
             problems.add(ItemProblem.CONTROL_CHARACTERS);
         }
         final boolean leaks = ProtocolLeak.leaks(target);

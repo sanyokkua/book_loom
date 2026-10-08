@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.util.List;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -34,6 +37,62 @@ class ReviewViewModelRetryTest extends ReviewViewModelTestBase {
         return toasts.raised().stream()
                 .filter(raised -> raised.severity().equals("warning"))
                 .toList();
+    }
+
+    /** Runs each task on the calling thread until it is told to refuse, as a shut-down executor does. */
+    private static final class RefusingExecutor extends AbstractExecutorService {
+
+        private volatile boolean refusing;
+
+        @Override
+        public void execute(final Runnable command) {
+            if (refusing) {
+                throw new RejectedExecutionException("shut down");
+            }
+            command.run();
+        }
+
+        @Override
+        public void shutdown() {
+            refusing = true;
+        }
+
+        @Override
+        public List<Runnable> shutdownNow() {
+            refusing = true;
+            return List.of();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return refusing;
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return refusing;
+        }
+
+        @Override
+        public boolean awaitTermination(final long timeout, final TimeUnit unit) {
+            return refusing;
+        }
+    }
+
+    // IF a retry the executor refused kept its activity and its hold on the run, THEN the busy state and the disabled
+    // Resume would stay until the app was closed.
+    @Test
+    void retry_executorRefusesTheCall_endsTheActivityAndReleasesTheRun() {
+        final RefusingExecutor executor = new RefusingExecutor();
+        buildReview(executor);
+        selectLowScore(RunState.PAUSED);
+        executor.shutdown();
+
+        press(() -> review.retry(null, false));
+
+        assertThat(onFx(() -> List.copyOf(activities.running()))).isEmpty();
+        assertThat(onFx(() -> mirror.review().retryInFlight().get())).isFalse();
+        assertThat(desk.calls()).doesNotContain(retryCall("null", false));
     }
 
     @Test

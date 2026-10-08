@@ -67,6 +67,13 @@ public final class ConfirmDialog {
                 MessageKey.CONFIRM_QUIT_YES,
                 MessageKey.CONFIRM_QUIT_YES_TIP);
 
+        /** Closing the window on a translation that ended and was never exported. */
+        public static final Question QUIT_UNEXPORTED = new Question(
+                MessageKey.CONFIRM_QUIT_UNEXPORTED_TITLE,
+                MessageKey.CONFIRM_QUIT_UNEXPORTED_TEXT,
+                MessageKey.CONFIRM_QUIT_UNEXPORTED_YES,
+                MessageKey.CONFIRM_QUIT_UNEXPORTED_YES_TIP);
+
         /** Rejects a missing part. */
         public Question {
             Objects.requireNonNull(title, "title");

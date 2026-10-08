@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import java.util.Arrays;
 import java.util.Objects;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -212,7 +213,10 @@ public final class AppShellView {
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
-        final StackPane shell = new StackPane(frame, busyHost.view(), modalHost.view());
+        final Node toastLayer = toasts.view();
+        // Above the busy scrim, so an error raised while the window waits is seen; below the dialogs.
+        final StackPane shell = new StackPane(frame, busyHost.view(), toastLayer, modalHost.view());
+        keepOverTheContent(toastLayer);
         MonoFont.pick(Font.getFamilies()).ifPresent(face -> {
             log.debug("the activity log is set in {}", face.family());
             shell.getStyleClass().add(face.styleClass());
@@ -231,6 +235,16 @@ public final class AppShellView {
         showContent(navigator.content().get());
         syncThemeToggle(themeController.activeBlock());
         return shell;
+    }
+
+    // The toasts rise from the bottom and are centred over the content, so none covers the navigation column.
+    private void keepOverTheContent(final Node toastLayer) {
+        final Node nav = navColumn.view();
+        StackPane.setMargin(
+                toastLayer, new Insets(0, 0, 0, nav.getLayoutBounds().getWidth()));
+        nav.layoutBoundsProperty()
+                .addListener(
+                        (observed, was, now) -> StackPane.setMargin(toastLayer, new Insets(0, 0, 0, now.getWidth())));
     }
 
     private Node titleBar() {
@@ -276,8 +290,7 @@ public final class AppShellView {
         toolbar.getStyleClass().add("shell-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
         final ScrollPane scroll = configuredContentScroll();
-        // The toasts sit over the content only, so none can cover the title bar, a toolbar button or the navigation.
-        final StackPane contentArea = new StackPane(scroll, toasts.view());
+        final StackPane contentArea = new StackPane(scroll);
         VBox.setVgrow(contentArea, Priority.ALWAYS);
         return new VBox(toolbar, contentArea);
     }

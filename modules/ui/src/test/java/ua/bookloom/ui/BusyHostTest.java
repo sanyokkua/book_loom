@@ -17,7 +17,10 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.state.Activity;
@@ -211,5 +214,47 @@ class BusyHostTest extends ShellTestBase {
         assertThat(shell.getChildren().indexOf(required(BusyHost.HOST_ID)))
                 .isLessThan(shell.getChildren().indexOf(required("shell-modal-host")));
         assertThat(MessageKey.BUSY_CANCEL_TIP).isNotNull();
+    }
+
+    private static boolean isInside(final @Nullable Node node, final Node root) {
+        return node != null && (node.equals(root) || isInside(node.getParent(), root));
+    }
+
+    // IF a card with nothing to press left the focus behind the scrim, THEN Enter or Space would press a button the
+    // person cannot even see.
+    @Test
+    void card_workThatCannotBeStopped_takesTheKeyboardFocusOntoTheCard() throws TimeoutException {
+        begin(ActivityKind.IMPORT, false);
+        awaitCard();
+
+        assertThat(isInside(scene.getFocusOwner(), required(BusyHost.CARD_ID))).isTrue();
+    }
+
+    // IF a key could pass the scrim, THEN the window behind would act on it while it is working.
+    @ParameterizedTest
+    @EnumSource(
+            value = KeyCode.class,
+            names = {"ENTER", "SPACE", "A"})
+    void key_pressedWhileTheCardShows_neverReachesTheWindowBehind(final KeyCode key) throws TimeoutException {
+        final List<KeyCode> reached = new CopyOnWriteArrayList<>();
+        final Node behind = required("shell-content");
+        onFx(() -> behind.addEventHandler(KeyEvent.KEY_PRESSED, event -> reached.add(event.getCode())));
+        begin(ActivityKind.IMPORT, false);
+        awaitCard();
+
+        onFx(() ->
+                Event.fireEvent(behind, new KeyEvent(KeyEvent.KEY_PRESSED, "", "", key, false, false, false, false)));
+
+        assertThat(reached).isEmpty();
+    }
+
+    // IF the toasts sat under the scrim, THEN an error raised during blocking work would be dimmed out of sight.
+    @Test
+    void toasts_whileBusy_areShownAboveTheScrimAndBelowTheDialogs() {
+        final StackPane shell = (StackPane) scene.getRoot();
+        final int toasts = shell.getChildren().indexOf(required("shell-toast-host"));
+
+        assertThat(toasts).isGreaterThan(shell.getChildren().indexOf(required(BusyHost.HOST_ID)));
+        assertThat(toasts).isLessThan(shell.getChildren().indexOf(required("shell-modal-host")));
     }
 }

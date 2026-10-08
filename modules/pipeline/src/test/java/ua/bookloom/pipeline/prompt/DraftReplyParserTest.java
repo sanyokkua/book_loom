@@ -13,11 +13,13 @@ import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
 /** Verifies documented reply shapes and prevents malformed JSON from becoming book text. */
 class DraftReplyParserTest {
 
+    private static final String SOURCE = "Come on, I said.";
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("structuredReplyCases")
     void parse_exactTargetObject_returnsStructuredTranslation(
             final String name, final String reply, final String expectedTranslation) {
-        final ParsedReply parsed = parser().parse(reply);
+        final ParsedReply parsed = parser().parse(reply, SOURCE);
 
         assertThat(parsed.kind()).isEqualTo(ReplyKind.STRUCTURED);
         assertThat(parsed.translation()).isEqualTo(expectedTranslation);
@@ -26,10 +28,43 @@ class DraftReplyParserTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidStructuredReplyCases")
     void parse_wrongReplyShape_isNeverTranslation(final String name, final String reply) {
-        final ParsedReply parsed = parser().parse(reply);
+        final ParsedReply parsed = parser().parse(reply, SOURCE);
 
         assertThat(parsed.kind()).isEqualTo(ReplyKind.INVALID_STRUCTURED);
         assertThat(parsed.translation()).isEmpty();
+    }
+
+    // IF a control character the source holds (U+001C-U+001F, VT or FF in an old TXT or FB2) were refused in the
+    // reply, THEN that segment could never be translated; one the source does not hold, or holds fewer times, still is.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("sourceControlCases")
+    void parse_controlCharacterAgainstTheSource_isAcceptedOnlyAsOftenAsTheSourceHasIt(
+            final String name, final String source, final String reply, final ReplyKind expected) {
+        assertThat(parser().parse(reply, source).kind()).isEqualTo(expected);
+    }
+
+    private static Stream<Arguments> sourceControlCases() {
+        return Stream.of(
+                Arguments.of(
+                        "form feed the source has",
+                        "Page one.\fPage two.",
+                        "{\"target\":\"Сторінка один.\\fСторінка два.\"}",
+                        ReplyKind.STRUCTURED),
+                Arguments.of(
+                        "file separator the source has",
+                        "\u001cRun\u001c",
+                        "{\"target\":\"\\u001cБіжи\\u001c\"}",
+                        ReplyKind.STRUCTURED),
+                Arguments.of(
+                        "one form feed more than the source",
+                        "Page one.\fPage two.",
+                        "{\"target\":\"\\fСторінка один.\\fСторінка два.\"}",
+                        ReplyKind.INVALID_STRUCTURED),
+                Arguments.of(
+                        "another control than the source's",
+                        "Page one.\fPage two.",
+                        "{\"target\":\"Сторінка один.\\u000bСторінка два.\"}",
+                        ReplyKind.INVALID_STRUCTURED));
     }
 
     private static Stream<Arguments> structuredReplyCases() {

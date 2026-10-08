@@ -267,7 +267,8 @@ public final class SegmentTranslator {
         if (response.content().isBlank() || response.finishReason() != FinishReason.STOP) {
             return DraftOutcomes.unfinished(attempt, response);
         }
-        final ParsedReply parsed = replyParser.parse(response.content());
+        final ParsedReply parsed =
+                replyParser.parse(response.content(), attempt.segment().masked());
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED) {
             return structuralRepairUsed
                     ? DraftOutcomes.invalidStructuredReply(attempt, response)

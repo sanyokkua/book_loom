@@ -83,6 +83,38 @@ class OperationStateTest {
         assertThat(shown.stepText()).isEqualTo("Checking against neighbours");
     }
 
+    // IF the time left were read from the activity's start, THEN after a ten-minute retry step the next step at 1 of 50
+    // would promise hours; each counted step is timed from its own start.
+    @Test
+    void progress_secondStepAfterALongFirstOne_takesItsEtaFromItsOwnStart() {
+        final ActivityTracker.Handle export = tracker.begin(ActivityKind.EXPORT, null);
+        export.progress(0, 10, "Drafting doubted segments again");
+        clock.advance(Duration.ofMinutes(10));
+        export.progress(10, 10, "Drafting doubted segments again");
+        export.progress(0, 50, "Checking against neighbours");
+        clock.advance(Duration.ofSeconds(6));
+
+        export.progress(1, 50, "Checking against neighbours");
+
+        assertThat(tracker.running().getFirst().eta()).isEqualTo(Duration.ofSeconds(294));
+    }
+
+    // IF a step that announced no start were timed from the moment its text first appeared, THEN its first ETA would
+    // be zero; a new step's text alone starts its clock too.
+    @Test
+    void progress_newStepTextWithoutAZeroAnnouncement_isTimedFromWhenItsTextAppeared() {
+        final ActivityTracker.Handle export = tracker.begin(ActivityKind.EXPORT, null);
+        clock.advance(Duration.ofSeconds(100));
+        export.progress(4, 4, "Drafting doubted segments again");
+        clock.advance(Duration.ofSeconds(10));
+        export.progress(1, 3, "Checking against neighbours");
+        clock.advance(Duration.ofSeconds(10));
+
+        export.progress(2, 3, "Checking against neighbours");
+
+        assertThat(tracker.running().getFirst().eta()).isEqualTo(Duration.ofSeconds(10));
+    }
+
     // IF zero finished units gave an ETA, THEN it would divide by zero or promise nothing real.
     @Test
     void progress_nothingDoneYet_hasAFractionButNoEta() {

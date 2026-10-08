@@ -236,7 +236,7 @@ final class PromptEvalRunner {
                     expect);
         }
         final String content = Objects.requireNonNull(reply.data()).content();
-        final ParsedReply parsed = parser.parse(content);
+        final ParsedReply parsed = parser.parse(content, shown);
         if (parsed.kind() != ReplyKind.STRUCTURED) {
             return failed(name, kind, "unparsed: " + content, expect);
         }

@@ -26,13 +26,16 @@ public final class RepairReplies {
      *
      * @param reply the model call's result
      * @param parser the strict single-target reader
+     * @param source the masked source the rewrite translates, whose own control characters the reply may keep
      * @return a usable rewrite, a malformed reply, or content that flags the segment now, each wrapped in
      *     {@link Result#ok}; the call's own error, unwrapped, when it was neither {@code emptyCompletion} nor
      *     {@code contextWindow}
      */
-    public static Result<RepairReply> read(final Result<ChatResponse> reply, final DraftReplyParser parser) {
+    public static Result<RepairReply> read(
+            final Result<ChatResponse> reply, final DraftReplyParser parser, final String source) {
         Objects.requireNonNull(reply, "reply");
         Objects.requireNonNull(parser, "parser");
+        Objects.requireNonNull(source, "source");
         if (reply.isErr()) {
             return routeCallFailure(Objects.requireNonNull(reply.error()));
         }
@@ -43,7 +46,7 @@ public final class RepairReplies {
         if (response.finishReason() != FinishReason.STOP) {
             return Result.ok(new RepairReply.FlagNow(invalidFinish()));
         }
-        final ParsedReply parsed = parser.parse(response.content());
+        final ParsedReply parsed = parser.parse(response.content(), source);
         return parsed.kind() == ReplyKind.INVALID_STRUCTURED
                 ? Result.ok(new RepairReply.Malformed(parsed.diagnostic()))
                 : Result.ok(new RepairReply.Rewritten(parsed.translation().strip()));

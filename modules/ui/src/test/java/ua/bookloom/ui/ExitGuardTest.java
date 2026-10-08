@@ -8,8 +8,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.ui.state.ActivityKind;
 import ua.bookloom.ui.state.ActivityTracker;
+import ua.bookloom.ui.state.CurrentProject;
+import ua.bookloom.ui.state.OpenBookForTest;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.WorkflowProgress;
 
 /** Closing the window: at once when idle, otherwise only after the person confirmed stopping the work. */
 class ExitGuardTest extends ShellTestBase {
@@ -73,6 +80,53 @@ class ExitGuardTest extends ShellTestBase {
 
         assertThat(stopped).isEmpty();
         assertThat(exits).hasValue(0);
+        assertThat(isAsking()).isFalse();
+    }
+
+    private void runEnded(final RunState state) {
+        onFx(() -> {
+            OpenBookForTest.open(injector.getInstance(CurrentProject.class), "en", "uk");
+            injector.getInstance(StateMirror.class).publishRunState(state);
+        });
+    }
+
+    // IF a model listing or a connection check made the window ask, THEN quitting from Settings would meet a question
+    // about work nobody would lose.
+    @ParameterizedTest
+    @EnumSource(
+            value = ActivityKind.class,
+            names = {"MODEL_LISTING", "PROVIDER_CHECK"})
+    void requestClose_onlyWorkTheWindowDoesNotWaitFor_allowsTheCloseAtOnce(final ActivityKind kind) {
+        onFx(() -> injector.getInstance(ActivityTracker.class).begin(kind, () -> stopped.add(kind.name())));
+
+        assertThat(request()).isTrue();
+
+        assertThat(isAsking()).isFalse();
+    }
+
+    // IF a finished translation that was never exported closed unasked, THEN the whole run would be lost without a
+    // word, since nothing survives a restart yet.
+    @ParameterizedTest
+    @EnumSource(
+            value = RunState.class,
+            names = {"COMPLETED", "STOPPED"})
+    void requestClose_runEndedAndNotExported_asksAboutTheUnexportedTranslation(final RunState state) {
+        runEnded(state);
+
+        assertThat(request()).isFalse();
+
+        assertThat(textsUnder(required("confirm-card"))).contains("Quit without exporting?");
+        onFx(() -> ((Button) required("confirm-yes")).fire());
+        assertThat(exits).hasValue(1);
+    }
+
+    @Test
+    void requestClose_runCompletedAndExported_allowsTheCloseAtOnce() {
+        runEnded(RunState.COMPLETED);
+        onFx(() -> injector.getInstance(WorkflowProgress.class).markDone(ViewNames.EXPORT));
+
+        assertThat(request()).isTrue();
+
         assertThat(isAsking()).isFalse();
     }
 }

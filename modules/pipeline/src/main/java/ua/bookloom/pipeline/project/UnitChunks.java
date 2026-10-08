@@ -25,7 +25,11 @@ import ua.bookloom.pipeline.heal.VerbatimRule;
 
 /**
  * The one packing of a unit into chunks that both the plan and the Structure screen's segment listing read, so the two
- * can never disagree on which segments are translated or where a chunk ends.
+ * can never disagree on which segments are translated or where a chunk ends. It is the run's packing as far as it can
+ * be known before a model is chosen: the run sizes a chunk by the window the model reports, which at the default
+ * window ({@link ua.bookloom.pipeline.context.ContextBudget#DEFAULT_WINDOW}) reaches the
+ * {@link TokenBudget#MAX_CHUNK_TOKENS} ceiling packed by here, and caps it by the dial as an unattended or guided run
+ * does. A model with a smaller window, or a Manual review, packs smaller chunks, so the screen calls these "planned".
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

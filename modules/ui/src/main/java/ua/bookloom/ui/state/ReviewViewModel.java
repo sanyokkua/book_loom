@@ -5,6 +5,7 @@ import com.google.inject.Singleton;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.BiFunction;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -160,20 +161,12 @@ public final class ReviewViewModel {
         return availability.lockReason();
     }
 
-    /**
-     * The reason the desk refused the last accept or save, worded by the desk.
-     *
-     * @return a read-only property holding {@code null} when nothing is refused; FX thread only
-     */
+    /** The reason the desk refused the last accept or save, worded by it; {@code null} when none. FX thread only. */
     public ReadOnlyStringProperty problem() {
         return problem.getReadOnlyProperty();
     }
 
-    /**
-     * Whether Save edit, Revert and Skip are offered: a segment is selected and no run is translating.
-     *
-     * @return a read-only property; FX thread only
-     */
+    /** Whether Save edit, Revert and Skip are offered: a segment is selected and no run translates. FX only. */
     public ReadOnlyBooleanProperty actionsAvailable() {
         return availability.actions();
     }
@@ -183,12 +176,7 @@ public final class ReviewViewModel {
         return availability.acceptNote();
     }
 
-    /**
-     * Whether Accept is offered: the actions are, the editor is clean, the segment is flagged or accepted, and it holds
-     * a translation.
-     *
-     * @return a read-only property; FX thread only
-     */
+    /** Whether Accept is offered: actions are, the editor is clean, the segment is flagged or accepted, translated. */
     public ReadOnlyBooleanProperty acceptAvailable() {
         return availability.accept();
     }
@@ -295,9 +283,9 @@ public final class ReviewViewModel {
         } else if (availability.isTranslating()) {
             refusals.refuseBusy("retry", segment.segmentId());
         } else {
-            final var call = retry.begin(segment.segmentId(), note, lowerTemperature, problem::set);
-            if (call != null) {
-                act("retry", call);
+            final ReviewRetry.Pending pending = retry.begin(segment.segmentId(), note, lowerTemperature, problem::set);
+            if (pending != null && !act("retry", pending.call())) {
+                pending.abandon().run();
             }
         }
     }
@@ -307,18 +295,26 @@ public final class ReviewViewModel {
         act("acceptProposal", desk::acceptProposal);
     }
 
-    private void act(final String name, final BiFunction<String, String, Result<SegmentRecord>> call) {
+    // Answers whether the call was dispatched, so a caller holding something for it can let go when it was not.
+    private boolean act(final String name, final BiFunction<String, String, Result<SegmentRecord>> call) {
         final SegmentView segment = selected.get();
         final OpenedBook book = current.book().get();
         final boolean offered = availability.actions().get();
         if (segment == null || book == null || !offered) {
             log.debug("{} not offered: segment {}, actions {}", name, segment, offered);
-            return;
+            return false;
         }
         problem.set(null);
         final String projectId = book.projectId();
         final List<String> order = rows.stream().map(ReviewRow::segmentId).toList();
-        executor.execute(() -> perform(name, projectId, segment, order, call.apply(projectId, segment.segmentId())));
+        try {
+            executor.execute(
+                    () -> perform(name, projectId, segment, order, call.apply(projectId, segment.segmentId())));
+            return true;
+        } catch (RejectedExecutionException rejected) {
+            refusals.notStarted(name, segment.segmentId(), rejected);
+            return false;
+        }
     }
 
     // After a decision the panel moves on (ReviewNext): it never keeps showing a segment that left the list.

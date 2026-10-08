@@ -92,4 +92,19 @@ class BatchReplyShapesTest {
         assertThat(PARSER.parse(reply, open, "en", "uk").outcome("1"))
                 .hasValueSatisfying(outcome -> assertThat(outcome.problems()).isEmpty());
     }
+
+    // IF a control character the source holds were refused in the reply, THEN an old TXT with a form feed could never
+    // be translated.
+    @Test
+    void parse_controlCharacterTheSourceHolds_isAccepted() {
+        final List<BatchItem> items = List.of(new BatchItem("1", "She opened the door.\fHe looked outside."));
+        final String reply =
+                "{\"items\": [{\"id\": \"1\", \"target\": \"Вона відчинила двері.\\fВін визирнув надвір.\"}]}";
+
+        final BatchReply parsed = PARSER.parse(reply, items, "en", "uk");
+
+        assertThat(parsed.outcome("1"))
+                .hasValueSatisfying(outcome -> assertThat(outcome.problems()).isEmpty());
+        assertThat(parsed.acceptedIds()).containsExactly("1");
+    }
 }

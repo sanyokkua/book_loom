@@ -164,22 +164,29 @@ final class ExportRun {
     private void work(
             final ExportRequest request, final @Nullable ModelSelection selection, final ExportActivity shown) {
         ExportOutcome result = null;
-        AppError error = null;
+        // Failed until the job answers: an Error (a stack overflow, out of memory) escapes the catch below, and the
+        // finally must still end the activity, or its scrim and the disabled navigation would stay for good.
+        AppError error = AppError.of(ErrorCode.internal, "Export failed", "The book could not be written.");
         try {
             final Result<ExportReport> ran = run(request, selection, shown);
             if (ran.isOk()) {
                 final ExportReport report = Objects.requireNonNull(ran.data(), "report");
                 result = new ExportOutcome(report, sizeOf(report.destination()));
+                error = null;
             } else {
                 error = ran.error();
             }
         } catch (RuntimeException thrown) {
             log.error("the export threw instead of returning a result", thrown);
-            error = AppError.of(ErrorCode.internal, "Export failed", "The book could not be written.");
+        } finally {
+            final ExportOutcome published = result;
+            final AppError failed = error;
+            log.debug(
+                    "export work ended on {}: written {}",
+                    Thread.currentThread().getName(),
+                    published != null);
+            Platform.runLater(() -> finish(published, failed));
         }
-        final ExportOutcome published = result;
-        final AppError failed = error;
-        Platform.runLater(() -> finish(published, failed));
     }
 
     private Result<ExportReport> run(

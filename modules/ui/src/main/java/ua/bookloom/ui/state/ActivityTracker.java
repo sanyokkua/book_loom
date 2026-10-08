@@ -267,6 +267,11 @@ public final class ActivityTracker {
         private final long id;
         private final ActivityKind kind;
         private boolean ended;
+        // The counted step under way: its text, when it began and how many units were done then. Null until a step
+        // other than the first begins, so the first is timed from the activity's start.
+        private @Nullable String step;
+        private @Nullable Instant stepStart;
+        private int stepStartDone;
 
         private Handle(final long id, final ActivityKind kind) {
             this.id = id;
@@ -302,8 +307,8 @@ public final class ActivityTracker {
         }
 
         /**
-         * Says how far a counted step has got; the time left is the elapsed time per finished unit times the units
-         * left. Ignored once ended.
+         * Says how far a counted step has got; the time left is the step's elapsed time per unit finished in it times
+         * the units left. A step begins when it announces nothing done or its text changes. Ignored once ended.
          *
          * @param done the units finished, from 0
          * @param total the units in the step, at least 1 and at least {@code done}
@@ -312,11 +317,19 @@ public final class ActivityTracker {
         public void progress(final int done, final int total, final String stepText) {
             Objects.requireNonNull(stepText, "stepText");
             final double fraction = total <= 0 ? 0 : Math.min(1.0, (double) done / total);
+            final Instant now = clock.instant();
+            if (done <= 0 || (step != null && !step.equals(stepText))) {
+                log.debug("activity {} #{} step '{}' begins at {} of {}", kind, id, stepText, done, total);
+                stepStart = now;
+                stepStartDone = Math.max(0, done);
+            }
+            step = stepText;
             update(shown -> {
-                final Duration elapsed = Duration.between(shown.startedAt(), clock.instant());
-                final Duration eta = done <= 0 || total <= done
+                final Instant began = stepStart == null ? shown.startedAt() : stepStart;
+                final int doneInStep = done - stepStartDone;
+                final Duration eta = doneInStep <= 0 || total <= done
                         ? null
-                        : elapsed.dividedBy(done).multipliedBy(total - done);
+                        : Duration.between(began, now).dividedBy(doneInStep).multipliedBy(total - done);
                 return shown.withProgress(
                         new Activity.Progress(fraction, stepText, shown.details(), eta, shown.calls()));
             });

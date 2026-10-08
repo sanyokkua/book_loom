@@ -45,13 +45,21 @@ public final class TermChoice {
      *
      * @param kept the lexicon keys of the terms it said to keep
      * @param dropped the lexicon keys of the terms it explicitly said to drop; a term it did not mention is in neither
+     * @param undecided the lexicon keys of the terms whose batch was answered all alike even in halves, so the model's
+     *     verdict on them is not taken: a scan does not add them and a review does not remove them
      */
-    public record Choice(Set<String> kept, Set<String> dropped) {
+    public record Choice(Set<String> kept, Set<String> dropped, Set<String> undecided) {
 
         /** Copies the sets. */
         public Choice {
             kept = Set.copyOf(kept);
             dropped = Set.copyOf(dropped);
+            undecided = Set.copyOf(undecided);
+        }
+
+        /** A choice that decided every term it was asked about. */
+        public Choice(final Set<String> kept, final Set<String> dropped) {
+            this(kept, dropped, Set.of());
         }
     }
 
@@ -86,10 +94,19 @@ public final class TermChoice {
         final Map<String, Evidence> evidence = TermEvidence.of(segments, terms);
         final String system =
                 templates.renderSystem(PromptName.TERM_CHOICE, frame).strip();
+        return runBatches(terms, evidence, system, calls);
+    }
+
+    private Result<Choice> runBatches(
+            final List<String> terms,
+            final Map<String, Evidence> evidence,
+            final String system,
+            final ModelCalls calls) {
         final int batches = (terms.size() + BATCH_SIZE - 1) / BATCH_SIZE;
         log.info("Term choice started terms={} batches={}", terms.size(), batches);
         final Set<String> kept = new HashSet<>();
         final Set<String> dropped = new HashSet<>();
+        final Set<String> undecided = new HashSet<>();
         for (int index = 0; index < batches; index++) {
             final List<String> batch =
                     terms.subList(index * BATCH_SIZE, Math.min(terms.size(), (index + 1) * BATCH_SIZE));
@@ -98,11 +115,18 @@ public final class TermChoice {
             if (answered.isErr()) {
                 return answered;
             }
-            kept.addAll(Objects.requireNonNull(answered.data(), "choice").kept());
-            dropped.addAll(answered.data().dropped());
+            final Choice batchChoice = Objects.requireNonNull(answered.data(), "choice");
+            kept.addAll(batchChoice.kept());
+            dropped.addAll(batchChoice.dropped());
+            undecided.addAll(batchChoice.undecided());
         }
-        log.info("Term choice finished kept={} dropped={} of {}", kept.size(), dropped.size(), terms.size());
-        return Result.ok(new Choice(kept, dropped));
+        log.info(
+                "Term choice finished kept={} dropped={} undecided={} of {}",
+                kept.size(),
+                dropped.size(),
+                undecided.size(),
+                terms.size());
+        return Result.ok(new Choice(kept, dropped, undecided));
     }
 
     private Result<Choice> runBatch(
@@ -131,8 +155,12 @@ public final class TermChoice {
         dropped.addAll(tail.data().dropped());
         final Choice merged = new Choice(kept, dropped);
         if (isUniform(merged)) {
-            log.warn("Term choice batch of {} is still answered all alike; nothing is decided", batch.size());
-            return unreadable();
+            // Only this batch's verdicts are doubted; the other batches were read and stand.
+            log.warn("Term choice batch of {} is still answered all alike; it is left undecided", batch.size());
+            return Result.ok(new Choice(
+                    Set.of(),
+                    Set.of(),
+                    Set.copyOf(batch.stream().map(LexiconEntry::keyOf).toList())));
         }
         return Result.ok(merged);
     }

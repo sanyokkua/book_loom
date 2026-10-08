@@ -111,7 +111,7 @@ class LanguageFilesTest {
     @ParameterizedTest
     @MethodSource("exampleReplies")
     void example_reply_parsesAndKeepsTheSourceTokensInOrder(final Example example) {
-        final ParsedReply parsed = PARSER.parse(example.reply());
+        final ParsedReply parsed = PARSER.parse(example.reply(), example.source());
 
         assertThat(parsed.kind()).as(example.source()).isEqualTo(ReplyKind.STRUCTURED);
         assertThat(Tokens.inOrder(parsed.translation())).isEqualTo(Tokens.inOrder(example.source()));
@@ -120,7 +120,7 @@ class LanguageFilesTest {
     @ParameterizedTest
     @MethodSource("exampleReplies")
     void example_declaredPairs_wrapWordsOnBothSides(final Example example) {
-        final String target = PARSER.parse(example.reply()).translation();
+        final String target = PARSER.parse(example.reply(), example.source()).translation();
         final var pairs = PAIR.matcher(example.pairs()).results().toList();
 
         assertThat(pairs)

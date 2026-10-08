@@ -1,7 +1,10 @@
 package ua.bookloom.pipeline.revision;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,7 @@ import ua.bookloom.pipeline.heal.AcceptanceRule;
 import ua.bookloom.pipeline.heal.QaEvaluation;
 import ua.bookloom.pipeline.heal.RoundProgress;
 import ua.bookloom.pipeline.memory.ProtectedSpans;
+import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
@@ -28,6 +32,10 @@ final class PassChecks {
 
     static final String CHECKS = "checks";
     static final String WORSE = "worse";
+
+    /** The checks whose failure says the old text is still in the source language. */
+    private static final Set<CheckName> UNTRANSLATED =
+            EnumSet.of(CheckName.ECHO, CheckName.SCRIPT, CheckName.LANGUAGE_IDENTITY);
 
     /**
      * Why a new text may not replace the old one.
@@ -49,15 +57,18 @@ final class PassChecks {
             final RevisionGuards.Mode mode) {
         final QaResult fresh = evaluate(inputs, segment, candidate, after);
         final QaResult old = evaluate(inputs, segment, before, before);
+        final boolean untranslated = isUntranslated(old);
         final Optional<String> refusal = AcceptanceRule.accepts(fresh, 0)
-                ? RevisionGuards.violation(before, after, mode)
+                ? guards(segment, before, after, mode, untranslated)
                         .or(() -> RoundProgress.isWorse(fresh, old) ? Optional.of(WORSE) : Optional.empty())
                         .or(() -> newDoubt(inputs, segment, before, after))
                 : Optional.of(CHECKS);
         log.debug(
-                "Pass checks segmentId={} mode={} hardGatesPass={} failedOutright={} findings={} refusal={}",
+                "Pass checks segmentId={} mode={} oldUntranslated={} hardGatesPass={} failedOutright={} findings={}"
+                        + " refusal={}",
                 segment.id(),
                 mode,
+                untranslated,
                 fresh.hardGatesPass(),
                 fresh.failedOutright(),
                 fresh.findings().stream().map(QaFinding::kind).toList(),
@@ -91,6 +102,25 @@ final class PassChecks {
                 newDoubts,
                 better);
         return better;
+    }
+
+    // An old text still in the source language (an echo, the wrong script, a leftover paragraph) is no translation to
+    // keep counts of: a translation has fewer words than the English it replaces and no Latin run in common with it.
+    // The new text is then held to the source's quote marks, dashes and sentences instead, which a translation keeps.
+    private static Optional<String> guards(
+            final Segment segment,
+            final String before,
+            final String after,
+            final RevisionGuards.Mode mode,
+            final boolean untranslated) {
+        return untranslated
+                ? RevisionGuards.violationOfSource(segment.masked(), after)
+                : RevisionGuards.violation(before, after, mode);
+    }
+
+    private static boolean isUntranslated(final QaResult old) {
+        return Stream.concat(old.hardGates().stream(), old.soft().stream())
+                .anyMatch(result -> !result.passed() && UNTRANSLATED.contains(result.check()));
     }
 
     private static Optional<String> newDoubt(

@@ -63,7 +63,7 @@ final class RevisionCall {
         user.put("text", maskedTarget);
         user.put("resolvedFacts", facts);
         user.put("tokens", SelfHealCalls.immutableTokens(segment.masked()));
-        return send(PromptName.REVISION, inputs, segment, maskedTarget, user, calls)
+        return send(PromptName.REVISION, inputs, segment, maskedTarget, user, RevisionGuards.Mode.SAME_COUNTS, calls)
                 .map(RevisionAnswer::revised);
     }
 
@@ -74,6 +74,7 @@ final class RevisionCall {
      * @param segment the opened book's segment
      * @param maskedTarget the target to check, the document's own tokens in place
      * @param user the user template's slots, {@link NeighbourPrompt#slots} built from the same target
+     * @param mode how the guards compare the counts: a flagged paragraph's fix may restore what its draft lost
      * @param calls the seam the call is sent through
      * @return the checked target restored through the gate, equal to the given one when nothing needed to change, or
      *     the reason the answer was refused; or the call's own error
@@ -83,8 +84,9 @@ final class RevisionCall {
             final Segment segment,
             final String maskedTarget,
             final Map<String, String> user,
+            final RevisionGuards.Mode mode,
             final ModelCalls calls) {
-        return send(PromptName.CONSISTENCY, inputs, segment, maskedTarget, user, calls);
+        return send(PromptName.CONSISTENCY, inputs, segment, maskedTarget, user, mode, calls);
     }
 
     private Result<RevisionAnswer> send(
@@ -93,6 +95,7 @@ final class RevisionCall {
             final Segment segment,
             final String maskedTarget,
             final Map<String, String> user,
+            final RevisionGuards.Mode mode,
             final ModelCalls calls) {
         final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, inputs.frame(), user);
         final ChatRequest request =
@@ -104,13 +107,14 @@ final class RevisionCall {
                 request,
                 SelfHealCalls.descriptor(templates, name, inputs.frame(), segment.masked(), user));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
-        final Result<RepairReply> read = RepairReplies.read(reply, replyParser);
+        final Result<RepairReply> read = RepairReplies.read(reply, replyParser, segment.masked());
         SelfHealCalls.logOutcome(log, LABEL, segment.id(), read);
         if (read.isErr()) {
             return Result.err(Objects.requireNonNull(read.error(), "error"));
         }
         return switch (Objects.requireNonNull(read.data(), "read")) {
-            case RepairReply.Rewritten rewritten -> gated(inputs, segment, maskedTarget, rewritten.maskedTarget());
+            case RepairReply.Rewritten rewritten ->
+                gated(inputs, segment, maskedTarget, rewritten.maskedTarget(), mode);
             case RepairReply.Malformed malformed -> Result.ok(new RevisionAnswer.Refused(UNREADABLE));
             case RepairReply.FlagNow flagNow -> Result.ok(new RevisionAnswer.Refused(UNREADABLE));
         };
@@ -118,19 +122,17 @@ final class RevisionCall {
 
     // An answer equal to the old text needs no check: it changes nothing, even when the old text fails one.
     private static Result<RevisionAnswer> gated(
-            final PassInputs inputs, final Segment segment, final String before, final String reply) {
+            final PassInputs inputs,
+            final Segment segment,
+            final String before,
+            final String reply,
+            final RevisionGuards.Mode mode) {
         final String candidate = WhitespaceRestoration.restore(segment.masked(), reply);
         return switch (inputs.gate().restore(segment, candidate)) {
             case GateResult.Restored restored -> {
                 final Optional<String> refusal = restored.maskedForm().equals(before)
                         ? Optional.empty()
-                        : PassChecks.refusal(
-                                inputs,
-                                segment,
-                                before,
-                                candidate,
-                                restored.maskedForm(),
-                                RevisionGuards.Mode.SAME_COUNTS);
+                        : PassChecks.refusal(inputs, segment, before, candidate, restored.maskedForm(), mode);
                 yield Result.ok(refusal.<RevisionAnswer>map(RevisionAnswer.Refused::new)
                         .orElseGet(() -> new RevisionAnswer.Revised(restored)));
             }

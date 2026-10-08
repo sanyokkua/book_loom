@@ -15,10 +15,13 @@ class ResidueCheckTest {
             value = {
                 "brace-bracket tail seg 182|\"Miles, where'd she go?\"|«Майлз, куди вона пішла?»}]}Outcome: {",
                 "closers and dollar seg 31|\"Looks Russian to me,\" he said.|«Схоже на російську», — сказав він.»}]}}$",
-                "wrapper label only|He left.|Він пішов. Translation: готово",
+                "label starting the text|He left.|Translation: Він пішов.",
+                "label after a quote|\"He left.\"|«Output: Він пішов.»",
+                "label before a brace|He left.|Він пішов. Outcome: {\"target\"",
+                "label ending the text|He left.|Він пішов. Outcome:",
             })
     void find_residueInTarget_isBlocking(final String name, final String source, final String target) {
-        assertThat(ResidueCheck.find(source, target)).hasValueSatisfying(finding -> {
+        assertThat(ResidueCheck.find(source, target, "uk")).hasValueSatisfying(finding -> {
             assertThat(finding.kind()).isEqualTo(FindingKind.PROTOCOL_LEAK);
             assertThat(finding.blocking()).isTrue();
         });
@@ -31,9 +34,29 @@ class ResidueCheckTest {
                 "clean dialogue|\"Miles, where'd she go?\"|«Майлз, куди вона пішла?»",
                 "braces the source has|Use {x} here.|Використай {x} тут.",
                 "brackets the source has|See note [1].|Дивись примітку [1].",
+                "label inside a sentence|He left. Done.|Він пішов. Translation: готово",
             })
     void find_cleanTarget_isEmpty(final String name, final String source, final String target) {
-        assertThat(ResidueCheck.find(source, target)).isEmpty();
+        assertThat(ResidueCheck.find(source, target, "uk")).isEmpty();
+    }
+
+    // IF the label rule read an English target, THEN a book's own "Target:" line could never be translated into
+    // English.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "en|Ціль: знищити міст.|Target: destroy the bridge.",
+                "en-GB|Результат: нічия.|Outcome: a draw.",
+            })
+    void find_englishTargetStartingWithALabelWord_isEmpty(final String tag, final String source, final String target) {
+        assertThat(ResidueCheck.find(source, target, tag)).isEmpty();
+    }
+
+    @Test
+    void find_englishTargetWithReplyClosers_isStillBlocking() {
+        assertThat(ResidueCheck.find("Він пішов.", "He left.}]}Outcome: {", "en"))
+                .isPresent();
     }
 
     @Test

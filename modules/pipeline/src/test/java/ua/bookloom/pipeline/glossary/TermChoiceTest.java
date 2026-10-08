@@ -162,9 +162,10 @@ class TermChoiceTest {
         assertThat(verdicts.dropped()).hasSize(8);
     }
 
-    // IF the halves are uniform too, THEN nothing is decided: the answer is an error, as for an unreadable one.
+    // IF a batch still uniform after halving failed the whole choice, THEN one lazy answer would throw away every other
+    // batch's verdicts; that batch alone is left undecided — neither added by a scan nor removed by a review.
     @Test
-    void choose_batchStillUniformAfterHalving_isAnErrorAndDecidesNothing() {
+    void choose_batchStillUniformAfterHalving_leavesOnlyThatBatchUndecided() {
         final List<String> terms =
                 IntStream.range(0, 10).mapToObj(n -> "word" + n).toList();
         final ScriptedChatModel model = new ScriptedChatModel()
@@ -172,10 +173,29 @@ class TermChoiceTest {
                 .answer(reply(verdictsJson(0, 5, n -> false)))
                 .answer(reply(verdictsJson(5, 10, n -> false)));
 
-        final Result<TermChoice.Choice> verdicts = choice.choose(terms, BOOK, FRAME, calls(model));
+        final TermChoice.Choice verdicts = ok(choice.choose(terms, BOOK, FRAME, calls(model)));
 
-        assertThat(verdicts.error()).isNotNull();
-        assertThat(verdicts.error().code()).isEqualTo(ErrorCode.validation);
+        assertThat(verdicts.kept()).isEmpty();
+        assertThat(verdicts.dropped()).isEmpty();
+        assertThat(verdicts.undecided()).hasSize(10);
+    }
+
+    @Test
+    void choose_threeBatchesWithTheMiddleOneUniform_appliesTheOtherTwoBatchesVerdicts() {
+        final List<String> terms =
+                IntStream.range(0, 30).mapToObj(n -> "word" + n).toList();
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply(verdictsJson(0, 10, n -> n < 3)))
+                .answer(reply(verdictsJson(10, 20, n -> true)))
+                .answer(reply(verdictsJson(10, 15, n -> true)))
+                .answer(reply(verdictsJson(15, 20, n -> true)))
+                .answer(reply(verdictsJson(20, 30, n -> n >= 28)));
+
+        final TermChoice.Choice verdicts = ok(choice.choose(terms, BOOK, FRAME, calls(model)));
+
+        assertThat(verdicts.kept()).containsExactlyInAnyOrder("word0", "word1", "word2", "word28", "word29");
+        assertThat(verdicts.dropped()).hasSize(15).doesNotContain("word10", "word19");
+        assertThat(verdicts.undecided()).hasSize(10).contains("word10", "word19");
     }
 
     // Fewer than six answers can honestly be all alike.
