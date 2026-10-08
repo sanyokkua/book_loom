@@ -2,11 +2,14 @@ package ua.bookloom.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.inject.Injector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
@@ -15,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.ui.state.ActivityKind;
+import ua.bookloom.ui.state.ActivityTracker;
 
 /**
  * The navigator swaps the content region by enum constant and refuses an inert one. It is built by the real
@@ -167,5 +172,23 @@ class NavigatorTest extends FxTestBase {
             names = {"EXPORT", "SETTINGS"})
     void nextAvailableStep_lastStepOrNonWorkflowEntry_isEmpty(final ViewNames after) {
         assertThat(navigator.nextAvailableStep(after)).isEmpty();
+    }
+
+    // IF a click could leave the screen while blocking work runs, THEN the work's result would land on a screen nobody
+    // is looking at; the refusal changes nothing, and navigation resumes when the work ends.
+    @Test
+    void navigate_blockingWorkRunning_isRefusedUntilItEnds() {
+        final Injector graph = UiTestInjector.create(Locale.ENGLISH);
+        final ActivityTracker tracker = graph.getInstance(ActivityTracker.class);
+        final Navigator guarded = graph.getInstance(Navigator.class);
+        final AtomicReference<ActivityTracker.Handle> handle = new AtomicReference<>();
+        interact(() -> handle.set(tracker.begin(ActivityKind.EXPORT, null)));
+
+        final boolean whileBusy = navigateOnFxThread(guarded, ViewNames.EXPORT);
+        interact(() -> Objects.requireNonNull(handle.get()).end());
+        final boolean afterwards = navigateOnFxThread(guarded, ViewNames.EXPORT);
+
+        assertThat(whileBusy).isFalse();
+        assertThat(afterwards).isTrue();
     }
 }

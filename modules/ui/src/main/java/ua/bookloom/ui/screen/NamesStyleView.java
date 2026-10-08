@@ -330,8 +330,10 @@ final class NamesStyleView {
 
     private void startRun() {
         noteUnconfirmedSuggestions();
-        translating.start();
+        // First, because starting registers the preparation as blocking work, and a blocking activity refuses
+        // navigation.
         navigator.navigate(ViewNames.TRANSLATING);
+        translating.start();
     }
 
     // A run drafts with a suggested target as a hint, not as the person's choice; starting does not wait for a review.

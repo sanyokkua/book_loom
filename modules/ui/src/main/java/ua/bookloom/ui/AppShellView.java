@@ -31,6 +31,7 @@ import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.notify.ToastStack;
+import ua.bookloom.ui.state.ActivityTracker;
 import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
@@ -77,6 +78,8 @@ public final class AppShellView {
     private final ThemeController themeController;
     private final String version;
     private final ModalHost modalHost;
+    private final BusyHost busyHost;
+    private final ActivityTracker activities;
     private final ToastStack toasts;
     private final RunStatusBar runStatus;
     private final ActivityChip activityChip;
@@ -96,6 +99,8 @@ public final class AppShellView {
      * @param messages the catalogue every label comes from
      * @param themeController what the theme control reads and drives, and what {@link #createScene} attaches
      * @param modalHost the overlay the About dialog is shown in; shared so other dialogs use the same one
+     * @param busyHost the layer between the frame and the dialogs that shows the work the window waits for
+     * @param activities the running work, whose blocking state disables the navigation and the toolbar actions
      * @param toasts the transient-message surface whose host the shell places over the content area
      * @param runStatus the run's status and control, placed between the product name and the theme control
      * @param activityChip the other model work under way, with its Stop, placed before the run's status
@@ -110,6 +115,8 @@ public final class AppShellView {
             final Messages messages,
             final ThemeController themeController,
             final ModalHost modalHost,
+            final BusyHost busyHost,
+            final ActivityTracker activities,
             final ToastStack toasts,
             final RunStatusBar runStatus,
             final ActivityChip activityChip,
@@ -121,6 +128,8 @@ public final class AppShellView {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.themeController = Objects.requireNonNull(themeController, "themeController");
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
+        this.busyHost = Objects.requireNonNull(busyHost, "busyHost");
+        this.activities = Objects.requireNonNull(activities, "activities");
         this.toasts = Objects.requireNonNull(toasts, "toasts");
         this.runStatus = Objects.requireNonNull(runStatus, "runStatus");
         this.activityChip = Objects.requireNonNull(activityChip, "activityChip");
@@ -189,11 +198,13 @@ public final class AppShellView {
         final BorderPane frame = new BorderPane();
         frame.setTop(titleBar());
         frame.setLeft(navColumn.view());
+        // Work the window waits for leaves nothing to navigate to; the busy card says why, and Navigator refuses too.
+        navColumn.view().disableProperty().bind(activities.blocking());
         frame.setCenter(main());
         // Top-left, not the StackPane default of centred: a frame that cannot shrink further would otherwise be pushed
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
-        final StackPane shell = new StackPane(frame, modalHost.view());
+        final StackPane shell = new StackPane(frame, busyHost.view(), modalHost.view());
         // Once at the top: a wheel notch glides whichever pane, list, table or tree is under the pointer.
         SmoothScroll.install(shell);
         navigator.currentView().addListener((observed, old, current) -> showCurrent(current));
@@ -236,6 +247,7 @@ public final class AppShellView {
         actions.setAlignment(Pos.CENTER_RIGHT);
         actions.setSpacing(ACTION_SPACING);
         actions.setMinWidth(Region.USE_PREF_SIZE);
+        actions.disableProperty().bind(activities.blocking());
         breadcrumb.setMinWidth(0);
         breadcrumb.setTextOverrun(OverrunStyle.ELLIPSIS);
         final HBox toolbar = new HBox(breadcrumb, spacer, actions);

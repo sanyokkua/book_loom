@@ -693,6 +693,15 @@
     -fx-text-fill: -color-text;
 }
 
+/* The busy card: a bar over a line of elapsed time and time left, then the work's facts as key/value rows. */
+.busy-body {
+    -fx-spacing: 10px;
+}
+
+.busy-body > .progress-bar {
+    -fx-pref-width: 480px;
+}
+
 /* The About card's diagnostic-log section: set apart from the description, its actions wrapping on a narrow card. */
 .about-diagnostics {
     -fx-spacing: 8px;

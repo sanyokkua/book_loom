@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -15,7 +16,7 @@ import ua.bookloom.ui.state.ActivityTracker;
 
 /**
  * The window's side of the activity tracker: the title-bar chip names other model work and stops it, and leaving the
- * screen of a glossary scan asks whether to stop it or let it run on.
+ * screen of a glossary scan asks whether to stop it or let it run on, and a scan keeps the window from navigating.
  */
 class ActivityShellTest extends ShellTestBase {
 
@@ -66,37 +67,55 @@ class ActivityShellTest extends ShellTestBase {
         assertThat(isShown("shell-activity")).isFalse();
     }
 
-    // IF leaving the scan's screen were silent, THEN its result would land on a screen nobody looks at; the person is
-    // asked, and Stop and leave stops the scan and then leaves.
-    @Test
-    void leave_whileAScanRuns_asksAndStopAndLeaveStopsItThenLeaves() {
-        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
-        beginScan();
+    private boolean askLeaving(final AtomicBoolean left) {
+        final AtomicBoolean admitted = new AtomicBoolean();
+        onFx(() -> admitted.set(
+                injector.getInstance(LeaveGuard.class).admits(ViewNames.NAMES_STYLE, () -> left.set(true))));
+        return admitted.get();
+    }
 
-        onFx(() -> shell.activate(ViewNames.STRUCTURE));
-        final ViewNames whileAsked = navigator.currentView().get();
+    // IF leaving the scan's screen were silent, THEN its result would land on a screen nobody looks at; the person is
+    // asked, and Stop and leave stops the scan and then leaves. (The window refuses to navigate at all while a scan
+    // runs, so this guards the one path that would reach it.)
+    @Test
+    void leaveGuard_whileAScanRuns_asksAndStopAndLeaveStopsItThenLeaves() {
+        beginScan();
+        final AtomicBoolean left = new AtomicBoolean();
+
+        final boolean admitted = askLeaving(left);
         final boolean asked = isShown("leave-card");
         final String keepTip = TooltipProbe.tipText(required("leave-keep"));
         onFx(() -> ((Button) required("leave-stop")).fire());
 
+        assertThat(admitted).isFalse();
         assertThat(asked).isTrue();
-        assertThat(whileAsked).isEqualTo(ViewNames.NAMES_STYLE);
         assertThat(stopped).containsExactly("scan");
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.STRUCTURE);
+        assertThat(left).isTrue();
         assertThat(keepTip).isNotBlank();
     }
 
     // IF Leave and keep running stopped the scan anyway, THEN the person could never let it finish in the background.
     @Test
-    void leave_keepRunning_leavesWithoutStopping() {
-        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+    void leaveGuard_keepRunning_leavesWithoutStopping() {
         beginScan();
-        onFx(() -> shell.activate(ViewNames.STRUCTURE));
+        final AtomicBoolean left = new AtomicBoolean();
+        askLeaving(left);
 
         onFx(() -> ((Button) required("leave-keep")).fire());
 
         assertThat(stopped).isEmpty();
-        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.STRUCTURE);
+        assertThat(left).isTrue();
+    }
+
+    // IF a scan did not hold the window, THEN the person could leave its screen with the result still to come.
+    @Test
+    void navigate_whileAScanRuns_staysOnTheScreen() {
+        onFx(() -> shell.activate(ViewNames.NAMES_STYLE));
+        beginScan();
+
+        onFx(() -> shell.activate(ViewNames.STRUCTURE));
+
+        assertThat(navigator.currentView().get()).isEqualTo(ViewNames.NAMES_STYLE);
     }
 
     // IF any running work asked on every navigation, THEN a provider check would nag on its way out of Settings.

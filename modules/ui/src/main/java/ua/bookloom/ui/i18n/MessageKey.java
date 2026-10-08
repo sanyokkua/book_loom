@@ -113,6 +113,20 @@ public enum MessageKey {
     ACTIVITY_DETAIL_REQUESTS("activity.detail.requests"),
     /** Busy-card detail value: a count out of a total; arguments: 0 done, 1 total. */
     ACTIVITY_DETAIL_OF("activity.detail.of"),
+    /** Busy card: time since the work began; argument 0 is a clock such as 1:15. */
+    BUSY_ELAPSED("busy.elapsed"),
+    /** Busy card: the estimated time left; argument 0 is a duration such as 2m. */
+    BUSY_ETA("busy.eta"),
+    /** Busy card: label of the button that stops the work. */
+    BUSY_CANCEL("busy.cancel"),
+    /** Hover explanation of the busy card's Cancel button. */
+    BUSY_CANCEL_TIP("busy.cancel.tip"),
+    /** Busy card: what the Cancel button and the step line say once a stop was asked for. */
+    BUSY_CANCELLING("busy.cancelling"),
+    /** Hover explanation of the disabled Cancel button while the work stops. */
+    BUSY_CANCELLING_TIP("busy.cancelling.tip"),
+    /** Busy card: shown instead of a Cancel button for work that cannot be stopped. */
+    BUSY_NOT_CANCELLABLE("busy.notCancellable"),
     /** About dialog subtitle; argument 0 is the build version. */
     ABOUT_SUBTITLE("about.subtitle"),
     /** About dialog description of the product. */
@@ -229,6 +243,10 @@ public enum MessageKey {
     COMMON_CLOSE("common.close"),
     /** Hover explanation of the control labelled by {@link #COMMON_CLOSE}. */
     COMMON_CLOSE_TIP("common.close.tip"),
+    /** Label of a dialog button that abandons the question and changes nothing. */
+    COMMON_CANCEL("common.cancel"),
+    /** Hover explanation of the control labelled by {@link #COMMON_CANCEL}. */
+    COMMON_CANCEL_TIP("common.cancel.tip"),
     /** Activity-log entry for an accepted segment; argument 0 is the segment id, passed as a String so it is never grouped like a number. */
     LOG_ACCEPTED("log.accepted"),
     /** Activity-log entry for an answered model-call attempt; arguments: 0 the call's name, 1 the locator part (empty or {@code " · ch7 · p42"}), 2 the repair round or {@code 0}, 3 the attempt, 4 the time it took as {@code m:ss}; all Strings. */

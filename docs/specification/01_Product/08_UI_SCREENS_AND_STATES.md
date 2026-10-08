@@ -17,7 +17,7 @@ in the mockup. It realizes `FR-UI-*`.
 ## shell-and-navigation {#shell-and-navigation}
 
 The application shell has a title bar, a left navigation grouped into Workflow / Application, a breadcrumb, a
-toolbar-actions area, a content host, a modal host with scrim, and a toast host.
+toolbar-actions area, a content host, a busy layer, a modal host with scrim, and a toast host.
 
 | Element            | JavaFX control                    | Notes                                                                                                                                                |
 |--------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -28,6 +28,7 @@ toolbar-actions area, a content host, a modal host with scrim, and a toast host.
 | Toolbar actions    | `ToolBar` / `HBox` of `Button`    | Context actions per screen                                                                                                                           |
 | Theme toggle       | `ToggleButton`                    | **2-state light↔dark quick-toggle** only; the tri-state selector including `system` lives in Settings → Appearance (`07_SETTINGS.md#appearance-tab`) |
 | Content host       | `ScrollPane` around a `StackPane` | Hosts the active screen; scrolls when the screen is taller or wider than the window, and fits width and height so a growing list still fills it       |
+| Busy host + scrim  | `StackPane` overlay               | The busy card for blocking work (`#busy-card`), below the modal host                                                                                 |
 | Modal host + scrim | `StackPane` overlay               | For `Dialog`/`Alert`                                                                                                                                 |
 | Toast host         | Native token-styled JavaFX nodes  | ok/info/warn/err, stacked in-shell                                                                                                                   |
 
@@ -48,6 +49,24 @@ explanation, absent when the start names none); and the elapsed time and the tim
 offers **Pause** while running, **Resume** while paused, stopped or in a provider error, and **no control** once the
 run has finished or failed. The title bar's control does exactly what the Translating screen's control of the same
 name does — pressing either one acts on the same run.
+
+### Background work and the busy card {#busy-card}
+
+Every background operation is registered as an activity with a title, a start time, optional progress (a fraction, a
+step, key/value details and a time left) and, when it can be stopped, a cancel. Work the window waits for is
+**blocking**: opening and inspecting a book, preparing a run, the export and its consistency pass, the glossary's model
+scan and review, the Book Brief's style suggestion, the file-name suggestion, the provider's inference test and a
+review retry. The translation run itself, the model listing, the connection check and structure checks are not.
+
+While a blocking activity runs: the navigation column and the toolbar actions are disabled, the navigator refuses every
+navigation, and — after 400 ms, so work that ends at once never flashes it — a **busy card** (`#busy-card`) fades in
+(160 ms) over a scrim (`#shell-busy-scrim`) that swallows clicks. It shows the title, the current step
+(`#busy-step`), a progress bar (`#busy-bar`, determinate when a fraction is known, else indeterminate), the elapsed time
+and the time left (the average of the units finished so far), the facts as key/value rows, and **Cancel**
+(`#busy-cancel`) when the work can be stopped; work that cannot be stopped shows no Cancel and says so. A press of
+Cancel disables the button and the step reads "Cancelling…" until the work ends. Escape does not close the card and
+Tab stays on it; the card goes when the work ends. The layer sits between the frame and the dialog layer, so an error
+dialog that arrives meanwhile is shown above it. The title-bar chip stays.
 
 ### Start and Resume {#start-and-resume}
 

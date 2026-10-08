@@ -14,6 +14,7 @@ import javafx.scene.Parent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.i18n.Messages;
+import ua.bookloom.ui.state.ActivityTracker;
 
 /**
  * Swaps the content region by {@link ViewNames} constant and answers which step follows another.
@@ -22,7 +23,8 @@ import ua.bookloom.ui.i18n.Messages;
  * with the active message catalogue and the {@link GuiceControllerFactory}, and a failed load leaves the previous
  * view in place: a screen that cannot be built must not blank the window. Both properties change only here, so the
  * shell can observe them without being able to fake a navigation. Leaving a screen whose model work would be left
- * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer.
+ * behind asks first ({@link LeaveGuard}); the navigation then completes from the person's answer. While work the
+ * window waits for runs (a blocking activity) every navigation is refused.
  */
 @Slf4j
 @Singleton
@@ -32,6 +34,7 @@ public final class Navigator {
     private final GuiceControllerFactory controllerFactory;
     private final Messages messages;
     private final LeaveGuard leaveGuard;
+    private final ActivityTracker activities;
     private final ReadOnlyObjectWrapper<ViewNames> currentView = new ReadOnlyObjectWrapper<>();
     private final ReadOnlyObjectWrapper<Parent> content = new ReadOnlyObjectWrapper<>();
 
@@ -60,12 +63,16 @@ public final class Navigator {
      * @param target the screen to show
      * @return {@code true} if the screen is now current; {@code false} if the entry is inert, is already current, its
      *     view failed to load, or leaving the current screen first asks the person, in each of which nothing changes
-     *     now
+     *     now, or blocking work is running
      */
     public boolean navigate(final ViewNames target) {
         Objects.requireNonNull(target, "target");
         final ViewNames source = currentView.get();
         log.debug("navigating {} -> {}", source, target);
+        if (activities.blocking().get()) {
+            log.debug("refused {}: work the window waits for is running", target);
+            return false;
+        }
         if (!target.isAvailable()) {
             log.debug("refused {}: it has no screen", target);
             return false;

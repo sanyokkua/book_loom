@@ -1933,6 +1933,7 @@ ${dlgCard('retry', 'Retry with note', 'Re-translate a chunk with guidance', 'inf
 ${dlgCard('confirmDelete', 'Confirm delete', 'Destructive action confirmation', 'err', '🗑')}
 ${dlgCard('quit', 'Unsaved changes', 'Save / discard / cancel on quit', 'warn', '⚠')}
 ${dlgCard('err', 'Error with details', 'Typed error + expandable details', 'err', '⛔')}
+${dlgCard('busy', 'Working (busy card)', 'Progress, elapsed, ETA, Cancel — blocks the window', 'brand', '◔')}
 ${dlgCard('exported', 'Export complete', 'Success + open folder', 'ok', '✓')}
 ${dlgCard('bindUnavailable', 'Bound provider unavailable', 'Resume: confirm fallback', 'warn', '⚠')}
 ${dlgCard('bindChanged', 'Provider/model changed', 'Resume: apply vs continue', 'brand', '⇄')}
@@ -2141,6 +2142,14 @@ ${dlgCard('about', 'About', 'Version + licenses', 'info', 'ⓘ')}
    <details><summary style="cursor:pointer;font-size:12px;color:var(--primary)">Technical details</summary>
    <div class="log" style="margin-top:8px;height:90px"><span class="r">code:</span> PROVIDER_UNREACHABLE<br><span class="r">cause:</span> java.net.ConnectException: Connection refused<br><span class="r">endpoint:</span> POST /v1/chat/completions<br><span class="r">attempts:</span> 3 (backoff 0.5s → 8s)</div></details></div>
    <div class="dialog-f"><button class="btn btn-ghost" onclick="closeDialog()">Close</button><button class="btn btn-secondary" onclick="closeDialog();go('settings')">Provider settings</button><button class="btn btn-primary" onclick="closeDialog();toast('info','Retrying…','Reconnecting to the model server.')">↻ Retry</button></div></div>`,
+        busy: `<div class="dialog"><div class="dialog-h"><div class="di brand">◔</div><div><h3>Export</h3><div class="sub">Checking paragraphs against their neighbours</div></div></div>
+   <div class="dialog-b"><div class="bar"><span style="width:25%"></span></div>
+   <div class="gap8" style="margin-top:8px;justify-content:space-between"><span class="muted" style="font-size:12px">Elapsed 0:42</span><span class="muted" style="font-size:12px">About 2m left</span></div>
+   <div class="kv"><span class="k">File</span><span>Frankenstein.uk.epub</span></div>
+   <div class="kv"><span class="k">Model</span><span>gemma4:e4b-mlx</span></div>
+   <div class="kv"><span class="k">Requests</span><span>3 of 12</span></div>
+   <div class="hint">The window waits for this. It appears only after 0.4 s, Escape does not close it, and it goes when the work ends. Work that cannot be stopped shows no Cancel and says so.</div></div>
+   <div class="dialog-f"><button class="btn btn-danger-outline" onclick="closeDialog()">Cancel</button></div></div>`,
         exported: `<div class="dialog"><div class="dialog-h"><div class="di ok">✓</div><div><h3>Export complete</h3></div></div>
    <div class="dialog-b"><p style="margin-top:0"><b>Frankenstein (UK).epub</b> was written and validated.</p>
    <div class="kv"><span class="k">Location</span><span class="mono" style="font-size:11.5px">~/Books/Translated/</span></div>

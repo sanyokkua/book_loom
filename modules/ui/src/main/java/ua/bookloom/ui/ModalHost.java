@@ -84,6 +84,15 @@ public final class ModalHost {
         focusFirstIn(dialog);
     }
 
+    /**
+     * Whether a dialog card is shown now; a layer below that has its own keyboard handling stands back while one is.
+     *
+     * @return {@code true} while a card is shown
+     */
+    boolean isShowing() {
+        return card != null;
+    }
+
     /** Removes the card and the dimming layer and returns focus; a host with nothing shown ignores it. */
     public void hide() {
         log.debug("hiding the modal host, card shown: {}", card != null);
