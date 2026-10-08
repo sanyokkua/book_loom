@@ -1,6 +1,8 @@
 package ua.bookloom.ui.control;
 
+import java.lang.ref.WeakReference;
 import java.util.Objects;
+import java.util.function.LongSupplier;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
@@ -8,6 +10,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.ScrollEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
@@ -19,17 +22,26 @@ import org.jspecify.annotations.Nullable;
  * content is briefly shorter (a live row hidden between two segments, a card swapped for another), the pane is clamped
  * to its new end and stays there when the content grows back, so the view lands somewhere else. This class remembers
  * where the person put the view — every change of the value while the content keeps its height is theirs — and puts it
- * back whenever the content's height or the viewport changes. Its listeners run on every scroll, so they log nothing.
+ * back whenever the content's height or the viewport changes. Its listeners run on every scroll, so they log nothing; a restore that moves the view logs one DEBUG line.
  *
  * <p>One change of the value is not the person's although the height stays: when the focused control goes away (a
  * banner's action hidden once the model answers, a row's control replaced), JavaFX moves the focus to the next control
  * and the pane scrolls that one into view, which can be a screen away. From the moment the focus leaves a control that
  * lost its place until the next pulse, the anchor puts the view back where the person had it.
+ *
+ * <p>While a scroll gesture is under way (a scroll event within {@link #GESTURE_QUIET_NANOS}) the content's growth does
+ * not move the view: the person's own movement during the layout pass would otherwise be overwritten with the position
+ * they had before it, and the view would snap back. The anchor takes the view where it is instead.
  */
 @Slf4j
 public final class ScrollAnchor {
 
+    /** How long after the last scroll event a gesture still counts as under way; a momentum tail stops sooner. */
+    static final long GESTURE_QUIET_NANOS = 250_000_000L;
+
     private final ScrollPane pane;
+    private final LongSupplier nanos;
+    private long lastScroll;
     private double offset;
     private double knownHeight;
     private boolean restoring;
@@ -38,8 +50,9 @@ public final class ScrollAnchor {
     private @Nullable Scene watched;
     private final ChangeListener<@Nullable Node> onFocus = (observed, was, now) -> focusMoved(was);
 
-    private ScrollAnchor(final ScrollPane pane) {
+    private ScrollAnchor(final ScrollPane pane, final LongSupplier nanos) {
         this.pane = pane;
+        this.nanos = nanos;
     }
 
     /**
@@ -50,10 +63,14 @@ public final class ScrollAnchor {
      * @return the anchor, whose {@link #reset()} moves the view back to the top
      */
     public static ScrollAnchor install(final ScrollPane pane) {
+        return install(pane, System::nanoTime);
+    }
+
+    static ScrollAnchor install(final ScrollPane pane, final LongSupplier nanos) {
         Objects.requireNonNull(pane, "pane");
-        final ScrollAnchor anchor = new ScrollAnchor(pane);
+        final ScrollAnchor anchor = new ScrollAnchor(pane, nanos);
         pane.vvalueProperty().addListener(observed -> anchor.onValue());
-        pane.viewportBoundsProperty().addListener(observed -> anchor.restore());
+        pane.viewportBoundsProperty().addListener(observed -> anchor.restoreAfterResize("viewport changed"));
         pane.skinProperty().addListener((observed, was, now) -> anchor.attach());
         pane.sceneProperty().addListener((observed, was, now) -> anchor.watchFocus(now));
         anchor.attach();
@@ -90,6 +107,18 @@ public final class ScrollAnchor {
         }
         watched = scene;
         scene.focusOwnerProperty().addListener(new WeakChangeListener<>(onFocus));
+        // At the scene, because the smooth-scroll filter above the pane consumes the events before the pane sees them.
+        final WeakReference<ScrollAnchor> self = new WeakReference<>(this);
+        scene.addEventFilter(ScrollEvent.ANY, event -> {
+            final ScrollAnchor anchor = self.get();
+            if (anchor != null) {
+                anchor.lastScroll = anchor.nanos.getAsLong();
+            }
+        });
+    }
+
+    private boolean isScrolling() {
+        return lastScroll != 0 && nanos.getAsLong() - lastScroll < GESTURE_QUIET_NANOS;
     }
 
     private void focusMoved(final @Nullable Node was) {
@@ -118,8 +147,18 @@ public final class ScrollAnchor {
     private void onBounds(final Bounds now) {
         if (now.getHeight() != knownHeight) {
             knownHeight = now.getHeight();
-            restore();
+            restoreAfterResize("content height changed");
         }
+    }
+
+    // A change of the view's size is no reason to move it while the person is scrolling it.
+    private void restoreAfterResize(final String reason) {
+        if (isScrolling()) {
+            log.debug("{} while {} is being scrolled: keeping the view where the person has it", reason, pane.getId());
+            adoptValue();
+            return;
+        }
+        restore(reason);
     }
 
     private void onValue() {
@@ -127,29 +166,38 @@ public final class ScrollAnchor {
             return;
         }
         if (holding) {
-            restore();
+            restore("focus went away");
             return;
         }
         final Node content = pane.getContent();
         if (content == null || content.getLayoutBounds().getHeight() != knownHeight) {
             return;
         }
+        adoptValue();
+    }
+
+    private void adoptValue() {
         final double range = pane.getVmax() - pane.getVmin();
         final double overflow = overflow();
         offset = range <= 0 || overflow <= 0 ? 0 : (pane.getVvalue() - pane.getVmin()) / range * overflow;
     }
 
-    private void restore() {
+    private void restore(final String reason) {
         final double overflow = overflow();
         final double range = pane.getVmax() - pane.getVmin();
         if (overflow <= 0 || range <= 0) {
             return;
         }
+        final double before = pane.getVvalue();
+        final double target = pane.getVmin() + Math.clamp(offset / overflow, 0, 1) * range;
         restoring = true;
         try {
-            pane.setVvalue(pane.getVmin() + Math.clamp(offset / overflow, 0, 1) * range);
+            pane.setVvalue(target);
         } finally {
             restoring = false;
+        }
+        if (before != pane.getVvalue()) {
+            log.debug("{} of {}: view restored from {} to {}", reason, pane.getId(), before, pane.getVvalue());
         }
     }
 

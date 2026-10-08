@@ -365,6 +365,13 @@ whether vsync is on. The pulse logger prints every pulse slower than one frame (
 `-Djavafx.pulseLogger.threshold=<ms>`) with where the time went — CSS, layout, rendering. Compare before and after a
 change on the same book and window size; a run of long pulses while scrolling a list points at its cells.
 
+Scroll events reach the FX thread a couple of hundred times a second on a trackpad, so the scroll code logs one DEBUG line a
+second (`scroll: N events, X px in, Y px out, max gap Z ms`) and nothing per event. To capture the raw events for a bug
+report (every event's `deltaX`, `deltaY`, inertia and units at TRACE, a line each), launch with
+`JAVA_TOOL_OPTIONS="-Dbookloom.log.scroll=true"` and the trace log on; expect the log itself to cost frame time then. A
+trackpad's vertical swipe carries a pixel or two of sideways noise; the larger of the two parts decides the direction,
+and only the vertical part is applied (`SmoothScrollReplayTest` replays such a gesture against hand-driven pulses).
+
 ---
 
 ### Where the time goes {#where-the-time-goes}

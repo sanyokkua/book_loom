@@ -22,10 +22,7 @@ class PixelFlushTest extends FxTestBase {
     // two pulses is one move of their sum, and a pulse with nothing new moves nothing.
     @Test
     void handle_afterABurst_movesOnceByTheSumAndNotAgain() {
-        final PixelFlush flush = new PixelFlush(pixels -> {
-            moves.add(pixels);
-            return pixels;
-        });
+        final PixelFlush flush = new PixelFlush(moves::add);
 
         interact(() -> {
             flush.add(2);
@@ -43,10 +40,7 @@ class PixelFlushTest extends FxTestBase {
     // +6.
     @Test
     void handle_opposingDeltasInOneFrame_flushTheirNet() {
-        final PixelFlush flush = new PixelFlush(pixels -> {
-            moves.add(pixels);
-            return pixels;
-        });
+        final PixelFlush flush = new PixelFlush(moves::add);
 
         interact(() -> {
             flush.add(10);

@@ -246,9 +246,11 @@ class SmoothScrollTest extends FxTestBase {
         assertThat(ThemeTestSupport.onFx(flow::getPosition)).isCloseTo(expected, within(EXACT));
     }
 
-    // IF a horizontal part were swallowed with the vertical one, THEN sideways panning would die on a diagonal swipe.
+    // IF a mostly sideways swipe were swallowed, THEN sideways panning would die; the larger part decides
+    // (SmoothScrollReplayTest
+    // covers the vertical swipe with sideways noise).
     @Test
-    void pixelEvent_withAHorizontalPart_isLeftToJavaFx() {
+    void pixelEvent_mostlySideways_isLeftToJavaFx() {
         final ScrollEvent diagonal = new ScrollEvent(
                 ScrollEvent.SCROLL,
                 10,
@@ -262,9 +264,9 @@ class SmoothScrollTest extends FxTestBase {
                 false,
                 false,
                 5,
-                -5,
+                -1,
                 5,
-                -5,
+                -1,
                 ScrollEvent.HorizontalTextScrollUnits.NONE,
                 0,
                 ScrollEvent.VerticalTextScrollUnits.NONE,
