@@ -121,6 +121,7 @@ class ConsistencyPassRetryTest {
         book.decide(BOBBY, "Він зайшов. Він сів.", "Він зайшов. Він сів.");
         ReviewFixtures.withContext(book.desk(), BOBBY, SNAPSHOT);
         book.model().answerTo(DRAFT, reply(WHOLE));
+        neighbourKeeps(WHOLE);
 
         final ConsistencyReport report = ok(book.runExport(EXPORT));
 

@@ -1,8 +1,10 @@
 package ua.bookloom.pipeline.export;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -11,12 +13,16 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
+import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.SegmentOutcomeNote;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * The seam the consistency pass reaches the model through during an export: it refuses a call once the export is
- * cancelled, counts the finished calls of the stage the pass announced, and lets a cancel interrupt the call that is
- * waiting on the provider (the client turns the interrupt into {@code cancelled}).
+ * cancelled, counts the finished calls (or, for the retry stage, the finished segments) of the stage the pass
+ * announced, lets a cancel interrupt the call that is waiting on the provider (the client turns the interrupt into
+ * {@code cancelled}), and hands every described call to the seam it wraps, which shows it.
  */
 @Slf4j
 final class ExportCalls implements ModelCalls {
@@ -38,13 +44,42 @@ final class ExportCalls implements ModelCalls {
 
     @Override
     public Result<ChatResponse> call(final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
+        return guarded(kind, () -> delegate.call(kind, segmentId, request));
+    }
+
+    @Override
+    public Result<ChatResponse> callAbout(
+            final CallKind kind, final List<String> segmentIds, final ChatRequest request) {
+        return guarded(kind, () -> delegate.callAbout(kind, segmentIds, request));
+    }
+
+    @Override
+    public Result<ChatResponse> callAbout(
+            final CallKind kind,
+            final List<String> segmentIds,
+            final ChatRequest request,
+            final CallDescriptor descriptor) {
+        return guarded(kind, () -> delegate.callAbout(kind, segmentIds, request, descriptor));
+    }
+
+    @Override
+    public void noted(final SegmentOutcomeNote note) {
+        delegate.noted(note);
+    }
+
+    @Override
+    public void announce(final JobEvent event) {
+        delegate.announce(event);
+    }
+
+    private Result<ChatResponse> guarded(final CallKind kind, final Supplier<Result<ChatResponse>> send) {
         if (cancelled.get()) {
             log.debug("export model call refused: the export is cancelled kind={}", kind);
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
         waiting.set(Thread.currentThread());
         try {
-            return delegate.call(kind, segmentId, request);
+            return send.get();
         } finally {
             waiting.set(null);
             // A cancel racing the end of the call must not leave the flag on the thread that goes on to write files.

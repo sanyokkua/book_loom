@@ -20,11 +20,25 @@ import ua.bookloom.pipeline.lexicon.TermMatch;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class InjectedLexicon {
+public final class InjectedLexicon {
 
     static List<SnapshotRendering> select(
             final Chunk chunk, final List<LexiconEntry> lexicon, final List<GlossaryEntry> glossary) {
-        final List<String> texts = chunk.segments().stream()
+        return select(chunk.segments(), lexicon, glossary);
+    }
+
+    /**
+     * The established renderings of the recurring terms some segments name.
+     *
+     * @param segments the segments whose text decides which terms are present
+     * @param lexicon every lexicon entry
+     * @param glossary every glossary entry, whose terms the lexicon never overrides
+     * @return one rendering per present term that has an established one and no glossary entry, in lexicon order;
+     *     never null, empty when none is
+     */
+    public static List<SnapshotRendering> select(
+            final List<Segment> segments, final List<LexiconEntry> lexicon, final List<GlossaryEntry> glossary) {
+        final List<String> texts = segments.stream()
                 .map(Segment::masked)
                 .map(masked -> Tokens.replace(masked, " "))
                 .toList();
@@ -34,11 +48,17 @@ final class InjectedLexicon {
                 .flatMap(entry ->
                         entry.established().map(rendering -> new SnapshotRendering(entry.term(), rendering)).stream())
                 .toList();
-        log.trace("Lexicon renderings for the chunk offered={} selected={}", lexicon.size(), selected.size());
+        log.trace("Lexicon renderings offered={} selected={}", lexicon.size(), selected.size());
         return selected;
     }
 
-    static String line(final SnapshotRendering rendering) {
+    /**
+     * How a prompt lists one rendering.
+     *
+     * @param rendering the non-null rendering
+     * @return {@code term → rendering}
+     */
+    public static String line(final SnapshotRendering rendering) {
         return rendering.term() + " → " + rendering.rendering();
     }
 

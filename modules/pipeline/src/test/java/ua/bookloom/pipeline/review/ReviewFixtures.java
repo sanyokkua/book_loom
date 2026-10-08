@@ -18,9 +18,11 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.SentenceSplitter;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.pipeline.ImportedBook;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.QualityDial;
@@ -77,7 +79,9 @@ public final class ReviewFixtures {
             DocumentPort documents,
             RunRepository runs,
             GlossaryRepository glossary,
-            SentenceSplitter splitter) {
+            SentenceSplitter splitter,
+            LexiconRepository lexicon,
+            SummaryRepository summaries) {
 
         /** Queries over the same stores whose opened books are forgotten. */
         ReviewQueries queriesWithoutOpenBook() {
@@ -209,27 +213,29 @@ public final class ReviewFixtures {
 
     /** Stores {@code id} with the snapshot of what its first draft saw. */
     public static void withContext(final Desk desk, final String id, final ContextSnapshot context) {
-        update(
-                desk,
-                id,
-                record -> new SegmentRecord(
-                        record.projectId(),
-                        record.segmentId(),
-                        record.unitId(),
-                        record.ord(),
-                        record.kind(),
-                        record.status(),
-                        record.machineTarget(),
-                        record.maskedMachineTarget(),
-                        record.userTarget(),
-                        record.maskedUserTarget(),
-                        record.confidence(),
-                        record.judgeScore(),
-                        record.findings(),
-                        record.path(),
-                        record.repairRounds(),
-                        record.reviewed(),
-                        context));
+        update(desk, id, record -> withContext(record, context));
+    }
+
+    /** The record carrying the snapshot of what its first draft saw. */
+    public static SegmentRecord withContext(final SegmentRecord record, final ContextSnapshot context) {
+        return new SegmentRecord(
+                record.projectId(),
+                record.segmentId(),
+                record.unitId(),
+                record.ord(),
+                record.kind(),
+                record.status(),
+                record.machineTarget(),
+                record.maskedMachineTarget(),
+                record.userTarget(),
+                record.maskedUserTarget(),
+                record.confidence(),
+                record.judgeScore(),
+                record.findings(),
+                record.path(),
+                record.repairRounds(),
+                record.reviewed(),
+                context);
     }
 
     /** Records the project's latest run in {@code state}; an ended run ends when it started. */
@@ -288,6 +294,8 @@ public final class ReviewFixtures {
                 documents,
                 injector.getInstance(RunRepository.class),
                 injector.getInstance(GlossaryRepository.class),
-                injector.getInstance(SentenceSplitter.class));
+                injector.getInstance(SentenceSplitter.class),
+                injector.getInstance(LexiconRepository.class),
+                injector.getInstance(SummaryRepository.class));
     }
 }

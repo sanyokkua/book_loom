@@ -10,6 +10,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -98,7 +99,13 @@ final class ExportJobFixture {
 
     ExportServiceImpl serviceOver(final DocumentPort port) {
         return new ExportServiceImpl(
-                projects(), segments(), openProjects(), port, injector.getInstance(ConsistencyPass.class), glossary());
+                projects(),
+                segments(),
+                openProjects(),
+                port,
+                injector.getInstance(ConsistencyPass.class),
+                glossary(),
+                Clock.systemUTC());
     }
 
     /** Imports {@code source} and briefs it from {@code sourceLanguage} to Ukrainian with the default switches. */

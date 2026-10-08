@@ -22,13 +22,16 @@ import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.persistence.DeferralRepository;
 import ua.bookloom.api.persistence.GlossaryRepository;
+import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.persistence.SummaryRepository;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
@@ -63,6 +66,8 @@ public final class ConsistencyPass {
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
     private final RetryDraft retryDraft;
+    private final LexiconRepository lexicon;
+    private final SummaryRepository summaries;
 
     /**
      * Runs the pass over a project's open deferrals.
@@ -94,7 +99,7 @@ public final class ConsistencyPass {
                 "Backward revision requested project={} withModel={} retryDoubted={} everySegment={}",
                 projectId,
                 calls != null,
-                options.retryDoubted(),
+                options.reviseDoubted(),
                 options.everySegment());
         try {
             return inputs(projectId).flatMap(inputs -> runWith(inputs, calls, options));
@@ -148,25 +153,35 @@ public final class ConsistencyPass {
         final RevisionCall call = new RevisionCall(templates, new DraftReplyParser(mapper));
         return new GenderRevision(glossary, segments, deferrals, writer, call)
                 .revise(inputs, open, calls, tally)
-                .flatMap(revised -> retryDoubted(inputs, calls, tally, options))
-                .flatMap(retried -> new NeighbourRevision(segments, writer, call).revise(inputs, calls, tally));
+                .flatMap(revised -> doubted(inputs, options))
+                .flatMap(doubted -> retryDoubted(inputs, doubted, calls, tally)
+                        .flatMap(retried -> new NeighbourRevision(segments, writer, call)
+                                .revise(
+                                        inputs,
+                                        calls,
+                                        tally,
+                                        new NeighbourRevision.Scope(Set.copyOf(doubted), options.everySegment()))));
     }
 
     // The audit reads the records as they stand once the gender step has run, so a segment it re-rendered is judged
-    // on its new text.
-    private Result<Boolean> retryDoubted(
-            final PassInputs inputs, final ModelCalls calls, final PassTally tally, final PassOptions options) {
-        if (!options.retryDoubted()) {
-            log.debug("Retry of doubted segments not asked for project={}", inputs.projectId());
-            return Result.ok(false);
+    // on its new text; the ids are read once, so the neighbour check still reads a segment the retry improved.
+    private Result<List<String>> doubted(final PassInputs inputs, final PassOptions options) {
+        if (!options.reviseDoubted()) {
+            log.debug("Doubted segments not revised project={}", inputs.projectId());
+            return Result.ok(List.of());
         }
-        return inOrder(inputs)
-                .flatMap(records -> new RetryPass(segments, retryDraft)
-                        .retry(
-                                inputs,
-                                RetryPass.doubted(records, FinalAudit.scan(inputs.book(), records)),
-                                calls,
-                                tally));
+        return inOrder(inputs).map(records -> {
+            final List<String> doubted = RetryPass.doubted(records, FinalAudit.scan(inputs.book(), records));
+            log.debug("Doubted segments project={} count={}", inputs.projectId(), doubted.size());
+            return doubted;
+        });
+    }
+
+    private Result<Boolean> retryDoubted(
+            final PassInputs inputs, final List<String> doubted, final ModelCalls calls, final PassTally tally) {
+        return doubted.isEmpty()
+                ? Result.ok(false)
+                : new RetryPass(segments, retryDraft).retry(inputs, doubted, calls, tally);
     }
 
     private Result<List<SegmentRecord>> inOrder(final PassInputs inputs) {
@@ -218,15 +233,31 @@ public final class ConsistencyPass {
                     "Nothing to revise",
                     "The project must be stored, name a target language and have its book open to be revised."));
         }
-        return glossary.all(projectId).map(entries -> inputsOf(projectId, brief, target, document, entries));
+        return bookContext(projectId)
+                .flatMap(context ->
+                        glossary.all(projectId).map(entries -> inputsOf(projectId, brief, document, entries, context)));
+    }
+
+    private Result<BookContext> bookContext(final String projectId) {
+        final Result<Optional<RollingSummary>> summary = summaries.latest(projectId);
+        if (summary.isErr()) {
+            return Result.err(Objects.requireNonNull(summary.error(), "error"));
+        }
+        final String text = Objects.requireNonNull(summary.data(), "summary")
+                .map(RollingSummary::target)
+                .filter(target -> !target.isBlank())
+                .orElse(null);
+        log.debug("Backward revision context project={} summary={}", projectId, text != null);
+        return lexicon.all(projectId).map(terms -> new BookContext(terms, text));
     }
 
     private PassInputs inputsOf(
             final String projectId,
             final BookBrief brief,
-            final String target,
             final Document document,
-            final List<GlossaryEntry> entries) {
+            final List<GlossaryEntry> entries,
+            final BookContext context) {
+        final String target = Objects.requireNonNull(brief.targetLanguage(), "target");
         final String source = brief.sourceLanguage() == null ? document.declaredLang() : brief.sourceLanguage();
         final Map<String, Segment> sources = new LinkedHashMap<>();
         document.units().forEach(unit -> unit.segments().forEach(segment -> sources.put(segment.id(), segment)));
@@ -239,7 +270,8 @@ public final class ConsistencyPass {
                 SegmentLocators.of(document),
                 entries,
                 List.copyOf(sources.keySet()),
-                new FinalAudit.Book(brief, document, entries, WordValidator.none()));
+                new FinalAudit.Book(brief, document, entries, WordValidator.none()),
+                context);
     }
 
     // Counted by segment: a segment naming two unknown-gender characters holds two deferrals but is one segment that

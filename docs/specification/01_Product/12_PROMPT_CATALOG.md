@@ -692,6 +692,76 @@ the reply must still carry every locked rendering present in the segment (the gl
 `{"target":"<revised translation>"}` — the same single-segment shape as `#draft-translation`; a segment that needs no
 change comes back unchanged, and a deferral that does not need re-rendering is simply not called.
 
+## consistency-neighbour-check {#consistency-neighbour-check}
+
+The export's consistency pass (`prompt: consistency`), applied **one paragraph per call** after the pass has drafted
+every flagged or audit-doubted segment again (the review desk's single-segment `#draft-translation` with the replayed
+context, kept only when better). It reads the repaired, flagged and doubted paragraphs — every machine-owned paragraph
+when the export asks for every segment, the default on Max — and fixes what disagrees with the book. The system message
+carries the style sheet with the narrator, as every rewrite does. An answer is kept only when it passes the checks with
+the real glossary, is no worse by them, keeps the old text's quote marks, dialogue dashes and sentences, loses at most a
+fifth of its words, brings no new Latin run and no new audit doubt; a refusal is counted by the rule it broke.
+
+**USER**
+
+```
+{{#previous}}
+[Previous paragraph — context only; do NOT re-translate it]
+{{previous}}
+
+{{/previous}}
+{{#next}}
+[Next paragraph — context only; do NOT re-translate it]
+{{next}}
+
+{{/next}}
+{{#resolvedFacts}}
+[Names and terms]
+{{resolvedFacts}}
+
+{{/resolvedFacts}}
+{{#lexiconTerms}}
+[Established renderings of recurring terms — keep consistent]
+{{lexiconTerms}}
+
+{{/lexiconTerms}}
+{{#characters}}
+[Characters in this text — keep their gender and agreement]
+{{characters}}
+
+{{/characters}}
+{{#summary}}
+[Book so far — context only]
+{{summary}}
+
+{{/summary}}
+<Source>
+{{source}}
+</Source>
+
+{{#tokens}}
+[Immutable tokens]
+Copy this exact ordered sequence unchanged: {{tokens}}
+{{/tokens}}
+
+<Translation>
+{{text}}
+</Translation>
+
+Return one JSON object: {"target":"<the checked translation, or the same text if nothing changes>"}
+```
+
+| Variable            | Required? | Source / notes                                                                                              |
+|---------------------|-----------|---------------------------------------------------------------------------------------------------------------|
+| `{{previous}}`, `{{next}}` | Optional | The paragraph before and after, as `Source: …` and `Translation: …` lines; dropped at a book edge or when it has no translation yet. |
+| `{{resolvedFacts}}` | Optional  | `- term → target, gender` for every glossary name the three paragraphs hold, at most 40 lines and about 600 tokens. |
+| `{{lexiconTerms}}`  | Optional  | `term → rendering` for the recurring terms the three paragraphs name that the glossary does not decide, about 400 tokens. |
+| `{{characters}}`    | Optional  | `name — gender` for each glossary character of known gender they name, about 200 tokens.                    |
+| `{{summary}}`       | Optional  | The rolling summary in the target language.                                                                 |
+| `{{source}}`, `{{text}}`, `{{tokens}}` | Required / optional | The masked source, the stored masked target and the source's `⟦gN⟧` sequence.        |
+
+**Parameters:** temperature 0.1; output format = JSON object / schema `{"target":"…"}`.
+
 ## book-brief-tone-setup {#book-brief-tone-setup}
 
 One-time Prep call (phase B, `05_TRANSLATION_ALGORITHM.md#phase-b-prep`, `FR-ALGO-B2`) that turns the user's Book Brief

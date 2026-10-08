@@ -8,6 +8,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.google.inject.Guice;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
@@ -42,8 +43,11 @@ class ExportJobLogTest {
 
     @BeforeEach
     void setUp() {
-        final var injector =
-                Guice.createInjector(new DocumentModule(), new PersistenceModule(), new ReviewModeTestModule());
+        final var injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                new ReviewModeTestModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
         appender.start();

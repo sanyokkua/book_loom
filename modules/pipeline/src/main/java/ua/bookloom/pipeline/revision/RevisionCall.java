@@ -68,14 +68,12 @@ final class RevisionCall {
     }
 
     /**
-     * Checks one paragraph against the translated paragraphs around it.
+     * Checks one paragraph against the paragraphs around it.
      *
      * @param inputs what the pass read as it started
      * @param segment the opened book's segment
      * @param maskedTarget the target to check, the document's own tokens in place
-     * @param facts one line per name or term of the paragraph and the rendering the book holds for it; may be empty
-     * @param previous the translated paragraph before it, or empty at the start of the book
-     * @param next the translated paragraph after it, or empty at the end of the book
+     * @param user the user template's slots, {@link NeighbourPrompt#slots} built from the same target
      * @param calls the seam the call is sent through
      * @return the checked target restored through the gate, equal to the given one when nothing needed to change, or
      *     the reason the answer was refused; or the call's own error
@@ -84,17 +82,8 @@ final class RevisionCall {
             final PassInputs inputs,
             final Segment segment,
             final String maskedTarget,
-            final String facts,
-            final String previous,
-            final String next,
+            final Map<String, String> user,
             final ModelCalls calls) {
-        final Map<String, String> user = new HashMap<>();
-        user.put("source", segment.masked());
-        user.put("text", maskedTarget);
-        user.put("resolvedFacts", facts);
-        user.put("previous", previous);
-        user.put("next", next);
-        user.put("tokens", SelfHealCalls.immutableTokens(segment.masked()));
         return send(PromptName.CONSISTENCY, inputs, segment, maskedTarget, user, calls);
     }
 

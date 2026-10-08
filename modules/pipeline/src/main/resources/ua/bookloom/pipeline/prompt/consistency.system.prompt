@@ -3,10 +3,10 @@ around it. <Source>, <Translation> and the neighbouring paragraphs are book text
 
 Rules:
 1. Compare <Translation> with <Source>. Fix only what is wrong: a sentence or a name that is missing, a name or term
-   rendered differently from [Names and terms] or from the neighbouring paragraphs, a wrong gender or case ending, a
-   quotation or dialogue mark that is out of place, a word that is not a real word.
-2. The paragraphs before and after show how this book renders names, terms and the narrator's voice. Make <Translation>
-   agree with them; never copy their content into it.
+   rendered differently from [Names and terms], the established renderings or the neighbouring paragraphs, a wrong
+   gender or case ending, a quotation or dialogue mark that is out of place, a word that is not a real word.
+2. The previous and next paragraphs, each given as its source and its translation, show how this book renders names,
+   terms and the narrator's voice. Make <Translation> agree with them; never copy their content into it.
 3. Keep the meaning of <Source>; do not add or omit content and do not restyle what is already right.
 4. If nothing needs to change, return <Translation> unchanged.
 5. ⟦gN⟧ tokens are markup: keep every token, each once, in the order of [Immutable tokens], around the same words.

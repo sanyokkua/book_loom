@@ -67,7 +67,9 @@ class ConsistencyPassNeighbourTest {
 
         assertThat(book.model().requests()).hasSize(1);
         assertThat(book.userMessage(0))
-                .contains("[Previous paragraph, translated]\nРанок.", "[Next paragraph, translated]\nВечір.")
+                .contains(
+                        "Source: Chapter 1 line 6.\nTranslation: Ранок.",
+                        "Source: Chapter 1 line 8.\nTranslation: Вечір.")
                 .contains("- Hale → Гейл, male")
                 .contains("<Translation>\n" + BEFORE + "\n</Translation>");
         assertThat(book.stored(SAM_MET_HALE))

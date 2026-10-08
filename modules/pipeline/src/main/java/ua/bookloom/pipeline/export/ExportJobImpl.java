@@ -22,6 +22,7 @@ import ua.bookloom.api.pipeline.ExportProgress;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -106,7 +107,7 @@ final class ExportJobImpl implements ExportJob {
         if (isCancelledBefore("consistency-pass")) {
             return Result.err(BookExporter.cancelledBeforeWriting());
         }
-        return consistencyPass(project.id()).flatMap(pass -> writeStored(project, book, pass.orElse(null)));
+        return consistencyPass(project).flatMap(pass -> writeStored(project, book, pass.orElse(null)));
     }
 
     private @Nullable AppError refusal(final Project project, @Nullable final Document opened) {
@@ -174,17 +175,26 @@ final class ExportJobImpl implements ExportJob {
         return occupied && !request.overwrite();
     }
 
-    private Result<Optional<ConsistencyReport>> consistencyPass(final String projectId) {
+    private Result<Optional<ConsistencyReport>> consistencyPass(final Project project) {
+        final boolean everySegment =
+                switch (request.consistencyScope()) {
+                    case BY_DIAL -> project.brief().dial() == QualityDial.MAX;
+                    case DOUBTED -> false;
+                    case EVERY_SEGMENT -> true;
+                };
         log.debug(
-                "export step=consistency-pass project={} requested={} withModel={}",
-                projectId,
+                "export step=consistency-pass project={} requested={} withModel={} scope={} dial={} everySegment={}",
+                project.id(),
                 request.consistencyPass(),
-                calls != null);
+                calls != null,
+                request.consistencyScope(),
+                project.brief().dial(),
+                everySegment);
         if (!request.consistencyPass()) {
             return Result.ok(Optional.empty());
         }
         return parts.consistencyPass()
-                .run(projectId, calls, new PassOptions(true, false))
+                .run(project.id(), calls, new PassOptions(true, everySegment))
                 .map(Optional::of);
     }
 
@@ -220,13 +230,21 @@ final class ExportJobImpl implements ExportJob {
         final ConsistencySummary.Status status =
                 calls == null ? ConsistencySummary.Status.RAN_WITHOUT_MODEL : ConsistencySummary.Status.RAN;
         log.debug(
-                "export consistency summary status={} termSubstitutions={} genderReRenders={} openDeferrals={}",
+                "export consistency summary status={} termSubstitutions={} genderReRenders={} openDeferrals={}"
+                        + " neighbourFixes={} checks={}",
                 status,
                 pass.termSubstitutions(),
                 pass.genderReRenders(),
-                pass.openDeferrals());
+                pass.openDeferrals(),
+                pass.neighbourFixes(),
+                pass.checks());
         return new ConsistencySummary(
-                status, pass.termSubstitutions(), pass.genderReRenders(), pass.openDeferrals(), pass.neighbourFixes());
+                status,
+                pass.termSubstitutions(),
+                pass.genderReRenders(),
+                pass.openDeferrals(),
+                pass.neighbourFixes(),
+                pass.checks());
     }
 
     private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {

@@ -38,6 +38,8 @@ final class ConsistencyPassFixture {
                         new ObjectMapper(),
                         Guice.createInjector().getInstance(QualityLoop.class),
                         Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
-                        ReviewMode.UNATTENDED));
+                        ReviewMode.UNATTENDED),
+                project.stores().lexicon(),
+                project.stores().summaries());
     }
 }

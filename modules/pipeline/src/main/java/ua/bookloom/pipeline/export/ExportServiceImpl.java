@@ -1,25 +1,32 @@
 package ua.bookloom.pipeline.export;
 
 import com.google.inject.Inject;
+import java.time.Clock;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ExportJob;
 import ua.bookloom.api.pipeline.ExportProgressListener;
 import ua.bookloom.api.pipeline.ExportRequest;
 import ua.bookloom.api.pipeline.ExportService;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.project.OpenProjects;
+import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
+import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
  * Refuses a destination the stored project's source cannot be written to, then hands back the job that writes it.
@@ -30,12 +37,15 @@ import ua.bookloom.pipeline.revision.ConsistencyPass;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class ExportServiceImpl implements ExportService {
 
+    private static final String UNKNOWN_LANGUAGE = "und";
+
     private final ProjectRepository projects;
     private final SegmentRepository segments;
     private final OpenProjects openProjects;
     private final DocumentPort documents;
     private final ConsistencyPass consistencyPass;
     private final GlossaryRepository glossary;
+    private final Clock clock;
 
     @Override
     public Result<ExportJob> newExport(final ExportRequest request, @Nullable final ChatModel model) {
@@ -94,10 +104,35 @@ public final class ExportServiceImpl implements ExportService {
         if (checked.isErr()) {
             return Result.err(Objects.requireNonNull(checked.error(), "error"));
         }
-        // The pass's revision calls reach the model the person chose; without one, gender deferrals stay open.
-        final ModelCalls calls = model == null ? null : (kind, segmentId, chat) -> model.chat(chat);
+        // The pass's calls reach the model the person chose; without one, only the name sweep runs.
+        final ModelCalls calls = model == null ? null : shownCalls(project, model, progress);
         final ExportParts parts =
                 new ExportParts(projects, segments, openProjects, documents, moves, consistencyPass, glossary);
         return Result.ok(new ExportJobImpl(request, parts, calls, progress));
+    }
+
+    // The pass's calls are timed and shown as a run's are: each described call reaches the listener as a snapshot.
+    private ModelCalls shownCalls(final Project project, final ChatModel model, final ExportProgressListener progress) {
+        final Document opened = openProjects.get(project.id());
+        final String target = Objects.requireNonNullElse(project.brief().targetLanguage(), UNKNOWN_LANGUAGE);
+        log.debug(
+                "export calls are shown project={} bookOpen={} targetLanguage={}",
+                project.id(),
+                opened != null,
+                target);
+        return new JobModelCalls(
+                onSent -> {
+                    onSent.run();
+                    return model;
+                },
+                event -> {
+                    if (event instanceof CallSnapshotUpdated updated) {
+                        progress.onCall(updated.snapshot());
+                    }
+                },
+                clock,
+                target,
+                ContextBudget.DEFAULT_WINDOW,
+                opened == null ? Map.of() : SegmentLocators.of(opened));
     }
 }

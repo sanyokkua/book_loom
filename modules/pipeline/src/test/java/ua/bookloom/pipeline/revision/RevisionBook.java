@@ -99,7 +99,9 @@ final class RevisionBook {
                 desk.glossary(),
                 new PromptTemplates(),
                 new ObjectMapper(),
-                desk.retryDraft(ReviewMode.UNATTENDED));
+                desk.retryDraft(ReviewMode.UNATTENDED),
+                desk.lexicon(),
+                desk.summaries());
     }
 
     GlossaryEntry character(

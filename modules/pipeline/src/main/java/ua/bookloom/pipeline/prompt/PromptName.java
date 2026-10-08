@@ -135,7 +135,9 @@ public enum PromptName {
             null,
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"), Set.of("examples")),
-            new Slots(Set.of("source", "text"), Set.of("resolvedFacts", "previous", "next", "tokens"))),
+            new Slots(
+                    Set.of("source", "text"),
+                    Set.of("resolvedFacts", "previous", "next", "lexiconTerms", "characters", "summary", "tokens"))),
 
     /** The choice among recurring words the Recurring terms section asks for: keep or drop, a batch of candidates a call. */
     TERM_CHOICE(

@@ -318,6 +318,60 @@ is a plain text substitution, so it can only find a spelling it knew: the one th
 - **WHEN** the person saved an edit of `ch2 · p4` reading `Джастін прийшла.` and the book is exported with the switch on
 - **THEN** the written `ch2 · p4` reads `Джастін прийшла.`
 
+### Requirement: Draft doubted segments again and check paragraphs against their neighbours during the pass
+
+WHEN an export runs the consistency pass with a model, the system SHALL, after the name sweep and the gender
+re-render, draft every machine-owned segment that is FLAGGED or that the final audit doubts again — with the context
+its first draft saw, the run's checks, reviewer and acceptance rule — and SHALL store the new text only when the
+acceptance rule takes it, the old text was flagged or the new one fails fewer checks or fewer audit checks, and the new
+text keeps the old one's quote marks, dialogue dashes and sentences, loses no more than a fifth of its words, brings no
+new Latin run, fails no check the old one passed and raises no audit doubt the old one did not have.
+
+THEN the system SHALL check against the paragraphs around it every machine-owned paragraph that the run repaired or
+flagged or that the audit doubted — and, WHERE the export asks for every segment (the default on the Max quality dial),
+every machine-owned decided paragraph — showing the model the previous and the next paragraph each as source and
+translation, the glossary renderings of the names the three paragraphs hold, the established renderings of recurring
+terms, the genders of the characters they name, the rolling summary, the style sheet with the narrator, and the
+source's immutable tokens; an answer SHALL be stored only under the same rules, its counts kept unchanged.
+
+The system SHALL never change a segment the person edited, SHALL skip a segment whose call fails and go on, SHALL end
+with `cancelled` when the person cancels — keeping every change already stored — and SHALL announce each call as a call
+snapshot and each step's progress (the retry counted by segment, the neighbour check by call).
+
+**Source:** FR-EXPORT-06 (`docs/specification/01_Product/01_FUNCTIONAL_REQUIREMENTS.md#fr-export`), FR-ALGO-10
+(`#fr-algo`), FR-REVIEW-10 (`#fr-review`).
+In plain words: the pass now spends its model calls where the run had trouble — it retries what was flagged or looks
+wrong and keeps the retry only when it is really better — and then reads each such paragraph with everything the run
+knew about the book, refusing any answer that strips quotes, drops a sentence or a name, or brings in English words,
+which is what a real pass did to a finished book before.
+
+#### Scenario: A flagged segment with a dropped sentence is drafted again
+
+- **WHEN** `ch2 · p03` (`Bobby came in. He sat down.`) is FLAGGED reading `Боббі зайшов.` and the retry drafts
+  `Боббі зайшов. Він сів.`, which the acceptance rule takes
+- **THEN** the written `ch2 · p03` reads `Боббі зайшов. Він сів.` and the report counts one segment improved
+
+#### Scenario: A retry that strips the quote marks is refused
+
+- **WHEN** `ch2 · p05` (`“Run, Bobby,” I said. He ran.`) is FLAGGED reading `«Біжи, Боббі», — сказав я. Він побіг.`
+  and the retry drafts `Біжи, Боббі, сказав я. Він побіг.`
+- **THEN** the segment keeps `«Біжи, Боббі», — сказав я. Він побіг.` and the report counts one answer refused by
+  `quotes`
+
+#### Scenario: The check shows both neighbours as source and translation
+
+- **WHEN** `ch1 · p08` was repaired, `ch1 · p07` reads `Chapter 1 line 6.` → `Ранок.` and `ch1 · p09` reads
+  `Chapter 1 line 8.` → `Вечір.`
+- **THEN** the check's prompt holds `Source: Chapter 1 line 6.` and `Translation: Ранок.` before
+  `Source: Chapter 1 line 8.` and `Translation: Вечір.`, then the names, the recurring terms, the characters and the
+  summary, then the source and the text to check
+
+#### Scenario: A clean paragraph is checked only when every segment is asked for
+
+- **WHEN** a book of three clean accepted paragraphs is exported with the pass on the Balanced dial
+- **THEN** no check against the neighbours is sent
+- **AND** on the Max dial each of the three is checked once
+
 ### Requirement: Show the export format as the book's own
 
 The export screen SHALL show the format as a read-only row naming the book's format and stating that it is the same as

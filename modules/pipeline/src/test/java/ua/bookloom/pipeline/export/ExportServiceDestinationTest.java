@@ -6,6 +6,7 @@ import com.google.inject.Guice;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,8 +39,11 @@ class ExportServiceDestinationTest {
 
     @BeforeEach
     void setUp() {
-        final var injector =
-                Guice.createInjector(new DocumentModule(), new PersistenceModule(), new ReviewModeTestModule());
+        final var injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                new ReviewModeTestModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
     }

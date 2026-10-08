@@ -8,6 +8,7 @@ import com.google.inject.Injector;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -65,7 +66,11 @@ class ExportServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        injector = Guice.createInjector(new DocumentModule(), new PersistenceModule(), new ReviewModeTestModule());
+        injector = Guice.createInjector(
+                new DocumentModule(),
+                new PersistenceModule(),
+                new ReviewModeTestModule(),
+                binder -> binder.bind(Clock.class).toInstance(Clock.systemUTC()));
         service = injector.getInstance(ExportServiceImpl.class);
         projectService = injector.getInstance(ProjectServiceImpl.class);
         projects = injector.getInstance(ProjectRepository.class);
@@ -234,7 +239,8 @@ class ExportServiceImplTest {
                 openProjects,
                 port,
                 injector.getInstance(ConsistencyPass.class),
-                injector.getInstance(GlossaryRepository.class));
+                injector.getInstance(GlossaryRepository.class),
+                Clock.systemUTC());
         final ExportJob job = dataOf(blocking.newExport(request(id, destination, false), null));
         workers = Executors.newSingleThreadExecutor();
 

@@ -1,18 +1,33 @@
+{{#previous}}
+[Previous paragraph — context only; do NOT re-translate it]
+{{previous}}
+
+{{/previous}}
+{{#next}}
+[Next paragraph — context only; do NOT re-translate it]
+{{next}}
+
+{{/next}}
 {{#resolvedFacts}}
 [Names and terms]
 {{resolvedFacts}}
 
 {{/resolvedFacts}}
-{{#previous}}
-[Previous paragraph, translated]
-{{previous}}
+{{#lexiconTerms}}
+[Established renderings of recurring terms — keep consistent]
+{{lexiconTerms}}
 
-{{/previous}}
-{{#next}}
-[Next paragraph, translated]
-{{next}}
+{{/lexiconTerms}}
+{{#characters}}
+[Characters in this text — keep their gender and agreement]
+{{characters}}
 
-{{/next}}
+{{/characters}}
+{{#summary}}
+[Book so far — context only]
+{{summary}}
+
+{{/summary}}
 <Source>
 {{source}}
 </Source>
