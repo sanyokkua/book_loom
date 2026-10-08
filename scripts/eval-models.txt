@@ -1,16 +1,27 @@
-# The models scripts/eval-matrix.sh runs by default: <provider>:<model-id>, one per line, in run order.
-# Provider is ollama or lmstudio. Refresh this file when `ollama ls` / `lms ls` change; nothing else lists models.
+# The models scripts/eval-matrix.sh runs by default, one per line, in run order:
+#   <provider>:<model-id> [context-length|-] [label]
+# Provider is ollama or lmstudio. The context length (tokens) is passed to `lms load --context-length` and defaults to
+# 16384, the window a run uses; ollama ignores it (the app sets num_ctx per request). The label gives an LM Studio model
+# its own identifier `<model>-<label>`, so the same model twice (two quants, two context lengths) gives two reports.
+# Refresh this file when `ollama ls` / `lms ls` change; nothing else lists models.
 # Not listed on purpose: ollama qwen2.5:1.5b (a stub for API checks only, cannot translate to Ukrainian).
 # Order: the gemma-4 e4b target in every quant first, then the other sizes, then the rest.
 ollama:gemma4:e4b-mlx
 ollama:gemma4:e4b-mxfp8
 lmstudio:google/gemma-4-e4b
+# `lms ls google/gemma-4-e4b` lists two variants here (google/gemma-4-e4b@4bit and @8bit), but `lms load
+# google/gemma-4-e4b@8bit` answers "Model not found" (checked), so the loadable key of the 8-bit file is not verified.
+# When `lms load <key>` works for it, replace <q8-key> and enable both lines (the plain line above is the 4-bit default):
+# lmstudio:google/gemma-4-e4b 16384 q4
+# lmstudio:<q8-key> 16384 q8
 ollama:gemma4:e2b-mlx
 lmstudio:google/gemma-4-e2b
 ollama:gemma4:12b-mxfp8
 ollama:gemma4:12b-mlx
 ollama:gemma4:26b-mlx
 lmstudio:google/gemma-4-26b-a4b-qat
+# The 26b again under another label, e.g. at a larger context (pair it with BOOKLOOM_EVAL_WINDOW to size requests to it):
+# lmstudio:google/gemma-4-26b-a4b-qat 32768 ctx32k
 ollama:gpt-oss:20b
 ollama:qwen3.8:27b-mlx
 lmstudio:qwen/qwen3.8-27b

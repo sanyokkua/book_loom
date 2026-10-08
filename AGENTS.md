@@ -20,7 +20,7 @@ sweep), `:llm` (chat-model contract, factory, pseudo model, gated/retried Ollama
 token usage, verification, model discovery), `:persistence` (in-memory adapters behind the storage ports), `:pipeline`
 (translation engine, pausable and interruptible job, checked export; prompt templates, style sheet, quality dial, chunk
 packing, oversized-segment splitting, the stored-project service; the quality gates — deterministic checks, refusal
-gate, confidence, the per-chunk reviewer with verified edits, directed fix, reflect → improve, polish, acceptance rule and quality loop; open language tags, the deterministic and model name scans, protected spans,
+gate, confidence, the per-chunk reviewer with verified edits, directed fix, acceptance rule and quality loop; open language tags, the deterministic and model name scans, protected spans,
 translation memory, rolling summary, context assembly, the deferral register, the glossary service with CSV), `:ui`
 (the shell, six screens, the state mirror, English and Ukrainian bundles chosen by the OS, light/dark theme) and `:app`
 (boot, logging, single-instance lock, DI, the window). A book of any of the four formats goes through the whole

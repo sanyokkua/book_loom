@@ -47,8 +47,8 @@ import ua.bookloom.pipeline.run.JobModelCalls;
  *
  * <p>The requests are the app's: {@link PromptEvalRunner} and {@link BatchEvalRunner} build them with the run's own
  * request factory over an {@link EvalProject}, and every call goes through {@link JobModelCalls}, which sizes it to the
- * window. {@code BOOKLOOM_EVAL_WINDOW} sets that window (default: what the app uses when the provider reports none or
- * more than its cap), so a model can be measured at the window a run will give it.
+ * window. {@code BOOKLOOM_EVAL_WINDOW} sets that window (default: the context length the provider reports for the model,
+ * limited as a run limits it, else the app's default), so a model can be measured at the window a run will give it.
  */
 @Slf4j
 @Tag("promptEval")
@@ -56,7 +56,8 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 @DisabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "batch|words|realrun|sequence")
 class PromptEvalTest {
 
-    private static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
+    static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
+    static final String PROVIDER_ID = "eval";
     private static final List<String> LANGUAGES =
             List.of("en", "ru", "uk", "fr", "hr", "pl", "cs", "sl", "sk", "es", "pt", "de");
 
@@ -121,7 +122,7 @@ class PromptEvalTest {
         Files.createDirectories(Objects.requireNonNull(file.getParent()));
         Files.writeString(file, report.table() + "\n", StandardCharsets.UTF_8);
         Files.writeString(file.resolveSibling(name + ".json"), report.json() + "\n", StandardCharsets.UTF_8);
-        log.info("Prompt eval report {}\n{}", file.toAbsolutePath(), report.table());
+        log.info("Prompt eval report {} window={}\n{}", file.toAbsolutePath(), EvalProject.window(), report.table());
     }
 
     private static String safeName(final String model) {
@@ -140,12 +141,12 @@ class PromptEvalTest {
                 EvalProject.window());
     }
 
-    /** The real chat model of the eval's provider, built by the production factory. */
-    static ChatModel chatModel(final String modelId) {
+    /** An injector whose provider registry holds the eval's one provider, built from the environment. */
+    static Injector registeredProvider() {
         final Injector injector = Guice.createInjector(new LlmModule());
         final boolean lmStudio = "lmstudio".equalsIgnoreCase(System.getenv("BOOKLOOM_EVAL_PROVIDER"));
         final ProviderConfig config = new ProviderConfig(
-                "eval",
+                PROVIDER_ID,
                 lmStudio ? ProviderKind.OPENAI_COMPATIBLE : ProviderKind.OLLAMA,
                 URI.create(Objects.requireNonNull(System.getenv("BOOKLOOM_EVAL_URL"))),
                 ProviderConfig.DEFAULT_CONNECT_TIMEOUT,
@@ -155,8 +156,14 @@ class PromptEvalTest {
         assertThat(registered.isOk())
                 .as("provider registration: " + registered.error())
                 .isTrue();
-        final Result<ChatModel> model =
-                injector.getInstance(ChatModelFactory.class).create(new ModelSelection("eval", modelId));
+        return injector;
+    }
+
+    /** The real chat model of the eval's provider, built by the production factory. */
+    static ChatModel chatModel(final String modelId) {
+        final Result<ChatModel> model = registeredProvider()
+                .getInstance(ChatModelFactory.class)
+                .create(new ModelSelection(PROVIDER_ID, modelId));
         assertThat(model.isOk()).as("chat model creation: " + model.error()).isTrue();
         return Objects.requireNonNull(model.data());
     }

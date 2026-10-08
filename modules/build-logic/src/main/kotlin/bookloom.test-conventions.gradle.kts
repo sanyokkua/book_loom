@@ -24,7 +24,7 @@ fun bundle(alias: String) = catalog.findBundle(alias).orElseThrow()
 // --- The local-only tag sets (design D5; `corpus` added by fix-document-round-trip-corpus-defects D6; `soak` by
 // the overnight-run work: a whole generated book under injected faults, about a minute a format) ------------------
 //
-// `liveLocal` needs a real Ollama / LM Studio, `promptEval` needs a real model plus an embedding scorer, `visual`
+// `liveLocal` needs a real Ollama / LM Studio, `promptEval` needs a real local model, `visual`
 // needs a pinned rendering environment, `corpus` needs a real, locally configured book corpus. None of the four
 // can run on a CI runner, and all four are excluded from coverage (`06_TESTING_STRATEGY.md#live-local`,
 // `#prompt-evals`, `#visual-validation`, DD-35, `fix-document-round-trip-corpus-defects` design.md D6).

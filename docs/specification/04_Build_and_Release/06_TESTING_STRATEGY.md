@@ -325,7 +325,7 @@ manual.
 | Smoke — jpackage app-image                                       | yes (`build.yml`/`release.yml` packaging matrix — runs on `main`/tags, not the PR gate) | —                            |
 | Visual snapshot + tolerant diff (`visual`, pinned env)           | **no** (nightly/on-demand)                                                              | yes (pinned)                 |
 | Visual vision-model assisted review (real app screenshots)       | **no**                                                                                  | yes (on-demand, late phases) |
-| Prompt evals (`promptEval`, real local model + embedding scorer) | **no** (excluded)                                                                       | yes (env-gated, per prompt)  |
+| Prompt evals (`promptEval`, real local model) | **no** (excluded)                                                                       | yes (env-gated, per prompt)  |
 | Live-local provider (`liveLocal`, real Ollama + LM Studio)       | **no** (excluded)                                                                       | yes (env-gated, manual)      |
 | Soak (`soak`, a generated 3,700-paragraph book under injected faults, scripted clock) | **no** (excluded; its fixture-book form `FixtureBookSoakTest` is `slow` and in the gate) | yes (`./gradlew :pipeline:soak`) |
 

@@ -41,8 +41,7 @@ class SequenceEvalTest {
         final String model = System.getenv().getOrDefault("BOOKLOOM_EVAL_MODEL", "gemma4:e4b-mlx");
         final QualityDial dial = QualityDial.valueOf(
                 System.getenv().getOrDefault("BOOKLOOM_EVAL_DIAL", "BALANCED").toUpperCase(java.util.Locale.ROOT));
-        final String asked = System.getenv("BOOKLOOM_EVAL_WINDOW");
-        final Integer window = asked == null || asked.isBlank() ? null : Integer.valueOf(asked.strip());
+        final int window = EvalWindow.window();
         final SequenceNarratorMode narrator = SequenceNarratorMode.parse(System.getenv("BOOKLOOM_EVAL_NARRATOR"));
         final Gender detected = SequenceNarratorMode.parseGender(System.getenv("BOOKLOOM_EVAL_NARRATOR_GENDER"));
         final SequenceFixture fixture = SequenceFixture.load();

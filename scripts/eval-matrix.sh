@@ -21,6 +21,13 @@
 # narrates" is --narrator-gender male|female, male by default) chooses the brief; both runs each model with unset and set. BOOKLOOM_EVAL_DIAL (default BALANCED) and BOOKLOOM_EVAL_WINDOW pass
 # through. A run takes about 15-25 min on a small model and 40-70 min on a 26B class model, so the per-model timeout
 # (MODEL_TIMEOUT, seconds) defaults to 5400 for this suite and 1500 for the others, per narrator mode; set it to override.
+# scripts/eval-models.txt lines are `<provider>:<model> [context-length|-] [label]`. An LM Studio model is loaded with
+# `lms load --context-length <N>` (default 16384) and, when a label is given, under the identifier `<model>-<label>`, so the
+# same model in two quants (or two context lengths) gives two reports. --models takes the same entries with the columns
+# joined by commas: "lmstudio:google/gemma-4-e4b,32768,q8". The brief the eval sends is BOOKLOOM_EVAL_PRESET (e.g.
+# burning-chrome), BOOKLOOM_EVAL_BRIEF (a JSON file) or BOOKLOOM_EVAL_REGISTER / _NAMES / _GENRE / _DIAL; they pass through.
+# The window is the model's reported context length capped at 16384 (as a run does) unless BOOKLOOM_EVAL_WINDOW is set.
+# Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -35,13 +42,16 @@ SUITE=""
 BATCH_SIZES=""
 NARRATOR=unset
 NARRATOR_GENDER=male
-MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | tr '\n' ' ')
+DEFAULT_CONTEXT=16384
+# An entry is model,context,label: the columns of a line of eval-models.txt joined by commas ("-" for no context).
+entries() { awk '{ print $1 "," ($2 == "" ? "-" : $2) "," $3 }' | tr '\n' ' '; }
+MODELS=$(grep -vE '^\s*(#|$)' scripts/eval-models.txt | entries)
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --stability) STABILITY=$2; shift 2 ;;
     --only) ONLY=$2; shift 2 ;;
-    --models) MODELS=$2; shift 2 ;;
+    --models) MODELS=$(echo "$2" | tr ' ' '\n' | sed 's/,/ /g' | entries); shift 2 ;;
     --table-only) TABLE_ONLY=1; shift ;;
     --rules) RULES=$2; shift 2 ;;
     --langs) LANGS=$2; shift 2 ;;
@@ -57,20 +67,33 @@ REPORTS=modules/pipeline/build/reports/promptEval
 if [ "$SUITE" = sequence ]; then DEFAULT_TIMEOUT=5400; else DEFAULT_TIMEOUT=1500; fi
 
 run_one() {
-  local provider=${1%%:*} model=${1#*:} narrator=${2:-unset} url env_provider
+  local entry=$1 narrator=${2:-unset} spec context label provider model api_model url env_provider log
+  IFS=, read -r spec context label <<<"$entry"
+  provider=${spec%%:*}; model=${spec#*:}; api_model=$model
+  [ "$context" = "-" ] && context=""
   if [ "$provider" = lmstudio ]; then
     url=$LMSTUDIO_URL; env_provider=lmstudio
-    lms unload --all >/dev/null 2>&1; lms load "$model" -y >/dev/null 2>&1 || { echo "!! cannot load $model"; return; }
+    [ -n "$label" ] && api_model="$model-$label"
+    lms unload --all >/dev/null 2>&1
+    local load=(lms load "$model" --context-length "${context:-$DEFAULT_CONTEXT}" -y)
+    [ -n "$label" ] && load+=(--identifier "$api_model")
+    "${load[@]}" || { echo "!! cannot load $model (${load[*]})"; return; }
   else
     url=$OLLAMA_URL; env_provider=ollama
   fi
-  echo "== $provider $model narrator=$narrator"
-  BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=${BATCH_SIZES:-4,8,12,16} ./gradlew -q :pipeline:promptEval >/dev/null 2>&1 &
+  mkdir -p build/eval-matrix
+  log="build/eval-matrix/$(echo "$api_model-$narrator" | tr -c 'A-Za-z0-9._\n-' '_').log"
+  echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
+  BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=${BATCH_SIZES:-4,8,12,16} ./gradlew :pipeline:promptEval >"$log" 2>&1 &
   local pid=$!
   ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
   local dog=$!
-  wait "$pid" || echo "   (below threshold, failed or timed out — see $REPORTS)"
+  if ! wait "$pid"; then
+    echo "   !! gradle failed, a threshold was missed, or the run timed out; what $log says:"
+    grep -E "Eval window|FAILED|AssertionError|Exception|Expecting" "$log" | head -15 | sed 's/^/   | /'
+    tail -5 "$log" | sed 's/^/   | /'
+  fi
   kill "$dog" 2>/dev/null
   if [ "$provider" = lmstudio ]; then lms unload --all >/dev/null 2>&1; else ollama stop "$model" >/dev/null 2>&1; fi
 }

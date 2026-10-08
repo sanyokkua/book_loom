@@ -31,7 +31,6 @@ import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.chunk.Chunk;
-import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.dial.DialParameters;
 import ua.bookloom.pipeline.heal.GateFunction;
@@ -119,14 +118,14 @@ public final class EvalProject {
         this.unit = unit;
     }
 
-    /** The window every eval request is sized against: {@code BOOKLOOM_EVAL_WINDOW}, else what an app run uses. */
+    /** The window every eval request is sized against; see {@link EvalWindow#window()}. */
     public static int window() {
-        return window(System.getenv("BOOKLOOM_EVAL_WINDOW"));
+        return EvalWindow.window();
     }
 
-    /** The window for an asked-for value: that number, else what an app run uses. */
+    /** The window for an asked-for value when the provider reported none. */
     static int window(@Nullable final String asked) {
-        return asked == null || asked.isBlank() ? ContextBudget.windowFor(null, null) : Integer.parseInt(asked.strip());
+        return EvalWindow.resolve(asked, null);
     }
 
     public static EvalProject of(final Setup setup, final ModelCalls calls) {
@@ -135,8 +134,14 @@ public final class EvalProject {
 
     public static EvalProject of(final Setup setup, final ModelCalls calls, final int window) {
         Objects.requireNonNull(setup, "setup");
+        return of(setup, calls, window, EvalBrief.of(setup.sourceLanguage(), setup.targetLanguage(), System.getenv()));
+    }
+
+    /** A project whose brief is given instead of read from the environment; the case's narrator still applies. */
+    static EvalProject of(final Setup setup, final ModelCalls calls, final int window, final BookBrief chosen) {
+        Objects.requireNonNull(setup, "setup");
         Objects.requireNonNull(calls, "calls");
-        final BookBrief brief = briefOf(setup);
+        final BookBrief brief = withNarrator(chosen, setup);
         final CallFrame frame = new CallFrame(
                 setup.sourceLanguage(),
                 setup.targetLanguage(),
@@ -185,9 +190,7 @@ public final class EvalProject {
         return Objects.requireNonNull(read.data(), () -> "chunk context: " + read.error());
     }
 
-    private static BookBrief briefOf(final Setup setup) {
-        final BookBrief brief = BookBrief.defaults(setup.sourceLanguage())
-                .withLanguages(setup.sourceLanguage(), setup.targetLanguage());
+    private static BookBrief withNarrator(final BookBrief brief, final Setup setup) {
         return setup.context().narrator() == null
                 ? brief
                 : brief.withNarrator(setup.context().narrator());
