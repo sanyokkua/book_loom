@@ -12,12 +12,22 @@ import java.util.Objects;
  * @param ellipses how many three-dot ellipses became one character
  * @param quotes how many straight quote marks became the language's marks
  * @param spaces how many spaces before a punctuation mark were removed
+ * @param speech the source-aware speech rewrites that fired, in the order they ran; each kind once with its count
  */
-public record Normalisation(String text, int apostrophes, int ellipses, int quotes, int spaces) {
+public record Normalisation(String text, int apostrophes, int ellipses, int quotes, int spaces, List<Tally> speech) {
 
-    /** Rejects a missing text. */
+    /**
+     * One kind of speech rewrite and how often it fired.
+     *
+     * @param label the words that name the rewrite in the note, printed after the count
+     * @param count how many times it fired; positive
+     */
+    public record Tally(String label, int count) {}
+
+    /** Rejects a missing text or tally list. */
     public Normalisation {
         Objects.requireNonNull(text, "text");
+        speech = List.copyOf(speech);
     }
 
     /**
@@ -26,7 +36,7 @@ public record Normalisation(String text, int apostrophes, int ellipses, int quot
      * @return {@code true} when at least one mark or space was changed
      */
     public boolean isChanged() {
-        return apostrophes + ellipses + quotes + spaces > 0;
+        return apostrophes + ellipses + quotes + spaces > 0 || !speech.isEmpty();
     }
 
     /**
@@ -43,6 +53,7 @@ public record Normalisation(String text, int apostrophes, int ellipses, int quot
         add(parts, ellipses, "ellipsis", "ellipses");
         add(parts, quotes, "quote mark", "quote marks");
         add(parts, spaces, "space", "spaces");
+        speech.forEach(tally -> parts.add(tally.count() + " " + tally.label()));
         return "Typography normalised: " + String.join(", ", parts) + ".";
     }
 

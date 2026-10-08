@@ -34,6 +34,20 @@ public final class TypographyNormalizer {
      * @return the text and what was changed in it; the same text with nothing counted when it was already right
      */
     public static Normalisation normalise(final String maskedText, final String targetLanguage) {
+        return normalise("", maskedText, targetLanguage);
+    }
+
+    /**
+     * Normalises one target text, with its source at hand for the speech rewrites that compare the two.
+     *
+     * @param maskedSource the segment's masked source; empty when unknown, which turns off the rewrites that need it
+     * @param maskedText a target with its {@code ⟦gN⟧} tokens in place
+     * @param targetLanguage the BCP 47 tag of the language the text is written in
+     * @return the text and what was changed in it
+     */
+    public static Normalisation normalise(
+            final String maskedSource, final String maskedText, final String targetLanguage) {
+        Objects.requireNonNull(maskedSource, "maskedSource");
         Objects.requireNonNull(maskedText, "maskedText");
         Objects.requireNonNull(targetLanguage, "targetLanguage");
         final TypographyRules rules = TypographyRules.forLanguage(targetLanguage);
@@ -42,8 +56,10 @@ public final class TypographyNormalizer {
         final Edit ellipses = OutsideTokens.replaceAll(spaces.text(), THREE_DOTS, "…");
         final Edit apostrophes =
                 OutsideTokens.replaceAll(ellipses.text(), STRAIGHT_APOSTROPHE, String.valueOf(rules.apostrophe()));
+        final SpeechRepairs.Result speech =
+                SpeechRepairs.apply(maskedSource, apostrophes.text(), targetLanguage, rules);
         final Normalisation result = new Normalisation(
-                apostrophes.text(), apostrophes.count(), ellipses.count(), quotes.count(), spaces.count());
+                speech.text(), apostrophes.count(), ellipses.count(), quotes.count(), spaces.count(), speech.tallies());
         log.debug(
                 "Typography language={} apostrophes={} ellipses={} quotes={} spaces={}",
                 targetLanguage,

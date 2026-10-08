@@ -21,8 +21,15 @@ import ua.bookloom.pipeline.checks.QuotePair;
  * @param apostrophe the character that replaces a straight apostrophe inside a word
  * @param noSpaceBefore the marks that never follow a space
  * @param quotes the language's quote pairs, primary first and nested second; empty when its quotes are not rewritten
+ * @param isCommaOutsideQuote whether a comma belongs after a closing quote that is followed by a dash
+ * @param isSpeechRepaired whether the source-aware speech rewrites apply to the language
  */
-record TypographyRules(char apostrophe, String noSpaceBefore, List<QuotePair> quotes) {
+record TypographyRules(
+        char apostrophe,
+        String noSpaceBefore,
+        List<QuotePair> quotes,
+        boolean isCommaOutsideQuote,
+        boolean isSpeechRepaired) {
 
     private static final String RESOURCE = "typography-rules.properties";
     private static final String FALLBACK_KEY = "*";
@@ -34,7 +41,9 @@ record TypographyRules(char apostrophe, String noSpaceBefore, List<QuotePair> qu
         return new TypographyRules(
                 property(language, "apostrophe").charAt(0),
                 property(language, "no-space-before"),
-                QuoteConventions.ownLine(languageTag).orElse(List.of()));
+                QuoteConventions.ownLine(languageTag).orElse(List.of()),
+                Boolean.parseBoolean(property(language, "comma-outside-quote")),
+                Boolean.parseBoolean(property(language, "repair-speech")));
     }
 
     private static String property(final String language, final String name) {

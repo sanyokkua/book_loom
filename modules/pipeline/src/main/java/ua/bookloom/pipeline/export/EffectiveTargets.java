@@ -251,7 +251,7 @@ record EffectiveTargets(
             final String target,
             final Decision decision) {
         final Normalisation normalised = TypographyNormalizer.normalise(
-                maskedTarget, decision.languages().target());
+                segment.masked(), maskedTarget, decision.languages().target());
         final Result<String> restored = decision.unmask().apply(segment, normalised.text());
         if (!normalised.isChanged() || restored.isErr()) {
             decision.masked().put(segment.id(), maskedTarget);

@@ -63,7 +63,7 @@ public final class TypographyGate implements GateFunction {
         withoutClosers.ifPresent(text -> log.debug(
                 "Reply closers cut segment={} before={} after={}", segment.id(), maskedReply.length(), text.length()));
         final Normalisation normalised =
-                TypographyNormalizer.normalise(withoutClosers.orElse(maskedReply), targetLanguage);
+                TypographyNormalizer.normalise(segment.masked(), withoutClosers.orElse(maskedReply), targetLanguage);
         return new Cleaned(normalised, withoutClosers.isPresent());
     }
 

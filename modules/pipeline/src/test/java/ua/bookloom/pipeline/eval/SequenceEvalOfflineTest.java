@@ -109,7 +109,9 @@ class SequenceEvalOfflineTest {
 
     @Test
     void run_strayQuoteAndMixedQuotesKept_areCountedAsAsciiQuotes() {
-        assertThat(scripted.asciiQuotes()).isEqualTo(7);
+        // 7 before the speech repairs (plan B7): the scripted model's trailing stray " is now removed by the
+        // normaliser.
+        assertThat(scripted.asciiQuotes()).isEqualTo(6);
         assertThat(scripted.quoteFailures()).isZero();
     }
 
