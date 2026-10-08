@@ -941,6 +941,20 @@ dominant share and 2 points of flagged in the sequence eval, see 15e.13). The fa
 run the offline `StageEvalRunnerTest` and `scripts/test-focused.sh`, then one `:pipeline:promptEval` run with a label, then `diff`.
 `python3 scripts/eval-score.py selftest` and `python3 -m unittest discover -s scripts/tests` check the script.
 
+**Prompt round 6 — draft rules rewrite (plan 16a, Phase C): reverted, no gain.** Control = HEAD `bd629759` (prompt hash `95c7d4ac6dc2`),
+candidate = the rewritten DRAFT/BATCH-DRAFT rules + end checklist, token rules moved into the conditional `[Immutable tokens]` block,
+the style default dropped when a register line follows, and uk/ru quotes, dialogue and venue-name lines. LM Studio `google/gemma-4-e4b`,
+`burning-chrome` preset, window 16384, three runs per arm (`eval-history/*r6-control*`, `*r6-cand*`, `*r6-split*`). Run-to-run spread of
+the control was zero on every group (the seed is fixed per call), so a range proves less than it looks: one case flipping is one sample.
+Moved for the better: `ascii-dialogue/draft` 33 % → 67 % (0.67..1.0), replay-fast pass 90 % (90..92.5) → 95 %, `injection-hello` fixed, default
+`falsePositive` 17.6 % → 5.9 %. Did not move: `venue-name/draft` 0/2 (the model now writes «Синього якоря», still the genitive), `slang/draft`
+60 % (0.4..0.6), `numbers/draft` 67 %, batch `tooShort`. Regressed: `quotes/draft` 100 % → 89 % (`quotes-unclosed-2` unparsed on an all-ASCII source),
+default `gate` 94.3 % → 91.4 % (`link-pair` put its token pair around nothing, `names-no-token` left "Vance" in Latin). The split without the token
+move kept the ascii gain (100 %) but lost the replay gain and `quotes/draft` fell to 78 %. The candidate was also not shorter: the token rules
+moved into the user message (+100 words) and the uk language lines grew by 88 words. The decision rule (two targets improved and no key metric
+worse than the control spread) was not met, so the edit was reverted; the idea worth retrying is the quotes line alone with a worked ASCII-quote example
+(round 8).
+
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
 prompt eval plus 19 labelled reviewer cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
 « », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints
