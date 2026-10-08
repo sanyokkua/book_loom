@@ -30,7 +30,9 @@ public final class NameSuggestion {
     private final ExportViewModel destination;
     private final ReadOnlyBooleanWrapper suggesting = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyStringWrapper notice = new ReadOnlyStringWrapper("");
+    private final ReadOnlyBooleanWrapper authorKept = new ReadOnlyBooleanWrapper(false);
     private @Nullable String askedFor;
+    private boolean applying;
 
     NameSuggestion(
             final CurrentProject project,
@@ -41,6 +43,12 @@ public final class NameSuggestion {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.setup = setup;
         this.destination = Objects.requireNonNull(destination, "destination");
+        destination.destination().addListener((observed, was, now) -> {
+            if (!applying && authorKept.get()) {
+                log.debug("the destination was edited; the note about the author's alphabet is dropped");
+                authorKept.set(false);
+            }
+        });
     }
 
     /** Whether a suggested file name is offered at all: a setup helper exists. */
@@ -58,6 +66,14 @@ public final class NameSuggestion {
         return notice.getReadOnlyProperty();
     }
 
+    /**
+     * Whether the name last put in the destination kept the author's name in the source alphabet (a Latin name in a
+     * Ukrainian title), so the person may want to translate it; false again once the destination is edited.
+     */
+    public ReadOnlyBooleanProperty authorKept() {
+        return authorKept.getReadOnlyProperty();
+    }
+
     /** Asks the model for the translated book's file name and puts it in the destination. */
     public void ask() {
         final OpenedBook book = project.book().get();
@@ -67,6 +83,7 @@ public final class NameSuggestion {
         log.debug("a file name suggestion is asked for project {}", book.projectId());
         askedFor = destination.destination().get();
         notice.set("");
+        authorKept.set(false);
         suggesting.set(true);
         setup.run(
                         ActivityKind.SUGGEST_NAME,
@@ -104,14 +121,24 @@ public final class NameSuggestion {
             log.debug("the file name suggestion is dropped: the person changed the destination while it waited");
             return;
         }
-        final String stem = Objects.requireNonNull(answer.data(), "data").name();
-        destination.destinationPath().ifPresent(current -> {
-            log.debug("the suggested file name is taken as the destination");
-            destination.editDestination(
-                    current.resolveSibling(stem + suffixOf(current.getFileName().toString()))
-                            .toString());
-            notice.set(messages.get(MessageKey.EXPORT_SUGGEST_NAME_DONE));
-        });
+        final FileNameSuggestion suggestion = Objects.requireNonNull(answer.data(), "data");
+        destination.destinationPath().ifPresent(current -> take(current, suggestion));
+    }
+
+    private void take(final java.nio.file.Path current, final FileNameSuggestion suggestion) {
+        log.debug(
+                "the suggested file name is taken as the destination, author kept in the source alphabet: {}",
+                suggestion.authorKeptInSourceScript());
+        applying = true;
+        try {
+            destination.editDestination(current.resolveSibling(
+                            suggestion.name() + suffixOf(current.getFileName().toString()))
+                    .toString());
+        } finally {
+            applying = false;
+        }
+        notice.set(messages.get(MessageKey.EXPORT_SUGGEST_NAME_DONE));
+        authorKept.set(suggestion.authorKeptInSourceScript());
     }
 
     private static String suffixOf(final String fileName) {

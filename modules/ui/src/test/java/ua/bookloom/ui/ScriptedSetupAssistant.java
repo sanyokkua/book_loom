@@ -16,7 +16,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     private static final Result<?> UNSCRIPTED =
             Result.err(AppError.of(ErrorCode.internal, "Not scripted", "The test scripted no answer."));
 
-    private Result<String> fileName = cast();
+    private Result<FileNameSuggestion> fileName = cast();
     private Result<BriefSuggestion> brief = cast();
     private final List<String> asked = new ArrayList<>();
 
@@ -27,7 +27,13 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
 
     /** Sets what the next file name suggestions answer. */
     public ScriptedSetupAssistant answersFileName(final Result<String> answer) {
-        this.fileName = answer;
+        this.fileName = answer.map(name -> new FileNameSuggestion(name, false));
+        return this;
+    }
+
+    /** Sets the next file name suggestion whole, with whether the author's name stayed in the source alphabet. */
+    public ScriptedSetupAssistant answersFileName(final FileNameSuggestion answer) {
+        this.fileName = Result.ok(answer);
         return this;
     }
 
@@ -45,7 +51,7 @@ public final class ScriptedSetupAssistant implements SetupAssistant {
     @Override
     public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
         asked.add(projectId);
-        return fileName.map(name -> new FileNameSuggestion(name, false));
+        return fileName;
     }
 
     @Override

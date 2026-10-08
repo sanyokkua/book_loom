@@ -1572,6 +1572,8 @@ public enum MessageKey {
     EXPORT_SUGGEST_NAME_NO_MODEL("export.suggestName.noModel"),
     /** Line shown after the model's name was put in the destination. */
     EXPORT_SUGGEST_NAME_DONE("export.suggestName.done"),
+    /** Hint under Save to when the suggested name kept the author's name in the source alphabet; it goes once the name is edited. */
+    EXPORT_SUGGEST_NAME_AUTHOR_KEPT("export.suggestName.authorKept"),
     /** Button that opens the system save dialog for the destination. */
     EXPORT_BROWSE("export.browse"),
     /** Hover explanation of the control labelled by {@link #EXPORT_BROWSE}. */

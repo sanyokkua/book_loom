@@ -68,6 +68,7 @@ final class ExportDestinationCard {
                 ROW_SPACING,
                 BriefCards.field(messages, MessageKey.EXPORT_SAVE_TO, row),
                 nameNotice(),
+                authorNote(),
                 refusal(),
                 currentNote(),
                 replaceSwitch());
@@ -88,6 +89,12 @@ final class ExportDestinationCard {
         notice.setId("export-name-notice");
         notice.textProperty().bind(viewModel.nameSuggestion.notice());
         return BriefCards.shownWhile(notice, viewModel.nameSuggestion.notice().isNotEmpty());
+    }
+
+    private Node authorNote() {
+        final Label note = BriefCards.hint(messages, MessageKey.EXPORT_SUGGEST_NAME_AUTHOR_KEPT);
+        note.setId("export-author-kept");
+        return BriefCards.shownWhile(note, viewModel.nameSuggestion.authorKept());
     }
 
     private Node refusal() {

@@ -11,6 +11,7 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedSetupAssistant;
 
@@ -99,5 +100,40 @@ class ExportViewModelSuggestNameTest extends ExportViewModelTestBase {
 
         assertThat(onFx(plain.nameSuggestion::isOffered)).isFalse();
         assertThat(onFx(() -> exports.nameSuggestion.isOffered())).isTrue();
+    }
+
+    // IF the person were not told the author stayed in Latin, THEN a Ukrainian file name would carry "Mary Shelley"
+    // unnoticed; the hint goes as soon as the person edits the name, since it is then theirs.
+    @Test
+    void suggestName_authorKeptInSourceScript_saysSoUntilThePersonEdits() {
+        onFx(() -> {
+            settings.model().set("gemma3:12b");
+            return null;
+        });
+        assistant.answersFileName(new FileNameSuggestion("Франкенштейн. Mary Shelley", true));
+
+        suggest();
+        final boolean shownAfterSuggestion =
+                onFx(() -> exports.nameSuggestion.authorKept().get());
+        onFx(() -> {
+            exports.editDestination(dir.resolve("Франкенштейн. Мері Шеллі.epub").toString());
+            return null;
+        });
+
+        assertThat(shownAfterSuggestion).isTrue();
+        assertThat(onFx(() -> exports.nameSuggestion.authorKept().get())).isFalse();
+    }
+
+    // IF the hint showed for every suggestion, THEN it would claim a Latin author where the model translated the name.
+    @Test
+    void suggestName_authorTranslated_saysNothingAboutIt() {
+        onFx(() -> {
+            settings.model().set("gemma3:12b");
+            return null;
+        });
+
+        suggest();
+
+        assertThat(onFx(() -> exports.nameSuggestion.authorKept().get())).isFalse();
     }
 }
