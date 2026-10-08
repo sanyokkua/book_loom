@@ -107,7 +107,8 @@ final class RevisionCall {
                 request,
                 SelfHealCalls.descriptor(templates, name, inputs.frame(), segment.masked(), user));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
-        final Result<RepairReply> read = RepairReplies.read(reply, replyParser, segment.masked());
+        final Result<RepairReply> read = RepairReplies.read(
+                reply, replyParser, segment.masked(), inputs.frame().targetLanguage());
         SelfHealCalls.logOutcome(log, LABEL, segment.id(), read);
         if (read.isErr()) {
             return Result.err(Objects.requireNonNull(read.error(), "error"));
@@ -115,7 +116,13 @@ final class RevisionCall {
         return switch (Objects.requireNonNull(read.data(), "read")) {
             case RepairReply.Rewritten rewritten ->
                 gated(inputs, segment, maskedTarget, rewritten.maskedTarget(), mode);
-            case RepairReply.Malformed malformed -> Result.ok(new RevisionAnswer.Refused(UNREADABLE));
+            case RepairReply.Malformed malformed -> {
+                log.debug(
+                        "Revision refused segmentId={}: the reply was unreadable diagnostic={}",
+                        segment.id(),
+                        malformed.diagnostic());
+                yield Result.ok(new RevisionAnswer.Refused(malformed.reason()));
+            }
             case RepairReply.FlagNow flagNow -> Result.ok(new RevisionAnswer.Refused(UNREADABLE));
         };
     }

@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.heal;
 
 import java.util.Objects;
 import ua.bookloom.api.AppError;
+import ua.bookloom.pipeline.prompt.DraftReplyParser;
 
 /**
  * How a self-heal call's reply was classified (design D3 rules 2-3, applied to every self-heal call): a usable
@@ -33,6 +34,16 @@ public sealed interface RepairReply {
         /** Rejects a missing diagnostic. */
         public Malformed {
             Objects.requireNonNull(diagnostic, "diagnostic");
+        }
+
+        /**
+         * The machine code of the cause, which a report turns into words.
+         *
+         * @return {@code control_chars} for a reply whose control codes could not be mapped back, else
+         *     {@code unreadable}
+         */
+        public String reason() {
+            return DraftReplyParser.CONTROL_CHARACTERS_DIAGNOSTIC.equals(diagnostic) ? "control_chars" : "unreadable";
         }
     }
 

@@ -14,6 +14,7 @@ import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.checks.QuoteConventions;
+import ua.bookloom.pipeline.checks.ReplyClosers;
 import ua.bookloom.pipeline.checks.SentenceCount;
 import ua.bookloom.pipeline.qa.LengthBand;
 
@@ -30,6 +31,7 @@ final class ItemValidator {
     private static final double MERGE_FACTOR = 1.5;
     // The same floor the echo check of the quality loop uses: a shorter copy may be a name or an interjection.
     private static final int ECHO_FLOOR_CODE_POINTS = 20;
+    private static final String STRUCTURAL = "{}[]";
     // A note marker a model drops silently because no placeholder protects it: [3], [12].
     private static final Pattern NOTE_MARKER = Pattern.compile("\\[\\d+]");
 
@@ -37,15 +39,17 @@ final class ItemValidator {
      * Checks one target against its source.
      *
      * @param item the non-null batch item
-     * @param target the non-null text the reply gave under the item's id
+     * @param written the non-null text the reply gave under the item's id, closers and all
      * @param sourceTag the source language tag, or null when unknown
      * @param targetTag the non-null target language tag
      * @return the problems found; never null, empty when the target passes
      */
     static List<ItemProblem> validate(
-            final BatchItem item, final String target, @Nullable final String sourceTag, final String targetTag) {
+            final BatchItem item, final String written, @Nullable final String sourceTag, final String targetTag) {
         Objects.requireNonNull(item, "item");
-        Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(written, "written");
+        // The gate cuts the closers off the adopted text; the checks read what it will read.
+        final String target = ReplyClosers.strip(item.masked(), written).orElse(written);
         final List<ItemProblem> problems = new ArrayList<>();
         if (!tokensKept(item.masked(), target)) {
             problems.add(ItemProblem.TOKENS);
@@ -59,20 +63,44 @@ final class ItemValidator {
         if (ControlCharacters.addsControl(item.masked(), target)) {
             problems.add(ItemProblem.CONTROL_CHARACTERS);
         }
-        final boolean leaks = ProtocolLeak.leaks(target);
-        if (leaks) {
-            problems.add(ItemProblem.LEAKED);
-        }
-        // A target that leaks reply text has broken quotes of its own; the leak already names it.
-        if (!leaks && shiftsQuotes(item.masked(), target, sourceTag, targetTag)) {
-            problems.add(ItemProblem.QUOTES);
-        }
+        quoteOrLeakProblem(item.masked(), written, target, sourceTag, targetTag).ifPresent(problems::add);
         lengthProblem(item.masked(), target, sourceTag, targetTag).ifPresent(problems::add);
         if (SentenceCount.dropsSentence(DisplayText.of(item.masked()), DisplayText.of(target), sourceTag, targetTag)) {
             problems.add(ItemProblem.SENTENCES);
         }
         log.debug("Validated batch item id={} problems={}", item.id(), problems);
         return problems;
+    }
+
+    // A target that leaks reply text has broken quotes of its own; the leak already names it.
+    private static Optional<ItemProblem> quoteOrLeakProblem(
+            final String masked,
+            final String written,
+            final String target,
+            @Nullable final String sourceTag,
+            final String targetTag) {
+        if (ProtocolLeak.leaks(target) || leftoverClosers(masked, written, target)) {
+            return Optional.of(ItemProblem.LEAKED);
+        }
+        return shiftsQuotes(masked, target, sourceTag, targetTag) ? Optional.of(ItemProblem.QUOTES) : Optional.empty();
+    }
+
+    // Closers that stripping would leave nothing of, or a closer inside the text with nothing to close, are reply
+    // syntax
+    // the code cannot cut away: the id is drafted again alone.
+    private static boolean leftoverClosers(final String masked, final String written, final String stripped) {
+        final boolean emptied = stripped.isBlank() && !written.isBlank();
+        return emptied
+                || (!hasStructure(masked) && (isUnbalanced(stripped, '{', '}') || isUnbalanced(stripped, '[', ']')));
+    }
+
+    private static boolean hasStructure(final String text) {
+        return text.chars().anyMatch(c -> STRUCTURAL.indexOf(c) >= 0);
+    }
+
+    private static boolean isUnbalanced(final String text, final char open, final char close) {
+        return text.chars().filter(c -> c == close).count()
+                > text.chars().filter(c -> c == open).count();
     }
 
     // A source that is itself open (a quotation running on into the next paragraph) lets the target be open too.

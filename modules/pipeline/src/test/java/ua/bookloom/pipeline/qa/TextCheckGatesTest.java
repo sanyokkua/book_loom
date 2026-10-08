@@ -37,6 +37,20 @@ class TextCheckGatesTest {
                 .contains(tuple("language-identity", "language"));
     }
 
+    // IF reply syntax were typed as a meaning defect, THEN the directed fix would be asked to repair the translation's
+    // meaning when only a trailing "} is wrong.
+    @Test
+    void evaluate_replySyntaxInTheTarget_isAFormatFindingNotAMeaningOne() {
+        final QaResult result =
+                QaEvaluator.evaluate(List.of(), input("He left.", "Він пішов.}]}", ForeignPassagePolicy.TRANSLATE));
+
+        assertThat(result.hardGatesPass()).isFalse();
+        assertThat(result.findings())
+                .extracting(QaFinding::raisedBy, QaFinding::kind)
+                .contains(tuple("protocol-leak", "markup"))
+                .doesNotContain(tuple("protocol-leak", "meaning"));
+    }
+
     @Test
     void evaluate_mixedScriptWord_failsAHardGateAndNamesTheWordInTheNote() {
         final QaResult result = QaEvaluator.evaluate(

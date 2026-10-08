@@ -39,7 +39,7 @@ final class RoundEvaluator {
                 "Self-heal round wasted segment={} diagnostic={} gateFindingCarried=false",
                 outcome.segment().id(),
                 malformed.diagnostic());
-        return new RoundOutcome.Failed(null);
+        return new RoundOutcome.Failed(ReplyFormatFinding.of(malformed.diagnostic()));
     }
 
     /**

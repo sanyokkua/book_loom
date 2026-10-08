@@ -45,7 +45,7 @@ class ReviewerEvalParityTest {
     }
 
     @Test
-    void review_rewriteEndingWithAStrayBrace_isRefusedAndFlagged() {
+    void review_rewriteEndingWithAStrayBrace_isCutAndAccepted() {
         final String rewrite = "{\"results\":[{\"id\":\"s1\",\"status\":\"rewrite\","
                 + "\"rewrite\":\"Він відчинив старі двері.\\\"}\"}]}";
         final ScriptedChatModel model = new ScriptedChatModel().answer(Result.ok(reply(rewrite)));
@@ -60,6 +60,6 @@ class ReviewerEvalParityTest {
 
         final ReviewerEval.Reviewed reviewed = reviews.review(project, CANDIDATE);
 
-        assertThat(reviewed.detail()).contains("blockersLeft=1", "accepted=false");
+        assertThat(reviewed.detail()).contains("blockersLeft=0", "accepted=true");
     }
 }

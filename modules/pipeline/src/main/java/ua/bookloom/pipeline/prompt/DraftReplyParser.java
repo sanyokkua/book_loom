@@ -6,7 +6,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.ControlCharacterMapper;
 import ua.bookloom.pipeline.ControlCharacters;
 
 /** Reads only the strict one-segment response object so wrapper prose never becomes translated book text. */
@@ -14,8 +19,12 @@ import ua.bookloom.pipeline.ControlCharacters;
 public final class DraftReplyParser {
 
     private static final String INVALID_OBJECT = "was not one JSON object with exactly a nonblank target field";
-    private static final String CONTROL_CHARACTERS =
+
+    /** The diagnostic of a reply whose control codes could not be mapped back to quote marks and dashes. */
+    public static final String CONTROL_CHARACTERS_DIAGNOSTIC =
             "held control characters; write quote marks and dashes as « » “ ” — themselves";
+
+    private static final Pattern TRAILING_CLOSERS = Pattern.compile("[\\s\\]}\"]*");
     private final ObjectMapper mapper;
 
     /** Creates a parser with the application's tolerant JSON mapper; Guice builds it for the self-heal calls. */
@@ -33,21 +42,58 @@ public final class DraftReplyParser {
      * @return the parsed target, or the diagnostic of a reply outside the contract
      */
     public ParsedReply parse(final String replyText, final String source) {
+        return parse(replyText, source, null);
+    }
+
+    /**
+     * Parses the complete reply, writing quote and dash codes the model gave as control characters as the target
+     * language's marks.
+     *
+     * @param replyText the model's whole reply
+     * @param source the masked source text the reply translates
+     * @param targetLanguage the BCP 47 tag whose quote convention mapped marks take; null for the guillemets
+     * @return the parsed target, or the diagnostic of a reply outside the contract
+     */
+    public ParsedReply parse(final String replyText, final String source, @Nullable final String targetLanguage) {
         Objects.requireNonNull(replyText, "replyText");
         Objects.requireNonNull(source, "source");
-        log.debug("Parsing draft reply replyLength={}", replyText.length());
+        log.debug("Parsing draft reply replyLength={} targetLanguage={}", replyText.length(), targetLanguage);
         try {
             final JsonNode root = mapper.reader()
                     .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
                     .readTree(replyText);
-            if (validTarget(root)
-                    && ControlCharacters.addsControl(source, root.path("target").textValue())) {
-                return logged(invalid(CONTROL_CHARACTERS));
-            }
-            return logged(validTarget(root) ? structured(root.path("target").textValue()) : invalid(INVALID_OBJECT));
+            return logged(
+                    validTarget(root)
+                            ? read(root.path("target").textValue(), source, targetLanguage)
+                            : invalid(INVALID_OBJECT));
         } catch (JsonProcessingException ignored) {
-            return logged(invalid("was not valid JSON"));
+            return withoutTrailingClosers(replyText)
+                    .map(object -> parse(object, source, targetLanguage))
+                    .orElseGet(() -> logged(invalid("was not valid JSON")));
         }
+    }
+
+    // A model that closes the object and then its imagined wrapper leaves only quotes, braces and brackets behind it.
+    private static Optional<String> withoutTrailingClosers(final String replyText) {
+        final OptionalInt end = JsonReplies.firstObjectEnd(replyText);
+        if (end.isEmpty() || !replyText.stripLeading().startsWith("{")) {
+            return Optional.empty();
+        }
+        final String rest = replyText.substring(end.getAsInt());
+        if (rest.isBlank() || !TRAILING_CLOSERS.matcher(rest).matches()) {
+            return Optional.empty();
+        }
+        log.debug("Closers after the reply object cut count={}", rest.strip().length());
+        return Optional.of(replyText.substring(0, end.getAsInt()));
+    }
+
+    private static ParsedReply read(final String target, final String source, @Nullable final String targetLanguage) {
+        if (!ControlCharacters.addsControl(source, target)) {
+            return structured(target);
+        }
+        return ControlCharacterMapper.map(source, target, targetLanguage)
+                .map(DraftReplyParser::structured)
+                .orElseGet(() -> invalid(CONTROL_CHARACTERS_DIAGNOSTIC));
     }
 
     private static boolean validTarget(final JsonNode root) {
@@ -66,7 +112,7 @@ public final class DraftReplyParser {
         return new ParsedReply(ReplyKind.INVALID_STRUCTURED, "", diagnostic);
     }
 
-    private ParsedReply logged(final ParsedReply parsed) {
+    private static ParsedReply logged(final ParsedReply parsed) {
         log.debug(
                 "Parsed draft reply kind={} translationLength={}",
                 parsed.kind(),

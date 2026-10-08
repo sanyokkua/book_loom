@@ -1,11 +1,13 @@
 package ua.bookloom.pipeline.typography;
 
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.document.PlaceholderRepair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.checks.ReplyClosers;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.qa.CheckName;
@@ -19,6 +21,8 @@ import ua.bookloom.pipeline.qa.CheckName;
  */
 @Slf4j
 public final class TypographyGate implements GateFunction {
+
+    private static final String CLOSERS_NOTE = "Removed reply closers from the end of the text.";
 
     private final GateFunction inner;
     private final String targetLanguage;
@@ -42,26 +46,42 @@ public final class TypographyGate implements GateFunction {
 
     @Override
     public GateResult restore(final Segment segment, final String maskedReply) {
-        final Normalisation normalised = TypographyNormalizer.normalise(maskedReply, targetLanguage);
-        return noted(inner.restore(segment, normalised.text()), normalised, segment);
+        final Cleaned cleaned = clean(segment, maskedReply);
+        return noted(inner.restore(segment, cleaned.normalised().text()), cleaned, segment);
     }
 
     @Override
     public GateResult restoreRepairing(final Segment segment, final String maskedReply, final PlaceholderRepair mode) {
-        final Normalisation normalised = TypographyNormalizer.normalise(maskedReply, targetLanguage);
-        return noted(inner.restoreRepairing(segment, normalised.text(), mode), normalised, segment);
+        final Cleaned cleaned = clean(segment, maskedReply);
+        return noted(inner.restoreRepairing(segment, cleaned.normalised().text(), mode), cleaned, segment);
     }
 
-    private static GateResult noted(final GateResult result, final Normalisation normalised, final Segment segment) {
+    // The closers go first, before any check reads the text: a quote and a brace at the end are reply syntax, and the
+    // residue check would otherwise block a draft that is right but for them.
+    private Cleaned clean(final Segment segment, final String maskedReply) {
+        final Optional<String> withoutClosers = ReplyClosers.strip(segment.masked(), maskedReply);
+        withoutClosers.ifPresent(text -> log.debug(
+                "Reply closers cut segment={} before={} after={}", segment.id(), maskedReply.length(), text.length()));
+        final Normalisation normalised =
+                TypographyNormalizer.normalise(withoutClosers.orElse(maskedReply), targetLanguage);
+        return new Cleaned(normalised, withoutClosers.isPresent());
+    }
+
+    private static GateResult noted(final GateResult result, final Cleaned cleaned, final Segment segment) {
         if (!(result instanceof GateResult.Restored restored)) {
             return result;
         }
+        final Normalisation normalised = cleaned.normalised();
         final GateResult.Restored withCandidate = restored.withMaskedCandidate(normalised.text());
-        if (!normalised.isChanged()) {
+        if (!cleaned.closersCut() && !normalised.isChanged()) {
             return withCandidate;
         }
-        log.trace("Typography note segment={} {}", segment.id(), normalised.note());
-        return withCandidate.withNormalised(new QaFinding(
-                CheckName.TYPOGRAPHY.findingKind(), Severity.LOW, normalised.note(), CheckName.TYPOGRAPHY.raisedBy()));
+        final String note =
+                (cleaned.closersCut() ? CLOSERS_NOTE + (normalised.isChanged() ? " " : "") : "") + normalised.note();
+        log.trace("Typography note segment={} {}", segment.id(), note);
+        return withCandidate.withNormalised(
+                new QaFinding(CheckName.TYPOGRAPHY.findingKind(), Severity.LOW, note, CheckName.TYPOGRAPHY.raisedBy()));
     }
+
+    private record Cleaned(Normalisation normalised, boolean closersCut) {}
 }

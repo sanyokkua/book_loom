@@ -68,8 +68,16 @@ class ReplyJudgeParityTest {
     }
 
     @Test
-    void judge_replyEndingWithAStrayBraceAndQuote_isBlockedAsTheJobFlagsIt() {
+    void judge_replyEndingWithAStrayBraceAndQuote_isCutAndAcceptedAsTheJobAccepts() {
         final String reply = "Він відчинив старі двері.\"}";
+
+        assertThat(ReplyJudge.judge(project(), 0, reply).accepted()).isTrue();
+        assertThat(jobStatus(project(), reply)).isEqualTo(SegmentStatus.ACCEPTED);
+    }
+
+    @Test
+    void judge_replyWithABraceInsideTheText_isBlockedAsTheJobFlagsIt() {
+        final String reply = "Він відчинив }старі двері.";
 
         assertThat(ReplyJudge.judge(project(), 0, reply).accepted()).isFalse();
         assertThat(jobStatus(project(), reply)).isEqualTo(SegmentStatus.FLAGGED);

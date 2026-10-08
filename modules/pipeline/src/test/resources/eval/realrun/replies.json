@@ -41,11 +41,11 @@
   "sourceLanguage": null,
   "source": "\"Not tonight,\" she said.",
   "reply": "{\"target\":\"\u001eНе сьогодні\u001d, — сказала вона.\"}",
-  "expect": "CONTROL_CHARS",
+  "expect": "REFUSED",
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [],
-  "rationale": "the same glitch written as raw control characters, which JSON does not allow"
+  "rationale": "the same glitch written as raw control characters, which JSON does not allow: not valid JSON, so nothing to map"
  },
  {
   "id": "ctrl-escaped-ru",
@@ -72,6 +72,42 @@
   "rationale": "ru to uk: a whole target wrapped"
  },
  {
+  "id": "ctrl-odd-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні, — сказала вона.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "one quote code with no partner: the count is odd, so the codes are not guessed at and the reply is refused"
+ },
+ {
+  "id": "ctrl-dash-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні\\u001d, \\u001f сказала вона.\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the dialogue dash written as a third control code is mapped to the em dash with the quote pair"
+ },
+ {
+  "id": "ctrl-inner-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він\\u001eвідчинив старі двері.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a control code between two words stands for no mark: refused, never stripped"
+ },
+ {
   "id": "residue-clean-en",
   "kind": "closer-residue",
   "sourceLanguage": null,
@@ -89,11 +125,11 @@
   "sourceLanguage": null,
   "source": "He opened the old door.",
   "reply": "{\"target\":\"Він відчинив старі двері.\\\"}\"}",
-  "expect": "REFUSED",
+  "expect": "ACCEPTED",
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [],
-  "rationale": "the target ends with a quote and a brace"
+  "rationale": "the target ends with a quote and a brace; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
  },
  {
   "id": "residue-brace-bracket-en",
@@ -101,11 +137,11 @@
   "sourceLanguage": null,
   "source": "He opened the old door.",
   "reply": "{\"target\":\"Він відчинив старі двері.\\\"}]}\"}",
-  "expect": "REFUSED",
+  "expect": "ACCEPTED",
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [],
-  "rationale": "the target ends with a quote, a brace, a bracket and a brace"
+  "rationale": "the target ends with a quote, a brace, a bracket and a brace; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
  },
  {
   "id": "residue-tail-en",
@@ -113,11 +149,11 @@
   "sourceLanguage": null,
   "source": "He opened the old door.",
   "reply": "{\"target\":\"Він відчинив старі двері.}]}\"}",
-  "expect": "REFUSED",
+  "expect": "ACCEPTED",
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [],
-  "rationale": "the target ends with bare closers"
+  "rationale": "the target ends with bare closers; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
  },
  {
   "id": "residue-after-object-en",
@@ -137,11 +173,11 @@
   "sourceLanguage": "ru",
   "source": "Он открыл старую дверь.",
   "reply": "{\"target\":\"Він відчинив стару браму.\\\"}\"}",
-  "expect": "REFUSED",
+  "expect": "ACCEPTED",
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [],
-  "rationale": "ru to uk: a quote and a brace"
+  "rationale": "ru to uk: a quote and a brace; the closers are cut off before the checks (plan B3) and the rest is a clean draft"
  },
  {
   "id": "script-clean-en",

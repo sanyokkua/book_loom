@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -33,5 +34,32 @@ public final class JsonReplies {
         } catch (JsonProcessingException ignored) {
             return Optional.empty();
         }
+    }
+
+    /**
+     * Finds where the first JSON object of a text closes, reading braces outside strings.
+     *
+     * @param text the text to scan; never null
+     * @return the index just past the first object's closing brace, or empty when the text holds no object or it never
+     *     closes
+     */
+    public static OptionalInt firstObjectEnd(final String text) {
+        Objects.requireNonNull(text, "text");
+        int depth = 0;
+        boolean inString = false;
+        for (int i = text.indexOf('{'); i >= 0 && i < text.length(); i++) {
+            final char c = text.charAt(i);
+            if (inString) {
+                inString = c != '"';
+                i += c == '\\' ? 1 : 0;
+                continue;
+            }
+            inString = c == '"';
+            depth += c == '{' ? 1 : c == '}' ? -1 : 0;
+            if (depth == 0 && c == '}') {
+                return OptionalInt.of(i + 1);
+            }
+        }
+        return OptionalInt.empty();
     }
 }

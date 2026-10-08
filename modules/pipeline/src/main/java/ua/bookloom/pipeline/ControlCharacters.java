@@ -6,7 +6,8 @@ import lombok.NoArgsConstructor;
 /**
  * The C0 and DEL control characters a model reply must never carry unless its source holds them. A model that writes its quote marks and dashes as
  * U+001C-U+001F leaves text that {@link Character#isWhitespace(int)} calls spacing, so trimming would silently drop an
- * opening mark and a refusal would hide the cause; such a reply is rejected whole instead. Tab, line feed and carriage
+ * opening mark and a refusal would hide the cause; such a reply is rejected whole instead, unless
+ * {@link ControlCharacterMapper} can put each code back where a quote or a dash belongs. Tab, line feed and carriage
  * return are ordinary text.
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")

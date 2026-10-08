@@ -79,7 +79,9 @@ class ReplayRunnerTest {
 
         assertThat(row(rows, 0).passed()).as(row(rows, 0).detail()).isTrue();
         assertThat(row(rows, 0).detail()).contains("single accepted", "logged reply ok");
-        assertThat(row(rows, 4).passed()).as("closer residue is refused").isFalse();
+        assertThat(row(rows, 4).passed())
+                .as("closer residue is cut, not refused")
+                .isTrue();
         assertThat(row(rows, 3).passed())
                 .as("an item left in English is refused")
                 .isFalse();

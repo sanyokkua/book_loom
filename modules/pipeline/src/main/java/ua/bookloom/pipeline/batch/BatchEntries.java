@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.OptionalInt;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -83,7 +84,9 @@ final class BatchEntries {
     /** The complete entries of a reply cut off before its JSON closed, as a model stopped by its cap leaves it. */
     private List<Entry> salvaged(final String reply) {
         final List<Entry> entries = new ArrayList<>();
-        final Matcher matcher = JSON_ENTRY.matcher(reply);
+        // Whatever follows the closing brace is not the reply (a runaway tail of markup): no entry is read from it.
+        final OptionalInt end = JsonReplies.firstObjectEnd(reply);
+        final Matcher matcher = JSON_ENTRY.matcher(end.isPresent() ? reply.substring(0, end.getAsInt()) : reply);
         while (matcher.find()) {
             try {
                 final String text = mapper.readValue("\"" + matcher.group(3) + "\"", String.class);

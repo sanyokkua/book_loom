@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.PlaceholderRepair;
@@ -25,13 +26,17 @@ class TypographyGateTest {
     };
 
     private static Segment segment() {
+        return segment("x");
+    }
+
+    private static Segment segment(final String masked) {
         return new Segment(
                 "u1:0",
                 "u1",
                 0,
                 SegmentKind.PARAGRAPH,
-                "x",
-                "x",
+                masked,
+                masked,
                 Map.of(),
                 "hash",
                 null,
@@ -78,5 +83,37 @@ class TypographyGateTest {
             assertThat(restored.normalised()).isNull();
             assertThat(restored.maskedForm()).isEqualTo("Усе гаразд.");
         });
+    }
+
+    // IF the closers reached the checks, THEN the residue check would block a draft that is only a quote and a brace
+    // too long (the Oct 8 run's batch items).
+    @Test
+    void restore_targetEndingInReplyClosers_passesTheGateTheStrippedTextWithANote() {
+        final GateResult result = TypographyGate.around(recording, "uk").restore(segment(), "Він пішов.\"}]}");
+
+        assertThat(seen).containsExactly("Він пішов.");
+        assertThat(noteOf(result)).isEqualTo("Removed reply closers from the end of the text.");
+    }
+
+    @Test
+    void restore_closersAndTypographyTogether_areBothInTheNote() {
+        final GateResult result = TypographyGate.around(recording, "uk").restore(segment(), "Не пам'ятаю.}");
+
+        assertThat(seen).containsExactly("Не пам’ятаю.");
+        assertThat(noteOf(result)).contains("reply closers", "1 apostrophe");
+    }
+
+    private static String noteOf(final GateResult result) {
+        final GateResult.Restored restored = (GateResult.Restored) result;
+        return Objects.requireNonNull(restored.normalised(), "normalised").note();
+    }
+
+    @Test
+    void restore_sourceWithBraces_keepsItsClosers() {
+        final Segment braces = segment("Set {a} now.");
+
+        TypographyGate.around(recording, "uk").restore(braces, "Задайте {a}");
+
+        assertThat(seen).containsExactly("Задайте {a}");
     }
 }

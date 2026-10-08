@@ -102,8 +102,10 @@ public final class DirectedFix {
         final Map<String, String> userValues = userValues(maskedSource, block, findings, includeExpectedTokens);
         final List<ChatMessage> messages =
                 SelfHealCalls.messagesFor(templates, PromptName.DIRECTED_FIX, frame, userValues);
-        final ChatRequest request = ChatRequests.build(
-                PromptName.DIRECTED_FIX, messages, SelfHealCalls.outputLimit(maskedSource, frame), false);
+        final ChatRequest request = retried(
+                findings,
+                ChatRequests.build(
+                        PromptName.DIRECTED_FIX, messages, SelfHealCalls.outputLimit(maskedSource, frame), false));
         SelfHealCalls.logTraceMessages(log, LABEL, request);
         final Result<ChatResponse> reply = calls.callAbout(
                 CallKind.DIRECTED_FIX,
@@ -111,9 +113,20 @@ public final class DirectedFix {
                 request,
                 SelfHealCalls.descriptor(templates, PromptName.DIRECTED_FIX, frame, maskedSource, userValues));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
-        final Result<RepairReply> outcome = RepairReplies.read(reply, replyParser, maskedSource);
+        final Result<RepairReply> outcome =
+                RepairReplies.read(reply, replyParser, maskedSource, frame.targetLanguage());
         SelfHealCalls.logOutcome(log, LABEL, segmentId, outcome);
         return outcome;
+    }
+
+    // A call that follows a refused reply is not a replay of it: the same request at the same sampling failed the same
+    // way.
+    private static ChatRequest retried(final List<QaFinding> findings, final ChatRequest request) {
+        if (findings.stream().noneMatch(ReplyFormatFinding::isReplyFormat)) {
+            return request;
+        }
+        log.debug("Directed fix follows a refused reply; sending with seed={}", ReplyFormatFinding.RETRY_SEED);
+        return request.withSeed(ReplyFormatFinding.RETRY_SEED);
     }
 
     private static Map<String, String> userValues(
