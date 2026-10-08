@@ -28,18 +28,22 @@ final class ConsistencyPassFixture {
                 project.stores().glossary(),
                 new PromptTemplates(),
                 new ObjectMapper(),
-                new RetryDraft(
-                        project.documents(),
-                        project.stores().openProjects(),
-                        project.stores().projects(),
-                        project.stores().segments(),
-                        project.stores().runs(),
-                        new PromptTemplates(),
-                        new ObjectMapper(),
-                        Guice.createInjector().getInstance(QualityLoop.class),
-                        Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
-                        ReviewMode.UNATTENDED),
+                retryDraft(project),
                 project.stores().lexicon(),
                 project.stores().summaries());
+    }
+
+    static RetryDraft retryDraft(final TestProject project) {
+        return new RetryDraft(
+                project.documents(),
+                project.stores().openProjects(),
+                project.stores().projects(),
+                project.stores().segments(),
+                project.stores().runs(),
+                new PromptTemplates(),
+                new ObjectMapper(),
+                Guice.createInjector().getInstance(QualityLoop.class),
+                Guice.createInjector(new DocumentModule()).getInstance(SentenceSplitter.class),
+                ReviewMode.UNATTENDED);
     }
 }

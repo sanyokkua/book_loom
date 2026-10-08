@@ -1,0 +1,30 @@
+[
+  {
+    "id": "setup-en-uk-first-person",
+    "source": "en",
+    "target": "uk",
+    "fileStem": "j_ostler-the_glass_orchard-2009-v2-final",
+    "title": "The Glass Orchard",
+    "author": "Jane Ostler",
+    "paragraphs": [
+      "The rain had not stopped for three days, and I was beginning to think the town had forgotten the sun.",
+      "I counted the windows on the far side of the square, because counting was all I had left to do that evening.",
+      "My sister wrote that the orchard was sold, and I read her letter twice before I put it down on the table."
+    ],
+    "narrator": "FIRST"
+  },
+  {
+    "id": "setup-ru-uk-third-person",
+    "source": "ru",
+    "target": "uk",
+    "fileStem": "ostrov_zabytyh_beregov_a_sorokin_2011",
+    "title": "Остров забытых берегов",
+    "author": "Артём Сорокин",
+    "paragraphs": [
+      "Дождь не прекращался три дня, и Лев начал думать, что город давно забыл о солнце.",
+      "Он считал окна на другой стороне площади, потому что считать было единственным делом на этот вечер.",
+      "Сестра писала, что сад продан, и Лев дважды прочёл её письмо, прежде чем положить его на стол."
+    ],
+    "narrator": "THIRD"
+  }
+]

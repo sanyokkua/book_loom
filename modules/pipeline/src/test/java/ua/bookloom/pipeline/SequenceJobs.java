@@ -16,6 +16,8 @@ import ua.bookloom.api.pipeline.RunRequest;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
+import ua.bookloom.pipeline.review.RetryDraft;
+import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
@@ -60,6 +62,16 @@ public final class SequenceJobs {
     /** Imports {@code book} under {@code brief}. */
     public static Prepared importBook(final Path book, final BookBrief brief) {
         return new Prepared(TranslationJobTestSupport.project(book, brief));
+    }
+
+    /** The consistency pass over the prepared book's own stores (the eval's stage runners reach it from here). */
+    public static ConsistencyPass consistencyPass(final Prepared prepared) {
+        return ConsistencyPassFixture.over(prepared.project);
+    }
+
+    /** The review desk's retry over the prepared book's own stores. */
+    public static RetryDraft retryDraft(final Prepared prepared) {
+        return ConsistencyPassFixture.retryDraft(prepared.project);
     }
 
     /**

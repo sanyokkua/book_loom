@@ -2,7 +2,7 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--rules generic] [--langs all|fr,de,...] [--suite batch] [--batch-sizes 4,8,12,16]
+#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry] [--batch-sizes 4,8,12,16]
 # --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
@@ -27,6 +27,11 @@
 # joined by commas: "lmstudio:google/gemma-4-e4b,32768,q8". The brief the eval sends is BOOKLOOM_EVAL_PRESET (e.g.
 # burning-chrome), BOOKLOOM_EVAL_BRIEF (a JSON file) or BOOKLOOM_EVAL_REGISTER / _NAMES / _GENRE / _DIAL; they pass through.
 # The window is the model's reported context length capped at 16384 (as a run does) unless BOOKLOOM_EVAL_WINDOW is set.
+# --suite prescan|terms|setup|consistency|retry runs the model-call stages the other suites never reach (A4), each through
+# its production class on small invented fixtures (eval/stages/*.json; reports end in -<suite>.json): prescan = the glossary
+# name scan, terms = the recurring-term choice and the glossary review, setup = the file-name and Book Brief suggestions,
+# consistency = the export pass (retry of doubted segments, check against the neighbours), retry = the review desk's Retry.
+# One row per model and suite: share of cases right, calls, failed and repeated calls, refused answers.
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -147,7 +152,13 @@ if sys.argv[2] == "words":
     for r in (r for r in reports if r.get("suite") == "words"):
         print("%-36s %5d %7.0f%% %7.0f%% %6s" % (r["model"], r["cases"], 100 * r["recall"], 100 * r["falsePositive"], "yes" if r["meetsTarget"] else "NO"))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence")]
+STAGES = ("prescan", "terms", "setup", "consistency", "retry")
+if sys.argv[2] in STAGES:
+    print("%-36s %-12s %5s %6s %6s %6s %8s %7s" % ("model", "suite", "cases", "pass", "calls", "failed", "repeated", "refused"))
+    for r in (r for r in reports if r.get("suite") == sys.argv[2]):
+        print("%-36s %-12s %5d %5.0f%% %6d %6d %8d %7d" % (r["model"], r["suite"], r["cases"], 100 * r["passRate"], r["calls"], r["failed"], r["repeated"], r["refused"]))
+    sys.exit(0)
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

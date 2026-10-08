@@ -1,0 +1,128 @@
+[
+  {
+    "id": "en-uk",
+    "source": "en",
+    "target": "uk",
+    "fillers": [
+      {
+        "text": "The harbour was quiet before the first boats went out.",
+        "draft": "Гавань була тихою, поки перші човни не вийшли в море."
+      },
+      {
+        "text": "Marta lit the lamp and set it on the table.",
+        "draft": "Марта запалила лампу й поставила її на стіл."
+      },
+      {
+        "text": "Nobody spoke until the bell had stopped ringing.",
+        "draft": "Ніхто не говорив, доки дзвін не вщух."
+      },
+      {
+        "text": "The road to the hills was wet and long.",
+        "draft": "Дорога до пагорбів була мокрою й довгою."
+      }
+    ],
+    "cases": [
+      {
+        "id": "mixed-script",
+        "text": "She pulled the old curtain across the window and sat down.",
+        "draft": "Вона засунула стару штору на вікнo й сіла.",
+        "defect": "\\p{IsCyrillic}\\p{IsLatin}|\\p{IsLatin}\\p{IsCyrillic}",
+        "required": null,
+        "fixed": "Вона засунула стару штору на вікно й сіла."
+      },
+      {
+        "id": "left-untranslated",
+        "text": "Flint closed the gate behind her. She did not answer the old man.",
+        "draft": "Флінт зачинила за собою браму. She did not answer the old man.",
+        "defect": "[A-Za-z]{3,}",
+        "required": null,
+        "fixed": "Флінт зачинила за собою браму. Вона не відповіла старому."
+      },
+      {
+        "id": "closer-residue",
+        "text": "The lamp burned all night and nobody came to the door.",
+        "draft": "Лампа горіла всю ніч, і ніхто не підійшов до дверей.\"}",
+        "defect": "\"\\}\\s*$",
+        "required": null,
+        "fixed": "Лампа горіла всю ніч, і ніхто не підійшов до дверей."
+      },
+      {
+        "id": "vocative-drop",
+        "text": "“Flint, wait,” said Marta.",
+        "draft": "«Зачекай», — сказала Марта.",
+        "defect": null,
+        "required": "Флін",
+        "fixed": "«Флінт, зачекай», — сказала Марта."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Flint",
+        "target": "Флінт"
+      }
+    ]
+  },
+  {
+    "id": "ru-uk",
+    "source": "ru",
+    "target": "uk",
+    "fillers": [
+      {
+        "text": "В гавани было тихо, пока не вышли первые лодки.",
+        "draft": "У гавані було тихо, поки не вийшли перші човни."
+      },
+      {
+        "text": "Марта зажгла лампу и поставила её на стол.",
+        "draft": "Марта запалила лампу й поставила її на стіл."
+      },
+      {
+        "text": "Никто не говорил, пока не смолк колокол.",
+        "draft": "Ніхто не говорив, доки не змовк дзвін."
+      },
+      {
+        "text": "Дорога к холмам была мокрой и длинной.",
+        "draft": "Дорога до пагорбів була мокрою й довгою."
+      }
+    ],
+    "cases": [
+      {
+        "id": "mixed-script",
+        "text": "Она задёрнула старую штору на окне и села.",
+        "draft": "Вона засунула стару штору на вікнo й сіла.",
+        "defect": "\\p{IsCyrillic}\\p{IsLatin}|\\p{IsLatin}\\p{IsCyrillic}",
+        "required": null,
+        "fixed": "Вона засунула стару штору на вікно й сіла."
+      },
+      {
+        "id": "left-untranslated",
+        "text": "Флинт закрыла за собой ворота. Она не ответила старику.",
+        "draft": "Флінт зачинила за собою браму. Она не ответила старику.",
+        "defect": "[ыэёъ]|\\bона\\b|\\bстарику\\b",
+        "required": null,
+        "fixed": "Флінт зачинила за собою браму. Вона не відповіла старому."
+      },
+      {
+        "id": "closer-residue",
+        "text": "Лампа горела всю ночь, и никто не подошёл к двери.",
+        "draft": "Лампа горіла всю ніч, і ніхто не підійшов до дверей.\"}",
+        "defect": "\"\\}\\s*$",
+        "required": null,
+        "fixed": "Лампа горіла всю ніч, і ніхто не підійшов до дверей."
+      },
+      {
+        "id": "vocative-drop",
+        "text": "— Флинт, подожди, — сказала Марта.",
+        "draft": "— Зачекай, — сказала Марта.",
+        "defect": null,
+        "required": "Флін",
+        "fixed": "— Флінте, зачекай, — сказала Марта."
+      }
+    ],
+    "glossary": [
+      {
+        "term": "Флинт",
+        "target": "Флінт"
+      }
+    ]
+  }
+]

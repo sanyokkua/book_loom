@@ -1,0 +1,41 @@
+[
+  {
+    "id": "prescan-en-uk-woman-and-trap",
+    "source": "en",
+    "target": "uk",
+    "sentences": [
+      "On the third night Flint climbed the stairs, and she did not look back.",
+      "Everyone said Flint was careful, and her careful hands never shook.",
+      "Marta handed Flint the lamp, and she thanked her with a nod.",
+      "They agreed to meet again on Monday at the harbour of Koreth.",
+      "He spoke English with Marta, who asked him about the road to Koreth.",
+      "Flint trusted her own eyes more than any map of Koreth."
+    ],
+    "expect": [
+      {"term": "Flint", "keep": true, "type": "CHARACTER", "gender": "FEMALE"},
+      {"term": "Marta", "keep": true, "type": "CHARACTER", "gender": "FEMALE"},
+      {"term": "Koreth", "keep": true, "type": "PLACE", "gender": null},
+      {"term": "Monday", "keep": false, "type": null, "gender": null},
+      {"term": "English", "keep": false, "type": null, "gender": null}
+    ]
+  },
+  {
+    "id": "prescan-ru-uk-woman-and-trap",
+    "source": "ru",
+    "target": "uk",
+    "sentences": [
+      "На третью ночь Флинт поднялась по лестнице и не оглянулась.",
+      "Все говорили, что Флинт осторожна, и её руки никогда не дрожали.",
+      "Флинт взяла лампу, которую подала Марта, и кивнула ей в ответ.",
+      "Они договорились встретиться в понедельник в гавани Корета.",
+      "Он говорил по-русски с Мартой, и она спросила его о дороге в Корет.",
+      "Флинт верила своим глазам больше, чем любой карте Корета."
+    ],
+    "expect": [
+      {"term": "Флинт", "keep": true, "type": "CHARACTER", "gender": "FEMALE"},
+      {"term": "Марта", "keep": true, "type": "CHARACTER", "gender": "FEMALE"},
+      {"term": "Корет", "keep": true, "type": "PLACE", "gender": null},
+      {"term": "Корета", "keep": false, "type": null, "gender": null}
+    ]
+  }
+]

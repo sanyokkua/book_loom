@@ -853,6 +853,27 @@ scripts/eval-matrix.sh --models "ollama:gemma4:e4b-mlx ollama:gemma4:26b-mlx" --
 Leave `BOOKLOOM_EVAL_ONLY` out to run the draft, fix and `review-*` pair cases as well; `--langs all` runs each language's
 mini-corpus. Reports land in `modules/pipeline/build/reports/promptEval/<model>.txt` and `.json`.
 
+**Stage suites (plan A4).** The model-call stages no other suite reaches are measured through their production classes on
+small invented fixtures (`src/test/resources/eval/stages/*.json`, English and Russian to Ukrainian, no book text), selected
+with `BOOKLOOM_EVAL_SUITE` and run like the others (`BOOKLOOM_EVAL_URL` required, `@Tag("promptEval")`, never in `check`):
+
+| Suite | Production class | What a case must end with |
+|---|---|---|
+| `prescan` | `PreScan` (PRESCAN, then the verdict and suggestion calls) | a woman's one-word name kept as a female character, a place kept, a weekday and a language name left out |
+| `terms` | `TermChoice` (TERM_CHOICE) and `TermReview` (REVIEW_TERMS) | everyday words (keep, black, screen) dropped, a jargon term kept; held names kept, a weekday removed |
+| `setup` | `SetupAssistantImpl` (FILE_NAME, BRIEF_SUGGESTION) | a file name in the target script with its author part in it; the narrator the text is told in |
+| `consistency` | `ConsistencyPass` (`RetryPass`, `RetryDraft`, `NeighbourRevision`, `RevisionCall`) | a planted mixed-script word, a left-untranslated sentence, a trailing `"}` and a dropped vocative repaired |
+| `retry` | `RetryDraft.retry` (the review desk's Retry) | the same four planted defects repaired by one retry each |
+
+`consistency` and `retry` first run the real batched job over a small book with a model that answers the case file's planted
+(defective) drafts, so the stored records, statuses and context snapshots are what a run leaves; only then is the real model
+asked. Scoring is deterministic: each case's pass/fail, and per row the calls, failed calls, repeated identical requests and
+answers the class read and refused (`ConsistencyChecks.refused`, undecided term batches). Reports are
+`build/reports/promptEval/<model>-<suite>.json` and `.txt` (`{"suite":"prescan",...}`), and
+`scripts/eval-matrix.sh --suite prescan|terms|setup|consistency|retry` prints one row per model. The offline proof is
+`StageEvalRunnerTest` (a fake model answering like a good one, and a silent one), which also compares the recorded request with
+the production prompt for the stage.
+
 **Corpus eval (15d.1).** `scripts/eval-matrix.sh [--models "ollama:<id> lmstudio:<id>"] [--stability N] [--only corpus]` runs the
 prompt eval plus 19 labelled reviewer cases (`src/test/resources/eval/defects.json`: garbled word, mixed script, unbalanced
 « », English left in, idiom, gender slip, lexical drift, omission, meaning, short lines) over Ollama and LM Studio and prints

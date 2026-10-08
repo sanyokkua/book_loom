@@ -43,7 +43,7 @@ import ua.bookloom.pipeline.run.JobModelCalls;
  * rules, and the reports then end in {@code -generic}, so the two can be compared. With
  * {@code BOOKLOOM_EVAL_SUITE=batch} this test is skipped and {@link BatchEvalTest} runs instead, with
  * {@code BOOKLOOM_EVAL_SUITE=words} {@link WordsEvalTest} does, and with {@code BOOKLOOM_EVAL_SUITE=realrun}
- * {@link RealRunTest} does, and with {@code BOOKLOOM_EVAL_SUITE=sequence} {@link SequenceEvalTest} does.
+ * {@link RealRunTest} does, and with {@code BOOKLOOM_EVAL_SUITE=sequence} {@link SequenceEvalTest} does, and with {@code prescan}, {@code terms}, {@code setup}, {@code consistency} or {@code retry} {@link StageEvalTest} does.
  *
  * <p>The requests are the app's: {@link PromptEvalRunner} and {@link BatchEvalRunner} build them with the run's own
  * request factory over an {@link EvalProject}, and every call goes through {@link JobModelCalls}, which sizes it to the
@@ -53,7 +53,9 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 @Slf4j
 @Tag("promptEval")
 @EnabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_URL", matches = ".+")
-@DisabledIfEnvironmentVariable(named = "BOOKLOOM_EVAL_SUITE", matches = "batch|words|realrun|sequence")
+@DisabledIfEnvironmentVariable(
+        named = "BOOKLOOM_EVAL_SUITE",
+        matches = "batch|words|realrun|sequence|prescan|terms|setup|consistency|retry")
 class PromptEvalTest {
 
     static final String DEFAULT_MODEL = "gemma4:e4b-mlx";
