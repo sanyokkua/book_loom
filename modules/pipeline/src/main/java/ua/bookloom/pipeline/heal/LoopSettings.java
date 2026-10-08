@@ -18,6 +18,8 @@ import ua.bookloom.pipeline.prompt.CallFrame;
  * @param glossaryPairs the chunk's unlocked glossary renderings, one {@code source → target} line each, which the
  *     reviewer checks the candidates against
  * @param characters the chunk's character gender sheet, one {@code name — gender} line each, shown to the reviewer
+ * @param usualRenderings the lexicon's established renderings of the chunk's recurring terms, one
+ *     {@code source → target} line each; the reviewer sees them as usage that may differ, never as a rule
  */
 public record LoopSettings(
         ReviewMode reviewMode,
@@ -26,7 +28,8 @@ public record LoopSettings(
         NamePolicy namePolicy,
         List<String> glossaryTerms,
         List<String> glossaryPairs,
-        List<String> characters) {
+        List<String> characters,
+        List<String> usualRenderings) {
 
     /** Validates the invariants a caller is entitled to assume and defensively copies the list component. */
     public LoopSettings {
@@ -37,9 +40,23 @@ public record LoopSettings(
         Objects.requireNonNull(glossaryTerms, "glossaryTerms");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(characters, "characters");
+        Objects.requireNonNull(usualRenderings, "usualRenderings");
+        usualRenderings = List.copyOf(usualRenderings);
         glossaryTerms = List.copyOf(glossaryTerms);
         glossaryPairs = List.copyOf(glossaryPairs);
         characters = List.copyOf(characters);
+    }
+
+    /** Settings for a chunk with no usual renderings to show the reviewer. */
+    public LoopSettings(
+            final ReviewMode reviewMode,
+            final DialParameters dial,
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<String> glossaryPairs,
+            final List<String> characters) {
+        this(reviewMode, dial, frame, namePolicy, glossaryTerms, glossaryPairs, characters, List.of());
     }
 
     /** Settings for a chunk whose reviewer is shown no character sheet. */

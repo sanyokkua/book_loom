@@ -77,7 +77,7 @@ public final class Lexicon {
     public static List<String> termsIn(final List<LexiconEntry> entries, final List<String> texts) {
         return entries.stream()
                 .map(LexiconEntry::term)
-                .filter(term -> texts.stream().anyMatch(text -> TermMatch.occursIn(term, text)))
+                .filter(term -> texts.stream().anyMatch(text -> TermMatch.isNamedIn(term, text)))
                 .toList();
     }
 }

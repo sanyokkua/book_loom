@@ -19,7 +19,8 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
  * @param dynamicTokens the tokens the dynamic context may take, from {@link ContextBudget#dynamicAllowance}; the
  *     lowest-priority sections are cut to fit it
  * @param lexicon the project's recurring-term entries as they stand; only the established renderings of terms the
- *     chunk names are shown, and never one the glossary already holds
+ *     text names are shown, and never one the glossary already holds
+ * @param lexiconFilter what keeps function words and declined forms out of the shown renderings
  */
 public record ContextInputs(
         StyleSheet styleSheet,
@@ -28,7 +29,28 @@ public record ContextInputs(
         List<GlossaryEntry> glossary,
         List<String> earlierMaskedTargets,
         int dynamicTokens,
-        List<LexiconEntry> lexicon) {
+        List<LexiconEntry> lexicon,
+        LexiconFilter lexiconFilter) {
+
+    /** A set of inputs whose lexicon is shown unfiltered. */
+    public ContextInputs(
+            final StyleSheet styleSheet,
+            @Nullable final String summary,
+            final int precedingCount,
+            final List<GlossaryEntry> glossary,
+            final List<String> earlierMaskedTargets,
+            final int dynamicTokens,
+            final List<LexiconEntry> lexicon) {
+        this(
+                styleSheet,
+                summary,
+                precedingCount,
+                glossary,
+                earlierMaskedTargets,
+                dynamicTokens,
+                lexicon,
+                LexiconFilter.NONE);
+    }
 
     /** A set of inputs with a window to respect and no lexicon. */
     public ContextInputs(
@@ -38,7 +60,15 @@ public record ContextInputs(
             final List<GlossaryEntry> glossary,
             final List<String> earlierMaskedTargets,
             final int dynamicTokens) {
-        this(styleSheet, summary, precedingCount, glossary, earlierMaskedTargets, dynamicTokens, List.of());
+        this(
+                styleSheet,
+                summary,
+                precedingCount,
+                glossary,
+                earlierMaskedTargets,
+                dynamicTokens,
+                List.of(),
+                LexiconFilter.NONE);
     }
 
     /** A set of inputs with no limit on the dynamic context, as a caller with no window to respect has. */
@@ -63,5 +93,6 @@ public record ContextInputs(
         glossary = List.copyOf(Objects.requireNonNull(glossary, "glossary"));
         earlierMaskedTargets = List.copyOf(Objects.requireNonNull(earlierMaskedTargets, "earlierMaskedTargets"));
         lexicon = List.copyOf(Objects.requireNonNull(lexicon, "lexicon"));
+        Objects.requireNonNull(lexiconFilter, "lexiconFilter");
     }
 }

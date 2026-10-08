@@ -103,7 +103,7 @@ final class NeighbourPrompt {
                 .reduce("", (joined, next) -> joined + " " + next);
         final List<String> found = inputs.glossary().stream()
                 .filter(entry -> entry.target() != null && !entry.target().isBlank())
-                .filter(entry -> TermMatch.occursIn(entry.term(), text))
+                .filter(entry -> TermMatch.isNamedIn(entry.term(), text))
                 .limit(MAX_FACT_LINES)
                 .map(NeighbourPrompt::fact)
                 .toList();

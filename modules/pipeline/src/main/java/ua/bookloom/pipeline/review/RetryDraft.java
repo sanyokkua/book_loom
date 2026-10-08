@@ -220,7 +220,7 @@ public final class RetryDraft {
         final List<GlossaryEntry> terms = termsOf(snapshot, plan.record().projectId());
         final ProtectedMask mask = ProtectedSpans.mask(segment, plan.frame(), terms);
         final DraftContext context =
-                ContextPackageAssembler.replay(snapshot, mask).withFollowingTarget(plan.followingTarget());
+                ContextPackageAssembler.replay(snapshot, mask, segment).withFollowingTarget(plan.followingTarget());
         logReplayed(segment.id(), snapshot);
         final GateFunction gate = TypographyGate.around(
                 ProtectedSpans.gate(

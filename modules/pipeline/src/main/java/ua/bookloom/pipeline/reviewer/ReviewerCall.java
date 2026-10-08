@@ -85,20 +85,58 @@ public final class ReviewerCall {
             final List<String> characters,
             final ReviewPass pass,
             final ModelCalls calls) {
+        return review(pairs, frame, new Terms(glossaryPairs, List.of()), characters, pass, calls);
+    }
+
+    /**
+     * The terms a reviewer is shown.
+     *
+     * @param glossaryPairs the confirmed glossary renderings the batch had to use, one {@code source → target} line
+     *     each: a rule
+     * @param usualRenderings the renderings the book usually gave recurring terms, one {@code source → target} line
+     *     each: usage that may differ, never a rule
+     */
+    public record Terms(List<String> glossaryPairs, List<String> usualRenderings) {
+
+        /** Copies both lists. */
+        public Terms {
+            glossaryPairs = List.copyOf(Objects.requireNonNull(glossaryPairs, "glossaryPairs"));
+            usualRenderings = List.copyOf(Objects.requireNonNull(usualRenderings, "usualRenderings"));
+        }
+    }
+
+    /**
+     * Reviews one batch in a single call, telling the reviewer the rules and the usual renderings apart.
+     *
+     * @param pairs the batch's pairs, in document order; never empty
+     * @param frame the run's language pair, style sheet and foreign-passage policy
+     * @param terms the confirmed and the usual renderings
+     * @param characters the characters present with their gender, or empty when the glossary knows none
+     * @param pass which pass of the batch this is
+     * @param calls the seam the call is sent through
+     * @return as {@link #review(List, CallFrame, List, ReviewPass, ModelCalls)}
+     */
+    public Result<ReviewVerdict> review(
+            final List<ReviewedPair> pairs,
+            final CallFrame frame,
+            final Terms terms,
+            final List<String> characters,
+            final ReviewPass pass,
+            final ModelCalls calls) {
+        Objects.requireNonNull(terms, "terms");
         Objects.requireNonNull(characters, "characters");
         Objects.requireNonNull(pairs, "pairs");
         Objects.requireNonNull(frame, "frame");
-        Objects.requireNonNull(glossaryPairs, "glossaryPairs");
         Objects.requireNonNull(pass, "pass");
         Objects.requireNonNull(calls, "calls");
         final List<String> segmentIds =
                 pairs.stream().map(ReviewedPair::segmentId).toList();
         log.debug("Reviewing batch pairCount={} pass={} segmentIds={}", pairs.size(), pass, segmentIds);
         try {
-            final Result<ChatResponse> reply = ask(pairs, frame, glossaryPairs, characters, pass, calls);
+            final Result<ChatResponse> reply = ask(pairs, frame, terms, characters, pass, calls);
             return reply.isErr()
                     ? routeFailure(segmentIds, Objects.requireNonNull(reply.error()))
-                    : read(Objects.requireNonNull(reply.data()), pairs, frame, glossaryPairs, characters, pass, calls);
+                    : read(Objects.requireNonNull(reply.data()), pairs, frame, terms, characters, pass, calls);
         } catch (Throwable cause) {
             return internalFailure(cause);
         }
@@ -115,12 +153,12 @@ public final class ReviewerCall {
             final ChatResponse response,
             final List<ReviewedPair> pairs,
             final CallFrame frame,
-            final List<String> glossaryPairs,
+            final Terms terms,
             final List<String> characters,
             final ReviewPass pass,
             final ModelCalls calls) {
         return response.finishReason() == FinishReason.LENGTH
-                ? readCut(pairs, response, frame, glossaryPairs, characters, pass, calls)
+                ? readCut(pairs, response, frame, terms, characters, pass, calls)
                 : Result.ok(
                         readVerdict(pairs.stream().map(ReviewedPair::segmentId).toList(), pairs, response));
     }
@@ -128,11 +166,11 @@ public final class ReviewerCall {
     private Result<ChatResponse> ask(
             final List<ReviewedPair> pairs,
             final CallFrame frame,
-            final List<String> glossaryPairs,
+            final Terms terms,
             final List<String> characters,
             final ReviewPass pass,
             final ModelCalls calls) {
-        final Map<String, String> userValues = userValues(pairs, glossaryPairs, characters, pass);
+        final Map<String, String> userValues = userValues(pairs, terms, characters, pass);
         final ChatRequest request = request(pairs, frame, userValues);
         logTraceMessages(request);
         final CallDescriptor descriptor = new CallDescriptor(
@@ -152,7 +190,7 @@ public final class ReviewerCall {
             final List<ReviewedPair> pairs,
             final ChatResponse response,
             final CallFrame frame,
-            final List<String> glossaryPairs,
+            final Terms terms,
             final List<String> characters,
             final ReviewPass pass,
             final ModelCalls calls) {
@@ -166,7 +204,7 @@ public final class ReviewerCall {
         if (unread.isEmpty()) {
             return Result.ok(first);
         }
-        final Result<ChatResponse> again = ask(unread, frame, glossaryPairs, characters, pass, calls);
+        final Result<ChatResponse> again = ask(unread, frame, terms, characters, pass, calls);
         if (again.isErr()) {
             return reAskFailed(first, unread, Objects.requireNonNull(again.error()));
         }
@@ -250,13 +288,11 @@ public final class ReviewerCall {
     }
 
     private static Map<String, String> userValues(
-            final List<ReviewedPair> pairs,
-            final List<String> glossaryPairs,
-            final List<String> characters,
-            final ReviewPass pass) {
+            final List<ReviewedPair> pairs, final Terms terms, final List<String> characters, final ReviewPass pass) {
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("pairs", renderPairs(pairs));
-        userValues.put("glossaryTerms", String.join("\n", glossaryPairs));
+        userValues.put("glossaryTerms", String.join("\n", terms.glossaryPairs()));
+        userValues.put("usualRenderings", String.join("\n", terms.usualRenderings()));
         userValues.put("characters", String.join("\n", characters));
         userValues.put("passFocus", pass.instruction());
         return userValues;

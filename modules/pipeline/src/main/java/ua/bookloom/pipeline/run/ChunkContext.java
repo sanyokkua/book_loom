@@ -1,6 +1,5 @@
 package ua.bookloom.pipeline.run;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,13 +13,13 @@ import ua.bookloom.api.persistence.LexiconRepository;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.chunk.Chunk;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextInputs;
 import ua.bookloom.pipeline.context.ContextPackage;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
 import ua.bookloom.pipeline.context.InjectedCharacters;
+import ua.bookloom.pipeline.context.LexiconFilter;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.lexicon.Lexicon;
 import ua.bookloom.pipeline.lexicon.TermMatch;
@@ -47,6 +46,7 @@ final class ChunkContext {
     private final Map<String, ProtectedMask> masks;
     private final GateFunction gate;
     private final Lexicon lexicon;
+    private final LexiconFilter lexiconFilter;
 
     private ChunkContext(
             final Chunk chunk,
@@ -61,6 +61,8 @@ final class ChunkContext {
         this.masks = Map.copyOf(masks);
         this.gate = gate;
         this.lexicon = lexicon;
+        this.lexiconFilter = LexiconFilter.of(
+                settings.frame().sourceLanguage(), settings.frame().targetLanguage());
     }
 
     /**
@@ -113,22 +115,32 @@ final class ChunkContext {
         return terms;
     }
 
-    /**
-     * The unlocked glossary renderings of the chunk's terms and the lexicon's established renderings of the recurring
-     * terms the glossary does not hold, as {@code source → target} lines, for the reviewer.
-     */
+    /** The unlocked glossary renderings of the chunk's terms as {@code source → target} lines: what the reviewer holds the text to. */
     List<String> termPairs() {
-        final List<String> pairs = new ArrayList<>(occurringIn(chunk.segments(), glossary).stream()
+        final List<String> pairs = occurringIn(chunk.segments(), glossary).stream()
                 .filter(entry -> entry.target() != null && !entry.target().isBlank() && !entry.locked())
                 .map(entry -> entry.term() + " → " + entry.target())
-                .toList());
+                .toList();
+        log.debug("Reviewer glossary pairs for a chunk pairs={}", pairs.size());
+        return pairs;
+    }
+
+    /**
+     * The lexicon's established renderings of the recurring terms the chunk names and the glossary does not hold, as
+     * {@code source → target} lines: the usual renderings, which the reviewer may see differ.
+     */
+    List<String> usualRenderings() {
         final List<String> texts = textsOf(chunk.segments());
-        lexicon.entries(settings.projectId()).stream()
+        final List<String> pairs = lexicon.entries(settings.projectId()).stream()
                 .filter(entry -> !heldByGlossary(entry))
-                .filter(entry -> texts.stream().anyMatch(text -> TermMatch.occursIn(entry.term(), text)))
-                .forEach(entry ->
-                        entry.established().ifPresent(rendering -> pairs.add(entry.term() + " → " + rendering)));
-        log.debug("Reviewer term pairs for a chunk pairs={}", pairs.size());
+                .filter(entry -> texts.stream().anyMatch(text -> TermMatch.isNamedIn(entry.term(), text)))
+                .flatMap(entry -> entry
+                        .established()
+                        .filter(rendering -> lexiconFilter.admits(entry.term(), rendering))
+                        .map(rendering -> entry.term() + " → " + rendering)
+                        .stream())
+                .toList();
+        log.debug("Reviewer usual renderings for a chunk pairs={}", pairs.size());
         return pairs;
     }
 
@@ -166,9 +178,7 @@ final class ChunkContext {
     }
 
     private static List<String> textsOf(final List<Segment> segments) {
-        return segments.stream()
-                .map(segment -> Tokens.replace(segment.masked(), " "))
-                .toList();
+        return Tokens.visibleTexts(segments);
     }
 
     /**
@@ -193,7 +203,8 @@ final class ChunkContext {
                 glossary,
                 earlierMaskedTargets,
                 ChunkBudget.dynamicAllowance(settings.frame(), settings.window()),
-                lexicon.entries(settings.projectId()));
+                lexicon.entries(settings.projectId()),
+                lexiconFilter);
         return ContextPackageAssembler.assemble(chunk, segment, mask(segment), memory, inputs);
     }
 
@@ -216,14 +227,9 @@ final class ChunkContext {
     }
 
     private static List<GlossaryEntry> occurringIn(final List<Segment> segments, final List<GlossaryEntry> entries) {
-        final List<String> texts = segments.stream()
-                .map(segment -> Tokens.replace(segment.masked(), " "))
-                .toList();
+        final List<String> texts = textsOf(segments);
         return entries.stream()
-                .filter(entry -> !entry.term().isBlank())
-                .filter(entry -> texts.stream()
-                        .anyMatch(text ->
-                                WholeWord.pattern(entry.term()).matcher(text).find()))
+                .filter(entry -> texts.stream().anyMatch(text -> TermMatch.isNamedIn(entry.term(), text)))
                 .toList();
     }
 }

@@ -9,13 +9,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.ContextSnapshot;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.SnapshotRendering;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.SnapshotTmHit;
 import ua.bookloom.api.project.SnapshotTmHit.TmHitKind;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.api.project.TmEntry;
 import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.TmLookup;
 import ua.bookloom.pipeline.prompt.DraftContext;
@@ -32,7 +36,7 @@ public final class ContextPackageAssembler {
     /**
      * Assembles one segment's context.
      *
-     * @param chunk the chunk holding the segment; its segments decide which glossary terms occur
+     * @param chunk the chunk holding the segment; the context is scoped to the segment's own text, not the chunk's
      * @param segment the segment about to be drafted
      * @param mask the segment's protected spans, which decide how a locked term is described
      * @param memory what the translation memory offers for the segment
@@ -51,16 +55,20 @@ public final class ContextPackageAssembler {
         Objects.requireNonNull(memory, "memory");
         Objects.requireNonNull(inputs, "inputs");
         final DynamicFit fit = DynamicFit.of(
-                InjectedTerms.select(chunk, mask, inputs.glossary()),
+                InjectedTerms.select(List.of(segment), mask, inputs.glossary()),
                 InjectedCharacters.select(List.of(segment), inputs.glossary()),
-                InjectedLexicon.select(chunk, inputs.lexicon(), inputs.glossary()),
+                InjectedLexicon.select(List.of(segment), inputs.lexicon(), inputs.glossary(), inputs.lexiconFilter()),
                 memoryHits(memory),
                 precedingTexts(inputs),
                 inputs.summary(),
                 inputs.dynamicTokens());
         final ContextPackage assembled = packageOf(fit, inputs.styleSheet().text());
         logAssembly(
-                segment, assembled.snapshot(), memoryLines(assembled.snapshot().tmHits()), assembled.draftContext());
+                segment,
+                assembled.snapshot(),
+                memoryLines(assembled.snapshot().tmHits()),
+                assembled.draftContext(),
+                scope(assembled.snapshot(), inputs));
         return assembled;
     }
 
@@ -92,33 +100,69 @@ public final class ContextPackageAssembler {
      * @param snapshot the non-null snapshot the first draft's record stores
      * @param mask the segment's non-null mask, built from the snapshot's terms, which decides how a locked term is
      *     described
-     * @return the same preceding targets, term lines, memory lines and summary the snapshot was assembled with
+     * @param segment the non-null segment being drafted again; the snapshot's terms, renderings and characters the
+     *     segment's own text does not name are dropped, so a snapshot taken when contexts were wider shrinks too
+     * @return the same preceding targets, memory lines and summary the snapshot was assembled with, and the term
+     *     lines, renderings and characters of it that the segment names
      */
-    public static DraftContext replay(final ContextSnapshot snapshot, final ProtectedMask mask) {
+    public static DraftContext replay(final ContextSnapshot snapshot, final ProtectedMask mask, final Segment segment) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(mask, "mask");
+        Objects.requireNonNull(segment, "segment");
+        final List<String> texts = Tokens.visibleTexts(List.of(segment));
         final List<InjectedTerm> terms = snapshot.glossary().stream()
+                .filter(term -> namedIn(term.term(), texts))
                 .map(term -> new InjectedTerm(term, InjectedTerms.lines(term, mask)))
                 .toList();
-        final List<String> glossaryLines = lines(terms, false);
+        final List<SnapshotRendering> lexicon = snapshot.lexicon().stream()
+                .filter(rendering -> namedIn(rendering.term(), texts))
+                .toList();
+        final List<String> characters = snapshot.characters().stream()
+                .filter(line -> namedIn(line.split(" — ", 2)[0], texts))
+                .toList();
         final DraftContext context = new DraftContext(
                 snapshot.precedingTargets(),
                 snapshot.summary(),
-                glossaryLines,
+                lines(terms, false),
                 memoryLines(snapshot.tmHits()),
                 lines(terms, true),
-                lexiconLines(snapshot.lexicon()),
-                snapshot.characters());
+                lexiconLines(lexicon),
+                characters);
+        logReplayed(segment, snapshot, context, terms.size());
+        return context;
+    }
+
+    private static void logReplayed(
+            final Segment segment, final ContextSnapshot snapshot, final DraftContext context, final int terms) {
         log.debug(
-                "Replayed context preceding={} terms={} lexicon={} glossaryLines={} suggestedLines={} memoryLines={} summary={}",
+                "Replayed context segment={} preceding={} terms={}/{} lexicon={}/{} characters={}/{} "
+                        + "suggestedLines={} memoryLines={} summary={}",
+                segment.id(),
                 context.precedingTargets().size(),
+                terms,
                 snapshot.glossary().size(),
+                context.lexiconLines().size(),
                 snapshot.lexicon().size(),
-                glossaryLines.size(),
+                context.characterLines().size(),
+                snapshot.characters().size(),
                 context.suggestedLines().size(),
                 context.memoryLines().size(),
                 snapshot.summary() != null);
-        return context;
+    }
+
+    private static boolean namedIn(final String term, final List<String> texts) {
+        return texts.stream().anyMatch(text -> TermMatch.isNamedIn(term, text));
+    }
+
+    private static String scope(final ContextSnapshot snapshot, final ContextInputs inputs) {
+        final long cast = inputs.glossary().stream()
+                .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() != Gender.UNKNOWN)
+                .count();
+        return "glossary=" + snapshot.glossary().size() + "/"
+                + inputs.glossary().size()
+                + " lexicon=" + snapshot.lexicon().size() + "/"
+                + inputs.lexicon().size()
+                + " characters=" + snapshot.characters().size() + "/" + cast;
     }
 
     /** The prompt lines of the terms whose target is, or is not, an unconfirmed suggestion. */
@@ -173,7 +217,8 @@ public final class ContextPackageAssembler {
             final Segment segment,
             final ContextSnapshot snapshot,
             final List<String> memoryLines,
-            final DraftContext context) {
+            final DraftContext context,
+            final String scope) {
         final List<SnapshotTerm> terms = snapshot.glossary();
         final long locked = terms.stream()
                 .filter(term -> term.locked() && InjectedTerms.hasTarget(term))
@@ -182,8 +227,9 @@ public final class ContextPackageAssembler {
                 terms.stream().filter(term -> !InjectedTerms.hasTarget(term)).count();
         final long suggested = terms.stream().filter(SnapshotTerm::suggested).count();
         log.debug(
-                "Assembled context segment={} preceding={} lockedTerms={} unlockedTerms={} suggestedTerms={} "
+                "Assembled context scoped {} segment={} preceding={} lockedTerms={} unlockedTerms={} suggestedTerms={} "
                         + "noTargetTerms={} characters={} lexicon={} hints={} suggestions={} reuse={} summary={}",
+                scope,
                 segment.id(),
                 snapshot.precedingTargets().size(),
                 locked,

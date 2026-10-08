@@ -43,7 +43,8 @@ class ContextPackageReplayTest {
                 ContextFixtures.inputs("Гейл повернувся.", 2, glossary, List.of("Він прийшов.")));
         final ContextSnapshot snapshot = assembled.snapshot();
 
-        final DraftContext replayed = ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, glossary));
+        final DraftContext replayed =
+                ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, glossary), segment);
 
         assertThat(replayed).isEqualTo(assembled.draftContext());
         assertThat(replayed.glossaryLines())
@@ -67,7 +68,7 @@ class ContextPackageReplayTest {
         final Segment segment = ContextFixtures.segment(0, SOURCE);
 
         final DraftContext replayed =
-                ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, List.of()));
+                ContextPackageAssembler.replay(snapshot, ContextFixtures.mask(segment, List.of()), segment);
 
         assertThat(replayed.glossaryLines()).containsExactly("Hale → Хейл (character, male)");
         assertThat(replayed.summary()).isNull();

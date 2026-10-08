@@ -108,11 +108,13 @@ class RetryDraftTest {
     }
 
     @Test
-    void retry_glossaryChangedSinceTheDraft_replaysTheSnapshotsTexts() {
-        // the prompt carries what the first draft saw — Hale → Хейл — not today's Гейл
+    void retry_glossaryChangedSinceTheDraft_replaysTheSnapshotsTextsOfTheTermsTheSegmentNames() {
+        // monster → потвора, not today's чудовисько; Hale, whom the segment does not name, is dropped
         final Desk desk = flaggedWithSnapshot(JobState.PAUSED);
+        withContext(desk, FLAGGED_ID, overWideSnapshot());
         Objects.requireNonNull(desk.glossary()
-                .add(new GlossaryEntry("g1", desk.projectId(), "Hale", "Гейл", TermType.CHARACTER, Gender.MALE, false))
+                .add(new GlossaryEntry(
+                        "g1", desk.projectId(), "monster", "чудовисько", TermType.TERM, Gender.NEUTER, false))
                 .data());
         final ScriptedChatModel model = passing();
 
@@ -122,11 +124,24 @@ class RetryDraftTest {
         assertThat(userMessage(draft))
                 .contains(
                         "Хейл повернувся до замку.",
-                        "Hale → Хейл (character, male)",
+                        "monster → потвора (term, neuter)",
                         "The night was quiet. → Ніч була тиха.",
                         "<PreviousTranslations>\nНіч була тиха й темна.\n</PreviousTranslations>")
-                .doesNotContain("Гейл", "The monster came.");
+                .doesNotContain("→ чудовисько", "Hale →", "The monster came.");
         assertThat(draft.messages().getFirst().content()).contains("Keep the narrator's voice formal.");
+    }
+
+    private static ContextSnapshot overWideSnapshot() {
+        return new ContextSnapshot(
+                SNAPSHOT.precedingTargets(),
+                List.of(
+                        SNAPSHOT.glossary().getFirst(),
+                        new SnapshotTerm("monster", "потвора", TermType.TERM, Gender.NEUTER, false)),
+                SNAPSHOT.tmHits(),
+                SNAPSHOT.summary(),
+                SNAPSHOT.styleSheet(),
+                List.of(),
+                List.of());
     }
 
     @Test

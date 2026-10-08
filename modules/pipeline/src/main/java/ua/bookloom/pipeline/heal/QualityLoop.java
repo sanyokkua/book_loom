@@ -107,7 +107,12 @@ public final class QualityLoop {
             final ReviewPass pass,
             final ModelCalls calls) {
         return reviewerCall.review(
-                pairs, settings.frame(), settings.glossaryPairs(), settings.characters(), pass, calls);
+                pairs,
+                settings.frame(),
+                new ReviewerCall.Terms(settings.glossaryPairs(), settings.usualRenderings()),
+                settings.characters(),
+                pass,
+                calls);
     }
 
     private SegmentHealer healer(final LoopSettings settings, final GateFunction gate, final ModelCalls calls) {

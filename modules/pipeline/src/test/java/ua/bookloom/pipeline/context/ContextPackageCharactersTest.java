@@ -66,7 +66,7 @@ class ContextPackageCharactersTest {
         final Segment segment = ContextFixtures.segment(0, "Hale met Lyra.");
 
         final DraftContext replayed =
-                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()));
+                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()), segment);
 
         assertThat(replayed.characterLines()).containsExactly("Lyra — female", "Hale — male");
     }

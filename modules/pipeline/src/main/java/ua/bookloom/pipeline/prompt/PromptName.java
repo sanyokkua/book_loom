@@ -93,7 +93,7 @@ public enum PromptName {
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
                     Set.of("languageRules")),
-            new Slots(Set.of("pairs"), Set.of("glossaryTerms", "characters", "passFocus"))),
+            new Slots(Set.of("pairs"), Set.of("glossaryTerms", "usualRenderings", "characters", "passFocus"))),
 
     /** The self-heal call that rewrites one rejected target to fix its concrete, named findings. */
     DIRECTED_FIX(

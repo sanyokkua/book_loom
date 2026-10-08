@@ -106,17 +106,20 @@ class ContextPackageAssemblerTest {
                 assemble(chunk, 0, ContextFixtures.inputs(null, 0, glossary, List.of()), ContextFixtures.NO_MEMORY);
 
         final var replayed = ContextPackageAssembler.replay(
-                first.snapshot(), ContextFixtures.mask(chunk.segments().getFirst(), glossary));
+                first.snapshot(),
+                ContextFixtures.mask(chunk.segments().getFirst(), glossary),
+                chunk.segments().getFirst());
 
         assertThat(replayed.glossaryLines()).isEmpty();
         assertThat(replayed.suggestedLines()).containsExactly("Hale → Гейл (character, male)");
     }
 
     @Test
-    void assemble_termOnlyInAnotherSegmentOfTheChunk_isStillListed() {
+    void assemble_termOnlyInAnotherSegmentOfTheChunk_isNotListed() {
         final Chunk chunk = ContextFixtures.chunk("It was late.", "Milton was quiet.");
 
-        assertThat(glossaryLines(chunk, 0, List.of(MILTON))).containsExactly("Milton → Мілтон (place, unknown)");
+        assertThat(glossaryLines(chunk, 0, List.of(MILTON))).isEmpty();
+        assertThat(glossaryLines(chunk, 1, List.of(MILTON))).containsExactly("Milton → Мілтон (place, unknown)");
     }
 
     @Test

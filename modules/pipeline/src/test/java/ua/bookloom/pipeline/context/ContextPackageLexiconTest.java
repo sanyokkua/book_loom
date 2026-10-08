@@ -99,7 +99,7 @@ class ContextPackageLexiconTest {
         final Segment segment = ContextFixtures.segment(0, "The master left.");
 
         final DraftContext replayed =
-                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()));
+                ContextPackageAssembler.replay(assembled.snapshot(), ContextFixtures.mask(segment, List.of()), segment);
 
         assertThat(replayed).isEqualTo(assembled.draftContext());
         assertThat(replayed.lexiconLines()).containsExactly("master → господар");

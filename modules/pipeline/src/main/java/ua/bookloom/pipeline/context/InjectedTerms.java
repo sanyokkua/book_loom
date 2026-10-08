@@ -10,8 +10,7 @@ import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.WholeWord;
-import ua.bookloom.pipeline.chunk.Chunk;
+import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.memory.ProtectedMask;
 import ua.bookloom.pipeline.memory.ProtectedSpan;
 import ua.bookloom.pipeline.qa.CheckName;
@@ -19,18 +18,16 @@ import ua.bookloom.pipeline.qa.LockedRendering;
 
 /**
  * Picks the glossary entries a segment's prompt lists. A small model's context is precious, so only the entries whose
- * term occurs whole-word in the chunk are sent; a locked entry the model never sees is described by its token.
+ * term occurs in the text being translated are sent; a locked entry the model never sees is described by its token.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class InjectedTerms {
 
-    static List<InjectedTerm> select(final Chunk chunk, final ProtectedMask mask, final List<GlossaryEntry> glossary) {
-        final List<String> searchTexts = chunk.segments().stream()
-                .map(Segment::masked)
-                .map(masked -> Tokens.replace(masked, " "))
-                .toList();
+    static List<InjectedTerm> select(
+            final List<Segment> segments, final ProtectedMask mask, final List<GlossaryEntry> glossary) {
+        final List<String> searchTexts = Tokens.visibleTexts(segments);
         final List<InjectedTerm> selected = new ArrayList<>();
         for (final GlossaryEntry entry : glossary) {
             if (!occursIn(entry.term(), searchTexts)) {
@@ -42,8 +39,10 @@ final class InjectedTerms {
                 log.debug("Glossary term {} is locked and hidden only in other segments; left out", entry.term());
             } else {
                 selected.add(new InjectedTerm(term, lines));
+                log.trace("Glossary term {} occurs in the text and is offered", entry.term());
             }
         }
+        log.trace("Glossary scoped to the text offered={} occurring={}", glossary.size(), selected.size());
         return selected;
     }
 
@@ -53,9 +52,7 @@ final class InjectedTerms {
     }
 
     private static boolean occursIn(final String term, final List<String> searchTexts) {
-        return !term.isBlank()
-                && searchTexts.stream()
-                        .anyMatch(text -> WholeWord.pattern(term).matcher(text).find());
+        return !term.isBlank() && searchTexts.stream().anyMatch(text -> TermMatch.isNamedIn(term, text));
     }
 
     /**

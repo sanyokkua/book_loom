@@ -11,8 +11,8 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.WholeWord;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.lexicon.TermMatch;
 
 /**
  * The character gender sheet of a segment: one {@code name — gender} line for each glossary character the segment
@@ -32,10 +32,7 @@ public final class InjectedCharacters {
      * @return one line per present character of known gender, in glossary order; never null, empty when none is
      */
     public static List<String> select(final List<Segment> segments, final List<GlossaryEntry> glossary) {
-        final List<String> texts = segments.stream()
-                .map(Segment::masked)
-                .map(masked -> Tokens.replace(masked, " "))
-                .toList();
+        final List<String> texts = Tokens.visibleTexts(segments);
         final List<String> lines = glossary.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() != Gender.UNKNOWN)
                 .filter(entry -> !entry.term().isBlank() && namedIn(entry.term(), texts))
@@ -66,7 +63,6 @@ public final class InjectedCharacters {
     }
 
     private static boolean namedIn(final String term, final List<String> texts) {
-        return texts.stream()
-                .anyMatch(text -> WholeWord.pattern(term).matcher(text).find());
+        return texts.stream().anyMatch(text -> TermMatch.isNamedIn(term, text));
     }
 }

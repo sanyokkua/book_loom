@@ -221,7 +221,8 @@ public final class PromptRequests {
                 settings.names(),
                 context.terms(),
                 context.termPairs(),
-                context.characterLines());
+                context.characterLines(),
+                context.usualRenderings());
     }
 
     private PreparedBatch prepared(

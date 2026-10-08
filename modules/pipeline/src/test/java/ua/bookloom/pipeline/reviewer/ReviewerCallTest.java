@@ -80,6 +80,25 @@ class ReviewerCallTest {
     }
 
     @Test
+    void review_usualRenderings_areShownApartFromTheGlossaryRules() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(ALL_OK));
+
+        CALL.review(
+                THREE_PAIRS,
+                FRAME,
+                new ReviewerCall.Terms(List.of("Hale → Гейл"), List.of("master → господар")),
+                List.of(),
+                ReviewPass.FIRST,
+                calls(model));
+
+        final String user = model.requests().getFirst().messages().getLast().content();
+        assertThat(user.indexOf("Hale → Гейл")).isLessThan(user.indexOf("Usual renderings"));
+        assertThat(user)
+                .contains("[Glossary the translation had to use", "Not a rule", "master → господар")
+                .doesNotContain("Glossary the translation had to use: source → target]\nHale → Гейл\nmaster");
+    }
+
+    @Test
     void review_secondPass_carriesItsNarrowerChecklistAndTheFirstDoesNot() {
         final ScriptedChatModel model =
                 new ScriptedChatModel().answer(readable(ALL_OK)).answer(readable(ALL_OK));

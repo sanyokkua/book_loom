@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import ua.bookloom.api.document.Segment;
 
 /** The one {@code ⟦gN⟧} placeholder-token pattern, so no class keeps its own copy of it. */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -110,5 +111,15 @@ public final class Tokens {
         Objects.requireNonNull(text, "text");
         Objects.requireNonNull(replacement, "replacement");
         return TOKEN.matcher(text).replaceAll(Matcher.quoteReplacement(replacement));
+    }
+
+    /**
+     * The text a model reads of some segments, to look names up in: each masked text with its tokens turned to spaces.
+     *
+     * @param segments the non-null segments
+     * @return one text per segment, in order
+     */
+    public static List<String> visibleTexts(final List<Segment> segments) {
+        return segments.stream().map(segment -> replace(segment.masked(), " ")).toList();
     }
 }

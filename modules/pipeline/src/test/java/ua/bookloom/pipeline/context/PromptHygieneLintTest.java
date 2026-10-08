@@ -55,6 +55,7 @@ class PromptHygieneLintTest {
             Map.entry("expectedTokens", "⟦g0⟧ ⟦g1⟧"),
             Map.entry("summary", "Hale searches for his brother."),
             Map.entry("glossaryTerms", "Hale → Гейл (character, male)"),
+            Map.entry("usualRenderings", "master → господар"),
             Map.entry("lockedNames", "⟦g0⟧ → Гейл, character, male"),
             Map.entry("suggestedTerms", "Moreau → Моро (character, male)"),
             Map.entry("lexiconTerms", "master → господар"),
