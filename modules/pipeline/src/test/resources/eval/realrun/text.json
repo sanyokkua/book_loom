@@ -628,5 +628,517 @@
   ],
   "context": null,
   "rationale": "a leading vocative dropped; the declined form Фінне counts as present"
+ },
+ {
+  "id": "female-name-flint-en",
+  "kind": "female-noun-name",
+  "check": "NONE",
+  "source": "Flint stopped at the door. She was tired, and she did not turn around.",
+  "good": "Флінт зупинилася біля дверей. Вона була втомлена й не обернулася.",
+  "bad": "Флінт зупинився біля дверей. Вона була втомлена й не обернулася.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Flint",
+    "target": "Флінт",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "invented consonant-ending name of a woman; the draft puts the verb after the name in the masculine (the Chrome class)",
+  "marker": "(?iu)флінт\\S*\\s+зупинилась|флінт\\S*\\s+зупинилася"
+ },
+ {
+  "id": "female-name-chisel-en",
+  "kind": "female-noun-name",
+  "check": "NONE",
+  "source": "Chisel poured the tea and handed the cup across the table. Nobody thanked her.",
+  "good": "Чизел налила чаю й подала чашку через стіл. Ніхто не подякував їй.",
+  "bad": "Чизел налив чаю й подав чашку через стіл. Ніхто не подякував їй.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Chisel",
+    "target": "Чизел",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "second invented name; two masculine verbs after a female name",
+  "marker": "(?iu)чизел\\S*\\s+налила"
+ },
+ {
+  "id": "female-name-flint-ru",
+  "kind": "female-noun-name",
+  "check": "NONE",
+  "source": "Флинт остановилась у двери. Она устала и не обернулась.",
+  "good": "Флінт зупинилася біля дверей. Вона втомилася й не обернулася.",
+  "bad": "Флінт зупинився біля дверей. Вона втомилася й не обернулася.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Флинт",
+    "target": "Флінт",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "ru to uk: the source verb is feminine, the draft turns it masculine after the name",
+  "sourceLanguage": "ru",
+  "marker": "(?iu)флінт\\S*\\s+зупинилась|флінт\\S*\\s+зупинилася"
+ },
+ {
+  "id": "slang-heat-en",
+  "kind": "slang",
+  "check": "NONE",
+  "source": "The heat showed up at the door, so he left by the back window.",
+  "good": "Поліція з’явилася біля дверей, тож він вийшов через заднє вікно.",
+  "bad": "Спека з’явилася біля дверей, тож він вийшов через заднє вікно.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "invented cyberpunk idiom: the heat is the police; the literal reading is the defect",
+  "marker": "(?iu)^(?!.*спек)"
+ },
+ {
+  "id": "slang-ice-en",
+  "kind": "slang",
+  "check": "NONE",
+  "source": "Nobody cracks that ice without a good deck.",
+  "good": "Ніхто не зламає цей захист без справного дека.",
+  "bad": "Ніхто не зламає цей лід без справного дека.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "ice is protective software; лід or льод is the literal defect",
+  "marker": "(?iu)^(?!.*(лід|льод))"
+ },
+ {
+  "id": "slang-burn-en",
+  "kind": "slang",
+  "check": "NONE",
+  "source": "She would burn him the moment he turned his back.",
+  "good": "Вона підставить його, щойно він повернеться спиною.",
+  "bad": "Вона спалить його, щойно він повернеться спиною.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "to burn someone is to betray them; спалити is the literal defect",
+  "marker": "(?iu)^(?!.*спал)"
+ },
+ {
+  "id": "slang-stump-en",
+  "kind": "slang",
+  "check": "NONE",
+  "source": "Old Moss was a stump now, a courier nobody trusted with a package.",
+  "good": "Старий Мосс тепер був списаним кур’єром, якому ніхто не довіряв пакунків.",
+  "bad": "Старий Мосс тепер був пеньком, кур’єром, якому ніхто не довіряв пакунків.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "invented sense: a stump is a washed-up has-been; пеньок is the literal defect",
+  "marker": "(?iu)^(?!.*(пеньк|пнем|пня))"
+ },
+ {
+  "id": "slang-cops-ru",
+  "kind": "slang",
+  "check": "NONE",
+  "source": "Мусора уже на пороге, так что ему пришлось уйти через окно.",
+  "good": "Поліція вже на порозі, тож йому довелося піти через вікно.",
+  "bad": "Сміття вже на порозі, тож йому довелося піти через вікно.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "ru to uk: the slang word for police read as its literal sense",
+  "sourceLanguage": "ru",
+  "marker": "(?iu)^(?!.*сміт)"
+ },
+ {
+  "id": "numbers-vault-en",
+  "kind": "numbers",
+  "check": "NONE",
+  "source": "The vault held 408 coins, 12 bars and a key marked 1973.",
+  "good": "У сховищі було 408 монет, 12 зливків і ключ із позначкою 1973.",
+  "bad": "У сховищі було 48 монет, 12 зливків і ключ із позначкою 1973.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "a digit dropped from 408 (the 408 to 48 class); no production check compares numbers yet",
+  "marker": "408.*12.*1973"
+ },
+ {
+  "id": "numbers-room-en",
+  "kind": "numbers",
+  "check": "NONE",
+  "source": "At 6:45 she paid 2,500 credits for room 17.",
+  "good": "О 6:45 вона заплатила 2500 кредитів за кімнату 17.",
+  "bad": "О 6:15 вона заплатила 2500 кредитів за кімнату 71.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "a time and a room number changed",
+  "marker": "6:45.*2[ ,. ]?500.*17"
+ },
+ {
+  "id": "numbers-vault-ru",
+  "kind": "numbers",
+  "check": "NONE",
+  "source": "В хранилище лежало 408 монет, 12 слитков и ключ с надписью 1973.",
+  "good": "У сховищі лежало 408 монет, 12 злитків і ключ із написом 1973.",
+  "bad": "У сховищі лежало 48 монет, 12 злитків і ключ із написом 1973.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "ru to uk: a digit dropped",
+  "sourceLanguage": "ru",
+  "marker": "408.*12.*1973"
+ },
+ {
+  "id": "ascii-dialogue-en",
+  "kind": "ascii-dialogue",
+  "check": "QUOTES",
+  "source": "\"Where have you been?\" asked Mara. \"Out,\" said Tom. \"Out where?\"",
+  "good": "«Де ти була?» — запитала Мара. «Надворі», — відповів Том. «Де саме?»",
+  "bad": "«Де ти була?» — запитала Мара. «Надворі», — відповів Том. «Де саме?",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "ASCII-quoted source; the last quote is left open",
+  "marker": "(?s)^(?!.*[\"“”]).*«.*»"
+ },
+ {
+  "id": "ascii-dialogue-kept-ascii-en",
+  "kind": "ascii-dialogue",
+  "check": "NONE",
+  "source": "\"Come in,\" said Mara. \"It is cold out there.\"",
+  "good": "«Заходьте», — сказала Мара. «Надворі холодно».",
+  "bad": "\"Заходьте\", — сказала Мара. \"Надворі холодно\".",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "the draft keeps the ASCII marks: the target must use « »",
+  "marker": "(?s)^(?!.*[\"“”]).*«.*»"
+ },
+ {
+  "id": "ascii-dialogue-ru",
+  "kind": "ascii-dialogue",
+  "check": "NONE",
+  "source": "\"Заходите,\" сказала Мара. \"На улице холодно.\"",
+  "good": "«Заходьте», — сказала Мара. «Надворі холодно».",
+  "bad": "\"Заходьте\", — сказала Мара. \"Надворі холодно\".",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "ru to uk: ASCII-quoted source, the target uses « » and a dash before the tag",
+  "sourceLanguage": "ru",
+  "marker": "(?s)^(?!.*[\"“”]).*«.*»"
+ },
+ {
+  "id": "venue-blue-anchor-en",
+  "kind": "venue-name",
+  "check": "NONE",
+  "source": "After work Dov went to the Blue Anchor, and the barman at the Blue Anchor knew his order.",
+  "good": "Після роботи Дов пішов до «Синього якоря», а бармен у «Синьому якорі» знав його замовлення.",
+  "bad": "Після роботи Дов пішов до Синього Якоря, а бармен у Синього Якоря знав його замовлення.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Dov",
+    "target": "Дов",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   },
+   {
+    "term": "Blue Anchor",
+    "target": "Синій якір",
+    "type": "PLACE",
+    "gender": "UNKNOWN",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "a venue made of common words: one declined form, in « », per case; the second occurrence wears the first one's case",
+  "marker": "(?iu)«[^»]*синьому якорі[^»]*»|«[^»]*синьому якорі»"
+ },
+ {
+  "id": "venue-blue-anchor-ru",
+  "kind": "venue-name",
+  "check": "NONE",
+  "source": "После работы Дов зашёл в «Синий якорь», а бармен в «Синем якоре» знал его заказ.",
+  "good": "Після роботи Дов зайшов до «Синього якоря», а бармен у «Синьому якорі» знав його замовлення.",
+  "bad": "Після роботи Дов зайшов до «Синього якорів», а бармен у «Синього якоря» знав його замовлення.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Дов",
+    "target": "Дов",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   },
+   {
+    "term": "Синий якорь",
+    "target": "Синій якір",
+    "type": "PLACE",
+    "gender": "UNKNOWN",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "ru to uk: the name declined twice, once on top of the other",
+  "sourceLanguage": "ru",
+  "marker": "(?iu)«синьому якорі»"
+ },
+ {
+  "id": "vocative-start-en",
+  "kind": "vocative-position",
+  "check": "VOCATIVE",
+  "source": "Dov, close the door behind you.",
+  "good": "Дове, зачини двері за собою.",
+  "bad": "Зачини двері за собою.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Dov",
+    "target": "Дов",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "vocative at the start of the sentence is dropped"
+ },
+ {
+  "id": "vocative-middle-en",
+  "kind": "vocative-position",
+  "check": "VOCATIVE",
+  "source": "\"Listen, Dov, the engine is still warm,\" said Mara.",
+  "good": "«Слухай, Дове, двигун ще теплий», — сказала Мара.",
+  "bad": "«Слухай, двигун ще теплий», — сказала Мара.",
+  "deterministic": false,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Dov",
+    "target": "Дов",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "vocative in the middle of a quoted line; VocativeCheck covers the start and the end, so only the reviewer counts",
+  "marker": "(?iu)дов"
+ },
+ {
+  "id": "vocative-end-en",
+  "kind": "vocative-position",
+  "check": "VOCATIVE",
+  "source": "Close the door behind you, Dov.",
+  "good": "Зачини двері за собою, Дове.",
+  "bad": "Зачини двері за собою.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Dov",
+    "target": "Дов",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "vocative at the end of the sentence is dropped"
+ },
+ {
+  "id": "vocative-start-ru",
+  "kind": "vocative-position",
+  "check": "VOCATIVE",
+  "source": "Дов, закрой дверь за собой.",
+  "good": "Дове, зачини двері за собою.",
+  "bad": "Зачини двері за собою.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Дов",
+    "target": "Дов",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "ru to uk: vocative at the start dropped",
+  "sourceLanguage": "ru"
+ },
+ {
+  "id": "vocative-end-ru",
+  "kind": "vocative-position",
+  "check": "VOCATIVE",
+  "source": "Закрой дверь за собой, Дов.",
+  "good": "Зачини двері за собою, Дове.",
+  "bad": "Зачини двері за собою.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Дов",
+    "target": "Дов",
+    "type": "CHARACTER",
+    "gender": "MALE",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "rationale": "ru to uk: vocative at the end dropped",
+  "sourceLanguage": "ru"
+ },
+ {
+  "id": "residue-brace-en",
+  "kind": "closer-residue",
+  "check": "RESIDUE",
+  "source": "The keeper locked the door and went upstairs.",
+  "good": "Доглядач зачинив двері й піднявся нагору.",
+  "bad": "Доглядач зачинив двері й піднявся нагору.\"}",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "a trailing quote and brace from the reply's JSON"
+ },
+ {
+  "id": "residue-brace-bracket-en",
+  "kind": "closer-residue",
+  "check": "RESIDUE",
+  "source": "The keeper locked the door and went upstairs.",
+  "good": "Доглядач зачинив двері й піднявся нагору.",
+  "bad": "Доглядач зачинив двері й піднявся нагору.\"}]}",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "a trailing quote, brace, bracket and brace"
+ },
+ {
+  "id": "residue-tail-en",
+  "kind": "closer-residue",
+  "check": "RESIDUE",
+  "source": "The keeper locked the door and went upstairs.",
+  "good": "Доглядач зачинив двері й піднявся нагору.",
+  "bad": "Доглядач зачинив двері й піднявся нагору.}]}",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "trailing closers with no quote"
+ },
+ {
+  "id": "residue-brace-ru",
+  "kind": "closer-residue",
+  "check": "RESIDUE",
+  "source": "Смотритель запер дверь и поднялся наверх.",
+  "good": "Доглядач зачинив двері й піднявся нагору.",
+  "bad": "Доглядач зачинив двері й піднявся нагору.\"}",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "ru to uk: a trailing quote and brace",
+  "sourceLanguage": "ru"
+ },
+ {
+  "id": "script-latin-tail-en",
+  "kind": "mixed-script-tail",
+  "check": "SCRIPT",
+  "source": "The keeper locked the door and went upstairs.",
+  "good": "Доглядач зачинив двері й піднявся нагору.",
+  "bad": "Доглядач зачинив дверіs й піднявся нагору.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "a Latin tail on a Cyrillic word"
+ },
+ {
+  "id": "script-latin-tail-lookalike-en",
+  "kind": "mixed-script-tail",
+  "check": "SCRIPT",
+  "source": "The keeper locked the door and went upstairs.",
+  "good": "Доглядач зачинив двері й піднявся нагору.",
+  "bad": "Доглядач зачинив двері й піднявся нагорe.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "the last letter is a Latin e that looks like the Cyrillic one"
+ },
+ {
+  "id": "script-latin-tail-ru",
+  "kind": "mixed-script-tail",
+  "check": "SCRIPT",
+  "source": "Смотритель запер дверь и поднялся наверх.",
+  "good": "Доглядач зачинив двері й піднявся нагору.",
+  "bad": "Доглядач зачинив дверіs й піднявся нагору.",
+  "deterministic": true,
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "context": null,
+  "rationale": "ru to uk: a Latin tail on a Cyrillic word",
+  "sourceLanguage": "ru"
  }
 ]

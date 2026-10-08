@@ -40,7 +40,8 @@ record BatchEvalReport(String model, List<BatchEvalRow> rows) {
     /** The cells, size by size, for every size the rows hold. */
     List<Cell> cells() {
         final List<Cell> cells = new ArrayList<>();
-        for (final int size : BatchEvalCases.SIZES) {
+        for (final int size :
+                rows.stream().map(BatchEvalRow::size).distinct().sorted().toList()) {
             final List<BatchEvalRow> own =
                     rows.stream().filter(row -> row.size() == size).toList();
             if (!own.isEmpty()) {

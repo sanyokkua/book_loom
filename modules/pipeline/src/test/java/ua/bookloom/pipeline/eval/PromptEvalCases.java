@@ -36,6 +36,22 @@ final class PromptEvalCases {
             new EvalTerm("Bartimaeus", "Бартімеус", TermType.CHARACTER, Gender.MALE, true);
     private static final EvalTerm NELL = new EvalTerm("Nell", "Нелл", TermType.CHARACTER, Gender.FEMALE, false);
 
+    /** Over 250 characters: the length at which a small model starts to drop a clause. */
+    static final String LONG_MEDIUM =
+            "Before the storm reached the harbour, the keeper of the lighthouse climbed the spiral"
+                    + " stairs for the last time that night, checked the lamp, wrote the wind speed in his book, and sent his"
+                    + " daughter down to bring the 17 fishing boats back through the narrow channel, although nobody on"
+                    + " the shore believed they would all arrive before midnight.";
+
+    /** Over 400 characters, with two counts that disagree and must both be kept. */
+    static final String LONG_LONG =
+            "When the ferry finally docked at the northern pier, forty minutes behind its schedule"
+                    + " and smelling of wet rope and diesel, the harbour clerk counted the passengers twice, found that there"
+                    + " were 63 of them instead of the 61 on his list, and walked slowly down the gangway to ask the captain"
+                    + " whether two strangers had boarded at the last island, because the customs office had closed an hour"
+                    + " earlier, the rain was getting heavier, and nobody wanted to explain to the inspector in the morning why"
+                    + " two people had come ashore without a name in the register.";
+
     static final List<EvalCase> ALL = List.of(
             new Draft(
                     "dialogue-locked-name",
@@ -158,6 +174,10 @@ final class PromptEvalCases {
                     "Where are you going at this hour, Bartimaeus?",
                     List.of(BARTIMAEUS),
                     Expect.translate()),
+            // Invented long paragraphs for the draft and batch suites: several clauses and one number that must
+            // survive.
+            new Draft("long-paragraph-medium", LONG_MEDIUM, List.of(), Expect.containing("17")),
+            new Draft("long-paragraph-long", LONG_LONG, List.of(), Expect.containing("(?s)63.*61")),
             new Fix(
                     "fix-echo",
                     "He opened the ⟦g0⟧old⟦g1⟧ door.",

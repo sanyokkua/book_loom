@@ -48,6 +48,11 @@ final class RunCorpus {
         return load("scan.json", new TypeReference<>() {});
     }
 
+    /** Synthetic model replies and what production makes of each. */
+    static List<ReplyCase> replies() {
+        return load("replies.json", new TypeReference<>() {});
+    }
+
     private static <T> List<T> load(final String file, final TypeReference<List<T>> type) {
         try (InputStream in = RunCorpus.class.getResourceAsStream(DIRECTORY + file)) {
             Objects.requireNonNull(in, file);

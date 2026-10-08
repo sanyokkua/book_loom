@@ -32,7 +32,7 @@ final class RunVerdicts {
         Objects.requireNonNull(runCase, "runCase");
         final EvalProject project = EvalProject.of(
                 EvalProject.Setup.single(
-                        RunCorpus.SOURCE_LANGUAGE,
+                        runCase.language(),
                         RunCorpus.TARGET_LANGUAGE,
                         runCase.glossary(),
                         runCase.surroundings(),
@@ -64,6 +64,7 @@ final class RunVerdicts {
                         .anyMatch(result -> result.check() == CheckName.LENGTH && !result.passed());
             case OMISSION -> hardGateFails(candidate, CheckName.SENTENCE_COUNT);
             case VOCATIVE -> hardGateFails(candidate, CheckName.VOCATIVE);
+            case RESIDUE -> hasBlocking(candidate, FindingKind.PROTOCOL_LEAK);
             case NONE -> false;
         };
     }
@@ -91,7 +92,7 @@ final class RunVerdicts {
         return TextChecks.run(
                 DisplayText.of(runCase.source()),
                 DisplayText.of(candidate),
-                RunCorpus.SOURCE_LANGUAGE,
+                runCase.language(),
                 RunCorpus.TARGET_LANGUAGE);
     }
 

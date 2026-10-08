@@ -2,11 +2,11 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry] [--batch-sizes 4,8,12,16]
+#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay] [--batch-sizes 4,8,12,16]
 # --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
-# draft A/B instead (batches of 4/8/12/16 consecutive cases through the JSON batch protocol; reports end in
+# draft A/B instead (consecutive cases, sized as a job sizes its batches unless --batch-sizes fixes the sweep, through the JSON batch protocol; reports end in
 # -batch.json) and prints one row per model and batch size. --suite words runs the garbled-word check (ADR-0042) over
 # eval/words.json (reports end in -words.json) and prints recall and false positives per model. --suite realrun runs the
 # real-run corpus (15e.2: quotes, scripts, narrator, short lines, batch protocol, reviewer batches, repairs; reports end in
@@ -32,6 +32,8 @@
 # name scan, terms = the recurring-term choice and the glossary review, setup = the file-name and Book Brief suggestions,
 # consistency = the export pass (retry of doubted segments, check against the neighbours), retry = the review desk's Retry.
 # One row per model and suite: share of cases right, calls, failed and repeated calls, refused answers.
+# --suite replay sends the calls of a real run's trace log again (BOOKLOOM_EVAL_REPLAY_LOG=<bookloom-trace.log[.gz]>; see
+# docs/DEVELOPMENT.md, replay): BOOKLOOM_EVAL_REPLAY_MODE=raw|fast, _MAX_BYTES, _LIMIT, _TARGET pass through the environment.
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -90,7 +92,7 @@ run_one() {
   log="build/eval-matrix/$(echo "$api_model-$narrator" | tr -c 'A-Za-z0-9._\n-' '_').log"
   echo "== $provider $api_model context=${context:-$DEFAULT_CONTEXT} narrator=$narrator (gradle log: $log)"
   BOOKLOOM_EVAL_URL=$url BOOKLOOM_EVAL_PROVIDER=$env_provider BOOKLOOM_EVAL_MODEL=$api_model \
-    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=${BATCH_SIZES:-4,8,12,16} ./gradlew :pipeline:promptEval >"$log" 2>&1 &
+    BOOKLOOM_EVAL_ONLY=$ONLY BOOKLOOM_EVAL_STABILITY=$STABILITY BOOKLOOM_EVAL_RULES=$RULES BOOKLOOM_EVAL_LANGS=$LANGS BOOKLOOM_EVAL_SUITE=$SUITE BOOKLOOM_EVAL_NARRATOR=$narrator BOOKLOOM_EVAL_NARRATOR_GENDER=$NARRATOR_GENDER BOOKLOOM_EVAL_BATCH_SIZES=$BATCH_SIZES ./gradlew :pipeline:promptEval >"$log" 2>&1 &
   local pid=$!
   ( sleep "${MODEL_TIMEOUT:-$DEFAULT_TIMEOUT}"; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; pkill -f "Gradle Test Executor" 2>/dev/null ) &
   local dog=$!
@@ -152,7 +154,7 @@ if sys.argv[2] == "words":
     for r in (r for r in reports if r.get("suite") == "words"):
         print("%-36s %5d %7.0f%% %7.0f%% %6s" % (r["model"], r["cases"], 100 * r["recall"], 100 * r["falsePositive"], "yes" if r["meetsTarget"] else "NO"))
     sys.exit(0)
-STAGES = ("prescan", "terms", "setup", "consistency", "retry")
+STAGES = ("prescan", "terms", "setup", "consistency", "retry", "replay")
 if sys.argv[2] in STAGES:
     print("%-36s %-12s %5s %6s %6s %6s %8s %7s" % ("model", "suite", "cases", "pass", "calls", "failed", "repeated", "refused"))
     for r in (r for r in reports if r.get("suite") == sys.argv[2]):

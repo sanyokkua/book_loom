@@ -830,7 +830,11 @@ Calibration on 2026-10-02 (one sample per case, temperature as in production):
 and the rest). `qwen2.5:1.5b` is kept only as a stub for API checks, never for translation. 
 
 **Batch A/B (15d.8).** `scripts/eval-matrix.sh --suite batch [--batch-sizes 4,8,12,16] --models "ollama:<id> lmstudio:<id>"`
-sends batches of consecutive draft cases through the JSON batch protocol and prints, per model and size: `idValid` (items
+sends batches of consecutive draft cases through the JSON batch protocol. Without `--batch-sizes` the size is the job's: the first
+batch has `BatchDrafter.DEFAULT_INITIAL_SIZE` cases and each reply goes to a production `BatchDrafter.record`, which halves the
+size on a lost numbering, an omission or a merge and grows it after a clean streak (the table then has a row per size reached);
+`--batch-sizes` fixes the old sweep. The draft cases include two invented long paragraphs (over 250 and over 400 characters,
+with numbers that must survive). It prints, per model and size: `idValid` (items
 answered under their id exactly once), `tokGate` (also kept their tokens in order), `omit`, `merge` and output tokens per
 item. It measures only; the batch size is chosen by reading the table (the tagged-block protocol it once compared was
 dropped after the first A/B, see `12_PROMPT_CATALOG.md#batch-draft`). A run's own draft calls per segment are
@@ -864,6 +868,7 @@ with `BOOKLOOM_EVAL_SUITE` and run like the others (`BOOKLOOM_EVAL_URL` required
 | `setup` | `SetupAssistantImpl` (FILE_NAME, BRIEF_SUGGESTION) | a file name in the target script with its author part in it; the narrator the text is told in |
 | `consistency` | `ConsistencyPass` (`RetryPass`, `RetryDraft`, `NeighbourRevision`, `RevisionCall`) | a planted mixed-script word, a left-untranslated sentence, a trailing `"}` and a dropped vocative repaired |
 | `retry` | `RetryDraft.retry` (the review desk's Retry) | the same four planted defects repaired by one retry each |
+| `replay` | the draft parsers and judges (`ReplyJudge`, the batch parser), over calls read from a real trace log | see "Replay from a trace log" below |
 
 `consistency` and `retry` first run the real batched job over a small book with a model that answers the case file's planted
 (defective) drafts, so the stored records, statuses and context snapshots are what a run leaves; only then is the real model
@@ -873,6 +878,37 @@ answers the class read and refused (`ConsistencyChecks.refused`, undecided term 
 `scripts/eval-matrix.sh --suite prescan|terms|setup|consistency|retry` prints one row per model. The offline proof is
 `StageEvalRunnerTest` (a fake model answering like a good one, and a silent one), which also compares the recorded request with
 the production prompt for the stage.
+
+**Defect-class corpus (A5).** `eval/realrun/text.json` (`RunCase`; an optional `sourceLanguage` makes a case ru to uk, an optional
+`marker` is a regex a model's draft must match where no production check decides) holds invented sentences for the classes
+the October 8 run showed: a female character with a consonant-ending name whose verbs the draft makes masculine
+(`female-noun-name`), slang read literally (`slang`), numbers that must not change, ASCII-quoted dialogue that must become
+« » (`ascii-dialogue`), venue names declined twice (`venue-name`), a vocative at the start, middle and end
+(`vocative-position`), reply closers after a draft (`closer-residue`, check `RESIDUE`) and a Latin tail on a Cyrillic word
+(`mixed-script-tail`). `eval/realrun/replies.json` (`ReplyCase`) holds synthetic whole replies read by the draft reply parser
+and judged by `ReplyJudge`; `DefectClassCorpusTest` holds each to what production does today. A defect production cannot see yet
+(a masculine verb after a female name, a changed number) is a `knownFailure` naming the plan task that adds the check, and the
+test fails once production gets it right. The control-character quote glitch (U+001C..U+001F where « » belong) and closers
+after the JSON object are refused today; what they are expected to come to is the named constants
+`ReplyExpectations.CONTROL_CHARS` and `.TRAILING_CLOSERS`, flipped to `ACCEPTED` when the mapping (plan B2) and the tail cut
+(B3) land. No text of the corpus is copied from a book.
+
+**Replay from a trace log (A6).** `BOOKLOOM_EVAL_SUITE=replay BOOKLOOM_EVAL_REPLAY_LOG=~/Library/Logs/BookLoom-Dev/bookloom-trace.log
+./gradlew :pipeline:promptEval` (with `BOOKLOOM_EVAL_URL`, `_PROVIDER`, `_MODEL` as for the other suites; `scripts/eval-matrix.sh
+--suite replay` passes the variables on) sends again the model calls a real run logged. `LogReplayCorpus` pairs each `Model call
+going out` line with the next `HTTP request body` and `HTTP response body` lines of its thread and reads the `Decided segmentId=`
+lines for how each segment ended; the log may be `.gz`. `BOOKLOOM_EVAL_REPLAY_MODE=raw` sends every logged request body as it
+went out (a model, quant or server setting compared on the very prompts of the run); `fast` (the default) takes a stratified
+selection of about `BOOKLOOM_EVAL_REPLAY_TARGET` (40) draft calls, by short/long (over 250 characters), single/batch and
+flagged/repaired/accepted, always including every call that drafted a segment that ended flagged, and rebuilds each request with
+the current prompts through `EvalProject` (a prompt change compared on the very paragraphs of the run; the glossary and context
+are not in a log, so the rebuilt request carries none). `BOOKLOOM_EVAL_REPLAY_MAX_BYTES` reads only the first bytes of a log and
+`_LIMIT` sends at most that many calls. A draft reply is scored by `DraftReplyParser` and `ReplyJudge`, a batch reply by the batch
+parser and the judge on each item, any other call kind on its structure only; each row shows the logged reply's verdict beside the
+new one. The calls stay in memory; the report (same files, provenance and history as the other stage suites, label = the mode)
+holds counts and verdict words, never log text. `LogReplayCorpusTest` and `ReplayRunnerTest` prove the parser, the selection and
+the runner on `eval/replay/sample-trace.txt`, an invented log in the real line format; `LogReplayRealLogTest` parses a real log
+when `BOOKLOOM_EVAL_REPLAY_LOG` is set, without sending anything.
 
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,

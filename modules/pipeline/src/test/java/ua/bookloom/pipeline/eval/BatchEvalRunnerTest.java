@@ -15,6 +15,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.TokenUsage;
+import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
 import ua.bookloom.pipeline.eval.BatchEvalReport.Cell;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -142,5 +143,36 @@ class BatchEvalRunnerTest {
                 .contains("\"idValidity\":1.000")
                 .contains("\"tooShort\":0.000", "\"leaked\":0.000");
         assertThat(report.table()).contains("idValid", "tokGate", "omit", "merge", "tooShort", "leaked");
+    }
+
+    @Test
+    void runAdaptive_modelOmittingAnItem_startsAtTheJobsSizeThenHalves() {
+        final List<BatchEvalRow> rows =
+                new BatchEvalRunner(copying(id -> id == 1)).runAdaptive(BatchDrafter.DEFAULT_INITIAL_SIZE);
+
+        assertThat(rows.getFirst().size()).isEqualTo(BatchDrafter.DEFAULT_INITIAL_SIZE);
+        assertThat(rows.get(1).size()).isLessThan(BatchDrafter.DEFAULT_INITIAL_SIZE);
+        assertThat(rows.stream().mapToInt(BatchEvalRow::size).sum())
+                .isGreaterThanOrEqualTo(BatchEvalCases.drafts().size() - 1);
+    }
+
+    @Test
+    void runAdaptive_cleanModel_growsTheBatchAfterACleanStreak() {
+        final List<BatchEvalRow> rows =
+                new BatchEvalRunner(copying(id -> false)).runAdaptive(BatchDrafter.MIN_BATCHING_SIZE);
+
+        assertThat(rows.getFirst().size()).isEqualTo(BatchDrafter.MIN_BATCHING_SIZE);
+        assertThat(rows.stream().mapToInt(BatchEvalRow::size)).anyMatch(size -> size > BatchDrafter.MIN_BATCHING_SIZE);
+    }
+
+    @Test
+    void cells_adaptiveSizes_arePerSizeAndSorted() {
+        final BatchEvalReport report = new BatchEvalReport(
+                "scripted", new BatchEvalRunner(copying(id -> id == 1)).runAdaptive(BatchDrafter.DEFAULT_INITIAL_SIZE));
+
+        assertThat(report.cells().stream().map(Cell::size))
+                .isSorted()
+                .doesNotHaveDuplicates()
+                .contains(8);
     }
 }

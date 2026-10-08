@@ -14,7 +14,9 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchItem;
+import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.batch.ItemOutcome;
@@ -25,6 +27,7 @@ import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.run.PromptRequests.PreparedBatch;
 
 /**
@@ -57,7 +60,41 @@ final class BatchEvalRunner {
         return rows;
     }
 
+    /**
+     * Runs the whole case list the way a job sizes its batches: the first batch has {@code initialSize} cases, and each
+     * reply is fed to a production {@link BatchDrafter} whose size halves on a lost numbering, an omission or a merge and
+     * grows after a clean streak. A tail shorter than the smallest batching size is left out, as in the fixed sweep.
+     */
+    List<BatchEvalRow> runAdaptive(final int initialSize) {
+        final int total = BatchEvalCases.drafts().size();
+        final BatchDrafter sizing = sizing(initialSize);
+        final List<BatchEvalRow> rows = new ArrayList<>();
+        int start = 0;
+        while (total - start >= BatchDrafter.MIN_BATCHING_SIZE) {
+            final int size = Math.min(Math.max(sizing.size(), BatchDrafter.MIN_BATCHING_SIZE), total - start);
+            final Outcome outcome = outcome(BatchEvalCases.batchAt(start, size));
+            rows.add(outcome.row());
+            outcome.reply().ifPresent(sizing::record);
+            log.debug("Adaptive batch start={} size={} nextSize={}", start, size, sizing.size());
+            start += size;
+        }
+        return rows;
+    }
+
+    private BatchDrafter sizing(final int initialSize) {
+        final EvalProject any = project(BatchEvalCases.batchAt(0, BatchDrafter.MIN_BATCHING_SIZE));
+        return new BatchDrafter(
+                new BatchPromptBuilder(new PromptTemplates(), any.frame()), parser, calls, SOURCE, TARGET, initialSize);
+    }
+
     BatchEvalRow run(final Batch batch) {
+        return outcome(batch).row();
+    }
+
+    /** One batch's row, and the parsed reply the job's batch size is adapted by (none when the call failed). */
+    private record Outcome(BatchEvalRow row, Optional<BatchReply> reply) {}
+
+    private Outcome outcome(final Batch batch) {
         log.info("Batch eval size={}", batch.cases().size());
         final EvalProject project = project(batch);
         final Optional<PreparedBatch> prepared = project.batch();
@@ -65,7 +102,7 @@ final class BatchEvalRunner {
             log.warn(
                     "Batch eval: no batch fits the window size={}",
                     batch.cases().size());
-            return failed(batch.cases().size());
+            return new Outcome(failed(batch.cases().size()), Optional.empty());
         }
         final List<BatchItem> items = prepared.get().items();
         final ChatRequest request = project.batchRequest(prepared.get());
@@ -74,10 +111,11 @@ final class BatchEvalRunner {
         final Result<ChatResponse> reply = calls.callAbout(CallKind.DRAFT, segmentIds, request);
         if (reply.isErr()) {
             log.warn("Batch eval call failed size={}", items.size());
-            return failed(items.size());
+            return new Outcome(failed(items.size()), Optional.empty());
         }
         final ChatResponse response = Objects.requireNonNull(reply.data());
-        return measured(project, items, response, parser.parse(response.content(), items, SOURCE, TARGET));
+        final BatchReply parsed = parser.parse(response.content(), items, SOURCE, TARGET);
+        return new Outcome(measured(project, items, response, parsed), Optional.of(parsed));
     }
 
     private EvalProject project(final Batch batch) {

@@ -24,6 +24,9 @@ import org.jspecify.annotations.Nullable;
  * @param glossary the glossary the case holds
  * @param context what surrounds the segment: earlier pairs, summary, lexicon and the narrator
  * @param rationale why the labels are what they are
+ * @param sourceLanguage the source language tag, or null for English; the target is always Ukrainian
+ * @param marker a regular expression a model's draft must match to count as right where no production check decides,
+ *     or null for none
  */
 record RunCase(
         String id,
@@ -37,7 +40,11 @@ record RunCase(
         @Nullable String fixedBy,
         List<EvalTerm> glossary,
         @Nullable EvalContext context,
-        String rationale) {
+        String rationale,
+        @Nullable String sourceLanguage,
+        @Nullable String marker) {
+
+    private static final String DEFAULT_SOURCE_LANGUAGE = "en";
 
     /** The production check that decides a case. */
     enum Check {
@@ -55,6 +62,8 @@ record RunCase(
         OMISSION,
         /** A vocative glossary name of the source missing from the target. */
         VOCATIVE,
+        /** A blocking reply-residue finding: a stray closer or label from the reply's JSON. */
+        RESIDUE,
         /** No production check: only the reviewer can tell. */
         NONE
     }
@@ -75,6 +84,16 @@ record RunCase(
         return check != Check.NONE && (deterministic == null || deterministic);
     }
 
+    /** The source language tag the case is written in. */
+    String language() {
+        return sourceLanguage == null ? DEFAULT_SOURCE_LANGUAGE : sourceLanguage;
+    }
+
+    /** Whether a model's draft is held to the case: a production check decides it, or the case states a marker. */
+    boolean isDraftChecked() {
+        return isDeterministic() || marker != null;
+    }
+
     /** The context the case states, or none. */
     EvalContext surroundings() {
         return context == null ? EvalContext.none() : context;
@@ -82,6 +101,11 @@ record RunCase(
 
     /** The draft case the run's request factory builds for the source. */
     EvalCase.Draft draft() {
-        return new EvalCase.Draft(id, source, glossary, EvalCase.Expect.translate(), surroundings());
+        return new EvalCase.Draft(
+                id,
+                source,
+                glossary,
+                marker == null ? EvalCase.Expect.translate() : EvalCase.Expect.containing(marker),
+                surroundings());
     }
 }

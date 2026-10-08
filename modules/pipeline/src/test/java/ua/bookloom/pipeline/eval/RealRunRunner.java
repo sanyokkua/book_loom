@@ -87,7 +87,7 @@ final class RealRunRunner {
         log.info("Real-run case {} kind={}", runCase.id(), runCase.kind());
         final RunVerdicts verdicts = RunVerdicts.of(runCase);
         final List<RealRunRow> rows = new ArrayList<>();
-        if (runCase.isDeterministic()) {
+        if (runCase.isDraftChecked()) {
             rows.add(draft(runCase, verdicts));
         }
         rows.add(separation(runCase, verdicts));
@@ -115,7 +115,9 @@ final class RealRunRunner {
             return RealRunRow.of(runCase.id(), runCase.kind(), "draft", false, runCase.knownFailure(), "unparsed");
         }
         final String target = parsed.translation();
-        final boolean passed = ReplyJudge.judge(project, 0, target).gatePassed() && !verdicts.fires(target);
+        final boolean passed = ReplyJudge.judge(project, 0, target).gatePassed()
+                && !verdicts.fires(target)
+                && ReplyChecks.marker(target, runCase.draft().expect()) != EvalRow.Check.FAIL;
         return RealRunRow.of(runCase.id(), runCase.kind(), "draft", passed, runCase.knownFailure(), target);
     }
 

@@ -41,18 +41,29 @@ final class BatchEvalCases {
         }
     }
 
-    static List<Batch> batches(final int size) {
-        final List<Draft> drafts = PromptEvalCases.ALL.stream()
+    /** The draft cases the batches are cut from, in order. */
+    static List<Draft> drafts() {
+        return PromptEvalCases.ALL.stream()
                 .filter(Draft.class::isInstance)
                 .map(Draft.class::cast)
                 .toList();
+    }
+
+    /** The batch of {@code size} cases that starts at case {@code start}; the cases must exist. */
+    static Batch batchAt(final int start, final int size) {
+        final List<Draft> drafts = drafts();
+        final boolean last = start + size >= drafts.size();
+        return new Batch(
+                drafts.subList(start, start + size),
+                last ? null : drafts.get(start + size),
+                start == 0 ? List.of() : EARLIER_PAIRS);
+    }
+
+    static List<Batch> batches(final int size) {
+        final int count = drafts().size();
         final List<Batch> batches = new ArrayList<>();
-        for (int start = 0; start + size <= drafts.size(); start += size) {
-            final boolean last = start + size >= drafts.size();
-            batches.add(new Batch(
-                    drafts.subList(start, start + size),
-                    last ? null : drafts.get(start + size),
-                    start == 0 ? List.of() : EARLIER_PAIRS));
+        for (int start = 0; start + size <= count; start += size) {
+            batches.add(batchAt(start, size));
         }
         return batches;
     }

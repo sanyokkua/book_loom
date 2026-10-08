@@ -1,0 +1,278 @@
+[
+ {
+  "id": "ctrl-clean-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"«Не сьогодні», — сказала вона.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the same line with the right marks is accepted"
+ },
+ {
+  "id": "ctrl-escaped-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні\\u001d, — сказала вона.\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "U+001E and U+001D, escaped as JSON, where « » belong (the glitch of the directed-fix, revision and consistency calls)"
+ },
+ {
+  "id": "ctrl-wrapped-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"\\u001eВін відчинив старі двері.\\u001d\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a whole target wrapped in the two control characters"
+ },
+ {
+  "id": "ctrl-raw-en",
+  "kind": "control-chars",
+  "sourceLanguage": null,
+  "source": "\"Not tonight,\" she said.",
+  "reply": "{\"target\":\"\u001eНе сьогодні\u001d, — сказала вона.\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the same glitch written as raw control characters, which JSON does not allow"
+ },
+ {
+  "id": "ctrl-escaped-ru",
+  "kind": "control-chars",
+  "sourceLanguage": "ru",
+  "source": "\"Не сегодня,\" сказала она.",
+  "reply": "{\"target\":\"\\u001eНе сьогодні\\u001d, — сказала вона.\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: the glitch in a dialogue line"
+ },
+ {
+  "id": "ctrl-wrapped-ru",
+  "kind": "control-chars",
+  "sourceLanguage": "ru",
+  "source": "Он открыл старую дверь.",
+  "reply": "{\"target\":\"\\u001eВін відчинив стару браму.\\u001d\"}",
+  "expect": "CONTROL_CHARS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: a whole target wrapped"
+ },
+ {
+  "id": "residue-clean-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a clean target is accepted"
+ },
+ {
+  "id": "residue-brace-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\\\"}\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the target ends with a quote and a brace"
+ },
+ {
+  "id": "residue-brace-bracket-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\\\"}]}\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the target ends with a quote, a brace, a bracket and a brace"
+ },
+ {
+  "id": "residue-tail-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.}]}\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the target ends with bare closers"
+ },
+ {
+  "id": "residue-after-object-en",
+  "kind": "closer-residue",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\"}]}",
+  "expect": "TRAILING_CLOSERS",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "closers after the reply's JSON object"
+ },
+ {
+  "id": "residue-brace-ru",
+  "kind": "closer-residue",
+  "sourceLanguage": "ru",
+  "source": "Он открыл старую дверь.",
+  "reply": "{\"target\":\"Він відчинив стару браму.\\\"}\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: a quote and a brace"
+ },
+ {
+  "id": "script-clean-en",
+  "kind": "mixed-script-tail",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі двері.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "clean"
+ },
+ {
+  "id": "script-latin-tail-en",
+  "kind": "mixed-script-tail",
+  "sourceLanguage": null,
+  "source": "He opened the old door.",
+  "reply": "{\"target\":\"Він відчинив старі дверіs.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "a Latin s after a Cyrillic word"
+ },
+ {
+  "id": "script-latin-tail-ru",
+  "kind": "mixed-script-tail",
+  "sourceLanguage": "ru",
+  "source": "Он открыл старую дверь.",
+  "reply": "{\"target\":\"Він відчинив стару дверіs.\"}",
+  "expect": "REFUSED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "ru to uk: the same"
+ },
+ {
+  "id": "gender-name-flint-en",
+  "kind": "gender-name",
+  "sourceLanguage": null,
+  "source": "Flint stopped at the door. She was tired.",
+  "reply": "{\"target\":\"Флінт зупинилася біля дверей. Вона була втомлена.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [
+   {
+    "term": "Flint",
+    "target": "Флінт",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "a female character with a consonant-ending name, agreed in the feminine"
+ },
+ {
+  "id": "gender-name-flint-masc-en",
+  "kind": "gender-name",
+  "sourceLanguage": null,
+  "source": "Flint stopped at the door. She was tired.",
+  "reply": "{\"target\":\"Флінт зупинився біля дверей. Вона була втомлена.\"}",
+  "expect": "REFUSED",
+  "knownFailure": true,
+  "fixedBy": "B6",
+  "glossary": [
+   {
+    "term": "Flint",
+    "target": "Флінт",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "the verb after the female name is masculine; no production check compares a character's gender with the verb yet"
+ },
+ {
+  "id": "gender-name-chisel-masc-ru",
+  "kind": "gender-name",
+  "sourceLanguage": "ru",
+  "source": "Чизел налила чаю. Она устала.",
+  "reply": "{\"target\":\"Чизел налив чаю. Вона втомилася.\"}",
+  "expect": "REFUSED",
+  "knownFailure": true,
+  "fixedBy": "B6",
+  "glossary": [
+   {
+    "term": "Чизел",
+    "target": "Чизел",
+    "type": "CHARACTER",
+    "gender": "FEMALE",
+    "locked": false
+   }
+  ],
+  "rationale": "ru to uk: a masculine verb after a female name"
+ },
+ {
+  "id": "numbers-dropped-digit-en",
+  "kind": "numbers",
+  "sourceLanguage": null,
+  "source": "The vault held 408 coins and 12 bars.",
+  "reply": "{\"target\":\"У сховищі було 408 монет і 12 зливків.\"}",
+  "expect": "ACCEPTED",
+  "knownFailure": false,
+  "fixedBy": null,
+  "glossary": [],
+  "rationale": "the numbers kept"
+ },
+ {
+  "id": "numbers-changed-en",
+  "kind": "numbers",
+  "sourceLanguage": null,
+  "source": "The vault held 408 coins and 12 bars.",
+  "reply": "{\"target\":\"У сховищі було 48 монет і 12 зливків.\"}",
+  "expect": "REFUSED",
+  "knownFailure": true,
+  "fixedBy": "B6",
+  "glossary": [],
+  "rationale": "408 became 48; no production check compares numbers yet"
+ },
+ {
+  "id": "numbers-changed-ru",
+  "kind": "numbers",
+  "sourceLanguage": "ru",
+  "source": "В хранилище лежало 408 монет и 12 слитков.",
+  "reply": "{\"target\":\"У сховищі лежало 48 монет і 12 злитків.\"}",
+  "expect": "REFUSED",
+  "knownFailure": true,
+  "fixedBy": "B6",
+  "glossary": [],
+  "rationale": "ru to uk: 408 became 48"
+ }
+]
