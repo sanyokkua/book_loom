@@ -2,7 +2,6 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
@@ -11,15 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.TermType;
+import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.TooltipProbe;
-import ua.bookloom.ui.state.LiveRow;
-import ua.bookloom.ui.state.LiveRows;
 import ua.bookloom.ui.state.RunState;
 
 /**
@@ -28,12 +21,8 @@ import ua.bookloom.ui.state.RunState;
  */
 class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
 
-    private static final ContextSnapshot CONTEXT = new ContextSnapshot(
-            List.of("Дощ лив стіною."),
-            List.of(new SnapshotTerm("Lovelace", "Лавлейс", TermType.CHARACTER, Gender.MALE, true)),
-            List.of(),
-            null,
-            "");
+    private static final String CURRENT_PROMPT = "translating-live-card-current-prompt";
+    private static final String PREVIOUS_PROMPT = "translating-live-card-previous-prompt";
 
     private Bounds sceneBounds(final String id) {
         return ThemeTestSupport.onFx(() -> {
@@ -79,68 +68,50 @@ class TranslatingPolishScreenTest extends TranslatingScreenTestBase {
                 .contains("titles, alt texts, contents entries and metadata");
     }
 
-    private void runningWithContext() {
+    private void runningWithPrompt() {
         mirror().publishRunStarted("Frankenstein.epub", null);
-        mirror().live()
-                .publishLiveRows(new LiveRows(
-                        new LiveRow(
-                                "s-1",
-                                "ch7 · p41",
-                                "Text.",
-                                "Текст.",
-                                0.93,
-                                SegmentPath.DRAFT,
-                                false,
-                                false,
-                                null,
-                                CONTEXT),
-                        new LiveRow("s-2", "ch7 · p42", "Text.", null, null, null, true, false, null, CONTEXT)));
-        WaitForAsyncUtils.waitForFxEvents();
+        publishCalls(2);
         showTranslating();
+    }
+
+    private void publishCalls(final long newest) {
+        mirror().live()
+                .publishCalls(LiveCallFixtures.calls(
+                        LiveCallFixtures.waiting(newest, 2, "Text.", LiveCallFixtures.smallPrompt()),
+                        LiveCallFixtures.answered(
+                                LiveCallFixtures.waiting(newest - 1, 2, "Text.", LiveCallFixtures.smallPrompt()),
+                                "{}")));
+        WaitForAsyncUtils.waitForFxEvents();
     }
 
     private boolean isExpanded(final String id) {
         return ThemeTestSupport.onFx(() -> ((TitledPane) required(id)).isExpanded());
     }
 
-    // IF the context the person opened closed itself whenever they looked at another step, THEN they would have to
-    // reopen it on every return; each row's section stays as they left it, open or closed again.
+    // IF the prompt the person opened closed itself whenever they looked at another step, THEN they would have to
+    // reopen it on every return; each block's section stays as they left it, open or closed again.
     @Test
-    void contextSection_openedThenAnotherStepVisited_isStillOpenOnReturn() {
-        runningWithContext();
-        onFx(() -> ((TitledPane) required("live-current-context")).setExpanded(true));
+    void promptSection_openedThenAnotherStepVisited_isStillOpenOnReturn() {
+        runningWithPrompt();
+        onFx(() -> ((TitledPane) required(CURRENT_PROMPT)).setExpanded(true));
 
         showTranslating();
 
-        assertThat(isExpanded("live-current-context")).isTrue();
-        assertThat(isExpanded("live-last-context")).isFalse();
-        onFx(() -> ((TitledPane) required("live-current-context")).setExpanded(false));
+        assertThat(isExpanded(CURRENT_PROMPT)).isTrue();
+        assertThat(isExpanded(PREVIOUS_PROMPT)).isFalse();
+        onFx(() -> ((TitledPane) required(CURRENT_PROMPT)).setExpanded(false));
         showTranslating();
-        assertThat(isExpanded("live-current-context")).isFalse();
+        assertThat(isExpanded(CURRENT_PROMPT)).isFalse();
     }
 
-    // IF the open section closed when the rows moved on to the next segment, THEN it could not be read during a run.
+    // IF the open section closed when the next call took the block, THEN it could not be read during a run.
     @Test
-    void contextSection_opened_staysOpenWhenTheRowsChange() {
-        runningWithContext();
-        onFx(() -> ((TitledPane) required("live-current-context")).setExpanded(true));
+    void promptSection_opened_staysOpenWhenTheCallsChange() {
+        runningWithPrompt();
+        onFx(() -> ((TitledPane) required(CURRENT_PROMPT)).setExpanded(true));
 
-        mirror().live()
-                .publishLiveRows(new LiveRows(
-                        new LiveRow(
-                                "s-2",
-                                "ch7 · p42",
-                                "Text.",
-                                "Текст.",
-                                0.9,
-                                SegmentPath.DRAFT,
-                                false,
-                                false,
-                                null,
-                                CONTEXT),
-                        new LiveRow("s-3", "ch7 · p43", "More.", null, null, null, true, false, null, CONTEXT)));
-        WaitForAsyncUtils.waitForFxEvents();
+        publishCalls(3);
 
-        assertThat(isExpanded("live-current-context")).isTrue();
+        assertThat(isExpanded(CURRENT_PROMPT)).isTrue();
     }
 }

@@ -12,15 +12,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.TermType;
+import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.state.LiveRow;
-import ua.bookloom.ui.state.LiveRows;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
 import ua.bookloom.ui.state.RunState;
@@ -38,12 +33,6 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
     private static final double LOG_MIN = 260;
     private static final double REVIEW_ROWS_MIN = 10 * 34;
     private static final String TEXT = "She had lost her mother, and the poor girl wept as she followed the coffin. ";
-    private static final ContextSnapshot CONTEXT = new ContextSnapshot(
-            List.of("Коли я приземлився на верхівку ліхтаря.", "Дощ лив стіною."),
-            List.of(new SnapshotTerm("Lovelace", "Лавлейс", TermType.CHARACTER, Gender.MALE, true)),
-            List.of(),
-            "A djinni is summoned to steal an amulet.",
-            "");
 
     // The headless screen is 1000 pixels square and draws nothing outside it, so the window starts at its corner.
     private void sizeTo(final double width, final double height) {
@@ -78,19 +67,19 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
 
     private void running() {
         mirror().publishRunStarted("Frankenstein.epub", null);
-        publishLiveRows(true);
+        publishCalls(true);
         mirror().publishLogEntries(List.of(new LogEntry(LogKind.RETRIED, List.of("format", "ch7 · p42"))));
         WaitForAsyncUtils.waitForFxEvents();
         showTranslating();
     }
 
-    private void publishLiveRows(final boolean withCurrent) {
+    private void publishCalls(final boolean withCurrent) {
+        final CallSnapshot older =
+                LiveCallFixtures.answered(LiveCallFixtures.waiting(1, 3, TEXT, LiveCallFixtures.smallPrompt()), TEXT);
         mirror().live()
-                .publishLiveRows(new LiveRows(
-                        new LiveRow("s-1", "ch7 · p41", TEXT, TEXT, 0.93, SegmentPath.DRAFT, false, false),
-                        withCurrent
-                                ? new LiveRow("s-2", "ch7 · p42", TEXT, null, null, null, true, false, null, CONTEXT)
-                                : null));
+                .publishCalls(LiveCallFixtures.calls(
+                        withCurrent ? LiveCallFixtures.waiting(2, 3, TEXT, LiveCallFixtures.smallPrompt()) : older,
+                        withCurrent ? older : null));
         WaitForAsyncUtils.waitForFxEvents();
     }
 
@@ -149,8 +138,8 @@ class ShellLayoutScreenTest extends TranslatingScreenTestBase {
         onFx(() -> shellScroll().setVvalue(shellScroll().getVmax()));
         final double before = offset();
 
-        publishLiveRows(false);
-        publishLiveRows(true);
+        publishCalls(false);
+        publishCalls(true);
         publishLog(new LogEntry(LogKind.ACCEPTED, List.of("ch7 · p43")));
         publishProgress(80, 0, 20);
         onFx(() -> {});

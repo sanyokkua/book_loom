@@ -171,7 +171,8 @@ final class SegmentEvents {
     void decided(final SegmentRecord record, @Nullable final ErrorCode reason, final JobProgress progress) {
         final List<String> kinds =
                 record.findings().stream().map(QaFinding::kind).distinct().toList();
-        final SegmentDetail detail = new SegmentDetail(record.judgeScore(), record.path(), kinds);
+        final SegmentDetail detail =
+                new SegmentDetail(record.judgeScore(), record.path(), kinds, displayTarget(record));
         log.debug(
                 "Sending SegmentDecided segmentId={} status={} judgeScore={} path={} findingKinds={}",
                 record.segmentId(),
@@ -182,6 +183,16 @@ final class SegmentEvents {
         keepEvidence(record);
         emit.accept(new SegmentDecided(record.segmentId(), record.status(), reason, progress, detail));
         noteDecision(record, kinds);
+    }
+
+    // The target a person reads, from the stored record: a reused or verbatim segment has no draft event, so the
+    // decision is the only place its target reaches a screen.
+    private static @Nullable String displayTarget(final SegmentRecord record) {
+        final String masked = record.userTarget() != null ? record.maskedUserTarget() : record.maskedMachineTarget();
+        if (masked != null) {
+            return DisplayText.of(masked);
+        }
+        return record.effectiveTarget().orElse(null);
     }
 
     private void noteDecision(final SegmentRecord record, final List<String> kinds) {

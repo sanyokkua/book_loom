@@ -41,10 +41,6 @@ abstract class LiveSessionTestBase extends RunnerTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    protected LiveRows rows() {
-        return onFx(() -> mirror.live().liveRows().get());
-    }
-
     protected Throughput throughput() {
         return onFx(() -> mirror.live().throughput().get());
     }

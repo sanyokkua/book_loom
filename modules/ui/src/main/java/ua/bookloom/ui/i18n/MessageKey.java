@@ -1165,6 +1165,62 @@ public enum MessageKey {
     LIVE_AWAITING_REVIEW("live.awaitingReview"),
     /** Badge with the judge's score; argument 0 is the formatted score. */
     LIVE_JUDGE("live.judge"),
+    /** Heading of the live panel's block for the call in flight. */
+    LIVE_CALL_CURRENT("live.call.current"),
+    /** Heading of the live panel's first block once the run has ended. */
+    LIVE_CALL_LAST("live.call.last"),
+    /** Heading of the live panel's block for the call before the current one. */
+    LIVE_CALL_PREVIOUS("live.call.previous"),
+    /** Text of the live panel before the run has made a model call. */
+    LIVE_CALL_NONE("live.call.none"),
+    /** Attempt chip of a call; arguments: 0 the attempt, 1 the most attempts allowed; both Strings. */
+    LIVE_CALL_ATTEMPT("live.call.attempt"),
+    /** Clock of a call still waiting for the model; argument 0 is the {@code m:ss} time since it went out. */
+    LIVE_CALL_WAITED("live.call.waited"),
+    /** Clock of a finished call; argument 0 is the {@code m:ss} time the answered attempt took. */
+    LIVE_CALL_TOOK("live.call.took"),
+    /** Bound of a call's attempt; argument 0 is the {@code m:ss} time it may wait. */
+    LIVE_CALL_TIMEOUT("live.call.timeout"),
+    /** Token usage of an answered call; arguments: 0 prompt tokens or {@code none}, 1 completion tokens or {@code none}. */
+    LIVE_CALL_TOKENS("live.call.tokens"),
+    /** State chip of a call; argument 0 is {@code waiting}, {@code answered}, {@code failed} or {@code cancelled}. */
+    LIVE_CALL_STATE("live.call.state"),
+    /** Caption above the segments a call sent; argument 0 is their number. */
+    LIVE_CALL_SEGMENTS("live.call.segments"),
+    /** Text of a call that is about no particular segment. */
+    LIVE_CALL_NO_SEGMENTS("live.call.noSegments"),
+    /** Heading of the collapsed section holding the model's reply as received. */
+    LIVE_CALL_REPLY("live.call.reply"),
+    /** Hover explanation of the reply section. */
+    LIVE_CALL_REPLY_TIP("live.call.reply.tip"),
+    /** Button in the reply section that copies the model's reply. */
+    LIVE_CALL_REPLY_COPY("live.call.reply.copy"),
+    /** Hover explanation of Copy in the reply section. */
+    LIVE_CALL_REPLY_COPY_TIP("live.call.reply.copy.tip"),
+    /** Heading of the collapsed section holding the prompt's filled parts; argument 0 is their number. */
+    LIVE_CALL_PROMPT("live.call.prompt"),
+    /** Hover explanation of the prompt-context section. */
+    LIVE_CALL_PROMPT_TIP("live.call.prompt.tip"),
+    /** Divider above the parts of the system message. */
+    LIVE_CALL_PROMPT_SYSTEM("live.call.prompt.system"),
+    /** Divider above the parts of the user message. */
+    LIVE_CALL_PROMPT_USER("live.call.prompt.user"),
+    /** Button in the prompt-context section that copies the prompt's filled parts. */
+    LIVE_CALL_PROMPT_COPY("live.call.prompt.copy"),
+    /** Hover explanation of Copy in the prompt-context section. */
+    LIVE_CALL_PROMPT_COPY_TIP("live.call.prompt.copy.tip"),
+    /** Chip for what became of one segment of a call; arguments: 0 {@code adopted}, {@code fell_back}, {@code accepted} or {@code flagged}, 1 the detail or {@code none}. */
+    LIVE_CALL_OUTCOME("live.call.outcome"),
+    /** Context-section heading of the style sheet. */
+    LIVE_CONTEXT_STYLE("live.context.style"),
+    /** Context-section heading of the locked glossary names. */
+    LIVE_CONTEXT_LOCKED_NAMES("live.context.lockedNames"),
+    /** Context-section heading of the glossary renderings the person has not confirmed. */
+    LIVE_CONTEXT_SUGGESTED("live.context.suggested"),
+    /** Context-section heading of the renderings the run keeps for recurring terms. */
+    LIVE_CONTEXT_LEXICON("live.context.lexicon"),
+    /** Context-section heading of the characters a segment names. */
+    LIVE_CONTEXT_CHARACTERS("live.context.characters"),
     /** Badge of a segment accepted as drafted. */
     LIVE_PATH_DRAFT("live.path.draft"),
     /** Badge of a segment accepted after a repair. */

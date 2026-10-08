@@ -20,11 +20,11 @@ import ua.bookloom.api.document.LanguageEvidence;
 import ua.bookloom.api.pipeline.BookPlan;
 import ua.bookloom.api.pipeline.JobReport;
 import ua.bookloom.api.pipeline.JobState;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.pipeline.RecoveryWaiting;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.RoundTripReport;
-import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
@@ -33,11 +33,8 @@ import ua.bookloom.ui.state.ExportViewModel;
 import ua.bookloom.ui.state.FlaggedRow;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
-import ua.bookloom.ui.state.LiveRow;
-import ua.bookloom.ui.state.LiveRows;
 import ua.bookloom.ui.state.RecoveryState;
 import ua.bookloom.ui.state.ReviewViewModel;
-import ua.bookloom.ui.state.RoundTrack;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.StateMirror;
 import ua.bookloom.ui.state.StructureChecks;
@@ -199,24 +196,16 @@ final class ConformancePreparations {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    // A run with one segment in progress whose draft was sent a context, so the live row's parts are drawn.
+    // A run with a call waiting and the one before it answered, so the live blocks and the prompt context are drawn.
     private void startARun() {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunStarted("Frankenstein.epub", null);
+        final List<PromptSection> prompt = LiveCallFixtures.smallPrompt();
         mirror.live()
-                .publishLiveRows(new LiveRows(
-                        null,
-                        new LiveRow(
-                                "s-2",
-                                "ch1 · p02",
-                                "You will rejoice to hear.",
-                                null,
-                                null,
-                                null,
-                                true,
-                                false,
-                                new RoundTrack(1, 3, 0.85, "meaning"),
-                                new ContextSnapshot(List.of("Ви зрадієте."), List.of(), List.of(), "A letter.", ""))));
+                .publishCalls(LiveCallFixtures.calls(
+                        LiveCallFixtures.waiting(2, 2, "You will rejoice to hear.", prompt),
+                        LiveCallFixtures.answered(
+                                LiveCallFixtures.waiting(1, 2, "It was a dreary night.", prompt), "{}")));
         WaitForAsyncUtils.waitForFxEvents();
     }
 

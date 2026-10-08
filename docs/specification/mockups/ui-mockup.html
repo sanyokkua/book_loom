@@ -2013,10 +2013,17 @@ ${dlgCard('about', 'About', 'Version + licenses', 'info', 'ⓘ')}
    <div class="stat"><div class="n" style="color:var(--warn)">3</div><div class="l">flagged</div></div>
    <div class="stat"><div class="n">460</div><div class="l">remaining</div></div></div>
  <div class="row">
-   <div class="col"><div class="card"><div class="card-h"><h3>Current chunk (live)</h3><span class="badge b-ok b-dot">judge 0.93</span></div><div class="card-b">
-     <div class="compare"><div class="pane"><div class="ph"><span>Source · EN</span></div><div class="pb">She had lost her mother, and the poor girl wept as she followed the coffin.</div></div>
-     <div class="pane target"><div class="ph"><span>Ukrainian</span></div><div class="pb">Вона втратила матір, і бідолашна дівчина плакала, ідучи за труною.</div></div></div>
-     <div class="gap8" style="margin-top:8px"><span class="badge b-ok">checks passed</span><span class="badge b-neutral">auto-accepted</span></div></div></div></div>
+   <div class="col"><div class="card"><div class="card-h"><h3>Model calls (live)</h3></div><div class="card-b">
+     <div class="gap8"><b>Current call</b><span class="muted">draft-batch-json</span><span class="badge b-neutral">Translate</span><span class="badge b-warn">Waiting for the model</span><span class="muted">attempt 1 of 2</span><span class="muted">waiting 0:12</span><span class="muted">timeout 3:00</span></div>
+     <div class="muted" style="font-size:11.5px;margin-top:8px">2 segments sent to the model</div>
+     <div class="compare" style="margin-top:6px"><div class="pane"><div class="ph"><span>ch7 · p42</span></div><div class="pb">She had lost her mother, and the poor girl wept as she followed the coffin.</div></div>
+     <div class="pane target"><div class="ph"><span>Ukrainian</span></div><div class="pb">waiting for the model…</div></div></div>
+     <div class="muted" style="font-size:12px;margin-top:8px">▸ Prompt context · 5 parts <button class="btn btn-ghost">Copy</button></div>
+     <hr style="border:0;border-top:1px solid var(--border);margin:10px 0">
+     <div class="gap8"><b>Previous call</b><span class="muted">draft-batch-json</span><span class="badge b-neutral">Translate</span><span class="badge b-ok">Answered</span><span class="muted">attempt 1 of 2</span><span class="muted">took 0:07</span><span class="muted">tokens: 412 in · 96 out</span></div>
+     <div class="compare" style="margin-top:6px"><div class="pane"><div class="ph"><span>ch7 · p41</span><span class="badge b-ok">Adopted</span><span class="badge b-ok b-dot">judge 0.93</span><span class="badge b-neutral">auto-accepted</span></div><div class="pb">The rain fell like a wall.</div></div>
+     <div class="pane target"><div class="ph"><span>Ukrainian</span></div><div class="pb">Дощ лив стіною.</div></div></div>
+     <div class="muted" style="font-size:12px;margin-top:8px">▸ Model reply · ▸ Prompt context · 5 parts</div></div></div></div>
    <div class="col"><div class="card"><div class="card-h"><h3>Activity log</h3></div><div class="card-b"><div class="log">
 <span class="g">[ok]</span> ch7/38 accepted (0.94)<br><span class="g">[ok]</span> ch7/39 accepted (0.91)<br>
 <span class="y">[fix]</span> ch7/40 name "Elizabeth" → locked spelling, re-accepted<br><span class="g">[ok]</span> ch7/41 accepted (0.93)<br>

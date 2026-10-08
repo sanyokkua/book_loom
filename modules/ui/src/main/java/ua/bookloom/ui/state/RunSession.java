@@ -47,7 +47,7 @@ final class RunSession implements JobListener {
 
     private final StateMirror mirror;
     private final Clock clock;
-    private final LiveChunkState liveChunks;
+    private final LiveCallState liveCalls = new LiveCallState();
     private final ThroughputMeter throughputMeter = new ThroughputMeter();
     private final RunClock runClock;
     private final ActivityLogFeed feed = new ActivityLogFeed();
@@ -64,9 +64,9 @@ final class RunSession implements JobListener {
     private boolean pauseRequested;
     private boolean pauseReached;
     private boolean terminal;
-    // Both are guarded by publishLock too: the live rows changed since the last publish, and the pace figures last
-    // published, so a tick publishes only what moved.
-    private boolean liveRowsChanged;
+    // Both are guarded by publishLock too: the live calls and the pace figures last published, so a tick publishes only
+    // what moved.
+    private LiveCalls shownCalls = LiveCalls.EMPTY;
     private Throughput shownThroughput = Throughput.EMPTY;
 
     RunSession(
@@ -78,7 +78,6 @@ final class RunSession implements JobListener {
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.clock = Objects.requireNonNull(clock, "clock");
         Objects.requireNonNull(context, "context");
-        this.liveChunks = new LiveChunkState(context.dial());
         this.calls = new CallTracker(mirror, clock, feed);
         this.runClock = new RunClock(clock.instant());
         this.deskReads = new ReviewDeskReads(desk, executor, mirror.live(), context.projectId());
@@ -233,16 +232,13 @@ final class RunSession implements JobListener {
             case SegmentDrafted drafted -> onSegmentDrafted(drafted);
             case ModelCallFinished finished -> onModelCallFinished(finished);
             case MemoryUpdated updated -> onMemory(updated);
-            case ContextAssembled assembled -> onLiveRow(() -> liveChunks.contextAssembled(assembled));
+            case ContextAssembled assembled ->
+                log.trace("context of segment {} is shown with its call", assembled.segmentId());
             case RoundStarted round -> onRound(round);
             case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
             case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
-            case CallSnapshotUpdated updated ->
-                log.trace(
-                        "call snapshot {} {} not shown yet",
-                        updated.snapshot().callId(),
-                        updated.snapshot().state());
+            case CallSnapshotUpdated updated -> locked(() -> liveCalls.snapshot(updated.snapshot()));
         }
     }
 
@@ -253,17 +249,7 @@ final class RunSession implements JobListener {
 
     private void onRound(final RoundStarted round) {
         log.debug("segment {} entered round {} of {}", round.segmentId(), round.round(), round.rounds());
-        onLiveRow(() -> {
-            queue(feed.roundStarted(round));
-            liveChunks.roundStarted(round);
-        });
-    }
-
-    private void onLiveRow(final Runnable change) {
-        locked(() -> {
-            change.run();
-            liveRowsChanged = true;
-        });
+        locked(() -> queue(feed.roundStarted(round)));
     }
 
     // Stamped here, under the lock, so the lines of one tick read in the order they were queued.
@@ -276,8 +262,7 @@ final class RunSession implements JobListener {
         locked(() -> {
             calls.clearWait("a segment was decided");
             feed.decided(decided).ifPresent(this::queue);
-            liveChunks.decided(decided);
-            liveRowsChanged = true;
+            liveCalls.decided(decided);
             if (RunClock.isTimed(decided)) {
                 runClock.decided(clock.instant());
             }
@@ -288,14 +273,11 @@ final class RunSession implements JobListener {
     }
 
     private void onSegmentStarted(final SegmentStarted started) {
-        onLiveRow(() -> {
-            feed.segmentStarted(started);
-            liveChunks.started(started);
-        });
+        locked(() -> feed.segmentStarted(started));
     }
 
     private void onSegmentDrafted(final SegmentDrafted drafted) {
-        onLiveRow(() -> liveChunks.drafted(drafted));
+        locked(() -> liveCalls.drafted(drafted));
     }
 
     private void onModelCallFinished(final ModelCallFinished finished) {
@@ -376,9 +358,10 @@ final class RunSession implements JobListener {
     }
 
     private void publishLiveLocked() {
-        if (liveRowsChanged) {
-            liveRowsChanged = false;
-            mirror.live().publishLiveRows(liveChunks.rows());
+        final LiveCalls calls = liveCalls.view(clock.instant());
+        if (!calls.equals(shownCalls)) {
+            shownCalls = calls;
+            mirror.live().publishCalls(calls);
         }
         final JobProgress seen = lastSeen.get();
         final Throughput figures = throughputMeter.snapshot(

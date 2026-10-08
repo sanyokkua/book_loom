@@ -117,6 +117,24 @@ class TranslationJobVerbatimTest {
                 .isEqualTo(List.of());
     }
 
+    // A segment kept verbatim has no draft event, so a screen can show its target only from the decision itself.
+    @Test
+    void run_verbatimAndDraftedSegments_decisionsCarryTheirDisplayTarget() {
+        final Path source = TestBooks.txt(tempDir.resolve("Book.txt"), "2\n\nHe left.\n\n***\n");
+        final TestProject project = project(source, brief("en", "uk"));
+        final TranslationJobImpl translation = job(project, replies("Він пішов."));
+        final List<JobEvent> events = new ArrayList<>();
+        translation.subscribe(events::add);
+
+        report(translation.run());
+
+        assertThat(events)
+                .filteredOn(SegmentDecided.class::isInstance)
+                .map(SegmentDecided.class::cast)
+                .extracting(event -> Objects.requireNonNull(event.detail()).displayTarget())
+                .containsExactly("2", "Він пішов.", "***");
+    }
+
     // A segment that is only a locked name takes the name's locked rendering, with no call.
     @Test
     void run_lockedNameAlone_writtenAsItsRenderingWithoutCall() {

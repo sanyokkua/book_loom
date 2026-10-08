@@ -287,19 +287,32 @@ final class ConformanceCases {
                             new Part("#translating-log-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
                             new Part("#translating-live-card", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
                             new Part("#translating-live-card", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            // The live boxes are framed surfaces; the target box is tinted one step.
-                            new Part("#live-current-source-scroll", Kind.BACKGROUND, "surface", "#ffffff", "#33424a"),
+                            // The call's segments sit in a framed scroll area; its state chip takes the waiting role.
                             new Part(
-                                    "#live-current-target-scroll",
+                                    "#translating-live-card-current-segments",
+                                    Kind.BACKGROUND,
+                                    "surface",
+                                    "#ffffff",
+                                    "#33424a"),
+                            new Part(
+                                    "#translating-live-card-current-state",
+                                    Kind.BACKGROUND,
+                                    "warn-bg",
+                                    "#f6ecd8",
+                                    "#3a3327"),
+                            // The prompt context is a tinted, framed body under the segments.
+                            new Part(
+                                    "#translating-live-card-current-prompt-body",
                                     Kind.BACKGROUND,
                                     "surface-alt",
                                     "#fbf9f4",
                                     "#38474f"),
-                            // The context the draft was sent with is a tinted, framed body under the panes.
                             new Part(
-                                    "#live-current-context-body", Kind.BACKGROUND, "surface-alt", "#fbf9f4", "#38474f"),
-                            new Part("#live-current-context-body", Kind.BORDER, "border", "#ddd5c8", "#48585f"),
-                            new Part("#live-current-round", Kind.BACKGROUND, "warn-bg", "#f6ecd8", "#3a3327"),
+                                    "#translating-live-card-current-prompt-body",
+                                    Kind.BORDER,
+                                    "border",
+                                    "#ddd5c8",
+                                    "#48585f"),
                             new Part("#translating-banner", Kind.BACKGROUND, "info-bg", "#e5edf0", "#293940"),
                             new Part("#translating-banner", Kind.BORDER, "info-bd", "#b7cbd2", "#3d525b"))),
             new Screen(

@@ -23,7 +23,7 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.Banner;
-import ua.bookloom.ui.control.LiveChunkPanel;
+import ua.bookloom.ui.control.LiveCallPanel;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TaggedLog;
 import ua.bookloom.ui.control.Tips;
@@ -223,8 +223,8 @@ final class TranslatingView {
             final ObservableValue<String> targetName,
             final Messages messages,
             final Exits exits) {
-        final LiveChunkPanel live =
-                new LiveChunkPanel("translating-live-card", mirror.live().liveRows(), sourceName, targetName, messages);
+        final LiveCallPanel live = new LiveCallPanel(
+                "translating-live-card", mirror.live().calls(), mirror.runState(), sourceName, targetName, messages);
         live.rememberSectionsIn(exits.sections());
         final Node logCard = TranslatingLogCard.build(logList, messages);
         final VBox row = new VBox(TILE_SPACING, live, logCard);

@@ -13,18 +13,12 @@ import javafx.scene.layout.Region;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.testfx.util.WaitForAsyncUtils;
-import ua.bookloom.api.project.ContextSnapshot;
-import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.SnapshotTmHit;
-import ua.bookloom.api.project.TermType;
+import ua.bookloom.api.pipeline.PromptSection;
+import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
-import ua.bookloom.ui.state.LiveRow;
-import ua.bookloom.ui.state.LiveRows;
 
 /**
- * The live rows' "Context sent to the model" sections measured in the real shell: an opened section grows its row, the
+ * The live blocks' "Prompt context" sections measured in the real shell: an opened section grows its block, the
  * live card and the page by what it shows, at its natural height up to 320 pixels and scrolling inside beyond that, and
  * closing it gives the height back. Earlier tests asserted only that the texts existed, which a section crushed to one
  * line also passes; these read the laid-out sizes, at the content area a 960 by 640 window leaves and at 1400 by 900.
@@ -36,21 +30,6 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
     private static final String TEXT = "She had lost her mother, and the poor girl wept as she followed the coffin. ";
     private static final String LONG = "Коли я приземлився на верхівку ліхтаря, місто вже спало, і тільки дощ, що лив"
             + " стіною, нагадував мені, чому я взагалі погодився на цю роботу для молодого чарівника. ";
-    private static final ContextSnapshot SMALL = new ContextSnapshot(
-            List.of("Дощ лив стіною."),
-            List.of(new SnapshotTerm("Lovelace", "Лавлейс", TermType.CHARACTER, Gender.MALE, true)),
-            List.of(),
-            null,
-            "");
-    private static final ContextSnapshot LARGE = new ContextSnapshot(
-            List.of(LONG + LONG, LONG, LONG + LONG + LONG),
-            List.of(
-                    new SnapshotTerm("Lovelace", "Лавлейс", TermType.CHARACTER, Gender.MALE, true),
-                    new SnapshotTerm("Bartimaeus", "Бартімеус", TermType.CHARACTER, Gender.MALE, false),
-                    new SnapshotTerm("Nathaniel", "Натаніель", TermType.CHARACTER, Gender.MALE, true)),
-            List.of(new SnapshotTmHit(SnapshotTmHit.TmHitKind.EXACT, "The amulet glowed.", "Амулет світився.")),
-            "A djinni is summoned to steal an amulet; " + LONG,
-            "");
 
     private void sizeTo(final double width, final double height) {
         interact(() -> {
@@ -60,13 +39,13 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
         resizeScene(width, height);
     }
 
-    private void running(final ContextSnapshot context) {
+    private void running(final boolean large) {
         mirror().publishRunStarted("Frankenstein.epub", null);
+        final List<PromptSection> prompt = large ? LiveCallFixtures.largePrompt(LONG) : LiveCallFixtures.smallPrompt();
         mirror().live()
-                .publishLiveRows(new LiveRows(
-                        new LiveRow(
-                                "s-1", "ch7 · p41", TEXT, TEXT, 0.93, SegmentPath.DRAFT, false, false, null, context),
-                        new LiveRow("s-2", "ch7 · p42", TEXT, null, null, null, true, false, null, context)));
+                .publishCalls(LiveCallFixtures.calls(
+                        LiveCallFixtures.waiting(2, 2, TEXT, prompt),
+                        LiveCallFixtures.answered(LiveCallFixtures.waiting(1, 2, TEXT, prompt), "{}")));
         WaitForAsyncUtils.waitForFxEvents();
         showTranslating();
     }
@@ -77,13 +56,13 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
     }
 
     private void expand(final String row, final boolean expanded) {
-        onFx(() -> ((TitledPane) required(row + "-context")).setExpanded(expanded));
+        onFx(() -> ((TitledPane) required(row + "-prompt")).setExpanded(expanded));
         onFx(() -> {});
     }
 
     // The natural height of what the body scrolls: its sections laid out at the width the body gives them.
     private double contentHeight(final String row) {
-        final ScrollPane body = (ScrollPane) required(row + "-context-body");
+        final ScrollPane body = (ScrollPane) required(row + "-prompt-body");
         return ThemeTestSupport.onFx(() -> {
             final Region sections = (Region) body.getContent();
             return sections.prefHeight(sections.getWidth());
@@ -92,7 +71,7 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
 
     // Every region from the body up to the shell's scrolled content, each laid out shorter than it asks to be.
     private List<String> crushed(final String row) {
-        final Node body = required(row + "-context-body");
+        final Node body = required(row + "-prompt-body");
         return ThemeTestSupport.onFx(() -> {
             final List<String> found = new ArrayList<>();
             // The walk ends at the shell's content host: above it are the scroll pane's own viewport nodes, which are
@@ -118,21 +97,21 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
     // nothing above it is squeezed below its own height.
     @ParameterizedTest
     @CsvSource({
-        "944, 600, live-current, false",
-        "944, 600, live-last, true",
-        "1400, 900, live-current, true",
-        "1400, 900, live-last, false"
+        "944, 600, translating-live-card-current, false",
+        "944, 600, translating-live-card-previous, true",
+        "1400, 900, translating-live-card-current, true",
+        "1400, 900, translating-live-card-previous, false"
     })
     void context_expanded_growsItsRowAndTheCardByItsContent(
             final double width, final double height, final String row, final boolean large) {
-        running(large ? LARGE : SMALL);
+        running(large);
         sizeTo(width, height);
         final double cardBefore = heightOf("translating-live-card");
         final double rowBefore = heightOf(row);
 
         expand(row, true);
 
-        final double body = heightOf(row + "-context-body");
+        final double body = heightOf(row + "-prompt-body");
         assertThat(body).isGreaterThanOrEqualTo(Math.min(contentHeight(row), BODY_MAX) - SLACK);
         assertThat(body).isLessThanOrEqualTo(BODY_MAX + SLACK);
         assertThat(heightOf(row) - rowBefore).isGreaterThanOrEqualTo(body);
@@ -145,20 +124,20 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
     @ParameterizedTest
     @CsvSource({"944, 600", "1400, 900"})
     void context_expandedWithMoreThanFits_scrollsInsideAt320(final double width, final double height) {
-        running(LARGE);
+        running(true);
         sizeTo(width, height);
 
-        expand("live-current", true);
+        expand("translating-live-card-current", true);
 
-        assertThat(contentHeight("live-current")).isGreaterThan(BODY_MAX);
-        assertThat(heightOf("live-current-context-body")).isCloseTo(BODY_MAX, within(SLACK));
+        assertThat(contentHeight("translating-live-card-current")).isGreaterThan(BODY_MAX);
+        assertThat(heightOf("translating-live-card-current-prompt-body")).isCloseTo(BODY_MAX, within(SLACK));
     }
 
     // IF closing a section left its space behind, THEN the card would keep a gap the size of the context.
     @ParameterizedTest
-    @CsvSource({"944, 600, live-current", "1400, 900, live-last"})
+    @CsvSource({"944, 600, translating-live-card-current", "1400, 900, translating-live-card-previous"})
     void context_collapsedAgain_restoresTheHeights(final double width, final double height, final String row) {
-        running(LARGE);
+        running(true);
         sizeTo(width, height);
         final double cardBefore = heightOf("translating-live-card");
         final double rowBefore = heightOf(row);

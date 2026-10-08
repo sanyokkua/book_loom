@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The part of the run's state that shows what the model is doing now and how fast: the two live rows, the pace, the
+ * The part of the run's state that shows what the model is doing now and how fast: the two live calls, the pace, the
  * kept-as-source count and the flagged queue.
  *
  * <p>Kept apart from {@link StateMirror} so that class stays a readable size. The properties are read-only and the
@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 @Slf4j
 public final class LiveSection {
 
-    private final ReadOnlyObjectWrapper<LiveRows> liveRows = new ReadOnlyObjectWrapper<>(LiveRows.EMPTY);
+    private final ReadOnlyObjectWrapper<LiveCalls> calls = new ReadOnlyObjectWrapper<>(LiveCalls.EMPTY);
     private final ReadOnlyObjectWrapper<Throughput> throughput = new ReadOnlyObjectWrapper<>(Throughput.EMPTY);
     private final ReadOnlyIntegerWrapper sourceKept = new ReadOnlyIntegerWrapper();
     private final ReadOnlyIntegerWrapper suspicious = new ReadOnlyIntegerWrapper();
@@ -34,12 +34,12 @@ public final class LiveSection {
     private final ObservableList<FlaggedRow> readOnlyQueue = FXCollections.unmodifiableObservableList(queue);
 
     /**
-     * The segment decided last and the one in progress.
+     * The model call in flight (else the newest finished) and the one before it.
      *
-     * @return the read-only rows; read on the FX thread
+     * @return the read-only calls; read on the FX thread
      */
-    public ReadOnlyObjectProperty<LiveRows> liveRows() {
-        return liveRows.getReadOnlyProperty();
+    public ReadOnlyObjectProperty<LiveCalls> calls() {
+        return calls.getReadOnlyProperty();
     }
 
     /**
@@ -116,13 +116,13 @@ public final class LiveSection {
     }
 
     /**
-     * Shows the two live rows.
+     * Shows the two live calls. Not logged: the run session publishes at most once a cadence tick.
      *
-     * @param rows the rows to show
+     * @param shown the calls to show
      */
-    public void publishLiveRows(final LiveRows rows) {
-        Objects.requireNonNull(rows, "rows");
-        Platform.runLater(() -> liveRows.set(rows));
+    public void publishCalls(final LiveCalls shown) {
+        Objects.requireNonNull(shown, "shown");
+        Platform.runLater(() -> calls.set(shown));
     }
 
     /**
@@ -179,7 +179,7 @@ public final class LiveSection {
 
     /** Clears every field; runs on the FX thread as part of the mirror's reset for a new run. */
     void reset() {
-        liveRows.set(LiveRows.EMPTY);
+        calls.set(LiveCalls.EMPTY);
         throughput.set(Throughput.EMPTY);
         sourceKept.set(0);
         suspicious.set(0);

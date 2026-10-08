@@ -10,13 +10,10 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
-import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
-import ua.bookloom.api.pipeline.RoundStarted;
-import ua.bookloom.api.project.ContextSnapshot;
 
 /** What a run's model calls show: the request it waits on, how the server answers, the pause and the live row's parts. */
 class RunSessionCallsTest extends LiveSessionTestBase {
@@ -146,23 +143,6 @@ class RunSessionCallsTest extends LiveSessionTestBase {
         final PauseNotice notice = onFx(() -> mirror.review().pauseNotice().get());
         assertThat(notice).isEqualTo(new PauseNotice(ErrorCode.timeout, LOCATOR, CallKind.REVIEW, 2, 2));
         assertThat(notice.isLastPause()).isTrue();
-    }
-
-    // IF the live row did not keep the context and the round, THEN the person could not see what the model was given.
-    @Test
-    void contextAndRound_reachTheSegmentsLiveRow() {
-        final RunSession session = session();
-        final ContextSnapshot context = new ContextSnapshot(List.of("Earlier."), List.of(), List.of(), "So far.", "");
-        session.onEvent(started("s-2", LOCATOR, "Text."));
-
-        session.onEvent(new ContextAssembled("s-2", context));
-        session.onEvent(new RoundStarted("s-2", 1, 3, 0.85, "meaning"));
-        tick(session);
-
-        final LiveRow current = rows().current();
-        assertThat(current).isNotNull();
-        assertThat(current.context()).isEqualTo(context);
-        assertThat(current.round()).isEqualTo(new RoundTrack(1, 3, 0.85, "meaning"));
     }
 
     private static ModelCallStarted judgeAttempt(final int attempt, final int of) {

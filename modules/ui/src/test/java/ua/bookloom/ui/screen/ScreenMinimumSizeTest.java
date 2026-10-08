@@ -11,11 +11,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.LiveCallFixtures;
 import ua.bookloom.ui.ViewNames;
-import ua.bookloom.ui.state.LiveRow;
-import ua.bookloom.ui.state.LiveRows;
 import ua.bookloom.ui.state.LogEntry;
 import ua.bookloom.ui.state.LogKind;
 import ua.bookloom.ui.state.StateMirror;
@@ -70,9 +68,10 @@ class ScreenMinimumSizeTest extends ImportScreenTestBase {
         final StateMirror mirror = injector.getInstance(StateMirror.class);
         mirror.publishRunStarted("Frankenstein.epub", null);
         mirror.live()
-                .publishLiveRows(new LiveRows(
-                        new LiveRow("s-1", "ch7 · p41", LONG_TEXT, LONG_TEXT, 0.93, SegmentPath.DRAFT, false, false),
-                        new LiveRow("s-2", "ch7 · p42", LONG_TEXT, null, null, null, true, false)));
+                .publishCalls(LiveCallFixtures.calls(
+                        LiveCallFixtures.waiting(2, 8, LONG_TEXT, LiveCallFixtures.smallPrompt()),
+                        LiveCallFixtures.answered(
+                                LiveCallFixtures.waiting(1, 8, LONG_TEXT, LiveCallFixtures.smallPrompt()), LONG_TEXT)));
         mirror.publishLogEntries(List.of(new LogEntry(LogKind.RETRIED, List.of("format", "ch7 · p42"))));
         WaitForAsyncUtils.waitForFxEvents();
 

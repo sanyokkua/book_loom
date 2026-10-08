@@ -1596,8 +1596,20 @@
     -fx-padding: 10px 4px 12px 4px;
 }
 
-/* The two live boxes are framed surfaces; the viewport only scrolls, so it stays clear. */
-.live-row .scroll-pane.edge-to-edge {
+/* One live call block: a quiet divider under it, its segments in a framed scroll area; the viewport only scrolls, */
+/* so it stays clear. */
+.live-call {
+    -fx-border-color: transparent transparent -color-divider transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.live-call-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-text-strong;
+}
+
+.live-call .scroll-pane.edge-to-edge {
     -fx-background-color: -color-surface;
     -fx-background-insets: 0;
     -fx-background-radius: 6px;
@@ -1606,12 +1618,13 @@
     -fx-border-radius: 6px;
 }
 
-.live-row .scroll-pane.edge-to-edge > .viewport {
+.live-call .scroll-pane.edge-to-edge > .viewport {
     -fx-background-color: transparent;
 }
 
-.live-row .scroll-pane.live-target {
-    -fx-background-color: -color-surface-alt;
+.context-origin {
+    -fx-text-fill: -color-text-strong;
+    -fx-font-size: 12px;
 }
 
 .review-list .list-cell:empty,

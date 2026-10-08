@@ -71,7 +71,8 @@ testable.
   count the client estimated rather than one the provider reported.
 - `ContextAssembled(segmentId, ContextSnapshot)` announces, in display text, what a draft is sent with besides its
   source (preceding translations, rolling summary, glossary names, memory hits, recurring terms, character sheet);
-  the live row shows it collapsed.
+  the review desk shows it collapsed, in prompt order (style sheet, summary, glossary names, locked names, suggested
+  renderings, recurring terms, memory hits, characters, preceding translations).
 - `CallSnapshotUpdated(CallSnapshot)` announces one model call as a person inspects it, under one `callId` per call:
   `WAITING` when its first attempt goes out (and again for a later attempt), then `ANSWERED` with the reply and usage,
   or `FAILED`/`CANCELLED`; each `SegmentOutcomeNote` noted afterwards (a batch item `ADOPTED` or `FELL_BACK` with its
@@ -81,8 +82,8 @@ testable.
   run's described calls are shown — the drafts (single and batch, with their repairs), the reviewer, the directed fix
   and the backward revision and consistency calls; the name scans and the summary are not.
 - `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces each repair round a segment
-  enters, for the live row's round tracker and the log.
-- `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds)` and the point-in-time `JobProgress`
+  enters, for the log.
+- `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds, displayTarget?)` and the point-in-time `JobProgress`
   snapshot, announcing a segment as decided.
 - `MemoryUpdated(kind, label)` is sent only when a name scan (preparation or a body unit's end) adds at least one
   glossary entry (label `+n`), on each memory reuse (labelled with the segment's locator), and on each summary
@@ -115,7 +116,7 @@ count within the current section's chunking. `pending` leaves out segments kept 
 | `progressFraction`    | decided segments over the total, `0.0` when the total is zero                                                   |
 | `tokensPerSecond`     | derived from the recent drafts' `ModelCallFinished` usage                                                       |
 | `timeLeft`, `elapsed` | the run's estimated time left and time spent                                                                    |
-| `livePanelRows`       | the segment decided last and the segment currently in progress, for the two-row "Current chunk (live)" panel     |
+| `liveCalls`           | the model call in flight (else the newest finished) and the one before it, with the targets and decisions of their segments and a waiting call's clock in whole seconds, for the "Model calls (live)" panel; published at most once per cadence tick, and only when it changed |
 | `reviewQueue`         | the flagged (and, on the "All segments" filter, kept-as-source) segments the review panel lists                 |
 | `waitingSeconds`      | how long one model request has been outstanding once past 10 s, else `NOT_WAITING` (-1)                         |
 | `providerErrorNotice` | the failure's error code, while the run is auto-paused on a provider error                                      |
@@ -199,7 +200,7 @@ build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
   `Start translation`. Live in this build.
 - **Translating** — states: `idle`, `running`, `paused`, `stopped` (resumable — it re-enters at the first pending
   segment), `provider error` (auto-paused), `completed`, `failed`. The dashboard (`#jobprogress`) shows the progress
-  line, time left, tokens per second, the four count tiles, the two-row live panel, and the tagged activity log. The
+  line, time left, tokens per second, the four count tiles, the two-block live call panel (current and previous call), and the tagged activity log. The
   review panel lives inside this screen (`01_Product/08_UI_SCREENS_AND_STATES.md#screen-review`).
 - **Export** — chooses the destination and exports: save path with overwrite, format, the three side-file boxes, the
   final consistency-pass switch, the carried-over checks, the accepted/flagged/pending/kept-as-source counts, and
