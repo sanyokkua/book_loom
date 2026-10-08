@@ -218,8 +218,13 @@ final class ExportJobImpl implements ExportJob {
                 stored,
                 kept,
                 (segment, masked) -> parts.documents().unmask(opened.format(), segment, masked),
+                project.brief().sourceLanguage(),
                 Objects.requireNonNull(project.brief().targetLanguage(), "target language"));
-        final Fallbacks fallbacks = new Fallbacks(opened, stored, ExportCounts.of(stored, kept, opened));
+        final Fallbacks fallbacks = new Fallbacks(
+                opened,
+                stored,
+                ExportCounts.of(stored, kept, opened)
+                        .withRefusedReplies(targets.candidates().size()));
         return glossaryEntries(project.id()).flatMap(glossary -> publish(project, targets, fallbacks, glossary, pass));
     }
 
@@ -277,41 +282,34 @@ final class ExportJobImpl implements ExportJob {
         }
         return withSideFiles(
                 project,
-                new Written(targets, fallbacks, glossary, pass),
+                new ExportFinish.Written(targets, fallbacks, glossary, pass),
                 Objects.requireNonNull(written.data(), "written book"));
     }
 
-    /** What the side files and the report are built from once the book is written. */
-    private record Written(
-            EffectiveTargets targets,
-            Fallbacks fallbacks,
-            List<GlossaryEntry> glossary,
-            @Nullable ConsistencyReport pass) {}
-
     private Result<ExportReport> withSideFiles(
-            final Project project, final Written book, final BookExporter.Exported exported) {
+            final Project project, final ExportFinish.Written book, final BookExporter.Exported exported) {
         final Fallbacks.Fallen fallen = book.fallbacks()
                 .of(
                         book.targets().sourceFallbacks(),
                         exported.sourceFallbacks(),
                         book.targets().noTarget());
         final List<SuspiciousSegment> suspicious = audit(project, book.fallbacks(), book.glossary());
-        final List<SideFiles.Content> sideFiles = SideFiles.build(
-                request.sideFiles(),
-                new SideFiles.Sources(
-                        request.destination(),
-                        book.targets(),
-                        book.fallbacks().stored(),
-                        project.brief().alsoTranslate().keptKinds(),
-                        fallen.counts(),
-                        book.pass(),
-                        book.glossary(),
-                        suspicious));
-        return SideFiles.write(sideFiles, request.overwrite(), parts.moves(), () -> isCancelledBefore("side-file"))
+        final ExportFinish.Built built = ExportFinish.build(project, request, book, fallen, suspicious);
+        return SideFiles.write(
+                        built.contents(),
+                        request.overwrite() || built.isReportForced(),
+                        parts.moves(),
+                        () -> isCancelledBefore("side-file"))
                 .map(paths -> {
                     progress.onProgress(new ExportProgress(ExportProgress.Step.WRITING, 1, 1));
                     return fallen.counts()
-                            .report(exported.path(), paths, summary(book.pass()), fallen.listed(), suspicious);
+                            .report(
+                                    exported.path(),
+                                    paths,
+                                    summary(book.pass()),
+                                    fallen.listed(),
+                                    suspicious,
+                                    built.policy().unresolvedLocators());
                 });
     }
 

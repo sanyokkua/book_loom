@@ -45,6 +45,7 @@ final class SideFiles {
      * @param pass what the consistency pass changed, or null when it was not run
      * @param glossary the project's glossary entries
      * @param suspicious the accepted segments the final audit doubts
+     * @param policy how each segment without an accepted target was written
      */
     record Sources(
             Path destination,
@@ -54,13 +55,15 @@ final class SideFiles {
             ExportCounts counts,
             @Nullable ConsistencyReport pass,
             List<GlossaryEntry> glossary,
-            List<SuspiciousSegment> suspicious) {
+            List<SuspiciousSegment> suspicious,
+            ExportPolicy policy) {
 
         /** Rejects missing parts and copies the collections. */
         Sources {
             Objects.requireNonNull(destination, "destination");
             Objects.requireNonNull(targets, "targets");
             Objects.requireNonNull(counts, "counts");
+            Objects.requireNonNull(policy, "policy");
             records = List.copyOf(records);
             keptKinds = Set.copyOf(keptKinds);
             glossary = List.copyOf(glossary);
@@ -122,7 +125,8 @@ final class SideFiles {
                         sources.records(),
                         sources.keptKinds(),
                         sources.pass(),
-                        sources.suspicious());
+                        sources.suspicious(),
+                        sources.policy());
         };
     }
 

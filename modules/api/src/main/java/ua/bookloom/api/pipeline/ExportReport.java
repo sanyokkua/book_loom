@@ -23,6 +23,8 @@ import java.util.Objects;
  *     formatting, in book order; counted in {@code pending}, never in {@code written}
  * @param suspicious accepted segments the final audit doubts as the book was written, in book order, each with the
  *     checks that fired
+ * @param unresolvedBlocking where a person finds each segment whose written text still holds a blocking finding
+ *     (a mixed-script word, a source-language paragraph, reply residue, a lost name, unbalanced quotes), in book order
  */
 public record ExportReport(
         Path destination,
@@ -37,7 +39,8 @@ public record ExportReport(
         ConsistencySummary consistency,
         int keptVerbatim,
         List<SourceFallback> sourceFallbacks,
-        List<SuspiciousSegment> suspicious) {
+        List<SuspiciousSegment> suspicious,
+        List<String> unresolvedBlocking) {
 
     /** Rejects a report without its destination, a negative count, or defensively copies {@code sideFiles}. */
     public ExportReport {
@@ -46,6 +49,7 @@ public record ExportReport(
         Objects.requireNonNull(consistency, "consistency");
         Objects.requireNonNull(sourceFallbacks, "sourceFallbacks");
         Objects.requireNonNull(suspicious, "suspicious");
+        Objects.requireNonNull(unresolvedBlocking, "unresolvedBlocking");
         if (written < 0
                 || pending < 0
                 || sourceKept < 0
@@ -61,6 +65,39 @@ public record ExportReport(
         sideFiles = List.copyOf(sideFiles);
         sourceFallbacks = List.copyOf(sourceFallbacks);
         suspicious = List.copyOf(suspicious);
+        unresolvedBlocking = List.copyOf(unresolvedBlocking);
+    }
+
+    /** A report with no segment holding a blocking finding. */
+    public ExportReport(
+            final Path destination,
+            final int written,
+            final int pending,
+            final int sourceKept,
+            final int flaggedWritten,
+            final int autoAccepted,
+            final int reviewed,
+            final List<Path> sideFiles,
+            final int verifiedSegments,
+            final ConsistencySummary consistency,
+            final int keptVerbatim,
+            final List<SourceFallback> sourceFallbacks,
+            final List<SuspiciousSegment> suspicious) {
+        this(
+                destination,
+                written,
+                pending,
+                sourceKept,
+                flaggedWritten,
+                autoAccepted,
+                reviewed,
+                sideFiles,
+                verifiedSegments,
+                consistency,
+                keptVerbatim,
+                sourceFallbacks,
+                suspicious,
+                List.of());
     }
 
     /** A report whose audit found nothing doubtful. */

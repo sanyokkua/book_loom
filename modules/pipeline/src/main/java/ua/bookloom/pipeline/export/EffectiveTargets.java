@@ -19,6 +19,10 @@ import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.checks.CheckFinding;
+import ua.bookloom.pipeline.checks.FindingKind;
+import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.typography.Normalisation;
 import ua.bookloom.pipeline.typography.TypographyNormalizer;
 
@@ -32,11 +36,18 @@ import ua.bookloom.pipeline.typography.TypographyNormalizer;
  *     placeholders were written in, which the re-open check compares; a segment written in its source is absent
  * @param sourceFallbacks the segments written in their source although their record holds a target, because that
  *     target's placeholders no longer match the segment's, in book order
- * @param noTarget the FLAGGED segments written in their source because no draft ever passed the gates, in book order
+ * @param noTarget the FLAGGED segments written in their source because no draft ever passed the gates and no refused
+ *     reply was fit to write, in book order
+ * @param candidates the FLAGGED segments with no target of their own written with the model's last refused reply,
+ *     because it passes every blocking check, in book order
  */
 @Slf4j
 record EffectiveTargets(
-        Document document, Map<String, String> maskedTargets, List<String> sourceFallbacks, List<String> noTarget) {
+        Document document,
+        Map<String, String> maskedTargets,
+        List<String> sourceFallbacks,
+        List<String> noTarget,
+        List<String> candidates) {
 
     /** Copies the map and the list so the targets cannot change after construction. */
     EffectiveTargets {
@@ -44,6 +55,16 @@ record EffectiveTargets(
         maskedTargets = Collections.unmodifiableMap(new LinkedHashMap<>(maskedTargets));
         sourceFallbacks = List.copyOf(sourceFallbacks);
         noTarget = List.copyOf(noTarget);
+        candidates = List.copyOf(candidates);
+    }
+
+    /** Targets with no refused reply written. */
+    EffectiveTargets(
+            final Document document,
+            final Map<String, String> maskedTargets,
+            final List<String> sourceFallbacks,
+            final List<String> noTarget) {
+        this(document, maskedTargets, sourceFallbacks, noTarget, List.of());
     }
 
     /**
@@ -54,6 +75,8 @@ record EffectiveTargets(
      * @param keptKinds the auxiliary kinds the brief keeps as source when the export starts; never null
      * @param unmask restores a masked target into a segment's markup, failing when the target's placeholders no longer
      *     match the segment's; never null
+     * @param sourceLanguage the source language tag the blocking checks of a refused reply need, or null when none is
+     *     declared
      * @param targetLanguage the language tag the export writes; a person's edit is normalised for it, because an edit
      *     does not pass through the run's typography gate; never null
      * @return the book to write, the masked form of every target written, and the targets written as source instead
@@ -63,6 +86,7 @@ record EffectiveTargets(
             final List<SegmentRecord> records,
             final Set<SegmentKind> keptKinds,
             final BiFunction<Segment, String, Result<String>> unmask,
+            @Nullable final String sourceLanguage,
             final String targetLanguage) {
         Objects.requireNonNull(opened, "opened");
         Objects.requireNonNull(records, "records");
@@ -76,32 +100,59 @@ record EffectiveTargets(
                 records.size(),
                 opened.id(),
                 keptKinds);
-        final Map<String, String> masked = new LinkedHashMap<>();
-        final List<String> fallbacks = new ArrayList<>();
-        final List<String> noTarget = new ArrayList<>();
-        final Decision decision = new Decision(keptKinds, unmask, targetLanguage, masked, fallbacks, noTarget);
-        final List<Unit> units = opened.units().stream()
+        final Decision decision = Decision.fresh(keptKinds, unmask, new Languages(sourceLanguage, targetLanguage));
+        final List<Unit> units = decideAll(opened, byId, decision);
+        log.debug(
+                "Effective targets applied document={} writtenWithTarget={} sourceFallbacks={} noTarget={} candidates={}",
+                opened.id(),
+                decision.masked().size(),
+                decision.fallbacks(),
+                decision.noTarget(),
+                decision.candidates());
+        return new EffectiveTargets(
+                opened.withUnits(units),
+                decision.masked(),
+                decision.fallbacks(),
+                decision.noTarget(),
+                decision.candidates());
+    }
+
+    private static List<Unit> decideAll(
+            final Document opened, final Map<String, SegmentRecord> byId, final Decision decision) {
+        return opened.units().stream()
                 .map(unit -> unit.withSegments(unit.segments().stream()
                         .map(segment -> decide(segment, byId.get(segment.id()), decision))
                         .toList()))
                 .toList();
-        log.debug(
-                "Effective targets applied document={} writtenWithTarget={} sourceFallbacks={} noTarget={}",
-                opened.id(),
-                masked.size(),
-                fallbacks,
-                noTarget);
-        return new EffectiveTargets(opened.withUnits(units), masked, fallbacks, noTarget);
     }
+
+    /** The pair a refused reply is checked in. */
+    private record Languages(@Nullable String source, String target) {}
 
     /** What deciding one segment reads and fills. */
     private record Decision(
             Set<SegmentKind> keptKinds,
             BiFunction<Segment, String, Result<String>> unmask,
-            String targetLanguage,
+            Languages languages,
             Map<String, String> masked,
             List<String> fallbacks,
-            List<String> noTarget) {}
+            List<String> noTarget,
+            List<String> candidates) {
+
+        static Decision fresh(
+                final Set<SegmentKind> keptKinds,
+                final BiFunction<Segment, String, Result<String>> unmask,
+                final Languages languages) {
+            return new Decision(
+                    keptKinds,
+                    unmask,
+                    languages,
+                    new LinkedHashMap<>(),
+                    new ArrayList<>(),
+                    new ArrayList<>(),
+                    new ArrayList<>());
+        }
+    }
 
     private static Segment decide(
             final Segment segment, @Nullable final SegmentRecord record, final Decision decision) {
@@ -111,11 +162,7 @@ record EffectiveTargets(
         }
         final String target = writtenTarget(record);
         if (target == null) {
-            log.trace("segment={} status={} written as source: no target", segment.id(), record.status());
-            if (record.status() == SegmentStatus.FLAGGED) {
-                decision.noTarget().add(segment.id());
-            }
-            return segment;
+            return decideWithoutTarget(segment, record, decision);
         }
         final String maskedTarget =
                 record.userTarget() != null ? record.maskedUserTarget() : record.maskedMachineTarget();
@@ -135,6 +182,59 @@ record EffectiveTargets(
         return segment.withDecision(record.status(), target);
     }
 
+    // The order for a segment with no target of its own: the model's refused reply when it passes every blocking check,
+    // else the source. (A flagged segment's machine translation is its target, so it never reaches here.) Only the last
+    // refused reply is stored, so there is no better candidate to pick among.
+    private static Segment decideWithoutTarget(
+            final Segment segment, final SegmentRecord record, final Decision decision) {
+        if (record.status() != SegmentStatus.FLAGGED) {
+            log.trace("segment={} status={} written as source: no target", segment.id(), record.status());
+            return segment;
+        }
+        final Segment candidate = candidate(segment, record, decision);
+        if (candidate != null) {
+            return candidate;
+        }
+        log.debug("segment={} export fallback=source-language: no target and no fit refused reply", segment.id());
+        decision.noTarget().add(segment.id());
+        return segment;
+    }
+
+    private static @Nullable Segment candidate(
+            final Segment segment, final SegmentRecord record, final Decision decision) {
+        final String rejected = record.rejectedTarget();
+        if (rejected == null || rejected.isBlank()) {
+            return null;
+        }
+        final Result<String> restored = decision.unmask().apply(segment, rejected);
+        if (restored.isErr()) {
+            log.debug("segment={} refused reply not fit: its placeholders do not match", segment.id());
+            return null;
+        }
+        final String shown = DisplayText.of(rejected);
+        final String origin = DisplayText.of(segment.masked());
+        final List<FindingKind> blocking = blockingKinds(origin, shown, decision.languages());
+        if (shown.equals(origin) || !blocking.isEmpty()) {
+            log.debug(
+                    "segment={} refused reply not fit: echo={} blocking={}",
+                    segment.id(),
+                    shown.equals(origin),
+                    blocking);
+            return null;
+        }
+        log.debug("segment={} export fallback=refused-reply-used", segment.id());
+        decision.masked().put(segment.id(), rejected);
+        decision.candidates().add(segment.id());
+        return segment.withDecision(record.status(), Objects.requireNonNull(restored.data()));
+    }
+
+    private static List<FindingKind> blockingKinds(final String origin, final String shown, final Languages languages) {
+        return TextChecks.run(origin, shown, languages.source(), languages.target()).stream()
+                .filter(CheckFinding::blocking)
+                .map(CheckFinding::kind)
+                .toList();
+    }
+
     private static @Nullable String writtenTarget(final SegmentRecord record) {
         return switch (record.status()) {
             case ACCEPTED, REVISED, FLAGGED -> record.effectiveTarget().orElse(null);
@@ -150,7 +250,8 @@ record EffectiveTargets(
             final String maskedTarget,
             final String target,
             final Decision decision) {
-        final Normalisation normalised = TypographyNormalizer.normalise(maskedTarget, decision.targetLanguage());
+        final Normalisation normalised = TypographyNormalizer.normalise(
+                maskedTarget, decision.languages().target());
         final Result<String> restored = decision.unmask().apply(segment, normalised.text());
         if (!normalised.isChanged() || restored.isErr()) {
             decision.masked().put(segment.id(), maskedTarget);

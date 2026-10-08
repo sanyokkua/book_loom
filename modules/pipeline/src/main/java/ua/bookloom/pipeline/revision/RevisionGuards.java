@@ -1,6 +1,7 @@
 package ua.bookloom.pipeline.revision;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -30,6 +31,12 @@ public final class RevisionGuards {
     private static final Pattern WORD = Pattern.compile("\\p{L}[\\p{L}\\p{M}'’ʼ-]*");
     private static final Pattern CYRILLIC = Pattern.compile("\\p{IsCyrillic}");
     static final String QUOTES = "quotes";
+    static final String CLAUSES = "clauses";
+    static final String REWRITE_CAP_RULE = "rewrite-cap";
+    /** The largest share of a paragraph's words a neighbour check may replace or remove; a rewrite past it is refused. */
+    static final double REWRITE_CAP = 0.35;
+
+    private static final String CLAUSE_MARKS = ",;:";
     private static final String DASH_RULE = "dashes";
     private static final String SENTENCES = "sentences";
     private static final String WORDS = "words";
@@ -67,7 +74,59 @@ public final class RevisionGuards {
      *     {@code latin-run}), or empty when the new text keeps every one
      */
     static Optional<String> violation(final String before, final String after, final Mode mode) {
-        return violationOf(before, after, mode);
+        return violationOf(before, after, mode)
+                .or(() -> clausesLost(DisplayText.of(before), DisplayText.of(after))
+                        ? Optional.of(CLAUSES)
+                        : Optional.empty());
+    }
+
+    /**
+     * Whether a new text replaces more of the old one's words than the cap allows. A pure addition (a restored
+     * sentence) replaces nothing.
+     *
+     * @param before the old text, masked
+     * @param after the new text, masked
+     * @return {@code true} if more than {@link #REWRITE_CAP} of the old words are missing from the new text, in order
+     */
+    static boolean exceedsRewriteCap(final String before, final String after) {
+        final List<String> old = words(DisplayText.of(before));
+        final List<String> fresh = words(DisplayText.of(after));
+        final double share = old.isEmpty() ? 0 : (double) (old.size() - commonWords(old, fresh)) / old.size();
+        log.debug(
+                "Rewrite cap oldWords={} newWords={} replacedShare={} cap={}",
+                old.size(),
+                fresh.size(),
+                share,
+                REWRITE_CAP);
+        return share > REWRITE_CAP;
+    }
+
+    private static boolean clausesLost(final String old, final String fresh) {
+        final long before = count(old, CLAUSE_MARKS);
+        final long after = count(fresh, CLAUSE_MARKS);
+        log.debug("Revision guards clause marks={}->{}", before, after);
+        return after < before;
+    }
+
+    private static List<String> words(final String text) {
+        return WORD.matcher(text)
+                .results()
+                .map(match -> match.group().toLowerCase(Locale.ROOT))
+                .toList();
+    }
+
+    // The longest run of old words that survive in order: what the new text kept.
+    private static int commonWords(final List<String> old, final List<String> fresh) {
+        final int[] row = new int[fresh.size() + 1];
+        for (final String word : old) {
+            int diagonal = 0;
+            for (int at = 1; at <= fresh.size(); at++) {
+                final int above = row[at];
+                row[at] = word.equals(fresh.get(at - 1)) ? diagonal + 1 : Math.max(row[at], row[at - 1]);
+                diagonal = above;
+            }
+        }
+        return row[fresh.size()];
     }
 
     /**

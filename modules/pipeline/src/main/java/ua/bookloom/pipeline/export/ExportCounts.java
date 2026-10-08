@@ -99,6 +99,25 @@ record ExportCounts(
     }
 
     /**
+     * These counts with flagged segments that had no target of their own moved from pending to written, because a
+     * refused reply that passes the blocking checks was written for each.
+     *
+     * @param used how many such segments were written with a refused reply
+     * @return the adjusted counts
+     */
+    ExportCounts withRefusedReplies(final int used) {
+        return new ExportCounts(
+                written + used,
+                pending - used,
+                sourceKept,
+                flaggedWritten + used,
+                autoAccepted,
+                reviewed,
+                bodySegments,
+                keptVerbatim);
+    }
+
+    /**
      * The report of a finished export.
      *
      * @param destination the non-null written book
@@ -106,6 +125,7 @@ record ExportCounts(
      * @param consistency the non-null summary of the consistency pass
      * @param sourceFallbacks the non-null segments written in their source for a broken translation
      * @param suspicious the non-null accepted segments the final audit doubts
+     * @param unresolvedBlocking the non-null locators of segments whose written text still holds a blocking finding
      * @return the report carrying these counts
      */
     ExportReport report(
@@ -113,7 +133,8 @@ record ExportCounts(
             final List<Path> sideFiles,
             final ConsistencySummary consistency,
             final List<SourceFallback> sourceFallbacks,
-            final List<SuspiciousSegment> suspicious) {
+            final List<SuspiciousSegment> suspicious,
+            final List<String> unresolvedBlocking) {
         return new ExportReport(
                 destination,
                 written,
@@ -127,6 +148,7 @@ record ExportCounts(
                 consistency,
                 keptVerbatim,
                 sourceFallbacks,
-                suspicious);
+                suspicious,
+                unresolvedBlocking);
     }
 }

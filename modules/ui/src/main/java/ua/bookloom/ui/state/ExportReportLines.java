@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -119,6 +120,25 @@ public final class ExportReportLines {
      */
     public static Optional<String> noTargetFallbacks(final Messages messages, final ExportReport report) {
         return fallbackLine(messages, report, SourceFallback.Reason.NO_TARGET, MessageKey.EXPORT_NO_TARGET_FALLBACKS);
+    }
+
+    /**
+     * The note that points at the report file when it lists segments written as they are.
+     *
+     * @param messages the catalogue the line is worded from
+     * @param report the finished export's report
+     * @return the line naming the report file, or empty when no report was written or nothing was written as it is
+     */
+    public static Optional<String> reportFile(final Messages messages, final ExportReport report) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(report, "report");
+        if (report.sourceFallbacks().isEmpty() && report.unresolvedBlocking().isEmpty()) {
+            return Optional.empty();
+        }
+        return sideFileNames(report).stream()
+                .filter(name -> name.endsWith(SideFile.QUALITY_REPORT.suffix()))
+                .findFirst()
+                .map(name -> messages.get(MessageKey.EXPORT_REPORT_FILE, name));
     }
 
     private static Optional<String> fallbackLine(

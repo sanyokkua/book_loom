@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.revision;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.qa.BlockingFindings;
 
 /**
  * The model's check of decided paragraphs against their neighbours. Each paragraph in scope is shown to the model with
@@ -70,6 +72,7 @@ final class NeighbourRevision {
         final List<Integer> checked = IntStream.range(0, order.size())
                 .filter(at -> isInScope(byId.get(order.get(at)), scope))
                 .boxed()
+                .sorted(Comparator.comparing(at -> !hasBlocking(byId.get(order.get(at)))))
                 .toList();
         log.info(
                 "Neighbour check started project={} segments={} inScope={} everySegment={}",
@@ -102,6 +105,12 @@ final class NeighbourRevision {
                 || record.status() == SegmentStatus.FLAGGED
                 || record.path() == SegmentPath.REPAIRED
                 || scope.doubted().contains(record.segmentId());
+    }
+
+    // Blocking defects first, in reading order within each group, so a stopped pass has spent its calls where they
+    // matter.
+    private static boolean hasBlocking(@Nullable final SegmentRecord record) {
+        return record != null && !BlockingFindings.of(record).isEmpty();
     }
 
     private Result<Boolean> checkOne(
@@ -168,8 +177,21 @@ final class NeighbourRevision {
                 tally.neighbourUnchanged();
                 yield Result.ok(false);
             }
+            case RevisionAnswer.Revised revised
+            when isRewriteTooLarge(record, masked, revised) -> {
+                log.debug("Neighbour check segmentId={} refused rule={}", id, RevisionGuards.REWRITE_CAP_RULE);
+                tally.refused(RevisionGuards.REWRITE_CAP_RULE);
+                yield Result.ok(false);
+            }
             case RevisionAnswer.Revised revised -> storeFix(inputs, record, masked, revised.restored(), tally);
         };
+    }
+
+    // A paragraph with a blocking finding is the defect the answer is there to remove, so it may be rewritten freely.
+    private static boolean isRewriteTooLarge(
+            final SegmentRecord record, final String masked, final RevisionAnswer.Revised revised) {
+        return BlockingFindings.of(record).isEmpty()
+                && RevisionGuards.exceedsRewriteCap(masked, revised.restored().maskedForm());
     }
 
     private Result<Boolean> storeFix(

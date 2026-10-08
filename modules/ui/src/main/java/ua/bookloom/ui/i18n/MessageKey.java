@@ -1546,6 +1546,8 @@ public enum MessageKey {
     EXPORT_SOURCE_FALLBACKS("export.sourceFallbacks"),
     /** Warning naming the flagged segments written in the source because no draft passed; arguments: count, locators. */
     EXPORT_NO_TARGET_FALLBACKS("export.noTargetFallbacks"),
+    /** Note under the completion card when the report beside the book lists segments written as they are; argument 0 is the report's file name. */
+    EXPORT_REPORT_FILE("export.reportFile"),
     /** Size of a written book under a kilobyte; argument 0 is the byte count. */
     EXPORT_SIZE_BYTES("export.size.bytes"),
     /** Size of a written book in kilobytes; argument 0 is the count. */

@@ -249,4 +249,49 @@ class ExportCompleteDialogTest extends ShellTestBase {
         assertThat(revealer().revealed()).isEmpty();
         assertThat(revealer().opened()).isEmpty();
     }
+
+    // IF the card did not point at the report, THEN a person could finish an export without learning that lines of the
+    // book were written as they are and a file beside it says which.
+    @Test
+    void show_segmentsWrittenAsTheyAreAndAReportBesideTheBook_pointsAtTheReport() {
+        final ExportReport report = new ExportReport(
+                BOOK,
+                8,
+                1,
+                0,
+                0,
+                8,
+                0,
+                List.of(Path.of("/books/Frankenstein.uk.report.md")),
+                10,
+                ConsistencySummary.NOT_RUN,
+                0,
+                List.of(new SourceFallback("part0009.html:1", "ch12 · p02", SourceFallback.Reason.NO_TARGET)));
+        onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
+
+        final Label line = (Label) scene.getRoot().lookup("#export-complete-report");
+        assertThat(line.getText())
+                .isEqualTo("The report Frankenstein.uk.report.md beside the book lists every segment that was written"
+                        + " as it is, not as an accepted translation.");
+    }
+
+    // A clean book has nothing to point at, even when the person asked for the report.
+    @Test
+    void show_cleanBookWithAReportBesideIt_hasNoReportLine() {
+        final ExportReport report = new ExportReport(
+                BOOK,
+                10,
+                0,
+                0,
+                0,
+                8,
+                2,
+                List.of(Path.of("/books/Frankenstein.uk.report.md")),
+                10,
+                ConsistencySummary.NOT_RUN,
+                0);
+        onFx(() -> injector.getInstance(ExportCompleteDialog.class).show(new ExportOutcome(report, SIZE)));
+
+        assertThat(scene.getRoot().lookup("#export-complete-report")).isNull();
+    }
 }

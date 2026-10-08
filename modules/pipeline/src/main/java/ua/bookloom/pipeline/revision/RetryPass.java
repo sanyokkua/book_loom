@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.revision;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -18,6 +19,7 @@ import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.SegmentOutcome;
 import ua.bookloom.pipeline.prompt.ModelCalls;
+import ua.bookloom.pipeline.qa.BlockingFindings;
 import ua.bookloom.pipeline.review.RetryCandidate;
 import ua.bookloom.pipeline.review.RetryDraft;
 import ua.bookloom.pipeline.run.OutcomeRecords;
@@ -27,7 +29,7 @@ import ua.bookloom.pipeline.run.OutcomeRecords;
  * review desk's Retry drafts it — the context its first draft saw, the run's checks, reviewer and acceptance rule —
  * and the new text replaces the old only when the acceptance rule takes it, it breaks none of {@link PassChecks}'s
  * rules against the old text, and it is better: the old text was flagged or failed a check, or the new one fails fewer
- * checks or fewer audit checks. Only a machine-owned target is touched; the person's own text never is.
+ * checks or fewer audit checks. Segments with a blocking finding are drafted first. Only a machine-owned target is touched; the person's own text never is.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -56,6 +58,8 @@ final class RetryPass {
         final Set<String> wanted = Set.copyOf(doubted);
         final List<SegmentRecord> eligible = Objects.requireNonNull(read.data(), "records").stream()
                 .filter(record -> wanted.contains(record.segmentId()) && isRetryable(record))
+                .sorted(Comparator.comparing(
+                        record -> BlockingFindings.of(record).isEmpty()))
                 .toList();
         log.info("Retry of doubted segments started project={} eligible={}", inputs.projectId(), eligible.size());
         calls.planned(ModelCalls.Stage.RETRY_DOUBTED, eligible.size());

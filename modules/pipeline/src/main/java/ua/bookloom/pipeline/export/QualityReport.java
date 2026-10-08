@@ -41,6 +41,7 @@ final class QualityReport {
      * @param keptKinds the non-null auxiliary kinds the brief keeps as source, whose records are never listed flagged
      * @param pass what the consistency pass changed, or null when it was not run
      * @param suspicious the non-null accepted segments the final audit doubts, listed with the checks that fired
+     * @param policy the non-null way each segment without an accepted target was written
      * @return the report's Markdown text
      */
     static String of(
@@ -50,16 +51,20 @@ final class QualityReport {
             final List<SegmentRecord> records,
             final Set<SegmentKind> keptKinds,
             @Nullable final ConsistencyReport pass,
-            final List<SuspiciousSegment> suspicious) {
+            final List<SuspiciousSegment> suspicious,
+            final ExportPolicy policy) {
         Objects.requireNonNull(counts, "counts");
+        Objects.requireNonNull(policy, "policy");
         final String text = "# Export report: " + title + "\n\n"
                 + counts(counts)
+                + "\n"
+                + policy.text()
                 + "\n## Flagged segments\n\n"
                 + flagged(book, records, keptKinds)
                 + "\n## Suspicious accepted segments\n\n"
                 + suspicious(suspicious)
                 + "\n## Consistency notes\n\n"
-                + notes(pass);
+                + ConsistencySection.of(pass);
         log.debug("Quality report built title={} length={} consistencyPass={}", title, text.length(), pass != null);
         return text;
     }
@@ -108,15 +113,5 @@ final class QualityReport {
                 : suspicious.stream()
                         .map(segment -> "- " + segment.locator() + ": " + String.join(", ", segment.checks()) + "\n")
                         .collect(Collectors.joining());
-    }
-
-    private static String notes(@Nullable final ConsistencyReport pass) {
-        if (pass == null) {
-            return "The consistency pass was not run.\n";
-        }
-        final List<String> notes = pass.notes();
-        return notes.isEmpty()
-                ? "The consistency pass changed nothing.\n"
-                : notes.stream().map(note -> "- " + note + "\n").collect(Collectors.joining());
     }
 }

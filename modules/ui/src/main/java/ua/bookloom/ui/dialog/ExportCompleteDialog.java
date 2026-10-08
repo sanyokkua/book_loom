@@ -147,6 +147,12 @@ public final class ExportCompleteDialog {
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-source-fallbacks", line)));
         ExportReportLines.noTargetFallbacks(messages, report)
                 .ifPresent(line -> body.getChildren().add(warning("export-complete-no-target", line)));
+        ExportReportLines.reportFile(messages, report).ifPresent(line -> {
+            final Label note = plain(line);
+            note.setId("export-complete-report");
+            note.setWrapText(true);
+            body.getChildren().add(note);
+        });
     }
 
     private static Banner warning(final String id, final String text) {
