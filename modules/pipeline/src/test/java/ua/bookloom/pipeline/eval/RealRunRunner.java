@@ -23,7 +23,6 @@ import ua.bookloom.pipeline.batch.BatchReplyParser;
 import ua.bookloom.pipeline.batch.ItemProblem;
 import ua.bookloom.pipeline.batch.ItemStatus;
 import ua.bookloom.pipeline.batch.ProtocolLeak;
-import ua.bookloom.pipeline.eval.EvalRow.Check;
 import ua.bookloom.pipeline.eval.ReviewerEval.BatchReviewed;
 import ua.bookloom.pipeline.eval.ReviewerEval.Reviewed;
 import ua.bookloom.pipeline.heal.DirectedFix;
@@ -116,8 +115,7 @@ final class RealRunRunner {
             return RealRunRow.of(runCase.id(), runCase.kind(), "draft", false, runCase.knownFailure(), "unparsed");
         }
         final String target = parsed.translation();
-        final boolean passed =
-                ReplyChecks.gate(project.mask(0).maskedText(), target) == Check.PASS && !verdicts.fires(target);
+        final boolean passed = ReplyJudge.judge(project, 0, target).gatePassed() && !verdicts.fires(target);
         return RealRunRow.of(runCase.id(), runCase.kind(), "draft", passed, runCase.knownFailure(), target);
     }
 

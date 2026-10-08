@@ -189,7 +189,7 @@ final class PromptEvalRunner {
         final String shown = project.mask(0).maskedText();
         final Result<ChatResponse> reply =
                 calls.call(CallKind.DRAFT, project.segment(0).id(), project.draftRequest(0));
-        return read(draft.name(), "draft", shown, reply, draft.expect());
+        return read(project, draft.name(), "draft", shown, reply, draft.expect());
     }
 
     private EvalRow repair(final Repair repair) {
@@ -199,6 +199,7 @@ final class PromptEvalRunner {
             return failed(repair.name(), "repair", "the gate accepts the rejected target", repair.expect());
         }
         return read(
+                project,
                 repair.name(),
                 "repair",
                 project.mask(0).maskedText(),
@@ -223,6 +224,7 @@ final class PromptEvalRunner {
     }
 
     private EvalRow read(
+            final EvalProject project,
             final String name,
             final String kind,
             final String shown,
@@ -240,7 +242,7 @@ final class PromptEvalRunner {
         if (parsed.kind() != ReplyKind.STRUCTURED) {
             return failed(name, kind, "unparsed: " + content, expect);
         }
-        return measured(name, kind, shown, parsed.translation(), expect);
+        return measured(project, name, kind, shown, parsed.translation(), expect);
     }
 
     private EvalRow fix(final Fix fix) {
@@ -261,7 +263,7 @@ final class PromptEvalRunner {
         }
         return switch (Objects.requireNonNull(reply.data())) {
             case RepairReply.Rewritten rewritten ->
-                measured(fix.name(), "fix", fix.masked(), rewritten.maskedTarget(), fix.expect());
+                measured(project, fix.name(), "fix", fix.masked(), rewritten.maskedTarget(), fix.expect());
             case RepairReply.Malformed malformed ->
                 failed(fix.name(), "fix", "unparsed: " + malformed.diagnostic(), fix.expect());
             case RepairReply.FlagNow flagNow ->
@@ -288,13 +290,21 @@ final class PromptEvalRunner {
     }
 
     private EvalRow measured(
-            final String name, final String kind, final String masked, final String target, final Expect expect) {
+            final EvalProject project,
+            final String name,
+            final String kind,
+            final String masked,
+            final String target,
+            final Expect expect) {
+        final ReplyJudge.Verdict verdict = ReplyJudge.judge(project, 0, target);
+        final Check script =
+                expect.copy() ? Check.of(target.strip().equals(masked.strip())) : Check.of(verdict.accepted());
         return new EvalRow(
                 name,
                 kind,
                 Check.PASS,
-                ReplyChecks.gate(masked, target),
-                ReplyChecks.script(masked, target, expect, targetLanguage),
+                Check.of(verdict.gatePassed()),
+                script,
                 ReplyChecks.marker(target, expect),
                 ReplyChecks.injection(target, expect),
                 Check.NA,

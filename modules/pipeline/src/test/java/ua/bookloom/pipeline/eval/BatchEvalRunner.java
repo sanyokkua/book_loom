@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
@@ -23,7 +24,6 @@ import ua.bookloom.pipeline.batch.ProtocolLeak;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.eval.BatchEvalCases.Batch;
 import ua.bookloom.pipeline.eval.EvalCase.Draft;
-import ua.bookloom.pipeline.eval.EvalRow.Check;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.run.PromptRequests.PreparedBatch;
 
@@ -77,7 +77,7 @@ final class BatchEvalRunner {
             return failed(items.size());
         }
         final ChatResponse response = Objects.requireNonNull(reply.data());
-        return measured(items, response, parser.parse(response.content(), items, SOURCE, TARGET));
+        return measured(project, items, response, parser.parse(response.content(), items, SOURCE, TARGET));
     }
 
     private EvalProject project(final Batch batch) {
@@ -96,9 +96,12 @@ final class BatchEvalRunner {
     }
 
     private static BatchEvalRow measured(
-            final List<BatchItem> items, final ChatResponse response, final BatchReply parsed) {
-        final int tokenPass = (int) items.stream()
-                .filter(item -> kept(item, parsed.outcome(item.id()).orElseThrow()))
+            final EvalProject project,
+            final List<BatchItem> items,
+            final ChatResponse response,
+            final BatchReply parsed) {
+        final int tokenPass = (int) IntStream.range(0, items.size())
+                .filter(i -> kept(project, i, parsed.outcome(items.get(i).id()).orElseThrow()))
                 .count();
         final TokenUsage usage = response.usage();
         return new BatchEvalRow(
@@ -122,9 +125,10 @@ final class BatchEvalRunner {
                 false);
     }
 
-    /** The token gate of the whole eval: the id came back once and {@link ReplyChecks#gate} passes on its text. */
-    private static boolean kept(final BatchItem item, final ItemOutcome outcome) {
-        return outcome.status() == ItemStatus.OK && ReplyChecks.gate(item.masked(), outcome.target()) == Check.PASS;
+    /** The token gate of the whole eval: the id came back once and the run's own gate and checks pass on its text. */
+    private static boolean kept(final EvalProject project, final int index, final ItemOutcome outcome) {
+        return outcome.status() == ItemStatus.OK
+                && ReplyJudge.judge(project, index, outcome.target()).gatePassed();
     }
 
     private static BatchEvalRow failed(final int size) {

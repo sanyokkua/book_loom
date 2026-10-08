@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -124,10 +123,9 @@ public final class QualityLoop {
         final Map<Integer, QaResult> results = new LinkedHashMap<>();
         for (int index = 0; index < outcomes.size(); index++) {
             if (outcomes.get(index) instanceof DraftOutcome.Drafted drafted) {
-                final QaResult qa = DraftEvaluation.evaluate(drafted, settings);
-                final Optional<QuoteFixUp.FixedDraft> fixed = QuoteFixUp.fixDraft(drafted, qa, gate, settings);
-                current.set(index, fixed.isPresent() ? fixed.get().outcome() : drafted);
-                results.put(index, fixed.isPresent() ? fixed.get().qa() : qa);
+                final DraftJudge.Judged judged = DraftJudge.judge(drafted, settings, gate);
+                current.set(index, judged.outcome());
+                results.put(index, judged.qa());
             }
         }
         return new EvaluatedDrafts(current, results);

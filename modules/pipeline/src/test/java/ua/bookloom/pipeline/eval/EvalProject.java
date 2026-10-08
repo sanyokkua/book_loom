@@ -6,11 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.ByteSpanAnchor;
 import ua.bookloom.api.document.DocumentPort;
+import ua.bookloom.api.document.PlaceholderPair;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
@@ -23,6 +25,7 @@ import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
 import ua.bookloom.pipeline.SegmentTranslator;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchPromptBuilder;
 import ua.bookloom.pipeline.batch.BatchReplyParser;
@@ -219,6 +222,63 @@ public final class EvalProject {
                 null,
                 SegmentStatus.PENDING,
                 0.0);
+    }
+
+    /**
+     * The segment at {@code index} as the document module would parse it: a map entry for each token and the tokens
+     * paired as they open and close, so the run's own gate can restore and judge a reply. The request-building segment
+     * has neither, which is what keeps the repair cases' rejected targets in need of a model.
+     */
+    public Segment judged(final int index) {
+        final Segment bare = chunk.get(index);
+        return new Segment(
+                bare.id(),
+                bare.unit(),
+                bare.order(),
+                bare.kind(),
+                bare.sourceInner(),
+                bare.masked(),
+                placeholders(bare.masked()),
+                bare.sourceHash(),
+                bare.prevKey(),
+                bare.nextKey(),
+                bare.anchor(),
+                bare.targetInner(),
+                bare.status(),
+                bare.confidence(),
+                null,
+                pairs(bare.masked()),
+                List.of());
+    }
+
+    /** The chunk gate a run restores replies through, so a reply is judged by the same placeholder rules. */
+    public GateFunction gate() {
+        return requests.gate();
+    }
+
+    /** The run's draft step over this project, whose {@code adopt} reads a reply with no repair. */
+    public SegmentTranslator translator() {
+        return requests.translator();
+    }
+
+    // The document gate restores each token from the segment's map, so every token the text holds needs an entry; the
+    // eval's text has no markup behind a token, so the original is empty.
+    private static java.util.Map<String, String> placeholders(final String masked) {
+        final java.util.Map<String, String> map = new java.util.LinkedHashMap<>();
+        Tokens.inOrder(masked).forEach(token -> map.put(token.substring(1, token.length() - 1), ""));
+        return map;
+    }
+
+    // The document module pairs the tokens of an inline element; the eval's texts hold either one lone token or tokens
+    // that open and close in turn.
+    private static List<PlaceholderPair> pairs(final String masked) {
+        final List<String> tokens = Tokens.inOrder(masked);
+        if (tokens.size() < 2 || tokens.size() % 2 != 0) {
+            return List.of();
+        }
+        return IntStream.range(0, tokens.size() / 2)
+                .mapToObj(i -> new PlaceholderPair(tokens.get(2 * i), tokens.get(2 * i + 1), null))
+                .toList();
     }
 
     public RunSettings settings() {

@@ -2,11 +2,10 @@ package ua.bookloom.pipeline.eval;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
@@ -15,21 +14,20 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
-import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
-import ua.bookloom.pipeline.checks.CheckFinding;
-import ua.bookloom.pipeline.checks.TextChecks;
 import ua.bookloom.pipeline.heal.DirectedFix;
+import ua.bookloom.pipeline.heal.DraftJudge;
+import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.QualityLoop;
-import ua.bookloom.pipeline.prompt.CallFrame;
+import ua.bookloom.pipeline.heal.ReviewJudge;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.reviewer.EditApplier;
-import ua.bookloom.pipeline.reviewer.EditOutcome;
 import ua.bookloom.pipeline.reviewer.EditVerifier;
 import ua.bookloom.pipeline.reviewer.ReviewItem;
 import ua.bookloom.pipeline.reviewer.ReviewPass;
 import ua.bookloom.pipeline.reviewer.ReviewReplyParser;
+import ua.bookloom.pipeline.reviewer.ReviewStatus;
 import ua.bookloom.pipeline.reviewer.ReviewVerdict;
 import ua.bookloom.pipeline.reviewer.ReviewedPair;
 import ua.bookloom.pipeline.reviewer.ReviewerCall;
@@ -43,10 +41,12 @@ final class ReviewerEval {
 
     private final ModelCalls calls;
     private final EditApplier editApplier = new EditApplier(new EditVerifier());
+    private final DirectedFix directedFix;
     private final QualityLoop loop;
 
     ReviewerEval(final ModelCalls calls, final PromptTemplates templates, final DirectedFix directedFix) {
         this.calls = Objects.requireNonNull(calls, "calls");
+        this.directedFix = Objects.requireNonNull(directedFix, "directedFix");
         this.loop = new QualityLoop(
                 new ReviewerCall(templates, new ReviewReplyParser(new ObjectMapper())), editApplier, directedFix);
     }
@@ -95,33 +95,53 @@ final class ReviewerEval {
         final Result<ReviewVerdict> result = loop.review(pairs, project.loop(), ReviewPass.FIRST, watch);
         final ReviewVerdict verdict =
                 result.isOk() ? Objects.requireNonNull(result.data()) : ReviewVerdict.unreadable();
-        final List<Reviewed> items = pairs.stream()
-                .map(pair -> read(project.frame(), renderingsOf(project), verdict, pair))
+        final List<Reviewed> items = IntStream.range(0, pairs.size())
+                .mapToObj(i -> read(project, i, verdict, pairs.get(i)))
                 .toList();
         return new BatchReviewed(items, watch.truncated());
     }
 
-    // As the run reads them (ReviewResolver): the target of every term pair is a rendering a terminology edit may use.
-    private static List<String> renderingsOf(final EvalProject project) {
-        return project.loop().glossaryPairs().stream()
-                .map(line -> line.substring(line.indexOf('→') + 1).strip())
-                .toList();
-    }
-
     private Reviewed read(
-            final CallFrame frame,
-            final List<String> renderings,
-            final ReviewVerdict verdict,
-            final ReviewedPair pair) {
+            final EvalProject project, final int index, final ReviewVerdict verdict, final ReviewedPair pair) {
         if (!verdict.readable()) {
             return new Reviewed(false, !isClean(pair.maskedCandidate()), 0, "unreadable", "unreadable");
         }
         final ReviewItem item = verdict.itemFor(pair.segmentId()).orElseGet(() -> ReviewItem.ok(pair.segmentId()));
-        return switch (item.status()) {
-            case OK -> new Reviewed(true, false, 0, "ok", "ok");
-            case EDITS -> editsOf(frame, renderings, pair.maskedSource(), pair.maskedCandidate(), item);
-            case REWRITE -> rewriteOf(pair.maskedCandidate(), item);
-        };
+        if (item.status() == ReviewStatus.OK) {
+            return new Reviewed(true, false, 0, "ok", "ok");
+        }
+        final Optional<DraftOutcome> adopted =
+                project.translator().adopt(project.judged(index), project.mask(index), pair.maskedCandidate());
+        if (adopted.isEmpty() || !(adopted.get() instanceof DraftOutcome.Drafted drafted)) {
+            return new Reviewed(true, true, 1, "gate", "the placeholder gate refuses the candidate");
+        }
+        return resolved(project, drafted, item, pair.maskedCandidate());
+    }
+
+    // The run's own resolver: verified edits with the function words, the directed fix after a refused edit, and the
+    // rewrite rule; the eval only reads what it came to.
+    private Reviewed resolved(
+            final EvalProject project,
+            final DraftOutcome.Drafted drafted,
+            final ReviewItem item,
+            final String candidate) {
+        final DraftJudge.Judged first = DraftJudge.judge(drafted, project.loop(), project.gate());
+        final Result<ReviewJudge.Judged> result = ReviewJudge.resolve(
+                first.outcome(), first.qa(), item, project.loop(), project.gate(), editApplier, directedFix, calls);
+        if (result.isErr()) {
+            return new Reviewed(true, true, 0, "unresolved", "the directed fix call failed");
+        }
+        final ReviewJudge.Judged judged = Objects.requireNonNull(result.data());
+        final boolean changed = !judged.maskedText().equals(first.outcome().maskedReply());
+        final int broken = Tokens.inOrder(judged.maskedText()).equals(Tokens.inOrder(candidate)) ? 0 : 1;
+        final String detail = item.status().name().toLowerCase(Locale.ROOT) + " rounds=" + judged.rounds()
+                + " blockersLeft=" + judged.verifiedBlockersLeft() + " accepted=" + judged.accepted();
+        return new Reviewed(
+                true,
+                changed || judged.verifiedBlockersLeft() > 0,
+                broken,
+                item.status() + judged.maskedText() + judged.verifiedBlockersLeft(),
+                detail);
     }
 
     /** Passes every call through and notes whether any reply was cut by the model's output cap. */
@@ -161,56 +181,6 @@ final class ReviewerEval {
             }
             return reply;
         }
-    }
-
-    private Reviewed editsOf(
-            final CallFrame frame,
-            final List<String> renderings,
-            final String masked,
-            final String candidate,
-            final ReviewItem item) {
-        final EditOutcome outcome = editApplier.apply(
-                candidate,
-                item.edits(),
-                text -> blockersOf(frame, masked, text),
-                blockersOf(frame, masked, candidate).orElseGet(java.util.Set::of),
-                renderings);
-        final boolean flagged =
-                !outcome.applied().isEmpty() || !outcome.failed().isEmpty();
-        final int broken = Tokens.inOrder(outcome.text()).equals(Tokens.inOrder(candidate)) ? 0 : 1;
-        final String detail = "edits applied=" + outcome.applied().size() + " refused="
-                + outcome.failed().size() + " ignored=" + outcome.ignored() + " notes="
-                + outcome.notes().size();
-        return new Reviewed(
-                true,
-                flagged,
-                broken,
-                "edits:" + outcome.text() + outcome.failed().size(),
-                detail);
-    }
-
-    private Reviewed rewriteOf(final String candidate, final ReviewItem item) {
-        final String rewrite = Objects.requireNonNull(item.rewrite());
-        final int broken = Tokens.inOrder(rewrite).equals(Tokens.inOrder(candidate)) ? 0 : 1;
-        return new Reviewed(
-                true, true, 0, signature(item), "rewrite" + (broken == 0 ? "" : " (breaks tokens, refused)"));
-    }
-
-    private static String signature(final ReviewItem item) {
-        return item.status() + item.rewrite();
-    }
-
-    private static Optional<Set<String>> blockersOf(final CallFrame frame, final String masked, final String text) {
-        return Optional.of(
-                TextChecks.run(
-                                DisplayText.of(masked),
-                                DisplayText.of(text),
-                                frame.sourceLanguage(),
-                                frame.targetLanguage())
-                        .stream()
-                        .filter(CheckFinding::blocking)
-                        .map(finding -> finding.kind().name())
-                        .collect(Collectors.toUnmodifiableSet()));
     }
 
     /** Whether a candidate carries no blocking defect of its own, so an unreadable reply on it is not a miss. */
