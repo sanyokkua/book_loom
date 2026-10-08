@@ -1299,6 +1299,8 @@ public enum MessageKey {
     LIVE_CALL_PROMPT_COPY_TIP("live.call.prompt.copy.tip"),
     /** Chip for what became of one segment of a call; arguments: 0 {@code adopted}, {@code fell_back}, {@code accepted} or {@code flagged}, 1 the detail or {@code none}. */
     LIVE_CALL_OUTCOME("live.call.outcome"),
+    /** Words for one reason in an outcome chip; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
+    LIVE_CALL_DETAIL("live.call.detail"),
     /** Context-section heading of the style sheet. */
     LIVE_CONTEXT_STYLE("live.context.style"),
     /** Context-section heading of the locked glossary names. */
@@ -1620,6 +1622,8 @@ public enum MessageKey {
      * broke with their counts ({@code quotes: 2, worse: 1}).
      */
     EXPORT_CHECK_CONSISTENCY_REFUSED("export.check.consistency.refused"),
+    /** Words for the rule a consistency answer broke; arguments: 0 the rule's name lower-cased with dashes as underscores, 1 the name as reported, shown when no words are known. */
+    EXPORT_CHECK_CONSISTENCY_RULE("export.check.consistency.rule"),
     /** Check line after an export: argument 0 is how many segments were skipped because their model call failed. */
     EXPORT_CHECK_CONSISTENCY_SKIPPED("export.check.consistency.skipped"),
     /** The forward action of the last step, always unavailable. */

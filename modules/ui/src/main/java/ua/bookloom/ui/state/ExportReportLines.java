@@ -87,7 +87,8 @@ public final class ExportReportLines {
         if (checks.refusedTotal() > 0) {
             final String rules = checks.refused().entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
-                    .map(rule -> rule.getKey() + ": " + rule.getValue())
+                    .map(rule -> messages.code(MessageKey.EXPORT_CHECK_CONSISTENCY_RULE, rule.getKey()) + ": "
+                            + rule.getValue())
                     .collect(Collectors.joining(", "));
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_REFUSED, checks.refusedTotal(), rules));
         }

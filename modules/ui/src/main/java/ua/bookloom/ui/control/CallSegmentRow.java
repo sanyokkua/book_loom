@@ -92,7 +92,16 @@ final class CallSegmentRow extends VBox {
         return messages.get(
                 MessageKey.LIVE_CALL_OUTCOME,
                 note.kind().name().toLowerCase(java.util.Locale.ROOT),
-                note.detail().isEmpty() ? "none" : note.detail());
+                note.detail().isEmpty() ? "none" : detailWords(note.detail()));
+    }
+
+    // The detail is the pipeline's comma-separated codes (MISSING, GATE, meaning…); each is worded on its own.
+    private String detailWords(final String detail) {
+        return java.util.Arrays.stream(detail.split(",", -1))
+                .map(String::strip)
+                .filter(code -> !code.isEmpty())
+                .map(code -> messages.code(MessageKey.LIVE_CALL_DETAIL, code))
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     private static String outcomeRole(final SegmentOutcomeNote.Kind kind) {

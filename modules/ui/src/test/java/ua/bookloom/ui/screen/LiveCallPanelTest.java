@@ -156,8 +156,8 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         showCalls(call, null);
 
         assertThat(chipTexts(CURRENT + "-segment-1-chips")).containsExactly("Adopted");
-        assertThat(chipTexts(CURRENT + "-segment-2-chips")).containsExactly("Fell back: MISSING");
-        assertThat(chipTexts(CURRENT + "-segment-3-chips")).containsExactly("Flagged: meaning");
+        assertThat(chipTexts(CURRENT + "-segment-2-chips")).containsExactly("Fell back: missing from the reply");
+        assertThat(chipTexts(CURRENT + "-segment-3-chips")).containsExactly("Flagged: meaning changed");
     }
 
     private List<String> chipTexts(final String id) {

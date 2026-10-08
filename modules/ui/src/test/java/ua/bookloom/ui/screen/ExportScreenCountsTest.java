@@ -81,7 +81,7 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
                         "Consistency pass: 5 segments adjusted",
                         "a fresh draft improved 4 flagged or doubtful segments; 2 were no better and stayed as before",
                         "27 paragraphs checked against their neighbours needed no change",
-                        "3 answers were refused because they would make the text worse (quotes: 2, worse: 1)",
+                        "3 answers were refused because they would make the text worse (quote marks: 2, scored worse: 1)",
                         "1 segment was skipped — the model call failed")
                 .doesNotContain("nothing needed changing");
     }

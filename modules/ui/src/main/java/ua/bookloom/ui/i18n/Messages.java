@@ -63,6 +63,22 @@ public final class Messages {
     }
 
     /**
+     * Words for a machine code the pipeline reports (a reason, a rule), from a message that selects on the code. ICU
+     * select keywords cannot hold a dash, so the code is lower-cased and its dashes turned into underscores to select;
+     * the code as reported is the message's second argument, which its {@code other} branch shows.
+     *
+     * @param key a message whose argument 0 selects on the normalised code and whose {@code other} branch shows {1}
+     * @param code the code as reported, for example {@code MISSING} or {@code latin-run}
+     * @return the words of the interface language, or the code itself when the message has none for it
+     */
+    public String code(final MessageKey key, final String code) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(code, "code");
+        final String selector = code.strip().toLowerCase(Locale.ROOT).replace('-', '_');
+        return get(key, selector.isEmpty() ? "none" : selector, code);
+    }
+
+    /**
      * Returns the display locale.
      *
      * @return the locale every message is rendered for
