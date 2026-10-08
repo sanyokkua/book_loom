@@ -18,6 +18,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -37,6 +38,7 @@ import ua.bookloom.ui.state.DiagnosticActions;
 import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.StepLocks;
 import ua.bookloom.ui.state.WorkflowProgress;
+import ua.bookloom.ui.theme.MonoFont;
 import ua.bookloom.ui.theme.ThemeBlock;
 import ua.bookloom.ui.theme.ThemeController;
 
@@ -211,6 +213,10 @@ public final class AppShellView {
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
         final StackPane shell = new StackPane(frame, busyHost.view(), modalHost.view());
+        MonoFont.pick(Font.getFamilies()).ifPresent(face -> {
+            log.debug("the activity log is set in {}", face.family());
+            shell.getStyleClass().add(face.styleClass());
+        });
         if (Motion.isReduced()) {
             // The switches' sliding thumb is the one transition the stylesheet plays; this class stills it.
             log.info("reduced motion: transitions are off");

@@ -136,4 +136,10 @@ label — takes the `-fg` shade, which holds 4.5:1 on the surfaces, the selected
 |-------------|-------------|
 | FR-THEME-11 | Every shown piece of text (labels, button words, field text and placeholders) contrasts **4.5:1** with the surface it is painted on, and every icon and every edge that tells a control apart (an input's border, a switch's track against the surface and its thumb against the track) **3:1**, in both value blocks. Card outlines and dividers are decoration (the card is told by its fill and content) and are exempt; so is a dimmed, disabled control. Informative text is at least **12px**; a badge that repeats the words beside it (the step number, "suggested", a formatting token) at least 11px. Enforced on every conformance screen by `ContrastTest`. |
 
+## fonts {#fonts}
+
+| ID          | Requirement |
+|-------------|-------------|
+| FR-THEME-12 | The interface is set in the system UI face. The activity log, whose columns line up, is set in the first sturdy monospaced face the system has — Menlo, Consolas, Cascadia Mono, DejaVu Sans Mono, Liberation Mono — chosen once at start (`MonoFont`, a class on the shell root); the logical `Monospaced` face (a thin Courier New on macOS and Windows, which reads as grey at 13px) is only the fallback. No font is bundled. |
+
 P6 reference: match the mockup's light and dark renderings for palette, status colours, and accent.

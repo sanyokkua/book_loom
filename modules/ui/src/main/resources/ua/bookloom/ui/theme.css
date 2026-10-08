@@ -1814,6 +1814,32 @@
     -fx-font-size: 13px;
 }
 
+/* The sturdy monospaced face the system has (MonoFont, a class on the shell root); "Monospaced" above is the fallback. */
+.mono-menlo .activity-log .list-cell,
+.mono-menlo .activity-log .list-cell .label {
+    -fx-font-family: "Menlo";
+}
+
+.mono-consolas .activity-log .list-cell,
+.mono-consolas .activity-log .list-cell .label {
+    -fx-font-family: "Consolas";
+}
+
+.mono-cascadia .activity-log .list-cell,
+.mono-cascadia .activity-log .list-cell .label {
+    -fx-font-family: "Cascadia Mono";
+}
+
+.mono-dejavu .activity-log .list-cell,
+.mono-dejavu .activity-log .list-cell .label {
+    -fx-font-family: "DejaVu Sans Mono";
+}
+
+.mono-liberation .activity-log .list-cell,
+.mono-liberation .activity-log .list-cell .label {
+    -fx-font-family: "Liberation Mono";
+}
+
 .activity-log .list-cell .log-time {
     -fx-text-fill: -color-muted;
 }

@@ -1,11 +1,13 @@
 package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import java.util.List;
 import java.util.stream.Stream;
 import javafx.scene.control.Label;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -67,7 +69,13 @@ class TaggedLogTest extends TranslatingScreenTestBase {
         publishLog(new LogEntry(kind, args));
 
         final Label words = (Label) logCells().get(0).lookup(".log-text");
-        assertThat(words.getFont().getFamily())
-                .isEqualTo(Font.font("Monospaced", 12).getFamily());
+        // Whichever face the system offers, a monospaced one gives a narrow and a wide letter the same advance.
+        assertThat(advance("iiii", words.getFont())).isEqualTo(advance("WWWW", words.getFont()), within(0.01));
+    }
+
+    private static double advance(final String text, final Font font) {
+        final Text probe = new Text(text);
+        probe.setFont(font);
+        return probe.getLayoutBounds().getWidth();
     }
 }

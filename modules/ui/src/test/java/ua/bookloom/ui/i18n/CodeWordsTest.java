@@ -44,6 +44,7 @@ class CodeWordsTest {
         "MISSING, en, missing from the reply",
         "MERGED_SUSPECT, en, merged with another",
         "TOO_LONG, en, too long",
+        "QUOTES, en, quote marks not paired",
         "GATE, en, refused by the checks",
         "reviewer-unavailable, en, reviewer unavailable",
         "omission, en, something left out",
