@@ -50,8 +50,12 @@ final class ExportRefusals {
             final Optional<Path> destination,
             final @Nullable Path occupied,
             final @Nullable Path justExported) {
-        if (book == null || destination.isEmpty()) {
+        if (book == null) {
             return Verdict.NONE;
+        }
+        if (destination.isEmpty()) {
+            // Not a refusal: nothing is wrong yet, but Export book waits for a path and should say so.
+            return new Verdict("", messages.get(MessageKey.EXPORT_NOTE_NO_DESTINATION));
         }
         final Optional<ExportPathRules.Refusal> rule = ExportPathRules.refusal(book.source(), destination.get());
         if (rule.isPresent()) {

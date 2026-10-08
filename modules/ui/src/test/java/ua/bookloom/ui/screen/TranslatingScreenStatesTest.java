@@ -76,6 +76,23 @@ class TranslatingScreenStatesTest extends TranslatingScreenTestBase {
         assertThat(isShown("translating-review-flagged")).isFalse();
     }
 
+    // IF the card only said "not chosen", THEN a first-time person would press Start to learn what to do; the hint says
+    // where a model is chosen, and goes once one is.
+    @Test
+    void readyCard_noModelChosen_saysWhereToChooseOneUntilOneIs() throws Exception {
+        bookReadyWithPending(1240);
+        onFx(() -> injector.getInstance(SettingsViewModel.class).model().set(""));
+
+        showTranslating();
+        final boolean shownWithout = isShown("translating-ready-model-hint");
+        final String words = labelText("translating-ready-model-hint");
+        onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma4:26b"));
+
+        assertThat(shownWithout).isTrue();
+        assertThat(words).isEqualTo("No model is chosen yet. Choose a provider and a model in Settings, then start.");
+        assertThat(isShown("translating-ready-model-hint")).isFalse();
+    }
+
     // IF the subtitle kept promising a saved run, THEN a person would close the window expecting to resume.
     @Test
     void subtitle_anyState_saysProgressLastsUntilTheApplicationCloses() {

@@ -1347,6 +1347,8 @@ public enum MessageKey {
     TRANSLATING_READY_BOOK("translating.ready.book"),
     /** Label of the ready card's model row. */
     TRANSLATING_READY_MODEL("translating.ready.model"),
+    /** Hint on the ready card while no model is chosen, saying where to choose one. */
+    TRANSLATING_READY_MODEL_HINT("translating.ready.modelHint"),
     /** Label of the ready card's review-mode row. */
     TRANSLATING_READY_REVIEW("translating.ready.review"),
     /** Label of the ready card's quality-dial row. */
@@ -1509,6 +1511,8 @@ public enum MessageKey {
     EXPORT_CONSISTENCY_NOTE("export.consistency.note"),
     /** Refusal beside Save to when the occupied book is the file the last export wrote. */
     EXPORT_NOTE_JUST_EXPORTED("export.note.justExported"),
+    /** Note under Save to while it is empty, saying why Export book waits. */
+    EXPORT_NOTE_NO_DESTINATION("export.note.noDestination"),
     /** Refusal beside Save to when the destination is the source file itself. */
     EXPORT_REFUSAL_SOURCE("export.refusal.source"),
     /** Refusal beside Save to when the destination's file type differs from the source's. */

@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.Objects;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -61,7 +62,17 @@ final class TranslatingReadyCard {
                 row("model", MessageKey.TRANSLATING_READY_MODEL, modelLabel(viewModel, messages), messages),
                 row("review", MessageKey.TRANSLATING_READY_REVIEW, fixed("translating-ready-review", review), messages),
                 row("dial", MessageKey.TRANSLATING_READY_DIAL, dialLabel(current, messages), messages),
-                row("pending", MessageKey.TRANSLATING_READY_PENDING, pending, messages));
+                row("pending", MessageKey.TRANSLATING_READY_PENDING, pending, messages),
+                modelHint(viewModel, messages));
+    }
+
+    // Before a first start: "not chosen" alone does not say where a model is chosen.
+    private static Node modelHint(final TranslatingViewModel viewModel, final Messages messages) {
+        final Label hint = BriefCards.hint(messages, MessageKey.TRANSLATING_READY_MODEL_HINT);
+        hint.setId("translating-ready-model-hint");
+        return BriefCards.shownWhile(
+                hint,
+                Bindings.createBooleanBinding(() -> viewModel.modelText().get().isBlank(), viewModel.modelText()));
     }
 
     private static Label modelLabel(final TranslatingViewModel viewModel, final Messages messages) {

@@ -1,6 +1,7 @@
 package ua.bookloom.ui.state;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -149,5 +150,19 @@ class ExportViewModelDestinationTest extends ExportViewModelTestBase {
                 .isNotNull()
                 .extracting(b -> b.targetLanguage())
                 .isNull();
+    }
+
+    // IF Export book were dimmed with nothing said, THEN a person with an empty Save to would not know what it waits
+    // for; the note goes once a path is there.
+    @Test
+    void currentNote_bookOpenWithNoDestination_saysToChooseWhereToSave() {
+        openBook(FRANKENSTEIN, BookFixtures.frankensteinImport());
+        editDestination("");
+        final String empty = onFx(() -> exports.currentNote().get());
+
+        editDestination("/archive/out.epub");
+
+        assertThat(empty).isEqualTo("Choose where to write the book: type a path in Save to or press Browse.");
+        assertThat(onFx(() -> exports.currentNote().get())).isEmpty();
     }
 }

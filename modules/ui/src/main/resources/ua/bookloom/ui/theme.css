@@ -528,12 +528,15 @@
     -fx-icon-color: -color-nav-active-fg;
 }
 
+/* An entry that cannot be opened now is dimmed as a whole, so it is told from an open one at a glance; its hover text
+   says why. (An inactive control is exempt from the contrast floor, ContrastTest skips it.) */
 .nav-item-unavailable,
 .nav-item-unavailable:hover,
 .nav-item-locked,
 .nav-item-locked:hover {
     -fx-background-color: transparent;
     -fx-text-fill: -color-nav-fg-muted;
+    -fx-opacity: 0.7;
     -fx-cursor: default;
 }
 
