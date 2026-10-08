@@ -270,5 +270,47 @@
    }
   ],
   "rationale": "twelve long paragraphs (about 450 characters each) in one reviewer call: the reply cap is what is tested (finish=LENGTH); one pair drops two sentences"
+ },
+ {
+  "id": "reviewer-no-damage-4",
+  "kind": "reviewer-batch",
+  "long": false,
+  "glossary": [
+   {
+    "term": "Blue Lights",
+    "target": "Сині Вогні",
+    "type": "PLACE",
+    "gender": "UNKNOWN",
+    "locked": false
+   }
+  ],
+  "context": null,
+  "pairs": [
+   {
+    "source": "The icebreaker rolled slowly out of the harbour.",
+    "candidate": "Криголам повільно вийшов із гавані.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "Nobody had been to the Blue Lights since the war.",
+    "candidate": "Ніхто не бував у Синіх Вогнях від часів війни.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "It was late. She did not look back.",
+    "candidate": "Було пізно. Вона не озирнулася.",
+    "defective": false,
+    "note": ""
+   },
+   {
+    "source": "\"Go on,\" he said, \"I will wait.\"",
+    "candidate": "— Іди, — сказав він, — я зачекаю.",
+    "defective": false,
+    "note": ""
+   }
+  ],
+  "rationale": "four clean pairs that tempt a damaging edit (a content word swapped, a glossary name re-inflected, a sentence start lowercased, a dash dropped): the reviewer must answer ok, and any edit it proposes is refused by the guards"
  }
 ]

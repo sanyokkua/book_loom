@@ -25,6 +25,8 @@ final class WordChange {
 
     private static final int SHORT_WORD_STEM = 2;
 
+    private static final int MIN_CONTENT_STEM = 3;
+
     /** A pronoun (він → вона) shares no stem with its other gender; the function-word rule watches particles. */
     private static final int PRONOUN = 3;
 
@@ -74,6 +76,16 @@ final class WordChange {
                 .filter(word -> !quoted.contains(word))
                 .toList();
         return brought.size() <= 1 || knownWords.containsAll(brought);
+    }
+
+    /** Whether two words begin with the same stem: most of the shorter word, at least three letters. */
+    static boolean sharesContentStem(final String first, final String second) {
+        int common = 0;
+        final int shorter = Math.min(first.length(), second.length());
+        while (common < shorter && first.charAt(common) == second.charAt(common)) {
+            common++;
+        }
+        return common >= Math.min(shorter, Math.max(MIN_CONTENT_STEM, Math.ceil(MIN_STEM_SHARE * shorter)));
     }
 
     private static List<String> function(final String text, final Set<String> functionWords) {

@@ -213,14 +213,7 @@ class ReviewerReplayTest {
                 Arguments.of(
                         "lexical-drift",
                         List.of(new ReviewEdit(ReviewCriterion.TERMINOLOGY, "Фокусник", "Чарівник")),
-                        "Чарівник підняв свій посох. Чарівник заговорив."),
-                Arguments.of(
-                        "meaning-error",
-                        List.of(new ReviewEdit(
-                                ReviewCriterion.MEANING,
-                                "Король народився, а його син втратив трон.",
-                                "Король помер, і його син посів трон.")),
-                        "Король помер, і його син посів трон."));
+                        "Чарівник підняв свій посох. Чарівник заговорив."));
     }
 
     // Each defect only a model can see ends as the clean text once the edits are verified and applied.
@@ -243,5 +236,33 @@ class ReviewerReplayTest {
         assertThat(decided.findings())
                 .flatMap(finding -> AppliedEdit.from(finding).stream().toList())
                 .containsExactly(new AppliedEdit("invented-word", "лісфвуту", "лісу"));
+    }
+
+    // A meaning edit that rewrites the words instead of correcting them is the damage the guards exist for: the draft
+    // stays and the directed fix gets the reviewer's quote.
+    @Test
+    void replay_meaningEditThatSwapsTheWords_isRefusedAndTheDraftStays() {
+        final DefectCase meaning = corpusCase("meaning-error");
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(ua.bookloom.api.Result.ok(new ChatResponse(
+                        reply(List.of(new ReviewEdit(
+                                ReviewCriterion.MEANING,
+                                "Король народився, а його син втратив трон.",
+                                "Король помер, і його син посів трон."))),
+                        FinishReason.STOP)))
+                .answer(ua.bookloom.api.Result.ok(
+                        new ChatResponse("{\"target\":\"" + meaning.candidate() + "\"}", FinishReason.STOP)));
+        final ChunkDecider decider = Objects.requireNonNull(loop().start(
+                        List.of(drafted(meaning)),
+                        settings(),
+                        PASSTHROUGH,
+                        (kind, segmentId, request) -> model.chat(request))
+                .data());
+
+        final SegmentOutcome decided =
+                Objects.requireNonNull(decider.nextDecision().data());
+
+        assertThat(decided.machineTarget()).isEqualTo(meaning.candidate());
+        assertThat(decided.status().name()).isEqualTo("FLAGGED");
     }
 }

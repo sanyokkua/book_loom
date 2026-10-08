@@ -291,14 +291,14 @@ class QualityLoopReviewerTest {
     void nextDecision_maxDial_makesASecondPassWhoseEditsFollowTheFirstPassEdits() {
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(readable(edits("invented-word", "дверзі", "двері")))
-                .answer(readable(edits("meaning", "старі", "давні")));
+                .answer(readable(edits("meaning", "відчинив", "відчиняв")));
 
         final SegmentOutcome decided = Objects.requireNonNull(
                 start(DRAFT, model, QualityDial.MAX).nextDecision().data());
 
         assertThat(formats(model)).containsExactly("reviewer", "reviewer");
         assertThat(model.requests().get(1).messages().getLast().content()).contains("second pass");
-        assertThat(decided.machineTarget()).isEqualTo("Він відчинив давні двері.");
+        assertThat(decided.machineTarget()).isEqualTo("Він відчиняв старі двері.");
         assertThat(decided.findings())
                 .flatMap(finding -> AppliedEdit.from(finding).stream().toList())
                 .extracting(AppliedEdit::criterion)

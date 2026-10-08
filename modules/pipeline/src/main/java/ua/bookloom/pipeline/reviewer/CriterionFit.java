@@ -80,8 +80,7 @@ final class CriterionFit {
     // A name's form is the glossary's and the sentence's business: a meaning, gender or agreement edit that re-inflects
     // a
     // name (Джеку → Джек, Хром → Хромів) made the text worse in a real run, so only a terminology edit may touch one.
-    private static boolean changesNameForm(
-            final String quote, final String replacement, final Collection<String> renderings) {
+    static boolean changesNameForm(final String quote, final String replacement, final Collection<String> renderings) {
         // Only a rendering that starts with a capital is a name's: the lexicon's common-noun renderings (господар) are
         // meant to be inflected and are never held to their spelling.
         final List<String> stems = renderings.stream()
@@ -124,7 +123,7 @@ final class CriterionFit {
                 .anyMatch(letter -> Character.UnicodeScript.of(letter) != own);
     }
 
-    private static Character.UnicodeScript majorityScript(final String text) {
+    static Character.UnicodeScript majorityScript(final String text) {
         final Map<Character.UnicodeScript, Integer> counts = new EnumMap<>(Character.UnicodeScript.class);
         text.codePoints()
                 .filter(Character::isLetter)

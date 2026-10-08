@@ -58,7 +58,25 @@ public sealed interface Verification {
         CHECKS_REFUSED("the edited text fails a hard gate"),
 
         /** The edited text has a blocking check the candidate did not have. */
-        BLOCKERS_GREW("the edit introduces a blocking defect");
+        BLOCKERS_GREW("the edit introduces a blocking defect"),
+
+        /** The edited text writes a word twice in a row that the candidate did not. */
+        DOUBLED_WORD("the edit writes a word twice in a row"),
+
+        /** The edit lowercases a sentence start or capitalises a word inside a sentence. */
+        CASE_CHANGED("the edit changes the case of a sentence start or a word"),
+
+        /** The edit brings in a letter of another script than the candidate's own. */
+        FOREIGN_SCRIPT("the edit brings in a letter of another script"),
+
+        /** The edit changes the number of quote marks, dialogue dashes, sentences or words. */
+        COUNTS_CHANGED("the edit changes the quote marks, dashes, sentences or words"),
+
+        /** The edit re-inflects or replaces a glossary rendering. */
+        GLOSSARY_RENDERING("the edit changes a glossary rendering"),
+
+        /** A meaning edit replaces a word with one that shares no stem and is not a glossary rendering. */
+        MEANING_SWAP("the edit swaps a word for a different one");
 
         private final String label;
 

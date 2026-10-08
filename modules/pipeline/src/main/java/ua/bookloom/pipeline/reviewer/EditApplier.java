@@ -71,9 +71,14 @@ public final class EditApplier {
         final List<EditOutcome.FailedEdit> failed = new ArrayList<>();
         final List<ReviewEdit> notes = new ArrayList<>();
         int ignored = 0;
+        int noOps = 0;
         for (final ReviewEdit edit : edits.stream().distinct().toList()) {
             if (edit.criterion().isNote()) {
                 notes.add(edit);
+                continue;
+            }
+            if (isNoOp(edit)) {
+                noOps++;
                 continue;
             }
             switch (verifier.verify(text, edit, checker, baseline, renderings, functionWords)) {
@@ -85,12 +90,25 @@ public final class EditApplier {
                 case Verification.Ignored skipped -> ignored++;
             }
         }
-        log.debug(
-                "Applied edits applied={} failed={} ignored={} notes={}",
-                applied.size(),
-                failed.size(),
-                ignored,
-                notes.size());
+        logCounts(applied.size(), failed.size(), ignored, noOps, notes.size());
         return new EditOutcome(text, applied, failed, ignored, notes);
+    }
+
+    private static void logCounts(
+            final int applied, final int refused, final int ignored, final int noOps, final int notes) {
+        log.debug(
+                "Applied edits applied={} refused={} notFoundOrIgnored={} noOps={} notes={}",
+                applied,
+                refused,
+                ignored,
+                noOps,
+                notes);
+    }
+
+    // A quote equal to its replacement is no proposal at all: it is dropped before anything counts it.
+    private static boolean isNoOp(final ReviewEdit edit) {
+        return NormalisedText.of(edit.quote())
+                .text()
+                .equals(NormalisedText.of(edit.replacement()).text());
     }
 }

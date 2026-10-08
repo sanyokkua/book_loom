@@ -74,13 +74,9 @@ public final class EditVerifier {
         if (occurrences == 0) {
             return new Verification.Ignored("the quote is not in the candidate");
         }
-        // The quote is the candidate's own text: an edit may keep a control character the book holds, never bring one.
-        if (ControlCharacters.addsControl(edit.quote(), edit.replacement())) {
-            return new Verification.Ignored("the replacement holds control characters");
-        }
-        if (!CriterionFit.fits(edit, candidate, renderings, functionWords)) {
-            return new Verification.Ignored(
-                    "the change does not fit its criterion " + edit.criterion().wire());
+        final Optional<Verification> unfit = unfit(edit, candidate, renderings, functionWords);
+        if (unfit.isPresent()) {
+            return unfit.get();
         }
         if (occurrences > 1) {
             return failed(Verification.FailureReason.AMBIGUOUS_QUOTE);
@@ -89,7 +85,13 @@ public final class EditVerifier {
         if (edited.equals(candidate)) {
             return new Verification.Ignored("the edit changes nothing");
         }
-        return checkEdited(candidate, edited, checker, baseline);
+        final Verification checked = checkEdited(candidate, edited, checker, baseline);
+        // The placeholders and the checks answer first; the guards then hold the result to a stricter standard.
+        return checked instanceof Verification.Verified
+                ? EditGuards.refusal(edit, candidate, edited, renderings, functionWords)
+                        .<Verification>map(EditVerifier::failed)
+                        .orElse(checked)
+                : checked;
     }
 
     /**
@@ -117,6 +119,22 @@ public final class EditVerifier {
         final NormalisedText replacement = NormalisedText.of(edit.replacement());
         final boolean addsAroundQuote = replacement.count(quote) > 0;
         return addsAroundQuote ? occursIn(text, edit.replacement()) : !occursIn(text, edit.quote());
+    }
+
+    private static Optional<Verification> unfit(
+            final ReviewEdit edit,
+            final String candidate,
+            final List<String> renderings,
+            final Set<String> functionWords) {
+        // The quote is the candidate's own text: an edit may keep a control character the book holds, never bring one.
+        if (ControlCharacters.addsControl(edit.quote(), edit.replacement())) {
+            return Optional.of(new Verification.Ignored("the replacement holds control characters"));
+        }
+        if (!CriterionFit.fits(edit, candidate, renderings, functionWords)) {
+            return Optional.of(new Verification.Ignored(
+                    "the change does not fit its criterion " + edit.criterion().wire()));
+        }
+        return Optional.empty();
     }
 
     private static Verification checkEdited(

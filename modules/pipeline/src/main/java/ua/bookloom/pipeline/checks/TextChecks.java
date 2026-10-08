@@ -85,6 +85,16 @@ public final class TextChecks {
         return List.copyOf(findings);
     }
 
+    /**
+     * How many words a display text writes twice in a row.
+     *
+     * @param display the display text; never null
+     * @return the number of doubled words, zero when there is none
+     */
+    public static int doubledWords(final String display) {
+        return DuplicateWordCheck.find("", display).size();
+    }
+
     private static void report(final List<CheckFinding> findings) {
         log.debug("Text checks found {} finding(s)", findings.size());
         for (final CheckFinding finding : findings) {

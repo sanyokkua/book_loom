@@ -34,6 +34,7 @@ import ua.bookloom.pipeline.reviewer.ReviewItem;
 final class ReviewResolver {
 
     private static final String REWRITE_KIND = "rewrite";
+    private static final String EDITS_KIND = "edits";
 
     private final EditApplier applier;
     private final DirectedFix directedFix;
@@ -88,9 +89,10 @@ final class ReviewResolver {
                 baseline,
                 renderings(),
                 functionWords());
-        final List<QaFinding> findings = recordedEdits(applied);
         final Edited edited = evaluateEdited(outcome, initialQa, draft, applied);
-        final int rounds = applied.applied().isEmpty() ? 0 : 1;
+        final List<QaFinding> findings =
+                edited.reverted() ? revertedFindings(applied) : recordedEdits(applied.applied(), applied.notes());
+        final int rounds = applied.applied().isEmpty() || edited.reverted() ? 0 : 1;
         if (applied.failed().isEmpty()) {
             return Result.ok(new Resolution(edited.machine(), edited.qa(), findings, rounds, 0, null, edited.text()));
         }
@@ -110,16 +112,23 @@ final class ReviewResolver {
             final MachineTarget draft,
             final EditOutcome applied) {
         if (applied.applied().isEmpty()) {
-            return new Edited(draft, initialQa, outcome.maskedReply());
+            return new Edited(draft, initialQa, outcome.maskedReply(), false);
         }
         if (evaluator.evaluateRewrite(outcome, applied.text()) instanceof RoundOutcome.Evaluated evaluated) {
-            return new Edited(machineOf(evaluated), evaluated.qa(), evaluated.maskedCandidate());
+            if (EditRegression.isWorse(initialQa, evaluated.qa())) {
+                log.debug(
+                        "Edits reverted, the edited text evaluates worse segment={} edits={}",
+                        outcome.segment().id(),
+                        applied.applied().size());
+                return new Edited(draft, initialQa, outcome.maskedReply(), true);
+            }
+            return new Edited(machineOf(evaluated), evaluated.qa(), evaluated.maskedCandidate(), false);
         }
         // Every edit passed the same evaluation one by one, so this cannot differ; keep the draft rather than guess.
         log.warn(
                 "Edited text no longer evaluates segment={}; keeping the draft",
                 outcome.segment().id());
-        return new Edited(draft, initialQa, outcome.maskedReply());
+        return new Edited(draft, initialQa, outcome.maskedReply(), false);
     }
 
     // A directed fix is spent only on an issue the reviewer evidenced with a quote the app found, only when the dial
@@ -249,13 +258,23 @@ final class ReviewResolver {
         return new MachineTarget(evaluated.restoredTarget(), evaluated.maskedForm());
     }
 
-    private static List<QaFinding> recordedEdits(final EditOutcome applied) {
+    private static List<QaFinding> revertedFindings(final EditOutcome applied) {
+        final List<QaFinding> findings = new ArrayList<>(recordedEdits(List.of(), applied.notes()));
+        findings.add(new QaFinding(
+                EDITS_KIND,
+                Severity.LOW,
+                "The reviewer's edits made the text worse, so they were not kept.",
+                SegmentOutcomes.REVIEWER));
+        return findings;
+    }
+
+    private static List<QaFinding> recordedEdits(final List<ReviewEdit> edits, final List<ReviewEdit> notes) {
         final List<QaFinding> findings = new ArrayList<>();
-        applied.applied().stream()
+        edits.stream()
                 .map(edit -> new AppliedEdit(edit.criterion().wire(), edit.quote(), edit.replacement()))
                 .map(AppliedEdit::toFinding)
                 .forEach(findings::add);
-        applied.notes().stream()
+        notes.stream()
                 .map(note -> new QaFinding(
                         note.criterion().wire(),
                         Severity.LOW,
@@ -276,5 +295,5 @@ final class ReviewResolver {
     }
 
     /** A draft's text after the verified edits: what it stands on, how it evaluated and the masked text. */
-    private record Edited(MachineTarget machine, QaResult qa, String text) {}
+    private record Edited(MachineTarget machine, QaResult qa, String text, boolean reverted) {}
 }

@@ -21,7 +21,7 @@ import ua.bookloom.pipeline.checks.Sentences;
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-final class RevisionGuards {
+public final class RevisionGuards {
 
     private static final String QUOTE_MARKS = "«»„“”\"";
     private static final String DASHES = "—–";
@@ -67,6 +67,22 @@ final class RevisionGuards {
      *     {@code latin-run}), or empty when the new text keeps every one
      */
     static Optional<String> violation(final String before, final String after, final Mode mode) {
+        return violationOf(before, after, mode);
+    }
+
+    /**
+     * The first rule a text edited in place breaks.
+     *
+     * @param before the text before the edit, masked; never null
+     * @param after the text after the edit, masked; never null
+     * @param mayGrow whether the edit may add quote marks, dashes or sentences (an omission fix), never remove them
+     * @return the broken rule's name, or empty when the edit keeps every count
+     */
+    public static Optional<String> violationOfEdit(final String before, final String after, final boolean mayGrow) {
+        return violationOf(before, after, mayGrow ? Mode.NO_LOSS : Mode.SAME_COUNTS);
+    }
+
+    private static Optional<String> violationOf(final String before, final String after, final Mode mode) {
         final String old = DisplayText.of(before);
         final String fresh = DisplayText.of(after);
         final Optional<String> broken = Stream.of(
