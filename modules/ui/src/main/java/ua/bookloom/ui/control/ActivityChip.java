@@ -10,6 +10,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -54,6 +55,9 @@ public final class ActivityChip {
         stop.getStyleClass().add("shell-title-button");
         Tips.install(messages, stop, MessageKey.ACTIVITY_STOP_TIP);
         stop.setOnAction(event -> stopShown());
+        // The chip is held whole in a narrow title bar; the run status beside it gives way instead.
+        text.setMinWidth(Region.USE_PREF_SIZE);
+        stop.setMinWidth(Region.USE_PREF_SIZE);
         view.getChildren().addAll(text, stop);
         view.setId("shell-activity");
         view.getStyleClass().add("activity-chip");

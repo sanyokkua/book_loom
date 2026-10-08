@@ -48,7 +48,12 @@ product name and the theme toggle: the file name; the state text (`Progress 78%`
 explanation, absent when the start names none); and the elapsed time and the time left. It
 offers **Pause** while running, **Resume** while paused, stopped or in a provider error, and **no control** once the
 run has finished or failed. The title bar's control does exactly what the Translating screen's control of the same
-name does — pressing either one acts on the same run.
+name does — pressing either one acts on the same run. In a narrow window (down to the 960 × 640 minimum, with the
+model-work chip and every run part shown at once) nothing is cut or drawn over another: the file name shortens first
+(ellipsis, down to about twenty characters), then the run parts are hidden whole in this order — the tokens-per-second
+rate, the mode, the time left, the elapsed time — and only then does the file name shrink further; the state text, the
+connection chip, the control, the model-work chip with its Stop, the product name, the theme toggle and About always
+keep their words whole, and a wider window brings the hidden parts back (`TitleBarFitTest`).
 
 ### Background work and the busy card {#busy-card}
 

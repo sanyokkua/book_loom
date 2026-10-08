@@ -321,6 +321,12 @@
     -fx-font-size: 12px;
 }
 
+/* The model work under way beside the run status ("Model scan · 12 requests"): title-bar words, not body text. */
+.activity-chip-text {
+    -fx-text-fill: -color-title-fg;
+    -fx-font-size: 12px;
+}
+
 .run-status-detail {
     -fx-text-fill: -color-nav-fg-muted;
     -fx-font-size: 12px;

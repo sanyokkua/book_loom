@@ -240,6 +240,11 @@ public final class AppShellView {
         Tips.install(messages, about, MessageKey.SHELL_ABOUT_TIP);
         about.getStyleClass().add("shell-title-button");
         about.setOnAction(event -> openAbout());
+        // Only the run status gives way in a narrow window (it shortens the book name and hides its lesser parts);
+        // the product name, the theme toggle and About keep their words whole.
+        for (final Region whole : new Region[] {product, themeToggle, about}) {
+            whole.setMinWidth(Region.USE_PREF_SIZE);
+        }
         final HBox bar = new HBox(product, spacer, activityChip.view(), runStatus.view(), themeToggle, about);
         bar.setId("shell-title-bar");
         bar.getStyleClass().add("shell-title-bar");

@@ -38,7 +38,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
  *
  * <p>The bar holds no state of its own. It is redrawn from the mirror and from the view model's controls, and its button
  * calls the view model's {@code pause} and {@code resume}, the methods the translating screen uses, so both places
- * always agree. The file name is the only part that gives way when the window is narrow. No log line is written for a
+ * always agree. When the window is narrow the file name gives way first, then the least important parts are hidden whole
+ * ({@link PriorityRow}). No log line is written for a
  * redraw, because the elapsed time changes every second; only showing, hiding and a press are logged.
  */
 @Slf4j
@@ -46,6 +47,8 @@ import ua.bookloom.ui.state.TranslatingViewModel;
 public final class RunStatusBar {
 
     private static final double PART_SPACING = 12;
+    // The book name shrinks to about twenty characters before any other part is hidden.
+    private static final double FILE_NAME_COMFORT = 150;
     private static final long SECONDS_PER_MINUTE = 60;
     private static final List<String> HEALTH_CLASSES = Arrays.stream(ConnectionStatus.Health.values())
             .map(ConnectionStatus.Health::styleClass)
@@ -54,7 +57,7 @@ public final class RunStatusBar {
     private final StateMirror mirror;
     private final TranslatingViewModel viewModel;
     private final Messages messages;
-    private final HBox view = new HBox(PART_SPACING);
+    private final PriorityRow view = new PriorityRow(PART_SPACING);
     private final Label fileName = new Label();
     private final Label stateText = new Label();
     private final Label modeText = new Label();
@@ -134,6 +137,10 @@ public final class RunStatusBar {
         Tips.install(messages, control, MessageKey.SHELL_RUN_PAUSE_TIP);
         buildConnection();
         view.getChildren().addAll(fileName, stateText, modeText, elapsed, timeLeft, rate, connection, control);
+        // A narrow window first shortens the book name, then hides the rate, the mode, the time left and the time
+        // elapsed in that order; the state, the connection chip and the control always stay.
+        view.elastic(fileName, FILE_NAME_COMFORT);
+        view.droppable(rate, modeText, timeLeft, elapsed);
     }
 
     private void buildConnection() {
@@ -209,8 +216,7 @@ public final class RunStatusBar {
     }
 
     private void showMode(final @Nullable RunMode mode) {
-        modeText.setVisible(mode != null);
-        modeText.setManaged(mode != null);
+        view.want(modeText, mode != null);
         if (mode != null) {
             modeText.setText(messages.get(
                     MessageKey.SHELL_RUN_MODE,
@@ -224,14 +230,12 @@ public final class RunStatusBar {
     private void showTimes(final Throughput figures) {
         elapsed.setText(messages.get(MessageKey.SHELL_RUN_ELAPSED, DurationText.format(messages, figures.elapsed())));
         final Duration left = figures.timeLeft();
-        timeLeft.setVisible(left != null);
-        timeLeft.setManaged(left != null);
+        view.want(timeLeft, left != null);
         if (left != null) {
             timeLeft.setText(messages.get(MessageKey.SHELL_RUN_LEFT, DurationText.format(messages, left)));
         }
         final Double average = figures.averageTokensPerSecond();
-        rate.setVisible(average != null);
-        rate.setManaged(average != null);
+        view.want(rate, average != null);
         if (average != null) {
             rate.setText(
                     messages.get(MessageKey.SHELL_RUN_RATE, (figures.estimated() ? "~" : "") + Math.round(average)));
