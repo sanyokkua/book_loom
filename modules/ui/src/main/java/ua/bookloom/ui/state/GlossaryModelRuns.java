@@ -87,6 +87,7 @@ final class GlossaryModelRuns {
     private final ObjectBinding<@Nullable ActivityKind> blocker;
     private @Nullable Future<?> running;
     private ActivityTracker.@Nullable Handle handle;
+    private @Nullable CallFeed feed;
     private long ticket;
     private int requests;
     private @Nullable BatchStarted suggesting;
@@ -240,6 +241,7 @@ final class GlossaryModelRuns {
         requests = 0;
         suggesting = null;
         handle = screen.activities().begin(what, this::stop);
+        feed = new CallFeed(handle, screen.activities()::now);
         busy.set(true);
         screen.notice().set(null);
         running = calls.start(
@@ -300,6 +302,10 @@ final class GlossaryModelRuns {
     private void progress(final long mine, final JobEvent event) {
         if (mine != ticket || running == null) {
             return;
+        }
+        final CallFeed shown = feed;
+        if (shown != null) {
+            shown.accept(event);
         }
         if (event instanceof BatchStarted batch) {
             suggesting = batch;

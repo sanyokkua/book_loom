@@ -33,5 +33,11 @@ public enum CallKind {
     SUMMARY,
 
     /** A backward-revision call re-rendering an already-decided segment. */
-    REVISION
+    REVISION,
+
+    /** A setup call proposing the translated book's file name. */
+    FILE_NAME,
+
+    /** A setup call proposing the Book Brief's tone and style from the opening of the book. */
+    BRIEF_SUGGESTION
 }

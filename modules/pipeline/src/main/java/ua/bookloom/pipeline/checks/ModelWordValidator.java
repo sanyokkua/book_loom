@@ -12,6 +12,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -70,7 +71,8 @@ public final class ModelWordValidator implements WordValidator {
             return List.of();
         }
         final ChatRequest request = request(targets);
-        final Result<ChatResponse> reply = calls.call(CallKind.REVIEW, null, request);
+        final Result<ChatResponse> reply =
+                calls.callAbout(CallKind.REVIEW, List.of(), request, CallDescriptor.whole(PromptName.SUSPICIOUS_WORDS));
         if (reply.isErr()) {
             log.warn(
                     "Garbled-word call failed code={}; no words reported",

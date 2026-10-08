@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.TokenUsage;
 
 /** One model call as the live panel shows it: what went out, the state it is in, the reply and what came of it. */
@@ -49,6 +51,18 @@ class CallSnapshotTest {
         assertThat(answered.usage()).isEqualTo(usage);
         assertThat(answered.elapsed()).isEqualTo(Duration.ofSeconds(3));
         assertThat(answered.sections()).containsExactly(STYLE);
+    }
+
+    @Test
+    void withSent_messages_survivesEveryLaterStateOfTheCall() {
+        final List<ChatMessage> sent = List.of(new ChatMessage(ChatRole.SYSTEM, "Rules"));
+
+        final CallSnapshot answered = waiting().withSent(sent).answered("ok", null, Duration.ofSeconds(1));
+
+        assertThat(answered.sent()).isEqualTo(sent);
+        assertThat(answered.withOutcome(new SegmentOutcomeNote("a", SegmentOutcomeNote.Kind.ACCEPTED, ""))
+                        .sent())
+                .isEqualTo(sent);
     }
 
     @Test

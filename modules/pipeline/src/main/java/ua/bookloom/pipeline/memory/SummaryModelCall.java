@@ -14,6 +14,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.JsonReplies;
@@ -48,7 +49,8 @@ final class SummaryModelCall {
         final List<ChatMessage> messages = messagesFor(previousSummary, chapterSource, chapterTarget);
         final ChatRequest request = ChatRequests.build(PromptName.SUMMARY, messages, OutputLimit.forSummary(), false);
         log.trace("Summary call messages {}", messages);
-        final Result<ChatResponse> reply = calls.call(CallKind.SUMMARY, null, request);
+        final Result<ChatResponse> reply =
+                calls.callAbout(CallKind.SUMMARY, List.of(), request, CallDescriptor.whole(PromptName.SUMMARY));
         if (reply.isErr()) {
             return Result.err(Objects.requireNonNull(reply.error(), "error"));
         }

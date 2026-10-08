@@ -55,7 +55,8 @@ final class SetupEvalRunner {
                     prepared.stores().segments(),
                     prepared.stores().openProjects(),
                     new PromptTemplates(),
-                    new ObjectMapper());
+                    new ObjectMapper(),
+                    java.time.Clock.systemUTC());
             rows.add(fileName(setupCase, assistant, prepared));
             rows.add(brief(setupCase, assistant, prepared));
         }

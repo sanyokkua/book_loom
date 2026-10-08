@@ -153,7 +153,7 @@ public enum PromptName {
     /** The proposal of the translated book's file name, asked for on the Export screen; one small call. */
     FILE_NAME(
             "file-name",
-            CallKind.SUMMARY,
+            CallKind.FILE_NAME,
             "file-name",
             DraftSchema.SCHEMA,
             0.2,
@@ -164,7 +164,7 @@ public enum PromptName {
     /** The proposal of the Book Brief's tone and style from the opening of the book; one small call. */
     BRIEF_SUGGESTION(
             "brief-suggestion",
-            CallKind.SUMMARY,
+            CallKind.BRIEF_SUGGESTION,
             "brief-suggestion",
             BriefSuggestionSchema.SCHEMA,
             0.1,

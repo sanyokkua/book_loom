@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.CallAttempt;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.CallSegment;
@@ -59,9 +60,13 @@ final class CallSnapshots {
      * @return the call's tracker, or null for a call no descriptor describes, which is not shown
      */
     @Nullable
-    Shown open(final CallKind kind, final List<String> segmentIds, @Nullable final CallDescriptor descriptor) {
+    Shown open(
+            final CallKind kind,
+            final List<String> segmentIds,
+            @Nullable final CallDescriptor descriptor,
+            final List<ChatMessage> sent) {
         log.debug("Call snapshot kind={} segmentIds={} described={}", kind, segmentIds, descriptor != null);
-        return descriptor == null ? null : new Shown(kind, segmentIds, descriptor);
+        return descriptor == null ? null : new Shown(kind, segmentIds, descriptor, sent);
     }
 
     /** Adds an outcome to the draft call that last drafted its segment; a decision ends that segment's following. */
@@ -128,28 +133,35 @@ final class CallSnapshots {
         private final CallKind kind;
         private final List<String> segmentIds;
         private final CallDescriptor descriptor;
+        private final List<ChatMessage> sent;
         private @Nullable CallSnapshot current;
 
-        private Shown(final CallKind kind, final List<String> segmentIds, final CallDescriptor descriptor) {
+        private Shown(
+                final CallKind kind,
+                final List<String> segmentIds,
+                final CallDescriptor descriptor,
+                final List<ChatMessage> sent) {
             this.kind = kind;
             this.segmentIds = List.copyOf(segmentIds);
             this.descriptor = descriptor;
+            this.sent = List.copyOf(sent);
         }
 
         void started(final CallAttempt attempt, final Instant at) {
             final CallSnapshot before = current;
             current = before == null
                     ? CallSnapshot.waiting(
-                            ++lastId,
-                            kind,
-                            descriptor.label(),
-                            descriptor.position(),
-                            segmentsOf(segmentIds, descriptor.sources()),
-                            descriptor.sections().get(),
-                            at,
-                            attempt.number(),
-                            attempt.maxAttempts(),
-                            attempt.timeout())
+                                    ++lastId,
+                                    kind,
+                                    descriptor.label(),
+                                    descriptor.position(),
+                                    segmentsOf(segmentIds, descriptor.sources()),
+                                    descriptor.sections().get(),
+                                    at,
+                                    attempt.number(),
+                                    attempt.maxAttempts(),
+                                    attempt.timeout())
+                            .withSent(sent)
                     : before.retrying(at, attempt.number(), attempt.maxAttempts(), attempt.timeout());
             publish(current);
         }

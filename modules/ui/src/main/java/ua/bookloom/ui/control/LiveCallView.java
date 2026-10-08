@@ -223,7 +223,7 @@ public final class LiveCallView extends VBox {
         }
         rows.getChildren().setAll(built);
         reply.show(call.reply());
-        prompt.show(call.sections());
+        prompt.show(call.sections(), call.sent());
     }
 
     private static List<SegmentOutcomeNote> notesOf(final CallSnapshot call, final CallSegment segment) {

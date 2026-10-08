@@ -70,7 +70,7 @@ public final class RequestTimeouts {
         }
         return switch (request.callKind()) {
             case REVIEW -> REVIEW_TIMEOUT;
-            case PRESCAN, REVIEW_TERMS, SUGGEST_TARGETS, SUMMARY -> HELPER_TIMEOUT;
+            case PRESCAN, REVIEW_TERMS, SUGGEST_TARGETS, SUMMARY, FILE_NAME, BRIEF_SUGGESTION -> HELPER_TIMEOUT;
             case DRAFT, STRUCTURAL_REPAIR, PLACEHOLDER_REPAIR, DIRECTED_FIX, REVISION -> null;
         };
     }

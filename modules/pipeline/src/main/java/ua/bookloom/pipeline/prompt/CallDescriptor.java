@@ -38,4 +38,15 @@ public record CallDescriptor(
             final PromptName name, final String source, final Supplier<List<PromptSection>> sections) {
         return new CallDescriptor(name.resourceBaseName(), null, List.of(source), sections);
     }
+
+    /**
+     * A call about no segment whose prompt is shown whole, because it has no parts of its own: a glossary scan, a
+     * summary, a setup proposal.
+     *
+     * @param name the non-null prompt the call renders
+     * @return the descriptor, with no segments, no chunk position and no parts
+     */
+    public static CallDescriptor whole(final PromptName name) {
+        return new CallDescriptor(name.resourceBaseName(), null, List.of(), List::of);
+    }
 }

@@ -165,7 +165,7 @@ public final class JobModelCalls implements ModelCalls {
                 request.maxOutputTokens());
         final Attempts attempts = new Attempts(
                 new Call(kind, List.copyOf(segmentIds), summaryOf(request)),
-                snapshots.open(kind, segmentIds, descriptor));
+                snapshots.open(kind, segmentIds, descriptor, request.messages()));
         final Result<ChatResponse> result = guard.apply(
                         () -> log.debug("Model call going out kind={} segmentIds={}", kind, segmentIds))
                 .chat(request, attempts);

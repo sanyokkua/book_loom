@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.TokenUsage;
 
 /**
@@ -21,6 +22,8 @@ import ua.bookloom.api.llm.TokenUsage;
  * @param position the chunk the call was made in, or null when the call names none
  * @param segments the segments the call is about, in document order; empty for a call about none
  * @param sections the filled parts of the prompt in the order they were sent, the system message's first
+ * @param sent the system and user messages exactly as the request carried them, fixed template text included, or
+ *     empty when the call site did not say; held once per call
  * @param reply the model's reply as received, or null until the call is answered
  * @param state where the call stands
  * @param startedAt when the current attempt went out
@@ -38,6 +41,7 @@ public record CallSnapshot(
         @Nullable ChunkPosition position,
         List<CallSegment> segments,
         List<PromptSection> sections,
+        List<ChatMessage> sent,
         @Nullable String reply,
         CallState state,
         Instant startedAt,
@@ -57,6 +61,7 @@ public record CallSnapshot(
         Objects.requireNonNull(label, "label");
         segments = List.copyOf(Objects.requireNonNull(segments, "segments"));
         sections = List.copyOf(Objects.requireNonNull(sections, "sections"));
+        sent = List.copyOf(Objects.requireNonNull(sent, "sent"));
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(startedAt, "startedAt");
         Objects.requireNonNull(elapsed, "elapsed");
@@ -99,6 +104,7 @@ public record CallSnapshot(
                 position,
                 segments,
                 sections,
+                List.of(),
                 null,
                 CallState.WAITING,
                 startedAt,
@@ -108,6 +114,32 @@ public record CallSnapshot(
                 timeout,
                 null,
                 List.of());
+    }
+
+    /**
+     * The same call with the messages the request carried.
+     *
+     * @param messages the non-null rendered messages in wire order
+     * @return the call that holds them
+     */
+    public CallSnapshot withSent(final List<ChatMessage> messages) {
+        return new CallSnapshot(
+                callId,
+                kind,
+                label,
+                position,
+                segments,
+                sections,
+                messages,
+                reply,
+                state,
+                startedAt,
+                elapsed,
+                attempt,
+                maxAttempts,
+                timeout,
+                usage,
+                outcomes);
     }
 
     /**
@@ -127,6 +159,7 @@ public record CallSnapshot(
                 position,
                 segments,
                 sections,
+                sent,
                 null,
                 CallState.WAITING,
                 at,
@@ -155,6 +188,7 @@ public record CallSnapshot(
                 position,
                 segments,
                 sections,
+                sent,
                 text,
                 CallState.ANSWERED,
                 startedAt,
@@ -185,6 +219,7 @@ public record CallSnapshot(
                 position,
                 segments,
                 sections,
+                sent,
                 null,
                 end,
                 startedAt,
@@ -212,6 +247,7 @@ public record CallSnapshot(
                 position,
                 segments,
                 sections,
+                sent,
                 reply,
                 state,
                 startedAt,

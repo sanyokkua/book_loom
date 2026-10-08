@@ -6,8 +6,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import javafx.application.Platform;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.AppError;
@@ -16,6 +18,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.ui.BackgroundExecutor;
 
@@ -84,6 +87,22 @@ public final class SetupHelper {
      */
     public <T> Optional<Refusal> run(
             final ActivityKind kind, final Function<ChatModel, Result<T>> work, final Consumer<Result<T>> done) {
+        return runShown(kind, (model, progress) -> work.apply(model), done);
+    }
+
+    /**
+     * Starts one proposal whose model calls show on the busy card. FX thread only.
+     *
+     * @param kind the model work it is registered as
+     * @param work asks the assistant with the model it is given and the receiver of each call's snapshot, which it may
+     *     call from the background thread
+     * @param done receives the answer on the FX thread, once
+     * @return empty when it started, else why it did not, in which case {@code done} is never called
+     */
+    public <T> Optional<Refusal> runShown(
+            final ActivityKind kind,
+            final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
+            final Consumer<Result<T>> done) {
         final Optional<ModelSelection> selection = settings.selection();
         if (selection.isEmpty()) {
             log.debug("setup proposal {} not started: no model is chosen", kind);
@@ -99,15 +118,28 @@ public final class SetupHelper {
                 selection.get().providerId());
         final InterruptibleWork running = new InterruptibleWork();
         final ActivityTracker.Handle handle = activities.begin(kind, running::stop);
+        final CallFeed feed = new CallFeed(handle, activities::now);
+        final Consumer<JobEvent> progress = event -> Platform.runLater(() -> feed.accept(event));
+        submit(
+                kind,
+                handle,
+                () -> running.run(() -> answer(selection.get(), work, progress), SetupHelper::stopped),
+                done);
+        return Optional.empty();
+    }
+
+    private <T> void submit(
+            final ActivityKind kind,
+            final ActivityTracker.Handle handle,
+            final Supplier<Result<T>> job,
+            final Consumer<Result<T>> done) {
         try {
-            executor.execute(() -> deliver(
-                    kind, handle, running.run(() -> answer(selection.get(), work), SetupHelper::stopped), done));
+            executor.execute(() -> deliver(kind, handle, job.get(), done));
         } catch (RejectedExecutionException rejected) {
             log.error("the setup proposal {} could not be submitted", kind, rejected);
             handle.end();
             done.accept(Result.err(AppError.of(ErrorCode.internal, "Suggestion failed", "It could not be started.")));
         }
-        return Optional.empty();
     }
 
     private <T> void deliver(
@@ -126,9 +158,12 @@ public final class SetupHelper {
         return Result.err(AppError.of(ErrorCode.cancelled, "Suggestion stopped", "It was stopped before it finished."));
     }
 
-    private <T> Result<T> answer(final ModelSelection selection, final Function<ChatModel, Result<T>> work) {
+    private <T> Result<T> answer(
+            final ModelSelection selection,
+            final BiFunction<ChatModel, Consumer<JobEvent>, Result<T>> work,
+            final Consumer<JobEvent> progress) {
         try {
-            return models.create(selection).flatMap(work);
+            return models.create(selection).flatMap(model -> work.apply(model, progress));
         } catch (Throwable thrown) {
             log.error("a setup proposal threw instead of returning a result", thrown);
             return Result.err(

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,11 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
@@ -53,7 +58,12 @@ class SetupAssistantImplTest {
                 tempDir, LONG_PARAGRAPH + "\n\n" + LONG_PARAGRAPH + " Nobody came.\n\nOk.\n\n" + LONG_PARAGRAPH + "\n");
         model = new ScriptedChatModel();
         assistant = new SetupAssistantImpl(
-                desk.projects(), desk.segments(), desk.openProjects(), new PromptTemplates(), new ObjectMapper());
+                desk.projects(),
+                desk.segments(),
+                desk.openProjects(),
+                new PromptTemplates(),
+                new ObjectMapper(),
+                java.time.Clock.systemUTC());
     }
 
     private static Result<ChatResponse> reply(final String json) {
@@ -77,6 +87,23 @@ class SetupAssistantImplTest {
 
         assertThat(result.data()).isEqualTo(new FileNameSuggestion("Джордж Орвел. Ферма тварин. 1945", false));
         assertThat(userMessage()).contains("File name: Book");
+    }
+
+    // IF the proposal's model call were not announced, THEN the busy card could not show what the file name asked.
+    @Test
+    void suggestFileName_withProgress_announcesTheCallWithTheMessagesSent() {
+        model.answer(reply("{\"target\":\"Ферма тварин\"}"));
+        final List<JobEvent> events = new ArrayList<>();
+
+        assistant.suggestFileName(desk.projectId(), model, events::add);
+
+        final CallSnapshot last = events.stream()
+                .filter(CallSnapshotUpdated.class::isInstance)
+                .map(event -> ((CallSnapshotUpdated) event).snapshot())
+                .reduce((first, second) -> second)
+                .orElseThrow();
+        assertThat(last.kind()).isEqualTo(CallKind.FILE_NAME);
+        assertThat(last.sent()).isEqualTo(model.requests().getFirst().messages());
     }
 
     @Test

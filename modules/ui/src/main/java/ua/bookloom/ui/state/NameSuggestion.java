@@ -85,9 +85,9 @@ public final class NameSuggestion {
         notice.set("");
         authorKept.set(false);
         suggesting.set(true);
-        setup.run(
+        setup.runShown(
                         ActivityKind.SUGGEST_NAME,
-                        model -> setup.assistant().suggestFileName(book.projectId(), model),
+                        (model, progress) -> setup.assistant().suggestFileName(book.projectId(), model, progress),
                         answer -> answered(book.projectId(), answer))
                 .ifPresent(this::refused);
     }

@@ -66,9 +66,9 @@ public final class StyleSuggestion {
         log.debug("a style suggestion is asked for project {}", book.projectId());
         outcome.set(StyleSuggestionOutcome.NONE);
         suggesting.set(true);
-        setup.run(
+        setup.runShown(
                         ActivityKind.SUGGEST_STYLE,
-                        model -> setup.assistant().suggestBrief(book.projectId(), model),
+                        (model, progress) -> setup.assistant().suggestBrief(book.projectId(), model, progress),
                         answer -> answered(book.projectId(), answer))
                 .ifPresent(refusal -> {
                     suggesting.set(false);

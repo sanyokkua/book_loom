@@ -89,6 +89,19 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         return new TokenUsage(prompt, completion, Duration.ofSeconds(5));
     }
 
+    // IF a call with no parts of its own showed no prompt, THEN a glossary scan's request could not be inspected.
+    @Test
+    void callWithMessagesButNoParts_showsTheFullPromptSection() {
+        final CallSnapshot scan = LiveCallFixtures.waiting(1, 0, SOURCE, List.of())
+                .withSent(List.of(
+                        new ua.bookloom.api.llm.ChatMessage(ua.bookloom.api.llm.ChatRole.SYSTEM, "Rules"),
+                        new ua.bookloom.api.llm.ChatMessage(ua.bookloom.api.llm.ChatRole.USER, "Names?")));
+
+        showCalls(scan, null);
+
+        assertThat(((TitledPane) required(CURRENT + "-prompt")).getText()).isEqualTo("Full prompt · 2 messages");
+    }
+
     // IF the prompt parts came out in another order than they were sent, THEN the person could not trust the context.
     @Test
     void promptContext_showsEveryPartInTheOrderItWasSent() {

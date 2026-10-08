@@ -28,6 +28,7 @@ import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -179,14 +180,11 @@ public final class SuggestTargets {
         return Result.ok(suggestions);
     }
 
-    private Result<List<Suggestion>> runBatch(
+    private ChatRequest requestFor(
             final int index,
             final List<GlossaryEntry> batch,
             final Map<String, Evidence> evidence,
-            final String system,
-            @Nullable final Script refused,
-            @Nullable final Script required,
-            final ModelCalls calls) {
+            final String system) {
         final String lines = String.join(
                 "\n",
                 batch.stream()
@@ -199,10 +197,22 @@ public final class SuggestTargets {
                         templates
                                 .renderUser(PromptName.SUGGEST_TARGETS, Map.of("terms", lines))
                                 .strip()));
-        final ChatRequest request = ChatRequests.build(
-                PromptName.SUGGEST_TARGETS, messages, OutputLimit.forSuggestions(batch.size()), false);
         log.trace("Glossary suggestion batch {} messages {}", index, messages);
-        final Result<ChatResponse> reply = calls.call(CallKind.SUGGEST_TARGETS, null, request);
+        return ChatRequests.build(
+                PromptName.SUGGEST_TARGETS, messages, OutputLimit.forSuggestions(batch.size()), false);
+    }
+
+    private Result<List<Suggestion>> runBatch(
+            final int index,
+            final List<GlossaryEntry> batch,
+            final Map<String, Evidence> evidence,
+            final String system,
+            @Nullable final Script refused,
+            @Nullable final Script required,
+            final ModelCalls calls) {
+        final ChatRequest request = requestFor(index, batch, evidence, system);
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.SUGGEST_TARGETS, List.of(), request, CallDescriptor.whole(PromptName.SUGGEST_TARGETS));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn("Glossary suggestion batch {} of size {} failed code={}", index, batch.size(), error.code());

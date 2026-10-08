@@ -7,7 +7,11 @@ import java.util.List;
 import java.util.Locale;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
+import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.ui.FxTestBase;
 import ua.bookloom.ui.LiveCallFixtures;
@@ -63,6 +67,83 @@ class PromptContextPaneTest extends FxTestBase {
                 [Previous pairs]
                 Rain.
                 Дощ.""");
+    }
+
+    private static final List<ChatMessage> SENT = List.of(
+            new ChatMessage(ChatRole.SYSTEM, "Rules:\n1. Translate every clause.\n2. Keep the names."),
+            new ChatMessage(ChatRole.USER, "Translate from English to Ukrainian.\n<s id=\"1\">He left.</s>"));
+
+    private PromptContextPane shownWithSent(final List<PromptSection> sections, final List<String> copied) {
+        return ThemeTestSupport.onFx(() -> {
+            final PromptContextPane pane = new PromptContextPane("prompt", messages, copied::add);
+            pane.show(sections, SENT);
+            new Scene(pane);
+            pane.applyCss();
+            return pane;
+        });
+    }
+
+    // IF the switch did not change the view, THEN the person could not see the numbered rules that were really sent.
+    @Test
+    void fullPromptSwitch_showsTheMessagesAsSentAndCopyPutsThemOnTheClipboard() {
+        final List<String> copied = new ArrayList<>();
+        final PromptContextPane pane = shownWithSent(LiveCallFixtures.smallPrompt(), copied);
+        assertThat(pane.getText()).isEqualTo("Prompt context · 5 parts");
+
+        ThemeTestSupport.onFx(() -> {
+            ((CheckBox) pane.lookup("#prompt-full")).fire();
+            ((Button) pane.lookup("#prompt-copy")).fire();
+            return null;
+        });
+
+        assertThat(pane.getText()).isEqualTo("Full prompt · 2 messages");
+        assertThat(copied).containsExactly("""
+                == System message ==
+
+                Rules:
+                1. Translate every clause.
+                2. Keep the names.
+
+                == User message ==
+
+                Translate from English to Ukrainian.
+                <s id="1">He left.</s>""");
+        assertThat(((Label) pane.lookup("#prompt-full-message-1")).getText()).startsWith("Rules:");
+    }
+
+    @Test
+    void fullPromptSwitch_switchedOffAgain_showsThePartsAgain() {
+        final PromptContextPane pane = shownWithSent(LiveCallFixtures.smallPrompt(), new ArrayList<>());
+
+        ThemeTestSupport.onFx(() -> {
+            final CheckBox full = (CheckBox) pane.lookup("#prompt-full");
+            full.fire();
+            full.fire();
+            return null;
+        });
+
+        assertThat(pane.getText()).isEqualTo("Prompt context · 5 parts");
+    }
+
+    // A call with no parts of its own has nothing to switch between: it shows the whole prompt and no switch.
+    @Test
+    void show_callWithoutPartsButWithMessages_showsTheFullPromptAndNoSwitch() {
+        final PromptContextPane pane = shownWithSent(List.of(), new ArrayList<>());
+
+        assertThat(pane.getText()).isEqualTo("Full prompt · 2 messages");
+        assertThat(pane.lookup("#prompt-full").isVisible()).isFalse();
+    }
+
+    // IF a call that sent nothing left an empty box standing, THEN the person could open it.
+    @Test
+    void show_noPartsAndNoMessages_hidesTheSection() {
+        final PromptContextPane pane = shownWithSent(List.of(), new ArrayList<>());
+        ThemeTestSupport.onFx(() -> {
+            pane.show(List.of(), List.of());
+            return null;
+        });
+
+        assertThat(pane.isVisible()).isFalse();
     }
 
     // IF a part with no heading of its own showed nothing to name it, THEN its lines would float unlabelled.

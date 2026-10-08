@@ -1,5 +1,6 @@
 package ua.bookloom.api.pipeline;
 
+import java.util.function.Consumer;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 
@@ -29,4 +30,30 @@ public interface SetupAssistant {
      *     own error otherwise
      */
     Result<BriefSuggestion> suggestBrief(String projectId, ChatModel model);
+
+    /**
+     * As {@link #suggestFileName(String, ChatModel)}, announcing the model call so a screen can show it. An assistant
+     * that shows nothing ignores {@code progress}.
+     *
+     * @param projectId the project whose book is open
+     * @param model the model to ask
+     * @param progress the non-null receiver of each call's snapshot, called on the calling thread
+     * @return as {@link #suggestFileName(String, ChatModel)}
+     */
+    default Result<FileNameSuggestion> suggestFileName(String projectId, ChatModel model, Consumer<JobEvent> progress) {
+        return suggestFileName(projectId, model);
+    }
+
+    /**
+     * As {@link #suggestBrief(String, ChatModel)}, announcing the model call so a screen can show it. An assistant
+     * that shows nothing ignores {@code progress}.
+     *
+     * @param projectId the project whose book is open
+     * @param model the model to ask
+     * @param progress the non-null receiver of each call's snapshot, called on the calling thread
+     * @return as {@link #suggestBrief(String, ChatModel)}
+     */
+    default Result<BriefSuggestion> suggestBrief(String projectId, ChatModel model, Consumer<JobEvent> progress) {
+        return suggestBrief(projectId, model);
+    }
 }

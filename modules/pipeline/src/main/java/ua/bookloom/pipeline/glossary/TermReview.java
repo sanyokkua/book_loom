@@ -27,6 +27,7 @@ import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -199,7 +200,8 @@ public final class TermReview {
                 new OutputLimit(batch.size() * TOKENS_PER_VERDICT, CAP_TOKENS),
                 false);
         log.trace("Glossary review batch {} messages {}", index, messages);
-        final Result<ChatResponse> reply = calls.call(CallKind.REVIEW_TERMS, null, request);
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.REVIEW_TERMS, List.of(), request, CallDescriptor.whole(PromptName.REVIEW_TERMS));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn("Glossary review batch {} of size {} failed code={}", index, batch.size(), error.code());

@@ -24,6 +24,7 @@ import ua.bookloom.api.pipeline.BatchStarted;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -191,7 +192,8 @@ public final class TermChoice {
         final ChatRequest request =
                 ChatRequests.build(PromptName.TERM_CHOICE, messages, new OutputLimit(cap / 2, cap), false);
         log.trace("Term choice messages {}", messages);
-        final Result<ChatResponse> reply = calls.call(CallKind.REVIEW_TERMS, null, request);
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.REVIEW_TERMS, List.of(), request, CallDescriptor.whole(PromptName.TERM_CHOICE));
         if (reply.isErr()) {
             final AppError error = Objects.requireNonNull(reply.error(), "error");
             log.warn("Term choice batch of {} failed code={}", batch.size(), error.code());

@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -32,6 +34,7 @@ import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
+import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.run.JobModelCalls;
 
 /** A described call is shown as one snapshot that waits, then answers, fails or is cancelled, and gathers outcomes. */
@@ -134,6 +137,55 @@ class JobModelCallSnapshotsTest {
         callsOver(TranslationJobTestSupport.replies("x")).callAbout(CallKind.SUMMARY, List.of(), REQUEST);
 
         assertThat(snapshots()).isEmpty();
+    }
+
+    // IF the snapshot held only parts, THEN the person could not see the numbered rules and the checklist that were
+    // sent.
+    @Test
+    void callAbout_described_holdsTheRenderedSystemAndUserMessagesOfTheRequest() {
+        final ChatRequest request = new ChatRequest(List.of(
+                new ChatMessage(ChatRole.SYSTEM, "Rules:\n1. Translate everything.\n2. Keep names."),
+                new ChatMessage(ChatRole.USER, "Translate from English to Ukrainian.\n<s id=\"1\">He left.</s>")));
+
+        callsOver(TranslationJobTestSupport.replies("x")).callAbout(CallKind.DRAFT, IDS, request, BATCH);
+
+        assertThat(snapshots())
+                .hasSize(2)
+                .allSatisfy(snapshot -> assertThat(snapshot.sent())
+                        .containsExactly(
+                                new ChatMessage(ChatRole.SYSTEM, "Rules:\n1. Translate everything.\n2. Keep names."),
+                                new ChatMessage(
+                                        ChatRole.USER,
+                                        "Translate from English to Ukrainian.\n<s id=\"1\">He left.</s>")));
+    }
+
+    // These are the calls of the glossary scan, the term review, the summary, the garbled-word check and the setup
+    // proposals: none names a segment, and each must still appear in the panel.
+    @ParameterizedTest
+    @EnumSource(
+            value = PromptName.class,
+            names = {
+                "PRESCAN",
+                "REVIEW_TERMS",
+                "SUGGEST_TARGETS",
+                "TERM_CHOICE",
+                "SUMMARY",
+                "SUSPICIOUS_WORDS",
+                "BRIEF_SUGGESTION",
+                "FILE_NAME"
+            })
+    void callAbout_segmentlessWholePrompt_publishesASnapshotLabelledByItsPrompt(final PromptName name) {
+        callsOver(TranslationJobTestSupport.replies("x"))
+                .callAbout(name.callKind(), List.of(), REQUEST, CallDescriptor.whole(name));
+
+        assertThat(snapshots())
+                .extracting(CallSnapshot::label, CallSnapshot::kind, CallSnapshot::state)
+                .containsExactly(
+                        tuple(name.resourceBaseName(), name.callKind(), CallState.WAITING),
+                        tuple(name.resourceBaseName(), name.callKind(), CallState.ANSWERED));
+        assertThat(snapshots().getLast().segments()).isEmpty();
+        assertThat(snapshots().getLast().sections()).isEmpty();
+        assertThat(snapshots().getLast().sent()).isEqualTo(REQUEST.messages());
     }
 
     @Test

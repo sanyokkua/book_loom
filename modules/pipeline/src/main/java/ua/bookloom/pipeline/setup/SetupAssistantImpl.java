@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
@@ -38,12 +41,15 @@ import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.heal.SelfHealCalls;
 import ua.bookloom.pipeline.project.OpenProjects;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.OutputLimit;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.prompt.StyleSheet;
+import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
  * Asks the chosen model for the two things a person would otherwise type: the translated book's file name and the
@@ -71,14 +77,22 @@ public final class SetupAssistantImpl implements SetupAssistant {
     private final OpenProjects openProjects;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
+    private final Clock clock;
 
     @Override
     public Result<FileNameSuggestion> suggestFileName(final String projectId, final ChatModel model) {
+        return suggestFileName(projectId, model, event -> {});
+    }
+
+    @Override
+    public Result<FileNameSuggestion> suggestFileName(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
         log.debug("File name suggestion requested project={}", projectId);
         try {
-            return opened(projectId).flatMap(book -> askName(book, model));
+            return opened(projectId).flatMap(book -> askName(book, calls(model, progress, book)));
         } catch (Throwable cause) {
             return failed("file name suggestion", cause);
         }
@@ -86,14 +100,32 @@ public final class SetupAssistantImpl implements SetupAssistant {
 
     @Override
     public Result<BriefSuggestion> suggestBrief(final String projectId, final ChatModel model) {
+        return suggestBrief(projectId, model, event -> {});
+    }
+
+    @Override
+    public Result<BriefSuggestion> suggestBrief(
+            final String projectId, final ChatModel model, final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
         log.debug("Brief suggestion requested project={}", projectId);
         try {
-            return opened(projectId).flatMap(book -> askBrief(book, model));
+            return opened(projectId).flatMap(book -> askBrief(book, calls(model, progress, book)));
         } catch (Throwable cause) {
             return failed("brief suggestion", cause);
         }
+    }
+
+    private ModelCalls calls(final ChatModel model, final Consumer<JobEvent> progress, final Book book) {
+        return new JobModelCalls(
+                onSent -> {
+                    onSent.run();
+                    return model;
+                },
+                progress,
+                clock,
+                book.target());
     }
 
     private Result<Book> opened(final String projectId) {
@@ -113,7 +145,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return Result.ok(new Book(project, document, target));
     }
 
-    private Result<FileNameSuggestion> askName(final Book book, final ChatModel model) {
+    private Result<FileNameSuggestion> askName(final Book book, final ModelCalls calls) {
         final String stem = stemOf(book.project().source().getFileName().toString());
         final Map<String, String> user = new HashMap<>();
         user.put("fileName", stem);
@@ -123,32 +155,32 @@ public final class SetupAssistantImpl implements SetupAssistant {
                 FileNameTargets.of(segments, book.project().id());
         Optional.ofNullable(targets.title()).ifPresent(title -> user.put("titleTarget", title));
         Optional.ofNullable(targets.author()).ifPresent(author -> user.put("authorTarget", author));
-        return askFileName(book, user, model)
+        return askFileName(book, user, calls)
                 .flatMap(name -> name.isEmpty()
                         ? Result.<FileNameSuggestion>err(AppError.of(
                                 ErrorCode.validation, "No name", "The model did not suggest a usable name."))
-                        : Result.ok(spelled(checkedAuthor(book, user, name, model), targets)));
+                        : Result.ok(spelled(checkedAuthor(book, user, name, calls), targets)));
     }
 
     private static FileNameSuggestion spelled(final FileNameSuggestion suggestion, final FileNameTargets targets) {
         return new FileNameSuggestion(targets.spell(suggestion.name()), suggestion.authorKeptInSourceScript());
     }
 
-    private Result<String> askFileName(final Book book, final Map<String, String> user, final ChatModel model) {
-        return ask(book, PromptName.FILE_NAME, user, NAME_TOKENS, model).map(this::fileNameFrom);
+    private Result<String> askFileName(final Book book, final Map<String, String> user, final ModelCalls calls) {
+        return ask(book, PromptName.FILE_NAME, user, NAME_TOKENS, calls).map(this::fileNameFrom);
     }
 
     // A non-Latin target with the author still in Latin letters is asked once more, naming the part; when the second
     // answer fails or keeps the Latin author too, the name is still offered, with the flag the screen can word.
     private FileNameSuggestion checkedAuthor(
-            final Book book, final Map<String, String> user, final String name, final ChatModel model) {
+            final Book book, final Map<String, String> user, final String name, final ModelCalls calls) {
         if (!FileNameAuthor.isLeftInAnotherScript(name, book.target())) {
             return new FileNameSuggestion(name, false);
         }
         log.warn("The suggested file name keeps its author in another script than the target's; asking once more");
         final Map<String, String> again = new HashMap<>(user);
         again.put("correction", FileNameAuthor.correction(name));
-        final String second = askFileName(book, again, model).data();
+        final String second = askFileName(book, again, calls).data();
         if (second == null || second.isEmpty()) {
             log.debug("The corrected file name is unusable; the first one is kept and flagged");
             return new FileNameSuggestion(name, true);
@@ -158,7 +190,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return new FileNameSuggestion(second, stillLeft);
     }
 
-    private Result<BriefSuggestion> askBrief(final Book book, final ChatModel model) {
+    private Result<BriefSuggestion> askBrief(final Book book, final ModelCalls calls) {
         final String opening = opening(book.document());
         if (opening.isBlank()) {
             return Result.err(AppError.of(
@@ -168,7 +200,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
         user.put("opening", opening);
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
         metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
-        return ask(book, PromptName.BRIEF_SUGGESTION, user, BRIEF_TOKENS, model)
+        return ask(book, PromptName.BRIEF_SUGGESTION, user, BRIEF_TOKENS, calls)
                 .flatMap(reply -> briefFrom(reply, book.project().brief().narrator()));
     }
 
@@ -177,7 +209,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
             final PromptName name,
             final Map<String, String> user,
             final int tokens,
-            final ChatModel model) {
+            final ModelCalls calls) {
         final BookBrief brief = book.project().brief();
         final CallFrame frame = new CallFrame(
                 brief.sourceLanguage() == null ? book.document().declaredLang() : brief.sourceLanguage(),
@@ -189,7 +221,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
         final List<ChatMessage> messages = SelfHealCalls.messagesFor(templates, name, frame, user);
         final ChatRequest request = ChatRequests.build(name, messages, new OutputLimit(tokens / 2, tokens), false);
         log.debug("Setup call {} sent", name);
-        final Result<ChatResponse> reply = model.chat(request);
+        final Result<ChatResponse> reply =
+                calls.callAbout(name.callKind(), List.of(), request, CallDescriptor.whole(name));
         if (reply.isErr()) {
             return Result.err(Objects.requireNonNull(reply.error(), "error"));
         }

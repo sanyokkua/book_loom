@@ -1317,10 +1317,18 @@ public enum MessageKey {
     LIVE_CALL_PROMPT_SYSTEM("live.call.prompt.system"),
     /** Divider above the parts of the user message. */
     LIVE_CALL_PROMPT_USER("live.call.prompt.user"),
+    /** Divider above a model-written message of the prompt, such as a worked example. */
+    LIVE_CALL_PROMPT_ASSISTANT("live.call.prompt.assistant"),
     /** Button in the prompt-context section that copies the prompt's filled parts. */
     LIVE_CALL_PROMPT_COPY("live.call.prompt.copy"),
     /** Hover explanation of Copy in the prompt-context section. */
     LIVE_CALL_PROMPT_COPY_TIP("live.call.prompt.copy.tip"),
+    /** Switch in the prompt-context section that shows the messages whole instead of the filled parts. */
+    LIVE_CALL_PROMPT_FULL("live.call.prompt.full"),
+    /** Hover explanation of the full-prompt switch. */
+    LIVE_CALL_PROMPT_FULL_TIP("live.call.prompt.full.tip"),
+    /** Heading of the section while it shows the whole messages; argument 0 is their number. */
+    LIVE_CALL_PROMPT_FULL_TITLE("live.call.prompt.fullTitle"),
     /** Chip for what became of one segment of a call; arguments: 0 {@code adopted}, {@code fell_back}, {@code accepted} or {@code flagged}, 1 the detail or {@code none}. */
     LIVE_CALL_OUTCOME("live.call.outcome"),
     /** Words for one reason in an outcome chip; arguments: 0 the reason's code lower-cased with dashes as underscores, 1 the code as reported, shown when no words are known. */
