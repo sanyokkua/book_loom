@@ -7,12 +7,11 @@ import ua.bookloom.api.pipeline.RoundStarted;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.pipeline.prompt.ModelCalls;
-import ua.bookloom.pipeline.qa.CheckName;
 import ua.bookloom.pipeline.qa.QaResult;
 
 /**
- * Settles an accepted segment that carries a soft finding a directed fix can mend: a narrator's word of the wrong
- * gender, or a word with a letter outside the target alphabet. Such a finding is soft — a rule that cannot be sure
+ * Settles an accepted segment that carries a soft finding a directed fix can mend ({@link SoftFindings}): a word of
+ * the wrong gender, a word with a letter outside the target alphabet, a number the translation changed. Such a finding is soft — a rule that cannot be sure
  * must never flag a segment — so all of them together earn exactly one directed fix, taken only when the fixed text
  * passes every check and holds none of them any more; otherwise the segment stays accepted as it was with the
  * findings kept as a note for review. Built fresh per chunk by {@link SegmentHealer}.
@@ -110,11 +109,6 @@ final class SoftFix {
     }
 
     private static List<QaFinding> fixableFindings(final QaResult qa) {
-        return qa.findings().stream().filter(SoftFix::isFixable).toList();
-    }
-
-    private static boolean isFixable(final QaFinding finding) {
-        return CheckName.GENDER.raisedBy().equals(finding.raisedBy())
-                || CheckName.ALPHABET.raisedBy().equals(finding.raisedBy());
+        return SoftFindings.fixableIn(qa);
     }
 }

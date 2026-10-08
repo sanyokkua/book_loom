@@ -95,6 +95,7 @@ public final class FrequencyScan {
         final Set<String> neverAlone = StopWords.neverAlone(sourceLanguage);
         final Map<String, NameCandidate> tallies = tally(read, word -> isNameLike(word, counts, stopWords));
         dropJunk(tallies);
+        dropHygiene(tallies, sourceLanguage);
         final List<NameCandidate> candidates = tallies.values().stream()
                 .filter(tally -> tally.count() >= minCount)
                 .filter(tally -> isNotCommonWord(tally, counts, neverAlone))
@@ -105,6 +106,12 @@ public final class FrequencyScan {
         candidates.forEach(candidate ->
                 log.trace("Name candidate {} x{}: {}", candidate.term(), candidate.count(), candidate.firstSentence()));
         return candidates;
+    }
+
+    private static void dropHygiene(final Map<String, NameCandidate> tallies, @Nullable final String language) {
+        final List<String> all = List.copyOf(tallies.keySet());
+        tallies.keySet()
+                .removeIf(term -> NameHygiene.rejection(term, all, language).isPresent());
     }
 
     private static void dropJunk(final Map<String, NameCandidate> tallies) {

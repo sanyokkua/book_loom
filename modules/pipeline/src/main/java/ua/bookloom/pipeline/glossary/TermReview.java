@@ -23,6 +23,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
 import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
@@ -129,15 +130,18 @@ public final class TermReview {
             log.warn("Glossary review project={} changed nothing: a suggestion call failed", projectId);
             return Result.err(Objects.requireNonNull(suggested.error(), "error"));
         }
-        return commit(projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"), in.frame());
+        return commit(projectId, answered, Objects.requireNonNull(suggested.data(), "suggestions"), in);
     }
 
     private Result<GlossaryReviewReport> commit(
-            final String projectId,
-            final List<Verdict> verdicts,
-            final List<Suggestion> suggestions,
-            final CallFrame frame) {
-        return ReviewCommit.apply(glossary, projectId, verdicts, suggestions, frame.sourceLanguage());
+            final String projectId, final List<Verdict> verdicts, final List<Suggestion> suggestions, final Inputs in) {
+        return ReviewCommit.apply(
+                glossary,
+                projectId,
+                verdicts,
+                suggestions,
+                in.frame().sourceLanguage(),
+                Tokens.visibleTexts(in.segments()));
     }
 
     /**

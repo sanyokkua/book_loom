@@ -14,7 +14,7 @@ import ua.bookloom.util.lang.Languages;
  * The deterministic text checks that need no model, run on one segment's display texts — a defect found here is a
  * fact, not an opinion, so a blocking finding fails the segment before any reviewer is asked. Blocking: a word that
  * mixes alphabets, a quote pair the source balanced and the target did not, a paragraph left in the source language.
- * Soft: a doubled word, a spacing artefact. The length check stays beside the other soft checks in
+ * A glossary name swapped for another one blocks too. Soft: a doubled word, a spacing artefact, a changed number. The length check stays beside the other soft checks in
  * {@code qa}, where its band and its blend weight live.
  */
 @Slf4j
@@ -73,16 +73,26 @@ public final class TextChecks {
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
         SentenceCountCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
-        findings.addAll(VocativeCheck.find(
-                source,
-                target,
-                glossaryPairs,
-                LanguageRules.bundled().stemAlternations(targetLanguage),
-                sourceLanguage));
+        findings.addAll(glossaryNameChecks(source, target, sourceLanguage, targetLanguage, glossaryPairs));
+        findings.addAll(NumberCheck.find(source, target));
         if (!findings.isEmpty()) {
             report(findings);
         }
         return List.copyOf(findings);
+    }
+
+    // The vocative and the swap check hold the target to the glossary's renderings with the same stem rule.
+    private static List<CheckFinding> glossaryNameChecks(
+            final String source,
+            final String target,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<String> glossaryPairs) {
+        final List<String> alternations = LanguageRules.bundled().stemAlternations(targetLanguage);
+        final List<CheckFinding> found =
+                new ArrayList<>(VocativeCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
+        found.addAll(NameSwapCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
+        return found;
     }
 
     /**

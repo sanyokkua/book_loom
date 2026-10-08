@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
+import ua.bookloom.pipeline.checks.CharacterName;
+import ua.bookloom.pipeline.checks.CharacterNames;
 import ua.bookloom.pipeline.checks.CheckFinding;
 import ua.bookloom.pipeline.checks.GenderCheck;
 import ua.bookloom.pipeline.checks.GenderChecks;
@@ -48,6 +50,7 @@ final class TextCheckGates {
                 .map(TextCheckGates::resultOf)
                 .forEach(results::add);
         genderResult(input, target).ifPresent(results::add);
+        characterResult(input, target).ifPresent(results::add);
         wordResult(input, target, words).ifPresent(results::add);
         return List.copyOf(results);
     }
@@ -87,6 +90,24 @@ final class TextCheckGates {
                 name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
     }
 
+    // One notice per segment that names every word that disagrees with a woman's name, like the narrator's notice.
+    private static Optional<CheckResult> characterResult(final SoftCheckInput input, final String target) {
+        final List<CharacterName> names = CharacterNames.of(input.characters(), input.glossaryPairs());
+        if (names.isEmpty()) {
+            return Optional.empty();
+        }
+        final GenderCheck check = GenderChecks.named(LanguageRules.bundled().genderCheck(input.targetLanguage()));
+        final List<CheckFinding> found = check.findCharacters(target, names);
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+        log.debug("Character agreement found {} word(s) for {} character(s)", found.size(), names.size());
+        final String note = found.stream().map(CheckFinding::note).collect(Collectors.joining(" "));
+        final CheckName name = CheckName.NAME_GENDER;
+        return Optional.of(CheckResult.passWithNotice(
+                name, new QaFinding(name.findingKind(), Severity.LOW, note, name.raisedBy())));
+    }
+
     private static CheckResult resultOf(final CheckFinding finding) {
         final CheckName check = checkOf(finding);
         return finding.blocking()
@@ -108,6 +129,9 @@ final class TextCheckGates {
             case SENTENCE_MISSING -> CheckName.SENTENCE_COUNT;
             case VOCATIVE_MISSING -> CheckName.VOCATIVE;
             case PROTOCOL_LEAK -> CheckName.PROTOCOL_LEAK;
+            case NUMBER_CHANGED -> CheckName.NUMBER;
+            case NAME_SWAP -> CheckName.NAME_SWAP;
+            case NAME_GENDER -> CheckName.NAME_GENDER;
         };
     }
 }

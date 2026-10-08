@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -26,6 +27,7 @@ import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.PreScanReplies.Proposal;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Kind;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
@@ -116,11 +118,8 @@ public final class PreScan {
             log.info("Model pre-scan finished project={} ok=false code={}", projectId, failed.code());
             return Result.err(failed);
         }
-        final Result<List<GlossaryEntry>> merged = fresh(
-                        projectId, Objects.requireNonNull(proposals.data(), "proposals"))
-                .flatMap(fresh -> confirmed(fresh, segments, frame, calls))
-                .flatMap(confirmed -> suggestions.suggestOnto(confirmed, segments, frame, policy, calls))
-                .flatMap(this::addAll);
+        final Result<List<GlossaryEntry>> merged =
+                merge(projectId, Objects.requireNonNull(proposals.data(), "proposals"), segments, frame, policy, calls);
         log.info("Model pre-scan finished project={} ok={} entriesAdded={}", projectId, merged.isOk(), added(merged));
         return merged;
     }
@@ -154,6 +153,37 @@ public final class PreScan {
         final GlossaryEntry entry = verdict.entry();
         return entry.withType(entry.type() == TermType.OTHER ? verdict.type() : entry.type())
                 .withInferredGender(entry.gender() == Gender.UNKNOWN ? verdict.gender() : entry.gender());
+    }
+
+    private Result<List<GlossaryEntry>> merge(
+            final String projectId,
+            final Collection<Proposal> proposals,
+            final List<Segment> segments,
+            final CallFrame frame,
+            final NamePolicy policy,
+            final ModelCalls calls) {
+        return fresh(projectId, proposals, frame.sourceLanguage())
+                .flatMap(fresh -> confirmed(fresh, segments, frame, calls))
+                .flatMap(confirmed ->
+                        suggestions.suggestOnto(seeded(confirmed, segments, frame), segments, frame, policy, calls))
+                .map(suggested -> noteWithoutTarget(suggested, policy))
+                .flatMap(this::addAll);
+    }
+
+    private static List<GlossaryEntry> seeded(
+            final List<GlossaryEntry> confirmed, final List<Segment> segments, final CallFrame frame) {
+        return PronounGender.seeded(confirmed, Tokens.visibleTexts(segments), frame.sourceLanguage());
+    }
+
+    // A name the policy translates and the suggestion step left without a target is still written, so the person can
+    // fill it; the log says which ones, since a book renders them freely until then.
+    private static List<GlossaryEntry> noteWithoutTarget(final List<GlossaryEntry> entries, final NamePolicy policy) {
+        if (policy != NamePolicy.KEEP_ORIGINAL) {
+            entries.stream()
+                    .filter(entry -> entry.target() == null || entry.target().isBlank())
+                    .forEach(entry -> log.debug("Pre-scan entry {} has no target under policy {}", entry.id(), policy));
+        }
+        return entries;
     }
 
     private Result<List<GlossaryEntry>> addAll(final List<GlossaryEntry> entries) {
@@ -227,7 +257,8 @@ public final class PreScan {
     }
 
     /** The proposals as entries, leaving out a term the glossary holds or the person removed. */
-    private Result<List<GlossaryEntry>> fresh(final String projectId, final Collection<Proposal> proposals) {
+    private Result<List<GlossaryEntry>> fresh(
+            final String projectId, final Collection<Proposal> proposals, @Nullable final String language) {
         final Result<List<GlossaryEntry>> held = glossary.all(projectId);
         if (held.isErr()) {
             return held;
@@ -235,8 +266,13 @@ public final class PreScan {
         final Set<String> heldKeys = new HashSet<>();
         Objects.requireNonNull(held.data(), "held").forEach(entry -> heldKeys.add(PreScanReplies.key(entry.term())));
         final List<GlossaryEntry> fresh = new ArrayList<>();
+        final List<String> proposed =
+                proposals.stream().map(proposal -> proposal.candidate().term()).toList();
         for (final Proposal proposal : proposals) {
             final String term = proposal.candidate().term();
+            if (NameHygiene.rejection(term, proposed, language).isPresent()) {
+                continue;
+            }
             final Result<Boolean> removed = glossary.wasRemoved(projectId, term);
             if (removed.isErr()) {
                 return Result.err(Objects.requireNonNull(removed.error(), "error"));

@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.pipeline.heal.DraftJudge;
 import ua.bookloom.pipeline.heal.DraftOutcome;
+import ua.bookloom.pipeline.heal.SoftFindings;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ReplyKind;
@@ -25,11 +26,18 @@ final class ReplyJudge {
      *
      * @param gatePassed whether the placeholder gate restored it (tokens in order, protected spans back)
      * @param accepted whether the acceptance rule takes it as drafted
+     * @param needsFix whether it carries a soft finding the run mends with a directed fix before it keeps the text
      */
-    record Verdict(boolean gatePassed, boolean accepted) {}
+    record Verdict(boolean gatePassed, boolean accepted, boolean needsFix) {
+
+        /** Whether the run takes the reply as it stands: accepted, with nothing left to mend. */
+        boolean isKeptAsDrafted() {
+            return accepted && !needsFix;
+        }
+    }
 
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
-    private static final Verdict REFUSED = new Verdict(false, false);
+    private static final Verdict REFUSED = new Verdict(false, false, false);
 
     /**
      * What the run makes of a model's whole reply: the draft reply parser first (a reply that is not exactly one target
@@ -50,6 +58,7 @@ final class ReplyJudge {
             return REFUSED;
         }
         final DraftJudge.Judged judged = DraftJudge.judge(drafted, project.loop(), project.gate());
-        return new Verdict(true, judged.accepted());
+        return new Verdict(
+                true, judged.accepted(), !SoftFindings.fixableIn(judged.qa()).isEmpty());
     }
 }

@@ -149,6 +149,32 @@ class GlossaryCsvTest {
     }
 
     @Test
+    void importCsv_rescanRowTypedTermWithUnknownGender_keepsTheHeldCharacterAndGender() throws IOException {
+        service.add(
+                new GlossaryEntry("p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
+        final Path file = write(HEADER, "Chisel,Чизел,term,unknown,false");
+
+        service.importCsv(PROJECT, file);
+
+        assertThat(service.entries(PROJECT).data())
+                .containsExactly(new GlossaryEntry(
+                        "p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
+    }
+
+    @Test
+    void importCsv_rowWithAKnownGender_replacesTheHeldOne() throws IOException {
+        service.add(
+                new GlossaryEntry("p1:chisel", PROJECT, "Chisel", "Чизел", TermType.CHARACTER, Gender.FEMALE, false));
+        final Path file = write(HEADER, "Chisel,Чизел,character,male,false");
+
+        service.importCsv(PROJECT, file);
+
+        assertThat(service.entries(PROJECT).data())
+                .extracting(GlossaryEntry::gender)
+                .containsExactly(Gender.MALE);
+    }
+
+    @Test
     void importCsv_unlockedRowWithNoTarget_addsAnEntryWithNoTarget() throws IOException {
         final Path file = write(HEADER, "Milton,,place,unknown,false");
 

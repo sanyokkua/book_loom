@@ -58,7 +58,8 @@ public final class QaEvaluation {
                 settings.namePolicy(),
                 settings.glossaryTerms(),
                 lockedRenderings,
-                settings.glossaryPairs());
+                settings.glossaryPairs(),
+                settings.characters());
     }
 
     /**
@@ -96,6 +97,7 @@ public final class QaEvaluation {
                 namePolicy,
                 glossaryTerms,
                 lockedRenderings,
+                List.of(),
                 List.of());
     }
 
@@ -117,6 +119,32 @@ public final class QaEvaluation {
             final List<String> glossaryTerms,
             final List<LockedRendering> lockedRenderings,
             final List<String> glossaryPairs) {
+        return evaluate(
+                givenHardGates,
+                segment,
+                maskedSource,
+                maskedCandidate,
+                maskedForm,
+                frame,
+                namePolicy,
+                glossaryTerms,
+                lockedRenderings,
+                glossaryPairs,
+                List.of());
+    }
+
+    private static QaResult evaluate(
+            final List<CheckResult> givenHardGates,
+            final Segment segment,
+            final String maskedSource,
+            final String maskedCandidate,
+            final String maskedForm,
+            final CallFrame frame,
+            final NamePolicy namePolicy,
+            final List<String> glossaryTerms,
+            final List<LockedRendering> lockedRenderings,
+            final List<String> glossaryPairs,
+            final List<String> characters) {
         Objects.requireNonNull(givenHardGates, "givenHardGates");
         Objects.requireNonNull(segment, "segment");
         Objects.requireNonNull(maskedSource, "maskedSource");
@@ -138,7 +166,8 @@ public final class QaEvaluation {
                 glossaryTerms,
                 lockedRenderings,
                 frame.narrator(),
-                glossaryPairs);
+                glossaryPairs,
+                characters);
         return QaEvaluator.evaluate(givenHardGates, input, frame.wordValidator());
     }
 }

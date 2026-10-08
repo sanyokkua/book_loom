@@ -17,9 +17,11 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.LexiconEntry;
 import ua.bookloom.api.project.NarratorHint;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GivenNames;
 import ua.bookloom.pipeline.glossary.KeyTermScan;
+import ua.bookloom.pipeline.glossary.PronounGender;
 import ua.bookloom.pipeline.narrator.NarratorDetector;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
@@ -126,11 +128,15 @@ public final class PrepStage {
         if (!held.isEmpty()) {
             log.debug("Name scan skipped project={}: the glossary holds {} entries", projectId, held.size());
             return GivenNames.seedHeld(glossary, projectId, sourceLanguage)
+                    .flatMap(seeded -> PronounGender.seedHeld(
+                            glossary, projectId, Tokens.visibleTexts(bodySegments(document)), sourceLanguage))
                     .map(seeded -> new Prepared(styleSheet, false, 0));
         }
         log.debug("Name scan runs project={}: the glossary is empty", projectId);
         return FrequencyScan.newTerms(projectId, bodySegments(document), sourceLanguage, glossary)
                 .map(proposals -> GivenNames.seeded(proposals, sourceLanguage))
+                .map(proposals ->
+                        PronounGender.seeded(proposals, Tokens.visibleTexts(bodySegments(document)), sourceLanguage))
                 .flatMap(proposals -> addAll(glossary, proposals))
                 .map(added -> new Prepared(styleSheet, true, added));
     }

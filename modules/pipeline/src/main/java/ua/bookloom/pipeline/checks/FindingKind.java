@@ -34,5 +34,14 @@ public enum FindingKind {
     VOCATIVE_MISSING,
 
     /** Reply structure (braces, brackets, a wrapper label) the model wrote into the text. */
-    PROTOCOL_LEAK
+    PROTOCOL_LEAK,
+
+    /** A number the source writes in digits that the target changed or lost. */
+    NUMBER_CHANGED,
+
+    /** A glossary name of the source replaced by another glossary name in the target. */
+    NAME_SWAP,
+
+    /** A woman's name written with a man's verb ending or declension. */
+    NAME_GENDER
 }

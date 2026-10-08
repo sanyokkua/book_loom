@@ -52,6 +52,9 @@ public enum CheckName {
     /** Text check, blocking: reply structure (braces, brackets, a wrapper label) left inside the text; a format defect, not a meaning one. */
     PROTOCOL_LEAK(0.0, "markup", "protocol-leak", true),
 
+    /** Text check, blocking: a glossary name of the source replaced by another glossary name in the target. */
+    NAME_SWAP(0.0, "glossary", "name-swap", true),
+
     /** Text check, soft: the same word twice in a row. */
     DUPLICATE_WORD(0.0, "fluency", "duplicate-word", false),
 
@@ -60,6 +63,12 @@ public enum CheckName {
 
     /** Text check, soft: a past-tense word after the narrator's «я» whose gender is not the narrator's. */
     GENDER(0.0, "gender", "gender", false),
+
+    /** Text check, soft: a woman's name followed by a masculine verb or declined like a man's name. */
+    NAME_GENDER(0.0, "gender", "name-gender", false),
+
+    /** Text check, soft: a number the source writes in digits that the target changed or lost. */
+    NUMBER(0.0, "meaning", "number", false),
 
     /** Text check, soft: a word the word validator doubts is a real word of the target language. */
     UNKNOWN_WORD(0.0, "fluency", "unknown-word", false),

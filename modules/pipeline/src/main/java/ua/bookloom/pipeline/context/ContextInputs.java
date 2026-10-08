@@ -21,6 +21,8 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
  * @param lexicon the project's recurring-term entries as they stand; only the established renderings of terms the
  *     text names are shown, and never one the glossary already holds
  * @param lexiconFilter what keeps function words and declined forms out of the shown renderings
+ * @param sourceLanguage the source language's tag, which picks the pronouns that evidence a character's gender in the
+ *     segment; null reads English
  */
 public record ContextInputs(
         StyleSheet styleSheet,
@@ -30,7 +32,30 @@ public record ContextInputs(
         List<String> earlierMaskedTargets,
         int dynamicTokens,
         List<LexiconEntry> lexicon,
-        LexiconFilter lexiconFilter) {
+        LexiconFilter lexiconFilter,
+        @Nullable String sourceLanguage) {
+
+    /** A set of inputs whose source language is not stated, so English pronouns are read. */
+    public ContextInputs(
+            final StyleSheet styleSheet,
+            @Nullable final String summary,
+            final int precedingCount,
+            final List<GlossaryEntry> glossary,
+            final List<String> earlierMaskedTargets,
+            final int dynamicTokens,
+            final List<LexiconEntry> lexicon,
+            final LexiconFilter lexiconFilter) {
+        this(
+                styleSheet,
+                summary,
+                precedingCount,
+                glossary,
+                earlierMaskedTargets,
+                dynamicTokens,
+                lexicon,
+                lexiconFilter,
+                null);
+    }
 
     /** A set of inputs whose lexicon is shown unfiltered. */
     public ContextInputs(

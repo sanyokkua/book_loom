@@ -18,4 +18,16 @@ public interface GenderCheck {
      * @return one soft finding per wrong word, in text order, each spanning that word; empty when the text agrees
      */
     List<CheckFinding> find(String target, Gender narrator);
+
+    /**
+     * Finds the words that disagree with a glossary character's gender: a masculine verb right after a woman's name,
+     * or the name itself declined like a man's. Most languages have no such rule.
+     *
+     * @param target the target's display text
+     * @param characters the glossary characters the segment names, each with the name as the target writes it
+     * @return one soft finding per wrong word, in text order; empty when the text agrees or the language has no rule
+     */
+    default List<CheckFinding> findCharacters(final String target, final List<CharacterName> characters) {
+        return List.of();
+    }
 }

@@ -39,7 +39,7 @@ class DefectClassCorpusTest {
         return replies(true);
     }
 
-    /** What the run makes of the case's reply: accepted as drafted, or refused. */
+    /** What the run makes of the case's reply: kept as drafted, or refused or sent to a directed fix. */
     static Expect outcome(final ReplyCase replyCase) {
         final EvalProject project = EvalProject.of(
                 EvalProject.Setup.single(
@@ -50,7 +50,9 @@ class DefectClassCorpusTest {
                         replyCase.source()),
                 (kind, segmentId, request) ->
                         Result.err(new AppError(ErrorCode.internal, "t", "no call", null, false, null)));
-        return ReplyJudge.judgeReply(project, 0, replyCase.reply()).accepted() ? Expect.ACCEPTED : Expect.REFUSED;
+        return ReplyJudge.judgeReply(project, 0, replyCase.reply()).isKeptAsDrafted()
+                ? Expect.ACCEPTED
+                : Expect.REFUSED;
     }
 
     @ParameterizedTest(name = "{0}")
@@ -59,13 +61,16 @@ class DefectClassCorpusTest {
         assertThat(outcome(replyCase)).as(id).isEqualTo(replyCase.resolved());
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("knownReplies")
-    void knownFailure_reply_isStillDecidedWrongByProduction(final String id, final ReplyCase replyCase) {
-        assertThat(outcome(replyCase))
-                .as(id + " now decided right: drop knownFailure (task " + replyCase.fixedBy() + ")")
-                .isNotEqualTo(replyCase.resolved());
-        assertThat(replyCase.fixedBy()).matches("[A-E]\\d+");
+    @Test
+    void knownFailure_replies_areStillDecidedWrongByProduction() {
+        assertThat(knownReplies().map(arguments -> (ReplyCase) arguments.get()[1]))
+                .allSatisfy(replyCase -> {
+                    assertThat(outcome(replyCase))
+                            .as(replyCase.id() + " now decided right: drop knownFailure (task " + replyCase.fixedBy()
+                                    + ")")
+                            .isNotEqualTo(replyCase.resolved());
+                    assertThat(replyCase.fixedBy()).matches("[A-E]\\d+");
+                });
     }
 
     @Test

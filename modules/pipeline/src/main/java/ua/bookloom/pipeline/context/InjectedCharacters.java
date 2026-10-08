@@ -6,12 +6,14 @@ import java.util.Locale;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.glossary.PronounGender;
 import ua.bookloom.pipeline.lexicon.TermMatch;
 
 /**
@@ -29,17 +31,39 @@ public final class InjectedCharacters {
      *
      * @param segments the segments whose text decides who is present
      * @param glossary every glossary entry as the run read it
-     * @return one line per present character of known gender, in glossary order; never null, empty when none is
+     * @param sourceLanguage the source language's tag, which picks the pronouns read as evidence; null reads English
+     * @return one line per present character of known gender, in glossary order, with the pronouns the text shows
+     *     after the name when it shows any ({@code Lyra — female (she ×2)}); never null, empty when none is present
      */
-    public static List<String> select(final List<Segment> segments, final List<GlossaryEntry> glossary) {
+    public static List<String> select(
+            final List<Segment> segments, final List<GlossaryEntry> glossary, @Nullable final String sourceLanguage) {
         final List<String> texts = Tokens.visibleTexts(segments);
         final List<String> lines = glossary.stream()
                 .filter(entry -> entry.type() == TermType.CHARACTER && entry.gender() != Gender.UNKNOWN)
                 .filter(entry -> !entry.term().isBlank() && namedIn(entry.term(), texts))
-                .map(entry -> entry.term() + " — " + entry.gender().name().toLowerCase(Locale.ROOT))
+                .map(entry -> lineOf(entry, texts, sourceLanguage))
                 .toList();
         log.trace("Character sheet offered={} selected={}", glossary.size(), lines.size());
         return lines;
+    }
+
+    /**
+     * The sheet for some segments, without pronoun evidence.
+     *
+     * @param segments the segments whose text decides who is present
+     * @param glossary every glossary entry as the run read it
+     * @return one {@code name — gender} line per present character of known gender; never null
+     */
+    public static List<String> select(final List<Segment> segments, final List<GlossaryEntry> glossary) {
+        return select(segments, glossary, null);
+    }
+
+    private static String lineOf(
+            final GlossaryEntry entry, final List<String> texts, @Nullable final String sourceLanguage) {
+        final String line = entry.term() + " — " + entry.gender().name().toLowerCase(Locale.ROOT);
+        final String evidence =
+                PronounGender.of(entry.term(), texts, sourceLanguage).compact();
+        return evidence.isEmpty() ? line : line + " (" + evidence + ")";
     }
 
     /**

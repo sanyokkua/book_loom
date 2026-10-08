@@ -160,7 +160,8 @@ final class ChunkContext {
      */
     List<String> characterLines() {
         final List<String> lines = InjectedCharacters.within(
-                InjectedCharacters.select(chunk.segments(), glossary),
+                InjectedCharacters.select(
+                        chunk.segments(), glossary, settings.frame().sourceLanguage()),
                 ContextBudget.characterAllowance(ChunkBudget.dynamicAllowance(settings.frame(), settings.window())));
         log.debug("Reviewer character sheet lines={}", lines.size());
         return lines;
@@ -204,7 +205,8 @@ final class ChunkContext {
                 earlierMaskedTargets,
                 ChunkBudget.dynamicAllowance(settings.frame(), settings.window()),
                 lexicon.entries(settings.projectId()),
-                lexiconFilter);
+                lexiconFilter,
+                settings.frame().sourceLanguage());
         return ContextPackageAssembler.assemble(chunk, segment, mask(segment), memory, inputs);
     }
 

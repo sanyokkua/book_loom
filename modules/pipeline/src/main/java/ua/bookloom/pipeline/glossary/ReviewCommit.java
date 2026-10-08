@@ -67,7 +67,8 @@ final class ReviewCommit {
             final String projectId,
             final List<Verdict> verdicts,
             final List<Suggestion> suggestions,
-            @Nullable final String sourceLanguage) {
+            @Nullable final String sourceLanguage,
+            final List<String> bookTexts) {
         final Result<List<GlossaryEntry>> current = glossary.all(projectId);
         if (current.isErr()) {
             return Result.err(Objects.requireNonNull(current.error(), "error"));
@@ -76,8 +77,9 @@ final class ReviewCommit {
                 .collect(Collectors.toMap(GlossaryEntry::id, Function.identity())));
         final Tally tally = Tally.empty();
         final Result<Boolean> applied = applyAll(glossary, byId, verdicts, suggestions, tally)
-                .flatMap(done ->
-                        GivenNames.seedHeld(glossary, projectId, sourceLanguage).map(seeded -> done));
+                .flatMap(done -> GivenNames.seedHeld(glossary, projectId, sourceLanguage)
+                        .flatMap(seeded -> PronounGender.seedHeld(glossary, projectId, bookTexts, sourceLanguage))
+                        .map(seeded -> done));
         if (applied.isErr()) {
             return Result.err(Objects.requireNonNull(applied.error(), "error"));
         }

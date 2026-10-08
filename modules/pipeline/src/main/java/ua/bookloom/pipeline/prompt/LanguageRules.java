@@ -337,7 +337,7 @@ public final class LanguageRules implements LanguageSupport {
     }
 
     // The whitespace-separated words of a language file's key, as written; empty when the language lacks the key.
-    private List<String> wordsOf(final String tag, final String key) {
+    List<String> wordsOf(final String tag, final String key) {
         final String value = targetValue(Objects.requireNonNull(tag, "tag"), key);
         return value == null || value.isBlank() ? List.of() : List.of(value.split("\\s+"));
     }

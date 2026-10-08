@@ -28,6 +28,8 @@ import ua.bookloom.api.project.Narrator;
  * @param narrator the Book Brief's narrator, which the target language's gender check holds the text against
  * @param glossaryPairs the unlocked glossary renderings of the chunk as {@code term → target} lines, which the vocative
  *     check holds the target to
+ * @param characters the chunk's character sheet, one {@code name — gender} line each, which the target language's
+ *     character-agreement check reads with the glossary pairs
  */
 public record SoftCheckInput(
         String sourceDisplayText,
@@ -41,7 +43,38 @@ public record SoftCheckInput(
         List<String> glossaryTerms,
         List<LockedRendering> lockedRenderings,
         Narrator narrator,
-        List<String> glossaryPairs) {
+        List<String> glossaryPairs,
+        List<String> characters) {
+
+    /** An input that names no character sheet, so no character-agreement check applies. */
+    public SoftCheckInput(
+            final String sourceDisplayText,
+            final String targetDisplayText,
+            final String targetWithRenderings,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final ForeignPassagePolicy foreignPassagePolicy,
+            final NamePolicy namePolicy,
+            @Nullable final String declaredLanguage,
+            final List<String> glossaryTerms,
+            final List<LockedRendering> lockedRenderings,
+            final Narrator narrator,
+            final List<String> glossaryPairs) {
+        this(
+                sourceDisplayText,
+                targetDisplayText,
+                targetWithRenderings,
+                sourceLanguage,
+                targetLanguage,
+                foreignPassagePolicy,
+                namePolicy,
+                declaredLanguage,
+                glossaryTerms,
+                lockedRenderings,
+                narrator,
+                glossaryPairs,
+                List.of());
+    }
 
     /**
      * Validates the invariants a caller is entitled to assume and defensively copies the two list components.
@@ -57,6 +90,8 @@ public record SoftCheckInput(
         Objects.requireNonNull(lockedRenderings, "lockedRenderings");
         Objects.requireNonNull(narrator, "narrator");
         Objects.requireNonNull(glossaryPairs, "glossaryPairs");
+        Objects.requireNonNull(characters, "characters");
+        characters = List.copyOf(characters);
         glossaryPairs = List.copyOf(glossaryPairs);
         glossaryTerms = List.copyOf(glossaryTerms);
         lockedRenderings = List.copyOf(lockedRenderings);

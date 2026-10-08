@@ -199,7 +199,7 @@ class TranslationJobSummaryTest {
                 .answer(Result.err(AppError.of(ErrorCode.unreachable, "Offline", "The model is unreachable.")));
         report(job(project, firstModel).run());
 
-        report(job(project, replies(numberedReplies(16))).run());
+        report(job(project, replies(numberedReplies(11, 26))).run());
 
         assertThat(latestSummary(project)).hasValueSatisfying(summary -> {
             assertThat(summary.version()).isEqualTo(2);
@@ -215,7 +215,12 @@ class TranslationJobSummaryTest {
     }
 
     private static String[] numberedReplies(final int count) {
-        return IntStream.rangeClosed(1, count)
+        return numberedReplies(1, count);
+    }
+
+    // The reply to line N carries N, since a changed number is a finding of its own.
+    private static String[] numberedReplies(final int first, final int last) {
+        return IntStream.rangeClosed(first, last)
                 .mapToObj(line -> "Рядок " + line + ".")
                 .toArray(String[]::new);
     }

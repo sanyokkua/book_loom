@@ -56,7 +56,7 @@ public final class ContextPackageAssembler {
         Objects.requireNonNull(inputs, "inputs");
         final DynamicFit fit = DynamicFit.of(
                 InjectedTerms.select(List.of(segment), mask, inputs.glossary()),
-                InjectedCharacters.select(List.of(segment), inputs.glossary()),
+                InjectedCharacters.select(List.of(segment), inputs.glossary(), inputs.sourceLanguage()),
                 InjectedLexicon.select(List.of(segment), inputs.lexicon(), inputs.glossary(), inputs.lexiconFilter()),
                 memoryHits(memory),
                 precedingTexts(inputs),

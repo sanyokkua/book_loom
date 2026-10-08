@@ -30,9 +30,12 @@ import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.revision.DeferralRegister;
 
@@ -137,9 +140,10 @@ public final class GlossaryServiceImpl implements GlossaryService {
         }
         log.info("Glossary scan started project={}", projectId);
         final String language = sourceLanguage(projectId, document);
-        final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(
-                        projectId, bodySegments(document), language, glossary)
+        final List<Segment> body = bodySegments(document);
+        final Result<List<GlossaryEntry>> added = FrequencyScan.newTerms(projectId, body, language, glossary)
                 .map(proposals -> GivenNames.seeded(proposals, language))
+                .map(proposals -> PronounGender.seeded(proposals, Tokens.visibleTexts(body), language))
                 .flatMap(this::addAll);
         log.info(
                 "Glossary scan finished project={} ok={} entriesAdded={}",
@@ -305,15 +309,26 @@ public final class GlossaryServiceImpl implements GlossaryService {
         return stored.map(entry -> Boolean.TRUE);
     }
 
+    // A row never turns a known value into an unknown one: a rescan's file lists a character as "term, unknown"
+    // before anybody has told it who she is, and importing it must not undo what the person or a review settled.
     private static GlossaryEntry replaced(final GlossaryEntry existing, final GlossaryCsv.Row row) {
+        final TermType type = isGeneric(row.type()) && !isGeneric(existing.type()) ? existing.type() : row.type();
+        final Gender gender = row.gender() == Gender.UNKNOWN ? existing.gender() : row.gender();
+        if (type != row.type() || gender != row.gender()) {
+            log.debug(
+                    "Glossary import keeps entry {} type={} gender={} over the row's {} / {}",
+                    existing.id(),
+                    type,
+                    gender,
+                    row.type(),
+                    row.gender());
+        }
         return new GlossaryEntry(
-                existing.id(),
-                existing.projectId(),
-                existing.term(),
-                row.target(),
-                row.type(),
-                row.gender(),
-                row.locked());
+                existing.id(), existing.projectId(), existing.term(), row.target(), type, gender, row.locked());
+    }
+
+    private static boolean isGeneric(final TermType type) {
+        return type == TermType.TERM || type == TermType.OTHER;
     }
 
     private Result<Path> writeExport(final String projectId, final Path destination) {

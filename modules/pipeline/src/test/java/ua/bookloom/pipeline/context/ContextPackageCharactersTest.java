@@ -27,7 +27,8 @@ class ContextPackageCharactersTest {
         final Chunk chunk = ContextFixtures.chunk(text);
         final Segment segment = chunk.segments().getFirst();
         final List<GlossaryEntry> glossary = List.of(LYRA, HALE, NOBODY, PLACE);
-        final ContextInputs inputs = new ContextInputs(ContextFixtures.STYLE, null, 0, glossary, List.of(), allowance);
+        final ContextInputs inputs = new ContextInputs(
+                ContextFixtures.STYLE, null, 0, glossary, List.of(), allowance, List.of(), LexiconFilter.NONE, "en");
         return ContextPackageAssembler.assemble(
                 chunk, segment, ContextFixtures.mask(segment, glossary), ContextFixtures.NO_MEMORY, inputs);
     }
@@ -38,6 +39,13 @@ class ContextPackageCharactersTest {
 
         assertThat(assembled.draftContext().characterLines()).containsExactly("Lyra — female");
         assertThat(assembled.snapshot().characters()).containsExactly("Lyra — female");
+    }
+
+    @Test
+    void assemble_pronounsFollowTheName_showTheEvidenceCompactly() {
+        final ContextPackage assembled = assemble("Lyra walked home. She sat down, and Hale watched her.", 1000);
+
+        assertThat(assembled.draftContext().characterLines()).containsExactly("Lyra — female (she ×1)", "Hale — male");
     }
 
     @Test

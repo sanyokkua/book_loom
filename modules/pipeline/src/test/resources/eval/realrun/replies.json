@@ -242,8 +242,8 @@
   "source": "Flint stopped at the door. She was tired.",
   "reply": "{\"target\":\"Флінт зупинився біля дверей. Вона була втомлена.\"}",
   "expect": "REFUSED",
-  "knownFailure": true,
-  "fixedBy": "B6",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Flint",
@@ -262,8 +262,8 @@
   "source": "Чизел налила чаю. Она устала.",
   "reply": "{\"target\":\"Чизел налив чаю. Вона втомилася.\"}",
   "expect": "REFUSED",
-  "knownFailure": true,
-  "fixedBy": "B6",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [
    {
     "term": "Чизел",
@@ -294,8 +294,8 @@
   "source": "The vault held 408 coins and 12 bars.",
   "reply": "{\"target\":\"У сховищі було 48 монет і 12 зливків.\"}",
   "expect": "REFUSED",
-  "knownFailure": true,
-  "fixedBy": "B6",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "rationale": "408 became 48; no production check compares numbers yet"
  },
@@ -306,8 +306,8 @@
   "source": "В хранилище лежало 408 монет и 12 слитков.",
   "reply": "{\"target\":\"У сховищі лежало 48 монет і 12 злитків.\"}",
   "expect": "REFUSED",
-  "knownFailure": true,
-  "fixedBy": "B6",
+  "knownFailure": false,
+  "fixedBy": null,
   "glossary": [],
   "rationale": "ru to uk: 408 became 48"
  }

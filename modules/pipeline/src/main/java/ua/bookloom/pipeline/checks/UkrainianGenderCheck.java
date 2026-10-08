@@ -33,10 +33,10 @@ final class UkrainianGenderCheck implements GenderCheck {
             "ось", "тепер", "швидше", "якось", "навіть", "зовсім", "аж", "все");
     private static final Set<String> NOT_PAST = Set.of(
             "мало", "чимало", "число", "село", "тіло", "діло", "світло", "скло", "зло", "весло", "крило", "дно", "лев",
-            "любов", "кров", "церков", "морков", "львів", "нів", "дарів");
+            "любов", "кров", "церков", "морков", "львів", "нів", "дарів", "знов");
 
     /** The gender a past-tense ending shows. */
-    private enum Ending {
+    enum Ending {
         MASCULINE(Gender.MALE),
         FEMININE(Gender.FEMALE),
         NEUTER(Gender.NEUTER),
@@ -61,8 +61,16 @@ final class UkrainianGenderCheck implements GenderCheck {
         return List.copyOf(findings);
     }
 
+    /** The first word after a position that is not a particle, in the same clause. */
+    record NextWord(String lower, int start, int end) {}
+
     private static Optional<CheckFinding> wordAfter(
             final String narration, final int from, final Gender narrator, final String target) {
+        return nextWord(narration, from).flatMap(word -> finding(word, narrator, target));
+    }
+
+    // Past a few particles and adverbs, never past punctuation: a word behind a comma has another subject.
+    static Optional<NextWord> nextWord(final String narration, final int from) {
         int position = from;
         for (int skipped = 0; skipped <= MAX_SKIPPED; skipped++) {
             final Matcher word = WORD.matcher(narration);
@@ -73,16 +81,20 @@ final class UkrainianGenderCheck implements GenderCheck {
             }
             final String lower = word.group().toLowerCase(Locale.ROOT);
             if (!SKIPPED.contains(lower)) {
-                return finding(lower, word, narrator, target);
+                return Optional.of(new NextWord(lower, word.start(), word.end()));
             }
             position = word.end();
         }
         return Optional.empty();
     }
 
-    private static Optional<CheckFinding> finding(
-            final String lower, final Matcher word, final Gender narrator, final String target) {
-        final Ending ending = endingOf(lower);
+    @Override
+    public List<CheckFinding> findCharacters(final String target, final List<CharacterName> characters) {
+        return UkrainianCharacterAgreement.find(target, characters);
+    }
+
+    private static Optional<CheckFinding> finding(final NextWord word, final Gender narrator, final String target) {
+        final Ending ending = endingOf(word.lower());
         if (ending == Ending.NONE || ending.gender == narrator) {
             return Optional.empty();
         }
@@ -100,7 +112,7 @@ final class UkrainianGenderCheck implements GenderCheck {
                 false));
     }
 
-    private static Ending endingOf(final String word) {
+    static Ending endingOf(final String word) {
         if (word.length() < MIN_VERB_LENGTH || NOT_PAST.contains(word)) {
             return Ending.NONE;
         }
