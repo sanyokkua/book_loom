@@ -69,7 +69,8 @@ public final class ReplaceRunDialog implements ReplaceRunPrompt {
         final DialogPane card = card(body);
         wire(card, body, stopped, onConfirm);
         shown = card;
-        modalHost.show(card, false);
+        // Must be answered: closing it unanswered, or while the run is stopping, would leave the import waiting.
+        modalHost.show(card, false, false);
     }
 
     @Override

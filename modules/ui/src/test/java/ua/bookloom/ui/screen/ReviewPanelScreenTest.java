@@ -3,11 +3,9 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TitledPane;
@@ -17,56 +15,12 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
-import ua.bookloom.api.pipeline.ReviewCounts;
-import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.ReviewFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
-import ua.bookloom.ui.state.FlaggedRow;
-import ua.bookloom.ui.state.ReviewRow;
 import ua.bookloom.ui.state.RunState;
 
 /** The review panel inside Translating, read from the real scene with the recording desk behind it. */
-class ReviewPanelScreenTest extends TranslatingScreenTestBase {
-
-    private static final String REVIEW = "translating-review-flagged";
-
-    private void script(final int flagged, final SegmentView... views) {
-        desk.willAnswerQueue(List.of(views));
-        for (final SegmentView view : views) {
-            desk.willAnswerSegment(view);
-        }
-        desk.willAnswerCounts(new ReviewCounts(100, 90, 0, flagged, 0, 0, 0, 0, 0));
-    }
-
-    private void publishFlagged(final int count) {
-        mirror().live()
-                .publishFlaggedQueue(java.util.stream.IntStream.range(0, count)
-                        .mapToObj(i -> new FlaggedRow("s-" + i, "ch7 · p" + i, List.of(), null))
-                        .toList());
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
-    private void openPanelWith(final RunState state, final int flagged, final SegmentView... views) throws Exception {
-        readyToStart();
-        script(flagged, views);
-        showTranslating();
-        publish(state);
-        publishFlagged(flagged);
-        awaitFx(() -> button(REVIEW).getText().equals("Review flagged (" + flagged + ")"));
-        onFx(() -> button(REVIEW).fire());
-        WaitForAsyncUtils.waitForFxEvents();
-    }
-
-    @SuppressWarnings("unchecked")
-    private ListView<ReviewRow> rowList() {
-        return (ListView<ReviewRow>) required("review-list");
-    }
-
-    private void selectFirstRow() throws TimeoutException {
-        awaitFx(() -> !rowList().getItems().isEmpty());
-        onFx(() -> rowList().getSelectionModel().select(0));
-        awaitFx(() -> !((TextArea) required("review-target")).getText().isEmpty());
-    }
+class ReviewPanelScreenTest extends ReviewPanelScreenTestBase {
 
     private List<String> rowTexts() {
         return rowList().lookupAll(".list-cell").stream()
@@ -166,13 +120,6 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
         assertThat(ua.bookloom.ui.TooltipProbe.tipText(chip)).startsWith("Shows accepted segments that a last check");
         assertThat(desk.calls()).contains("queue(" + projectIdOfOpenBook() + ", SUSPICIOUS)");
         assertThat(rowTexts()).containsExactly("ch2 · p04");
-    }
-
-    private String projectIdOfOpenBook() {
-        return ThemeTestSupport.onFx(() -> injector.getInstance(ua.bookloom.ui.state.CurrentProject.class)
-                .book()
-                .get()
-                .projectId());
     }
 
     // IF the source could be typed into, THEN a person could corrupt what the model is asked to translate.
@@ -338,6 +285,49 @@ class ReviewPanelScreenTest extends TranslatingScreenTestBase {
 
         assertThat(button("translating-resume").isDisabled()).isTrue();
         assertThat(button("shell-run-control").isDisabled()).isTrue();
+    }
+
+    // IF Revert threw the person's edit away unasked, THEN one stray click would lose their work; the desk is asked
+    // only after the confirming button.
+    @Test
+    void revert_segmentWithTheirEdit_asksFirstAndRevertsOnlyWhenConfirmed() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.withUserEdit());
+        selectFirstRow();
+        final String call = "revert(" + projectIdOfOpenBook() + ", ch07.xhtml:39)";
+
+        onFx(() -> button("review-revert").fire());
+        final boolean askedFirst = isShown("confirm-card");
+        final boolean revertedWhileAsking = desk.calls().contains(call);
+        onFx(() -> button("confirm-yes").fire());
+
+        assertThat(askedFirst).isTrue();
+        assertThat(revertedWhileAsking).isFalse();
+        awaitFx(() -> desk.calls().contains(call));
+    }
+
+    // IF Cancel in the question still reverted, THEN the question would be decoration.
+    @Test
+    void revert_segmentWithTheirEditAndCancelled_leavesTheEditAlone() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.withUserEdit());
+        selectFirstRow();
+
+        onFx(() -> button("review-revert").fire());
+        onFx(() -> button("confirm-cancel").fire());
+
+        assertThat(desk.calls()).doesNotContain("revert(" + projectIdOfOpenBook() + ", ch07.xhtml:39)");
+        assertThat(isShown("confirm-card")).isFalse();
+    }
+
+    // IF Revert asked when there is no edit, THEN it would nag about throwing away nothing.
+    @Test
+    void revert_segmentWithoutAnEdit_revertsAtOnce() throws Exception {
+        openPanelWith(RunState.PAUSED, 1, ReviewFixtures.nameIssue());
+        selectFirstRow();
+
+        onFx(() -> button("review-revert").fire());
+
+        assertThat(isShown("confirm-card")).isFalse();
+        awaitFx(() -> desk.calls().contains("revert(" + projectIdOfOpenBook() + ", ch07.xhtml:39)"));
     }
 
     @Test

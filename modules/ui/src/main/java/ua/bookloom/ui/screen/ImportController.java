@@ -23,6 +23,7 @@ import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.Tips;
+import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -30,6 +31,9 @@ import ua.bookloom.ui.state.ImportGuard;
 import ua.bookloom.ui.state.ImportState;
 import ua.bookloom.ui.state.ImportViewModel;
 import ua.bookloom.ui.state.LanguageWarning;
+import ua.bookloom.ui.state.RunState;
+import ua.bookloom.ui.state.StateMirror;
+import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The import screen: a drop zone and a file picker that both hand a file to the view model, and the area below them
@@ -48,6 +52,9 @@ public final class ImportController {
     private final Messages messages;
     private final Navigator navigator;
     private final LanguageNames names;
+    private final ConfirmDialog confirm;
+    private final WorkflowProgress progress;
+    private final StateMirror mirror;
     private final ChangeListener<ImportState> onState = (observed, was, now) -> show(now);
 
     @FXML
@@ -68,6 +75,9 @@ public final class ImportController {
      * @param messages the catalogue the built parts are worded from
      * @param navigator where Continue leads
      * @param names how a language tag is named on the card and in the warnings
+     * @param confirm the question asked before Cancel drops a project that holds work
+     * @param progress the steps already done, which tell whether the project holds work
+     * @param mirror the run's state, since a run that began is work too
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -77,7 +87,13 @@ public final class ImportController {
             final ImportGuard guard,
             final Messages messages,
             final Navigator navigator,
-            final LanguageNames names) {
+            final LanguageNames names,
+            final ConfirmDialog confirm,
+            final WorkflowProgress progress,
+            final StateMirror mirror) {
+        this.confirm = Objects.requireNonNull(confirm, "confirm");
+        this.progress = Objects.requireNonNull(progress, "progress");
+        this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.guard = Objects.requireNonNull(guard, "guard");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -234,8 +250,14 @@ public final class ImportController {
     }
 
     private void onCancel() {
-        log.debug("cancel pressed, the opened book is released");
-        viewModel.cancel();
+        final boolean holdsWork = mirror.runState().get() != RunState.IDLE
+                || progress.done().stream().anyMatch(step -> step != ViewNames.IMPORT);
+        log.debug("cancel pressed, the project holds work: {}", holdsWork);
+        if (holdsWork) {
+            confirm.ask(ConfirmDialog.Question.DISCARD_PROJECT, viewModel::cancel);
+        } else {
+            viewModel.cancel();
+        }
     }
 
     private void onContinue() {

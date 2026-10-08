@@ -127,6 +127,38 @@ public enum MessageKey {
     BUSY_CANCELLING_TIP("busy.cancelling.tip"),
     /** Busy card: shown instead of a Cancel button for work that cannot be stopped. */
     BUSY_NOT_CANCELLABLE("busy.notCancellable"),
+    /** Title of the question asked before the run is stopped. */
+    CONFIRM_STOP_TITLE("confirm.stop.title"),
+    /** Body of the stop-the-run question. */
+    CONFIRM_STOP_TEXT("confirm.stop.text"),
+    /** Confirming button of the stop-the-run question. */
+    CONFIRM_STOP_YES("confirm.stop.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_STOP_YES}. */
+    CONFIRM_STOP_YES_TIP("confirm.stop.yes.tip"),
+    /** Title of the question asked before the person's edit is discarded. */
+    CONFIRM_REVERT_TITLE("confirm.revert.title"),
+    /** Body of the discard-your-edit question. */
+    CONFIRM_REVERT_TEXT("confirm.revert.text"),
+    /** Confirming button of the discard-your-edit question. */
+    CONFIRM_REVERT_YES("confirm.revert.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_REVERT_YES}. */
+    CONFIRM_REVERT_YES_TIP("confirm.revert.yes.tip"),
+    /** Title of the question asked before a project with progress is discarded. */
+    CONFIRM_IMPORT_TITLE("confirm.import.title"),
+    /** Body of the discard-this-project question. */
+    CONFIRM_IMPORT_TEXT("confirm.import.text"),
+    /** Confirming button of the discard-this-project question. */
+    CONFIRM_IMPORT_YES("confirm.import.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_IMPORT_YES}. */
+    CONFIRM_IMPORT_YES_TIP("confirm.import.yes.tip"),
+    /** Title of the question asked before the window closes while work runs. */
+    CONFIRM_QUIT_TITLE("confirm.quit.title"),
+    /** Body of the quit-while-working question. */
+    CONFIRM_QUIT_TEXT("confirm.quit.text"),
+    /** Confirming button of the quit-while-working question. */
+    CONFIRM_QUIT_YES("confirm.quit.yes"),
+    /** Hover explanation of the control labelled by {@link #CONFIRM_QUIT_YES}. */
+    CONFIRM_QUIT_YES_TIP("confirm.quit.yes.tip"),
     /** About dialog subtitle; argument 0 is the build version. */
     ABOUT_SUBTITLE("about.subtitle"),
     /** About dialog description of the product. */

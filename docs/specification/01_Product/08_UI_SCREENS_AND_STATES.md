@@ -386,6 +386,18 @@ FR-GLOSS-04. P6 reference: Add glossary term.
 temperature for this retry**. Control: `Dialog` with a `TextArea` note field. FR-REVIEW-A2. P6 reference: Retry with
 note.
 
+### dialog-confirm-irreversible {#dialog-confirm-irreversible}
+
+**Ships in this build.** A yes/no card (`#confirm-card`) asked before something that cannot be undone, in the modal host:
+**Stop the run** (from the Translating screen's Stop and the banner's Stop; decided segments are kept), **Discard your
+edit** (the review panel's Revert, only when the segment holds the person's own edit), **Discard this project** (Import's
+Cancel, only when the project holds work: a run began or a later step is done) and **Quit BookLoom** (closing the
+window while a run or any activity is under way; confirming stops the work and closes). The safe answer is
+the default: **Cancel** (`#confirm-cancel`) is the default button and takes the focus, Escape and a click outside do
+nothing but close the card, and only the confirming button (`#confirm-yes`, worded for the action and in the danger
+look) runs the action. Review's Skip discards nothing and asks nothing. A card whose answer something waits on (the
+replace-run question) is not closed by Escape. Control: `Dialog`. P6 reference: Confirm dialogs.
+
 ### dialog-confirm-delete {#dialog-confirm-delete}
 
 Confirm deleting a provider (or similar destructive action). Control: `Alert` (confirmation). P6 reference: Delete

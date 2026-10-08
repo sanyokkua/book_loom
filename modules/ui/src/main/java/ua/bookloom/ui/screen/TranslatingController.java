@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.dialog.NarratorDialog;
 import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
@@ -51,6 +52,7 @@ public final class TranslatingController {
     private final RunInterventions interventions;
     private final SectionMemory sections;
     private final NarratorDialog narratorDialog;
+    private final ConfirmDialog confirm;
     private final ChangeListener<RunState> onState = (observed, was, now) -> renderState(now);
     private final ChangeListener<@Nullable RunNotice> onNotice = (observed, was, now) -> renderNotice(now);
     private final ChangeListener<Number> onWaiting = (observed, was, now) -> renderWaiting(now.intValue());
@@ -78,6 +80,7 @@ public final class TranslatingController {
      * @param interventions what skips a stuck or failed segment and sends a stuck request again
      * @param sections the session's memory of which sections the person left open
      * @param narratorDialog the question asked before a start when the book is told in the first person
+     * @param confirm the question asked before the run is stopped
      */
     // The FXML loader assigns the labelled fields after construction, which NullAway cannot see.
     @SuppressWarnings("NullAway.Init")
@@ -94,7 +97,8 @@ public final class TranslatingController {
             final ReviewPauseFollower pauses,
             final RunInterventions interventions,
             final SectionMemory sections,
-            final NarratorDialog narratorDialog) {
+            final NarratorDialog narratorDialog,
+            final ConfirmDialog confirm) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.mirror = Objects.requireNonNull(mirror, "mirror");
         this.messages = Objects.requireNonNull(messages, "messages");
@@ -107,11 +111,18 @@ public final class TranslatingController {
         this.interventions = Objects.requireNonNull(interventions, "interventions");
         this.sections = Objects.requireNonNull(sections, "sections");
         this.narratorDialog = Objects.requireNonNull(narratorDialog, "narratorDialog");
+        this.confirm = Objects.requireNonNull(confirm, "confirm");
     }
 
     private TranslatingView.Exits exits() {
         return new TranslatingView.Exits(
-                navigator, this::openSettings, review, retryDialog, pauses, interventions, sections, narratorDialog);
+                navigator,
+                this::openSettings,
+                review,
+                new TranslatingDialogs(retryDialog, narratorDialog, confirm),
+                pauses,
+                interventions,
+                sections);
     }
 
     @FXML

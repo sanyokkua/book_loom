@@ -1931,6 +1931,10 @@ ${dlgCard('provider', 'Add / edit provider', 'Endpoint, auth, and the Test trio'
 ${dlgCard('addterm', 'Add glossary term', 'Source → target + type + lock', 'brand', '＋')}
 ${dlgCard('retry', 'Retry with note', 'Re-translate a chunk with guidance', 'info', '↻')}
 ${dlgCard('confirmDelete', 'Confirm delete', 'Destructive action confirmation', 'err', '🗑')}
+${dlgCard('confirmStop', 'Stop the run?', 'Cancel is the default; decided segments are kept', 'warn', '⏹')}
+${dlgCard('confirmRevert', 'Discard your edit?', 'Review Revert, only when an edit exists', 'warn', '⚠')}
+${dlgCard('confirmProject', 'Discard this project?', 'Import Cancel, only when the project holds work', 'warn', '⚠')}
+${dlgCard('confirmQuit', 'Quit BookLoom?', 'Closing the window while work runs', 'warn', '⚠')}
 ${dlgCard('quit', 'Unsaved changes', 'Save / discard / cancel on quit', 'warn', '⚠')}
 ${dlgCard('err', 'Error with details', 'Typed error + expandable details', 'err', '⛔')}
 ${dlgCard('busy', 'Working (busy card)', 'Progress, elapsed, ETA, Cancel — blocks the window', 'brand', '◔')}
@@ -2150,6 +2154,18 @@ ${dlgCard('about', 'About', 'Version + licenses', 'info', 'ⓘ')}
    <div class="kv"><span class="k">Requests</span><span>3 of 12</span></div>
    <div class="hint">The window waits for this. It appears only after 0.4 s, Escape does not close it, and it goes when the work ends. Work that cannot be stopped shows no Cancel and says so.</div></div>
    <div class="dialog-f"><button class="btn btn-danger-outline" onclick="closeDialog()">Cancel</button></div></div>`,
+        confirmStop: `<div class="dialog"><div class="dialog-h"><div class="di warn">⏹</div><div><h3>Stop the run?</h3></div></div>
+   <div class="dialog-b"><p style="margin:0">The segments decided so far are kept. Resume continues from the first pending segment.</p></div>
+   <div class="dialog-f"><button class="btn btn-secondary" onclick="closeDialog()">Cancel</button><button class="btn btn-danger-outline" onclick="closeDialog();toast('info','Stopping…','The run ends after the call in flight.')">Stop run</button></div></div>`,
+        confirmRevert: `<div class="dialog"><div class="dialog-h"><div class="di warn">⚠</div><div><h3>Discard your edit?</h3></div></div>
+   <div class="dialog-b"><p style="margin:0">Your edit of this segment is thrown away and the machine translation comes back. This cannot be undone.</p></div>
+   <div class="dialog-f"><button class="btn btn-secondary" onclick="closeDialog()">Cancel</button><button class="btn btn-danger-outline" onclick="closeDialog()">Discard edit</button></div></div>`,
+        confirmProject: `<div class="dialog"><div class="dialog-h"><div class="di warn">⚠</div><div><h3>Discard this project?</h3></div></div>
+   <div class="dialog-b"><p style="margin:0">Cancelling closes this book. The work done on it so far — the brief, the names and any translated segments — is dropped.</p></div>
+   <div class="dialog-f"><button class="btn btn-secondary" onclick="closeDialog()">Cancel</button><button class="btn btn-danger-outline" onclick="closeDialog()">Discard project</button></div></div>`,
+        confirmQuit: `<div class="dialog"><div class="dialog-h"><div class="di warn">⚠</div><div><h3>Quit BookLoom?</h3></div></div>
+   <div class="dialog-b"><p style="margin:0">Work is still running. Quitting stops it, and nothing survives a restart yet.</p></div>
+   <div class="dialog-f"><button class="btn btn-secondary" onclick="closeDialog()">Cancel</button><button class="btn btn-danger-outline" onclick="closeDialog()">Stop and quit</button></div></div>`,
         exported: `<div class="dialog"><div class="dialog-h"><div class="di ok">✓</div><div><h3>Export complete</h3></div></div>
    <div class="dialog-b"><p style="margin-top:0"><b>Frankenstein (UK).epub</b> was written and validated.</p>
    <div class="kv"><span class="k">Location</span><span class="mono" style="font-size:11.5px">~/Books/Translated/</span></div>

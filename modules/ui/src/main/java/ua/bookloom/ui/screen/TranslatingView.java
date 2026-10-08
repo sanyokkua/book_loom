@@ -27,8 +27,6 @@ import ua.bookloom.ui.control.LiveChunkPanel;
 import ua.bookloom.ui.control.StepFooter;
 import ua.bookloom.ui.control.TaggedLog;
 import ua.bookloom.ui.control.Tips;
-import ua.bookloom.ui.dialog.NarratorDialog;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.LanguageNames;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -133,11 +131,10 @@ final class TranslatingView {
             Navigator navigator,
             Runnable openSettings,
             ReviewViewModel review,
-            RetryWithNoteDialog retryDialog,
+            TranslatingDialogs dialogs,
             ReviewPauseFollower pauses,
             RunInterventions interventions,
-            SectionMemory sections,
-            NarratorDialog narratorDialog) {}
+            SectionMemory sections) {}
 
     static TranslatingDashboard build(
             final TranslatingViewModel viewModel,
@@ -163,7 +160,7 @@ final class TranslatingView {
         final ReviewPanel review = reviewPanel(exits, sourceName, targetName, messages, state);
         final VBox screen = new VBox(
                 SCREEN_SPACING,
-                head(banner, actions(viewModel, mirror, exits.review(), review, exits.narratorDialog(), messages)),
+                head(banner, actions(viewModel, mirror, exits.review(), review, exits.dialogs(), messages)),
                 review,
                 StateVisibility.shownIn(
                         TranslatingReadyCard.build(viewModel, mirror, current, messages), state, Set.of(RunState.IDLE)),
@@ -196,7 +193,7 @@ final class TranslatingView {
         final Button stay = action(STAY_PAUSED, messages, () -> {});
         final Button again = action(SEND_AGAIN, messages, interventions::sendAgain);
         final Button pause = action(PAUSE_STUCK, messages, viewModel::pause);
-        final Button stop = action(STOP_RUN, messages, viewModel::stop);
+        final Button stop = action(STOP_RUN, messages, () -> exits.dialogs().askToStop(viewModel));
         final HBox row = new HBox(ACTION_SPACING, retry, skip, again, settings, pause, stay, stop);
         row.setId("translating-banner-actions");
         row.setAlignment(Pos.CENTER_LEFT);
@@ -261,7 +258,7 @@ final class TranslatingView {
             final Messages messages,
             final ReadOnlyObjectProperty<RunState> state) {
         final ReviewPanel panel =
-                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.retryDialog(), exits.pauses());
+                new ReviewPanel(exits.review(), sourceName, targetName, messages, exits.dialogs(), exits.pauses());
         panel.visibleProperty()
                 .bind(Bindings.createBooleanBinding(
                         () -> panel.openProperty().get() && REVIEWABLE.contains(state.get()),
@@ -276,15 +273,15 @@ final class TranslatingView {
             final StateMirror mirror,
             final ReviewViewModel review,
             final ReviewPanel panel,
-            final NarratorDialog narratorDialog,
+            final TranslatingDialogs dialogs,
             final Messages messages) {
         final ReadOnlyObjectProperty<Controls> controls = viewModel.controls();
         final HBox row = new HBox(
                 ACTION_SPACING,
-                control(START, () -> narratorDialog.startAfterAsking(viewModel::start), controls, messages),
+                control(START, () -> dialogs.narrator().startAfterAsking(viewModel::start), controls, messages),
                 control(PAUSE, viewModel::pause, controls, messages),
                 retryNowWhileRecovering(control(RESUME, viewModel::resume, controls, messages), mirror, messages),
-                control(STOP, viewModel::stop, controls, messages),
+                control(STOP, () -> dialogs.askToStop(viewModel), controls, messages),
                 reviewFlagged(mirror, review, panel, messages));
         row.setAlignment(Pos.CENTER_LEFT);
         return new VBox(CARD_SPACING, row, heldNote(viewModel, messages));

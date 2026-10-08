@@ -3,6 +3,7 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.state.ImportState;
+import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The import screen's refusing, blocked, in-progress and language-warning states and its Continue control, read from the real
@@ -262,6 +264,43 @@ class ImportScreenStatesTest extends ImportScreenTestBase {
         assertThat(state()).isEqualTo(new ImportState.Idle());
         assertThat(isShown("import-card")).isFalse();
         assertThat(isShown("import-dropzone")).isTrue();
+    }
+
+    // IF Cancel dropped a project that holds work without asking, THEN one click would lose the brief, the names and
+    // the translated segments; the project is closed only after the confirming button.
+    @Test
+    void cancel_projectWithProgress_asksFirstAndReleasesOnlyWhenConfirmed() throws TimeoutException {
+        final Path source = dir.resolve("Frankenstein.epub");
+        projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
+        openImport();
+        openBook(source);
+        onFx(() -> injector.getInstance(WorkflowProgress.class).markDone(ViewNames.BOOK_BRIEF));
+
+        onFx(() -> button("import-cancel").fire());
+        final boolean asked = isShown("confirm-card");
+        final List<String> closedWhileAsking = List.copyOf(projects.closedProjects());
+        onFx(() -> button("confirm-yes").fire());
+        awaitFx(() -> projects.closedProjects().size() == 1);
+
+        assertThat(asked).isTrue();
+        assertThat(closedWhileAsking).isEmpty();
+        assertThat(state()).isEqualTo(new ImportState.Idle());
+    }
+
+    // IF "No" still released the book, THEN the question would not protect anything.
+    @Test
+    void cancel_projectWithProgressAndAnsweredNo_keepsTheBookOpen() throws TimeoutException {
+        final Path source = dir.resolve("Frankenstein.epub");
+        projects.on(source, Result.ok(BookFixtures.frankensteinInspected()));
+        openImport();
+        openBook(source);
+        onFx(() -> injector.getInstance(WorkflowProgress.class).markDone(ViewNames.BOOK_BRIEF));
+
+        onFx(() -> button("import-cancel").fire());
+        onFx(() -> button("confirm-cancel").fire());
+
+        assertThat(projects.closedProjects()).isEmpty();
+        assertThat(isShown("import-card")).isTrue();
     }
 
     private void assertOnlyChooseAnotherFooter() {

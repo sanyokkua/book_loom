@@ -12,6 +12,7 @@ import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.ui.AppShellView;
+import ua.bookloom.ui.ExitGuard;
 import ua.bookloom.ui.Navigator;
 import ua.bookloom.ui.SessionInfo;
 import ua.bookloom.ui.UiModule;
@@ -77,6 +78,13 @@ public final class BookLoomApplication extends Application {
 
         stage.setTitle(TITLE);
         shell.applyWindowLimits(stage);
+        // Closing with work under way asks first; stage.close() is not a close request, so confirming does not loop.
+        final ExitGuard exitGuard = injector().getInstance(ExitGuard.class);
+        stage.setOnCloseRequest(event -> {
+            if (!exitGuard.requestClose(stage::close)) {
+                event.consume();
+            }
+        });
         stage.setScene(scene);
         stage.show();
         log.info(

@@ -89,4 +89,17 @@ class ModalHostTest extends ShellTestBase {
         assertThat(scene.getRoot().lookup("#answer-only-card")).isNull();
         assertThat(scene.getRoot().lookup("#second-card")).isNotNull();
     }
+
+    // IF Escape closed a card that must be answered, THEN what waits on the answer would wait for ever.
+    @Test
+    void show_cardThatMustBeAnswered_ignoresEscape() {
+        onFx(() -> host().show(answerOnlyCard(), false, false));
+
+        onFx(() -> scene.getRoot()
+                .lookup("#answer-only-card")
+                .fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false)));
+
+        assertThat(scene.getRoot().lookup("#answer-only-card")).isNotNull();
+        assertThat(host().isShowing()).isTrue();
+    }
 }

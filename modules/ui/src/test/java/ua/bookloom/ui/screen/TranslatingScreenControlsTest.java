@@ -2,12 +2,16 @@ package ua.bookloom.ui.screen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ModelSelection;
 import ua.bookloom.api.pipeline.PauseReason;
 import ua.bookloom.api.pipeline.Paused;
 import ua.bookloom.ui.ProgressFixtures;
+import ua.bookloom.ui.TooltipProbe;
 
 /**
  * The dashboard's buttons wired to the run: each one fired on the screen reaches the recording job the scripted engine
@@ -63,17 +67,62 @@ class TranslatingScreenControlsTest extends TranslatingScreenTestBase {
         assertThat(job.calls()).contains("resume");
     }
 
-    // IF the stop control were not wired, THEN a run could not be ended from the screen.
+    // IF the stop control were not wired, THEN a run could not be ended from the screen; it asks first, and only the
+    // confirming button reaches the job.
     @Test
-    void stopControl_running_firingItAsksTheJobToCancelAndTheReturnedRunReadsAsStopped() throws Exception {
+    void stopControl_runningAndConfirmed_asksTheJobToCancelAndTheReturnedRunReadsAsStopped() throws Exception {
         startRun();
 
         onFx(() -> button("translating-stop").fire());
+        final List<String> whileAsking = List.copyOf(job.calls());
+        onFx(() -> button("confirm-yes").fire());
 
+        assertThat(whileAsking).doesNotContain("cancel");
         assertThat(job.calls()).contains("cancel");
         awaitBanner("Stopping");
         job.finish(Result.ok(cancelledReport()));
         awaitBanner("Run stopped");
         assertThat(enabledControls()).containsExactly("translating-resume");
+    }
+
+    // IF Cancel stopped the run anyway, THEN a stray press would end hours of work.
+    @Test
+    void stopQuestion_cancelPressed_leavesTheRunTranslating() throws Exception {
+        startRun();
+        onFx(() -> button("translating-stop").fire());
+
+        onFx(() -> button("confirm-cancel").fire());
+
+        assertThat(job.calls()).doesNotContain("cancel");
+        assertThat(scene.getRoot().lookup("#confirm-card")).isNull();
+        assertThat(labelText("translating-banner-title")).isEqualTo("Translating");
+    }
+
+    // IF Escape stopped the run, THEN backing out of the question by reflex would end it.
+    @Test
+    void stopQuestion_escapePressed_closesItAndLeavesTheRunTranslating() throws Exception {
+        startRun();
+        onFx(() -> button("translating-stop").fire());
+
+        onFx(() -> scene.getRoot()
+                .lookup("#confirm-card")
+                .fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE, false, false, false, false)));
+
+        assertThat(job.calls()).doesNotContain("cancel");
+        assertThat(scene.getRoot().lookup("#confirm-card")).isNull();
+        assertThat(labelText("translating-banner-title")).isEqualTo("Translating");
+    }
+
+    // IF Enter confirmed the stop, THEN the dangerous answer would be the easy one.
+    @Test
+    void stopQuestion_asked_makesCancelTheDefaultButtonWithTooltipsOnBoth() throws Exception {
+        startRun();
+
+        onFx(() -> button("translating-stop").fire());
+
+        assertThat(button("confirm-cancel").isDefaultButton()).isTrue();
+        assertThat(button("confirm-yes").isDefaultButton()).isFalse();
+        assertThat(TooltipProbe.tipText(button("confirm-yes"))).isNotBlank();
+        assertThat(TooltipProbe.tipText(button("confirm-cancel"))).isNotBlank();
     }
 }

@@ -18,7 +18,7 @@ import ua.bookloom.ui.i18n.Messages;
 
 /**
  * The question asked before leaving a screen whose model work would otherwise be left behind: stop it and leave, or
- * leave and let it run on. Escape, which the host guarantees for every card, stays on the screen and changes nothing.
+ * leave and let it run on. Escape closes the card, stays on the screen and changes nothing.
  */
 @Slf4j
 @Singleton

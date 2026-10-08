@@ -146,6 +146,27 @@ public final class ReviewFixtures {
                 "Він пішов.");
     }
 
+    /** A flagged segment holding the person's own edit beside the machine target. */
+    public static SegmentView withUserEdit() {
+        final SegmentView base = nameIssue();
+        return new SegmentView(
+                base.segmentId(),
+                base.locator(),
+                base.kind(),
+                base.status(),
+                base.maskedSource(),
+                base.displaySource(),
+                base.maskedMachineTarget(),
+                "Гейл відчинив старі двері.",
+                "Гейл відчинив ⟦g0⟧старі⟦g1⟧ двері.",
+                base.findings(),
+                base.judgeScore(),
+                base.path(),
+                base.reviewed(),
+                null,
+                null);
+    }
+
     public static SegmentView accepted() {
         return view("ch02.xhtml:4", "ch2 · p04", SegmentStatus.ACCEPTED, List.of(), null, null);
     }

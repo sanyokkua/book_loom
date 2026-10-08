@@ -28,7 +28,7 @@ import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.ui.control.ComparePanes;
 import ua.bookloom.ui.control.ContextSection;
 import ua.bookloom.ui.control.Tips;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
+import ua.bookloom.ui.dialog.ConfirmDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ContextLine;
@@ -54,7 +54,7 @@ final class ReviewComparePane extends VBox {
 
     private final ReviewViewModel viewModel;
     private final Messages messages;
-    private final RetryWithNoteDialog retryDialog;
+    private final TranslatingDialogs dialogs;
     private final ObservableBooleanValue acceptContinues;
     private final NumberFormat score;
     private final ComparePanes panes;
@@ -76,11 +76,11 @@ final class ReviewComparePane extends VBox {
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
             final Messages messages,
-            final RetryWithNoteDialog retryDialog,
+            final TranslatingDialogs dialogs,
             final ObservableBooleanValue acceptContinues) {
         super(SPACING);
         this.acceptContinues = Objects.requireNonNull(acceptContinues, "acceptContinues");
-        this.retryDialog = Objects.requireNonNull(retryDialog, "retryDialog");
+        this.dialogs = Objects.requireNonNull(dialogs, "dialogs");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.context = new ContextSection("review-context", messages);
@@ -196,7 +196,7 @@ final class ReviewComparePane extends VBox {
         final SegmentView view = viewModel.selected().get();
         if (view != null) {
             log.debug("asking for a retry note on segment {}", view.segmentId());
-            retryDialog.ask(view.locator(), choice -> viewModel.retry(choice.note(), choice.lowerTemperature()));
+            dialogs.retry().ask(view.locator(), choice -> viewModel.retry(choice.note(), choice.lowerTemperature()));
         }
     }
 
@@ -239,13 +239,24 @@ final class ReviewComparePane extends VBox {
                         MessageKey.REVIEW_REVERT,
                         MessageKey.REVIEW_REVERT_TIP,
                         "btn-secondary",
-                        viewModel::revert),
+                        this::askToRevert),
                 available(
                         "review-skip",
                         MessageKey.REVIEW_SKIP,
                         MessageKey.REVIEW_SKIP_TIP,
                         "btn-ghost",
                         viewModel::skip));
+    }
+
+    // Reverting throws the person's own edit away, so it is asked first; with no edit held there is nothing to lose.
+    private void askToRevert() {
+        final SegmentView view = viewModel.selected().get();
+        if (view != null && view.userTarget() != null) {
+            log.debug("revert pressed on segment {} with an edit: asking first", view.segmentId());
+            dialogs.confirm().ask(ConfirmDialog.Question.REVERT_EDIT, viewModel::revert);
+        } else {
+            viewModel.revert();
+        }
     }
 
     private List<Button> retries() {

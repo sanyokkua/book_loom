@@ -18,7 +18,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.ui.control.Tips;
-import ua.bookloom.ui.dialog.RetryWithNoteDialog;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.ReviewPauseFollower;
@@ -48,7 +47,7 @@ final class ReviewPanel extends VBox {
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
             final Messages messages,
-            final RetryWithNoteDialog retryDialog,
+            final TranslatingDialogs dialogs,
             final ReviewPauseFollower pauses) {
         super(SPACING);
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
@@ -69,7 +68,7 @@ final class ReviewPanel extends VBox {
         list.setPrefWidth(LIST_WIDTH);
         list.setMinWidth(LIST_WIDTH);
         list.setMaxWidth(LIST_WIDTH);
-        final HBox body = new HBox(SPACING, list, right(sourceName, targetName, messages, retryDialog));
+        final HBox body = new HBox(SPACING, list, right(sourceName, targetName, messages, dialogs));
         setId("review-panel");
         getStyleClass().add("card");
         getChildren().addAll(header, body);
@@ -90,9 +89,9 @@ final class ReviewPanel extends VBox {
             final ObservableValue<String> sourceName,
             final ObservableValue<String> targetName,
             final Messages messages,
-            final RetryWithNoteDialog retryDialog) {
-        final ReviewComparePane compare = new ReviewComparePane(
-                viewModel, sourceName, targetName, messages, retryDialog, pauses.acceptContinues());
+            final TranslatingDialogs dialogs) {
+        final ReviewComparePane compare =
+                new ReviewComparePane(viewModel, sourceName, targetName, messages, dialogs, pauses.acceptContinues());
         final Label empty = new Label(messages.get(MessageKey.REVIEW_EMPTY));
         empty.setId("review-empty-text");
         empty.setWrapText(true);

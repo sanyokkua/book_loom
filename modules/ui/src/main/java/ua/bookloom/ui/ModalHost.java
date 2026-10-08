@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
  * The shell's overlay for one dialog at a time: a dimming layer with the dialog card centred over it.
  *
  * <p>The scrim and the card are siblings rather than parent and child so a click inside the card can never be
- * mistaken for a click on the dimmed area. While a card is shown a scene-level key filter keeps Escape working and
+ * mistaken for a click on the dimmed area. While a card is shown a scene-level key filter keeps Escape working (for a card that may be closed) and
  * keeps Tab inside the card, wherever focus was when it opened, and the filter is removed again on hide so nothing
  * outlives the dialog. Focus goes back to whatever owned it before. Everything is FX-Application-Thread only, like
  * the scene graph it edits.
@@ -36,6 +36,7 @@ public final class ModalHost {
     private final Region scrim = new Region();
     private final EventHandler<KeyEvent> keyFilter = this::filterKey;
     private boolean dismissOnOutsideClick;
+    private boolean dismissOnEscape;
     private @Nullable Node card;
     private @Nullable Scene filteredScene;
     private @Nullable Node previousFocus;
@@ -63,19 +64,36 @@ public final class ModalHost {
     }
 
     /**
-     * Shows a dialog card over the dimmed window, replacing any card already shown.
+     * Shows a dialog card over the dimmed window, replacing any card already shown. Escape closes the card.
      *
      * @param dialog the dialog's root node; the first focusable control in it takes keyboard focus
      * @param dismissOnOutsideClick {@code true} if a click on the dimmed area closes the dialog, {@code false} for a
-     *     dialog that must be answered through its own controls; Escape closes either way
+     *     dialog that must be answered through its own controls
      */
     public void show(final Node dialog, final boolean dismissOnOutsideClick) {
+        show(dialog, dismissOnOutsideClick, true);
+    }
+
+    /**
+     * Shows a dialog card over the dimmed window, replacing any card already shown.
+     *
+     * @param dialog the dialog's root node; the first focusable control in it takes keyboard focus
+     * @param dismissOnOutsideClick {@code true} if a click on the dimmed area closes the dialog
+     * @param dismissOnEscape {@code true} if Escape closes the dialog, {@code false} for a card that must be answered
+     *     through its own controls, because closing it unanswered would leave what waits on the answer waiting
+     */
+    public void show(final Node dialog, final boolean dismissOnOutsideClick, final boolean dismissOnEscape) {
         Objects.requireNonNull(dialog, "dialog");
-        log.debug("showing dialog card {}, dismissOnOutsideClick={}", dialog.getId(), dismissOnOutsideClick);
+        log.debug(
+                "showing dialog card {}, dismissOnOutsideClick={}, dismissOnEscape={}",
+                dialog.getId(),
+                dismissOnOutsideClick,
+                dismissOnEscape);
         if (card != null) {
             release();
         }
         this.dismissOnOutsideClick = dismissOnOutsideClick;
+        this.dismissOnEscape = dismissOnEscape;
         card = dialog;
         host.getChildren().setAll(scrim, dialog);
         host.setVisible(true);
@@ -136,9 +154,13 @@ public final class ModalHost {
 
     private void filterKey(final KeyEvent event) {
         if (event.getCode() == KeyCode.ESCAPE) {
-            log.debug("dialog dismissed by Escape");
             event.consume();
-            hide();
+            if (dismissOnEscape) {
+                log.debug("dialog dismissed by Escape");
+                hide();
+            } else {
+                log.debug("Escape ignored: this dialog must be answered through its own controls");
+            }
         } else if (event.getCode() == KeyCode.TAB) {
             event.consume();
             moveFocus(event.isShiftDown());
