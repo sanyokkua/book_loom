@@ -184,9 +184,9 @@ class TranslationJobSummaryTest {
         report(translation.run());
 
         assertThat(memoryEvents(events)).isEmpty();
-        assertThat(events.subList(events.size() - 2, events.size()))
+        assertThat(events.subList(events.size() - 3, events.size()))
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly("SegmentDecided", "Finished");
+                .containsExactly("SegmentDecided", "CallSnapshotUpdated", "Finished");
     }
 
     // IF a job resumed on a project with ten accepted segments counted its twenty from zero, THEN the version the

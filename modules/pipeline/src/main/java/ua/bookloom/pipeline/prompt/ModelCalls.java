@@ -7,6 +7,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 
 /**
  * The one seam every model call of a run goes through, so a call is announced, timed and redone in one place instead
@@ -37,6 +38,35 @@ public interface ModelCalls {
     default Result<ChatResponse> callAbout(
             final CallKind kind, final List<String> segmentIds, final ChatRequest request) {
         return call(kind, segmentIds.size() == 1 ? segmentIds.getFirst() : null, request);
+    }
+
+    /**
+     * Sends one model call a person can inspect: a seam that shows calls announces it with the segments it is about,
+     * its prompt part by part and its reply. A seam that shows nothing sends it as {@link #callAbout(CallKind, List,
+     * ChatRequest)} does.
+     *
+     * @param kind which call this is
+     * @param segmentIds the segments the call is about, in document order; never null, possibly empty
+     * @param request the request to send
+     * @param descriptor the non-null description built from the same values as the request
+     * @return the model's reply, or the failure the call ended with
+     */
+    default Result<ChatResponse> callAbout(
+            final CallKind kind,
+            final List<String> segmentIds,
+            final ChatRequest request,
+            final CallDescriptor descriptor) {
+        return callAbout(kind, segmentIds, request);
+    }
+
+    /**
+     * Notes what became of a segment a shown call was about, so the call's snapshot says it. A seam that shows nothing
+     * ignores it.
+     *
+     * @param note the non-null outcome
+     */
+    default void noted(final SegmentOutcomeNote note) {
+        // Nothing shows calls.
     }
 
     /**

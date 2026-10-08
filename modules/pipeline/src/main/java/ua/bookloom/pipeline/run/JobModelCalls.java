@@ -4,11 +4,13 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.CallAttempt;
@@ -23,8 +25,11 @@ import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.ModelCallStarted;
 import ua.bookloom.api.pipeline.RequestSummary;
+import ua.bookloom.api.pipeline.SegmentOutcomeNote;
+import ua.bookloom.api.project.SegmentLocator;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.context.ContextBudget;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
@@ -51,6 +56,7 @@ public final class JobModelCalls implements ModelCalls {
     private final Clock clock;
     private final String targetLanguage;
     private final int window;
+    private final CallSnapshots snapshots;
 
     /**
      * Creates a seam for calls made against the default window, such as a glossary scan before any run.
@@ -85,6 +91,26 @@ public final class JobModelCalls implements ModelCalls {
             final Clock clock,
             final String targetLanguage,
             final int window) {
+        this(guard, announce, clock, targetLanguage, window, Map.of());
+    }
+
+    /**
+     * Creates the run's model-call seam, which names a shown call's segments by their locators.
+     *
+     * @param guard see the five-argument constructor
+     * @param announce see the five-argument constructor
+     * @param clock see the five-argument constructor
+     * @param targetLanguage see the five-argument constructor
+     * @param window see the five-argument constructor
+     * @param locators the non-null locator of every segment of the opened book; a segment it lacks is named by its id
+     */
+    public JobModelCalls(
+            final Function<Runnable, ChatModel> guard,
+            final Consumer<JobEvent> announce,
+            final Clock clock,
+            final String targetLanguage,
+            final int window,
+            final Map<String, SegmentLocator> locators) {
         this.guard = Objects.requireNonNull(guard, "guard");
         this.announce = Objects.requireNonNull(announce, "announce");
         this.clock = Objects.requireNonNull(clock, "clock");
@@ -93,6 +119,7 @@ public final class JobModelCalls implements ModelCalls {
             throw new IllegalArgumentException("window must be positive: " + window);
         }
         this.window = window;
+        this.snapshots = new CallSnapshots(announce, locators);
     }
 
     @Override
@@ -102,6 +129,28 @@ public final class JobModelCalls implements ModelCalls {
 
     @Override
     public Result<ChatResponse> callAbout(final CallKind kind, final List<String> segmentIds, final ChatRequest asked) {
+        return send(kind, segmentIds, asked, null);
+    }
+
+    @Override
+    public Result<ChatResponse> callAbout(
+            final CallKind kind,
+            final List<String> segmentIds,
+            final ChatRequest asked,
+            final CallDescriptor descriptor) {
+        return send(kind, segmentIds, asked, Objects.requireNonNull(descriptor, "descriptor"));
+    }
+
+    @Override
+    public void noted(final SegmentOutcomeNote note) {
+        snapshots.noted(note);
+    }
+
+    private Result<ChatResponse> send(
+            final CallKind kind,
+            final List<String> segmentIds,
+            final ChatRequest asked,
+            @Nullable final CallDescriptor descriptor) {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(segmentIds, "segmentIds");
         Objects.requireNonNull(asked, "request");
@@ -114,7 +163,9 @@ public final class JobModelCalls implements ModelCalls {
                 request.contextWindow(),
                 asked.contextWindow(),
                 request.maxOutputTokens());
-        final Attempts attempts = new Attempts(new Call(kind, List.copyOf(segmentIds), summaryOf(request)));
+        final Attempts attempts = new Attempts(
+                new Call(kind, List.copyOf(segmentIds), summaryOf(request)),
+                snapshots.open(kind, segmentIds, descriptor));
         final Result<ChatResponse> result = guard.apply(
                         () -> log.debug("Model call going out kind={} segmentIds={}", kind, segmentIds))
                 .chat(request, attempts);
@@ -156,17 +207,20 @@ public final class JobModelCalls implements ModelCalls {
     private final class Attempts implements CallAttemptListener {
 
         private final Call call;
+        private final CallSnapshots.@Nullable Shown shown;
         private @Nullable CallAttempt current;
         private @Nullable Instant startedAt;
 
-        Attempts(final Call call) {
+        Attempts(final Call call, final CallSnapshots.@Nullable Shown shown) {
             this.call = call;
+            this.shown = shown;
         }
 
         @Override
         public void started(final CallAttempt attempt) {
             current = attempt;
-            startedAt = clock.instant();
+            final Instant at = clock.instant();
+            startedAt = at;
             final RequestSummary summary = new RequestSummary(
                     call.summary().messageChars(), call.summary().contextWindow(), attempt.maxOutputTokens());
             log.debug(
@@ -186,6 +240,9 @@ public final class JobModelCalls implements ModelCalls {
                     attempt.maxAttempts(),
                     attempt.timeout(),
                     summary));
+            if (shown != null) {
+                shown.started(attempt, at);
+            }
         }
 
         @Override
@@ -209,12 +266,19 @@ public final class JobModelCalls implements ModelCalls {
                     call.segmentIds(),
                     attempt.number(),
                     code));
+            if (shown != null) {
+                shown.failed(code, elapsed);
+            }
         }
 
         // An attempt that failed was announced by failed(); only an answered one is still current here.
         void ended(final Result<ChatResponse> result) {
             final CallAttempt attempt = current;
             final ChatResponse reply = result.data();
+            final AppError error = result.error();
+            if (shown != null && error != null) {
+                shown.ended(error.code());
+            }
             if (attempt == null || reply == null) {
                 log.debug(
                         "Model call ended kind={} segmentIds={} answered={} attemptOpen={}",
@@ -224,7 +288,11 @@ public final class JobModelCalls implements ModelCalls {
                         attempt != null);
                 return;
             }
-            announce.accept(finished(attempt, elapsed(), reply));
+            final ModelCallFinished done = finished(attempt, elapsed(), reply);
+            announce.accept(done);
+            if (shown != null) {
+                shown.answered(reply.content(), done.usage(), done.elapsed());
+            }
         }
 
         private void logFinished(

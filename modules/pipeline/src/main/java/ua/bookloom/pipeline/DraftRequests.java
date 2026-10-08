@@ -11,6 +11,7 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.pipeline.heal.GateFunction;
 import ua.bookloom.pipeline.heal.GateResult;
 import ua.bookloom.pipeline.memory.ProtectedMask;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.DraftContext;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
@@ -104,6 +105,25 @@ public final class DraftRequests {
                 request.expectedOutputTokens() == null ? "none" : request.expectedOutputTokens(),
                 request.maxOutputTokens() == null ? "none" : request.maxOutputTokens());
         return request;
+    }
+
+    /**
+     * What the shown call of a draft step names besides its request: the segment's source and the prompt's parts, built
+     * from the same values as {@link #build}'s messages.
+     */
+    CallDescriptor descriptor(
+            final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
+        Objects.requireNonNull(attempt, "attempt");
+        return CallDescriptor.of(
+                step.promptName(),
+                DisplayText.of(attempt.segment().masked()),
+                () -> promptBuilder.sectionsFor(
+                        step,
+                        attempt.context(),
+                        attempt.shownText(),
+                        attempt.extraInstruction(),
+                        rejected,
+                        diagnostic));
     }
 
     private List<ChatMessage> messagesFor(

@@ -18,6 +18,7 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentDrafted;
+import ua.bookloom.api.pipeline.SegmentOutcomeNote;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.project.ContextSnapshot;
 import ua.bookloom.api.project.QaFinding;
@@ -29,6 +30,7 @@ import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.heal.DraftEvaluation;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.LoopSettings;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.util.log.EvidenceLog;
 
 /**
@@ -45,6 +47,7 @@ final class SegmentEvents {
 
     private final Consumer<JobEvent> emit;
     private final Map<String, SegmentLocator> locators;
+    private final ModelCalls calls;
 
     /**
      * Creates the announcer of one run.
@@ -52,10 +55,12 @@ final class SegmentEvents {
      * @param emit the non-null receiver of each event
      * @param locators the non-null, unmodifiable locator of every segment of the opened book, the one a memory reuse
      *     is named by
+     * @param calls the non-null seam a decision is noted on, so the call that drafted the segment shows it
      */
-    SegmentEvents(final Consumer<JobEvent> emit, final Map<String, SegmentLocator> locators) {
+    SegmentEvents(final Consumer<JobEvent> emit, final Map<String, SegmentLocator> locators, final ModelCalls calls) {
         this.emit = Objects.requireNonNull(emit, "emit");
         this.locators = Objects.requireNonNull(locators, "locators");
+        this.calls = Objects.requireNonNull(calls, "calls");
     }
 
     /**
@@ -91,14 +96,19 @@ final class SegmentEvents {
                                 hit.kind(), DisplayText.of(hit.source()), DisplayText.of(hit.target())))
                         .toList(),
                 snapshot.summary(),
-                snapshot.styleSheet());
+                snapshot.styleSheet(),
+                snapshot.lexicon(),
+                snapshot.characters());
         log.debug(
-                "Sending ContextAssembled segmentId={} preceding={} summary={} names={} tmHits={}",
+                "Sending ContextAssembled segmentId={} preceding={} summary={} names={} tmHits={} lexicon={}"
+                        + " characters={}",
                 segmentId,
                 shown.precedingTargets().size(),
                 shown.summary() != null,
                 shown.glossary().size(),
-                shown.tmHits().size());
+                shown.tmHits().size(),
+                shown.lexicon().size(),
+                shown.characters().size());
         emit.accept(new ContextAssembled(segmentId, shown));
     }
 
@@ -171,6 +181,18 @@ final class SegmentEvents {
                 kinds);
         keepEvidence(record);
         emit.accept(new SegmentDecided(record.segmentId(), record.status(), reason, progress, detail));
+        noteDecision(record, kinds);
+    }
+
+    private void noteDecision(final SegmentRecord record, final List<String> kinds) {
+        switch (record.status()) {
+            case ACCEPTED ->
+                calls.noted(new SegmentOutcomeNote(record.segmentId(), SegmentOutcomeNote.Kind.ACCEPTED, ""));
+            case FLAGGED ->
+                calls.noted(new SegmentOutcomeNote(
+                        record.segmentId(), SegmentOutcomeNote.Kind.FLAGGED, String.join(",", kinds)));
+            default -> log.debug("No outcome noted segmentId={} status={}", record.segmentId(), record.status());
+        }
     }
 
     // The detailed log rotates away a long run's early TRACE; a flagged or repaired segment is the one a person will

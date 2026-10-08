@@ -8,6 +8,7 @@ import static ua.bookloom.pipeline.TranslationJobTestSupport.targetReply;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.Result;
@@ -18,6 +19,18 @@ import ua.bookloom.api.pipeline.ModelCallStarted;
 
 /** The job tells its listeners when a request is really sent to the model, so a screen can say the model is slow. */
 class TranslationJobModelCallEventTest {
+
+    /** What one segment drafted and accepted on its first call announces, in order. */
+    private static final List<String> ONE_SEGMENT = List.of(
+            "SegmentStarted",
+            "ContextAssembled",
+            "ModelCallStarted",
+            "CallSnapshotUpdated",
+            "ModelCallFinished",
+            "CallSnapshotUpdated",
+            "SegmentDrafted",
+            "SegmentDecided",
+            "CallSnapshotUpdated");
 
     @TempDir
     private Path tempDir;
@@ -34,22 +47,10 @@ class TranslationJobModelCallEventTest {
 
         assertThat(events)
                 .extracting(event -> event.getClass().getSimpleName())
-                .containsExactly(
-                        "StageStarted",
-                        "StageStarted",
-                        "SegmentStarted",
-                        "ContextAssembled",
-                        "ModelCallStarted",
-                        "ModelCallFinished",
-                        "SegmentDrafted",
-                        "SegmentDecided",
-                        "SegmentStarted",
-                        "ContextAssembled",
-                        "ModelCallStarted",
-                        "ModelCallFinished",
-                        "SegmentDrafted",
-                        "SegmentDecided",
-                        "Finished");
+                .containsExactlyElementsOf(Stream.of(
+                                List.of("StageStarted", "StageStarted"), ONE_SEGMENT, ONE_SEGMENT, List.of("Finished"))
+                        .flatMap(List::stream)
+                        .toList());
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)
                 .extracting(event -> ((ModelCallStarted) event).segmentId())

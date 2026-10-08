@@ -17,6 +17,8 @@ import org.jspecify.annotations.Nullable;
  * @param lexiconLines one {@code term → rendering} line per recurring term whose rendering the book has established,
  *     shown as a "keep consistent" hint; it never overrides the glossary
  * @param characterLines one {@code name — gender} line per character of the segment whose gender the glossary knows
+ * @param followingTarget the next segment's target as plain text, or null when it has none; a run drafts ahead of the
+ *     next segment and never has one, a retry shows the one the book holds by then
  */
 public record DraftContext(
         List<String> precedingTargets,
@@ -25,7 +27,8 @@ public record DraftContext(
         List<String> memoryLines,
         List<String> suggestedLines,
         List<String> lexiconLines,
-        List<String> characterLines) {
+        List<String> characterLines,
+        @Nullable String followingTarget) {
 
     /**
      * Rejects null entries and makes the context immutable at the prompt boundary, leaving out empty and
@@ -39,6 +42,37 @@ public record DraftContext(
         suggestedLines = PromptHygiene.clean(Objects.requireNonNull(suggestedLines, "suggestedLines"));
         lexiconLines = PromptHygiene.clean(Objects.requireNonNull(lexiconLines, "lexiconLines"));
         characterLines = PromptHygiene.clean(Objects.requireNonNull(characterLines, "characterLines"));
+        followingTarget = PromptHygiene.cleanText(followingTarget);
+    }
+
+    /** A context with no following target, as every draft of a run has. */
+    public DraftContext(
+            final List<String> precedingTargets,
+            @Nullable final String summary,
+            final List<String> glossaryLines,
+            final List<String> memoryLines,
+            final List<String> suggestedLines,
+            final List<String> lexiconLines,
+            final List<String> characterLines) {
+        this(precedingTargets, summary, glossaryLines, memoryLines, suggestedLines, lexiconLines, characterLines, null);
+    }
+
+    /**
+     * The same context showing the next segment's target after the preceding ones.
+     *
+     * @param target the next segment's target as plain text, or null for none
+     * @return the context with that following target
+     */
+    public DraftContext withFollowingTarget(@Nullable final String target) {
+        return new DraftContext(
+                precedingTargets,
+                summary,
+                glossaryLines,
+                memoryLines,
+                suggestedLines,
+                lexiconLines,
+                characterLines,
+                target);
     }
 
     /** A context with no character sheet. */

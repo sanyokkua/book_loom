@@ -254,9 +254,10 @@ final class PieceDrafter {
             final DraftStep step,
             final String rejected,
             final String diagnostic) {
-        final var request = owner.requestFor(
-                DraftAttempt.ofPiece(piece, context, extraInstruction, lowerTemperature), step, rejected, diagnostic);
-        return DraftCalls.call(step, piece, request, calls);
+        final DraftAttempt attempt = DraftAttempt.ofPiece(piece, context, extraInstruction, lowerTemperature);
+        final var request = owner.requestFor(attempt, step, rejected, diagnostic);
+        return DraftCalls.call(
+                step, piece, request, owner.requests().descriptor(attempt, step, rejected, diagnostic), calls);
     }
 
     private static Result<Piece> failed(final Segment piece, final ErrorCode code, final String message) {

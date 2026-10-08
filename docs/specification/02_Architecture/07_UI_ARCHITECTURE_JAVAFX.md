@@ -70,7 +70,16 @@ testable.
   segment it judges in `segmentIds`; a failed attempt finishes with its `ErrorCode`; `usageEstimated` marks a token
   count the client estimated rather than one the provider reported.
 - `ContextAssembled(segmentId, ContextSnapshot)` announces, in display text, what a draft is sent with besides its
-  source (preceding translations, rolling summary, glossary names, memory hits); the live row shows it collapsed.
+  source (preceding translations, rolling summary, glossary names, memory hits, recurring terms, character sheet);
+  the live row shows it collapsed.
+- `CallSnapshotUpdated(CallSnapshot)` announces one model call as a person inspects it, under one `callId` per call:
+  `WAITING` when its first attempt goes out (and again for a later attempt), then `ANSWERED` with the reply and usage,
+  or `FAILED`/`CANCELLED`; each `SegmentOutcomeNote` noted afterwards (a batch item `ADOPTED` or `FELL_BACK` with its
+  reason, a segment `ACCEPTED` or `FLAGGED` on the draft call that last drafted it) sends it again. It carries the
+  segments the call is about (`CallSegment(id, locator, displaySource)`) and the prompt's filled parts in the order
+  they were sent (`PromptSection(slot, heading, origin SYSTEM|USER, lines)`, the system style sheet first). Only the
+  run's described calls are shown — the drafts (single and batch, with their repairs), the reviewer, the directed fix
+  and the backward revision and consistency calls; the name scans and the summary are not.
 - `RoundStarted(segmentId, round, rounds, judgeScore?, blockingFinding?)` announces each repair round a segment
   enters, for the live row's round tracker and the log.
 - `SegmentDecided` carries a `SegmentDetail(judgeScore?, path, findingKinds)` and the point-in-time `JobProgress`

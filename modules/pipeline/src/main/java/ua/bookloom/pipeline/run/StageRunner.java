@@ -1,6 +1,8 @@
 package ua.bookloom.pipeline.run;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
@@ -12,6 +14,7 @@ import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
 import ua.bookloom.pipeline.revision.ConsistencyReport;
@@ -124,8 +127,25 @@ public final class StageRunner {
         @Override
         public Result<ChatResponse> call(
                 final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
-            final Step<Result<ChatResponse>> step = routed.untilAnswered(
-                    work::revisionProgress, segmentId, () -> keepUnreadable(calls.call(kind, segmentId, request)));
+            return route(segmentId, () -> calls.call(kind, segmentId, request));
+        }
+
+        // A shown revision call keeps its description through the routing, so a retried call is shown again.
+        @Override
+        public Result<ChatResponse> callAbout(
+                final CallKind kind,
+                final List<String> segmentIds,
+                final ChatRequest request,
+                final CallDescriptor descriptor) {
+            final String segmentId = segmentIds.size() == 1 ? segmentIds.getFirst() : null;
+            log.debug("Routing a shown revision call kind={} segmentIds={}", kind, segmentIds);
+            return route(segmentId, () -> calls.callAbout(kind, segmentIds, request, descriptor));
+        }
+
+        private Result<ChatResponse> route(
+                @Nullable final String segmentId, final Supplier<Result<ChatResponse>> call) {
+            final Step<Result<ChatResponse>> step =
+                    routed.untilAnswered(work::revisionProgress, segmentId, () -> keepUnreadable(call.get()));
             return switch (step) {
                 case Step.Done<Result<ChatResponse>>(final Result<ChatResponse> answer) -> answer;
                 case Step.Stopped<Result<ChatResponse>>(final RunEnd end) -> {

@@ -82,9 +82,10 @@ public final class ChunkRunner {
         this.calls = new RoutedCalls(sinks.boundaries());
         this.followUp = new DecisionFollowUp(
                 settings.projectId(), settings.frame().sourceLanguage(), steps.summary(), stores, sinks, calls);
-        this.events = new SegmentEvents(sinks.emit(), locators);
+        this.events = new SegmentEvents(sinks.emit(), locators, steps.calls());
         this.shortcuts = new DraftShortcuts(settings.frame().styleSheet().text());
-        this.batches = new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary);
+        this.batches =
+                new BatchStage(steps.batch(), settings, memory, preceding, calls, followUp::summary, steps.calls());
         this.learning = new TermLearning(
                 stores,
                 settings.projectId(),

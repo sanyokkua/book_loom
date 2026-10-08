@@ -9,10 +9,14 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.chunk.BatchSizeController;
 import ua.bookloom.pipeline.chunk.BatchSizeController.Failure;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptBreakdown;
+import ua.bookloom.pipeline.prompt.PromptName;
 
 /**
  * Drafts several consecutive segments in one model call and reads the reply per id. It makes the call and judges the
@@ -101,11 +105,45 @@ public final class BatchDrafter {
      */
     public Result<BatchReply> draft(
             final BatchContext context, final List<BatchItem> items, final List<String> segmentIds) {
+        return draft(
+                context,
+                items,
+                segmentIds,
+                items.stream().map(item -> DisplayText.of(item.masked())).toList(),
+                null);
+    }
+
+    /**
+     * Sends one batch made in a known chunk and reads its reply, as {@link #draft(BatchContext, List, List)} does.
+     *
+     * @param context the non-null read-only context shown with the items
+     * @param items the non-null items, at least one, with unique ids
+     * @param segmentIds the non-null segments the items stand for, in the items' order
+     * @param sources the non-null source of each segment as a person reads it, in the items' order
+     * @param position the chunk the batch is made in, which the shown call names, or null when it is not known
+     * @return as {@link #draft(BatchContext, List, List)}
+     */
+    public Result<BatchReply> draft(
+            final BatchContext context,
+            final List<BatchItem> items,
+            final List<String> segmentIds,
+            final List<String> sources,
+            @Nullable final ChunkPosition position) {
         Objects.requireNonNull(context, "context");
         Objects.requireNonNull(items, "items");
-        log.debug("Drafting a batch items={} segmentIds={} size={}", items.size(), segmentIds, size.size());
+        log.debug(
+                "Drafting a batch items={} segmentIds={} size={} position={}",
+                items.size(),
+                segmentIds,
+                size.size(),
+                position);
         final ChatRequest request = request(context, items);
-        final Result<ChatResponse> answered = calls.callAbout(CallKind.DRAFT, segmentIds, request);
+        final CallDescriptor descriptor = new CallDescriptor(
+                PromptName.DRAFT_BATCH_JSON.resourceBaseName(),
+                position,
+                sources,
+                () -> prompts.sectionsFor(context, items));
+        final Result<ChatResponse> answered = calls.callAbout(CallKind.DRAFT, segmentIds, request, descriptor);
         final ChatResponse response = answered.data();
         if (response == null) {
             return Result.err(Objects.requireNonNull(answered.error(), "error"));

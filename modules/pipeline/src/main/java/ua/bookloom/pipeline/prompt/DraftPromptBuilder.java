@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.prompt;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.pipeline.Tokens;
 
 /** Renders the catalog's one-segment draft-translation prompt with the currently available context. */
@@ -113,8 +115,8 @@ public final class DraftPromptBuilder {
             final String diagnostic) {
         Objects.requireNonNull(rejectedReply, "rejectedReply");
         Objects.requireNonNull(diagnostic, "diagnostic");
-        final String correction = templates.renderUser(
-                PromptName.STRUCTURAL_REPAIR, Map.of("rejectedReply", rejectedReply, "diagnostic", diagnostic));
+        final String correction =
+                templates.renderUser(PromptName.STRUCTURAL_REPAIR, structuralValues(rejectedReply, diagnostic));
         return withCorrection(segment, context, shownText, extraInstruction, correction);
     }
 
@@ -152,18 +154,69 @@ public final class DraftPromptBuilder {
             final String rejectedTarget,
             @Nullable final String gateNote) {
         Objects.requireNonNull(rejectedTarget, "rejectedTarget");
+        return withCorrection(
+                segment,
+                context,
+                shownText,
+                extraInstruction,
+                templates.renderUser(
+                        PromptName.PLACEHOLDER_REPAIR, placeholderValues(shownText, rejectedTarget, gateNote)));
+    }
+
+    /**
+     * The parts of a draft step's prompt as its messages send them, in order: the draft's system and user parts, then
+     * the correction a repair adds.
+     *
+     * @param step the non-null step whose prompt is shown
+     * @param context the non-null context the draft is shown
+     * @param shownText the non-null text the model translates
+     * @param extraInstruction the non-null note under {@code [Extra instruction]}; empty for none
+     * @param rejected the rejected reply or target a repair quotes; empty for a draft
+     * @param diagnostic what the reader or the gate said of it; empty for a draft or for no gate note
+     * @return never null; the filled parts
+     */
+    public List<PromptSection> sectionsFor(
+            final DraftStep step,
+            final DraftContext context,
+            final String shownText,
+            final String extraInstruction,
+            final String rejected,
+            final String diagnostic) {
+        Objects.requireNonNull(step, "step");
+        final List<PromptSection> sections = new ArrayList<>(templates.sectionsOf(
+                PromptName.DRAFT,
+                frame,
+                userValues(
+                        PromptLanguages.describe(frame.sourceLanguage()),
+                        PromptLanguages.describe(frame.targetLanguage()),
+                        shownText,
+                        context,
+                        extraInstruction)));
+        switch (step) {
+            case DRAFT -> log.debug("A draft adds no correction section");
+            case STRUCTURAL_REPAIR ->
+                sections.addAll(templates.userSectionsOf(step.promptName(), structuralValues(rejected, diagnostic)));
+            case PLACEHOLDER_REPAIR ->
+                sections.addAll(templates.userSectionsOf(
+                        step.promptName(),
+                        placeholderValues(shownText, rejected, diagnostic.isEmpty() ? null : diagnostic)));
+        }
+        return sections;
+    }
+
+    private static Map<String, String> structuralValues(final String rejectedReply, final String diagnostic) {
+        return Map.of("rejectedReply", rejectedReply, "diagnostic", diagnostic);
+    }
+
+    private static Map<String, String> placeholderValues(
+            final String shownText, final String rejectedTarget, @Nullable final String gateNote) {
         final Map<String, String> values = new HashMap<>();
         values.put("rejectedTarget", rejectedTarget);
         values.put("tokens", expectedTokenSequence(shownText));
         if (gateNote != null) {
             values.put("gateNote", gateNote);
         }
-        return withCorrection(
-                segment,
-                context,
-                shownText,
-                extraInstruction,
-                templates.renderUser(PromptName.PLACEHOLDER_REPAIR, values));
+        return values;
     }
 
     private List<ChatMessage> withCorrection(
@@ -188,25 +241,34 @@ public final class DraftPromptBuilder {
             final String shownText,
             final DraftContext context,
             final String extraInstruction) {
-        final String summary = context.summary();
         return templates
-                .renderUser(
-                        PromptName.DRAFT,
-                        Map.ofEntries(
-                                Map.entry("source", source),
-                                Map.entry("target", target),
-                                Map.entry("tokens", expectedTokenSequence(shownText)),
-                                Map.entry("text", shownText),
-                                Map.entry("summary", summary == null || summary.isBlank() ? "" : summary),
-                                Map.entry("glossaryTerms", linesWhere(context.glossaryLines(), false)),
-                                Map.entry("lockedNames", linesWhere(context.glossaryLines(), true)),
-                                Map.entry("suggestedTerms", String.join("\n", context.suggestedLines())),
-                                Map.entry("memoryHint", String.join("\n", context.memoryLines())),
-                                Map.entry("lexiconTerms", String.join("\n", context.lexiconLines())),
-                                Map.entry("characters", String.join("\n", context.characterLines())),
-                                Map.entry("precedingTargets", String.join("\n\n", context.precedingTargets())),
-                                Map.entry("extraInstruction", extraInstruction)))
+                .renderUser(PromptName.DRAFT, userValues(source, target, shownText, context, extraInstruction))
                 .strip();
+    }
+
+    private static Map<String, String> userValues(
+            final String source,
+            final String target,
+            final String shownText,
+            final DraftContext context,
+            final String extraInstruction) {
+        final String summary = context.summary();
+        final String following = context.followingTarget();
+        return Map.ofEntries(
+                Map.entry("source", source),
+                Map.entry("target", target),
+                Map.entry("tokens", expectedTokenSequence(shownText)),
+                Map.entry("text", shownText),
+                Map.entry("summary", summary == null || summary.isBlank() ? "" : summary),
+                Map.entry("glossaryTerms", linesWhere(context.glossaryLines(), false)),
+                Map.entry("lockedNames", linesWhere(context.glossaryLines(), true)),
+                Map.entry("suggestedTerms", String.join("\n", context.suggestedLines())),
+                Map.entry("memoryHint", String.join("\n", context.memoryLines())),
+                Map.entry("lexiconTerms", String.join("\n", context.lexiconLines())),
+                Map.entry("characters", String.join("\n", context.characterLines())),
+                Map.entry("precedingTargets", String.join("\n\n", context.precedingTargets())),
+                Map.entry("followingTarget", following == null ? "" : following),
+                Map.entry("extraInstruction", extraInstruction));
     }
 
     /**

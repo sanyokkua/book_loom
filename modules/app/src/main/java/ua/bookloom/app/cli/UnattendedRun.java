@@ -16,6 +16,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -112,7 +113,8 @@ final class UnattendedRun {
                     MemoryUpdated _,
                     ContextAssembled _,
                     RoundStarted _,
-                    BatchStarted _ -> {}
+                    BatchStarted _,
+                    CallSnapshotUpdated _ -> {}
         }
     }
 

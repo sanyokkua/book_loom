@@ -42,6 +42,13 @@ Write each term as shown, inflected as the sentence needs, unless the glossary s
 </PreviousTranslations>
 {{/precedingTargets}}
 
+{{#followingTarget}}
+[Next translated text — context only; do NOT re-translate it]
+<NextTranslation>
+{{followingTarget}}
+</NextTranslation>
+{{/followingTarget}}
+
 Translate from {{source}} to {{target}}.
 
 [Immutable tokens for this text]

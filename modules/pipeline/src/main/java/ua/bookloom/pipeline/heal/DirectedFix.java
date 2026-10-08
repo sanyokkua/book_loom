@@ -99,19 +99,24 @@ public final class DirectedFix {
             final List<QaFinding> findings,
             final boolean includeExpectedTokens,
             final ModelCalls calls) {
-        final List<ChatMessage> messages = messagesFor(frame, maskedSource, block, findings, includeExpectedTokens);
+        final Map<String, String> userValues = userValues(maskedSource, block, findings, includeExpectedTokens);
+        final List<ChatMessage> messages =
+                SelfHealCalls.messagesFor(templates, PromptName.DIRECTED_FIX, frame, userValues);
         final ChatRequest request = ChatRequests.build(
                 PromptName.DIRECTED_FIX, messages, SelfHealCalls.outputLimit(maskedSource, frame), false);
         SelfHealCalls.logTraceMessages(log, LABEL, request);
-        final Result<ChatResponse> reply = calls.call(CallKind.DIRECTED_FIX, segmentId, request);
+        final Result<ChatResponse> reply = calls.callAbout(
+                CallKind.DIRECTED_FIX,
+                List.of(segmentId),
+                request,
+                SelfHealCalls.descriptor(templates, PromptName.DIRECTED_FIX, frame, maskedSource, userValues));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
         final Result<RepairReply> outcome = RepairReplies.read(reply, replyParser);
         SelfHealCalls.logOutcome(log, LABEL, segmentId, outcome);
         return outcome;
     }
 
-    private List<ChatMessage> messagesFor(
-            final CallFrame frame,
+    private static Map<String, String> userValues(
             final String maskedSource,
             final String block,
             final List<QaFinding> findings,
@@ -123,7 +128,7 @@ public final class DirectedFix {
         if (includeExpectedTokens) {
             userValues.put("expectedTokens", DraftPromptBuilder.expectedTokenSequence(maskedSource));
         }
-        return SelfHealCalls.messagesFor(templates, PromptName.DIRECTED_FIX, frame, userValues);
+        return userValues;
     }
 
     private static String renderFindings(final List<QaFinding> findings) {

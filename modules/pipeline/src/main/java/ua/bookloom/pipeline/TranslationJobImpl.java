@@ -302,7 +302,8 @@ final class TranslationJobImpl implements TranslationJob {
                 this::emit,
                 clock,
                 frame.targetLanguage(),
-                window);
+                window,
+                SegmentLocators.of(run.document()));
         final RunSettings settings = new RunSettings(
                 request.projectId(), request.mode(), DialParameters.of(brief.dial()), frame, brief.names(), window);
         final RunSinks sinks = new RunSinks(pending, recorder, this::emit, boundaries());

@@ -119,7 +119,8 @@ public final class SegmentTranslator {
     private Result<DraftOutcome> send(
             final DraftAttempt attempt, final DraftStep step, final String rejected, final String diagnostic) {
         final ChatRequest request = requestFor(attempt, step, rejected, diagnostic);
-        final Result<ChatResponse> reply = DraftCalls.call(step, attempt.segment(), request, calls);
+        final Result<ChatResponse> reply = DraftCalls.call(
+                step, attempt.segment(), request, requests.descriptor(attempt, step, rejected, diagnostic), calls);
         if (reply.isErr()) {
             return decideModelError(attempt, Objects.requireNonNull(reply.error()));
         }

@@ -11,17 +11,23 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.document.Unit;
+import ua.bookloom.api.pipeline.ChunkPosition;
+import ua.bookloom.api.pipeline.SegmentOutcomeNote;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchContext;
 import ua.bookloom.pipeline.batch.BatchDrafter;
 import ua.bookloom.pipeline.batch.BatchItem;
 import ua.bookloom.pipeline.batch.BatchReply;
 import ua.bookloom.pipeline.batch.ItemOutcome;
+import ua.bookloom.pipeline.batch.ItemProblem;
+import ua.bookloom.pipeline.batch.ItemStatus;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.heal.DraftOutcome;
 import ua.bookloom.pipeline.heal.VerbatimCheck;
 import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
 import ua.bookloom.pipeline.memory.ProtectedMask;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 
 /**
  * Drafts the segments of a chunk that need a model call in batches, ahead of their turn: when the chunk reaches a
@@ -37,12 +43,15 @@ import ua.bookloom.pipeline.memory.ProtectedMask;
 @Slf4j
 final class BatchStage {
 
+    private static final String GATE_REFUSED = "GATE";
+
     private final BatchDrafter drafter;
     private final RunSettings settings;
     private final MemoryReuse memory;
     private final PrecedingTargets preceding;
     private final RoutedCalls calls;
     private final Supplier<@Nullable String> summary;
+    private final ModelCalls notes;
 
     /**
      * Creates the batch side of one run.
@@ -53,6 +62,7 @@ final class BatchStage {
      * @param preceding the non-null reader of the chapter's earlier targets
      * @param calls the non-null router a batch call goes through
      * @param summary the rolling summary as it stands, or null while there is none
+     * @param notes the non-null seam a batch item's adoption or fallback is noted on, so the shown call says it
      */
     BatchStage(
             final BatchDrafter drafter,
@@ -60,13 +70,15 @@ final class BatchStage {
             final MemoryReuse memory,
             final PrecedingTargets preceding,
             final RoutedCalls calls,
-            final Supplier<@Nullable String> summary) {
+            final Supplier<@Nullable String> summary,
+            final ModelCalls notes) {
         this.drafter = Objects.requireNonNull(drafter, "drafter");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.memory = Objects.requireNonNull(memory, "memory");
         this.preceding = Objects.requireNonNull(preceding, "preceding");
         this.calls = Objects.requireNonNull(calls, "calls");
         this.summary = Objects.requireNonNull(summary, "summary");
+        this.notes = Objects.requireNonNull(notes, "notes");
     }
 
     /** A segment that will be drafted by a call, with what the batch needs of it. */
@@ -180,11 +192,15 @@ final class BatchStage {
                 batch.size(),
                 segmentIds.getFirst(),
                 segmentIds);
+        final List<String> sources = batch.stream()
+                .map(candidate -> DisplayText.of(candidate.segment().masked()))
+                .toList();
+        final ChunkPosition position = current.work().position(batch.getFirst().item());
         final Step<BatchAttempt> step = calls.untilAnsweredOrFlagged(
                 current.work(),
                 null,
                 new RoutedCalls.StepName("batch", segmentIds.getFirst()),
-                () -> attempt(prepared.context(), items, segmentIds),
+                () -> attempt(prepared.context(), items, new Shown(segmentIds, sources, position)),
                 error -> BatchAttempt.unavailable(ids),
                 error -> BatchAttempt.skipped(ids, error));
         return switch (step) {
@@ -198,9 +214,9 @@ final class BatchStage {
 
     // An answer the draft step would flag its one segment for (an empty completion, a context-window error) says
     // nothing about the others: the batch is unavailable and every segment takes its own draft, which flags itself.
-    private Result<BatchAttempt> attempt(
-            final BatchContext context, final List<BatchItem> items, final List<String> segmentIds) {
-        final Result<BatchReply> answered = drafter.draft(context, items, segmentIds);
+    private Result<BatchAttempt> attempt(final BatchContext context, final List<BatchItem> items, final Shown shown) {
+        final Result<BatchReply> answered =
+                drafter.draft(context, items, shown.segmentIds(), shown.sources(), shown.position());
         final AppError error = answered.error();
         if (error == null) {
             return Result.ok(BatchAttempt.answered(Objects.requireNonNull(answered.data(), "reply")));
@@ -230,7 +246,9 @@ final class BatchStage {
             final Candidate candidate = batch.get(i);
             current.batches().tried(candidate.segment().id());
             final ItemOutcome outcome = reply.outcome(Integer.toString(i + 1)).orElseThrow();
-            if (outcome.isAccepted() && adopt(current, candidate, outcome)) {
+            final boolean isAdopted = outcome.isAccepted() && adopt(current, candidate, outcome);
+            note(candidate.segment().id(), outcome, isAdopted);
+            if (isAdopted) {
                 adopted++;
                 recordTerms(current, candidate, outcome, context.keyTerms());
             } else {
@@ -246,6 +264,29 @@ final class BatchStage {
         }
         logSettled(batch.size(), adopted, attempt.kind());
     }
+
+    private void note(final String segmentId, final ItemOutcome outcome, final boolean isAdopted) {
+        notes.noted(
+                isAdopted
+                        ? new SegmentOutcomeNote(segmentId, SegmentOutcomeNote.Kind.ADOPTED, "")
+                        : new SegmentOutcomeNote(
+                                segmentId, SegmentOutcomeNote.Kind.FELL_BACK, fallbackReason(outcome)));
+    }
+
+    // The id's own status when the reply got the id wrong, else the checks that failed, else the gate's refusal.
+    private static String fallbackReason(final ItemOutcome outcome) {
+        if (outcome.status() != ItemStatus.OK) {
+            return outcome.status().name();
+        }
+        if (outcome.problems().isEmpty()) {
+            return GATE_REFUSED;
+        }
+        return String.join(
+                ",", outcome.problems().stream().map(ItemProblem::name).toList());
+    }
+
+    /** What the shown batch call names besides its request. */
+    private record Shown(List<String> segmentIds, List<String> sources, ChunkPosition position) {}
 
     private void logSettled(final int segments, final int adopted, final BatchAttempt.Kind kind) {
         log.info(

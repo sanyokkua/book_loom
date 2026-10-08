@@ -86,6 +86,7 @@ class JobEventContractsTest {
             case RoundStarted round -> "RoundStarted";
             case RecoveryWaiting waiting -> "RecoveryWaiting";
             case BatchStarted batch -> "BatchStarted";
+            case CallSnapshotUpdated updated -> "CallSnapshotUpdated";
         };
     }
 

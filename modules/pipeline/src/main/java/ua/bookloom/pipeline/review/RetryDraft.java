@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.review;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -33,6 +34,7 @@ import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.SnapshotTerm;
 import ua.bookloom.api.project.TargetOrigin;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
@@ -59,7 +61,8 @@ import ua.bookloom.pipeline.typography.TypographyGate;
 
 /**
  * Retry and Retry with note: one fair second attempt at a FLAGGED or ACCEPTED segment. It replays the context its first
- * draft saw, from the stored snapshot's texts alone, and is decided by the run's own draft step, checks, reviewer and
+ * draft saw, from the stored snapshot's texts alone, adds the next paragraph's target when the book holds one by then
+ * (the run's batch showed the model what came next), shows the reviewer the snapshot's character sheet, and is decided by the run's own draft step, checks, reviewer and
  * acceptance rule — the quality loop with no repair round. A segment the run drafted in pieces is drafted in the same
  * pieces, each carrying the note. It never queues behind a running book: while the project's
  * latest run is RUNNING it answers {@code busy} before any call. A failure never downgrades an ACCEPTED segment.
@@ -188,7 +191,28 @@ public final class RetryDraft {
                 brief.foreignPassages(),
                 CallFrame.bookLanguageOf(document),
                 brief.narrator());
-        return Result.ok(new RetryPlan(record, snapshot, brief, frame, document, segment.get()));
+        return followingTargetOf(record)
+                .map(next -> new RetryPlan(record, snapshot, brief, frame, document, segment.get(), next.orElse(null)));
+    }
+
+    // The run's batch showed the model what came next; by the time of a retry the next paragraph usually has a target,
+    // which is shown after the preceding ones the first draft saw.
+    private Result<Optional<String>> followingTargetOf(final SegmentRecord record) {
+        final Result<List<SegmentRecord>> unit = segments.byUnit(record.projectId(), record.unitId());
+        if (unit.isErr()) {
+            return Result.err(Objects.requireNonNull(unit.error()));
+        }
+        final Optional<String> next = Objects.requireNonNull(unit.data()).stream()
+                .filter(other -> other.ord() > record.ord())
+                .min(Comparator.comparingInt(SegmentRecord::ord))
+                .map(RetryDraft::effectiveTarget);
+        log.debug("retry: segment={} followingTarget={}", record.segmentId(), next.isPresent());
+        return Result.ok(next);
+    }
+
+    private static @Nullable String effectiveTarget(final SegmentRecord record) {
+        final String masked = record.userTarget() == null ? record.maskedMachineTarget() : record.maskedUserTarget();
+        return masked == null || DisplayText.of(masked).isEmpty() ? null : DisplayText.of(masked);
     }
 
     private Result<SegmentRecord> attempt(
@@ -197,7 +221,8 @@ public final class RetryDraft {
         final ContextSnapshot snapshot = plan.snapshot();
         final List<GlossaryEntry> terms = termsOf(snapshot, plan.record().projectId());
         final ProtectedMask mask = ProtectedSpans.mask(segment, plan.frame(), terms);
-        final DraftContext context = ContextPackageAssembler.replay(snapshot, mask);
+        final DraftContext context =
+                ContextPackageAssembler.replay(snapshot, mask).withFollowingTarget(plan.followingTarget());
         logReplayed(segment.id(), snapshot);
         final GateFunction gate = TypographyGate.around(
                 ProtectedSpans.gate(
@@ -242,7 +267,8 @@ public final class RetryDraft {
                 plan.snapshot().glossary().stream()
                         .filter(term -> term.target() != null && !term.locked())
                         .map(term -> term.term() + " → " + term.target())
-                        .toList());
+                        .toList(),
+                plan.snapshot().characters());
         log.debug(
                 "retry: deciding segment={} dial={} reviewPasses={}",
                 plan.segment().id(),
@@ -349,12 +375,16 @@ public final class RetryDraft {
         return Result.err(AppError.of(code, "Cannot retry", message));
     }
 
-    /** What one retry replays: the stored record, its snapshot, the brief, the call frame and the opened segment. */
+    /**
+     * What one retry replays: the stored record, its snapshot, the brief, the call frame, the opened segment and the
+     * next segment's target as plain text, or null when it has none.
+     */
     private record RetryPlan(
             SegmentRecord record,
             ContextSnapshot snapshot,
             BookBrief brief,
             CallFrame frame,
             Document document,
-            Segment segment) {}
+            Segment segment,
+            @Nullable String followingTarget) {}
 }

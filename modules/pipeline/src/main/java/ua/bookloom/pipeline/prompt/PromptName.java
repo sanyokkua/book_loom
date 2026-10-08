@@ -38,6 +38,7 @@ public enum PromptName {
                             "lexiconTerms",
                             "characters",
                             "precedingTargets",
+                            "followingTarget",
                             "extraInstruction"))),
 
     /**

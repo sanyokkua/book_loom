@@ -17,4 +17,5 @@ public sealed interface JobEvent
                 ContextAssembled,
                 RoundStarted,
                 RecoveryWaiting,
-                BatchStarted {}
+                BatchStarted,
+                CallSnapshotUpdated {}

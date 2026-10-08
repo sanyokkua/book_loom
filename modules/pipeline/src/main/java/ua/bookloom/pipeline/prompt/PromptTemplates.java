@@ -4,9 +4,11 @@ import com.google.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -16,6 +18,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.pipeline.prompt.PromptName.Slots;
 
 /**
@@ -26,9 +29,12 @@ import ua.bookloom.pipeline.prompt.PromptName.Slots;
 public final class PromptTemplates {
 
     private static final Pattern MARKER = Pattern.compile("\\{\\{([#/]?)([A-Za-z][A-Za-z0-9]*)}}");
-    private static final Pattern BLOCK =
+    /** An optional block: group 1 its slot, group 2 its body, group 3 the blank line after it, kept with the block. */
+    static final Pattern BLOCK =
             Pattern.compile("^\\{\\{#(\\w+)}}\\n(.*?)^\\{\\{/\\1}}\\n(\\n)?", Pattern.MULTILINE | Pattern.DOTALL);
-    private static final Pattern SLOT = Pattern.compile("\\{\\{(\\w+)}}");
+
+    /** A plain slot: group 1 its name. */
+    static final Pattern SLOT = Pattern.compile("\\{\\{(\\w+)}}");
 
     /** Opens a template file by name; {@code null} when it does not exist. */
     @FunctionalInterface
@@ -100,6 +106,51 @@ public final class PromptTemplates {
      * @return the rendered system message
      */
     public String renderSystem(final PromptName name, final CallFrame frame, final Map<String, String> extra) {
+        return renderSystem(name, systemValues(name, frame, extra));
+    }
+
+    /**
+     * The filled parts of {@code name}'s prompt as {@link #renderSystem(PromptName, CallFrame)} and
+     * {@link #renderUser} send them: the system message's parts first, then the user message's, each in its
+     * template's order.
+     *
+     * @param name the non-null call
+     * @param frame the non-null run's language pair, style sheet and foreign-passage policy
+     * @param userValues the non-null user slot values, as {@link #renderUser} takes them
+     * @return never null; the parts with a value, a part left empty not being sent
+     */
+    public List<PromptSection> sectionsOf(
+            final PromptName name, final CallFrame frame, final Map<String, String> userValues) {
+        final List<PromptSection> sections = new ArrayList<>();
+        final Template system = systems.get(Objects.requireNonNull(name, "name"));
+        if (system != null) {
+            final Map<String, String> values = systemValues(name, frame, Map.of());
+            check(system, values);
+            sections.addAll(PromptSections.of(system.text(), values, PromptSection.Origin.SYSTEM));
+        }
+        sections.addAll(userSectionsOf(name, userValues));
+        log.debug(
+                "Prompt sections name={} slots={}",
+                name,
+                sections.stream().map(PromptSection::slot).toList());
+        return sections;
+    }
+
+    /**
+     * The filled parts of {@code name}'s user message as {@link #renderUser} sends it, in the template's order.
+     *
+     * @param name the non-null call
+     * @param values the non-null slot values, as {@link #renderUser} takes them
+     * @return never null; the parts with a value
+     */
+    public List<PromptSection> userSectionsOf(final PromptName name, final Map<String, String> values) {
+        final Template template = Objects.requireNonNull(users.get(Objects.requireNonNull(name, "name")));
+        check(template, values);
+        return PromptSections.of(template.text(), values, PromptSection.Origin.USER);
+    }
+
+    private Map<String, String> systemValues(
+            final PromptName name, final CallFrame frame, final Map<String, String> extra) {
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(extra, "extra");
         final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
@@ -112,7 +163,7 @@ public final class PromptTemplates {
                     LANGUAGE_RULES,
                     rules.section(frame.sourceLanguage(), frame.targetLanguage(), name.reviewsTranslation()));
         }
-        return renderSystem(name, values);
+        return values;
     }
 
     private String examplesFor(final PromptName name, final CallFrame frame) {
@@ -174,6 +225,22 @@ public final class PromptTemplates {
     }
 
     private static String render(final Template template, final Map<String, String> values) {
+        check(template, values);
+        logRender(template, values);
+        final String withBlocks = BLOCK.matcher(template.text())
+                .replaceAll(block -> Matcher.quoteReplacement(
+                        values.getOrDefault(block.group(1), "").isEmpty()
+                                ? ""
+                                : block.group(2) + (block.group(3) == null ? "" : block.group(3))));
+        return fill(withBlocks, values);
+    }
+
+    /** Puts each slot's value in place of its marker; a slot with no value becomes empty. */
+    static String fill(final String part, final Map<String, String> values) {
+        return SLOT.matcher(part).replaceAll(slot -> Matcher.quoteReplacement(values.getOrDefault(slot.group(1), "")));
+    }
+
+    private static void check(final Template template, final Map<String, String> values) {
         Objects.requireNonNull(values, "values");
         final Slots slots = template.slots();
         for (final String key : values.keySet()) {
@@ -186,14 +253,6 @@ public final class PromptTemplates {
                 throw new IllegalArgumentException("Template " + template.fileName() + " needs slot '" + slot + "'");
             }
         }
-        logRender(template, values);
-        final String withBlocks = BLOCK.matcher(template.text())
-                .replaceAll(block -> Matcher.quoteReplacement(
-                        values.getOrDefault(block.group(1), "").isEmpty()
-                                ? ""
-                                : block.group(2) + (block.group(3) == null ? "" : block.group(3))));
-        return SLOT.matcher(withBlocks)
-                .replaceAll(slot -> Matcher.quoteReplacement(values.getOrDefault(slot.group(1), "")));
     }
 
     private static void logRender(final Template template, final Map<String, String> values) {

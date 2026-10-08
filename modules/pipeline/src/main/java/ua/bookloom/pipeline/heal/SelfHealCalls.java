@@ -12,7 +12,9 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftPromptBuilder;
 import ua.bookloom.pipeline.prompt.OutputLimit;
@@ -48,6 +50,27 @@ public final class SelfHealCalls {
         final String system = templates.renderSystem(name, frame).strip();
         final String user = templates.renderUser(name, userValues).strip();
         return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+    }
+
+    /**
+     * What a self-heal call's shown snapshot names besides its request, built from the same values as
+     * {@link #messagesFor}.
+     *
+     * @param templates the catalogue's template renderer
+     * @param name which call's templates are rendered
+     * @param frame the run's language pair, style sheet and foreign-passage policy
+     * @param maskedSource the segment's masked source, shown as a person reads it
+     * @param userValues the user template's slot values
+     * @return the call's descriptor, naming no chunk
+     */
+    public static CallDescriptor descriptor(
+            final PromptTemplates templates,
+            final PromptName name,
+            final CallFrame frame,
+            final String maskedSource,
+            final Map<String, String> userValues) {
+        return CallDescriptor.of(
+                name, DisplayText.of(maskedSource), () -> templates.sectionsOf(name, frame, userValues));
     }
 
     /**

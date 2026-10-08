@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline;
 
+import java.util.List;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -10,6 +11,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.DraftStep;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 
@@ -23,14 +25,18 @@ import ua.bookloom.pipeline.prompt.ModelCalls;
 final class DraftCalls {
 
     static Result<ChatResponse> call(
-            final DraftStep step, final Segment segment, final ChatRequest request, final ModelCalls through) {
+            final DraftStep step,
+            final Segment segment,
+            final ChatRequest request,
+            final CallDescriptor descriptor,
+            final ModelCalls through) {
         log.debug(
                 "Calling chat model segmentId={} messageCount={}",
                 segment.id(),
                 request.messages().size());
         try {
-            final Result<ChatResponse> result =
-                    Objects.requireNonNull(through.call(step.callKind(), segment.id(), request), "model result");
+            final Result<ChatResponse> result = Objects.requireNonNull(
+                    through.callAbout(step.callKind(), List.of(segment.id()), request, descriptor), "model result");
             log.debug("Chat model completed segmentId={} result={}", segment.id(), result.isOk() ? "success" : "error");
             return result;
         } catch (Throwable cause) {

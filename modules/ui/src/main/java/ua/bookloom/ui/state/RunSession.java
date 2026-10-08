@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -237,6 +238,11 @@ final class RunSession implements JobListener {
             case RecoveryWaiting waiting -> locked(() -> queue(calls.recovery(waiting)));
             case Finished finished -> log.debug("ignoring the Finished event; the returned result decides the outcome");
             case BatchStarted batch -> log.debug("ignoring a {} batch event: a run sends none", batch.kind());
+            case CallSnapshotUpdated updated ->
+                log.trace(
+                        "call snapshot {} {} not shown yet",
+                        updated.snapshot().callId(),
+                        updated.snapshot().state());
         }
     }
 

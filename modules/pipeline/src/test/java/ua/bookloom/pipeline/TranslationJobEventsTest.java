@@ -30,6 +30,7 @@ import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.FlaggedSegment;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -57,9 +58,12 @@ class TranslationJobEventsTest {
             "SegmentStarted",
             "ContextAssembled",
             "ModelCallStarted",
+            "CallSnapshotUpdated",
             "ModelCallFinished",
+            "CallSnapshotUpdated",
             "SegmentDrafted",
-            "SegmentDecided");
+            "SegmentDecided",
+            "CallSnapshotUpdated");
 
     @TempDir
     private Path tempDir;
@@ -86,9 +90,9 @@ class TranslationJobEventsTest {
                 .extracting(TranslationJobEventsTest::label)
                 .containsExactlyElementsOf(concat(List.of(
                         List.of("StageStarted PREP", "StageStarted TRANSLATE"),
-                        acceptedOnFirstCall("Book.txt:0", 2),
-                        acceptedOnFirstCall("Book.txt:1", 1),
-                        acceptedOnFirstCall("Book.txt:2", 0),
+                        acceptedOnFirstCall("Book.txt:0", 1, 2),
+                        acceptedOnFirstCall("Book.txt:1", 2, 1),
+                        acceptedOnFirstCall("Book.txt:2", 3, 0),
                         List.of("Finished COMPLETED"))));
         assertThat(events)
                 .filteredOn(StageStarted.class::isInstance)
@@ -161,7 +165,7 @@ class TranslationJobEventsTest {
 
         assertThat(report(result).end()).isEqualTo(JobState.COMPLETED);
         assertThat(selfCalls).hasValue(1);
-        assertThat(healthy).hasSize(9);
+        assertThat(healthy).hasSize(2 + ACCEPTED_ON_FIRST_CALL.size() + 1);
     }
 
     // Equal listener instances still need independently removable subscription handles.
@@ -293,14 +297,18 @@ class TranslationJobEventsTest {
         return job(TestBooks.markdown(tempDir.resolve("Book.md"), content), model);
     }
 
-    private static List<String> acceptedOnFirstCall(final String segmentId, final int pendingAfter) {
+    // The shown call waits, is answered, and is shown once more with the decision noted on it.
+    private static List<String> acceptedOnFirstCall(final String segmentId, final long callId, final int pendingAfter) {
         return List.of(
                 "SegmentStarted " + segmentId,
                 "ContextAssembled",
                 "ModelCallStarted DRAFT " + segmentId,
+                "CallSnapshotUpdated " + callId + " WAITING outcomes=0",
                 "ModelCallFinished DRAFT " + segmentId,
+                "CallSnapshotUpdated " + callId + " ANSWERED outcomes=0",
                 "SegmentDrafted " + segmentId,
-                "SegmentDecided " + segmentId + " ACCEPTED pending=" + pendingAfter);
+                "SegmentDecided " + segmentId + " ACCEPTED pending=" + pendingAfter,
+                "CallSnapshotUpdated " + callId + " ANSWERED outcomes=1");
     }
 
     private static List<String> concat(final List<List<String>> parts) {
@@ -319,6 +327,10 @@ class TranslationJobEventsTest {
                         + decided.progress().pending();
             case MemoryUpdated updated -> "MemoryUpdated " + updated.kind();
             case Finished finished -> "Finished " + finished.report().end();
+            case CallSnapshotUpdated updated ->
+                "CallSnapshotUpdated " + updated.snapshot().callId() + " "
+                        + updated.snapshot().state() + " outcomes="
+                        + updated.snapshot().outcomes().size();
             default -> event.getClass().getSimpleName();
         };
     }

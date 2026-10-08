@@ -3,9 +3,11 @@ package ua.bookloom.pipeline.heal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
@@ -18,12 +20,15 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.llm.ResponseFormat;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.llm.pseudo.PseudoChatModel;
 import ua.bookloom.pipeline.ScriptedChatModel;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.DraftReplyParser;
 import ua.bookloom.pipeline.prompt.DraftSchema;
@@ -79,6 +84,30 @@ class DirectedFixTest {
                 calls(model));
 
         assertThat(userMessageOf(model)).contains(EXPECTED_THREE_TOKENS);
+    }
+
+    // The live panel shows the fix as the call it was: the prompt's parts in the order it sent them.
+    @Test
+    void fix_placeholderFinding_describesTheCallWithItsPartsInPromptOrder() {
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(TARGET_ONLY_REPLY));
+        final List<CallDescriptor> described = new ArrayList<>();
+        final ModelCalls recording = describing(model, described);
+
+        FIX.fix(
+                segment("Book.md:0"),
+                FRAME,
+                THREE_TOKEN_SOURCE,
+                THREE_TOKEN_TARGET,
+                List.of(PLACEHOLDER_FINDING),
+                recording);
+
+        assertThat(described).singleElement().satisfies(descriptor -> {
+            assertThat(descriptor.label()).isEqualTo("directed-fix");
+            assertThat(descriptor.sources()).containsExactly("items remain.");
+            assertThat(descriptor.sections().get())
+                    .extracting(PromptSection::slot)
+                    .containsExactly("styleSheet", "examples", "source", "findings", "expectedTokens", "text");
+        });
     }
 
     @Test
@@ -233,6 +262,27 @@ class DirectedFixTest {
 
     private static String userMessageOf(final ScriptedChatModel model) {
         return model.requests().getFirst().messages().get(1).content();
+    }
+
+    // A seam that answers from the scripted model and keeps every description it is given.
+    private static ModelCalls describing(final ScriptedChatModel model, final List<CallDescriptor> described) {
+        return new ModelCalls() {
+            @Override
+            public Result<ChatResponse> call(
+                    final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
+                return model.chat(request);
+            }
+
+            @Override
+            public Result<ChatResponse> callAbout(
+                    final CallKind kind,
+                    final List<String> segmentIds,
+                    final ChatRequest request,
+                    final CallDescriptor descriptor) {
+                described.add(descriptor);
+                return model.chat(request);
+            }
+        };
     }
 
     private static ModelCalls calls(final ScriptedChatModel model) {

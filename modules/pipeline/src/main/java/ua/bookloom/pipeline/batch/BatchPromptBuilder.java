@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.pipeline.PromptSection;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
@@ -69,6 +70,18 @@ public final class BatchPromptBuilder {
             log.trace("Batch prompt system={} user={}", system, user);
         }
         return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
+    }
+
+    /**
+     * The parts of one batch's prompt as {@link #messagesFor} sends them, in order.
+     *
+     * @param context the non-null read-only context
+     * @param items the non-null batch items, at least one
+     * @return never null; the filled parts, the system message's first
+     */
+    public List<PromptSection> sectionsFor(final BatchContext context, final List<BatchItem> items) {
+        Objects.requireNonNull(context, "context");
+        return templates.sectionsOf(PromptName.DRAFT_BATCH_JSON, frame, userValues(context, items));
     }
 
     /**

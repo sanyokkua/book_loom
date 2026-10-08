@@ -19,6 +19,7 @@ import ua.bookloom.api.pipeline.JobProgress;
 import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
+import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.util.log.EvidenceLog;
 
 /**
@@ -26,6 +27,11 @@ import ua.bookloom.util.log.EvidenceLog;
  * accepted at once does not, so the evidence file holds only what someone will ask about.
  */
 class SegmentEvidenceMarkerTest {
+
+    // The marker tests send no model call; a decision's note goes nowhere.
+    private static final ModelCalls NO_CALLS = (kind, segmentId, request) -> {
+        throw new AssertionError("no model call expected");
+    };
 
     // Logback reads the MDC lazily; an appender that holds events must capture it while the span is still open.
     private final ListAppender<ILoggingEvent> appender = new ListAppender<>() {
@@ -61,7 +67,7 @@ class SegmentEvidenceMarkerTest {
     })
     void decided_statusAndPath_marksOnlyFlaggedOrRepairedForKeeping(
             final SegmentStatus status, final SegmentPath path, final boolean marked) {
-        final SegmentEvents events = new SegmentEvents(event -> {}, Map.of());
+        final SegmentEvents events = new SegmentEvents(event -> {}, Map.of(), NO_CALLS);
 
         events.decided(record(status, path), null, new JobProgress(JobStage.TRANSLATE, 1, 1, 0, 0, 3));
 
@@ -72,7 +78,7 @@ class SegmentEvidenceMarkerTest {
     // The marker line must carry the segment key, or the evidence log would not know whose lines to write.
     @Test
     void decided_flaggedSegment_keepLineCarriesTheSegmentKey() {
-        final SegmentEvents events = new SegmentEvents(event -> {}, Map.of());
+        final SegmentEvents events = new SegmentEvents(event -> {}, Map.of(), NO_CALLS);
 
         events.decided(
                 record(SegmentStatus.FLAGGED, SegmentPath.DRAFT),

@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.BatchStarted;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.ContextAssembled;
 import ua.bookloom.api.pipeline.Finished;
 import ua.bookloom.api.pipeline.JobEvent;
@@ -70,7 +71,10 @@ final class RunSummaryLogger {
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
-    /** Takes in one job event, and writes a line when a minute has passed or the job has ended. */
+    /**
+     * Takes in one job event, and writes a line when a minute has passed or the job has ended. Only the decisions, the
+     * stages, the pauses and the finished calls change the counts; the other events say what is happening.
+     */
     void onEvent(final JobEvent event) {
         Objects.requireNonNull(event, "event");
         switch (event) {
@@ -90,9 +94,8 @@ final class RunSummaryLogger {
                     ContextAssembled _,
                     RoundStarted _,
                     RecoveryWaiting _,
-                    BatchStarted _ -> {
-                // Nothing to count: these say what is happening, the counts change on the events above.
-            }
+                    BatchStarted _,
+                    CallSnapshotUpdated _ -> {}
         }
         final Instant now = clock.instant();
         final Instant last = lastLine;

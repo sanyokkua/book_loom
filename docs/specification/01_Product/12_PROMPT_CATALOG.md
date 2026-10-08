@@ -241,6 +241,13 @@ Write each term as shown, inflected as the sentence needs, unless the glossary s
 </PreviousTranslations>
 {{/precedingTargets}}
 
+{{#followingTarget}}
+[Next translated text — context only; do NOT re-translate it]
+<NextTranslation>
+{{followingTarget}}
+</NextTranslation>
+{{/followingTarget}}
+
 Translate from {{source}} to {{target}}.
 
 [Immutable tokens for this text]
@@ -269,6 +276,7 @@ Return exactly one JSON object matching this schema: {"target":"<translation>"}
 | `{{text}}`                         | Required  | The one masked source segment, rendered verbatim inside `<Text>`.                                                                                                                                        |
 | `{{tokens}}`                       | Required  | This segment's exact source-order placeholder sequence, or the no-token statement `(none — write no ⟦gN⟧ token at all; write every name as plain text)`: a small model otherwise invents a token for a name. |
 | `{{precedingTargets}}`             | Optional  | The targets just before the segment in the current unit (dial-capped); the entire block is omitted when absent and reset at a section boundary.                                                          |
+| `{{followingTarget}}`              | Optional  | The next segment's target in display text — sent only by a review retry, whose first draft (often in a batch) saw what came next; a run drafts ahead of the next segment and never sends it. |
 | `{{summary}}`, `{{glossaryTerms}}`, `{{lockedNames}}`, `{{suggestedTerms}}`, `{{lexiconTerms}}`, `{{memoryHint}}`, `{{extraInstruction}}` | Optional | The rolling summary, the glossary lines of the terms in the chunk whose target is the person's, under a header saying each name is written out as plain text; `{{lockedNames}}`, the locked terms the segment hides behind tokens, as `⟦gN⟧ → rendering` under a header saying the token is kept and the name never written — a block present only when the segment holds such a token, so a text with none never sees a token explained beside a name; the lines of the terms whose target the model suggested and nobody confirmed (`#glossary-target-suggestions`; a hint the draft may inflect, never a token), the established renderings of the recurring terms the chunk names (`#recurring-terms`), translation-memory hints, and a retry's note; each block is omitted when empty. |
 
 **Parameters:** temperature 0.2; output format = the strict `target` JSON schema; reasoning low/off; non-streaming.

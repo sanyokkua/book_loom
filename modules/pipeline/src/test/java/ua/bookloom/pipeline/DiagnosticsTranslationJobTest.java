@@ -308,6 +308,7 @@ class DiagnosticsTranslationJobTest {
                         " ",
                         events.stream()
                                 .map(event -> event.getClass().getSimpleName())
+                                .filter(name -> !name.equals("CallSnapshotUpdated"))
                                 .toList()))
                 .isEqualTo("StageStarted StageStarted"
                         + " SegmentStarted ContextAssembled ModelCallStarted ModelCallFinished SegmentDrafted SegmentDecided"

@@ -17,6 +17,8 @@ import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.llm.FinishReason;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.pipeline.DisplayText;
+import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
 import ua.bookloom.pipeline.prompt.ChatRequests;
 import ua.bookloom.pipeline.prompt.ModelCalls;
@@ -130,9 +132,15 @@ public final class ReviewerCall {
             final List<String> characters,
             final ReviewPass pass,
             final ModelCalls calls) {
-        final ChatRequest request = request(pairs, frame, glossaryPairs, characters, pass);
+        final Map<String, String> userValues = userValues(pairs, glossaryPairs, characters, pass);
+        final ChatRequest request = request(pairs, frame, userValues);
         logTraceMessages(request);
-        return send(pairs.stream().map(ReviewedPair::segmentId).toList(), request, calls);
+        final CallDescriptor descriptor = new CallDescriptor(
+                PromptName.REVIEWER.resourceBaseName(),
+                null,
+                pairs.stream().map(pair -> DisplayText.of(pair.maskedSource())).toList(),
+                () -> templates.sectionsOf(PromptName.REVIEWER, frame, userValues));
+        return send(pairs.stream().map(ReviewedPair::segmentId).toList(), request, descriptor, calls);
     }
 
     /**
@@ -198,13 +206,16 @@ public final class ReviewerCall {
     }
 
     private Result<ChatResponse> send(
-            final List<String> segmentIds, final ChatRequest request, final ModelCalls calls) {
-        final Result<ChatResponse> first = calls.callAbout(CallKind.REVIEW, segmentIds, request);
+            final List<String> segmentIds,
+            final ChatRequest request,
+            final CallDescriptor descriptor,
+            final ModelCalls calls) {
+        final Result<ChatResponse> first = calls.callAbout(CallKind.REVIEW, segmentIds, request, descriptor);
         if (first.isOk() || Objects.requireNonNull(first.error()).code() != ErrorCode.timeout) {
             return first;
         }
         log.warn("Review call timed out; sending it once more without a response format segmentIds={}", segmentIds);
-        return calls.callAbout(CallKind.REVIEW, segmentIds, request.withoutResponseFormat());
+        return calls.callAbout(CallKind.REVIEW, segmentIds, request.withoutResponseFormat(), descriptor);
     }
 
     private ReviewVerdict readVerdict(
@@ -238,18 +249,22 @@ public final class ReviewerCall {
         return Result.err(error);
     }
 
-    private ChatRequest request(
+    private static Map<String, String> userValues(
             final List<ReviewedPair> pairs,
-            final CallFrame frame,
             final List<String> glossaryPairs,
             final List<String> characters,
             final ReviewPass pass) {
-        final String system = templates.renderSystem(PromptName.REVIEWER, frame).strip();
         final Map<String, String> userValues = new HashMap<>();
         userValues.put("pairs", renderPairs(pairs));
         userValues.put("glossaryTerms", String.join("\n", glossaryPairs));
         userValues.put("characters", String.join("\n", characters));
         userValues.put("passFocus", pass.instruction());
+        return userValues;
+    }
+
+    private ChatRequest request(
+            final List<ReviewedPair> pairs, final CallFrame frame, final Map<String, String> userValues) {
+        final String system = templates.renderSystem(PromptName.REVIEWER, frame).strip();
         final String user =
                 templates.renderUser(PromptName.REVIEWER, userValues).strip();
         final List<ChatMessage> messages =
