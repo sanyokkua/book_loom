@@ -6,6 +6,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 /**
@@ -61,6 +62,8 @@ public final class Banner extends HBox {
         Objects.requireNonNull(id, "id");
         this.role = Objects.requireNonNull(role, "role");
         icon.getStyleClass().add("banner-icon");
+        // The words wrap; the glyph never gives way to them (squeezed, it showed as "…" in a narrow dialog).
+        icon.setMinWidth(Region.USE_PREF_SIZE);
         setId(id);
         this.title.setId(id + "-title");
         this.text.setId(id + "-text");

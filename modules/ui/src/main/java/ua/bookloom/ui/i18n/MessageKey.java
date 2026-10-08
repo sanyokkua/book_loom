@@ -1822,6 +1822,8 @@ public enum MessageKey {
     REVIEW_BACK_TIP("review.back.tip"),
     /** Empty state of the review panel when no segment is listed. */
     REVIEW_EMPTY("review.empty"),
+    /** Text in the review pane while the list holds segments and none is picked. */
+    REVIEW_PICK("review.pick"),
     /** Mark on the target pane, which the person can edit. */
     REVIEW_EDITABLE("review.editable"),
     /** Hover explanation of the control labelled by {@link #REVIEW_EDITABLE}. */

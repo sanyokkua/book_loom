@@ -56,6 +56,23 @@ class ReviewPanelScreenTest extends ReviewPanelScreenTestBase {
         assertThat(button("review-back").getText()).isEqualTo("Back to progress");
     }
 
+    // IF the panel opened on a list with nothing picked showed a blank pane, THEN a person would not know what to do.
+    @Test
+    void panel_flaggedButNonePicked_saysToPickOne() throws Exception {
+        openPanelWith(
+                RunState.COMPLETED,
+                3,
+                ReviewFixtures.lowScore(),
+                ReviewFixtures.nameIssue(),
+                ReviewFixtures.wrongLanguage());
+        onFx(() -> ((javafx.scene.control.ListView<?>) required("review-list"))
+                .getSelectionModel()
+                .clearSelection());
+
+        assertThat(isShown("review-empty-text")).isTrue();
+        assertThat(labelText("review-empty-text")).isEqualTo("Pick a segment in the list to review it here.");
+    }
+
     @Test
     void reviewFlagged_threeFlagged_opensThePanelAndBackToProgressClosesIt() throws Exception {
         openPanelWith(

@@ -51,6 +51,7 @@ final class ExportDestinationCard {
         field.setId("export-save-to");
         Tips.install(messages, field, MessageKey.EXPORT_SAVE_TO_TIP);
         field.setText(viewModel.destination().get());
+        field.end();
         field.textProperty().addListener((observed, was, now) -> onTyped(now));
         viewModel.destination().addListener(new WeakChangeListener<>(onDestination));
         HBox.setHgrow(field, Priority.ALWAYS);
@@ -135,9 +136,11 @@ final class ExportDestinationCard {
         }
     }
 
+    // The caret goes to the end so a long path shows its file name, the part a person checks, not its first folders.
     private void showDestination(final String text) {
         if (!text.equals(field.getText())) {
             field.setText(text);
+            field.end();
         }
     }
 

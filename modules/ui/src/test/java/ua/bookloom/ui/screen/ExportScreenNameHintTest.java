@@ -40,11 +40,16 @@ class ExportScreenNameHintTest extends TranslatingScreenTestBase {
                 .nameSuggestion
                 .authorKept()
                 .get());
+        final TextField saveTo = (TextField) required("export-save-to");
+        final boolean caretAtEnd = saveTo.getCaretPosition() == saveTo.getText().length();
         final Node hint = required("export-author-kept");
         final boolean shown = hint.isVisible();
         final String words = ((Label) hint).getText();
         onFx(() -> ((TextField) required("export-save-to")).setText("Франкенштейн. Мері Шеллі.epub"));
 
+        assertThat(caretAtEnd)
+                .as("the suggested name, at the path's end, is what the field shows")
+                .isTrue();
         assertThat(shown).isTrue();
         assertThat(words).isEqualTo("The author's name was kept in Latin — edit it if you want it translated.");
         assertThat(required("export-author-kept").isVisible()).isFalse();

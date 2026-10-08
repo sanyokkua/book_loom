@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.qa;
 
 import static ua.bookloom.pipeline.qa.CheckName.LENGTH;
 
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -84,7 +85,8 @@ final class LengthCheck {
         final boolean compact = isCompactLine(input.sourceDisplayText(), input.targetDisplayText(), sourceChars, ratio);
         if (ratio > band.upper() || (ratio < band.lower() && !compact)) {
             return CheckResult.fail(
-                    LENGTH, "length ratio " + ratio + " outside [" + band.lower() + "," + band.upper() + "]");
+                    LENGTH,
+                    String.format(Locale.ROOT, "length ratio %.2f outside [%s,%s]", ratio, band.lower(), band.upper()));
         }
         final Optional<String> omission = omission(
                 input.sourceDisplayText(),

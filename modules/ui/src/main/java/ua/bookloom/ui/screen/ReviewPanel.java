@@ -92,10 +92,7 @@ final class ReviewPanel extends VBox {
             final TranslatingDialogs dialogs) {
         final ReviewComparePane compare =
                 new ReviewComparePane(viewModel, sourceName, targetName, messages, dialogs, pauses.acceptContinues());
-        final Label empty = new Label(messages.get(MessageKey.REVIEW_EMPTY));
-        empty.setId("review-empty-text");
-        empty.setWrapText(true);
-        final VBox emptyState = new VBox(empty);
+        final VBox emptyState = new VBox(emptyText(messages));
         emptyState.setId("review-empty");
         emptyState.setAlignment(Pos.CENTER);
         // A pause names a segment the flagged list may not hold (Manual pauses after an accepted one), so the compare
@@ -107,7 +104,7 @@ final class ReviewPanel extends VBox {
                 viewModel.rows(),
                 viewModel.selected(),
                 pauses.pausedForReview());
-        emptyState.visibleProperty().bind(Bindings.isEmpty(viewModel.rows()).and(shown.not()));
+        emptyState.visibleProperty().bind(shown.not());
         emptyState.managedProperty().bind(emptyState.visibleProperty());
         compare.visibleProperty().bind(shown);
         compare.managedProperty().bind(compare.visibleProperty());
@@ -116,6 +113,19 @@ final class ReviewPanel extends VBox {
         stack.setMinWidth(0);
         HBox.setHgrow(stack, Priority.ALWAYS);
         return stack;
+    }
+
+    // An empty list says the run left nothing to review; a list with nothing picked says what to do next.
+    private Label emptyText(final Messages messages) {
+        final Label empty = new Label();
+        empty.setId("review-empty-text");
+        empty.textProperty()
+                .bind(Bindings.createStringBinding(
+                        () -> messages.get(
+                                viewModel.rows().isEmpty() ? MessageKey.REVIEW_EMPTY : MessageKey.REVIEW_PICK),
+                        viewModel.rows()));
+        empty.setWrapText(true);
+        return empty;
     }
 
     private void pausedForReview(final boolean now) {

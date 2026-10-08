@@ -119,6 +119,18 @@ class LengthCheckTest {
         assertThat(result.passed()).isTrue();
     }
 
+    // The review desk showed "length ratio 0.6617647058823529 outside [0.7,1.8]": a note a person reads keeps two
+    // decimals.
+    @Test
+    void run_ratioOutsideTheBand_namesTheRatioWithTwoDecimals() {
+        final CheckResult result =
+                LengthCheck.run(SoftCheckFixtures.length("a".repeat(136), "b".repeat(90), "en", "uk"));
+
+        assertThat(result.passed()).isFalse();
+        assertThat(result.finding()).isNotNull();
+        assertThat(result.finding().note()).startsWith("length ratio 0.66 outside [");
+    }
+
     @Test
     void run_longerLineCutToAFragment_stillFailsAsAnOmission() {
         final CheckResult result = LengthCheck.run(
