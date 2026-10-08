@@ -39,6 +39,7 @@ import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.api.pipeline.CallState;
 import ua.bookloom.ui.control.DurationText;
 import ua.bookloom.ui.control.LiveCallView;
+import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.dialog.ModalCard;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -79,7 +80,7 @@ public final class BusyHost {
     /** How long work runs before the card appears, so a quick action does not flash it. */
     static final javafx.util.Duration DELAY = javafx.util.Duration.millis(400);
 
-    private static final javafx.util.Duration FADE = javafx.util.Duration.millis(160);
+    private static final javafx.util.Duration FADE = Motion.STANDARD;
     private static final javafx.util.Duration TICK = javafx.util.Duration.seconds(1);
 
     private final ActivityTracker activities;
@@ -221,10 +222,14 @@ public final class BusyHost {
         revealed = true;
         host.setVisible(true);
         fade.stop();
-        fade.setFromValue(0);
-        fade.setToValue(1);
-        fade.setOnFinished(null);
-        fade.playFromStart();
+        if (Motion.isReduced()) {
+            host.setOpacity(1);
+        } else {
+            fade.setFromValue(0);
+            fade.setToValue(1);
+            fade.setOnFinished(null);
+            fade.playFromStart();
+        }
         capture();
         clock.playFromStart();
         cancel.requestFocus();
@@ -238,6 +243,11 @@ public final class BusyHost {
         clock.stop();
         release();
         fade.stop();
+        if (Motion.isReduced()) {
+            host.setOpacity(0);
+            host.setVisible(false);
+            return;
+        }
         fade.setFromValue(host.getOpacity());
         fade.setToValue(0);
         fade.setOnFinished(event -> {

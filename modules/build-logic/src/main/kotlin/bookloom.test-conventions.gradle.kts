@@ -116,6 +116,10 @@ tasks.withType<Test>().configureEach {
     // Any incidental AWT/Swing initialisation (font metrics, image IO) must not try to open a display either.
     systemProperty("java.awt.headless", "true")
 
+    // The window's transitions off (`ua.bookloom.ui.control.Motion`): a UI test reads the state a node is set to, not
+    // a frame on its way there. A test of a transition itself turns them back on for its own duration.
+    systemProperty("bookloom.reduceMotion", "true")
+
     // A tag-partitioned suite legitimately matches zero tests: `:api` has no `visual` test and never will, and on
     // a machine with no local model EVERY `liveLocal` case is skipped. Gradle's default would turn that into a
     // build failure, which would make `./gradlew liveLocal` red on a fresh checkout — the precise outcome

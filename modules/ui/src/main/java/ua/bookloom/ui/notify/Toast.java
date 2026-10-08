@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -28,7 +29,7 @@ import ua.bookloom.ui.i18n.Messages;
 @Slf4j
 final class Toast {
 
-    private static final Duration FADE = Duration.millis(160);
+    private static final Duration FADE = Motion.STANDARD;
     private static final double SLIDE_PIXELS = 12;
 
     private final Severity severity;
@@ -145,6 +146,12 @@ final class Toast {
     }
 
     void playIn() {
+        if (Motion.isReduced()) {
+            node.setOpacity(1);
+            node.setTranslateY(0);
+            timer.play();
+            return;
+        }
         node.setOpacity(0);
         node.setTranslateY(SLIDE_PIXELS);
         final FadeTransition fade = new FadeTransition(FADE, node);
@@ -160,7 +167,7 @@ final class Toast {
     void dismiss(final boolean isAnimated, final Runnable removal) {
         isDismissed = true;
         timer.stop();
-        if (!isAnimated) {
+        if (!isAnimated || Motion.isReduced()) {
             removal.run();
             return;
         }

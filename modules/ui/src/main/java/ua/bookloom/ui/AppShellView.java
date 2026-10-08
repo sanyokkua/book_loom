@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 import ua.bookloom.ui.control.ActivityChip;
+import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.RunStatusBar;
 import ua.bookloom.ui.control.ScrollAnchor;
 import ua.bookloom.ui.control.SmoothScroll;
@@ -52,6 +53,8 @@ import ua.bookloom.ui.theme.ThemeController;
 @Slf4j
 @Singleton
 public final class AppShellView {
+
+    static final String REDUCED_MOTION_CLASS = "reduce-motion";
 
     /**
      * The smallest <em>outer</em> window width. The content area that leaves a person is smaller (borders and title
@@ -208,6 +211,11 @@ public final class AppShellView {
         // above the top edge and left of the left edge equally, cutting off the title bar with no way to reach it.
         StackPane.setAlignment(frame, Pos.TOP_LEFT);
         final StackPane shell = new StackPane(frame, busyHost.view(), modalHost.view());
+        if (Motion.isReduced()) {
+            // The switches' sliding thumb is the one transition the stylesheet plays; this class stills it.
+            log.info("reduced motion: transitions are off");
+            shell.getStyleClass().add(REDUCED_MOTION_CLASS);
+        }
         // Once at the top: a wheel notch glides whichever pane, list, table or tree is under the pointer.
         SmoothScroll.install(shell);
         navigator.currentView().addListener((observed, old, current) -> showCurrent(current));
@@ -302,6 +310,7 @@ public final class AppShellView {
                 region.setMinHeight(Region.USE_PREF_SIZE);
             }
             contentHost.getChildren().setAll(content);
+            Motion.fadeIn(content, Motion.QUICK);
         }
         contentAnchor.reset();
     }

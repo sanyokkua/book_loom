@@ -1,7 +1,9 @@
 package ua.bookloom.ui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
+import java.util.concurrent.TimeUnit;
 import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
@@ -10,12 +12,17 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import org.junit.jupiter.api.Test;
+import org.testfx.util.WaitForAsyncUtils;
 
 /**
  * The modal host's contract for a dialog other than About: one that must be answered through its own controls is not
  * dismissed by a click on the dimmed area, while Escape still closes it.
  */
 class ModalHostTest extends ShellTestBase {
+
+    // Longer than the card's transition, with room for a loaded test machine.
+    private static final long SETTLE_MS = 1500;
+    private static final double TOLERANCE = 1e-6;
 
     private ModalHost host() {
         return injector.getInstance(ModalHost.class);
@@ -101,5 +108,29 @@ class ModalHostTest extends ShellTestBase {
 
         assertThat(scene.getRoot().lookup("#answer-only-card")).isNotNull();
         assertThat(host().isShowing()).isTrue();
+    }
+
+    // IF a dialog appeared in one frame, THEN it would jump at the person; with motion on it fades and grows in, and
+    // ends fully shown at its own size.
+    @Test
+    void show_withMotion_easesTheCardIn() {
+        final String before = System.getProperty("bookloom.reduceMotion");
+        System.setProperty("bookloom.reduceMotion", "false");
+        try {
+            final double[] start = ThemeTestSupport.onFx(() -> {
+                final Node card = answerOnlyCard();
+                host().show(card, true);
+                return new double[] {host().view().getOpacity(), card.getScaleX()};
+            });
+            WaitForAsyncUtils.sleep(SETTLE_MS, TimeUnit.MILLISECONDS);
+            final Node card = required("answer-only-card");
+
+            assertThat(start[0]).as("the dimmed layer starts transparent").isLessThan(1);
+            assertThat(start[1]).as("the card starts a little smaller").isLessThan(1);
+            assertThat(ThemeTestSupport.onFx(() -> host().view().getOpacity())).isCloseTo(1, within(TOLERANCE));
+            assertThat(ThemeTestSupport.onFx(card::getScaleX)).isCloseTo(1, within(TOLERANCE));
+        } finally {
+            System.setProperty("bookloom.reduceMotion", before == null ? "true" : before);
+        }
     }
 }

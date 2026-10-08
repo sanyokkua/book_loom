@@ -221,6 +221,20 @@ build does and does not do is in `01_Product/08_UI_SCREENS_AND_STATES.md`:
   empty states per screen. Errors surface as a dialog (with expandable typed `AppError.details`) plus a toast, per
   `09_ERROR_HANDLING.md#ui-surfacing`.
 
+## motion {#motion}
+
+Short transitions ease a change in; none carries meaning on its own (NFR-A11Y-09), and every duration lives in
+`ua.bookloom.ui.control.Motion`: **120 ms** (`QUICK`) for a screen's content fading in on a switch and the current
+navigation step settling; **160 ms** (`STANDARD`) for a dialog card fading and growing in (scale 0.96 → 1) over its
+fading scrim, a banner appearing or changing role, a toast sliding in and out and the busy card; **200 ms** (`SLOW`)
+for a progress bar gliding to its new fraction (a reset or an indeterminate value is shown at once) and the switch's
+sliding thumb (ControlsFX). Closing is immediate. Motion is reduced — every transition skipped and the final state set at
+once — when `BOOKLOOM_REDUCE_MOTION` / `-Dbookloom.reduceMotion` says so (`1`/`true`/`yes` on, `0`/`false`/`no` off),
+otherwise when the operating system asks (`Platform.Preferences#isReducedMotion`); the shell root then carries
+`reduce-motion`, which stills the switch thumb in CSS. The test tasks set the property, so TestFX reads final states; a
+test of a transition turns it off for its own duration. Nothing animates inside a cell's `updateItem` or a
+`layoutChildren`, and nothing logs per frame.
+
 ## i18n {#i18n}
 
 UI strings come from `ResourceBundle`s keyed by locale; the Appearance tab is specified to select the app language, but

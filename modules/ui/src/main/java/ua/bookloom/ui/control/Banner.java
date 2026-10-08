@@ -70,6 +70,12 @@ public final class Banner extends HBox {
         setGlyph(glyph);
         setTitle(title);
         setText(text);
+        // A banner that appears on a screen already shown eases in, so the eye is drawn to it without a jump.
+        visibleProperty().addListener((observed, was, now) -> {
+            if (now && getScene() != null) {
+                Motion.fadeIn(this, Motion.STANDARD);
+            }
+        });
     }
 
     /**
@@ -79,9 +85,13 @@ public final class Banner extends HBox {
      */
     public void setRole(final Role newRole) {
         Objects.requireNonNull(newRole, "newRole");
+        final boolean changed = newRole != role;
         getStyleClass().remove(role.styleClass());
         getStyleClass().add(newRole.styleClass());
         role = newRole;
+        if (changed && getScene() != null && isVisible()) {
+            Motion.settle(this);
+        }
     }
 
     /**

@@ -19,6 +19,7 @@ import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.ui.control.DurationText;
+import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -51,7 +52,7 @@ final class TranslatingFigures {
         final ProgressBar bar = new ProgressBar();
         bar.setId("translating-progress");
         bar.setMaxWidth(Double.MAX_VALUE);
-        bar.progressProperty().bind(mirror.progressFraction());
+        Motion.followProgress(bar, mirror.progressFraction());
         followProviderError(bar, mirror);
         final Label line = boundLabel(
                 "translating-progress-text",

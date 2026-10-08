@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
@@ -130,9 +131,12 @@ final class NavColumn {
      */
     void markCurrent(final @Nullable ViewNames current) {
         entries.forEach((view, button) -> {
-            button.getStyleClass().remove(CURRENT_STYLE_CLASS);
+            final boolean wasCurrent = button.getStyleClass().remove(CURRENT_STYLE_CLASS);
             if (view == current) {
                 button.getStyleClass().add(CURRENT_STYLE_CLASS);
+                if (!wasCurrent) {
+                    Motion.settle(button);
+                }
             }
         });
     }

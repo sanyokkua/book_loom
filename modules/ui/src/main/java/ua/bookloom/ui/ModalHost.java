@@ -15,6 +15,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.ui.control.Motion;
 
 /**
  * The shell's overlay for one dialog at a time: a dimming layer with the dialog card centred over it.
@@ -95,9 +96,14 @@ public final class ModalHost {
         this.dismissOnOutsideClick = dismissOnOutsideClick;
         this.dismissOnEscape = dismissOnEscape;
         card = dialog;
+        final boolean arriving = !host.isVisible();
         host.getChildren().setAll(scrim, dialog);
         host.setVisible(true);
         scrim.setVisible(true);
+        if (arriving) {
+            Motion.fadeIn(host, Motion.STANDARD);
+        }
+        Motion.popIn(dialog);
         capture();
         focusFirstIn(dialog);
     }

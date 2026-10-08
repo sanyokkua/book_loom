@@ -25,7 +25,7 @@ _Advisory guidance, not requirements in the gating sense:_
 | NFR-A11Y-06 | **Non-text cues** — errors/warnings pair color with an icon and text (`09_ERROR_HANDLING.md`); the flagged status uses shape/label, not hue alone.                                                                                                                        |
 | NFR-A11Y-07 | **Focus management** — opening a dialog moves focus into it and returns focus to the invoker on close; toasts do not steal focus.                                                                                                                                         |
 | NFR-A11Y-08 | **Labels & instructions** — every input has an associated label; validation errors are announced and programmatically associated with their field.                                                                                                                        |
-| NFR-A11Y-09 | **Motion** — no essential information is conveyed only by animation; progress has a textual/percentage equivalent.                                                                                                                                                        |
+| NFR-A11Y-09 | **Motion** — no essential information is conveyed only by animation; progress has a textual/percentage equivalent. Transitions are short (≤ 200 ms) and are turned off when the OS asks for reduced motion or `BOOKLOOM_REDUCE_MOTION=1` is set (`02_Architecture/07_UI_ARCHITECTURE_JAVAFX.md#motion`). |
 
 ## color-and-theming {#color-and-theming}
 

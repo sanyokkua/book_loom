@@ -1386,6 +1386,11 @@
     -thumb-move-animation-time: 1;
 }
 
+/* Reduced motion (Motion.isReduced): the switch's thumb jumps to its side instead of sliding there. */
+.reduce-motion .toggle-switch {
+    -thumb-move-animation-time: 1;
+}
+
 .toggle-switch:focus-visible .thumb-area {
     -fx-border-color: -color-focus;
     -fx-border-width: 2px;
