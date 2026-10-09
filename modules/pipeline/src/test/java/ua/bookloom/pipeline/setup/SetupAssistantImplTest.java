@@ -47,6 +47,7 @@ class SetupAssistantImplTest {
         assistant = new SetupAssistantImpl(
                 desk.projects(),
                 desk.segments(),
+                desk.glossary(),
                 desk.openProjects(),
                 new PromptTemplates(),
                 new ObjectMapper(),

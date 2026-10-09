@@ -17,6 +17,9 @@ import ua.bookloom.api.pipeline.BriefField;
  * Reads one sample's brief suggestion reply and keeps only the answers the sample supports. A neutral answer (a
  * neutral register, no narrator, an unknown gender, an empty phrase) needs no proof; any other needs a quote the code
  * finds in the sample it was given and a confidence of at least {@value #MIN_CONFIDENCE}, or it is no answer at all.
+ * The narrator's gender needs more: its quote must show the gender in words the code can check
+ * ({@link NarratorGenderEvidence}), which then decide it; a gender that does not is the neutral unknown, because the
+ * sample showed nothing the code could verify.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -28,6 +31,7 @@ final class BriefReplies {
 
     private static final double SURE = 1.0;
     private static final Set<String> NEUTRAL = Set.of("", "neutral", "unspecified", "unknown");
+    private static final Answer UNKNOWN = new Answer("unknown", "");
 
     /**
      * One supported answer of one sample.
@@ -54,11 +58,14 @@ final class BriefReplies {
      *
      * @param reply the parsed reply
      * @param sample the sample the reply was given
+     * @param narratorGender the check of the narrator's gender quote for this book
      * @return the answer of each field the sample supports; never null, without a field whose answer it does not
      */
-    static Map<BriefField, Answer> read(final JsonNode reply, final BookSample sample) {
+    static Map<BriefField, Answer> read(
+            final JsonNode reply, final BookSample sample, final NarratorGenderEvidence narratorGender) {
         Objects.requireNonNull(reply, "reply");
         Objects.requireNonNull(sample, "sample");
+        Objects.requireNonNull(narratorGender, "narratorGender");
         final Map<BriefField, Answer> answers = new EnumMap<>(BriefField.class);
         for (final BriefField field : BriefField.values()) {
             final JsonNode node = reply.get(wireName(field));
@@ -72,9 +79,34 @@ final class BriefReplies {
                 answers.put(field, answer);
                 continue;
             }
-            supported(field, answer, node, sample).ifPresent(kept -> answers.put(field, kept));
+            final Optional<Answer> supported = supported(field, answer, node, sample);
+            if (field == BriefField.NARRATOR_GENDER) {
+                answers.put(
+                        field,
+                        supported
+                                .flatMap(kept -> proven(kept, node, narratorGender))
+                                .orElse(UNKNOWN));
+            } else {
+                supported.ifPresent(kept -> answers.put(field, kept));
+            }
         }
         return answers;
+    }
+
+    // The gender the quote proves replaces the model's word for it; one the quote does not prove is no evidence.
+    private static Optional<Answer> proven(
+            final Answer answer, final JsonNode node, final NarratorGenderEvidence narratorGender) {
+        final String name = text(node.get("name"));
+        final Optional<String> gender = narratorGender
+                .genderOf(answer.quote(), name)
+                .map(proved -> proved.name().toLowerCase(Locale.ROOT));
+        log.trace("Brief reply narrator gender name '{}' quote '{}'", name, answer.quote());
+        if (gender.isEmpty()) {
+            log.warn("Brief reply narrator gender {} is not shown by a name or a word of address", answer.value());
+            return Optional.empty();
+        }
+        log.debug("Brief reply narrator gender {} proven as {}", answer.value(), gender.get());
+        return gender.map(word -> new Answer(word, answer.quote()));
     }
 
     private static Optional<Answer> supported(

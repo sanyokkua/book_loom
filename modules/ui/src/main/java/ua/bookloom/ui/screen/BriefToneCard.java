@@ -55,6 +55,7 @@ final class BriefToneCard {
     private final TextArea voice = TabMovesFocus.install(new TextArea());
     private final TextField audience = new TextField();
     private final Map<BriefField, BriefEvidenceRow> evidence;
+    private final Label genderSuggested = new Label();
     private final BookBriefViewModel viewModel;
     private final Node node;
     // True while a value from the view model is written into a control, so it is not handed back as a person's choice.
@@ -64,6 +65,7 @@ final class BriefToneCard {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.evidence = evidenceRows(messages);
+        configureGenderSuggested();
         this.genre = genreBox(viewModel);
         this.register = registerChoice(viewModel, messages);
         Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
@@ -81,13 +83,46 @@ final class BriefToneCard {
                 field(MessageKey.BRIEF_TONE_VOICE, voice, BriefField.VOICE),
                 field(MessageKey.BRIEF_TONE_AUDIENCE, audience, BriefField.AUDIENCE),
                 field(MessageKey.BRIEF_TONE_NARRATOR, narrator.withHelp(), BriefField.NARRATOR),
-                field(MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.withHelp(), BriefField.NARRATOR_GENDER),
+                genderField(),
                 notice);
         viewModel
                 .styleSuggestion()
                 .evidence()
                 .addListener(
                         (observed, was, now) -> showEvidence(viewModel.brief().get()));
+    }
+
+    // The gender choice, its "(suggested)" mark and the evidence line under them.
+    private Node genderField() {
+        return field(
+                MessageKey.BRIEF_TONE_NARRATOR_GENDER,
+                new VBox(FIELD_SPACING, narratorGender.withHelp(), genderSuggested),
+                BriefField.NARRATOR_GENDER);
+    }
+
+    private void configureGenderSuggested() {
+        genderSuggested.setId("brief-tone-narrator-gender-suggested");
+        genderSuggested.getStyleClass().add("hint");
+        Tips.install(messages, genderSuggested, MessageKey.BRIEF_NARRATOR_GENDER_SUGGESTED_TIP);
+        BriefEvidenceRow.shownIf(genderSuggested, false);
+    }
+
+    // The gender the model proved reads "Male (suggested)" until the person changes it.
+    private void showGenderSuggested(final BookBrief brief) {
+        final boolean suggested = viewModel.styleSuggestion().isNarratorGenderSuggested(brief);
+        if (suggested != genderSuggested.isVisible()) {
+            log.debug(
+                    "narrator gender {} shown as suggested: {}",
+                    brief.narrator().gender(),
+                    suggested);
+        }
+        BriefEvidenceRow.shownIf(genderSuggested, suggested);
+        if (suggested) {
+            final MessageKey gender = brief.narrator().gender() == Gender.MALE
+                    ? MessageKey.BRIEF_NARRATOR_GENDER_MALE
+                    : MessageKey.BRIEF_NARRATOR_GENDER_FEMALE;
+            genderSuggested.setText(messages.get(MessageKey.BRIEF_NARRATOR_GENDER_SUGGESTED, messages.get(gender)));
+        }
     }
 
     private static Map<BriefField, BriefEvidenceRow> evidenceRows(final Messages messages) {
@@ -112,6 +147,11 @@ final class BriefToneCard {
 
     // A field shows the suggestion's evidence only while it holds what the suggestion wrote into it.
     private void showEvidence(final @Nullable BookBrief brief) {
+        if (brief == null) {
+            BriefEvidenceRow.shownIf(genderSuggested, false);
+        } else {
+            showGenderSuggested(brief);
+        }
         evidence.forEach((field, row) -> row.show(
                 brief == null
                         ? null

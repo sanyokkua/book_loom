@@ -53,6 +53,7 @@ final class SetupEvalRunner {
             final SetupAssistantImpl assistant = new SetupAssistantImpl(
                     prepared.stores().projects(),
                     prepared.stores().segments(),
+                    prepared.stores().glossary(),
                     prepared.stores().openProjects(),
                     new PromptTemplates(),
                     new ObjectMapper(),

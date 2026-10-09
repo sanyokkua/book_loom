@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.chunk.TokenEstimator;
 import ua.bookloom.pipeline.prompt.DraftReplyParser.ParsedReply;
@@ -34,7 +35,7 @@ class LanguageFilesTest {
     private static final int PAIR_LIMIT = 100;
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
     private static final Pattern KEY = Pattern.compile(
-            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|voicingPairs|functionWords|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|foreignWords"
+            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|voicingPairs|functionWords|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns|pluralSuffixes|foreignWords|addressTerms"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
                     + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+)");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");
@@ -85,6 +86,23 @@ class LanguageFilesTest {
         assertThat(properties.containsKey("malePronouns"))
                 .as(resource)
                 .isEqualTo(properties.containsKey("maleObjectPronouns"));
+    }
+
+    // Every language file lists its words of address, each pair naming male or female (15h.G2).
+    @ParameterizedTest
+    @MethodSource("ua.bookloom.pipeline.prompt.V1Languages#languages")
+    void languageFile_addressTerms_listOnlyMaleOrFemalePairs(final String tag) throws IOException {
+        final String terms = file("languages/" + tag + ".properties").getProperty("addressTerms");
+
+        assertThat(terms).as(tag).isNotBlank();
+        assertThat(List.of(terms.split("\\s+"))).as(tag).allMatch(pair -> pair.matches("[^>]+>(male|female)"));
+    }
+
+    @Test
+    void addressTerms_englishAndUkrainian_mapEachWordToItsGender() {
+        assertThat(AddressTerms.of("en")).containsEntry("sir", Gender.MALE).containsEntry("ma'am", Gender.FEMALE);
+        assertThat(AddressTerms.of("uk")).containsEntry("пане", Gender.MALE).containsEntry("дівчино", Gender.FEMALE);
+        assertThat(AddressTerms.of("de")).containsEntry("fräulein", Gender.FEMALE);
     }
 
     @Test

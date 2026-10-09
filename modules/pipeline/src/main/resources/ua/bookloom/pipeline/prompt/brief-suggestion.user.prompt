@@ -10,4 +10,4 @@ Sample (passages from the start, the middle and a late chapter of the book):
 {{sample}}
 </Input>
 
-Return one JSON object with the fields genre, register, voice, audience, narrator and narratorGender, each with value, evidence and confidence.
+Return one JSON object with the fields genre, register, voice, audience, narrator and narratorGender, each with value, evidence and confidence; narratorGender also with name.

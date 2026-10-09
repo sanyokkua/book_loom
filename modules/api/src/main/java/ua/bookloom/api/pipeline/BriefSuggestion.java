@@ -20,7 +20,8 @@ import ua.bookloom.api.project.Register;
  * @param voiceEra a short phrase on the narrator's voice and the era of the language, or null when nothing stands out
  * @param audience the likely readers, or null when none was named
  * @param narrator who tells the story
- * @param narratorGender the first-person narrator's gender, {@link Gender#UNKNOWN} when the text does not show it
+ * @param narratorGender the first-person narrator's gender, {@link Gender#UNKNOWN} unless a quote the code verified
+ *     shows it (a name the narrator is called by, or a word of address)
  * @param evidence the quotes and the agreement of the samples behind each field; never null, empty when the
  *     suggestion was not read from samples, and without the narrator fields once they are held to a set narrator
  */
@@ -80,7 +81,9 @@ public record BriefSuggestion(
      * This suggestion held to a narrator that is already set: a person who chose the narrator, or the detector that
      * read it from the text, is never contradicted by a guess. The narrator and its gender are the set ones, and a
      * voice note that names the other grammatical person ("third-person limited" for a first-person book) is dropped.
-     * The evidence of a field that is no longer the model's goes with it.
+     * One gap is filled: a first-person narrator whose gender is unknown takes the gender this suggestion holds, with
+     * its evidence, because that gender stands on a quote the code verified and the screen marks it as suggested. The
+     * evidence of a field that is no longer the model's goes with it.
      *
      * @param current the brief's narrator now; {@link Narrator#unspecified()} when nothing is set
      * @return this suggestion when the brief names no narrator person, else the aligned one
@@ -91,15 +94,26 @@ public record BriefSuggestion(
             return this;
         }
         final boolean contradicts = voiceEra != null && contradicts(current.person(), voiceEra);
+        final boolean fillsGender = current.person() == NarratorPerson.FIRST
+                && current.gender() == Gender.UNKNOWN
+                && (narratorGender == Gender.MALE || narratorGender == Gender.FEMALE);
         final Map<BriefField, FieldEvidence> kept = new EnumMap<>(BriefField.class);
         kept.putAll(evidence);
         kept.remove(BriefField.NARRATOR);
-        kept.remove(BriefField.NARRATOR_GENDER);
+        if (!fillsGender) {
+            kept.remove(BriefField.NARRATOR_GENDER);
+        }
         if (contradicts) {
             kept.remove(BriefField.VOICE);
         }
         return new BriefSuggestion(
-                genre, register, contradicts ? null : voiceEra, audience, current.person(), current.gender(), kept);
+                genre,
+                register,
+                contradicts ? null : voiceEra,
+                audience,
+                current.person(),
+                fillsGender ? narratorGender : current.gender(),
+                kept);
     }
 
     private static boolean contradicts(final NarratorPerson person, final String voice) {

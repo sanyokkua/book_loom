@@ -253,4 +253,89 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
         assertThat(evidence(BriefField.NARRATOR)).isEmpty();
         assertThat(evidence(BriefField.GENRE)).contains(AGREED);
     }
+
+    private static final FieldEvidence VOCATIVE = new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2);
+
+    private static BriefSuggestion provenGender(final Gender gender) {
+        return new BriefSuggestion(
+                null,
+                Register.NEUTRAL,
+                null,
+                null,
+                NarratorPerson.FIRST,
+                gender,
+                Map.of(BriefField.NARRATOR, AGREED, BriefField.NARRATOR_GENDER, VOCATIVE));
+    }
+
+    private boolean genderSuggested() {
+        return onFx(() ->
+                brief.styleSuggestion().isNarratorGenderSuggested(brief.brief().get()));
+    }
+
+    // IF the verified gender were discarded for a first-person narrator nobody gendered, THEN the Start question would
+    // ask what the book already showed.
+    @Test
+    void suggestStyle_firstPersonNarratorWithNoGender_fillsTheProvenGenderAsSuggested() {
+        chooseModel();
+        onFx(() -> {
+            brief.setNarratorPerson(NarratorPerson.FIRST);
+            return null;
+        });
+        assistant.answersBrief(Result.ok(provenGender(Gender.MALE)));
+
+        suggest();
+
+        assertThat(stored().narrator().person()).isEqualTo(NarratorPerson.FIRST);
+        assertThat(stored().narrator().gender()).isEqualTo(Gender.MALE);
+        assertThat(evidence(BriefField.NARRATOR_GENDER)).contains(VOCATIVE);
+        assertThat(genderSuggested()).isTrue();
+    }
+
+    @Test
+    void suggestStyle_personChangesTheSuggestedGender_isNoLongerSuggested() {
+        chooseModel();
+        onFx(() -> {
+            brief.setNarratorPerson(NarratorPerson.FIRST);
+            return null;
+        });
+        assistant.answersBrief(Result.ok(provenGender(Gender.MALE)));
+        suggest();
+
+        onFx(() -> {
+            brief.setNarratorGender(Gender.FEMALE);
+            return null;
+        });
+
+        assertThat(genderSuggested()).isFalse();
+    }
+
+    @Test
+    void suggestStyle_personChoseTheGender_neitherOverridesNorMarksIt() {
+        chooseModel();
+        onFx(() -> {
+            brief.setFirstPersonNarrator(Gender.FEMALE);
+            return null;
+        });
+        assistant.answersBrief(Result.ok(provenGender(Gender.MALE)));
+
+        suggest();
+
+        assertThat(stored().narrator().gender()).isEqualTo(Gender.FEMALE);
+        assertThat(genderSuggested()).isFalse();
+    }
+
+    @Test
+    void suggestStyle_noGenderProven_leavesItUnknownAndUnmarked() {
+        chooseModel();
+        onFx(() -> {
+            brief.setNarratorPerson(NarratorPerson.FIRST);
+            return null;
+        });
+        assistant.answersBrief(Result.ok(provenGender(Gender.UNKNOWN)));
+
+        suggest();
+
+        assertThat(stored().narrator().gender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(genderSuggested()).isFalse();
+    }
 }

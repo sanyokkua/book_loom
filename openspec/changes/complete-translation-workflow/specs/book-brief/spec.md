@@ -532,6 +532,37 @@ matters, without ever blocking the start.
 - **WHEN** the question is shown and Escape is pressed
 - **THEN** no run starts, the brief is unchanged and the next Start asks again
 
+### Requirement: Suggest the narrator's gender only from evidence the code verifies
+
+WHEN the model's style suggestion (Suggest with model) answers the narrator's gender, the application SHALL keep it only
+when its quote is found in the sample the model read and shows the gender in words the code can check: the quote calls
+the narrator by a name, or the narrator gives it ("Hang on to your ass, Jack"), the name the model gives stands in the
+quote and is a glossary character of known gender (the whole term or one word of it) or a name of the source language's
+first-name list, whose gender is then the narrator's whatever the model said; or, with no name, the quote holds words of
+the source language file's `addressTerms` table (`term>male` / `term>female`, such as `sir`, `ma'am`, `пане`, `дівчино`)
+of one gender only. Any other answer SHALL be the unknown gender. A gender one sample proves SHALL be kept unless another
+sample proves the other gender, and shown with its quote and the number of proving samples (`1 of 2 samples agrees`),
+not as uncertain. A first-person narrator whose gender is unknown SHALL take the kept gender, shown on the Book Brief as
+`Male (suggested)` or `Female (suggested)` with a hover explanation in English and Ukrainian until the person changes it;
+a gender the person set is never replaced, a third-person narrator gets none, and with no kept gender the gender stays
+unknown and the Start question asks as before.
+
+**Source:** FR-BRIEF-02; tasks 15h.G2.
+In plain words: the model was free to say "male" from nothing, and its answer was then thrown away for a book whose
+narrator was already set to first person. Now the model has to point at a line the code can check — a name it can look
+up or a word like "ma'am" — and the gender it proves fills only a gap, marked as a suggestion.
+
+#### Scenario: A vocative of a glossary person genders the narrator
+
+- **WHEN** the glossary holds the character `Jack` as male, the narrator is first person with no gender, and the model
+  quotes `Hang on to your ass, Jack` from the sample with the name `Jack`
+- **THEN** the narrator's gender is male and shown as `Male (suggested)` with the quote
+
+#### Scenario: A gender with nothing the code can check stays unknown
+
+- **WHEN** the model answers `female` with a quote that holds neither a known name nor a word of address
+- **THEN** the narrator's gender stays unknown and Start translation asks who narrates
+
 ## REMOVED Requirements
 
 ### Requirement: Choose the target language and show the source the book declares

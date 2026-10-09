@@ -686,6 +686,10 @@ public enum MessageKey {
     BRIEF_NARRATOR_GENDER_MALE("brief.narrator.gender.male"),
     /** Narrator gender option: female. */
     BRIEF_NARRATOR_GENDER_FEMALE("brief.narrator.gender.female"),
+    /** The narrator gender the style suggestion proved from the book, marked so it is not taken for the person's. */
+    BRIEF_NARRATOR_GENDER_SUGGESTED("brief.narrator.gender.suggested"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_NARRATOR_GENDER_SUGGESTED}. */
+    BRIEF_NARRATOR_GENDER_SUGGESTED_TIP("brief.narrator.gender.suggested.tip"),
     /** Label of the character-and-place-names policy. */
     BRIEF_POLICY_NAMES("brief.policy.names"),
     /** Hover explanation of the control labelled by {@link #BRIEF_POLICY_NAMES}. */

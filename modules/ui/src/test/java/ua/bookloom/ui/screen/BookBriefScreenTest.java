@@ -300,4 +300,36 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
 
         assertThat(isShown("brief-evidence-register")).isFalse();
     }
+
+    // IF a gender the model proved looked like the person's own choice, THEN nobody would know to check it.
+    @Test
+    void suggestStyle_provenNarratorGender_isShownAsSuggestedUntilThePersonChangesIt() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+        onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b"));
+        onFx(() -> briefModel().setNarratorPerson(NarratorPerson.FIRST));
+        ((ScriptedSetupAssistant) injector.getInstance(SetupAssistant.class))
+                .answersBrief(Result.ok(new BriefSuggestion(
+                        null,
+                        Register.NEUTRAL,
+                        null,
+                        null,
+                        NarratorPerson.FIRST,
+                        Gender.MALE,
+                        Map.of(
+                                BriefField.NARRATOR_GENDER,
+                                new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2)))));
+
+        onFx(() -> button("brief-suggest-style").fire());
+        awaitFx(() -> isShown("brief-tone-narrator-gender-suggested"));
+
+        assertThat(((Label) required("brief-tone-narrator-gender-suggested")).getText())
+                .isEqualTo("Male (suggested)");
+        assertThat(((Label) required("brief-evidence-narrator-gender")).getText())
+                .isEqualTo("“Hang on to your ass, Jack” · 1 of 2 samples agrees");
+        assertThat(isShown("brief-evidence-narrator-gender-uncertain")).isFalse();
+
+        onFx(() -> briefModel().setNarratorGender(Gender.FEMALE));
+
+        assertThat(isShown("brief-tone-narrator-gender-suggested")).isFalse();
+    }
 }

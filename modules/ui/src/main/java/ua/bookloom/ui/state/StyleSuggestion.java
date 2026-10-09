@@ -19,15 +19,16 @@ import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
 
 /**
  * The model's proposal of the Book Brief's tone and style: asks for it, and writes the answer into the brief through the
  * view model's own change path, so it is saved and observed like a person's edit. A narrator the model could not tell
- * leaves the person's own choice alone. The evidence behind each field (the book's words the model quoted, and how many
- * of the samples agreed) is kept for the screen to show while the field still holds the value the suggestion wrote.
- * FX thread only.
+ * leaves the person's own choice alone; a narrator gender it proved fills only an unknown one, and is shown as
+ * suggested. The evidence behind each field (the book's words the model quoted, and how many of the samples agreed) is
+ * kept for the screen to show while the field still holds the value the suggestion wrote. FX thread only.
  */
 @Slf4j
 public final class StyleSuggestion {
@@ -88,6 +89,22 @@ public final class StyleSuggestion {
             return Optional.empty();
         }
         return Optional.ofNullable(evidence.get().get(field));
+    }
+
+    /**
+     * Whether the narrator's gender shown is the model's suggestion, not the person's choice, so the screen can mark it.
+     *
+     * @param current the brief as it is now
+     * @return {@code true} if the last suggestion wrote a male or female narrator gender, backed by evidence, and the
+     *     brief still holds it; {@code false} otherwise
+     */
+    public boolean isNarratorGenderSuggested(final BookBrief current) {
+        final Gender gender =
+                Objects.requireNonNull(current, "current").narrator().gender();
+        return (gender == Gender.MALE || gender == Gender.FEMALE)
+                && evidenceFor(BriefField.NARRATOR_GENDER, current)
+                        .filter(FieldEvidence::isKept)
+                        .isPresent();
     }
 
     private static @Nullable Object valueOf(final BriefField field, final BookBrief brief) {
@@ -190,13 +207,13 @@ public final class StyleSuggestion {
     }
 
     /**
-     * The narrator the suggestion states, but only while the brief names none: a narrator the person chose, or answered
-     * at Start, is never replaced by a guess. The brief's own when the model could not tell.
+     * The narrator the suggestion states once it is held to the brief's own ({@link BriefSuggestion#alignedTo}): a
+     * narrator the person chose, or answered at Start, is never replaced by a guess, but a first-person narrator with no
+     * gender takes the gender the suggestion proved. The brief's own when the model could not tell.
      */
-    static Narrator narratorFor(final BookBrief brief, final BriefSuggestion suggestion) {
-        return suggestion.narrator() == NarratorPerson.UNSPECIFIED
-                        || brief.narrator().person() != NarratorPerson.UNSPECIFIED
+    static Narrator narratorFor(final BookBrief brief, final BriefSuggestion aligned) {
+        return aligned.narrator() == NarratorPerson.UNSPECIFIED
                 ? brief.narrator()
-                : new Narrator(suggestion.narrator(), suggestion.narratorGender());
+                : new Narrator(aligned.narrator(), aligned.narratorGender());
     }
 }

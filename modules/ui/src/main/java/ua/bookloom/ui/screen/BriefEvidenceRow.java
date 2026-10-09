@@ -53,13 +53,13 @@ final class BriefEvidenceRow {
         return node;
     }
 
-    private static void shownIf(final Node shown, final boolean isShown) {
+    static void shownIf(final Node shown, final boolean isShown) {
         shown.setVisible(isShown);
         shown.setManaged(isShown);
     }
 
     void show(final @Nullable FieldEvidence evidence) {
-        final boolean uncertain = evidence != null && !evidence.isAgreed();
+        final boolean uncertain = evidence != null && !evidence.isKept();
         shownIf(node, evidence != null);
         shownIf(line, evidence != null);
         shownIf(chip, uncertain);

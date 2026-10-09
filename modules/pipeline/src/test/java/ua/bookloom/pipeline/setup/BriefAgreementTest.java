@@ -11,6 +11,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FieldEvidence;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.pipeline.setup.BriefReplies.Answer;
 
@@ -87,5 +88,41 @@ class BriefAgreementTest {
                 2);
 
         assertThat(suggestion.genre()).isEqualTo("science fiction");
+    }
+
+    private static Map<BriefField, Answer> gender(final String value, final String quote) {
+        return Map.of(BriefField.NARRATOR_GENDER, new Answer(value, quote));
+    }
+
+    // IF a vocative the code verified in one sample were outvoted by the other sample's silence, THEN a narrator named
+    // once in the book would never get a gender.
+    @Test
+    void combine_genderProvenInOneSampleAndTheOtherShowsNone_keepsTheProvenGender() {
+        final BriefSuggestion suggestion =
+                BriefAgreement.combine(List.of(gender("male", "Hang on to your ass, Jack"), gender("unknown", "")), 2);
+
+        assertThat(suggestion.narratorGender()).isEqualTo(Gender.MALE);
+        assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER))
+                .contains(new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2));
+        assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER))
+                .hasValueSatisfying(evidence -> assertThat(evidence.isKept()).isTrue());
+    }
+
+    @Test
+    void combine_samplesProveDifferentGenders_leavesTheGenderUnknownAndUncertain() {
+        final BriefSuggestion suggestion =
+                BriefAgreement.combine(List.of(gender("male", "Sir, your car"), gender("female", "Yes, ma'am")), 2);
+
+        assertThat(suggestion.narratorGender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER)).contains(new FieldEvidence(List.of(), 1, 2));
+    }
+
+    @Test
+    void combine_noSampleProvesAGender_keepsItUnknownAsAgreed() {
+        final BriefSuggestion suggestion =
+                BriefAgreement.combine(List.of(gender("unknown", ""), gender("unknown", "")), 2);
+
+        assertThat(suggestion.narratorGender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER)).contains(new FieldEvidence(List.of(), 2, 2));
     }
 }

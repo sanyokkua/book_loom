@@ -26,6 +26,7 @@ import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.pipeline.BriefField;
@@ -51,7 +52,8 @@ import ua.bookloom.pipeline.run.JobModelCalls;
  * Asks the chosen model for the two things a person would otherwise type: the translated book's file name and the
  * tone and style of the Book Brief. The file name is one small call; the brief is one call for each of two disjoint
  * samples of the book ({@link BookSamples}), each answer held to a quote the code finds in its sample, and a field is
- * kept only when both samples agree. Every reply is read leniently, cleaned in code and returned as a proposal, never
+ * kept only when both samples agree; the narrator's gender is kept only from a quote that shows it by a name the
+ * glossary or the first-name list genders, or by a word of address ({@link NarratorGenderEvidence}). Every reply is read leniently, cleaned in code and returned as a proposal, never
  * applied.
  */
 @Slf4j
@@ -60,8 +62,8 @@ public final class SetupAssistantImpl implements SetupAssistant {
 
     private static final String FB2_ZIP = ".fb2.zip";
     private static final int NAME_TOKENS = 96;
-    // Six fields, each a value, a quote of up to fifteen words and a confidence.
-    private static final int BRIEF_TOKENS = 480;
+    // Six fields, each a value, a quote of up to fifteen words and a confidence, and the narrator's name.
+    private static final int BRIEF_TOKENS = 512;
     private static final int SAMPLES = 2;
     private static final String FALLBACK_LANGUAGE = "en";
     // A file name holds at most 255 bytes on the common file systems; the suffix and a margin are kept free.
@@ -72,6 +74,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
 
     private final ProjectRepository projects;
     private final SegmentRepository segments;
+    private final GlossaryRepository glossary;
     private final OpenProjects openProjects;
     private final PromptTemplates templates;
     private final ObjectMapper mapper;
@@ -194,6 +197,16 @@ public final class SetupAssistantImpl implements SetupAssistant {
             return Result.err(AppError.of(
                     ErrorCode.validation, "Nothing to read", "The book has no body text to suggest a style from."));
         }
+        return glossary.all(book.project().id())
+                .flatMap(people ->
+                        askSamples(book, samples, new NarratorGenderEvidence(people, languageOf(book)), calls));
+    }
+
+    private Result<BriefSuggestion> askSamples(
+            final Book book,
+            final List<BookSample> samples,
+            final NarratorGenderEvidence genders,
+            final ModelCalls calls) {
         final List<@Nullable Map<BriefField, BriefReplies.Answer>> answers = new ArrayList<>();
         for (int index = 0; index < samples.size(); index++) {
             final BookSample sample = samples.get(index);
@@ -206,7 +219,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
                 return Result.err(Objects.requireNonNull(reply.error(), "error"));
             }
             final JsonNode node = json(Objects.requireNonNull(reply.data(), "reply"));
-            answers.add(node == null ? null : BriefReplies.read(node, sample));
+            answers.add(node == null ? null : BriefReplies.read(node, sample, genders));
         }
         if (answers.stream().allMatch(Objects::isNull)) {
             return Result.err(AppError.of(
@@ -220,9 +233,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
         final BriefSuggestion read = BriefAgreement.combine(answers, SAMPLES);
         final BriefSuggestion aligned = read.alignedTo(book.project().brief().narrator());
         log.info(
-                "Brief suggested from {} samples: agreed fields {}, voiceDropped={}",
+                "Brief suggested from {} samples: kept fields {}, narratorGender={}, voiceDropped={}",
                 taken,
                 agreed(aligned),
+                aligned.narratorGender(),
                 !Objects.equals(aligned.voiceEra(), read.voiceEra()));
         return aligned;
     }
@@ -238,7 +252,7 @@ public final class SetupAssistantImpl implements SetupAssistant {
 
     private static List<BriefField> agreed(final BriefSuggestion suggestion) {
         return suggestion.evidence().entrySet().stream()
-                .filter(entry -> entry.getValue().isAgreed())
+                .filter(entry -> entry.getValue().isKept())
                 .map(Map.Entry::getKey)
                 .sorted()
                 .toList();

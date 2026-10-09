@@ -27,6 +27,10 @@ import ua.bookloom.pipeline.setup.BriefReplies.Answer;
  * with a closed vocabulary (register, narrator, gender); for the genre and the audience, one phrase's words all in the
  * other's ("science fiction" and "cyberpunk science fiction"); for the voice, at least half of the shorter phrase's
  * words in the other. A kept phrase is the shorter one, which is what both samples say.
+ *
+ * <p>The narrator's gender is the one exception: every gender a sample gives was proven by the code from a name or a
+ * word of address ({@link BriefReplies}), so a sample that shows none is silent, not a disagreement. The gender is kept
+ * when at least one sample proves it and no sample proves the other, with the proving samples counted as agreeing.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -54,9 +58,7 @@ final class BriefAgreement {
                 final Map<BriefField, Answer> read = sample < answers.size() ? answers.get(sample) : null;
                 given.add(read == null ? null : read.get(field));
             }
-            final Answer kept = kept(field, given);
-            values.put(field, kept == null ? "" : kept.value());
-            evidence.put(field, evidenceOf(field, given, kept, samples));
+            combineField(field, given, samples, values, evidence);
         }
         return new BriefSuggestion(
                 blankToNull(values.get(BriefField.GENRE)),
@@ -66,6 +68,24 @@ final class BriefAgreement {
                 narrator(values.get(BriefField.NARRATOR)),
                 gender(values.get(BriefField.NARRATOR_GENDER)),
                 evidence);
+    }
+
+    private static void combineField(
+            final BriefField field,
+            final List<@Nullable Answer> given,
+            final int samples,
+            final Map<BriefField, String> values,
+            final Map<BriefField, FieldEvidence> evidence) {
+        final List<Answer> proven = field == BriefField.NARRATOR_GENDER ? proven(given) : List.of();
+        if (!proven.isEmpty()) {
+            final FieldEvidence shown = provenEvidence(proven, samples);
+            values.put(field, shown.isKept() ? proven.getFirst().value() : "");
+            evidence.put(field, shown);
+            return;
+        }
+        final Answer kept = kept(field, given);
+        values.put(field, kept == null ? "" : kept.value());
+        evidence.put(field, evidenceOf(field, given, kept, samples));
     }
 
     private static @Nullable Answer kept(final BriefField field, final List<@Nullable Answer> given) {
@@ -81,6 +101,33 @@ final class BriefAgreement {
             }
         }
         return shortest;
+    }
+
+    private static List<Answer> proven(final List<@Nullable Answer> given) {
+        final List<Answer> proven = new ArrayList<>();
+        for (final Answer answer : given) {
+            if (answer != null && !answer.isNeutral()) {
+                proven.add(answer);
+            }
+        }
+        return proven;
+    }
+
+    private static FieldEvidence provenEvidence(final List<Answer> proven, final int samples) {
+        final String gender = proven.getFirst().value();
+        final long same =
+                proven.stream().filter(answer -> answer.value().equals(gender)).count();
+        if (same < proven.size()) {
+            log.warn("Narrator gender is uncertain: the samples prove different genders");
+            return new FieldEvidence(List.of(), (int) Math.max(same, proven.size() - same), samples);
+        }
+        final List<String> quotes = proven.stream()
+                .map(Answer::quote)
+                .filter(quote -> !quote.isBlank())
+                .distinct()
+                .toList();
+        log.debug("Narrator gender {} kept: proven by {} of {} samples", gender, proven.size(), samples);
+        return new FieldEvidence(quotes, proven.size(), samples);
     }
 
     private static FieldEvidence evidenceOf(

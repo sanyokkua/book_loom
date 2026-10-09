@@ -99,6 +99,74 @@ class BriefSuggestionTest {
                 .hasSize(4);
     }
 
+    private static BriefSuggestion provenGender(final Gender gender) {
+        return new BriefSuggestion(
+                "noir",
+                Register.CASUAL,
+                "terse",
+                "adults",
+                NarratorPerson.FIRST,
+                gender,
+                Map.of(
+                        BriefField.NARRATOR,
+                        AGREED,
+                        BriefField.NARRATOR_GENDER,
+                        new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2)));
+    }
+
+    // IF a first-person narrator whose gender nobody chose discarded the model's verified answer, THEN the Start
+    // question
+    // would ask what the book already showed.
+    @Test
+    void alignedTo_firstPersonWithUnknownGender_fillsTheSuggestedGenderWithItsEvidence() {
+        final BriefSuggestion aligned =
+                provenGender(Gender.MALE).alignedTo(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
+
+        assertThat(aligned.narrator()).isEqualTo(NarratorPerson.FIRST);
+        assertThat(aligned.narratorGender()).isEqualTo(Gender.MALE);
+        assertThat(aligned.evidenceOf(BriefField.NARRATOR_GENDER))
+                .contains(new FieldEvidence(List.of("Hang on to your ass, Jack"), 1, 2));
+        assertThat(aligned.evidence()).doesNotContainKey(BriefField.NARRATOR);
+    }
+
+    // IF a suggestion could replace a gender the person chose, THEN a guess would overrule the person.
+    @ParameterizedTest
+    @CsvSource({"MALE,FEMALE", "FEMALE,MALE", "FEMALE,FEMALE"})
+    void alignedTo_genderAlreadySet_neverOverridesIt(final Gender set, final Gender suggested) {
+        final BriefSuggestion aligned = provenGender(suggested).alignedTo(new Narrator(NarratorPerson.FIRST, set));
+
+        assertThat(aligned.narratorGender()).isEqualTo(set);
+        assertThat(aligned.evidence()).doesNotContainKey(BriefField.NARRATOR_GENDER);
+    }
+
+    @Test
+    void alignedTo_thirdPersonSet_fillsNoNarratorGender() {
+        final BriefSuggestion aligned =
+                provenGender(Gender.FEMALE).alignedTo(new Narrator(NarratorPerson.THIRD, Gender.UNKNOWN));
+
+        assertThat(aligned.narratorGender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(aligned.evidence()).doesNotContainKey(BriefField.NARRATOR_GENDER);
+    }
+
+    @Test
+    void alignedTo_suggestionWithUnknownGender_leavesTheGenderUnknownWithNoEvidence() {
+        final BriefSuggestion aligned =
+                provenGender(Gender.UNKNOWN).alignedTo(new Narrator(NarratorPerson.FIRST, Gender.UNKNOWN));
+
+        assertThat(aligned.narratorGender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(aligned.evidence()).doesNotContainKey(BriefField.NARRATOR_GENDER);
+    }
+
+    // A field the code proved from one sample's quote is kept although the other sample showed nothing.
+    @ParameterizedTest
+    @CsvSource({"2,2,'',true", "1,2,'',false", "1,2,'Hang on, Jack',true", "0,2,'',false"})
+    void isKept_agreementOrAVerifiedQuote_keepsTheField(
+            final int agreeing, final int samples, final String quote, final boolean expected) {
+        final List<String> quotes = quote.isEmpty() ? List.of() : List.of(quote);
+
+        assertThat(new FieldEvidence(quotes, agreeing, samples).isKept()).isEqualTo(expected);
+    }
+
     @ParameterizedTest
     @CsvSource({"2,2,true", "1,2,false", "0,2,false"})
     void isAgreed_agreeingOfSamples_isTrueOnlyWhenAllAgree(
