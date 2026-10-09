@@ -215,4 +215,15 @@ class LanguageFilesTest {
     private static int tokens(final String text) {
         return TokenEstimator.estimate(text, "en");
     }
+
+    // A model fed straight quotes read the speaker's "he" as a name's gender and answered with control codes; one
+    // worked line shows what a straight-quoted dialogue becomes in the target (15h.C3).
+    @Test
+    void section_englishToUkrainian_quoteLineCarriesAStraightQuotedExample() {
+        final String section = LanguageRules.bundled().section("en", "uk", false);
+
+        assertThat(section)
+                .contains(
+                        "- Quotes: Straight quotes are dialogue too: \"Stay,\" he said. → «Залишайся», — сказав він.");
+    }
 }

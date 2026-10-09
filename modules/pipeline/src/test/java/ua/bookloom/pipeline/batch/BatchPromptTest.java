@@ -23,7 +23,7 @@ import ua.bookloom.pipeline.prompt.StyleSheet;
 class BatchPromptTest {
 
     private static final PromptTemplates TEMPLATES = new PromptTemplates();
-    private static final int SYSTEM_BUDGET_TOKENS = 860;
+    private static final int SYSTEM_BUDGET_TOKENS = 875;
     private static final Pattern EXAMPLE = Pattern.compile(
             "<Items>\\n((?:<s id=\"\\d+\">.*</s>\\n)+)</Items>\\nReply:(.*?)(?:\\n\\n|\\z)", Pattern.DOTALL);
     private static final Pattern ITEM = Pattern.compile("<s id=\"(\\d+)\">(.*)</s>");

@@ -22,6 +22,7 @@ Target — Ukrainian
 Source — English
 - I, you, they and past-tense verbs show no gender, and you may be formal or plural: use the glossary or the scene.
 Pair — English -> Ukrainian
+- Quotes: Straight quotes are dialogue too: "Stay," he said. → «Залишайся», — сказав він.
 - Watch: English hides gender: choose Ukrainian past-tense forms from the glossary or the nearest clue (he, she); else avoid a gendered form.
 
 Examples (Source = the <Text>, Reply = your whole answer):

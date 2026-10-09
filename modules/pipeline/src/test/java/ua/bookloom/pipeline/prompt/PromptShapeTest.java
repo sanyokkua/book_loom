@@ -54,11 +54,12 @@ class PromptShapeTest {
             "brief-suggestion", "genre",
             "term-choice", "terms");
 
-    // The draft system measured 698 before the language-rules map replaced the per-language example files.
-    private static final int DRAFT_SYSTEM_BUDGET = 697;
+    // Raised from 697 by the pair's straight-quote example line (15h.C3), about 21 tokens; measured 698 before the
+    // language-rules map replaced the per-language example files.
+    private static final int DRAFT_SYSTEM_BUDGET = 720;
     private static final int SYSTEM_BUDGET = 900;
     // The reviewer also carries the languages' reviewer checks; the suggestion call carries its name examples.
-    private static final int LARGE_SYSTEM_BUDGET = 1200;
+    private static final int LARGE_SYSTEM_BUDGET = 1230;
 
     @ParameterizedTest
     @EnumSource(PromptName.class)
