@@ -275,13 +275,20 @@ its name so the screen does not change under the person's hand.
 
 ### Requirement: Review the glossary with the model when the person asks
 
-WHEN the person presses Review with model on Names & style, the application SHALL send the chosen model every
-unlocked entry with no target or with a target the model suggested, 40 per call, each with how many times the book uses it in any case and up to two
-sentences that hold it, and SHALL ask for each a verdict — name, term or not a name — with a type (person, place, org,
-term, title or other) and a gender (male, female, neuter or unknown) under a strict schema. Only after every call has
-answered, and against each entry as it then stands, the application SHALL remove through the glossary (so the removal is
-remembered) each entry judged not a name whose type is still other and gender still unknown, and SHALL set the type of
-an entry still of type other and the gender of an entry still of gender unknown to the model's guess, and SHALL write
+WHEN the person presses Review with model on Names & style, the application SHALL decide without the model each
+unlocked open entry whose pronouns alone decide its gender — five or more pronouns the code gives the name outside
+quoted speech (straight quotes included when they pair up) with no other name between, 90 % agreeing — as a person of
+that gender, and SHALL send the chosen model every other unlocked entry with no target or with a target the model
+suggested, in calls cut by a budget of about 5,000 input tokens and at most 40 entries, each with how many times the
+book uses it in any case, the code's pronoun tally and numbered windows — four uses (six above 30 uses, two for a
+place), the first and one from each equal stretch of the rest, a narration window whose pronoun the code gives the name
+preferred, each the sentence with one before and one after — and SHALL ask for each a verdict — name, term or not a
+name — with a type (person, place, org, term, title or other), a gender (male, female, neuter or unknown) and the
+numbers of the windows it relied on, under a strict schema. Only after every call has answered, and against each entry
+as it then stands, the application SHALL remove through the glossary (so the removal is remembered) each entry judged
+not a name whose type is still other and gender still unknown, and SHALL set the type of an entry still of type other
+to the model's guess and the gender of a person still of gender unknown to the model's — as decided when a window it
+cites holds a pronoun of that gender the code gives the name, else as a suggestion nobody has verified — and SHALL write
 the suggested targets that "Suggest target renderings with the model" asks for after the verdicts, in the same
 action; it SHALL NOT change a locked entry or one whose target the person chose, and SHALL then show the glossary as it
 stands and the line `Model review done: N rows removed, M rows updated, K targets suggested.` IF any call fails or the
@@ -302,10 +309,22 @@ a target is theirs and is never sent.
 - **WHEN** the glossary holds `Well` and `Hale` (other, unknown), `Moreau` (character, unknown), `Milton` → `Мілтон`
   locked and `Baker Street` → `Бейкер-стріт`, and the model answers `Well` not a name, `Hale` a name (person, male),
   `Moreau` a name (place, female), and `Milton` and `Baker Street` not a name
-- **THEN** `Well` is removed and remembered as removed, `Hale` reads character, male, `Moreau` reads character, female,
-  and `Milton` and `Baker Street` are unchanged
+- **THEN** `Well` is removed and remembered as removed, `Hale` reads character, male (suggested), `Moreau` reads
+  character, female (suggested) — no window shows either by a pronoun — and `Milton` and `Baker Street` are unchanged
 - **AND** only `Well`, `Hale` and `Moreau` were sent, and the line reads `Model review done: 1 row removed, 2 rows
   updated, 0 targets suggested.` when the suggestion call suggests nothing
+
+#### Scenario: A gender stands only on a window that shows it
+
+- **WHEN** the book reads `Chrome nodded. "He never pays," said Tiger.` and the model answers `Chrome` a person, male,
+  citing that window
+- **THEN** `Chrome` reads male (suggested): the `he` is inside the speech, so no window shows the gender
+- **AND** had the model answered female citing a window `Chrome stood. She left.`, `Chrome` would read female
+
+#### Scenario: Five agreeing pronouns need no model
+
+- **WHEN** an open entry `Wren` is followed by `she` in five narration sentences of the book and by no `he`
+- **THEN** `Wren` is not sent and reads character, female
 
 #### Scenario: A term locked while the model thinks is left alone
 
@@ -337,8 +356,8 @@ asked about, to be translated by meaning. The application SHALL keep a suggestio
 line, without a placeholder token, at most 80 characters, and — under Transliterate when the source and target scripts
 differ — with no letter left in the source's script once a Latin look-alike inside a Cyrillic word (`Вeнс`) is put back
 as its Cyrillic twin. Only after every call has answered, and against each entry as it then stands, it SHALL write a
-suggestion into an unlocked entry whose target is empty or was suggested, as a suggested target, and the suggested
-gender only into a character whose gender is still unknown; it SHALL NOT overwrite a target the person typed,
+suggestion into an unlocked entry whose target is empty or was suggested, as a suggested target, and SHALL NOT write
+the reply's gender (a person's gender is the review's); it SHALL NOT overwrite a target the person typed,
 imported, accepted or locked. The writes SHALL record no deferral. IF any suggestion call fails or the person presses
 Stop, THEN nothing of the action SHALL be written. WHILE the suggestion calls run, the screen SHALL show
 `Suggesting renderings B/N` with the batch under way.
@@ -358,7 +377,8 @@ In plain words: a glossary of names with no targets leaves every draft to spell 
 one spelling per name, following the policy the person chose. It is a call of its own because a small model does one
 task per call far better than two. A suggestion is only a hint until the person confirms it — the draft may inflect it
 — and the model never undoes the person's choice. On gemma4:e4b every place and thing came back "neuter", masculine
-Ukrainian nouns included, so a suggested gender is kept for characters only; and the same model wrote a Latin `e`
+Ukrainian nouns included, and a person's gender judged from one sentence took a speaker's `he` (15h.A2), so the
+reply's gender is not written; and the same model wrote a Latin `e`
 inside `Венс`, which reads right and matches nothing.
 
 #### Scenario: Transliterated names get Cyrillic targets

@@ -74,10 +74,13 @@ class TermReviewTest {
         assertThat(report.data())
                 .extracting(GlossaryReviewReport::removed, GlossaryReviewReport::updated)
                 .containsExactly(1, 2);
+        // No window shows Hale's or Moreau's gender by a pronoun, so the model's genders are suggestions only.
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
-                        entry("p1:hale", "Hale", null, TermType.CHARACTER, Gender.MALE, false),
-                        entry("p1:moreau", "Moreau", null, TermType.CHARACTER, Gender.FEMALE, false),
+                        entry("p1:hale", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                                .withSuggestedGender(Gender.MALE),
+                        entry("p1:moreau", "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                                .withSuggestedGender(Gender.FEMALE),
                         entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true),
                         entry("p1:baker", "Baker Street", "Бейкер-стріт", TermType.OTHER, Gender.UNKNOWN, false));
         assertThat(glossary.wasRemoved(PROJECT, "Well").data()).isTrue();
@@ -119,18 +122,23 @@ class TermReviewTest {
     }
 
     @Test
-    void review_request_listsOnlyOpenTermsWithCountAndExamples() {
+    void review_request_listsOnlyOpenTermsWithCountPronounsAndNumberedWindows() {
         heldGlossary();
         final ScriptedChatModel model = new ScriptedChatModel().answer(reply("{\"verdicts\":[]}"));
 
         review.review(PROJECT, BOOK, FRAME, POLICY, calls(model));
 
         final ChatRequest request = model.requests().getFirst();
-        assertThat(termLines(request))
+        assertThat(blockLines(request))
                 .containsExactly(
-                        "- Well — 2× — \"Well, Hale said.\" / \"He knew it well.\"",
-                        "- Hale — 2× — \"Well, Hale said.\" / \"We met Hale today.\"",
-                        "- Moreau — 1× — \"Moreau smiled.\"");
+                        "- Well — 2× — pronouns: none",
+                        "  [1] Well, Hale said.",
+                        "  [2] He knew it well.",
+                        "- Hale — 2× — pronouns: none",
+                        "  [1] Well, Hale said.",
+                        "  [2] We met Hale today.",
+                        "- Moreau — 1× — pronouns: none",
+                        "  [1] Moreau smiled.");
         assertThat(request.callKind()).isEqualTo(CallKind.REVIEW_TERMS);
         assertThat(request.temperature()).isEqualTo(0.1);
         assertThat(request.maxOutputTokens()).isEqualTo(2048);
@@ -206,8 +214,10 @@ class TermReviewTest {
                 .containsExactly(1, 2, 2);
         assertThat(glossary.all(PROJECT).data())
                 .containsExactly(
-                        suggested("p1:hale", "Hale", "Гейл", TermType.CHARACTER, Gender.MALE),
-                        suggested("p1:moreau", "Moreau", "Моро", TermType.CHARACTER, Gender.FEMALE),
+                        suggested("p1:hale", "Hale", "Гейл", TermType.CHARACTER, Gender.UNKNOWN)
+                                .withSuggestedGender(Gender.MALE),
+                        suggested("p1:moreau", "Moreau", "Моро", TermType.CHARACTER, Gender.UNKNOWN)
+                                .withSuggestedGender(Gender.FEMALE),
                         entry("p1:milton", "Milton", "Мілтон", TermType.OTHER, Gender.UNKNOWN, true),
                         entry("p1:baker", "Baker Street", "Бейкер-стріт", TermType.OTHER, Gender.UNKNOWN, false));
     }
@@ -354,6 +364,15 @@ class TermReviewTest {
     private static GlossaryEntry suggested(
             final String id, final String term, final String target, final TermType type, final Gender gender) {
         return new GlossaryEntry(id, PROJECT, term, target, type, gender, false, TargetOrigin.SUGGESTED);
+    }
+
+    private static List<String> blockLines(final ChatRequest request) {
+        return request.messages().stream()
+                .filter(message -> message.role() == ChatRole.USER)
+                .map(ChatMessage::content)
+                .flatMap(String::lines)
+                .filter(line -> line.startsWith("- ") || line.startsWith("  ["))
+                .toList();
     }
 
     private static List<String> termLines(final ChatRequest request) {

@@ -34,7 +34,7 @@ class LanguageFilesTest {
     private static final int PAIR_LIMIT = 100;
     private static final DraftReplyParser PARSER = new DraftReplyParser(new ObjectMapper());
     private static final Pattern KEY = Pattern.compile(
-            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|voicingPairs|functionWords|firstPersonPronouns|femalePronouns|malePronouns"
+            "(quotes|dialogue|apostrophe|hyphen|ellipsis|agreement|address|numbers|dates|names|status|nameExample|genderCheck|stemAlternations|forbiddenLetters|obliqueEndings|voicingPairs|functionWords|firstPersonPronouns|femalePronouns|malePronouns|femaleObjectPronouns|maleObjectPronouns"
                     + "|names\\.(convention|terms|policy\\.[A-Z_]+)|(pitfalls|sourceNotes|reviewerChecks)\\.\\d+"
                     + "|example\\.\\d+(\\.pairs)?|batchExample\\.\\d+)");
     private static final Pattern PAIR = Pattern.compile("(⟦g\\d+⟧) (⟦g\\d+⟧)");
@@ -70,6 +70,28 @@ class LanguageFilesTest {
     void file_everyKey_isOneTheAssemblerReads(final String resource) throws IOException {
         assertThat(file(resource).stringPropertyNames())
                 .allMatch(key -> KEY.matcher(key).matches(), resource);
+    }
+
+    // A file that lists subject pronouns states its object forms too, even as an empty list, so a language whose
+    // object forms are ambiguous says so instead of being forgotten (15h.A2).
+    @ParameterizedTest
+    @MethodSource("everyFile")
+    void file_subjectPronouns_comeWithTheObjectForms(final String resource) throws IOException {
+        final Properties properties = file(resource);
+
+        assertThat(properties.containsKey("femalePronouns"))
+                .as(resource)
+                .isEqualTo(properties.containsKey("femaleObjectPronouns"));
+        assertThat(properties.containsKey("malePronouns"))
+                .as(resource)
+                .isEqualTo(properties.containsKey("maleObjectPronouns"));
+    }
+
+    @Test
+    void objectPronouns_englishAndUkrainian_listTheFormsThatShowGender() {
+        assertThat(Pronouns.femaleObject("en")).containsExactlyInAnyOrder("her", "hers");
+        assertThat(Pronouns.maleObject("uk")).contains("його", "йому");
+        assertThat(Pronouns.femaleObject("fr")).isEmpty();
     }
 
     @ParameterizedTest

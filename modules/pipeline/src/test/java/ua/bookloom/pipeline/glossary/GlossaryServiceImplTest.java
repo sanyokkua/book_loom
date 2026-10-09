@@ -282,10 +282,12 @@ class GlossaryServiceImplTest {
 
         final Result<List<GlossaryEntry>> added = service.prescan(PROJECT, model, events::add);
 
+        // The review gave no gender, so the proposal's first-sentence guess stays only as a suggestion (15h.A2).
         assertThat(added.data())
-                .containsExactly(
-                        new GlossaryEntry("p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.MALE, false)
-                                .withSuggestedTarget("Моро"));
+                .containsExactly(new GlossaryEntry(
+                                "p1:moreau", PROJECT, "Moreau", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                        .withSuggestedGender(Gender.MALE)
+                        .withSuggestedTarget("Моро"));
         assertThat(model.requests()).hasSize(3);
         assertThat(events)
                 .filteredOn(ModelCallStarted.class::isInstance)

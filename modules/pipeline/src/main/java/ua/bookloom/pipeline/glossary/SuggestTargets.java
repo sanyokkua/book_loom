@@ -141,7 +141,7 @@ public final class SuggestTargets {
     private static List<Suggestion> keptAsWritten(final List<GlossaryEntry> entries, final NamePolicy policy) {
         return entries.stream()
                 .filter(entry -> isKeptAsWritten(entry, policy))
-                .map(entry -> new Suggestion(entry, entry.term(), Gender.UNKNOWN))
+                .map(entry -> new Suggestion(entry, entry.term()))
                 .toList();
     }
 

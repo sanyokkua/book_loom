@@ -33,10 +33,10 @@ class SuggestionRepliesTest {
     }
 
     @Test
-    void read_cleanRendering_keepsItStrippedWithItsGender() {
+    void read_cleanRendering_keepsItStripped() {
         assertThat(read("  Гейл "))
-                .extracting(Suggestion::entry, Suggestion::target, Suggestion::gender)
-                .containsExactly(tuple(HALE, "Гейл", Gender.MALE));
+                .extracting(Suggestion::entry, Suggestion::target)
+                .containsExactly(tuple(HALE, "Гейл"));
     }
 
     @ParameterizedTest
@@ -67,9 +67,7 @@ class SuggestionRepliesTest {
                 null,
                 null);
 
-        assertThat(kept)
-                .extracting(Suggestion::target, Suggestion::gender)
-                .containsExactly(tuple("Hale", Gender.UNKNOWN));
+        assertThat(kept).extracting(Suggestion::target).containsExactly("Hale");
     }
 
     @ParameterizedTest

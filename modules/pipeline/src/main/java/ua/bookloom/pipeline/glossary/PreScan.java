@@ -150,10 +150,21 @@ public final class PreScan {
         });
     }
 
+    /**
+     * The proposal as the verdict leaves it. The verdict saw windows from across the book and the proposal one
+     * sentence, so the verdict's type and gender win (15h.A2); the proposal's gender stays only as an unverified
+     * suggestion when the verdict gives none.
+     */
     private static GlossaryEntry withVerdict(final Verdict verdict) {
-        final GlossaryEntry entry = verdict.entry();
-        return entry.withType(entry.type() == TermType.OTHER ? verdict.type() : entry.type())
-                .withInferredGender(entry.gender() == Gender.UNKNOWN ? verdict.gender() : entry.gender());
+        final GlossaryEntry proposed = verdict.entry();
+        final TermType type = verdict.type() == TermType.OTHER ? proposed.type() : verdict.type();
+        final GlossaryEntry judged = ReviewCommit.guessed(
+                proposed.withType(TermType.OTHER).withInferredGender(Gender.UNKNOWN), verdict.withType(type));
+        if (judged.gender() == Gender.UNKNOWN && proposed.gender() != Gender.UNKNOWN) {
+            log.debug("Pre-scan entry {} keeps the proposal's gender as a suggestion", proposed.id());
+            return judged.withSuggestedGender(proposed.gender());
+        }
+        return judged;
     }
 
     private Result<List<GlossaryEntry>> merge(

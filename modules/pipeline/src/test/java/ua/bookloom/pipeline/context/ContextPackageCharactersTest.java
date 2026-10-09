@@ -24,9 +24,12 @@ class ContextPackageCharactersTest {
             ContextFixtures.entry("Oxford", "Оксфорд", TermType.PLACE, Gender.NEUTER, false);
 
     private static ContextPackage assemble(final String text, final int allowance) {
+        return assemble(text, allowance, List.of(LYRA, HALE, NOBODY, PLACE));
+    }
+
+    private static ContextPackage assemble(final String text, final int allowance, final List<GlossaryEntry> glossary) {
         final Chunk chunk = ContextFixtures.chunk(text);
         final Segment segment = chunk.segments().getFirst();
-        final List<GlossaryEntry> glossary = List.of(LYRA, HALE, NOBODY, PLACE);
         final ContextInputs inputs = new ContextInputs(
                 ContextFixtures.STYLE, null, 0, glossary, List.of(), allowance, List.of(), LexiconFilter.NONE, "en");
         return ContextPackageAssembler.assemble(
@@ -46,6 +49,28 @@ class ContextPackageCharactersTest {
         final ContextPackage assembled = assemble("Lyra walked home. She sat down, and Hale watched her.", 1000);
 
         assertThat(assembled.draftContext().characterLines()).containsExactly("Lyra — female (she ×1)", "Hale — male");
+    }
+
+    // IF a count against the set gender were shown, THEN the sheet would argue with itself ("Hale — male (her ×1)").
+    @Test
+    void assemble_countsAgainstTheSetGender_areLeftOut() {
+        final ContextPackage assembled = assemble("Hale shook her hand. Hale waved her off.", 1000);
+
+        assertThat(assembled.draftContext().characterLines()).containsExactly("Hale — male");
+    }
+
+    // IF a short name had a line of its own, THEN one person would read as two on the sheet.
+    @Test
+    void assemble_shortNameOfAFullName_isFoldedIntoTheFullNamesLine() {
+        final GlossaryEntry bobby = ContextFixtures.entry("Bobby", "Боббі", TermType.CHARACTER, Gender.MALE, false);
+        final GlossaryEntry bobbyQuine =
+                ContextFixtures.entry("Bobby Quine", "Боббі Квайн", TermType.CHARACTER, Gender.MALE, false);
+
+        final ContextPackage assembled =
+                assemble("Bobby Quine came in. Later Bobby left. He was tired.", 1000, List.of(bobby, bobbyQuine));
+
+        assertThat(assembled.draftContext().characterLines())
+                .containsExactly("Bobby Quine (also Bobby) — male (he ×1)");
     }
 
     @Test

@@ -186,8 +186,20 @@ final class ReviewCommit {
         return verdict.kind() == Kind.NOT_A_NAME && now.type() == TermType.OTHER && now.gender() == Gender.UNKNOWN;
     }
 
-    private static GlossaryEntry guessed(final GlossaryEntry now, final Verdict verdict) {
-        return now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type())
-                .withInferredGender(now.gender() == Gender.UNKNOWN ? verdict.gender() : now.gender());
+    /**
+     * The entry with the verdict's type where its own is unset, and, for a person whose gender is unknown, the
+     * verdict's gender: as decided when a cited window shows it, else as a suggestion nobody has verified (15h.A2). A
+     * place or a thing takes no gender from the review.
+     */
+    static GlossaryEntry guessed(final GlossaryEntry now, final Verdict verdict) {
+        final GlossaryEntry typed = now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type());
+        if (now.gender() != Gender.UNKNOWN
+                || typed.type() != TermType.CHARACTER
+                || verdict.gender() == Gender.UNKNOWN) {
+            return typed;
+        }
+        return verdict.genderVerified()
+                ? typed.withInferredGender(verdict.gender())
+                : typed.withSuggestedGender(verdict.gender());
     }
 }

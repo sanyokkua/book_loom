@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
@@ -21,11 +22,14 @@ import ua.bookloom.api.llm.ChatRole;
 import ua.bookloom.api.persistence.GlossaryRepository;
 import ua.bookloom.api.pipeline.CallKind;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.Tokens;
+import ua.bookloom.pipeline.chunk.TokenEstimator;
+import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.glossary.SuggestionReplies.Suggestion;
-import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
 import ua.bookloom.pipeline.glossary.TermReviewReplies.Verdict;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -38,8 +42,11 @@ import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * The model's review of the glossary, run only when the person asks: each unlocked term with no target is sent with
- * how often the book uses it and where, and the model says whether it is a name, a term or not a name. Nothing is
- * changed until every batch has answered, so a failed or cancelled call leaves the glossary as it was.
+ * how often the book uses it, the pronouns the code read after it and numbered windows from across the book
+ * ({@link NameWindows}), and the model says whether it is a name, a term or not a name, its type and gender, and which
+ * windows it relied on. A name whose pronouns decide its gender on their own ({@link PronounGender.Evidence#isStrong()})
+ * is decided by the code and not sent. Nothing is changed until every batch has answered, so a failed or cancelled call
+ * leaves the glossary as it was.
  *
  * <p>Once every verdict is in, the terms that remain are given a suggested target in calls of their own
  * ({@link SuggestTargets}), and verdicts and suggestions are written together.
@@ -53,10 +60,13 @@ import ua.bookloom.util.text.GlossaryKeys;
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class TermReview {
 
-    /** How many terms one call carries, so a long glossary stays inside the model's context. */
+    /** The most terms one call carries, whatever their size: the schema's cap on the verdicts of one reply. */
     static final int BATCH_SIZE = 40;
 
-    private static final int TOKENS_PER_VERDICT = 32;
+    /** The input tokens one call may take, system message included: a batch is cut by size, not by a term count. */
+    static final int INPUT_BUDGET_TOKENS = 5000;
+
+    private static final int TOKENS_PER_VERDICT = 40;
     private static final int CAP_TOKENS = 2048;
 
     private final PromptTemplates templates;
@@ -108,17 +118,16 @@ public final class TermReview {
         final List<GlossaryEntry> open =
                 held.stream().filter(TermReview::isOpen).toList();
         log.info(
-                "Glossary review started project={} held={} reviewed={} batches={} policy={}",
+                "Glossary review started project={} held={} reviewed={} policy={}",
                 projectId,
                 held.size(),
                 open.size(),
-                (open.size() + BATCH_SIZE - 1) / BATCH_SIZE,
                 in.policy());
         if (open.isEmpty()) {
             return Result.ok(new GlossaryReviewReport(0, 0, held));
         }
-        final Map<String, Evidence> evidence = TermEvidence.of(
-                in.segments(), open.stream().map(GlossaryEntry::term).toList());
+        final Map<String, Evidence> evidence =
+                NameWindows.of(in.segments(), open, in.frame().sourceLanguage());
         final Result<List<Verdict>> verdicts = ask(open, evidence, in.frame(), in.calls());
         if (verdicts.isErr()) {
             log.warn("Glossary review project={} changed nothing: a call failed", projectId);
@@ -165,8 +174,7 @@ public final class TermReview {
         if (entries.isEmpty()) {
             return Result.ok(List.of());
         }
-        final Map<String, Evidence> evidence = TermEvidence.of(
-                segments, entries.stream().map(GlossaryEntry::term).toList());
+        final Map<String, Evidence> evidence = NameWindows.of(segments, entries, frame.sourceLanguage());
         return ask(entries, evidence, frame, calls);
     }
 
@@ -176,9 +184,19 @@ public final class TermReview {
             final CallFrame frame,
             final ModelCalls calls) {
         final List<Verdict> verdicts = new ArrayList<>();
-        for (int from = 0, index = 0; from < open.size(); from += BATCH_SIZE, index++) {
-            final List<GlossaryEntry> batch = open.subList(from, Math.min(open.size(), from + BATCH_SIZE));
-            final Result<List<Verdict>> answered = runBatch(index, batch, evidence, frame, calls);
+        final List<GlossaryEntry> asked = new ArrayList<>();
+        open.forEach(entry -> decidedByCode(entry, evidence).ifPresentOrElse(verdicts::add, () -> asked.add(entry)));
+        final String system =
+                templates.renderSystem(PromptName.REVIEW_TERMS, frame).strip();
+        final List<List<GlossaryEntry>> batches = batches(asked, evidence, system, frame.sourceLanguage());
+        log.info(
+                "Glossary review asks the model about {} of {} terms in {} batches; {} decided by their pronouns",
+                asked.size(),
+                open.size(),
+                batches.size(),
+                verdicts.size());
+        for (int index = 0; index < batches.size(); index++) {
+            final Result<List<Verdict>> answered = runBatch(index, batches.get(index), evidence, system, calls);
             if (answered.isErr()) {
                 return answered;
             }
@@ -187,18 +205,57 @@ public final class TermReview {
         return Result.ok(verdicts);
     }
 
+    // A strong pronoun case decides a person's gender alone; a place or a title is never read for one.
+    private static Optional<Verdict> decidedByCode(final GlossaryEntry entry, final Map<String, Evidence> evidence) {
+        final PronounGender.Evidence pronouns =
+                evidence.getOrDefault(entry.term(), Evidence.NONE).pronouns();
+        final boolean personLike =
+                entry.type() == TermType.CHARACTER || entry.type() == TermType.TERM || entry.type() == TermType.OTHER;
+        final Optional<Gender> decided = personLike && pronouns.isStrong() ? pronouns.dominant() : Optional.empty();
+        decided.ifPresent(gender -> log.debug(
+                "Glossary review decides entry {} without the model: {} ({})", entry.id(), gender, pronouns.compact()));
+        return decided.map(gender -> Verdict.decided(entry, gender));
+    }
+
+    /** The terms cut into batches that each stay within {@link #INPUT_BUDGET_TOKENS} and {@link #BATCH_SIZE}. */
+    private static List<List<GlossaryEntry>> batches(
+            final List<GlossaryEntry> asked,
+            final Map<String, Evidence> evidence,
+            final String system,
+            @Nullable final String sourceLanguage) {
+        final int room = INPUT_BUDGET_TOKENS - TokenEstimator.estimate(system, null);
+        final List<List<GlossaryEntry>> batches = new ArrayList<>();
+        List<GlossaryEntry> batch = new ArrayList<>();
+        int used = 0;
+        for (final GlossaryEntry entry : asked) {
+            final int size = TokenEstimator.estimate(block(entry, evidence), sourceLanguage);
+            if (!batch.isEmpty() && (used + size > room || batch.size() == BATCH_SIZE)) {
+                batches.add(batch);
+                batch = new ArrayList<>();
+                used = 0;
+            }
+            batch.add(entry);
+            used += size;
+        }
+        if (!batch.isEmpty()) {
+            batches.add(batch);
+        }
+        return batches;
+    }
+
     private Result<List<Verdict>> runBatch(
             final int index,
             final List<GlossaryEntry> batch,
             final Map<String, Evidence> evidence,
-            final CallFrame frame,
+            final String system,
             final ModelCalls calls) {
-        final List<ChatMessage> messages = messagesFor(batch, evidence, frame);
+        final List<ChatMessage> messages = messagesFor(batch, evidence, system);
         final ChatRequest request = ChatRequests.build(
                 PromptName.REVIEW_TERMS,
                 messages,
                 new OutputLimit(batch.size() * TOKENS_PER_VERDICT, CAP_TOKENS),
                 false);
+        log.debug("Glossary review batch {} asks about {} terms", index, batch.size());
         log.trace("Glossary review batch {} messages {}", index, messages);
         final Result<ChatResponse> reply = calls.callAbout(
                 CallKind.REVIEW_TERMS, List.of(), request, CallDescriptor.whole(PromptName.REVIEW_TERMS));
@@ -217,27 +274,33 @@ public final class TermReview {
     }
 
     private List<ChatMessage> messagesFor(
-            final List<GlossaryEntry> batch, final Map<String, Evidence> evidence, final CallFrame frame) {
-        final String lines = String.join(
-                "\n",
-                batch.stream()
-                        .map(entry -> line(entry.term(), evidence.getOrDefault(entry.term(), Evidence.NONE)))
-                        .toList());
-        final String system =
-                templates.renderSystem(PromptName.REVIEW_TERMS, frame).strip();
+            final List<GlossaryEntry> batch, final Map<String, Evidence> evidence, final String system) {
+        final String blocks = String.join(
+                "\n", batch.stream().map(entry -> block(entry, evidence)).toList());
         final String user = templates
-                .renderUser(PromptName.REVIEW_TERMS, Map.of("terms", lines))
+                .renderUser(PromptName.REVIEW_TERMS, Map.of("terms", blocks))
                 .strip();
         return List.of(new ChatMessage(ChatRole.SYSTEM, system), new ChatMessage(ChatRole.USER, user));
     }
 
-    private static String line(final String term, final Evidence evidence) {
-        final String examples = String.join(
-                " / ",
-                evidence.examples().stream()
-                        .map(example -> "\"" + example + "\"")
-                        .toList());
-        return "- " + term + " — " + evidence.count() + "×" + (examples.isEmpty() ? "" : " — " + examples);
+    // One term: its count and the code's pronoun tally on the line, then its numbered windows.
+    private static String block(final GlossaryEntry entry, final Map<String, Evidence> evidence) {
+        final Evidence used = evidence.getOrDefault(entry.term(), Evidence.NONE);
+        final String tally = used.pronouns().compact();
+        final StringBuilder block = new StringBuilder()
+                .append("- ")
+                .append(entry.term())
+                .append(" — ")
+                .append(used.count())
+                .append("× — pronouns: ")
+                .append(tally.isEmpty() ? "none" : tally);
+        for (int number = 1; number <= used.windows().size(); number++) {
+            block.append("\n  [")
+                    .append(number)
+                    .append("] ")
+                    .append(used.windows().get(number - 1).text());
+        }
+        return block.toString();
     }
 
     /**

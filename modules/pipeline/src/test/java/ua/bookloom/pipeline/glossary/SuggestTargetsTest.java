@@ -132,6 +132,22 @@ class SuggestTargetsTest {
         assertThat(suggested.error()).isEqualTo(failure);
     }
 
+    // IF the suggestion's gender were written, THEN one example sentence would decide a character's gender (15h.A2).
+    @Test
+    void suggestOnto_replyNamesAGender_writesOnlyTheTarget() {
+        final GlossaryEntry unknown =
+                new GlossaryEntry("p1:hale", "p1", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false);
+        final ScriptedChatModel model = new ScriptedChatModel()
+                .answer(reply("{\"suggestions\":[{\"term\":\"Hale\",\"target\":\"Гейл\",\"gender\":\"male\"}]}"));
+
+        final Result<List<GlossaryEntry>> suggested =
+                suggest.suggestOnto(List.of(unknown), BOOK, FRAME, NamePolicy.TRANSLITERATE, calls(model));
+
+        assertThat(suggested.data())
+                .extracting(GlossaryEntry::target, GlossaryEntry::gender)
+                .containsExactly(tuple("Гейл", Gender.UNKNOWN));
+    }
+
     @Test
     void suggest_nothingToAsk_makesNoCall() {
         final ScriptedChatModel model = new ScriptedChatModel();

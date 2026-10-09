@@ -13,15 +13,17 @@ import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.TermType;
-import ua.bookloom.pipeline.glossary.TermEvidence.Evidence;
+import ua.bookloom.pipeline.glossary.NameWindows.Evidence;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 import ua.bookloom.util.text.GlossaryKeys;
 
 /**
  * Reads one glossary-review reply. Only a verdict on a term of the batch survives, and a verdict word or type the
  * schema does not list reads as "no opinion", so an unreadable reply changes nothing. A "not-a-name" verdict removes
- * an entry, so it stands only with evidence: a phrase the model quotes that really occurs in one of the example
- * sentences it was given; without one it reads as "unsure" and the entry stays for the person to judge.
+ * an entry, so it stands only with evidence: a phrase the model quotes that really occurs in one of the windows it
+ * was given; without one it reads as "unsure" and the entry stays for the person to judge. A gender stands only when
+ * one of the windows the model cites holds a pronoun of that gender the code gives the name; otherwise it is kept as
+ * a suggestion nobody has verified (15h.A2).
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -52,8 +54,33 @@ final class TermReviewReplies {
      * @param gender the gender the model guessed; {@link Gender#UNKNOWN} when none
      * @param evidence the phrase the model quoted for a "not-a-name" verdict, empty when it quoted none or the verdict
      *     is another
+     * @param genderVerified whether a window the model cited shows the gender by a pronoun the code gives the name;
+     *     false for {@link Gender#UNKNOWN}
      */
-    record Verdict(GlossaryEntry entry, Kind kind, TermType type, Gender gender, String evidence) {}
+    record Verdict(
+            GlossaryEntry entry, Kind kind, TermType type, Gender gender, String evidence, boolean genderVerified) {
+
+        /**
+         * The verdict the code reaches with no model, from a strong pronoun case: a name, a person, the gender shown.
+         *
+         * @param entry the entry decided
+         * @param gender the gender the pronouns show
+         * @return a verified verdict
+         */
+        static Verdict decided(final GlossaryEntry entry, final Gender gender) {
+            return new Verdict(entry, Kind.NAME, TermType.CHARACTER, gender, "", true);
+        }
+
+        /**
+         * This verdict with another type.
+         *
+         * @param changed the non-null type
+         * @return a copy with the type set
+         */
+        Verdict withType(final TermType changed) {
+            return new Verdict(entry, kind, changed, gender, evidence, genderVerified);
+        }
+    }
 
     /**
      * Reads a reply against the batch it answers.
@@ -61,7 +88,7 @@ final class TermReviewReplies {
      * @param mapper the mapper the tolerant reader uses
      * @param replyText the model's reply
      * @param batch the batch's entries by their {@link GlossaryKeys} key
-     * @param evidence the sentences each term was asked with, by the term as listed
+     * @param evidence the windows each term was asked with, by the term as listed
      * @return the verdicts on entries of the batch; empty when the reply holds none or is unreadable
      */
     static List<Verdict> read(
@@ -96,20 +123,40 @@ final class TermReviewReplies {
             log.trace("Glossary review evidence for {} was '{}'", entry.term(), quoted);
             kind = Kind.UNSURE;
         }
+        final Gender gender = genderOf(node.path("gender").asText(""));
+        final List<Integer> cited = numbers(node.path("windows"));
+        final boolean verified = gender != Gender.UNKNOWN && evidence.shows(cited, gender);
+        log.debug(
+                "Glossary review verdict on entry {}: {} gender={} windows={} verified={}",
+                entry.id(),
+                kind,
+                gender,
+                cited,
+                verified);
         return new Verdict(
                 entry,
                 kind,
                 typeOf(kind, node.path("type").asText("")),
-                genderOf(node.path("gender").asText("")),
-                kind == Kind.NOT_A_NAME ? quoted : "");
+                gender,
+                kind == Kind.NOT_A_NAME ? quoted : "",
+                verified);
+    }
+
+    private static List<Integer> numbers(final JsonNode windows) {
+        final List<Integer> numbers = new ArrayList<>();
+        if (windows.isArray()) {
+            // A number written as a string reads too; anything else reads as 0, which names no window.
+            windows.forEach(number -> numbers.add(number.asInt(0)));
+        }
+        return numbers;
     }
 
     // The quote may drop the sentence's quotes, ellipses and case, but it must be words the sentence holds.
     private static boolean quotes(final String quoted, final Evidence evidence) {
         final String wanted = squeezed(quoted);
         return !wanted.isEmpty()
-                && evidence.examples().stream()
-                        .map(TermReviewReplies::squeezed)
+                && evidence.windows().stream()
+                        .map(window -> squeezed(window.text()))
                         .anyMatch(text -> text.contains(wanted));
     }
 

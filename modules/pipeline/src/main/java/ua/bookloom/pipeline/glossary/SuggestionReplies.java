@@ -10,9 +10,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 import ua.bookloom.util.lang.Script;
 import ua.bookloom.util.text.GlossaryKeys;
@@ -32,23 +30,18 @@ final class SuggestionReplies {
     static final int MAX_TARGET_CHARS = 80;
 
     /**
-     * The model's suggestion for one entry.
+     * The model's suggestion for one entry. The reply's gender is not read: a small model answered "neuter" for every
+     * place and thing (gemma4:e4b, 2026-10-02) and a person's gender from one example sentence (15h.A2), and the
+     * gender is the review's, decided from evidence across the book.
      *
      * @param entry the entry as it was held when the batch was asked
      * @param target the suggested rendering, stripped and never blank
-     * @param gender the gender the model gave; {@link Gender#UNKNOWN} when none
      */
-    record Suggestion(GlossaryEntry entry, String target, Gender gender) {
+    record Suggestion(GlossaryEntry entry, String target) {
 
-        /**
-         * The entry as it is now with this suggestion written in: the target as a suggestion, and the gender only for a
-         * person whose gender is still unknown. A small model answered "neuter" for every place and thing, masculine
-         * Ukrainian nouns included (gemma4:e4b, 2026-10-02), and a wrong gender misleads every draft's agreement more
-         * than none, which the draft infers from its own rendering.
-         */
+        /** The entry as it is now with this suggestion written in as a suggested target; nothing else changes. */
         GlossaryEntry onto(final GlossaryEntry now) {
-            final boolean takesGender = now.gender() == Gender.UNKNOWN && now.type() == TermType.CHARACTER;
-            return now.withSuggestedTarget(target).withInferredGender(takesGender ? gender : now.gender());
+            return now.withSuggestedTarget(target);
         }
     }
 
@@ -103,8 +96,7 @@ final class SuggestionReplies {
             log.trace("Suggestion dropped for term '{}' target '{}': {}", term, target, refusal);
             return Optional.empty();
         }
-        return Optional.of(
-                new Suggestion(entry, target, genderOf(node.path("gender").asText(""))));
+        return Optional.of(new Suggestion(entry, target));
     }
 
     private static @Nullable String refusal(
@@ -143,14 +135,5 @@ final class SuggestionReplies {
         return target.codePoints()
                 .filter(Character::isLetter)
                 .anyMatch(codePoint -> script.letterScripts().contains(Character.UnicodeScript.of(codePoint)));
-    }
-
-    private static Gender genderOf(final String wire) {
-        return switch (GlossaryKeys.of(wire)) {
-            case "female" -> Gender.FEMALE;
-            case "male" -> Gender.MALE;
-            case "neuter" -> Gender.NEUTER;
-            default -> Gender.UNKNOWN;
-        };
     }
 }

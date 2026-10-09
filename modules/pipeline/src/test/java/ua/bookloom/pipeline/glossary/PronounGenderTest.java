@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
@@ -123,5 +124,58 @@ class PronounGenderTest {
     void compact_evidence_namesThePronounsSeen() {
         assertThat(PronounGender.of("Chisel", FEMALE_TEXTS, "en").compact()).isEqualTo("she ×3");
         assertThat(new Evidence(List.of(), List.of()).compact()).isEmpty();
+    }
+
+    // IF the narrator's "I" stopped the scan like a name, THEN a first-person book would give its characters nothing.
+    @Test
+    void of_firstPersonPronounBetweenNameAndPronoun_stillCounts() {
+        final Evidence evidence =
+                PronounGender.of("Kestrel", List.of("Kestrel looked at me and I knew she was gone."), "en");
+
+        assertThat(evidence.femaleWords()).containsExactly("she");
+    }
+
+    @Test
+    void of_onlyPossessivePronouns_countWhenSubjectPronounsAreScarce() {
+        final List<String> texts =
+                List.of("Wren shook her head.", "Wren lifted her bag.", "Wren rubbed her eyes and waited.");
+
+        final Evidence evidence = PronounGender.of("Wren", texts, "en");
+
+        assertThat(evidence.female()).isEqualTo(3);
+        assertThat(evidence.dominant()).contains(Gender.FEMALE);
+        assertThat(evidence.compact()).isEqualTo("her ×3");
+    }
+
+    @Test
+    void of_objectPronounsContradictedByASubjectPronoun_areNotCounted() {
+        final List<String> texts = List.of("Wren shook her head.", "Wren lifted her bag.", "Wren sat. He left.");
+
+        final Evidence evidence = PronounGender.of("Wren", texts, "en");
+
+        assertThat(evidence.female()).isZero();
+        assertThat(evidence.male()).isEqualTo(1);
+        assertThat(evidence.dominant()).isEmpty();
+    }
+
+    @Test
+    void of_enoughSubjectPronouns_leavesTheObjectFormsOut() {
+        assertThat(PronounGender.of("Chisel", FEMALE_TEXTS, "en").compact()).isEqualTo("she ×3");
+    }
+
+    @Test
+    void of_oddNumberOfStraightQuotes_readsTheParagraphAsNarration() {
+        final Evidence evidence = PronounGender.of("Wren", List.of("Wren measured the 6\" shelf. She left."), "en");
+
+        assertThat(evidence.femaleWords()).containsExactly("she");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"5,0,true", "4,0,false", "9,1,true", "8,2,false", "0,6,true"})
+    void isStrong_countsAndAgreement_decideWithoutTheModel(final int female, final int male, final boolean strong) {
+        final Evidence evidence =
+                new Evidence(java.util.Collections.nCopies(female, "she"), java.util.Collections.nCopies(male, "he"));
+
+        assertThat(evidence.isStrong()).isEqualTo(strong);
     }
 }
