@@ -8,11 +8,14 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.DocumentPort;
 import ua.bookloom.api.document.Segment;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.llm.FinishReason;
@@ -66,6 +69,33 @@ class QualityLoopReviewInputTest {
                 .contains("<Pair id=\"s1\"><Source>She smiled softly.")
                 .contains("<Pair id=\"s2\"><Source>The rain fell.")
                 .doesNotContain("s3", "s4");
+    }
+
+    // The title rule owns these segments (15h.A4): a bare heading or a metadata line gave the reviewer nothing to
+    // judge.
+    @ParameterizedTest
+    @EnumSource(
+            value = SegmentKind.class,
+            names = {"TITLE", "HEADING", "METADATA_TITLE", "METADATA_AUTHOR", "METADATA_DESCRIPTION"})
+    void start_titleHeadingOrMetadataSegment_makesNoReviewerCall(final SegmentKind kind) {
+        final DraftOutcome.Drafted heading = new DraftOutcome.Drafted(
+                QualityLoopTestSupport.segment(kind),
+                QualityLoopTestSupport.SOURCE,
+                List.of(),
+                "Він відчинив старі двері.",
+                "Він відчинив старі двері.",
+                "Він відчинив старі двері.",
+                null);
+        final ScriptedChatModel model = new ScriptedChatModel();
+
+        final Result<ChunkDecider> started = loop.start(
+                List.of(heading),
+                QualityLoopFixtures.settings(ReviewMode.ASSISTED, QualityDial.BALANCED),
+                QualityLoopFixtures.PASSTHROUGH_GATE,
+                calls(model));
+
+        assertThat(started.isOk()).isTrue();
+        assertThat(model.requests()).isEmpty();
     }
 
     @Test

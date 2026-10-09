@@ -32,6 +32,7 @@ class QualityLoopReviewerTest {
     private static final String DRAFT = "Він відчинив старі дверзі.";
     private static final String FIXED = "Він відчинив старі двері.";
     private static final String CLEAN_DRAFT = "Він відчинив старі двері.";
+    private static final String SWAPPED = "вікна";
     private static final String LATIN_E = "двeрі";
     private static final String OK = "{\"results\":[{\"id\":\"s1\",\"status\":\"ok\"}]}";
 
@@ -150,18 +151,19 @@ class QualityLoopReviewerTest {
                 .hasSize(2);
     }
 
-    // The edit's quote is in the text, but its result mixes alphabets inside a word, which a hard check refuses: the
+    // The edit's quote is in the text, but it swaps a word for a different one, which the code refuses without calling
+    // the draft wrong: the
     // reviewer's finding stands as evidence and the segment gets exactly one directed fix that names the quote.
     @Test
-    void nextDecision_editWhoseResultMixesScripts_makesOneDirectedFixNamingTheQuoteAndAcceptsItsResult() {
+    void nextDecision_editThatSwapsAWord_makesOneDirectedFixNamingTheQuoteAndAcceptsItsResult() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(edits("invented-word", "дверзі", LATIN_E)))
+                .answer(readable(edits("meaning", "дверзі", SWAPPED)))
                 .answer(readable(targetReply(FIXED)));
 
         final SegmentOutcome decided = decide(DRAFT, model);
 
         assertThat(formats(model)).containsExactly("reviewer", "directed-fix");
-        assertThat(model.requests().get(1).messages().getLast().content()).contains("дверзі", "invented-word");
+        assertThat(model.requests().get(1).messages().getLast().content()).contains("дверзі", "meaning");
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(decided.machineTarget()).isEqualTo(FIXED);
         assertThat(decided.repairRounds()).isEqualTo(1);
@@ -170,7 +172,7 @@ class QualityLoopReviewerTest {
     @Test
     void nextDecision_directedFixThatLeavesTheQuote_flagsWithTheEvidenceAndKeepsTheDraft() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(edits("invented-word", "дверзі", LATIN_E)))
+                .answer(readable(edits("meaning", "дверзі", SWAPPED)))
                 .answer(readable(targetReply(DRAFT)));
 
         final SegmentOutcome decided = decide(DRAFT, model);
@@ -182,16 +184,16 @@ class QualityLoopReviewerTest {
                 .filteredOn(finding -> finding.raisedBy().equals("reviewer"))
                 .singleElement()
                 .satisfies(finding -> {
-                    assertThat(finding.kind()).isEqualTo("invented-word");
+                    assertThat(finding.kind()).isEqualTo("meaning");
                     assertThat(finding.severity()).isEqualTo(Severity.MEDIUM);
-                    assertThat(finding.note()).contains("дверзі", "introduces a blocking defect");
+                    assertThat(finding.note()).contains("дверзі", "swaps a word");
                 });
     }
 
     @Test
     void nextDecision_directedFixAnswersAuth_endsTheStepAndARetryRepeatsOnlyTheFix() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(edits("invented-word", "дверзі", LATIN_E)))
+                .answer(readable(edits("meaning", "дверзі", SWAPPED)))
                 .answer(Result.err(AppError.of(ErrorCode.auth, "Rejected", "the key was refused")))
                 .answer(readable(targetReply(FIXED)));
         final ChunkDecider decider = start(DRAFT, model, QualityDial.BALANCED);

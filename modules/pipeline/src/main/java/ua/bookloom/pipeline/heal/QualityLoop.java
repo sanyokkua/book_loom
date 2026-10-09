@@ -2,15 +2,18 @@ package ua.bookloom.pipeline.heal;
 
 import com.google.inject.Inject;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.document.SegmentKind;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.qa.QaResult;
 import ua.bookloom.pipeline.reviewer.EditApplier;
@@ -185,7 +188,12 @@ public final class QualityLoop {
             final List<ReviewedPair> pairs, final DraftOutcome outcome, @Nullable final QaResult qa) {
         switch (outcome) {
             case DraftOutcome.Drafted drafted -> {
-                if (AcceptanceRule.readyForReview(Objects.requireNonNull(qa))) {
+                if (ownedByTitleRule(drafted)) {
+                    log.debug(
+                            "Review skips segment={} kind={}",
+                            drafted.segment().id(),
+                            drafted.segment().kind());
+                } else if (AcceptanceRule.readyForReview(Objects.requireNonNull(qa))) {
                     // The reviewer reads and quotes the text as the model wrote it, protected tokens in place, because
                     // that is the text its edits are applied to and checked on.
                     pairs.add(new ReviewedPair(drafted.segment().id(), drafted.maskedSource(), drafted.maskedReply()));
@@ -197,6 +205,18 @@ public final class QualityLoop {
             // Nothing was translated, so there is nothing to review.
             case DraftOutcome.Verbatim ignored -> {}
         }
+    }
+
+    private static final Set<SegmentKind> TITLE_RULE_KINDS = EnumSet.of(
+            SegmentKind.TITLE,
+            SegmentKind.HEADING,
+            SegmentKind.METADATA_TITLE,
+            SegmentKind.METADATA_AUTHOR,
+            SegmentKind.METADATA_DESCRIPTION);
+
+    // Titles, headings and metadata are the title rule's, which the reviewer cannot judge from a bare line.
+    private static boolean ownedByTitleRule(final DraftOutcome.Drafted drafted) {
+        return TITLE_RULE_KINDS.contains(drafted.segment().kind());
     }
 
     private static void logReviewInput(
@@ -224,6 +244,8 @@ public final class QualityLoop {
             excluded.add(reused.segment().id() + ":reused");
         } else if (outcome instanceof DraftOutcome.Verbatim verbatim) {
             excluded.add(verbatim.segment().id() + ":verbatim");
+        } else if (outcome instanceof DraftOutcome.Drafted drafted && ownedByTitleRule(drafted)) {
+            excluded.add(drafted.segment().id() + ":title-rule");
         } else if (qa != null && !AcceptanceRule.readyForReview(qa)) {
             excluded.add(outcome.segment().id() + ":refused-by-checks");
         }

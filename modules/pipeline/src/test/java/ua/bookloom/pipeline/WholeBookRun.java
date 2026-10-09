@@ -97,16 +97,16 @@ final class WholeBookRun {
             "The captain studied the old map.",
             SOURCE_3,
             "The rain did not stop that evening.");
-    // Two edits whose results the checks refuse (a Latin letter inside a Cyrillic word), so each segment gets one
-    // directed
-    // fix naming the reviewer's quote; the first fix answers a text that no longer holds the quote, the second one
+    // Two edits the code refuses as a swapped word, which leaves the reviewer's finding standing, so each segment gets
+    // one directed fix naming the reviewer's quote; the first fix answers a text that no longer holds the quote, the
+    // second one
     // echoes
     // the English source, which the echo check blocks.
     private static final String CHUNK_REVIEW = "{\"results\":["
             + "{\"id\":\"s2\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"пішла\","
-            + "\"replacement\":\"пішлa\"}]},"
+            + "\"replacement\":\"побігла\"}]},"
             + "{\"id\":\"s8\",\"status\":\"edits\",\"edits\":[{\"criterion\":\"meaning\",\"quote\":\"Він пішов\","
-            + "\"replacement\":\"Він пішoв\"}]}]}";
+            + "\"replacement\":\"Він побіг\"}]}]}";
     private static final String LAST_REVIEW = "{\"results\":[]}";
     private static final int PROMPT_TOKENS = 120;
     private static final int COMPLETION_TOKENS = 45;

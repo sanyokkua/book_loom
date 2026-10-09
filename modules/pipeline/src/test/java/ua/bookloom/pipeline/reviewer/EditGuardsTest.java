@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /** The result of a reviewer edit is judged as hard as the edit itself: a damaging edit is worse than none. */
 class EditGuardsTest {
@@ -138,5 +140,43 @@ class EditGuardsTest {
 
         assertThat(outcome.failed()).isEmpty();
         assertThat(outcome.ignored()).isEqualTo(1);
+    }
+
+    // A refusal that disproves the edit is set aside; the draft is not in doubt (15h.A4).
+    @Test
+    void apply_caseChange_isDisprovedAndNotEvidence() {
+        final EditOutcome outcome =
+                apply(CANDIDATE, new ReviewEdit(ReviewCriterion.AGREEMENT, "Потім він", "потім він"), List.of());
+
+        assertThat(outcome.disproved()).hasSize(1);
+        assertThat(outcome.evidenced()).isEmpty();
+    }
+
+    @Test
+    void apply_meaningSwap_isEvidenceAndNotDisproved() {
+        final String candidate = "Він побачив криголам у порту.";
+        final EditOutcome outcome = apply(
+                candidate, new ReviewEdit(ReviewCriterion.MEANING, "побачив криголам", "побачив льодовик"), List.of());
+
+        assertThat(outcome.evidenced()).hasSize(1);
+        assertThat(outcome.disproved()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "AMBIGUOUS_QUOTE,false",
+        "MEANING_SWAP,false",
+        "CASE_CHANGED,true",
+        "GLOSSARY_RENDERING,true",
+        "FOREIGN_SCRIPT,true",
+        "DOUBLED_WORD,true",
+        "TOKENS_CHANGED,true",
+        "CHECKS_REFUSED,true",
+        "BLOCKERS_GREW,true",
+        "COUNTS_CHANGED,true"
+    })
+    void disprovesEdit_perReason_onlyAMeaningSwapAndAnAmbiguousQuoteKeepTheFinding(
+            final Verification.FailureReason reason, final boolean disproves) {
+        assertThat(reason.disprovesEdit()).isEqualTo(disproves);
     }
 }

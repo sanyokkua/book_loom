@@ -14,6 +14,7 @@ import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.NamePolicy;
 import ua.bookloom.api.project.QaFinding;
+import ua.bookloom.api.project.Severity;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.dial.DialParameters;
 
@@ -26,10 +27,10 @@ class QualityLoopReviewerFixTest {
 
     private static final String DRAFT = "Він відчинив старі дверзі.";
     private static final String TWO_WORDS_DRAFT = "Він відчинив старі дверзі і стіни.";
-    private static final String LATIN_E_EDIT =
-            "{\"criterion\":\"invented-word\",\"quote\":\"дверзі\",\"replacement\":\"двeрі\"}";
-    private static final String LATIN_I_EDIT =
-            "{\"criterion\":\"invented-word\",\"quote\":\"стіни\",\"replacement\":\"стiни\"}";
+    private static final String SWAP_DOOR_EDIT =
+            "{\"criterion\":\"meaning\",\"quote\":\"дверзі\",\"replacement\":\"вікна\"}";
+    private static final String SWAP_WALL_EDIT =
+            "{\"criterion\":\"meaning\",\"quote\":\"стіни\",\"replacement\":\"дахи\"}";
 
     private final QualityLoop loop = QualityLoopFixtures.loop();
 
@@ -40,7 +41,7 @@ class QualityLoopReviewerFixTest {
     @Test
     void nextDecision_refusedEditAndNoRepairRoundInTheDial_sendsNoDirectedFix() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(reply(LATIN_E_EDIT)))
+                .answer(readable(reply(SWAP_DOOR_EDIT)))
                 .answer(readable(targetReply("Він відчинив старі двері.")));
 
         final SegmentOutcome decided =
@@ -56,7 +57,7 @@ class QualityLoopReviewerFixTest {
     @Test
     void nextDecision_directedFixThatAddsABlocker_isDiscardedAndTheDraftStays() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(reply(LATIN_E_EDIT)))
+                .answer(readable(reply(SWAP_DOOR_EDIT)))
                 .answer(readable(targetReply("Він відчинив «старі дверзі.")));
 
         final SegmentOutcome decided = decide(DRAFT, model, DialParameters.of(QualityDial.BALANCED));
@@ -72,7 +73,7 @@ class QualityLoopReviewerFixTest {
     @Test
     void nextDecision_directedFixThatClearsOneOfTwoQuotes_isKeptAndTheOtherQuoteRemainsEvidence() {
         final ScriptedChatModel model = new ScriptedChatModel()
-                .answer(readable(reply(LATIN_E_EDIT, LATIN_I_EDIT)))
+                .answer(readable(reply(SWAP_DOOR_EDIT, SWAP_WALL_EDIT)))
                 .answer(readable(targetReply("Він відчинив старі двері і стіни.")));
 
         final SegmentOutcome decided = decide(TWO_WORDS_DRAFT, model, DialParameters.of(QualityDial.BALANCED));
@@ -99,6 +100,24 @@ class QualityLoopReviewerFixTest {
         assertThat(model.requests()).hasSize(2);
         assertThat(decided.machineTarget()).isEqualTo("Він відчинив старі двері і двері.");
         assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
+    }
+
+    // The refusal disproves the edit: the note is low, the count is kept in the finding kind, and no blocker remains.
+    @Test
+    void nextDecision_ignoredEdit_leavesOneLowNoteOfKindIgnoredEdit() {
+        final String caseEdit =
+                "{\"criterion\":\"invented-word\",\"quote\":\"Він відчинив\",\"replacement\":\"він відчинив\"}";
+        final ScriptedChatModel model = new ScriptedChatModel().answer(readable(reply(caseEdit)));
+
+        final SegmentOutcome decided =
+                decide("Він відчинив старі двері.", model, DialParameters.of(QualityDial.BALANCED));
+
+        assertThat(model.requests()).hasSize(1);
+        assertThat(decided.status()).isEqualTo(SegmentStatus.ACCEPTED);
+        assertThat(decided.findings())
+                .filteredOn(finding -> finding.kind().equals("ignored-edit"))
+                .singleElement()
+                .satisfies(finding -> assertThat(finding.severity()).isEqualTo(Severity.LOW));
     }
 
     private SegmentOutcome decide(final String draft, final ScriptedChatModel model, final DialParameters dial) {

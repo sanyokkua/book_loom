@@ -54,9 +54,10 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
  */
 class TranslationJobObservabilityTest {
 
-    // The reviewer's edit for s1 would mix two alphabets in one word, which a hard check refuses.
+    // The reviewer's edit for s1 swaps a word for a different one, which the code refuses but cannot call a wrong
+    // draft.
     private static final String REFUSED_EDIT_ON_S1 = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"meaning\",\"quote\":\"Старий\",\"replacement\":\"Стaрий\"}]}]}";
+            + "{\"criterion\":\"meaning\",\"quote\":\"Старий\",\"replacement\":\"Високий\"}]}]}";
     private static final String FIXED_T0 = "Старий чоловік повільно пішов до гавані.";
     private static final long WAIT_SECONDS = 10;
 

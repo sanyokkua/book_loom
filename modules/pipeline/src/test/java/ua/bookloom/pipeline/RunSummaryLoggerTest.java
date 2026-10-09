@@ -29,8 +29,10 @@ import ua.bookloom.api.pipeline.JobStage;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ModelCallFinished;
 import ua.bookloom.api.pipeline.SegmentDecided;
+import ua.bookloom.api.pipeline.SegmentDetail;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.api.project.SegmentPath;
 
 /**
  * The run summary: one INFO line a minute while a job runs and one when it ends, with the counts, call times and
@@ -84,8 +86,22 @@ class RunSummaryLoggerTest {
         summary.onEvent(new SegmentStarted("ch12.xhtml:5", "ch12 · p06", "Source", new ChunkPosition(1, 3, 1, 4)));
 
         assertThat(summaries())
-                .containsExactly("run summary periodic accepted=5 flagged=1 verbatim=2 pending=10 calls=2"
-                        + " avgCallMs=2000 p95CallMs=3000 tokensPerSecond=25.0 timeouts=1 current=ch12 · p06");
+                .containsExactly(
+                        "run summary periodic accepted=5 flagged=1 verbatim=2 pending=10 calls=2"
+                                + " avgCallMs=2000 p95CallMs=3000 tokensPerSecond=25.0 timeouts=1 ignoredEdits=0 current=ch12 · p06");
+    }
+
+    @Test
+    void onEvent_decisionsCarryingIgnoredEditNotes_finalLineCountsThem() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+
+        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
+        summary.onEvent(decidedWith(List.of("ignored-edit", "meaning", "ignored-edit")));
+        summary.onEvent(decidedWith(List.of("ignored-edit")));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries()).singleElement().asString().contains(" ignoredEdits=3 ");
     }
 
     @Test
@@ -115,7 +131,7 @@ class RunSummaryLoggerTest {
 
         assertThat(summaries())
                 .containsExactly("run summary final accepted=5 flagged=1 verbatim=2 pending=10 calls=0 avgCallMs=0"
-                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 current=-");
+                        + " p95CallMs=0 tokensPerSecond=- timeouts=0 ignoredEdits=0 current=-");
     }
 
     // The final line says per kind what the calls cost, so a shared log shows where the time went.
@@ -163,6 +179,15 @@ class RunSummaryLoggerTest {
                 .map(ILoggingEvent::getFormattedMessage)
                 .filter(message -> message.startsWith("run summary "))
                 .toList();
+    }
+
+    private static SegmentDecided decidedWith(final List<String> kinds) {
+        return new SegmentDecided(
+                "ch12.xhtml:4",
+                SegmentStatus.ACCEPTED,
+                null,
+                DECIDED,
+                new SegmentDetail(null, SegmentPath.DRAFT, kinds));
     }
 
     private static SegmentDecided decided() {

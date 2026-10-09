@@ -16,6 +16,9 @@ import java.util.Objects;
 public record EditOutcome(
         String text, List<ReviewEdit> applied, List<FailedEdit> failed, int ignored, List<ReviewEdit> notes) {
 
+    /** The kind of the low note left for a reviewer edit the code refused for what the edit did; the run summary counts it. */
+    public static final String IGNORED_EDIT_KIND = "ignored-edit";
+
     /** Copies the lists and rejects a missing component. */
     public EditOutcome {
         Objects.requireNonNull(text, "text");
@@ -25,6 +28,24 @@ public record EditOutcome(
         applied = List.copyOf(applied);
         failed = List.copyOf(failed);
         notes = List.copyOf(notes);
+    }
+
+    /**
+     * The refused edits that stand as evidence of a defect in the draft: a meaning swap or an ambiguous quote.
+     *
+     * @return the refusals that may earn a directed fix; never null
+     */
+    public List<FailedEdit> evidenced() {
+        return failed.stream().filter(edit -> !edit.reason().disprovesEdit()).toList();
+    }
+
+    /**
+     * The refused edits whose own refusal disproves them, which leave the draft untouched and unflagged.
+     *
+     * @return the refusals that are only set aside; never null
+     */
+    public List<FailedEdit> disproved() {
+        return failed.stream().filter(edit -> edit.reason().disprovesEdit()).toList();
     }
 
     /**

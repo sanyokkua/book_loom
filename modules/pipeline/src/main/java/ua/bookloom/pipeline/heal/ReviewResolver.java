@@ -35,6 +35,7 @@ final class ReviewResolver {
 
     private static final String REWRITE_KIND = "rewrite";
     private static final String EDITS_KIND = "edits";
+    private static final String IGNORED_EDIT_KIND = EditOutcome.IGNORED_EDIT_KIND;
 
     private final EditApplier applier;
     private final DirectedFix directedFix;
@@ -90,13 +91,39 @@ final class ReviewResolver {
                 renderings(),
                 functionWords());
         final Edited edited = evaluateEdited(outcome, initialQa, draft, applied);
-        final List<QaFinding> findings =
-                edited.reverted() ? revertedFindings(applied) : recordedEdits(applied.applied(), applied.notes());
+        final List<QaFinding> findings = withIgnored(
+                edited.reverted() ? revertedFindings(applied) : recordedEdits(applied.applied(), applied.notes()),
+                applied.disproved(),
+                outcome.segment().id());
         final int rounds = applied.applied().isEmpty() || edited.reverted() ? 0 : 1;
-        if (applied.failed().isEmpty()) {
+        if (applied.evidenced().isEmpty()) {
             return Result.ok(new Resolution(edited.machine(), edited.qa(), findings, rounds, 0, null, edited.text()));
         }
-        return fixRefused(outcome, edited, applied.failed(), baseline, findings);
+        return fixRefused(outcome, edited, applied.evidenced(), baseline, findings);
+    }
+
+    // An edit the code refused for what the edit did is no evidence against the draft: a low note, no fix, no blocker.
+    private static List<QaFinding> withIgnored(
+            final List<QaFinding> findings, final List<EditOutcome.FailedEdit> disproved, final String segmentId) {
+        if (disproved.isEmpty()) {
+            return findings;
+        }
+        final List<QaFinding> all = new ArrayList<>(findings);
+        for (final EditOutcome.FailedEdit ignored : disproved) {
+            log.debug(
+                    "Reviewer edit ignored segment={} criterion={} reason={}",
+                    segmentId,
+                    ignored.edit().criterion().wire(),
+                    ignored.reason());
+            all.add(new QaFinding(
+                    IGNORED_EDIT_KIND,
+                    Severity.LOW,
+                    "The reviewer suggested \"" + ignored.edit().replacement() + "\" for \""
+                            + ignored.edit().quote() + "\", but "
+                            + ignored.reason().label() + ", so it was not used.",
+                    SegmentOutcomes.REVIEWER));
+        }
+        return all;
     }
 
     // The glossary lines read "source → target"; only the target is a rendering a terminology edit may use.

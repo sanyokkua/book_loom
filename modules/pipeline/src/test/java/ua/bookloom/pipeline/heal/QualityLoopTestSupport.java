@@ -22,11 +22,16 @@ final class QualityLoopTestSupport {
 
     /** A plain-text segment of {@link #SOURCE} with no placeholder, so a target is its own masked form. */
     static Segment segment() {
+        return segment(SegmentKind.PARAGRAPH);
+    }
+
+    /** The same segment as {@link #segment()}, parsed from a block of another kind. */
+    static Segment segment(final SegmentKind kind) {
         return new Segment(
                 "Book.md:0",
                 "Book.md",
                 0,
-                SegmentKind.PARAGRAPH,
+                kind,
                 SOURCE,
                 SOURCE,
                 Map.of(),

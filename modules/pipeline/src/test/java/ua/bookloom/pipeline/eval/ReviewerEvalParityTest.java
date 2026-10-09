@@ -25,7 +25,7 @@ class ReviewerEvalParityTest {
     @Test
     void review_editTheVerifierRefuses_isFollowedByTheRunsDirectedFixCall() {
         final String refusedEdit = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-                + "{\"criterion\":\"meaning\",\"quote\":\"старі двері\",\"replacement\":\"старі двері}\"}]}]}";
+                + "{\"criterion\":\"meaning\",\"quote\":\"старі двері\",\"replacement\":\"старі вікна\"}]}]}";
         final ScriptedChatModel model = new ScriptedChatModel()
                 .answer(Result.ok(reply(refusedEdit)))
                 .answer(Result.ok(reply("{\"target\":\"" + CANDIDATE + "\"}")));

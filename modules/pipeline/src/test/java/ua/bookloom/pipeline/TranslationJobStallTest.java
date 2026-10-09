@@ -50,10 +50,9 @@ import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 class TranslationJobStallTest {
 
     private static final String FIXED_T0 = "Старий чоловік повільно пішов до гавані.";
-    // The reviewer's edit for s1 would mix two alphabets in one word, which a hard check refuses: a directed fix
-    // follows.
+    // The reviewer's edit for s1 swaps a word for a different one: a directed fix follows.
     private static final String REFUSED_EDIT_ON_S1 = "{\"results\":[{\"id\":\"s1\",\"status\":\"edits\",\"edits\":["
-            + "{\"criterion\":\"meaning\",\"quote\":\"чоловік пішов\",\"replacement\":\"чоловік пішoв\"}]}]}";
+            + "{\"criterion\":\"meaning\",\"quote\":\"чоловік пішов\",\"replacement\":\"чоловік побіг\"}]}]}";
 
     @TempDir
     private Path tempDir;

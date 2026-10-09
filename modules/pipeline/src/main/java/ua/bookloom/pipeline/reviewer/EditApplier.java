@@ -86,12 +86,21 @@ public final class EditApplier {
                     text = verified.edited();
                     applied.add(edit);
                 }
-                case Verification.Failed refused -> failed.add(new EditOutcome.FailedEdit(edit, refused.reason()));
+                case Verification.Failed refused -> failed.add(refusal(edit, refused));
                 case Verification.Ignored skipped -> ignored++;
             }
         }
         logCounts(applied.size(), failed.size(), ignored, noOps, notes.size());
         return new EditOutcome(text, applied, failed, ignored, notes);
+    }
+
+    private static EditOutcome.FailedEdit refusal(final ReviewEdit edit, final Verification.Failed refused) {
+        log.debug(
+                "Edit refused criterion={} reason={} disprovesEdit={}",
+                edit.criterion().wire(),
+                refused.reason(),
+                refused.reason().disprovesEdit());
+        return new EditOutcome.FailedEdit(edit, refused.reason());
     }
 
     private static void logCounts(

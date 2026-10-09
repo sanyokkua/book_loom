@@ -29,6 +29,7 @@ import ua.bookloom.api.pipeline.SegmentDecided;
 import ua.bookloom.api.pipeline.SegmentDrafted;
 import ua.bookloom.api.pipeline.SegmentStarted;
 import ua.bookloom.api.pipeline.StageStarted;
+import ua.bookloom.pipeline.reviewer.EditOutcome;
 
 /**
  * Writes one INFO {@code run summary} line a minute while a job runs, and a last one when it ends: segments accepted,
@@ -64,6 +65,7 @@ final class RunSummaryLogger {
     private @Nullable JobProgress progress;
     private String locator = NONE;
     private int timeouts;
+    private long ignoredEdits;
     private long completionTokens;
     private long generationMillis;
 
@@ -79,7 +81,7 @@ final class RunSummaryLogger {
         Objects.requireNonNull(event, "event");
         switch (event) {
             case SegmentStarted started -> locator = started.locator();
-            case SegmentDecided decided -> progress = decided.progress();
+            case SegmentDecided decided -> decide(decided);
             case Paused paused -> progress = paused.progress();
             case Resumed resumed -> progress = resumed.progress();
             case StageStarted stage -> progress = stage.progress();
@@ -103,6 +105,24 @@ final class RunSummaryLogger {
             lastLine = now;
         } else if (Duration.between(last, now).compareTo(INTERVAL) >= 0) {
             write("periodic");
+        }
+    }
+
+    private void decide(final SegmentDecided decided) {
+        progress = decided.progress();
+        countIgnoredEdits(decided);
+    }
+
+    private void countIgnoredEdits(final SegmentDecided decided) {
+        if (decided.detail() == null) {
+            return;
+        }
+        final long count = decided.detail().findingKinds().stream()
+                .filter(EditOutcome.IGNORED_EDIT_KIND::equals)
+                .count();
+        if (count > 0) {
+            ignoredEdits += count;
+            log.debug("Ignored reviewer edits segment={} count={} total={}", decided.segmentId(), count, ignoredEdits);
         }
     }
 
@@ -132,7 +152,7 @@ final class RunSummaryLogger {
         final JobProgress at = progress;
         log.info(
                 "run summary {} accepted={} flagged={} verbatim={} pending={} calls={} avgCallMs={} p95CallMs={}"
-                        + " tokensPerSecond={} timeouts={} current={}{}",
+                        + " tokensPerSecond={} timeouts={} ignoredEdits={} current={}{}",
                 kind,
                 at == null ? 0 : at.accepted(),
                 at == null ? 0 : at.flagged(),
@@ -143,6 +163,7 @@ final class RunSummaryLogger {
                 percentileMillis(),
                 tokensPerSecond(),
                 timeouts,
+                ignoredEdits,
                 locator,
                 "final".equals(kind) ? byKind() : "");
     }
