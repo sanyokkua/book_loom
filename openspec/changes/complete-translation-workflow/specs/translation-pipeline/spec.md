@@ -1226,6 +1226,13 @@ loses one of them only that one is asked again.
 - **WHEN** the reply answers ids 1, 3 and 4 of four
 - **THEN** a single-segment draft is made for the second segment only, and the other three are taken from the batch
 
+#### Scenario: Two or more missing ids are asked again together
+
+- **WHEN** the reply answers ids 1 and 4 of four
+- **THEN** one more batch call carries items 2 and 3 only with the same context, their entries are taken from it, no
+  single-segment draft is made, and the batch size is judged by the first reply alone (it halves); if the second call
+  fails or is unreadable the two are drafted alone as before
+
 #### Scenario: A merged pair falls back for both
 
 - **WHEN** the entry for id 2 holds the translation of items 2 and 3 and id 3 has no entry

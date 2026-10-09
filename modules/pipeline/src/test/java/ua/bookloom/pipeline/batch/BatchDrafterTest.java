@@ -84,6 +84,121 @@ class BatchDrafterTest {
         assertThat(Objects.requireNonNull(result.data()).acceptedIds()).containsExactly("1", "2");
     }
 
+    private static final List<BatchItem> FOUR = List.of(
+            new BatchItem("1", "She opened the door."),
+            new BatchItem("2", "He said nothing."),
+            new BatchItem("3", "The rain stopped."),
+            new BatchItem("4", "Night fell."));
+    private static final List<String> FOUR_IDS = List.of("s1", "s2", "s3", "s4");
+    private static final List<String> FOUR_SOURCES =
+            List.of("She opened the door.", "He said nothing.", "The rain stopped.", "Night fell.");
+
+    private BatchDrafter drafterAnswering(final List<Result<ChatResponse>> answers) {
+        final ModelCalls scripted = new ModelCalls() {
+            private int next;
+
+            @Override
+            public Result<ChatResponse> call(
+                    final CallKind kind, @Nullable final String segmentId, final ChatRequest request) {
+                return answers.get(next++);
+            }
+
+            @Override
+            public Result<ChatResponse> callAbout(
+                    final CallKind kind, final List<String> segmentIds, final ChatRequest request) {
+                segments.add(segmentIds);
+                return answers.get(next++);
+            }
+        };
+        final CallFrame frame =
+                new CallFrame("en", "uk", StyleSheet.from(BookBrief.defaults("en")), ForeignPassagePolicy.KEEP);
+        return new BatchDrafter(
+                new BatchPromptBuilder(new PromptTemplates(), frame),
+                new BatchReplyParser(new ObjectMapper()),
+                scripted,
+                "en",
+                "uk",
+                8);
+    }
+
+    private static String entries(final String... pairs) {
+        final List<String> parts = new ArrayList<>();
+        for (int i = 0; i < pairs.length; i += 2) {
+            parts.add("{\"id\":\"" + pairs[i] + "\",\"target\":\"" + pairs[i + 1] + "\"}");
+        }
+        return "{\"items\":[" + String.join(",", parts) + "]}";
+    }
+
+    private BatchReply firstReply(final BatchDrafter drafter) {
+        return Objects.requireNonNull(
+                drafter.draft(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null)
+                        .data(),
+                "reply");
+    }
+
+    @Test
+    void reaskMissing_twoIdsLeftOut_asksOnlyThoseAndMergesTheirAnswers() {
+        final BatchDrafter drafter = drafterAnswering(List.of(
+                reply(entries("1", "Вона відчинила двері.", "4", "Настала ніч.")),
+                reply(entries("2", "Він мовчав.", "3", "Дощ припинився."))));
+        final BatchReply first = firstReply(drafter);
+
+        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+
+        assertThat(segments).containsExactly(FOUR_IDS, List.of("s2", "s3"));
+        assertThat(merged.acceptedIds()).containsExactly("1", "2", "3", "4");
+        assertThat(first.failingIds()).containsExactly("2", "3");
+    }
+
+    @Test
+    void reaskMissing_oneIdLeftOut_makesNoCall() {
+        final BatchDrafter drafter = drafterAnswering(
+                List.of(reply(entries("1", "Вона відчинила двері.", "2", "Він мовчав.", "4", "Настала ніч."))));
+        final BatchReply first = firstReply(drafter);
+
+        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+
+        assertThat(merged).isSameAs(first);
+        assertThat(segments).hasSize(1);
+    }
+
+    @Test
+    void reaskMissing_unreadableFirstReply_makesNoCall() {
+        final BatchDrafter drafter = drafterAnswering(List.of(reply("I cannot help with that.")));
+        final BatchReply first = firstReply(drafter);
+
+        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+
+        assertThat(merged).isSameAs(first);
+        assertThat(segments).hasSize(1);
+    }
+
+    @Test
+    void reaskMissing_secondCallFails_keepsTheFirstReply() {
+        final AppError error = AppError.of(ErrorCode.unreachable, "Provider unreachable", "No answer.");
+        final BatchDrafter drafter =
+                drafterAnswering(List.of(reply(entries("1", "Вона відчинила двері.")), Result.err(error)));
+        final BatchReply first = firstReply(drafter);
+
+        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+
+        assertThat(merged).isSameAs(first);
+    }
+
+    @Test
+    void reaskMissing_secondReplyNamesAnotherId_ignoresThatId() {
+        final BatchDrafter drafter = drafterAnswering(List.of(
+                reply(entries("1", "Вона відчинила двері.", "4", "Настала ніч.")),
+                reply(entries("2", "Він мовчав.", "9", "Зайве."))));
+        final BatchReply first = firstReply(drafter);
+
+        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+
+        assertThat(merged.acceptedIds()).containsExactly("1", "2", "4");
+        assertThat(merged.failingIds()).containsExactly("3");
+        assertThat(merged.count(ItemStatus.EXTRA)).isZero();
+    }
+
     @Test
     void draft_blankReply_isUnreadableSoEveryItemFallsBack() {
         final BatchDrafter drafter = drafter(reply("  "), 8);

@@ -219,7 +219,10 @@ final class BatchStage {
                 drafter.draft(context, items, shown.segmentIds(), shown.sources(), shown.position());
         final AppError error = answered.error();
         if (error == null) {
-            return Result.ok(BatchAttempt.answered(Objects.requireNonNull(answered.data(), "reply")));
+            final BatchReply first = Objects.requireNonNull(answered.data(), "reply");
+            return Result.ok(BatchAttempt.answered(
+                    drafter.reaskMissing(context, items, shown.segmentIds(), shown.sources(), shown.position(), first),
+                    first));
         }
         if (PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE) {
             log.warn("The batch call answered code={}; every segment is drafted on its own", error.code());
@@ -260,7 +263,7 @@ final class BatchStage {
             }
         }
         if (attempt.kind() == BatchAttempt.Kind.ANSWERED) {
-            drafter.record(reply);
+            drafter.record(attempt.first());
         }
         logSettled(batch.size(), adopted, attempt.kind());
     }

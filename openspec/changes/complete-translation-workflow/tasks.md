@@ -1639,7 +1639,7 @@ Burning Chrome was translated with gemma-4-e4b and gemma-4-26b (Balanced, LM Stu
 - [x] 15h.A8 One more speech repair: a paragraph with one opening and two closing guillemets whose first closer is followed by ", — narration — " loses that first closer (the 26b ch4 p112 shape). Replaces the full normaliser of 15f.A7b. → `:pipeline`
 
 ### Protocols
-- [ ] 15h.B1 A batch reply that misses two or more ids is re-asked once with only the missing items and the same context before falling back one by one; the size controller counts the first reply only. Replaces 15f.A6. Target: about 10 fewer calls a run on both models. → `:pipeline`
+- [x] 15h.B1 A batch reply that misses two or more ids is re-asked once with only the missing items and the same context before falling back one by one; the size controller counts the first reply only. Replaces 15f.A6. Target: about 10 fewer calls a run on both models. → `:pipeline`
 - [ ] 15h.B2 The consistency pass answers `{"unchanged":true}` or `{"target":…}` instead of echoing the paragraph, and remembers each checked paragraph by a hash of its target, its neighbours and the glossary, so a second export of an unchanged book sends no model call; a retry that removes the blocking finding is kept through 15h.A4. Gate: the consistency stage suite's repair rate does not drop on 26b, completion tokens per call fall by half on e4b. → `:pipeline`
 
 ### Prompt rounds (one per round, eval on e4b and 26b: default, realrun, replay of both Oct 9 logs, plus the suite named; keep only when the target moves by 2+ cases and no key metric loses 2+)

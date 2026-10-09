@@ -1,5 +1,6 @@
 package ua.bookloom.pipeline.batch;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -40,6 +41,9 @@ public final class BatchDrafter {
 
     /** The smallest size of a run that batches: halving never takes it down to {@link #NO_BATCHING}. */
     public static final int MIN_BATCHING_SIZE = 2;
+
+    /** How many ids a readable reply must leave out before the missing ones are asked again together. */
+    public static final int MIN_MISSING_TO_REASK = 2;
 
     static final int MAX_SIZE = 16;
     static final int CLEAN_STREAK_TO_GROW = 3;
@@ -159,6 +163,69 @@ public final class BatchDrafter {
     }
 
     /**
+     * Asks once more for the ids a readable reply left out, when it left out {@value #MIN_MISSING_TO_REASK} or more:
+     * only those items go, with the same context, so the model has fewer to number and the rest of the reply is kept.
+     * One id left out is not worth a call of its own, since its single-segment draft costs the same. A failed or
+     * unreadable second call changes nothing, so those ids fall back one by one as before.
+     *
+     * @param context the non-null context the first call showed
+     * @param items the non-null items of the first call
+     * @param segmentIds the non-null segments of the first call, in the items' order
+     * @param sources the non-null source of each segment as a person reads it, in the items' order
+     * @param position the chunk the batch is made in, or null when it is not known
+     * @param first the non-null reply of the first call
+     * @return {@code first} with each re-asked id taken from the second reply, or {@code first} itself when no call
+     *     was made or it brought nothing
+     */
+    public BatchReply reaskMissing(
+            final BatchContext context,
+            final List<BatchItem> items,
+            final List<String> segmentIds,
+            final List<String> sources,
+            @Nullable final ChunkPosition position,
+            final BatchReply first) {
+        Objects.requireNonNull(first, "first");
+        final long missing = first.count(ItemStatus.MISSING);
+        if (!first.readable() || missing < MIN_MISSING_TO_REASK) {
+            log.debug("No re-ask readable={} missing={}", first.readable(), missing);
+            return first;
+        }
+        final List<Integer> at = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            if (first.outcome(items.get(i).id())
+                    .filter(o -> o.status() == ItemStatus.MISSING)
+                    .isPresent()) {
+                at.add(i);
+            }
+        }
+        log.info("Batch reply left out {} of {} ids; asking for those only", at.size(), items.size());
+        final Result<BatchReply> second = draft(
+                context,
+                at.stream().map(items::get).toList(),
+                at.stream().map(segmentIds::get).toList(),
+                at.stream().map(sources::get).toList(),
+                position);
+        final BatchReply again = second.data();
+        if (again == null || !again.readable()) {
+            log.warn("The re-ask for the missing ids brought nothing; they fall back one by one");
+            return first;
+        }
+        return withAnswers(first, again);
+    }
+
+    private static BatchReply withAnswers(final BatchReply first, final BatchReply again) {
+        final List<ItemOutcome> merged = first.outcomes().stream()
+                .map(outcome -> outcome.status() == ItemStatus.MISSING
+                        ? again.outcome(outcome.id())
+                                .filter(second -> second.status() != ItemStatus.EXTRA)
+                                .orElse(outcome)
+                        : outcome)
+                .toList();
+        log.debug("Re-ask answered ids={}", again.acceptedIds());
+        return new BatchReply(true, merged);
+    }
+
+    /**
      * The request one batch's call sends, before the run's seam sizes it to the window: the same one {@link #draft}
      * sends, so a caller that only needs the request (a prompt eval) builds exactly the run's.
      *
@@ -171,7 +238,8 @@ public final class BatchDrafter {
     }
 
     /**
-     * Feeds a batch's outcome to the adaptive size: a lost numbering, an omission or a merge halves it, a reply whose
+     * Feeds a batch's first reply to the adaptive size, never a re-ask's, so a model that needs the second call still
+     * shrinks the batches: a lost numbering, an omission or a merge halves it, a reply whose
      * ids were all right counts toward growing it. An item that only failed its own checks is the item's problem, not
      * the size's.
      *
