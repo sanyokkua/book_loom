@@ -1,0 +1,55 @@
+{
+  "id": "gender-late-or-object",
+  "about": "Odile's gender shows only in a 'She' two sentences after her name, which the pronoun reader (same or next sentence) cannot see; Bram's shows only by his/him, which the reader counts when no subject pronoun contradicts it.",
+  "title": "The Pear Ferry",
+  "author": "Lina Marsh",
+  "chapters": [
+    {
+      "title": "One",
+      "paragraphs": [
+        "The ferry left the harbour at dawn, and the mist lay low over the water. Odile stood at the rail with a basket of pears. The gulls followed the wake for a mile. She counted the boats that passed the lighthouse.",
+        "Bram carried the ropes to the stern on his shoulder. The deck was wet and the planks were slick. The captain shouted a warning across the deck.",
+        "The captain paid Bram at noon and thanked him for the work. A bell rang somewhere below the deck. The engine coughed twice and then ran smoothly.",
+        "Odile sat on a coil of rope near the bow. The wind was cold for the season. She pulled a scarf from the basket and wrapped it twice.",
+        "Nobody spoke for a long while. The town on the far shore grew slowly from a smudge into roofs and chimneys. Smoke rose from a dozen kitchens.",
+        "Bram tied the last knot and wiped his hands on a rag. The ferry turned towards the pier. The pilot leaned on the wheel and squinted.",
+        "Odile looked at the roofs and the chimneys. The pears smelled of late summer. She thought of the orchard behind the mill.",
+        "The pier was crowded with carts and barrels. A dog barked at the gulls. The ropes were thrown and caught."
+      ]
+    },
+    {
+      "title": "Two",
+      "paragraphs": [
+        "The market opened at eight, and the stalls filled the square. Odile set the basket on a barrel by the fountain. A boy ran past with a hoop and a stick. She sold the first pears before the church bell had finished.",
+        "Bram came up from the pier with a sack on his back. The baker waved from the doorway. The sack was full of flour for the mill.",
+        "A carter asked Bram for a hand with a wheel, and the two of them lifted it together. The axle groaned. The carter gave him a coin and a nod.",
+        "Odile counted the coins twice. The fountain splashed over the stones. She smiled at the total and tied the purse.",
+        "By noon the square was half empty. The stall keepers ate bread and cheese in the shade. Pigeons picked at the crumbs.",
+        "Bram walked over to the fountain and tipped his cap.",
+        "The two of them shared the last pear. The bell rang for the afternoon. The ferry would leave again at four."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "literary fiction",
+      "genreClass": ["literary", "fiction", "drama", "slice of life", "pastoral"],
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {"term": "Odile", "type": "CHARACTER", "gender": "FEMALE"},
+      {"term": "Bram", "type": "CHARACTER", "gender": "MALE"}
+    ]
+  },
+  "expect": {
+    "narrator": "THIRD",
+    "pronouns": {"Odile": "UNKNOWN", "Bram": "MALE"},
+    "sampleStartsWith": "The ferry left the harbour at dawn",
+    "sampleNever": []
+  },
+  "narratorQuotes": []
+}

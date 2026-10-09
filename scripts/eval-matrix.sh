@@ -2,7 +2,7 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall] [--batch-sizes 4,8,12,16]
+#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall|stability|gold] [--batch-sizes 4,8,12,16]
 # --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
@@ -38,6 +38,11 @@
 # repository; docs/DEVELOPMENT.md, recall suite), runs every deterministic check and the final audit on each aligned
 # segment, and prints recall and precision per detector and per defect class against each book's gold.jsonl. --models
 # is ignored; the report is build/reports/promptEval/recall.json.
+# --suite stability (15h.E3) runs the Book Brief suggestion and the glossary name review on one committed fixture book
+# (BOOKLOOM_EVAL_BOOK=<id>|all, default front-matter-converter) once per seed (BOOKLOOM_EVAL_SEEDS, default 1,2,3) for
+# every model, and prints each field's agreement across the seeds (target 80 % or more), its accuracy against the
+# book's gold, and the agreement of all models' answers pooled. --suite gold scores the same two steps on the owner's
+# books (BOOKLOOM_CORPUS_DIR holding <name>.gold.json files; docs/DEVELOPMENT.md, judgement evals).
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -177,6 +182,33 @@ if sys.argv[2] == "recall":
         for c in r["classes"]:
             print("%-32s %6d %6d %6s %7d %9s" % (c["name"], c["segments"], c["caught"], pct(c["recall"]), c["flagged"], pct(c["precision"])))
     sys.exit(0)
+if sys.argv[2] in ("stability", "gold"):
+    runs = [r for r in reports if r.get("suite") == sys.argv[2]]
+    print("%-36s %5s %5s %8s %8s %6s %s" % ("model", "books", "items", "agreeMin", "accuracy", "below", "seeds"))
+    for r in runs:
+        print("%-36s %5d %5d %7.0f%% %7.0f%% %6d %s" % (r["model"], len(r["books"]), sum(len(b["items"]) for b in r["books"]), 100 * r["agreement"], 100 * r["accuracy"], len(r["belowTarget"]), ",".join(str(s) for s in r["seeds"])))
+    keys, answers = [], {}
+    for r in runs:
+        for b in r["books"]:
+            for i in b["items"]:
+                key = b["book"] + ":" + i["name"]
+                if key not in keys:
+                    keys.append(key)
+                answers.setdefault(key, {})[r["model"]] = i
+    print()
+    print("%-40s %-10s " % ("book:field (agreement/accuracy)", "gold") + " ".join("%11s" % r["model"][-11:] for r in runs) + "  all-models")
+    for key in keys:
+        cells = []
+        pooled = []
+        for r in runs:
+            i = answers[key].get(r["model"])
+            cells.append("%11s" % ("-" if i is None else "%3.0f/%3.0f%%" % (100 * i["agreement"], 100 * i["accuracy"])))
+            pooled += [] if i is None else i["answers"]
+        most = max((pooled.count(a) for a in set(pooled)), default=0)
+        gold = next(iter(answers[key].values()))["gold"]
+        print("%-40s %-10s " % (key[-40:], gold[:10]) + " ".join(cells) + "  %5.0f%%" % (100.0 * most / max(1, len(pooled))))
+    print("(agreement: share of a field's answers across seeds that are the most common one, target %.0f%%; accuracy: share that match the gold; all-models: agreement of every model's answers pooled)" % (100 * (runs[0]["target"] if runs else 0.8)))
+    sys.exit(0)
 if sys.argv[2] == "words":
     print("%-36s %5s %8s %8s %6s" % ("model", "cases", "recall", "falsePos", "ok"))
     for r in (r for r in reports if r.get("suite") == "words"):
@@ -188,7 +220,7 @@ if sys.argv[2] in STAGES:
     for r in (r for r in reports if r.get("suite") == sys.argv[2]):
         print("%-36s %-12s %5d %5.0f%% %6d %6d %8d %7d" % (r["model"], r["suite"], r["cases"], 100 * r["passRate"], r["calls"], r["failed"], r["repeated"], r["refused"]))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall") + STAGES]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall", "stability", "gold") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.setup;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,9 +23,10 @@ import ua.bookloom.pipeline.narrator.NarratorDetector;
  * late chapter; the second sample reads the {@value #WINDOW} sentences that follow each window of the first.
  *
  * <p>Story is what a chapter of the book's body holds when it has at least {@value #MIN_CHAPTER_SENTENCES} sentences
- * and a paragraph of two full sentences: front and back matter, the metadata unit, a contents list, a converter's page
- * and a heading-only unit are not read. A book with no such chapter is read whole, minus its short lines. A book too
- * short for six windows is cut into six equal ones, and one too short for that into two halves.
+ * and a paragraph of two full sentences, each of three words or more and closed by its terminal mark: front and back
+ * matter, the metadata unit, a contents list, a converter's page, a page of praise (a blurb's attribution is a
+ * sentence with no mark) and a heading-only unit are not read. A book with no such chapter is read whole, minus its
+ * short lines. A book too short for six windows is cut into six equal ones, and one too short for that into two halves.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -43,6 +45,7 @@ final class BookSamples {
     private static final int MIN_FALLBACK_CHARS = 40;
     private static final double LATE = 0.8;
     private static final int PERCENT = 100;
+    private static final Pattern CLOSED = Pattern.compile("[.!?…。！？][»”\"’)]*$");
 
     private record Line(int chapter, int paragraph, String text) {}
 
@@ -132,8 +135,15 @@ final class BookSamples {
                 .mapToInt(text -> Sentences.split(text).size())
                 .sum();
         final boolean hasStoryParagraph =
-                paragraphs.stream().anyMatch(text -> Sentences.significant(text).size() >= STORY_PARAGRAPH_SENTENCES);
+                paragraphs.stream().anyMatch(text -> fullSentences(text) >= STORY_PARAGRAPH_SENTENCES);
+        log.trace("Book samples chapter: {} sentences, a story paragraph {}", sentences, hasStoryParagraph);
         return sentences >= MIN_CHAPTER_SENTENCES && hasStoryParagraph;
+    }
+
+    private static long fullSentences(final String paragraph) {
+        return Sentences.significant(paragraph).stream()
+                .filter(sentence -> CLOSED.matcher(sentence).find())
+                .count();
     }
 
     private static List<Line> lines(final List<List<String>> chapters) {

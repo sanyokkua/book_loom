@@ -1,0 +1,64 @@
+{
+  "id": "alternating-narrators",
+  "about": "The chapters alternate between a first-person narrator and a third-person account of Petra, so no single narrator may be suggested.",
+  "title": "Two Lighthouses",
+  "author": "Owen Hale",
+  "chapters": [
+    {
+      "title": "The Keeper",
+      "paragraphs": [
+        "I climbed the tower at dusk, as I had every evening for eleven years. The stairs were damp and I counted them out of habit.",
+        "At the top I trimmed the wick and wiped the great lens. I could see the other light across the bay, small and steady.",
+        "I never knew who kept that light. I only knew that it was always lit a minute after mine.",
+        "The wind rose after dark. I wrote the weather in the log and drew a line under the date.",
+        "Below me the sea threw itself at the rocks. I made tea on the little stove and drank it standing by the glass.",
+        "Some nights I signalled across the bay with a hand lamp. I never once had an answer.",
+        "At midnight I wound the clockwork again. Then I sat in the chair by the window and listened to the gears."
+      ]
+    },
+    {
+      "title": "Across the Bay",
+      "paragraphs": [
+        "Petra lit the lamp a minute after the light across the bay, as she always did. She liked to see the other light first.",
+        "The lighthouse on her side of the bay was older and smaller. Its stairs were stone, and the rail was worn smooth by a century of hands.",
+        "Petra kept a ledger of every ship that passed. She wrote their names in a neat hand and drew a small flag beside each one.",
+        "On stormy nights she stayed awake until dawn. The lamp needed oil every three hours, and the glass needed wiping.",
+        "Sometimes a small light flickered from the other tower. Petra watched it but never answered.",
+        "In the spring a supply boat brought letters and flour. The boatman stayed for one cup of coffee and then rowed away.",
+        "Petra read the letters by the lamp. None of them were from anyone she knew well."
+      ]
+    },
+    {
+      "title": "The Keeper Again",
+      "paragraphs": [
+        "I saw the supply boat cross the bay in the spring. It went to the other light first and came to me last.",
+        "The boatman brought my flour and a sack of coal. I asked him who kept the other light, and he only shrugged.",
+        "That night I signalled again. I flashed the hand lamp three times and waited by the glass.",
+        "For a long time nothing happened. Then the far light flickered, once, twice, three times.",
+        "I laughed out loud in the empty tower. I signalled back until the oil in the hand lamp ran out.",
+        "In the morning I wrote it in the log. I wrote it plainly, with the time and the weather, and I underlined it twice."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "literary fiction",
+      "genreClass": ["literary", "fiction", "drama", "romance"],
+      "register": "NEUTRAL",
+      "narrator": "UNSPECIFIED",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {"term": "Petra", "type": "CHARACTER", "gender": "FEMALE"}
+    ]
+  },
+  "expect": {
+    "narrator": "MIXED",
+    "pronouns": {"Petra": "FEMALE"},
+    "sampleStartsWith": "I climbed the tower at dusk",
+    "sampleNever": []
+  },
+  "narratorQuotes": []
+}

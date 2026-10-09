@@ -1,10 +1,6 @@
 package ua.bookloom.pipeline.eval;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +21,8 @@ import ua.bookloom.pipeline.setup.SetupAssistantImpl;
 /**
  * Imports each case's small FB2 book through the real project service and asks the production
  * {@link SetupAssistantImpl} for the file name (FILE_NAME) and the Book Brief suggestion (BRIEF_SUGGESTION). The name
- * must be in the target's script with its author part in it too; the brief must name the narrator the book is told in.
+ * must be in the target's script with its author part in it too; the brief must give the narrator the book is told in,
+ * the narrator's gender, the register and a genre of the case's class.
  */
 @Slf4j
 final class SetupEvalRunner {
@@ -97,14 +94,36 @@ final class SetupEvalRunner {
             return failed(id, Objects.requireNonNull(result.error()).code().name(), counts);
         }
         final BriefSuggestion brief = Objects.requireNonNull(result.data(), "brief");
+        final List<String> misses = misses(setupCase, brief);
         return new StageRow(
                 id,
-                brief.narrator() == setupCase.narrator(),
-                "narrator=" + brief.narrator() + " gender=" + brief.narratorGender() + " register=" + brief.register(),
+                misses.isEmpty(),
+                (misses.isEmpty() ? "" : "missed " + String.join(",", misses) + ": ") + "narrator=" + brief.narrator()
+                        + " gender=" + brief.narratorGender() + " register=" + brief.register() + " genre="
+                        + brief.genre(),
                 counts.calls(),
                 counts.failed(),
                 counts.repeated(),
                 0);
+    }
+
+    // Every field a reader settles is asserted, not only the narrator: the brief is accepted as is by most people.
+    static List<String> misses(final SetupCase setupCase, final BriefSuggestion brief) {
+        final List<String> misses = new ArrayList<>();
+        if (brief.narrator() != setupCase.narrator()) {
+            misses.add("narrator");
+        }
+        if (brief.narratorGender() != setupCase.narratorGender()) {
+            misses.add("narratorGender");
+        }
+        if (brief.register() != setupCase.register()) {
+            misses.add("register");
+        }
+        if (!JudgementGold.isOfClass(setupCase.genreClass(), brief.genre())) {
+            misses.add("genre");
+        }
+        log.debug("Setup eval case={} brief misses={}", setupCase.id(), misses);
+        return misses;
     }
 
     private static StageRow failed(final String id, final String code, final StageProbe.Counts counts) {
@@ -112,27 +131,9 @@ final class SetupEvalRunner {
     }
 
     private Path write(final SetupCase setupCase) {
-        final String[] author = setupCase.author().split(" ", 2);
-        final String body = String.join(
-                "\n",
-                setupCase.paragraphs().stream()
-                        .map(text -> "<p>" + text + "</p>")
-                        .toList());
-        final String xml = """
-            <?xml version="1.0" encoding="UTF-8"?>
-            <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
-            <description><title-info>
-            <author><first-name>%s</first-name><last-name>%s</last-name></author>
-            <book-title>%s</book-title><lang>%s</lang>
-            </title-info></description>
-            <body><section>%s</section></body>
-            </FictionBook>
-            """.formatted(
-                        author[0], author.length > 1 ? author[1] : "", setupCase.title(), setupCase.source(), body);
-        try {
-            return Files.writeString(workDir.resolve(setupCase.fileStem() + ".fb2"), xml, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        return Fb2Fixture.write(
+                workDir,
+                new Fb2Fixture.Meta(setupCase.fileStem(), setupCase.title(), setupCase.author(), setupCase.source()),
+                List.of(new Fb2Fixture.Section(null, setupCase.paragraphs())));
     }
 }

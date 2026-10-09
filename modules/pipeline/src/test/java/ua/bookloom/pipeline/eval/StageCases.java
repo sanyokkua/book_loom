@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Register;
 import ua.bookloom.api.project.TermType;
 
 /**
@@ -60,7 +61,10 @@ final class StageCases {
         }
     }
 
-    /** A small FB2 book for the file-name and Book Brief suggestions. */
+    /**
+     * A small FB2 book for the file-name and Book Brief suggestions, with the brief a reader would give it: the narrator
+     * and its gender, the register, and the genre's class (lower-case words, any one of which a right genre holds).
+     */
     record SetupCase(
             String id,
             String source,
@@ -69,10 +73,16 @@ final class StageCases {
             String title,
             String author,
             List<String> paragraphs,
-            NarratorPerson narrator) {
+            NarratorPerson narrator,
+            Gender narratorGender,
+            Register register,
+            List<String> genreClass) {
 
         SetupCase {
             paragraphs = List.copyOf(paragraphs);
+            Objects.requireNonNull(narratorGender, "narratorGender");
+            Objects.requireNonNull(register, "register");
+            genreClass = List.copyOf(genreClass);
         }
     }
 

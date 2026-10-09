@@ -703,7 +703,7 @@ is built by the run's own `PromptRequests` (`ua.bookloom.pipeline.run`) — the 
 context, a batch's fit and previous pairs, the `terms` request, the draft and its two repairs, and the reviewer's
 term pairs and character sheet. A locked name is written out in the case text and hidden behind the run's token by
 the real mask. Every model call goes through `JobModelCalls`, so the request is sized to the window and the reply cap
-exactly as in a run; the window is the context length the provider reports for the model, limited to 16,384 tokens as a run limits it (16,384 when it reports none), and `BOOKLOOM_EVAL_WINDOW` overrides it; the chosen window is logged at INFO (`Eval window …`) and in the report line. The brief the requests carry is the defaults unless `BOOKLOOM_EVAL_PRESET` (`burning-chrome`: formal literary register, names translated, Balanced, cyberpunk genre), `BOOKLOOM_EVAL_BRIEF` (a JSON file with `register`, `names`, `genre`, `voiceEra`, `audience`, `dial`, `balance`) or `BOOKLOOM_EVAL_REGISTER` / `_NAMES` (`translate`, `transliterate`, `keep`) / `_GENRE` / `_DIAL` say otherwise The equality of the
+exactly as in a run; the window is the context length the provider reports for the model, limited to 16,384 tokens as a run limits it (16,384 when it reports none), and `BOOKLOOM_EVAL_WINDOW` overrides it; the chosen window is logged at INFO (`Eval window …`) and in the report line. The brief the requests carry is the defaults unless `BOOKLOOM_EVAL_PRESET` (`burning-chrome`: formal literary register, names translated, Balanced, cyberpunk genre — one model's frozen answer, kept so earlier reports can be measured again), `BOOKLOOM_EVAL_GOLD` (the owner's gold file for the book, [judgement evals](#judgement-evals): its brief's register, names, genre, voice, audience and narrator — prefer it for a new measurement), `BOOKLOOM_EVAL_BRIEF` (a JSON file with `register`, `names`, `genre`, `voiceEra`, `audience`, `dial`, `balance`) or `BOOKLOOM_EVAL_REGISTER` / `_NAMES` (`translate`, `transliterate`, `keep`) / `_GENRE` / `_DIAL` say otherwise The equality of the
 two paths is held by `PromptRequestsEquivalenceTest`. Not covered by this path yet: the name prescan, the glossary
 review and the rolling summary call, which build their own frame (deferred from 15e.2 to 15e.13, which tunes those
 prompts; `SummaryModelCall` is package-private).
@@ -872,7 +872,7 @@ with `BOOKLOOM_EVAL_SUITE` and run like the others (`BOOKLOOM_EVAL_URL` required
 |---|---|---|
 | `prescan` | `PreScan` (PRESCAN, then the verdict and suggestion calls) | a woman's one-word name kept as a female character, a place kept, a weekday and a language name left out |
 | `terms` | `TermChoice` (TERM_CHOICE) and `TermReview` (REVIEW_TERMS) | everyday words (keep, black, screen) dropped, a jargon term kept; held names kept, a weekday removed |
-| `setup` | `SetupAssistantImpl` (FILE_NAME, BRIEF_SUGGESTION) | a file name in the target script with its author part in it; the narrator the text is told in |
+| `setup` | `SetupAssistantImpl` (FILE_NAME, BRIEF_SUGGESTION) | a file name in the target script with its author part in it; the narrator the text is told in, the narrator's gender, the register and a genre of the case's class (`genreClass`, any one of whose words the genre holds) |
 | `consistency` | `ConsistencyPass` (`RetryPass`, `RetryDraft`, `NeighbourRevision`, `RevisionCall`) | a planted mixed-script word, a left-untranslated sentence, a trailing `"}` and a dropped vocative repaired |
 | `retry` | `RetryDraft.retry` (the review desk's Retry) | the same four planted defects repaired by one retry each |
 | `replay` | the draft parsers and judges (`ReplyJudge`, the batch parser), over calls read from a real trace log | see "Replay from a trace log" below |
@@ -958,6 +958,74 @@ detector fired on) and `falseAlarm` (clean segments any detector fired on). A ra
 the JSON). `RecallSuiteTest` (in `check`) proves all of it on `eval/recall/mini/`, an invented eight-paragraph English → Ukrainian
 book exported under another name. The gold for the three Oct 9 books is produced from the Opus readings and spot-checked by the owner (pending); it stays
 in the owner's directory.
+
+<a id="judgement-evals"></a>**The model's judgement of the book: stability and gold (15h.E3).** Most people accept the Book Brief and
+the glossary's genders as suggested, so two suites measure them, both through the production `SetupAssistantImpl.suggestBrief`
+and `TermReview.review` (`JudgementRunner`: the book imported with nothing stated, the gold's main characters held as a scan
+leaves them — untyped, gender unknown — then the review with the code's pronoun and first-name seeding). Scored per field:
+the brief's genre (by the gold's genre class), register, narrator and narrator gender, and each main character's type and
+gender; voice and audience are free phrases and are not scored. *Agreement* is the share of a field's answers across seeds
+that are the most common one (target 0.8 or more); *accuracy* is the share that match the gold.
+
+```bash
+scripts/eval-matrix.sh --suite stability                    # every model in scripts/eval-models.txt, seeds 1,2,3
+BOOKLOOM_EVAL_BOOK=all BOOKLOOM_EVAL_SEEDS=1,2,3,4,5 scripts/eval-matrix.sh --suite stability --models "ollama:gemma4:e4b-mlx"
+BOOKLOOM_CORPUS_DIR=/abs/books scripts/eval-matrix.sh --suite gold   # the owner's gold set, one seed
+BOOKLOOM_EVAL_SUITE=stability BOOKLOOM_EVAL_URL=http://localhost:11434 BOOKLOOM_EVAL_MODEL=gemma4:e4b-mlx \
+  ./gradlew :pipeline:promptEval --tests '*JudgementEvalTest*'    # one model by hand
+```
+
+`stability` reads one committed fixture book (`BOOKLOOM_EVAL_BOOK`: an id below or `all`; default `front-matter-converter`) once
+per seed (`BOOKLOOM_EVAL_SEEDS`, comma-separated; each call is sent with that sampling seed). `gold` reads every
+`<name>.gold.json` directly under `BOOKLOOM_CORPUS_DIR` (absolute path) and opens the book each names; it is skipped when the
+directory is unset. Both are `promptEval`-tagged (`JudgementEvalTest`), never in `check`. Reports:
+`build/reports/promptEval/<model>-stability.{txt,json}` (or `-gold`) and the history; the matrix table prints each model's
+lowest agreement and mean accuracy, then every `book:field` per model as agreement/accuracy and the agreement of all models'
+answers pooled.
+
+*Gold file format* (one per book, written by the owner after reading it; no book text):
+
+```json
+{
+  "book": "Burning Chrome.epub",
+  "sourceLanguage": "en",
+  "targetLanguage": "uk",
+  "brief": {
+    "genre": "cyberpunk short stories",
+    "genreClass": ["cyberpunk", "science fiction"],
+    "register": "NEUTRAL",
+    "voiceEra": "hard-boiled, 1980s street slang",
+    "audience": "adult readers of science fiction",
+    "names": "TRANSLITERATE",
+    "narrator": "FIRST",
+    "narratorGender": "MALE"
+  },
+  "characters": [
+    {"term": "Rikki", "type": "CHARACTER", "gender": "FEMALE"},
+    {"term": "Bobby Quine", "type": "CHARACTER", "gender": "MALE"}
+  ]
+}
+```
+
+`book` is relative to the gold file's directory. `register` is `FORMAL_LITERARY`, `NEUTRAL` or `CASUAL`; `narrator` is `FIRST`,
+`THIRD` or `UNSPECIFIED` (also for a book whose narrators alternate); `narratorGender` and a character's `gender` are `MALE`,
+`FEMALE`, `NEUTER` or `UNKNOWN` (the book never shows it); `type` is `CHARACTER`, `PLACE`, `TERM`, `TITLE` or `OTHER`; `names`
+is `TRANSLATE`, `TRANSLITERATE` or `KEEP_ORIGINAL`. `genreClass` holds lower-case words, any one of which a right genre contains
+(empty: the genre is not scored); `genre`, `voiceEra`, `audience` and `names` are optional and only used when the same file is
+given to `BOOKLOOM_EVAL_GOLD`, which sizes every other suite's requests for that book's real brief. List each main character
+under the term the book uses most. Three to five books make the set.
+
+*Committed cases* (`src/test/resources/eval/judgement/*.json`, invented text): `gender-late-or-object` (a "She" only two
+sentences after the name; a man shown only by his/him), `straight-quoted-speech` (another man's "He" inside straight-quoted
+speech next to a woman's name), `vocative-name` (a woman named mostly as a vocative before "he said"), `female-narrator-address`
+(a first-person woman shown only by "ma'am" and her name), `front-matter-converter` (title page, copyright, twelve blurbs of
+praise, dedication, contents and a converter's page before the story), `alternating-narrators`. Each holds its chapters, its
+gold, what the code must conclude with no model (`expect`: the narrator detector's person, the pronoun reader's gender per
+name, where the brief's first sample starts and what no sample may hold) and the quotes a good model gives for the narrator's
+gender. `JudgementBooksTest` (in `check`) holds the code to `expect` and runs each book through the runner with a fake model that
+answers as the gold says (every field right); `JudgementSuitesTest` proves the agreement and accuracy scoring, the seed handling
+and the gold directory. The praise page found a defect: twelve blurbs ("A quiet triumph." The Northern Review) counted as a
+story chapter, so the brief read reviewers first; a story paragraph now needs two full sentences closed by their mark.
 
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,

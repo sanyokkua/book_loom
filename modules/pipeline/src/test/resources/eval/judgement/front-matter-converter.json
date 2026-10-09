@@ -1,0 +1,111 @@
+{
+  "id": "front-matter-converter",
+  "about": "Long front matter (title page, copyright, twelve lines of praise, a dedication, a contents list) and a converter's page come before the story; the brief must be read from the story's chapters, never from what precedes them.",
+  "title": "The Salt Road",
+  "author": "Anna Fell",
+  "chapters": [
+    {
+      "title": "The Salt Road",
+      "paragraphs": ["A Novel", "Anna Fell", "Harbour Lane Press"]
+    },
+    {
+      "title": "Copyright",
+      "paragraphs": [
+        "Copyright 2011 by Anna Fell.",
+        "All rights reserved.",
+        "No part of this book may be reproduced without the written permission of the publisher.",
+        "First edition.",
+        "This is a work of fiction, and any likeness to real persons is a coincidence."
+      ]
+    },
+    {
+      "title": "Praise for The Salt Road",
+      "paragraphs": [
+        "\"A quiet triumph.\" The Northern Review",
+        "\"Luminous and exact.\" Coastal Weekly",
+        "\"I could not put it down.\" A bookseller in Leith",
+        "\"The finest debut of the year.\" The Morning Ledger",
+        "\"Every page smells of the sea.\" Harbour Notes",
+        "\"A book to give to everyone you love.\" The Evening Star",
+        "\"Fell writes like a tide coming in.\" The Literary Gazette",
+        "\"Unforgettable.\" Saltmarsh Radio",
+        "\"A novel of rare patience.\" The Weekend Paper",
+        "\"Tender, funny and wise.\" The Lantern",
+        "\"Read it slowly.\" The Quarterly",
+        "\"A modern classic.\" The Broadside"
+      ]
+    },
+    {
+      "title": "Dedication",
+      "paragraphs": ["For my mother, who walked the salt road first."]
+    },
+    {
+      "title": "Contents",
+      "paragraphs": ["One. The Pans", "Two. The Carts"]
+    },
+    {
+      "title": "About this edition",
+      "paragraphs": [
+        "Converted with fb2tools 1.4",
+        "Validated with the FictionBook validator",
+        "Source: a scanned paperback",
+        "www.example.org/books",
+        "Version 1.0"
+      ]
+    },
+    {
+      "title": "One. The Pans",
+      "paragraphs": [
+        "Ines walked out to the salt pans before the sun was up. She liked the hour when the water was still and the herons stood like posts.",
+        "The pans stretched to the dunes in long white squares. Each square had a wooden rake beside it and a heap of salt drying at one corner.",
+        "Ines picked up the first rake. She drew it slowly through the brine, and the crust broke into small grey plates.",
+        "By six the other workers had come down the dyke. They called greetings across the water and set to work without hurry.",
+        "Duarte arrived last, as he always did. He carried the bread and the flask and set them on the sluice gate.",
+        "The work went on until the light turned hard. Nobody talked much once the heat came.",
+        "Ines stopped at noon to drink. She looked along the dyke towards the town and saw the carts already waiting.",
+        "Duarte came over with the flask. He poured two cups and handed one across without a word.",
+        "The salt was good that year. The merchants said so, and the prices said so too.",
+        "In the afternoon the wind turned off the sea. The heaps crusted over, and the rakes were laid down in a row.",
+        "Ines counted the heaps twice. She wrote the number on a slate and hung the slate on the gate."
+      ]
+    },
+    {
+      "title": "Two. The Carts",
+      "paragraphs": [
+        "The carts came down the salt road at dusk, six of them in a line. The drivers walked beside the mules and sang to keep them steady.",
+        "Duarte loaded the first cart himself. He lifted each sack onto his shoulder and swung it up with a grunt.",
+        "Ines checked the slate against the sacks. She found one sack short and sent a boy back to the pans for it.",
+        "The road to the town was narrow and rutted. The carts creaked and rocked, and the mules flicked their ears at the flies.",
+        "At the toll bridge the keeper came out with a lantern. He counted the carts, took the coins and waved them through.",
+        "Duarte rode on the last cart with his legs hanging over the tail. He whistled the same tune over and over until Ines laughed.",
+        "The town was still awake when they reached it. Lamps burned in the windows above the square.",
+        "The merchant met them at the warehouse door. He weighed every sack and wrote the weights in a ledger.",
+        "Ines watched the scales closely. She had learned long ago that a merchant's thumb was heavier than it looked.",
+        "When the last sack was weighed, the merchant paid in silver. Duarte bit one of the coins, and everyone laughed.",
+        "They drove the empty carts home under the stars. The road was quiet, and the sea was a long pale line beyond the dunes."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "literary fiction",
+      "genreClass": ["literary", "fiction", "historical", "drama", "pastoral"],
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {"term": "Ines", "type": "CHARACTER", "gender": "FEMALE"},
+      {"term": "Duarte", "type": "CHARACTER", "gender": "MALE"}
+    ]
+  },
+  "expect": {
+    "narrator": "THIRD",
+    "pronouns": {"Ines": "FEMALE", "Duarte": "MALE"},
+    "sampleStartsWith": "Ines walked out to the salt pans",
+    "sampleNever": ["Converted with", "fb2tools", "quiet triumph", "All rights reserved", "For my mother"]
+  },
+  "narratorQuotes": []
+}

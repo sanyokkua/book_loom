@@ -12,7 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
+import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.Narrator;
+import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Register;
 import ua.bookloom.pipeline.prompt.StyleSheet;
 
@@ -86,6 +89,54 @@ class EvalBriefTest {
         assertThat(brief.register()).isEqualTo(Register.FORMAL_LITERARY);
         assertThat(brief.names()).isEqualTo(NamePolicy.TRANSLATE);
         assertThat(brief.genre()).isEqualTo("western");
+    }
+
+    private Path goldFile() throws IOException {
+        final Path file = dir.resolve("chrome.gold.json");
+        Files.writeString(file, """
+                {"book": "Burning Chrome.epub", "sourceLanguage": "en", "targetLanguage": "uk",
+                 "brief": {"genre": "cyberpunk short stories", "genreClass": ["cyberpunk"], "register": "CASUAL",
+                           "voiceEra": "hard-boiled 1980s slang", "names": "TRANSLITERATE",
+                           "narrator": "FIRST", "narratorGender": "MALE"},
+                 "characters": [{"term": "Rikki", "type": "CHARACTER", "gender": "FEMALE"}]}
+                """);
+        return file;
+    }
+
+    @Test
+    void of_goldFile_takesTheOwnersBriefAndNarratorInsteadOfTheDefaults() throws IOException {
+        final BookBrief brief =
+                EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_GOLD", goldFile().toString()));
+
+        assertThat(brief.genre()).isEqualTo("cyberpunk short stories");
+        assertThat(brief.register()).isEqualTo(Register.CASUAL);
+        assertThat(brief.voiceEra()).isEqualTo("hard-boiled 1980s slang");
+        assertThat(brief.names()).isEqualTo(NamePolicy.TRANSLITERATE);
+        assertThat(brief.narrator()).isEqualTo(new Narrator(NarratorPerson.FIRST, Gender.MALE));
+        assertThat(brief.audience()).isEqualTo(BookBrief.defaults("en").audience());
+    }
+
+    @Test
+    void of_goldOverThePreset_winsAndAnEnvSettingWinsOverTheGold() throws IOException {
+        final BookBrief brief = EvalBrief.of(
+                "en",
+                "uk",
+                Map.of(
+                        "BOOKLOOM_EVAL_PRESET", "burning-chrome",
+                        "BOOKLOOM_EVAL_GOLD", goldFile().toString(),
+                        "BOOKLOOM_EVAL_GENRE", "noir"));
+
+        assertThat(brief.register()).isEqualTo(Register.CASUAL);
+        assertThat(brief.names()).isEqualTo(NamePolicy.TRANSLITERATE);
+        assertThat(brief.audience()).isEqualTo("readers interested in cyberpunk themes");
+        assertThat(brief.genre()).isEqualTo("noir");
+    }
+
+    @Test
+    void of_noGold_leavesTheNarratorUnstated() {
+        assertThat(EvalBrief.of("en", "uk", Map.of("BOOKLOOM_EVAL_PRESET", "burning-chrome"))
+                        .narrator())
+                .isEqualTo(Narrator.unspecified());
     }
 
     @Test

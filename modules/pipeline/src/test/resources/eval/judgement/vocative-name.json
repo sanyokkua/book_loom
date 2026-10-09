@@ -1,0 +1,47 @@
+{
+  "id": "vocative-name",
+  "about": "Hester is named mostly as a vocative inside an old man's speech, each followed by 'he said'; only three narration sentences show her as 'She'.",
+  "title": "The Goat Gate",
+  "author": "Ada Pell",
+  "chapters": [
+    {
+      "title": "Evening",
+      "paragraphs": [
+        "\"Hester, close the gate before the goats get out,\" the old man called from the porch.",
+        "\"Not now, Hester,\" he said when the dog began to bark.",
+        "Hester latched the gate and walked up the path. She carried the milk pail in both hands.",
+        "\"Hester, the lamp,\" he said, and pointed at the dark window.",
+        "\"Yes, Hester, the big one,\" he added, as if the lamp might have been forgotten.",
+        "The kitchen smelled of smoke and onions. The old man sat by the stove and rubbed his knees.",
+        "\"Hester, will you read to me?\" he asked.",
+        "Hester took the book from the shelf. She opened it at the ribbon and began to read aloud.",
+        "The clock ticked over the stove. The goats settled in the shed. Outside the wind moved through the orchard.",
+        "\"Good night, Hester,\" he said at last, and closed his eyes.",
+        "Hester put the book away. She banked the fire and climbed the stairs with the candle.",
+        "In the morning the gate was open again. The goats were in the orchard. Nobody could say how they had got there.",
+        "\"Hester!\" he shouted from the porch, and the whole valley heard it."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "rural drama",
+      "genreClass": ["rural", "pastoral", "drama", "literary", "fiction"],
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {"term": "Hester", "type": "CHARACTER", "gender": "FEMALE"}
+    ]
+  },
+  "expect": {
+    "narrator": "THIRD",
+    "pronouns": {"Hester": "FEMALE"},
+    "sampleStartsWith": "\"Hester, close the gate",
+    "sampleNever": []
+  },
+  "narratorQuotes": []
+}

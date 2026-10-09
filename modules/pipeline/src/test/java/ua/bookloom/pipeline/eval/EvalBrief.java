@@ -13,6 +13,7 @@ import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.pipeline.QualityDial;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.NamePolicy;
@@ -21,10 +22,16 @@ import ua.bookloom.api.project.Register;
 /**
  * The Book Brief an eval request is sized for. A real run's brief is the person's choices; an eval used to send the
  * defaults, so what it measured was not what a run sends. The brief now starts from the defaults and takes, in this
- * order and later winning: a named preset ({@code BOOKLOOM_EVAL_PRESET}), a JSON file ({@code BOOKLOOM_EVAL_BRIEF}
- * with any of {@code register}, {@code names}, {@code genre}, {@code voiceEra}, {@code audience}, {@code dial},
- * {@code balance}) and the single settings {@code BOOKLOOM_EVAL_REGISTER}, {@code _NAMES} ({@code translate},
- * {@code transliterate} or {@code keep}), {@code _GENRE} and {@code _DIAL}.
+ * order and later winning: a named preset ({@code BOOKLOOM_EVAL_PRESET}), the owner's gold for the book
+ * ({@code BOOKLOOM_EVAL_GOLD}, a {@link JudgementGold} file: its brief's register, names, genre, voice, audience and
+ * narrator), a JSON file ({@code BOOKLOOM_EVAL_BRIEF} with any of {@code register}, {@code names}, {@code genre},
+ * {@code voiceEra}, {@code audience}, {@code dial}, {@code balance}) and the single settings
+ * {@code BOOKLOOM_EVAL_REGISTER}, {@code _NAMES} ({@code translate}, {@code transliterate} or {@code keep}),
+ * {@code _GENRE} and {@code _DIAL}.
+ *
+ * <p>The {@code burning-chrome} preset is one model's frozen answer (the e4b run's brief, from its trace log), kept so
+ * that earlier reports can be measured again; the gold is what a reader of the book chose, and is what a new
+ * measurement should be sized for.
  */
 @Slf4j
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -49,10 +56,11 @@ final class EvalBrief {
     /** The brief for the languages, from the settings an environment (or a test's map) holds. */
     static BookBrief of(final String source, final String target, final Map<String, String> env) {
         Objects.requireNonNull(env, "env");
-        final Map<String, String> settings = settings(env);
-        log.debug("Eval brief source={} target={} settings={}", source, target, settings);
+        final JudgementGold gold = gold(env);
+        final Map<String, String> settings = settings(env, gold);
+        log.debug("Eval brief source={} target={} settings={} gold={}", source, target, settings, gold != null);
         final BookBrief base = BookBrief.defaults(source).withLanguages(source, target);
-        return new BookBrief(
+        final BookBrief brief = new BookBrief(
                 source,
                 target,
                 settings.getOrDefault("genre", base.genre()),
@@ -66,13 +74,22 @@ final class EvalBrief {
                 settings.containsKey("balance") ? Integer.parseInt(settings.get("balance")) : base.balance(),
                 base.alsoTranslate(),
                 dial(settings.get("dial"), base.dial()));
+        return gold == null ? brief : brief.withNarrator(gold.brief().narratorOf());
     }
 
-    private static Map<String, String> settings(final Map<String, String> env) {
+    private static @Nullable JudgementGold gold(final Map<String, String> env) {
+        final String file = env.get(PREFIX + "GOLD");
+        return file == null || file.isBlank() ? null : JudgementGold.read(Path.of(file.strip()));
+    }
+
+    private static Map<String, String> settings(final Map<String, String> env, @Nullable final JudgementGold gold) {
         final Map<String, String> settings = new LinkedHashMap<>();
         final String preset = env.get(PREFIX + "PRESET");
         if (preset != null && !preset.isBlank()) {
             settings.putAll(preset(preset.strip()));
+        }
+        if (gold != null) {
+            settings.putAll(gold.brief().settings());
         }
         final String file = env.get(PREFIX + "BRIEF");
         if (file != null && !file.isBlank()) {

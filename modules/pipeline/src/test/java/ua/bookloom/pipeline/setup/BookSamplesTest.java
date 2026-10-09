@@ -79,6 +79,23 @@ class BookSamplesTest {
         assertThat(starts(samples.get(1))).containsExactly("Line 6", "Line 16", "Line 26");
     }
 
+    // IF a page of praise counted as story (each blurb's attribution counts as a sentence, so twelve blurbs make 24),
+    // THEN the brief would read reviewers' words before the book's (15h.E3, front-matter-converter).
+    @Test
+    void of_praisePageOfQuotedBlurbs_isNotRead() {
+        final String praise = IntStream.rangeClosed(1, 12)
+                .mapToObj(n -> "\"A quiet triumph number " + n + ".\" The Northern Review")
+                .collect(Collectors.joining("\n\n"));
+        final Document document = book("# Praise\n\n" + praise + "\n\n# Chapter One\n\n" + lines(1, 30, 3) + "\n");
+
+        final List<BookSample> samples = BookSamples.of(document, "en");
+
+        final String read =
+                samples.stream().flatMap(sample -> sample.passages().stream()).collect(Collectors.joining("\n"));
+        assertThat(read).doesNotContain("triumph", "Northern Review");
+        assertThat(starts(samples.get(0))).containsExactly("Line 1", "Line 11", "Line 21");
+    }
+
     @Test
     void of_halfOfEveryParagraphQuoted_measuresHalfTheLettersAsDialogue() {
         final String paragraph = "“Abc def ghi.” Jkl mno pqr.";

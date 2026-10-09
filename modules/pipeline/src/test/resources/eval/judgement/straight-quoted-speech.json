@@ -1,0 +1,48 @@
+{
+  "id": "straight-quoted-speech",
+  "about": "Velka's name stands before straight-quoted speech in which someone says 'He' about another man, and a name inside speech is followed by 'she said'; only the narration's pronouns may decide a gender.",
+  "title": "The North Road",
+  "author": "Tomas Reed",
+  "chapters": [
+    {
+      "title": "The Crossroads",
+      "paragraphs": [
+        "Velka reached the crossroads before the rain. She dropped the pack by the milestone and sat down to wait.",
+        "\"Ask Corin, he knows the road,\" Velka said when the cart stopped.",
+        "The drover looked down at the pack and the mud. \"He went north at first light,\" he said.",
+        "Velka stood up. \"He always goes north,\" said the drover's boy.",
+        "Corin came back along the north road an hour later. He was soaked to the knees and carried a lamp.",
+        "Velka waved the lamp over. \"Corin, tell him he is wrong,\" she said, and pointed at the drover.",
+        "Corin laughed. He set the lamp on the milestone and shook the water from the coat.",
+        "The rain came at last, hard and grey. The four of them crowded under the cart. Nobody said a word for a long time.",
+        "Velka watched the road. She had walked it twice before and knew every stone of it.",
+        "\"We leave at dawn,\" Corin said. He pulled the hat down over the eyes.",
+        "Velka frowned at the drover. \"He snores,\" said the drover's boy.",
+        "Velka nodded. She was already asleep when the rain stopped.",
+        "The drover's boy kept watch until the lamp burned out. The road stayed empty. Somewhere far off a dog barked twice."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "adventure",
+      "genreClass": ["adventure", "literary", "fiction", "drama", "travel", "fantasy"],
+      "register": "NEUTRAL",
+      "narrator": "THIRD",
+      "narratorGender": "UNKNOWN"
+    },
+    "characters": [
+      {"term": "Velka", "type": "CHARACTER", "gender": "FEMALE"},
+      {"term": "Corin", "type": "CHARACTER", "gender": "MALE"}
+    ]
+  },
+  "expect": {
+    "narrator": "THIRD",
+    "pronouns": {"Velka": "FEMALE", "Corin": "MALE"},
+    "sampleStartsWith": "Velka reached the crossroads",
+    "sampleNever": []
+  },
+  "narratorQuotes": []
+}

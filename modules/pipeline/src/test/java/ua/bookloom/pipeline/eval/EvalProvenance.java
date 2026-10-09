@@ -53,7 +53,7 @@ record EvalProvenance(
     private static final String PROMPT_DIR = "modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt";
     private static final int HASH_DIGITS = 12;
     private static final long GIT_TIMEOUT_SECONDS = 10;
-    private static final String[] BRIEF_KEYS = {"PRESET", "BRIEF", "REGISTER", "NAMES", "GENRE"};
+    private static final String[] BRIEF_KEYS = {"PRESET", "GOLD", "BRIEF", "REGISTER", "NAMES", "GENRE"};
 
     /** Rejects missing text. */
     EvalProvenance {
@@ -199,8 +199,9 @@ record EvalProvenance(
         for (final String key : BRIEF_KEYS) {
             final String value = env.get("BOOKLOOM_EVAL_" + key);
             if (value != null && !value.isBlank()) {
-                final String shown =
-                        "BRIEF".equals(key) ? Path.of(value).getFileName().toString() : value;
+                final String shown = "BRIEF".equals(key) || "GOLD".equals(key)
+                        ? Path.of(value).getFileName().toString()
+                        : value;
                 out.append(out.length() == 0 ? "" : " ")
                         .append(key.toLowerCase(java.util.Locale.ROOT))
                         .append('=')

@@ -9,9 +9,16 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatRequest;
+import ua.bookloom.api.llm.ChatResponse;
+import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Register;
 import ua.bookloom.pipeline.eval.StageCases.RetryBook;
 import ua.bookloom.pipeline.prompt.PromptName;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -129,6 +136,40 @@ class StageEvalRunnerTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(sent.messages().getLast().content()).contains("File name: j_ostler-the_glass_orchard");
+    }
+
+    @Test
+    void setup_modelWithAGenreOutsideTheClass_failsTheBriefNamingTheGenre() {
+        final StageFakeModel good = new StageFakeModel(false);
+        final ChatModel western = request -> good.chat(request)
+                .map(response -> new ChatResponse(
+                        response.content()
+                                .replace("\"genre\":{\"value\":\"drama\"", "\"genre\":{\"value\":\"western\""),
+                        response.finishReason()));
+
+        final List<StageRow> rows = new SetupEvalRunner(western, workDir).run(StageCases.setup());
+
+        assertThat(rows.stream().filter(row -> row.id().endsWith(":brief")))
+                .allSatisfy(row -> assertThat(row.passed()).isFalse())
+                .allSatisfy(row -> assertThat(row.detail()).startsWith("missed genre:"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "THIRD, UNKNOWN, NEUTRAL, family saga, narrator",
+        "FIRST, FEMALE, NEUTRAL, family saga, narratorGender",
+        "FIRST, UNKNOWN, CASUAL, family saga, register",
+        "FIRST, UNKNOWN, NEUTRAL, space opera, genre"
+    })
+    void misses_oneFieldOffTheCase_namesThatField(
+            final NarratorPerson narrator,
+            final Gender gender,
+            final Register register,
+            final String genre,
+            final String missed) {
+        final BriefSuggestion brief = new BriefSuggestion(genre, register, null, null, narrator, gender);
+
+        assertThat(SetupEvalRunner.misses(StageCases.setup().getFirst(), brief)).containsExactly(missed);
     }
 
     @Test

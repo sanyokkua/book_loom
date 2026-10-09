@@ -1,0 +1,54 @@
+{
+  "id": "female-narrator-address",
+  "about": "A first-person narrator who is a woman, shown only by being addressed as 'ma'am' and called 'Margaret'; no pronoun ever names her gender.",
+  "title": "The House Above the Valley",
+  "author": "Ruth Calder",
+  "chapters": [
+    {
+      "title": "Arrival",
+      "paragraphs": [
+        "I came off the night train with one suitcase and a letter of introduction. The platform was empty except for a porter and a cat.",
+        "\"Can I take that for you, ma'am?\" the porter asked, reaching for the suitcase.",
+        "I let him take it. I had carried it for two days and my arm ached from the strap.",
+        "Outside the station a man waited beside a black car. He raised his hat when he saw me.",
+        "\"You must be Margaret,\" he said. \"My name is Tobias, and the house is not far.\"",
+        "I gave him the letter. He read it twice under the lamp and folded it into his coat.",
+        "Tobias drove with both hands on the wheel. He did not speak again until the woods.",
+        "The road climbed through pine woods. I watched the headlights sweep the trunks and counted the bends.",
+        "\"Hang on, Margaret, this next turn is a bad one,\" Tobias said.",
+        "I held the door handle and said nothing. The car swung round the bend and the house appeared above us.",
+        "Tobias stopped the car at the gate. He got out and pushed it open with both hands.",
+        "It was larger than I had imagined. Every window on the ground floor was lit.",
+        "Tobias carried the suitcase up the steps. He set it down by the door and wished me good night.",
+        "\"Welcome home, ma'am,\" said the housekeeper at the door, and I almost laughed at the word home.",
+        "I followed the housekeeper up the stairs. My room looked out over the valley, and I stood at the window until the lights went out below."
+      ]
+    }
+  ],
+  "gold": {
+    "sourceLanguage": "en",
+    "targetLanguage": "uk",
+    "brief": {
+      "genre": "gothic novel",
+      "genreClass": ["gothic", "literary", "fiction", "mystery", "drama", "romance"],
+      "register": "NEUTRAL",
+      "narrator": "FIRST",
+      "narratorGender": "FEMALE"
+    },
+    "characters": [
+      {"term": "Tobias", "type": "CHARACTER", "gender": "MALE"},
+      {"term": "Margaret", "type": "CHARACTER", "gender": "FEMALE"}
+    ]
+  },
+  "expect": {
+    "narrator": "FIRST",
+    "pronouns": {"Tobias": "MALE"},
+    "sampleStartsWith": "I came off the night train",
+    "sampleNever": []
+  },
+  "narratorQuotes": [
+    {"quote": "Can I take that for you, ma'am?", "name": ""},
+    {"quote": "Hang on, Margaret, this next turn is a bad one", "name": "Margaret"},
+    {"quote": "Welcome home, ma'am", "name": ""}
+  ]
+}

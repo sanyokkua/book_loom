@@ -11,7 +11,10 @@
       "I counted the windows on the far side of the square, because counting was all I had left to do that evening.",
       "My sister wrote that the orchard was sold, and I read her letter twice before I put it down on the table."
     ],
-    "narrator": "FIRST"
+    "narrator": "FIRST",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": ["literary", "fiction", "drama", "family"]
   },
   {
     "id": "setup-ru-uk-third-person",
@@ -25,6 +28,9 @@
       "Он считал окна на другой стороне площади, потому что считать было единственным делом на этот вечер.",
       "Сестра писала, что сад продан, и Лев дважды прочёл её письмо, прежде чем положить его на стол."
     ],
-    "narrator": "THIRD"
+    "narrator": "THIRD",
+    "narratorGender": "UNKNOWN",
+    "register": "NEUTRAL",
+    "genreClass": ["literary", "fiction", "drama", "family"]
   }
 ]
