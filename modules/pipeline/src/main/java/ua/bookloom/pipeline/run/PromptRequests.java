@@ -235,8 +235,9 @@ public final class PromptRequests {
                 .map(slot -> context.contextFor(slot.segment(), List.of(), slot.memory(), summary)
                         .draftContext())
                 .toList();
-        final List<String> keyTerms =
-                context.keyTermsIn(shown.stream().map(BatchSlot::segment).toList());
+        final List<String> keyTerms = drafter.keyTermAsks().isAsking()
+                ? context.keyTermsIn(shown.stream().map(BatchSlot::segment).toList())
+                : List.of();
         final BatchContext batch = new BatchContext(
                 merged(items, perItem),
                 pairs,

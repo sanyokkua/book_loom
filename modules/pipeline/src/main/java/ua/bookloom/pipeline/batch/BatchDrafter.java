@@ -54,6 +54,7 @@ public final class BatchDrafter {
     private final @Nullable String sourceLanguage;
     private final String targetLanguage;
     private final BatchSizeController size;
+    private final KeyTermAsks keyTermAsks = new KeyTermAsks();
 
     /**
      * Creates the drafter of one run.
@@ -80,6 +81,11 @@ public final class BatchDrafter {
         // A run that batches never halves its way into no batching, which only an initial size of one asks for.
         final int min = initialSize < MIN_BATCHING_SIZE ? NO_BATCHING : MIN_BATCHING_SIZE;
         this.size = new BatchSizeController(min, MAX_SIZE, initialSize, CLEAN_STREAK_TO_GROW);
+    }
+
+    /** The run's memory of whether its model answers the key-term block, which decides if the next prompt asks. */
+    public KeyTermAsks keyTermAsks() {
+        return keyTermAsks;
     }
 
     /** The items the next batch may carry, before the token budget cuts it. */

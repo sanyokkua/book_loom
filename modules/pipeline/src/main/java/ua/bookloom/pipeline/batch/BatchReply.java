@@ -55,6 +55,11 @@ public record BatchReply(boolean readable, List<ItemOutcome> outcomes) {
         return outcomes.stream().filter(outcome -> outcome.status() == status).count();
     }
 
+    /** Whether any item of the reply reported a key-term rendering. */
+    public boolean hasTerms() {
+        return outcomes.stream().anyMatch(outcome -> !outcome.terms().isEmpty());
+    }
+
     /** Whether every expected id is accepted and no id is extra. */
     public boolean isClean() {
         return failingIds().isEmpty() && count(ItemStatus.EXTRA) == 0;

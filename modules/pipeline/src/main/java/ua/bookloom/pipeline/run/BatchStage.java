@@ -264,8 +264,16 @@ final class BatchStage {
         }
         if (attempt.kind() == BatchAttempt.Kind.ANSWERED) {
             drafter.record(attempt.first());
+            noteKeyTerms(context, attempt.first());
         }
         logSettled(batch.size(), adopted, attempt.kind());
+    }
+
+    // An unreadable reply says nothing of whether the model uses the key-term block.
+    private void noteKeyTerms(final BatchContext context, final BatchReply first) {
+        if (first.readable()) {
+            drafter.keyTermAsks().record(!context.keyTerms().isEmpty(), first.hasTerms());
+        }
     }
 
     private void note(final String segmentId, final ItemOutcome outcome, final boolean isAdopted) {
