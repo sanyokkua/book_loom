@@ -105,7 +105,7 @@ record EffectiveTargets(
                 keptKinds,
                 unmask,
                 new Languages(sourceLanguage, targetLanguage),
-                TitleConsistency.of(opened, byId, keptKinds));
+                TitleConsistency.of(opened, byId, keptKinds, targetLanguage));
         final List<Unit> units = decideAll(opened, byId, decision);
         logApplied(opened, decision);
         return new EffectiveTargets(

@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.ByteSpanAnchor;
@@ -89,6 +91,45 @@ class TitleConsistencyTest {
         decided(body("c1:1", SegmentKind.HEADING, TITLE), MODEL_TITLE);
 
         assertThat(written(Set.of())).containsEntry("c1:1", MODEL_TITLE);
+    }
+
+    // IF a heading holds only the names and punctuation, THEN it is composed; any other word leaves it alone.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "“Amber Tide”|«Бурштиновий Приплив»",
+                "\"Amber Tide\"|«Бурштиновий Приплив»",
+                "Mara Voss — “Amber Tide”|Мара Восс — «Бурштиновий Приплив»",
+                "Mara Voss: ‘Amber Tide’.|Мара Восс: «Бурштиновий Приплив».",
+                "“Amber Tide”, Mara Voss|«Бурштиновий Приплив», Мара Восс",
+                "Mara Voss|Мара Восс",
+                "Mara Voss Amber Tide|Мара Восс Бурштиновий Приплив",
+            })
+    void apply_headingOfOnlyTitleAndAuthor_isComposedWithTargetQuotes(final String source, final String expected) {
+        decided(aux("aux:title", SegmentKind.METADATA_TITLE, TITLE), BRIEF_TITLE);
+        decided(aux("aux:author", SegmentKind.METADATA_AUTHOR, "Mara Voss"), "Мара Восс");
+        decided(body("c1:1", SegmentKind.HEADING, source), "інше");
+
+        assertThat(written(Set.of())).containsEntry("c1:1", expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "Mara Voss and “Amber Tide”",
+                "“Amber Tide” Part One",
+                "Amber Tides",
+                "Mara Vosser, “Amber Tide”",
+                "“Hollow Crown”",
+            })
+    void apply_headingWithAnyOtherWord_isLeftToItsOwnTranslation(final String source) {
+        decided(aux("aux:title", SegmentKind.METADATA_TITLE, TITLE), BRIEF_TITLE);
+        decided(aux("aux:author", SegmentKind.METADATA_AUTHOR, "Mara Voss"), "Мара Восс");
+        decided(body("c1:1", SegmentKind.HEADING, source), "інше");
+
+        assertThat(written(Set.of())).containsEntry("c1:1", "інше");
     }
 
     private Segment aux(final String id, final SegmentKind kind, final String text) {
