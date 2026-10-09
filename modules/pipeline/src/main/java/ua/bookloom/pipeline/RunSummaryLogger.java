@@ -53,6 +53,7 @@ final class RunSummaryLogger {
 
     private static final double PERCENTILE = 0.95;
     private static final double MILLIS_PER_SECOND = 1000.0;
+    private static final double PERCENT = 100.0;
     private static final String NONE = "-";
 
     private final Clock clock;
@@ -176,7 +177,7 @@ final class RunSummaryLogger {
             }
             line.append(String.format(
                     Locale.ROOT,
-                    "%s=%d/%d in:%d out:%d promptEvalMs:%d generationMs:%d cached:%d",
+                    "%s=%d/%d in:%d out:%d promptEvalMs:%d generationMs:%d cached:%d ttftMs:%s prefill:%s",
                     kind,
                     totals.attempts(),
                     totals.failed(),
@@ -184,7 +185,13 @@ final class RunSummaryLogger {
                     totals.completionTokens(),
                     totals.promptEval().toMillis(),
                     totals.generation().toMillis(),
-                    totals.cachedPromptTokens()));
+                    totals.cachedPromptTokens(),
+                    totals.meanFirstToken()
+                            .map(mean -> String.valueOf(mean.toMillis()))
+                            .orElse(NONE),
+                    totals.prefillShare()
+                            .map(share -> String.format(Locale.ROOT, "%.1f%%", share * PERCENT))
+                            .orElse(NONE)));
         });
         return line.isEmpty() ? "" : " byKind[" + line + "]";
     }

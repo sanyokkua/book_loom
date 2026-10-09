@@ -630,6 +630,19 @@ The owner's 26b run of *Burning Chrome* (Balanced, 21 min, 229 segments) showed 
 
 The models differ, so the time column compares nothing about speed; it shows the new run costs no more than the old one. What the Max run's 35 corrections were, read from the TRACE log: narrator gender (шукала, знайшла, щасливий), a wrong ending (дивитеся → дивишся), a lower-case sentence start, a doubled full stop after a closing quote — and one doubtful swap (база даних → вежа даних). Not measured: the 26b with the new checks, the Russian→Ukrainian book, and the speed effect of the 16k window alone (15e.15 asks for a first-300 A/B).
 
+### Time to first token {#time-to-first-token}
+
+The time before a call's first token (the provider's prompt evaluation, "prefill") is read from the provider's own
+timings: Ollama's `prompt_eval_duration`, LM Studio's `stats.time_to_first_token`. A provider that sends neither leaves
+the figure unknown (`-`), never zero. Read it in the final `run summary final ... byKind[...]` line of the log, per call
+kind: `ttftMs:` is the mean over the calls that reported it and `prefill:` is its share of those calls' wall time. The
+unattended command line's JSON report carries the same as `meanFirstTokenSeconds` and `prefillShare` under
+`modelCallsByKind`.
+
+The 10 % rule (15h.C5): the shared style and language block is moved to the front of the prompt (so the provider can
+cache it) only when `prefill:` is over 10 % for the dominant kinds on the 26b model. The code does not reorder; run a
+book on 26b, read the line and decide.
+
 ## 6. IDE (IntelliJ IDEA) {#ide}
 
 Open the repository root, let IDEA import the Gradle build with the wrapper, and create a **Gradle** run

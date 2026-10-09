@@ -195,6 +195,8 @@ final class RunReport {
             node.put("elapsedSeconds", seconds(totals.elapsed()));
             node.put("promptEvalSeconds", seconds(totals.promptEval()));
             node.put("generationSeconds", seconds(totals.generation()));
+            totals.meanFirstToken().ifPresent(mean -> node.put("meanFirstTokenSeconds", seconds(mean)));
+            totals.prefillShare().ifPresent(share -> node.put("prefillShare", share));
         });
     }
 

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.llm.TokenUsage;
@@ -28,19 +29,53 @@ class CallKindTotalsTest {
                 CallKind.DRAFT, 2000, new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)));
         totals.record(answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800))));
 
-        assertThat(totals.totals().get(CallKind.DRAFT))
-                .isEqualTo(new CallKindTotals.Totals(
-                        2,
-                        0,
-                        1500,
-                        150,
-                        Duration.ofMillis(5000),
-                        Duration.ofMillis(700),
-                        Duration.ofMillis(4000),
-                        1100));
+        assertThat(totals.totals().get(CallKind.DRAFT)).isEqualTo(draftTotals());
         assertThat(totals.totals().get(CallKind.REVIEW))
                 .isEqualTo(new CallKindTotals.Totals(
-                        1, 0, 500, 20, Duration.ofMillis(1000), Duration.ZERO, Duration.ofMillis(800), 0));
+                        1,
+                        0,
+                        500,
+                        20,
+                        Duration.ofMillis(1000),
+                        Duration.ZERO,
+                        Duration.ofMillis(800),
+                        0,
+                        0,
+                        Duration.ZERO));
+    }
+
+    private static CallKindTotals.Totals draftTotals() {
+        return new CallKindTotals.Totals(
+                2,
+                0,
+                1500,
+                150,
+                Duration.ofMillis(5000),
+                Duration.ofMillis(700),
+                Duration.ofMillis(4000),
+                1100,
+                2,
+                Duration.ofMillis(5000));
+    }
+
+    // 15h.C5: the mean first-token time and its share count only the attempts that reported a prompt-evaluation time.
+    @Test
+    void record_firstTokenReported_meanAndShareOfOnlyThoseAttempts() {
+        final CallKindTotals totals = new CallKindTotals();
+        totals.record(answered(
+                CallKind.DRAFT, 3000, new TokenUsage(800, 90, Duration.ofMillis(2500), Duration.ofMillis(400), 600)));
+        totals.record(answered(
+                CallKind.DRAFT, 2000, new TokenUsage(700, 60, Duration.ofMillis(1500), Duration.ofMillis(300), 500)));
+        totals.record(answered(CallKind.REVIEW, 1000, new TokenUsage(500, 20, Duration.ofMillis(800))));
+
+        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.DRAFT)).meanFirstToken())
+                .contains(Duration.ofMillis(350));
+        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.DRAFT)).prefillShare())
+                .contains(0.14);
+        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.REVIEW)).meanFirstToken())
+                .isEmpty();
+        assertThat(Objects.requireNonNull(totals.totals().get(CallKind.REVIEW)).prefillShare())
+                .isEmpty();
     }
 
     // A failed attempt counts as an attempt and a failure but adds no tokens; a reply with no usage adds only its time.
@@ -52,7 +87,7 @@ class CallKindTotalsTest {
         totals.record(new ModelCallFinished("s1", CallKind.DRAFT, Duration.ofSeconds(4), null, 10, false));
 
         assertThat(totals.totals().get(CallKind.DRAFT))
-                .isEqualTo(
-                        new CallKindTotals.Totals(2, 1, 0, 0, Duration.ofSeconds(64), Duration.ZERO, Duration.ZERO, 0));
+                .isEqualTo(new CallKindTotals.Totals(
+                        2, 1, 0, 0, Duration.ofSeconds(64), Duration.ZERO, Duration.ZERO, 0, 0, Duration.ZERO));
     }
 }

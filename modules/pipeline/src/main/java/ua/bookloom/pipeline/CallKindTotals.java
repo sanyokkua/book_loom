@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallKind;
@@ -29,6 +30,10 @@ public final class CallKindTotals {
      * @param promptEval the provider-reported prompt-evaluation time; zero when it reports none
      * @param generation the provider-reported generation time, or the attempt's wall time when it reported none
      * @param cachedPromptTokens the prompt tokens the provider says its cache served
+     * @param firstTokenCalls how many answered attempts the provider gave a prompt-evaluation time for, which is the
+     *     time before the first token
+     * @param firstTokenCallElapsed the wall-clock time of just those attempts, so the prefill share is not diluted by
+     *     calls that reported nothing
      */
     public record Totals(
             int attempts,
@@ -38,7 +43,31 @@ public final class CallKindTotals {
             Duration elapsed,
             Duration promptEval,
             Duration generation,
-            long cachedPromptTokens) {}
+            long cachedPromptTokens,
+            int firstTokenCalls,
+            Duration firstTokenCallElapsed) {
+
+        /**
+         * The mean time before the first token over the attempts that reported it.
+         *
+         * @return the mean, or empty when no attempt reported one
+         */
+        public Optional<Duration> meanFirstToken() {
+            return firstTokenCalls == 0 ? Optional.empty() : Optional.of(promptEval.dividedBy(firstTokenCalls));
+        }
+
+        /**
+         * The share of call time spent before the first token, which is what reordering the prompt could save.
+         *
+         * @return the share from 0 to 1, or empty when no attempt reported a first-token time
+         */
+        public Optional<Double> prefillShare() {
+            if (firstTokenCalls == 0 || firstTokenCallElapsed.isZero()) {
+                return Optional.empty();
+            }
+            return Optional.of((double) promptEval.toNanos() / firstTokenCallElapsed.toNanos());
+        }
+    }
 
     /**
      * Counts one finished attempt.
@@ -82,6 +111,8 @@ public final class CallKindTotals {
         Duration elapsed = Duration.ZERO;
         Duration promptEval = Duration.ZERO;
         Duration generation = Duration.ZERO;
+        int firstTokenCalls;
+        Duration firstTokenCallElapsed = Duration.ZERO;
 
         void add(final TokenUsage usage, final Duration wall) {
             promptTokens += usage.prompt() == null ? 0 : usage.prompt();
@@ -89,6 +120,10 @@ public final class CallKindTotals {
             cachedPromptTokens += usage.cachedPrompt() == null ? 0 : usage.cachedPrompt();
             promptEval = promptEval.plus(usage.promptEval() == null ? Duration.ZERO : usage.promptEval());
             generation = generation.plus(usage.generation() == null ? wall : usage.generation());
+            if (usage.promptEval() != null) {
+                firstTokenCalls++;
+                firstTokenCallElapsed = firstTokenCallElapsed.plus(wall);
+            }
         }
 
         Totals snapshot() {
@@ -100,7 +135,9 @@ public final class CallKindTotals {
                     elapsed,
                     promptEval,
                     generation,
-                    cachedPromptTokens);
+                    cachedPromptTokens,
+                    firstTokenCalls,
+                    firstTokenCallElapsed);
         }
     }
 }

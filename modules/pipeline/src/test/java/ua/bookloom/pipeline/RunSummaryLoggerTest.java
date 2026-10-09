@@ -148,7 +148,21 @@ class RunSummaryLoggerTest {
         assertThat(summaries())
                 .singleElement()
                 .asString()
-                .endsWith(" byKind[DRAFT=1/0 in:800 out:90 promptEvalMs:400 generationMs:2500 cached:600]");
+                .endsWith(
+                        " byKind[DRAFT=1/0 in:800 out:90 promptEvalMs:400 generationMs:2500 cached:600 ttftMs:400 prefill:13.3%]");
+    }
+
+    // 15h.C5: a provider that reports no prompt-evaluation time leaves the first-token figures unknown, never zero.
+    @Test
+    void onEvent_noPromptEvalReported_firstTokenFiguresAreDashes() {
+        final RunSummaryLogger summary = new RunSummaryLogger(clock);
+
+        summary.onEvent(new StageStarted(JobStage.TRANSLATE, START));
+        summary.onEvent(answered(Duration.ofSeconds(3), new TokenUsage(800, 90, Duration.ofMillis(2500))));
+        summary.onEvent(
+                new Finished(new JobReport(BookFormat.MARKDOWN, JobState.COMPLETED, 16, 5, 1, List.of(), null)));
+
+        assertThat(summaries()).singleElement().asString().endsWith(" cached:0 ttftMs:- prefill:-]");
     }
 
     // A night's run makes tens of thousands of calls; the line counts them all but keeps only the newest
