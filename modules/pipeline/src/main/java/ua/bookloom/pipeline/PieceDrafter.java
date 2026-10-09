@@ -172,7 +172,7 @@ final class PieceDrafter {
             return Result.err(Objects.requireNonNull(reply.error()));
         }
         final ChatResponse response = Objects.requireNonNull(reply.data());
-        final ParsedReply parsed = replyParser.parse(response.content(), piece.masked());
+        final ParsedReply parsed = replyParser.parse(response.content(), piece.masked(), owner.targetLanguage());
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED && !response.content().isBlank()) {
             return structuralUsed
                     ? failed(piece, ErrorCode.validation, "The model did not return the required translation JSON.")

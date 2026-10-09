@@ -7,11 +7,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.pipeline.ControlCharacterMapper;
+import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.batch.BatchEntries.Entry;
@@ -95,7 +98,7 @@ public final class BatchReplyParser {
         if (written.size() > 1) {
             return ItemOutcome.bare(item.id(), ItemStatus.DUPLICATE);
         }
-        final String text = texts.getFirst();
+        final String text = withoutControlCodes(item, texts.getFirst(), targetTag);
         final BatchItem next = index + 1 < items.size() ? items.get(index + 1) : null;
         if (next != null && isMerged(item, next, text, byId, sourceTag, targetTag)) {
             log.warn("Batch item looks merged with the next id={} next={}", item.id(), next.id());
@@ -103,6 +106,16 @@ public final class BatchReplyParser {
         }
         return new ItemOutcome(
                 item.id(), ItemStatus.OK, text, ItemValidator.validate(item, text, sourceTag, targetTag));
+    }
+
+    // A code the mapper can place is resolved here, so the validator sees the marks and refuses only what has no place.
+    private static String withoutControlCodes(final BatchItem item, final String text, final String targetTag) {
+        if (!ControlCharacters.addsControl(item.masked(), text)) {
+            return text;
+        }
+        final Optional<String> mapped = ControlCharacterMapper.map(item.masked(), text, targetTag);
+        log.debug("Control codes in batch item id={} mapped={}", item.id(), mapped.isPresent());
+        return mapped.orElse(text);
     }
 
     /**

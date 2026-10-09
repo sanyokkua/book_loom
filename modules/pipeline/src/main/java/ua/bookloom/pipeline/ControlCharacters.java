@@ -32,6 +32,29 @@ public final class ControlCharacters {
                 .anyMatch(c -> occurrences(text, c) > occurrences(source, c));
     }
 
+    /**
+     * Strips the whitespace round a text but keeps a control code at its edge: {@link String#strip()} calls U+001C-U+001F
+     * whitespace, and a quote mark a model wrote as one would be lost before the mapper could read it.
+     *
+     * @param text the non-null text
+     * @return the text without its leading and trailing spacing; control codes stay
+     */
+    public static String stripSpacing(final String text) {
+        int start = 0;
+        int end = text.length();
+        while (start < end && isSpacing(text.charAt(start))) {
+            start++;
+        }
+        while (end > start && isSpacing(text.charAt(end - 1))) {
+            end--;
+        }
+        return text.substring(start, end);
+    }
+
+    private static boolean isSpacing(final char c) {
+        return Character.isWhitespace(c) && !isControl(c);
+    }
+
     private static long occurrences(final String text, final int c) {
         return text.chars().filter(each -> each == c).count();
     }

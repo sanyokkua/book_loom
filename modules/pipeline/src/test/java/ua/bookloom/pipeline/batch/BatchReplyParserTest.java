@@ -149,19 +149,6 @@ class BatchReplyParserTest {
     }
 
     @Test
-    void parse_controlCharactersInOneItem_failsOnlyThatItemAsControlCharacters() {
-        final Map<String, String> entries = clean();
-        entries.put("2", "\\u001eВін\\u001d довго нічого не казав.");
-
-        final BatchReply reply = parse(write(entries));
-
-        assertThat(reply.outcome("2"))
-                .hasValueSatisfying(
-                        outcome -> assertThat(outcome.problems()).containsExactly(ItemProblem.CONTROL_CHARACTERS));
-        assertThat(reply.acceptedIds()).containsExactly("1", "3", "4");
-    }
-
-    @Test
     void parse_droppedTokenInOneItem_failsOnlyThatItemWithTokens() {
         final Map<String, String> entries = clean();
         entries.put("4", "⟦g0⟧Привіт, мій старий друже.");

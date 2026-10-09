@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import ua.bookloom.pipeline.ControlCharacters;
 import ua.bookloom.pipeline.prompt.JsonReplies;
 
 /**
@@ -90,7 +91,7 @@ final class BatchEntries {
         while (matcher.find()) {
             try {
                 final String text = mapper.readValue("\"" + matcher.group(3) + "\"", String.class);
-                entries.add(new Entry(matcher.group(2), text.strip()));
+                entries.add(new Entry(matcher.group(2), ControlCharacters.stripSpacing(text)));
             } catch (JsonProcessingException ignored) {
                 log.debug("Skipped a batch entry whose text is not a JSON string id={}", matcher.group(2));
             }
@@ -101,7 +102,7 @@ final class BatchEntries {
     private static void entry(final JsonNode node, final List<Entry> entries) {
         entries.add(new Entry(
                 node.path("id").asText().strip(),
-                node.path("target").textValue().strip(),
+                ControlCharacters.stripSpacing(node.path("target").textValue()),
                 termsOf(node.path("terms"))));
     }
 

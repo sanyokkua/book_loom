@@ -242,6 +242,10 @@ public final class SegmentTranslator {
         return requests.build(attempt, step, rejected, diagnostic);
     }
 
+    String targetLanguage() {
+        return promptBuilder.targetLanguage();
+    }
+
     /** The requests this draft step sends, which a prompt eval builds the same way. */
     public DraftRequests requests() {
         return requests;
@@ -268,7 +272,7 @@ public final class SegmentTranslator {
             return DraftOutcomes.unfinished(attempt, response);
         }
         final ParsedReply parsed =
-                replyParser.parse(response.content(), attempt.segment().masked());
+                replyParser.parse(response.content(), attempt.segment().masked(), promptBuilder.targetLanguage());
         if (parsed.kind() == ReplyKind.INVALID_STRUCTURED) {
             return structuralRepairUsed
                     ? DraftOutcomes.invalidStructuredReply(attempt, response)

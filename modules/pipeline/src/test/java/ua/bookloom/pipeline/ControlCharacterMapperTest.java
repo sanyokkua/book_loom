@@ -45,7 +45,7 @@ class ControlCharacterMapperTest {
                 "\u001eКуди вона пішла, спитала вона.",
                 "\u001eКуди\u001d вона \u001eпішла",
                 "Куди\u001d вона\u001e пішла",
-                "Куди вона\u001eпішла"
+                "Куди вона \u001eпішла"
             })
     void map_unpairableCodes_areNotMapped(final String reply) {
         assertThat(ControlCharacterMapper.map(SOURCE, reply, "uk")).isEmpty();
@@ -55,6 +55,20 @@ class ControlCharacterMapperTest {
     @Test
     void map_sourceHoldingControlCharacters_isNotMapped() {
         assertThat(ControlCharacterMapper.map("Page\fone.", "\u001eСторінка\u001d\f", "uk"))
+                .isEmpty();
+    }
+
+    // IF a real mark of the language is counted with the codes, THEN a code closing it pairs up without a second mark.
+    @Test
+    void map_germanRealOpeningMarkAndClosingCode_closesWithTheGermanMark() {
+        assertThat(ControlCharacterMapper.map(SOURCE, "Er sagte: „Hallo.\u001d", "de"))
+                .contains("Er sagte: „Hallo.“");
+    }
+
+    // IF the reply holds a real mark that is never closed, THEN the quote does not pair up and nothing is guessed.
+    @Test
+    void map_realOpeningMarkNeverClosed_isNotMapped() {
+        assertThat(ControlCharacterMapper.map(SOURCE, "«Привіт, \u001fсвіте", "uk"))
                 .isEmpty();
     }
 }

@@ -203,7 +203,7 @@ final class RevisionBook {
             case "1:1" -> "Run, Hale.";
             case "1:3" -> "Hale went away.";
             case "1:5" -> "Hale came in.";
-            case "1:7" -> "Sam met Hale.";
+            case "1:7" -> "\"Sam met Hale.\"";
             case "1:9" -> "Sam opened the <em>old</em> door.";
             case "2:6" -> "Sam went away.";
             case "2:1" -> OLD_MAN_SOURCE;

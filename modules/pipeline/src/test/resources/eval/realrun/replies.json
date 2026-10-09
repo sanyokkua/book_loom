@@ -99,13 +99,13 @@
   "id": "ctrl-inner-en",
   "kind": "control-chars",
   "sourceLanguage": null,
-  "source": "He opened the old door.",
-  "reply": "{\"target\":\"Він\\u001eвідчинив старі двері.\"}",
+  "source": "\"He opened the old door,\" he said.",
+  "reply": "{\"target\":\"Він відчинив\\u001e старі двері.\"}",
   "expect": "REFUSED",
   "knownFailure": false,
   "fixedBy": null,
   "glossary": [],
-  "rationale": "a control code between two words stands for no mark: refused, never stripped"
+  "rationale": "a control code after a word, in a source that has quotes, has no place: refused, never stripped"
  },
  {
   "id": "residue-clean-en",
