@@ -40,6 +40,7 @@ final class SpeechRepairs {
             current = run(tallies, "mixed quote mark", MixedQuotes.apply(current, pairs));
             current = run(tallies, "opening quote restored", OpeningQuote.apply(source, current, primary));
             current = run(tallies, "split speech merged", SplitSpeech.apply(source, current, primary));
+            current = run(tallies, "extra closing quote removed", ExtraCloser.apply(current, primary));
             current = run(tallies, "stray quote mark removed", StrayQuote.apply(current, languageTag));
             current = run(tallies, "sentence capitalised", SentenceCase.apply(source, current, locale));
         }

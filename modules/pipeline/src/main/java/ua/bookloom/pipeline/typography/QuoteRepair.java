@@ -21,7 +21,7 @@ import ua.bookloom.pipeline.checks.QuotePair;
  * quote marks and nothing else, and it either returns a text whose marks pair up under the language's table or the
  * input untouched: collapses a doubled mark, writes straight marks as the language's pairs, replaces a closer that
  * crosses the open mark with the open mark's own closer, opens a paragraph whose first mark is a stray closer when the
- * source opens with a quote, drops a stray closer at a paragraph edge, and closes one unclosed opener before the
+ * source opens with a quote, drops the extra first closer of split speech (one opener, two closers, narration set off by dashes between them), drops a stray closer at a paragraph edge, and closes one unclosed opener before the
  * dash clause that follows it or at the paragraph's end, before a single final full stop. It leaves a text alone when its source is itself open, when
  * a placeholder token sits inside a word, or when any rule above would be a guess. A repaired text repairs to itself.
  */
@@ -111,9 +111,10 @@ public final class QuoteRepair {
     }
 
     private static Optional<Repaired> attempt(final String source, final String target, final List<QuotePair> pairs) {
-        final String collapsed = collapseDoubled(target, pairs);
+        final Edit trimmed = ExtraCloser.apply(target, pairs.getFirst());
+        final String collapsed = collapseDoubled(trimmed.text(), pairs);
         final Edit styled = QuoteStyler.apply(collapsed, pairs);
-        final int collapsedMarks = target.length() - collapsed.length();
+        final int collapsedMarks = trimmed.count() + trimmed.text().length() - collapsed.length();
         return new Fixer(styled.text(), pairs, opensWithQuote(source), hasDashInsideSpeech(source))
                 .run()
                 .map(fixed -> new Repaired(fixed.text(), collapsedMarks + styled.count() + fixed.count()));

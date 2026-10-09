@@ -1612,7 +1612,7 @@ The owner translated Burning Chrome (en→uk, gemma-4-26b, Balanced, 21 min) and
 - [x] 15f.C5c A glossary switch rebinds without sliding when the table recycles its rows.
 - [ ] 15f.A4 Infer an unstated narrator's gender from the majority of «я + past verb» forms and flag the minority.
 - [ ] 15f.A6 (moved to 15h.B1) Re-ask only the missing ids of a short batch reply before falling back one by one.
-- [ ] 15f.A7b (moved to 15h.A8, narrowed to the one shape the runs showed) A deterministic normaliser for dialogue structure (attribution inside the quote, an unclosed nested quote, a dropped full stop).
+- [x] 15f.A7b (moved to 15h.A8, narrowed to the one shape the runs showed) A deterministic normaliser for dialogue structure (attribution inside the quote, an unclosed nested quote, a dropped full stop).
 - [ ] 15f.C5ab (moved to 15h.D2) Scrolling on macOS: wheel and trackpad momentum and the Activity log's one-row step. The code paths are in `SmoothScroll`/`ScrollGlide`; the real events a Mac sends are unknown, so first read the TRACE lines of `ua.bookloom.ui.control.SmoothScroll` from a real scroll.
 
 ## 15h. Quality round 4 and the UI round 2 — after the owner's Oct 9 e4b and 26b runs (after group 15f)
@@ -1636,7 +1636,7 @@ Burning Chrome was translated with gemma-4-e4b and gemma-4-26b (Balanced, LM Stu
 - [x] 15h.A5 Name and script checks that catch what the runs missed: a name variant counts only in segments whose source names the term and never a word the targets also use in lower case (no more "Він" for "Фінн"), and becomes a soft run-time finding with a code stem swap when one candidate stands where the rendering is missing; a lost name becomes a soft run-time finding with a directed fix instead of an audit doubt; a source Latin run left in a target of another script, not a glossary or kept span, is a blocking check; a short `foreignWords` replacement list in `uk.properties` (`тоже>теж` and the like) gives a soft finding with the exact replacement. → `:pipeline`, language files
 - [x] 15h.A6 Glossary hygiene: a possessive ends a name run (no "Chrome Zurich"), a candidate that is another plus a plural suffix (`pluralSuffixes` in the language file) or one edit away at a fifth of its count becomes its alias and shares its target ("Chromes", "Ikons"), a connector fragment is judged from the book text, and identifiers (UUID, hex, ISBN, URL, e-mail) are kept verbatim and exempt from language and script checks. → `:pipeline`, `:document`
 - [x] 15h.A7 A segment whose source is the title and/or the author with only spaces, punctuation and quote marks around them is composed from the decided title and author in the target language's quote marks, so no second title («Горючий хром») reaches the book. → `:pipeline`
-- [ ] 15h.A8 One more speech repair: a paragraph with one opening and two closing guillemets whose first closer is followed by ", — narration — " loses that first closer (the 26b ch4 p112 shape). Replaces the full normaliser of 15f.A7b. → `:pipeline`
+- [x] 15h.A8 One more speech repair: a paragraph with one opening and two closing guillemets whose first closer is followed by ", — narration — " loses that first closer (the 26b ch4 p112 shape). Replaces the full normaliser of 15f.A7b. → `:pipeline`
 
 ### Protocols
 - [ ] 15h.B1 A batch reply that misses two or more ids is re-asked once with only the missing items and the same context before falling back one by one; the size controller counts the first reply only. Replaces 15f.A6. Target: about 10 fewer calls a run on both models. → `:pipeline`
