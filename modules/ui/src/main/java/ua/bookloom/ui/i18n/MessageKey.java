@@ -597,6 +597,16 @@ public enum MessageKey {
     BRIEF_SUGGEST_DONE("brief.suggest.done"),
     /** Line shown when a style is suggested but no model is chosen. */
     BRIEF_SUGGEST_NO_MODEL("brief.suggest.noModel"),
+    /** Line under a suggested field: the book's words the model quoted for it and how many samples agree. */
+    BRIEF_EVIDENCE_QUOTED("brief.evidence.quoted"),
+    /** Line under a suggested field that needed no quote: how many samples agree. */
+    BRIEF_EVIDENCE_AGREED("brief.evidence.agreed"),
+    /** Hover explanation of the line labelled by {@link #BRIEF_EVIDENCE_AGREED}. */
+    BRIEF_EVIDENCE_AGREED_TIP("brief.evidence.agreed.tip"),
+    /** Chip beside a field the samples of the book did not agree on. */
+    BRIEF_EVIDENCE_UNCERTAIN("brief.evidence.uncertain"),
+    /** Hover explanation of the chip labelled by {@link #BRIEF_EVIDENCE_UNCERTAIN}. */
+    BRIEF_EVIDENCE_UNCERTAIN_TIP("brief.evidence.uncertain.tip"),
     /** Heading of the tone-and-style card. */
     BRIEF_CARD_TONE("brief.card.tone"),
     /** Heading of the translation-policies card. */

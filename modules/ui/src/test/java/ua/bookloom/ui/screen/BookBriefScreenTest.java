@@ -3,7 +3,9 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 import javafx.scene.control.Label;
 import org.junit.jupiter.api.Test;
@@ -11,15 +13,25 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.BookFormat;
+import ua.bookloom.api.pipeline.BriefField;
+import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.FieldEvidence;
+import ua.bookloom.api.pipeline.SetupAssistant;
+import ua.bookloom.api.project.Gender;
+import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Register;
 import ua.bookloom.ui.BookFixtures;
+import ua.bookloom.ui.ScriptedSetupAssistant;
 import ua.bookloom.ui.ThemeTestSupport;
 import ua.bookloom.ui.ViewNames;
+import ua.bookloom.ui.state.SettingsViewModel;
 import ua.bookloom.ui.state.WorkflowProgress;
 
 /**
  * The book-brief screen the application builds, read from the real scene: the state with no book open and its way to
  * the import screen, the Languages card (the boxes, the source the book declares and the same-language refusal), and
- * the buttons that move around the workflow. The other cards are in {@code BookBriefScreenCardsTest}.
+ * the buttons that move around the workflow, and the evidence the model's style suggestion shows under each field. The
+ * other cards are in {@code BookBriefScreenCardsTest}.
  */
 class BookBriefScreenTest extends BookBriefScreenTestBase {
 
@@ -234,5 +246,58 @@ class BookBriefScreenTest extends BookBriefScreenTestBase {
         showBrief();
 
         assertThat(((Label) required("nobook-report")).getText()).isNotBlank().matches(".*\\p{IsCyrillic}.*");
+    }
+
+    // IF the brief showed no evidence, THEN a person would accept the model's register with nothing to judge it by;
+    // IF a field the samples disagreed on looked like any other, THEN a guess would pass for a reading of the book.
+    @Test
+    void suggestStyle_answerWithEvidence_showsTheQuoteAndAgreementAndAnUncertainChip() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+        onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b"));
+        ((ScriptedSetupAssistant) injector.getInstance(SetupAssistant.class))
+                .answersBrief(Result.ok(new BriefSuggestion(
+                        null,
+                        Register.CASUAL,
+                        null,
+                        null,
+                        NarratorPerson.UNSPECIFIED,
+                        Gender.UNKNOWN,
+                        Map.of(
+                                BriefField.REGISTER, new FieldEvidence(List.of("Hang on, man"), 2, 2),
+                                BriefField.GENRE, new FieldEvidence(List.of(), 1, 2)))));
+
+        onFx(() -> button("brief-suggest-style").fire());
+        awaitFx(() -> isShown("brief-evidence-register"));
+
+        assertThat(((Label) required("brief-evidence-register")).getText())
+                .isEqualTo("“Hang on, man” · 2 of 2 samples agree");
+        assertThat(isShown("brief-evidence-register-uncertain")).isFalse();
+        assertThat(isShown("brief-evidence-genre-uncertain")).isTrue();
+        assertThat(((Label) required("brief-evidence-genre-uncertain")).getText())
+                .isEqualTo("? Uncertain");
+        assertThat(((Label) required("brief-evidence-genre")).getText()).isEqualTo("1 of 2 samples agrees");
+        assertThat(isShown("brief-evidence-voice")).isFalse();
+    }
+
+    // IF the evidence stayed after the person changed the field, THEN it would vouch for a choice the model never made.
+    @Test
+    void suggestStyle_personChangesASuggestedField_hidesThatFieldsEvidence() throws TimeoutException {
+        openFrankensteinThenShowBrief();
+        onFx(() -> injector.getInstance(SettingsViewModel.class).model().set("gemma3:12b"));
+        ((ScriptedSetupAssistant) injector.getInstance(SetupAssistant.class))
+                .answersBrief(Result.ok(new BriefSuggestion(
+                        null,
+                        Register.CASUAL,
+                        null,
+                        null,
+                        NarratorPerson.UNSPECIFIED,
+                        Gender.UNKNOWN,
+                        Map.of(BriefField.REGISTER, new FieldEvidence(List.of("Hang on, man"), 2, 2)))));
+        onFx(() -> button("brief-suggest-style").fire());
+        awaitFx(() -> isShown("brief-evidence-register"));
+
+        onFx(() -> briefModel().setRegister(Register.FORMAL_LITERARY));
+
+        assertThat(isShown("brief-evidence-register")).isFalse();
     }
 }

@@ -109,6 +109,17 @@ class PromptShapeTest {
                 .isLessThanOrEqualTo(large ? LARGE_SYSTEM_BUDGET : SYSTEM_BUDGET);
     }
 
+    // IF the brief call invited the model's memory of a famous book, THEN its answer could not be checked against the
+    // text; IF its example named a gender, THEN a small model would copy it.
+    @Test
+    void render_briefSuggestion_asksForAQuoteFromThePassagesAndShowsNoGender() {
+        final String prompt = prompt(PromptName.BRIEF_SUGGESTION);
+
+        assertThat(prompt)
+                .contains("copied exactly from the passages", "\"confidence\"", "Dialogue share")
+                .doesNotContain("what you know of this book", "\"value\":\"male\"", "\"value\":\"female\"");
+    }
+
     // The draft system is sent with every segment of a book; a small model must still read its last rule.
     @Test
     void render_draftSystemWithExamples_staysWithinSevenHundredTokens() {

@@ -16,6 +16,8 @@ import ua.bookloom.pipeline.prompt.PromptName;
  */
 final class StageFakeModel implements ChatModel {
 
+    private static final Pattern FIRST_PASSAGE = Pattern.compile("Passage 1: ((?:\\S+ ){4}\\S+)");
+    private static final Pattern FIRST_PERSON = Pattern.compile("(?<=\\s)I \\p{L}+");
     private static final Pattern SCAN_LINE = Pattern.compile("(?m)^(\\S+) — ");
     private static final Pattern TERM_LINE = Pattern.compile("(?m)^- (.+?) (?:·|—) ");
     private static final Map<String, String> PEOPLE =
@@ -54,8 +56,24 @@ final class StageFakeModel implements ChatModel {
         if (format.equals(PromptName.FILE_NAME.responseFormatName())) {
             return "{\"target\":\"Джейн Остлер. Скляний сад. 2009\"}";
         }
-        return "{\"genre\":\"drama\",\"register\":\"neutral\",\"voice\":\"plain\",\"audience\":\"adults\","
-                + "\"narrator\":\"" + (user.contains(" I ") ? "first" : "third") + "\",\"narratorGender\":\"unknown\"}";
+        return brief(user);
+    }
+
+    // A good model quotes the sample it was given: the first words of its first passage, and an "I" clause for a
+    // first-person narrator.
+    private static String brief(final String user) {
+        final Matcher passage = FIRST_PASSAGE.matcher(user);
+        final String quote = passage.find() ? passage.group(1) : "";
+        final Matcher first = FIRST_PERSON.matcher(user);
+        final boolean isFirst = first.find();
+        return "{" + field("genre", "drama", quote) + "," + field("register", "neutral", "") + ","
+                + field("voice", "plain", quote) + "," + field("audience", "adults", quote) + ","
+                + field("narrator", isFirst ? "first" : "third", isFirst ? first.group() : quote) + ","
+                + field("narratorGender", "unknown", "") + "}";
+    }
+
+    private static String field(final String name, final String value, final String quote) {
+        return "\"" + name + "\":{\"value\":\"" + value + "\",\"evidence\":\"" + quote + "\",\"confidence\":0.9}";
     }
 
     private static java.util.List<String> lines(

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,18 +28,13 @@ import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
 import ua.bookloom.api.pipeline.FileNameSuggestion;
 import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.SetupAssistant;
 import ua.bookloom.api.project.BookBrief;
-import ua.bookloom.api.project.Gender;
-import ua.bookloom.api.project.Narrator;
-import ua.bookloom.api.project.NarratorPerson;
 import ua.bookloom.api.project.Project;
-import ua.bookloom.api.project.Register;
-import ua.bookloom.pipeline.DisplayText;
-import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.heal.SelfHealCalls;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.prompt.CallDescriptor;
@@ -53,19 +49,21 @@ import ua.bookloom.pipeline.run.JobModelCalls;
 
 /**
  * Asks the chosen model for the two things a person would otherwise type: the translated book's file name and the
- * tone and style of the Book Brief. Each is one small call over the opened book; the reply is read leniently, cleaned
- * in code and returned as a proposal, never applied.
+ * tone and style of the Book Brief. The file name is one small call; the brief is one call for each of two disjoint
+ * samples of the book ({@link BookSamples}), each answer held to a quote the code finds in its sample, and a field is
+ * kept only when both samples agree. Every reply is read leniently, cleaned in code and returned as a proposal, never
+ * applied.
  */
 @Slf4j
 @RequiredArgsConstructor(onConstructor_ = {@Inject})
 public final class SetupAssistantImpl implements SetupAssistant {
 
     private static final String FB2_ZIP = ".fb2.zip";
-    private static final int OPENING_CHARS = 3500;
-    private static final int OPENING_PARAGRAPHS = 14;
-    private static final int MIN_PARAGRAPH_CHARS = 40;
     private static final int NAME_TOKENS = 96;
-    private static final int BRIEF_TOKENS = 220;
+    // Six fields, each a value, a quote of up to fifteen words and a confidence.
+    private static final int BRIEF_TOKENS = 480;
+    private static final int SAMPLES = 2;
+    private static final String FALLBACK_LANGUAGE = "en";
     // A file name holds at most 255 bytes on the common file systems; the suffix and a margin are kept free.
     private static final int MAX_NAME_BYTES = 200;
     private static final Pattern RESERVED = Pattern.compile("(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\\..*)?");
@@ -191,17 +189,65 @@ public final class SetupAssistantImpl implements SetupAssistant {
     }
 
     private Result<BriefSuggestion> askBrief(final Book book, final ModelCalls calls) {
-        final String opening = opening(book.document());
-        if (opening.isBlank()) {
+        final List<BookSample> samples = BookSamples.of(book.document(), languageOf(book));
+        if (samples.isEmpty()) {
             return Result.err(AppError.of(
                     ErrorCode.validation, "Nothing to read", "The book has no body text to suggest a style from."));
         }
+        final List<@Nullable Map<BriefField, BriefReplies.Answer>> answers = new ArrayList<>();
+        for (int index = 0; index < samples.size(); index++) {
+            final BookSample sample = samples.get(index);
+            log.debug(
+                    "Brief sample {} of {}: {} passages, dialogue {} %",
+                    index + 1, samples.size(), sample.passages().size(), sample.dialoguePercent());
+            final Result<String> reply =
+                    ask(book, PromptName.BRIEF_SUGGESTION, briefInput(book, sample), BRIEF_TOKENS, calls);
+            if (reply.isErr()) {
+                return Result.err(Objects.requireNonNull(reply.error(), "error"));
+            }
+            final JsonNode node = json(Objects.requireNonNull(reply.data(), "reply"));
+            answers.add(node == null ? null : BriefReplies.read(node, sample));
+        }
+        if (answers.stream().allMatch(Objects::isNull)) {
+            return Result.err(AppError.of(
+                    ErrorCode.validation, "Unreadable answer", "The model's suggestion could not be read."));
+        }
+        return Result.ok(combined(book, answers, samples.size()));
+    }
+
+    private static BriefSuggestion combined(
+            final Book book, final List<@Nullable Map<BriefField, BriefReplies.Answer>> answers, final int taken) {
+        final BriefSuggestion read = BriefAgreement.combine(answers, SAMPLES);
+        final BriefSuggestion aligned = read.alignedTo(book.project().brief().narrator());
+        log.info(
+                "Brief suggested from {} samples: agreed fields {}, voiceDropped={}",
+                taken,
+                agreed(aligned),
+                !Objects.equals(aligned.voiceEra(), read.voiceEra()));
+        return aligned;
+    }
+
+    private static Map<String, String> briefInput(final Book book, final BookSample sample) {
         final Map<String, String> user = new HashMap<>();
-        user.put("opening", opening);
+        user.put("sample", sample.text());
+        user.put("dialogueShare", Integer.toString(sample.dialoguePercent()));
         metadata(book.document(), MetadataKey.TITLE).ifPresent(title -> user.put("title", title));
         metadata(book.document(), MetadataKey.AUTHOR).ifPresent(author -> user.put("author", author));
-        return ask(book, PromptName.BRIEF_SUGGESTION, user, BRIEF_TOKENS, calls)
-                .flatMap(reply -> briefFrom(reply, book.project().brief().narrator()));
+        return user;
+    }
+
+    private static List<BriefField> agreed(final BriefSuggestion suggestion) {
+        return suggestion.evidence().entrySet().stream()
+                .filter(entry -> entry.getValue().isAgreed())
+                .map(Map.Entry::getKey)
+                .sorted()
+                .toList();
+    }
+
+    private static String languageOf(final Book book) {
+        final String source = book.project().brief().sourceLanguage();
+        final String declared = book.document().declaredLang();
+        return source != null ? source : declared != null && !declared.isBlank() ? declared : FALLBACK_LANGUAGE;
     }
 
     private Result<String> ask(
@@ -261,26 +307,6 @@ public final class SetupAssistantImpl implements SetupAssistant {
         return RESERVED.matcher(cut).matches() ? cut + "_" : cut;
     }
 
-    private Result<BriefSuggestion> briefFrom(final String reply, final Narrator current) {
-        final JsonNode node = json(reply);
-        if (node == null) {
-            return Result.err(AppError.of(
-                    ErrorCode.validation, "Unreadable answer", "The model's suggestion could not be read."));
-        }
-        final BriefSuggestion read = new BriefSuggestion(
-                text(node, "genre"),
-                register(text(node, "register")),
-                text(node, "voice"),
-                text(node, "audience"),
-                narrator(text(node, "narrator")),
-                narratorGender(text(node, "narratorGender")));
-        final BriefSuggestion aligned = read.alignedTo(current);
-        log.debug(
-                "Brief suggestion aligned to the set narrator: voiceDropped={}",
-                !Objects.equals(aligned.voiceEra(), read.voiceEra()));
-        return Result.ok(aligned);
-    }
-
     private @Nullable JsonNode json(final String reply) {
         final int from = reply.indexOf('{');
         final int to = reply.lastIndexOf('}');
@@ -295,57 +321,10 @@ public final class SetupAssistantImpl implements SetupAssistant {
         }
     }
 
-    private static @Nullable String text(final JsonNode node, final String field) {
-        final String value = node.hasNonNull(field) ? node.get(field).asText().strip() : "";
-        return value.isEmpty() ? null : value;
-    }
-
-    private static Register register(@Nullable final String value) {
-        return switch (value == null ? "" : value.toLowerCase(Locale.ROOT)) {
-            case "formal", "literary" -> Register.FORMAL_LITERARY;
-            case "casual" -> Register.CASUAL;
-            default -> Register.NEUTRAL;
-        };
-    }
-
-    private static NarratorPerson narrator(@Nullable final String value) {
-        return switch (value == null ? "" : value.toLowerCase(Locale.ROOT)) {
-            case "first" -> NarratorPerson.FIRST;
-            case "third" -> NarratorPerson.THIRD;
-            default -> NarratorPerson.UNSPECIFIED;
-        };
-    }
-
-    private static Gender narratorGender(@Nullable final String value) {
-        return switch (value == null ? "" : value.toLowerCase(Locale.ROOT)) {
-            case "male" -> Gender.MALE;
-            case "female" -> Gender.FEMALE;
-            default -> Gender.UNKNOWN;
-        };
-    }
-
     private static Optional<String> metadata(final Document document, final MetadataKey key) {
         return Optional.ofNullable(document.metadata().get(key.key()))
                 .map(String::strip)
                 .filter(s -> !s.isEmpty());
-    }
-
-    private static String opening(final Document document) {
-        final StringBuilder text = new StringBuilder();
-        int taken = 0;
-        for (final var segment : FrequencyScan.storyText(document)) {
-            final String paragraph = DisplayText.of(segment.masked()).strip();
-            if (paragraph.length() < MIN_PARAGRAPH_CHARS) {
-                continue;
-            }
-            text.append(paragraph).append("\n\n");
-            if (++taken >= OPENING_PARAGRAPHS || text.length() >= OPENING_CHARS) {
-                break;
-            }
-        }
-        return text.length() > OPENING_CHARS
-                ? text.substring(0, OPENING_CHARS)
-                : text.toString().strip();
     }
 
     private static String stemOf(final String fileName) {

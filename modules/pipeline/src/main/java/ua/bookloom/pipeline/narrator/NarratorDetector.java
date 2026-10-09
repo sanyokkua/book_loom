@@ -216,9 +216,17 @@ public final class NarratorDetector {
         return words;
     }
 
-    // The language's own quote marks and a dash dialogue are blanked by QuotedSpans; straight quotes cannot be told
-    // from their closing twin there, so they are paired here, and an unclosed one blanks the rest.
-    private static String narration(final String paragraph, final String languageTag) {
+    /**
+     * The paragraph with every character's speech blanked, so what is left is the narrator's. The language's own quote
+     * marks and a dash dialogue are blanked by {@link QuotedSpans}; straight quotes cannot be told from their closing
+     * twin there, so they are paired here, and an unclosed one blanks the rest.
+     *
+     * @param paragraph a non-null paragraph, masked or display text
+     * @param languageTag the language whose quote marks apply
+     * @return the paragraph without its tokens and with its speech replaced by spaces
+     */
+    public static String narration(final String paragraph, final String languageTag) {
+        Objects.requireNonNull(paragraph, "paragraph");
         final String blanked = QuotedSpans.narration(TOKEN.matcher(paragraph).replaceAll(""), languageTag);
         final char[] chars = blanked.toCharArray();
         boolean inside = false;

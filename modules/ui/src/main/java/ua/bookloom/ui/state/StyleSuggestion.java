@@ -1,7 +1,9 @@
 package ua.bookloom.ui.state;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.UnaryOperator;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -13,7 +15,9 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
@@ -21,7 +25,9 @@ import ua.bookloom.api.project.NarratorPerson;
 /**
  * The model's proposal of the Book Brief's tone and style: asks for it, and writes the answer into the brief through the
  * view model's own change path, so it is saved and observed like a person's edit. A narrator the model could not tell
- * leaves the person's own choice alone. FX thread only.
+ * leaves the person's own choice alone. The evidence behind each field (the book's words the model quoted, and how many
+ * of the samples agreed) is kept for the screen to show while the field still holds the value the suggestion wrote.
+ * FX thread only.
  */
 @Slf4j
 public final class StyleSuggestion {
@@ -32,6 +38,10 @@ public final class StyleSuggestion {
     private final ReadOnlyBooleanWrapper suggesting = new ReadOnlyBooleanWrapper(false);
     private final ReadOnlyObjectWrapper<StyleSuggestionOutcome> outcome =
             new ReadOnlyObjectWrapper<>(StyleSuggestionOutcome.NONE);
+    private final ReadOnlyObjectWrapper<Map<BriefField, FieldEvidence>> evidence =
+            new ReadOnlyObjectWrapper<>(Map.of());
+    // The brief right after the suggestion was written, so a field the person has changed since shows no evidence.
+    private @Nullable BookBrief applied;
 
     StyleSuggestion(
             final CurrentProject project,
@@ -40,6 +50,7 @@ public final class StyleSuggestion {
         this.project = Objects.requireNonNull(project, "project");
         this.setup = setup;
         this.change = Objects.requireNonNull(change, "change");
+        project.book().addListener((observed, was, now) -> forget());
     }
 
     /** Whether a model-suggested style is offered at all: a setup helper exists. */
@@ -57,6 +68,45 @@ public final class StyleSuggestion {
         return outcome.getReadOnlyProperty();
     }
 
+    /** The evidence of the last suggestion's fields; empty before any and after the book changed. */
+    public ReadOnlyObjectProperty<Map<BriefField, FieldEvidence>> evidence() {
+        return evidence.getReadOnlyProperty();
+    }
+
+    /**
+     * The evidence to show beside one field of the brief.
+     *
+     * @param field the field
+     * @param current the brief as it is now
+     * @return the field's evidence if the last suggestion wrote it and the field still holds what it wrote, or empty
+     */
+    public Optional<FieldEvidence> evidenceFor(final BriefField field, final BookBrief current) {
+        Objects.requireNonNull(field, "field");
+        Objects.requireNonNull(current, "current");
+        final BookBrief written = applied;
+        if (written == null || !Objects.equals(valueOf(field, written), valueOf(field, current))) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(evidence.get().get(field));
+    }
+
+    private static @Nullable Object valueOf(final BriefField field, final BookBrief brief) {
+        return switch (field) {
+            case GENRE -> brief.genre();
+            case REGISTER -> brief.register();
+            case VOICE -> brief.voiceEra();
+            case AUDIENCE -> brief.audience();
+            case NARRATOR -> brief.narrator().person();
+            case NARRATOR_GENDER -> brief.narrator().gender();
+        };
+    }
+
+    private void forget() {
+        log.debug("the style suggestion's evidence is forgotten: the open book changed");
+        applied = null;
+        evidence.set(Map.of());
+    }
+
     /** Asks the model, and writes its answer into the brief of the book that is open when it arrives. */
     public void ask() {
         final OpenedBook book = project.book().get();
@@ -65,6 +115,7 @@ public final class StyleSuggestion {
         }
         log.debug("a style suggestion is asked for project {}", book.projectId());
         outcome.set(StyleSuggestionOutcome.NONE);
+        forget();
         suggesting.set(true);
         setup.runShown(
                         ActivityKind.SUGGEST_STYLE,
@@ -97,7 +148,14 @@ public final class StyleSuggestion {
             return;
         }
         final BriefSuggestion suggestion = Objects.requireNonNull(answer.data(), "data");
+        final BookBrief before = project.brief().get();
+        final BriefSuggestion aligned = before == null ? suggestion : suggestion.alignedTo(before.narrator());
         change.accept("style suggestion", brief -> withSuggestion(brief, suggestion));
+        applied = project.brief().get();
+        log.debug(
+                "the style suggestion wrote the brief; evidence for {}",
+                aligned.evidence().keySet());
+        evidence.set(aligned.evidence());
         outcome.set(StyleSuggestionOutcome.of(StyleSuggestionOutcome.Kind.DONE));
     }
 

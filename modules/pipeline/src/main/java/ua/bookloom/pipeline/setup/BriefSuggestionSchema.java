@@ -8,8 +8,28 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class BriefSuggestionSchema {
 
-    /** An object holding the six fields the brief suggestion answers with. */
+    /** An object holding the six fields the brief suggestion answers with, each a value, its quote and a confidence. */
     public static final String SCHEMA = """
-            {"type":"object","properties":{"genre":{"type":"string"},"register":{"type":"string","enum":["formal","neutral","casual"]},"voice":{"type":"string"},"audience":{"type":"string"},"narrator":{"type":"string","enum":["first","third","unspecified"]},"narratorGender":{"type":"string","enum":["male","female","unknown"]}},"required":["genre","register","voice","audience","narrator","narratorGender"],"additionalProperties":false}
-            """.strip();
+            {"type":"object","properties":{\
+            "genre":%s,\
+            "register":%s,\
+            "voice":%s,\
+            "audience":%s,\
+            "narrator":%s,\
+            "narratorGender":%s},\
+            "required":["genre","register","voice","audience","narrator","narratorGender"],\
+            "additionalProperties":false}""".formatted(
+                    field("{\"type\":\"string\"}"),
+                    field("{\"type\":\"string\",\"enum\":[\"formal\",\"neutral\",\"casual\"]}"),
+                    field("{\"type\":\"string\"}"),
+                    field("{\"type\":\"string\"}"),
+                    field("{\"type\":\"string\",\"enum\":[\"first\",\"third\",\"unspecified\"]}"),
+                    field("{\"type\":\"string\",\"enum\":[\"male\",\"female\",\"unknown\"]}"));
+
+    private static String field(final String value) {
+        return """
+                {"type":"object","properties":{"value":%s,"evidence":{"type":"string"},\
+                "confidence":{"type":"number"}},"required":["value","evidence","confidence"],\
+                "additionalProperties":false}""".formatted(value);
+    }
 }

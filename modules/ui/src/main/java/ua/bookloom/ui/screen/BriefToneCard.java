@@ -1,7 +1,9 @@
 package ua.bookloom.ui.screen;
 
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -15,6 +17,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
@@ -32,7 +35,8 @@ import ua.bookloom.ui.state.StyleSuggestionOutcome;
 /**
  * The Tone &amp; style card: a genre box that suggests the forty predefined genres and also takes free text, the
  * register, the free-text narrative voice and audience, and who narrates (the person and, for a first-person narrator, the
- * gender).
+ * gender). Under each field the model suggested, its evidence: the book's words it quoted and how many samples agree,
+ * or an "uncertain" chip.
  *
  * <p>The person sees a predefined genre in the interface language while the brief holds its English name, because the
  * prompt is written in English.
@@ -50,12 +54,16 @@ final class BriefToneCard {
     private final BriefChoice<Gender> narratorGender;
     private final TextArea voice = TabMovesFocus.install(new TextArea());
     private final TextField audience = new TextField();
+    private final Map<BriefField, BriefEvidenceRow> evidence;
+    private final BookBriefViewModel viewModel;
     private final Node node;
     // True while a value from the view model is written into a control, so it is not handed back as a person's choice.
     private boolean applying;
 
     BriefToneCard(final BookBriefViewModel viewModel, final Messages messages) {
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        this.evidence = evidenceRows(messages);
         this.genre = genreBox(viewModel);
         this.register = registerChoice(viewModel, messages);
         Tips.install(messages, register.node(), MessageKey.BRIEF_TONE_REGISTER_TIP);
@@ -68,13 +76,46 @@ final class BriefToneCard {
                 messages,
                 MessageKey.BRIEF_CARD_TONE,
                 suggestion(viewModel, messages),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_GENRE, genre),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_REGISTER, register.withHelp()),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_VOICE, voice),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_AUDIENCE, audience),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR, narrator.withHelp()),
-                BriefCards.field(messages, MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.withHelp()),
+                field(MessageKey.BRIEF_TONE_GENRE, genre, BriefField.GENRE),
+                field(MessageKey.BRIEF_TONE_REGISTER, register.withHelp(), BriefField.REGISTER),
+                field(MessageKey.BRIEF_TONE_VOICE, voice, BriefField.VOICE),
+                field(MessageKey.BRIEF_TONE_AUDIENCE, audience, BriefField.AUDIENCE),
+                field(MessageKey.BRIEF_TONE_NARRATOR, narrator.withHelp(), BriefField.NARRATOR),
+                field(MessageKey.BRIEF_TONE_NARRATOR_GENDER, narratorGender.withHelp(), BriefField.NARRATOR_GENDER),
                 notice);
+        viewModel
+                .styleSuggestion()
+                .evidence()
+                .addListener(
+                        (observed, was, now) -> showEvidence(viewModel.brief().get()));
+    }
+
+    private static Map<BriefField, BriefEvidenceRow> evidenceRows(final Messages messages) {
+        final Map<BriefField, BriefEvidenceRow> rows = new EnumMap<>(BriefField.class);
+        for (final BriefField field : BriefField.values()) {
+            rows.put(field, new BriefEvidenceRow(messages, field));
+        }
+        return rows;
+    }
+
+    // A labelled field with the suggestion's evidence line under its control.
+    private Node field(final MessageKey label, final Node control, final BriefField field) {
+        return BriefCards.field(messages, label, withEvidence(control, field));
+    }
+
+    private Node withEvidence(final Node control, final BriefField field) {
+        return new VBox(
+                FIELD_SPACING,
+                control,
+                Objects.requireNonNull(evidence.get(field), "row").node());
+    }
+
+    // A field shows the suggestion's evidence only while it holds what the suggestion wrote into it.
+    private void showEvidence(final @Nullable BookBrief brief) {
+        evidence.forEach((field, row) -> row.show(
+                brief == null
+                        ? null
+                        : viewModel.styleSuggestion().evidenceFor(field, brief).orElse(null)));
     }
 
     private static BriefChoice<Register> registerChoice(final BookBriefViewModel viewModel, final Messages messages) {
@@ -226,6 +267,7 @@ final class BriefToneCard {
             narratorGender.node().setDisable(brief.narrator().person() != NarratorPerson.FIRST);
             showText(voice, brief.voiceEra());
             showText(audience, brief.audience());
+            showEvidence(brief);
         } finally {
             applying = false;
         }

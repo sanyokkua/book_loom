@@ -5,8 +5,9 @@ Title: {{title}}
 {{#author}}
 Author: {{author}}
 {{/author}}
-Opening paragraphs:
-{{opening}}
+Dialogue share, measured in the sample: {{dialogueShare}} % of its letters are in quoted speech.
+Sample (passages from the start, the middle and a late chapter of the book):
+{{sample}}
 </Input>
 
-Return one JSON object with the fields genre, register, voice, audience, narrator and narratorGender.
+Return one JSON object with the fields genre, register, voice, audience, narrator and narratorGender, each with value, evidence and confidence.

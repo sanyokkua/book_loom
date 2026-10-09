@@ -162,7 +162,7 @@ public enum PromptName {
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
             new Slots(Set.of("fileName"), Set.of("title", "author", "titleTarget", "authorTarget", "correction"))),
 
-    /** The proposal of the Book Brief's tone and style from the opening of the book; one small call. */
+    /** The proposal of the Book Brief's tone and style from one sample of the book; one small call per sample. */
     BRIEF_SUGGESTION(
             "brief-suggestion",
             CallKind.BRIEF_SUGGESTION,
@@ -171,7 +171,7 @@ public enum PromptName {
             0.1,
             null,
             new Slots(Set.of("sourceLanguage", "targetLanguage"), Set.of("styleSheet", "foreignPassageRule")),
-            new Slots(Set.of("opening"), Set.of("title", "author"))),
+            new Slots(Set.of("sample", "dialogueShare"), Set.of("title", "author"))),
 
     /** The name and term proposal the person asks for; a batch of candidates per call, never run by itself. */
     PRESCAN(

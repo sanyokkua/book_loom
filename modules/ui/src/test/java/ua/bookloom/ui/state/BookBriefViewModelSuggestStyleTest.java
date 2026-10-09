@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -11,7 +13,9 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.pipeline.BriefField;
 import ua.bookloom.api.pipeline.BriefSuggestion;
+import ua.bookloom.api.pipeline.FieldEvidence;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.NarratorPerson;
@@ -180,5 +184,73 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
 
         assertThat(stored().narrator().person()).isEqualTo(NarratorPerson.FIRST);
         assertThat(stored().narrator().gender()).isEqualTo(Gender.MALE);
+    }
+
+    private static final FieldEvidence AGREED = new FieldEvidence(List.of("Hang on, man"), 2, 2);
+    private static final FieldEvidence UNCERTAIN = new FieldEvidence(List.of(), 1, 2);
+
+    private static BriefSuggestion withEvidence(final NarratorPerson narrator) {
+        return new BriefSuggestion(
+                "noir",
+                Register.CASUAL,
+                null,
+                null,
+                narrator,
+                Gender.UNKNOWN,
+                Map.of(
+                        BriefField.GENRE, AGREED,
+                        BriefField.REGISTER, AGREED,
+                        BriefField.AUDIENCE, UNCERTAIN,
+                        BriefField.NARRATOR, AGREED));
+    }
+
+    private java.util.Optional<FieldEvidence> evidence(final BriefField field) {
+        return onFx(
+                () -> brief.styleSuggestion().evidenceFor(field, brief.brief().get()));
+    }
+
+    // IF the evidence were dropped on the way to the screen, THEN the person could not see why a field was filled.
+    @Test
+    void suggestStyle_answerWithEvidence_keepsEachFieldsEvidenceForTheScreen() {
+        chooseModel();
+        assistant.answersBrief(Result.ok(withEvidence(NarratorPerson.FIRST)));
+
+        suggest();
+
+        assertThat(evidence(BriefField.REGISTER)).contains(AGREED);
+        assertThat(evidence(BriefField.AUDIENCE)).contains(UNCERTAIN);
+        assertThat(evidence(BriefField.NARRATOR)).contains(AGREED);
+        assertThat(evidence(BriefField.VOICE)).isEmpty();
+    }
+
+    @Test
+    void suggestStyle_personChangesASuggestedField_itsEvidenceIsNoLongerOffered() {
+        chooseModel();
+        assistant.answersBrief(Result.ok(withEvidence(NarratorPerson.FIRST)));
+        suggest();
+
+        onFx(() -> {
+            brief.setRegister(Register.FORMAL_LITERARY);
+            return null;
+        });
+
+        assertThat(evidence(BriefField.REGISTER)).isEmpty();
+        assertThat(evidence(BriefField.GENRE)).contains(AGREED);
+    }
+
+    // IF the model's narrator evidence showed beside the person's own narrator, THEN it would vouch for their choice.
+    @Test
+    void suggestStyle_personAlreadyNamedANarrator_offersNoNarratorEvidence() {
+        chooseModel();
+        onFx(() -> {
+            brief.setFirstPersonNarrator(Gender.MALE);
+            return null;
+        });
+        assistant.answersBrief(Result.ok(withEvidence(NarratorPerson.THIRD)));
+
+        suggest();
+
+        assertThat(evidence(BriefField.NARRATOR)).isEmpty();
+        assertThat(evidence(BriefField.GENRE)).contains(AGREED);
     }
 }
