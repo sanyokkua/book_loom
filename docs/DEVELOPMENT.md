@@ -917,6 +917,48 @@ holds counts and verdict words, never log text. `LogReplayCorpusTest` and `Repla
 the runner on `eval/replay/sample-trace.txt`, an invented log in the real line format; `LogReplayRealLogTest` parses a real log
 when `BOOKLOOM_EVAL_REPLAY_LOG` is set, without sending anything.
 
+<a id="recall-suite"></a>**Detector recall over an exported book (15h.E2).** How many of the defects a person finds in a finished
+book the code's own detectors catch, and how often they fire on a sound paragraph. No model is involved:
+
+```bash
+BOOKLOOM_EVAL_SUITE=recall BOOKLOOM_RECALL_DIR=~/bookloom-recall ./gradlew :pipeline:promptEval --tests '*RecallEvalTest*'
+BOOKLOOM_RECALL_DIR=~/bookloom-recall scripts/eval-matrix.sh --suite recall     # the same, then the table
+```
+
+`BOOKLOOM_RECALL_DIR` must lie **outside the repository** (the test refuses a path inside the checkout); unset, the test is
+skipped. The directory is one book (it holds `book.json`) or holds one sub-directory per book. A book directory holds:
+
+| File | Who writes it | What it holds |
+|---|---|---|
+| `book.json` | the owner | `{"source": "Burning Chrome.epub", "exported": "Burning Chrome (uk).epub", "glossary": "glossary.csv", "sourceLanguage": "en", "targetLanguage": "uk", "narrator": {"person": "FIRST", "gender": "MALE"}}` — `source` and `exported` are required (paths relative to the directory); the glossary is the export's CSV side file; the languages default to `en` and `uk`, the narrator to unstated |
+| `segments.jsonl` | the suite, on every run | one line per aligned segment: `{"id", "hash", "source", "target", "fired"}` — the display texts and the detectors that fired; **book text**, which is why the directory stays outside the repository. This is what a reading (a person, or an Opus reading the person spot-checks) labels |
+| `gold.jsonl` | the reading | one line per segment that was read, no book text: `{"hash": "<64 hex>", "classes": ["dropped-sentence"], "expect": ["sentence-count", "audit:sentence-count"]}` |
+
+*Gold line format.* `hash` is SHA-256, lower-case hex, of the NFC form of the source's display text, the unit separator U+001F and
+the exported text's display text (`RecallGold.hash`; display text = `DisplayText.of`, tokens out, whitespace runs as one space,
+trimmed), copied from `segments.jsonl`. `classes` are the defect classes the reading found, free words such as `dropped-sentence`,
+`untranslated`, `wrong-gender`, `name-lost`, `wrong-meaning`; an empty list marks a segment read and found **clean** (needed for
+precision). `expect` names the detectors that should have caught it, spelled as the report spells them: the run check's
+`raisedBy` (`sentence-count`, `language-identity`, `quote-balance`, `number`, `vocative`, `name-swap`, `gender`, `length`, `echo`,
+… — `qa.CheckName`) or the final audit's `audit:<check>`; leave it empty when no deterministic detector can see the defect. A
+segment no line names is unread and counts nowhere. A line whose hash matches no segment (a new export of other text) is counted as
+`staleGold`; a malformed or repeated line fails the run with its line number.
+
+*What runs.* Both books are opened through `DocumentPort` and paired by segment id (`ExportedBooks.recordsOf`; a single-file book's
+unit id is its file name, so an export under another name is paired unit by unit). Each pair goes through the run's own
+evaluation, `QaEvaluator.evaluate` (refusal gate, every deterministic text check, the soft checks) with the glossary's pairs and the
+segment's character sheet, then `FinalAudit.scan` reads the whole book as accepted, unreviewed records. The word validator is the
+offline one, so `unknown-word` never fires.
+
+*Report* (`build/reports/promptEval/recall.{txt,json}` and the history; counts and names only). Per detector: `fired` (read
+segments it fired on), `tp` (of those, defective), precision = tp / fired, `expected` (segments whose gold expects it) and recall
+= caught / expected. Per defect class: recall = the share of its segments **any** detector fired on; precision = of the read
+segments one of the class's expected detectors fired on, the share of that class. Overall: `recall` (defective segments any
+detector fired on) and `falseAlarm` (clean segments any detector fired on). A rate with an empty population prints `-` (`null` in
+the JSON). `RecallSuiteTest` (in `check`) proves all of it on `eval/recall/mini/`, an invented eight-paragraph English → Ukrainian
+book exported under another name. The gold for the three Oct 9 books is produced from the Opus readings and spot-checked by the owner (pending); it stays
+in the owner's directory.
+
 **Scoreboard: comparing prompt rounds (A7).** Every eval report's JSON starts with a `provenance` object (`EvalProvenance`:
 ISO timestamp, short git SHA and dirty flag, a 12-hex hash of `modules/pipeline/src/main/resources/ua/bookloom/pipeline/prompt/**`,
 model, `BOOKLOOM_EVAL_LABEL`, provider, window, dial, brief preset and overrides, suite). Besides `build/reports/promptEval`

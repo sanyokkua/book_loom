@@ -2,7 +2,7 @@
 # Runs the :pipeline promptEval over the models in scripts/eval-models.txt (or --models) (Ollama and LM Studio), one model resident at a time and
 # one gradle at a time, then prints a comparison table from build/reports/promptEval/*.json.
 #   scripts/eval-matrix.sh [--stability N] [--only PREFIX] [--table-only] [--models "ollama:gemma4:e4b-mlx lmstudio:google/gemma-4-e4b"]
-#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay] [--batch-sizes 4,8,12,16]
+#                          [--rules generic] [--langs all|fr,de,...] [--suite batch|words|realrun|sequence|prescan|terms|setup|consistency|retry|replay|recall] [--batch-sizes 4,8,12,16]
 # --rules generic forces every prompt to the generic language rules (reports end in -generic.json), so run the matrix
 # once without it and once with it and compare the two rows of each model in the table. --langs runs the per-language
 # mini-corpora (eval/languages/<tag>.json) instead of the English -> Ukrainian case set. --suite batch runs the batch
@@ -34,6 +34,10 @@
 # One row per model and suite: share of cases right, calls, failed and repeated calls, refused answers.
 # --suite replay sends the calls of a real run's trace log again (BOOKLOOM_EVAL_REPLAY_LOG=<bookloom-trace.log[.gz]>; see
 # docs/DEVELOPMENT.md, replay): BOOKLOOM_EVAL_REPLAY_MODE=raw|fast, _MAX_BYTES, _LIMIT, _TARGET pass through the environment.
+# --suite recall needs no model (15h.E2): it reads the owner's exported books under BOOKLOOM_RECALL_DIR (outside the
+# repository; docs/DEVELOPMENT.md, recall suite), runs every deterministic check and the final audit on each aligned
+# segment, and prints recall and precision per detector and per defect class against each book's gold.jsonl. --models
+# is ignored; the report is build/reports/promptEval/recall.json.
 # Gradle's output is kept in build/eval-matrix/<model>-<narrator>.log; its key lines are shown when a model fails.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -105,7 +109,20 @@ run_one() {
   if [ "$provider" = lmstudio ]; then lms unload --all >/dev/null 2>&1; else ollama stop "$model" >/dev/null 2>&1; fi
 }
 
-if [ "$TABLE_ONLY" = 0 ]; then
+run_recall() {
+  [ -n "${BOOKLOOM_RECALL_DIR:-}" ] || { echo "!! --suite recall needs BOOKLOOM_RECALL_DIR" >&2; exit 2; }
+  mkdir -p build/eval-matrix
+  local log=build/eval-matrix/recall.log
+  echo "== recall dir=$BOOKLOOM_RECALL_DIR (gradle log: $log)"
+  if ! BOOKLOOM_EVAL_SUITE=recall ./gradlew :pipeline:promptEval --tests '*RecallEvalTest*' >"$log" 2>&1; then
+    echo "   !! gradle failed; what $log says:"
+    grep -E "FAILED|AssertionError|Exception|Expecting" "$log" | head -15 | sed 's/^/   | /'
+  fi
+}
+
+if [ "$TABLE_ONLY" = 0 ] && [ "$SUITE" = recall ]; then
+  run_recall
+elif [ "$TABLE_ONLY" = 0 ]; then
   if [ "$NARRATOR" = both ]; then MODES="unset set"; else MODES=$NARRATOR; fi
   for m in $MODELS; do
     if [ "$SUITE" = sequence ]; then for n in $MODES; do run_one "$m" "$n"; done; else run_one "$m"; fi
@@ -149,6 +166,17 @@ if sys.argv[2] == "sequence":
         print("%-30s %-6s %7d %7d %8d %8d %7.0f%% %8d %7.0f%%  %s" % (r.get("model", "?"), r.get("narrator", "?"), r.get("hardGateFailuresRound0", 0), r.get("leakedProtocol", 0), r.get("reviewerTruncated", 0), r.get("termClaimedWrong", 0), 100 * r.get("dominantShareMean", 0), r.get("learned", 0), 100 * r.get("learnedCoverage", 0), " ".join("%s=%d(%.0f%%)" % (t.get("term", "?"), t.get("distinct", 0), 100 * t.get("dominantShare", 0)) for t in r.get("terms", []))))
     print("(rend/tm: mean distinct renderings per fixture term, 1.00 is ideal; gender: narrator slips in the first-person chapters; hard0: segments whose first round failed a hard gate; claimed: terms sharing a learned rendering)")
     sys.exit(0)
+if sys.argv[2] == "recall":
+    pct = lambda v: "-" if v is None else "%.0f%%" % (100 * v)
+    for r in (r for r in reports if r.get("suite") == "recall"):
+        print("books=%d aligned=%d read=%d defective=%d unaligned=%d staleGold=%d recall=%s falseAlarm=%s" % (len(r["books"]), r["aligned"], r["read"], r["defective"], r["unaligned"], r["staleGold"], pct(r["recall"]), pct(r["falseAlarm"])))
+        print("%-32s %6s %6s %9s %8s %6s" % ("detector", "fired", "tp", "precision", "expected", "recall"))
+        for d in r["detectors"]:
+            print("%-32s %6d %6d %9s %8d %6s" % (d["name"], d["fired"], d["truePositive"], pct(d["precision"]), d["expected"], pct(d["recall"])))
+        print("%-32s %6s %6s %6s %7s %9s" % ("class", "segs", "caught", "recall", "flagged", "precision"))
+        for c in r["classes"]:
+            print("%-32s %6d %6d %6s %7d %9s" % (c["name"], c["segments"], c["caught"], pct(c["recall"]), c["flagged"], pct(c["precision"])))
+    sys.exit(0)
 if sys.argv[2] == "words":
     print("%-36s %5s %8s %8s %6s" % ("model", "cases", "recall", "falsePos", "ok"))
     for r in (r for r in reports if r.get("suite") == "words"):
@@ -160,7 +188,7 @@ if sys.argv[2] in STAGES:
     for r in (r for r in reports if r.get("suite") == sys.argv[2]):
         print("%-36s %-12s %5d %5.0f%% %6d %6d %8d %7d" % (r["model"], r["suite"], r["cases"], 100 * r["passRate"], r["calls"], r["failed"], r["repeated"], r["refused"]))
     sys.exit(0)
-rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence") + STAGES]
+rows = [r for r in reports if r.get("suite") not in ("batch", "words", "realrun", "sequence", "recall") + STAGES]
 cols = ["parse", "gate", "script", "marker", "injection", "reviewSeparation", "reviewParse", "falseNegative", "falsePositive", "stability"]
 print("%-36s %-8s %-6s " % ("model", "rules", "class") + " ".join("%7s" % c[:7] for c in cols) + " tokBrk  ok")
 for r in rows:

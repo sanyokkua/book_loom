@@ -3,12 +3,7 @@ package ua.bookloom.pipeline.audit;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.google.inject.Guice;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,19 +11,13 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.document.Document;
 import ua.bookloom.api.document.DocumentPort;
-import ua.bookloom.api.document.Segment;
-import ua.bookloom.api.document.SegmentStatus;
-import ua.bookloom.api.document.Unit;
 import ua.bookloom.api.pipeline.SuspiciousSegment;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.SegmentPath;
-import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.document.DocumentModule;
-import ua.bookloom.pipeline.DisplayText;
 import ua.bookloom.pipeline.checks.WordValidator;
-import ua.bookloom.pipeline.glossary.GlossaryCsv;
+import ua.bookloom.pipeline.eval.ExportedBooks;
 
 /**
  * Local-only tool: audits a book that was already exported against its source, with no model and no project. Run
@@ -47,22 +36,20 @@ class ExportedBookAuditTool {
     private static final String GLOSSARY = "BOOKLOOM_AUDIT_GLOSSARY";
 
     @Test
-    void audit_exportedBookAgainstItsSource_printsTheSuspiciousSegments() throws IOException {
+    void audit_exportedBookAgainstItsSource_printsTheSuspiciousSegments() {
         final String source = System.getenv(SOURCE);
         final String exported = System.getenv(EXPORT);
         assumeTrue(source != null && exported != null, "set BOOKLOOM_AUDIT_SOURCE and BOOKLOOM_AUDIT_EXPORT");
         final DocumentPort documents =
                 Guice.createInjector(new DocumentModule()).getInstance(DocumentPort.class);
-        final Document original = Objects.requireNonNull(
-                documents.open(Path.of(Objects.requireNonNull(source))).data());
-        final Document written = Objects.requireNonNull(
-                documents.open(Path.of(Objects.requireNonNull(exported))).data());
+        final Document original = ExportedBooks.open(documents, Path.of(Objects.requireNonNull(source)));
+        final Document written = ExportedBooks.open(documents, Path.of(Objects.requireNonNull(exported)));
         final String from = System.getenv().getOrDefault("BOOKLOOM_AUDIT_FROM", "en");
         final String to = System.getenv().getOrDefault("BOOKLOOM_AUDIT_TO", "uk");
         final BookBrief brief = withTarget(BookBrief.defaults(from), to);
         final FinalAudit.Book book = new FinalAudit.Book(brief, original, glossary(), WordValidator.none());
 
-        final Map<String, List<QaFinding>> doubted = FinalAudit.scan(book, recordsOf(original, written));
+        final Map<String, List<QaFinding>> doubted = FinalAudit.scan(book, ExportedBooks.recordsOf(original, written));
         final List<SuspiciousSegment> suspicious = FinalAudit.named(doubted, original);
 
         System.out.println("AUDIT suspicious=" + suspicious.size());
@@ -91,55 +78,8 @@ class ExportedBookAuditTool {
                 brief.dial());
     }
 
-    private static List<GlossaryEntry> glossary() throws IOException {
+    private static List<GlossaryEntry> glossary() {
         final String file = System.getenv(GLOSSARY);
-        if (file == null) {
-            return List.of();
-        }
-        final List<GlossaryEntry> entries = new ArrayList<>();
-        for (final GlossaryCsv.Row row : GlossaryCsv.parse(Files.readString(Path.of(file), StandardCharsets.UTF_8))
-                .rows()) {
-            entries.add(new GlossaryEntry(
-                    "audit-" + entries.size(), "audit", row.term(), row.target(), row.type(), row.gender(), false));
-        }
-        return entries;
-    }
-
-    // Each source segment that the exported book also holds becomes an accepted record whose target is the written
-    // text.
-    private static List<SegmentRecord> recordsOf(final Document original, final Document written) {
-        final Map<String, Segment> writtenById = new HashMap<>();
-        written.units().forEach(unit -> unit.segments().forEach(segment -> writtenById.put(segment.id(), segment)));
-        final List<SegmentRecord> records = new ArrayList<>();
-        for (final Unit unit : original.units()) {
-            for (final Segment segment : unit.segments()) {
-                final Segment target = writtenById.get(segment.id());
-                if (target != null) {
-                    records.add(record(segment, DisplayText.of(target.masked())));
-                }
-            }
-        }
-        return records;
-    }
-
-    private static SegmentRecord record(final Segment segment, final String text) {
-        return new SegmentRecord(
-                "audit",
-                segment.id(),
-                segment.unit(),
-                segment.order(),
-                segment.kind(),
-                SegmentStatus.ACCEPTED,
-                text,
-                text,
-                null,
-                null,
-                1.0,
-                null,
-                List.<QaFinding>of(),
-                SegmentPath.DRAFT,
-                0,
-                false,
-                null);
+        return ExportedBooks.glossary(file == null ? null : Path.of(file));
     }
 }
