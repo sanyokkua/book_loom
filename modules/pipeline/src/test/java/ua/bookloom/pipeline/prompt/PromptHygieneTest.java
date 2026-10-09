@@ -2,7 +2,13 @@ package ua.bookloom.pipeline.prompt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -42,5 +48,60 @@ class PromptHygieneTest {
         assertThat(context.summary()).isNull();
         assertThat(context.glossaryLines()).isEmpty();
         assertThat(context.memoryLines()).isEmpty();
+    }
+
+    private static final Path PROMPTS = Path.of("src/main/resources/ua/bookloom/pipeline/prompt");
+    // A template-tag, block, JSON or finished-sentence line may be followed by anything.
+    private static final Pattern SKIPPED_LINE =
+            Pattern.compile("^(\\{\\{[#/^]?\\w+\\}\\}$|[\\[<\\]]|\\{(?!\\{))|\":|[.:?!\"}>\\]]$");
+    // A list item, a numbered rule, a tag or a template tag starts a line of its own.
+    private static final Pattern NEW_BLOCK =
+            Pattern.compile("^(- |\\d+\\. |\\{\\{[#/^]?\\w+\\}\\}$|[\\[<\\]]|\\{(?!\\{))");
+    private static final Pattern WRONG_ARTICLE =
+            Pattern.compile("\\ba (\\{\\{(source|target)Language\\}\\}|English\\b)");
+
+    // A line cut mid-sentence at a fixed column reads as two sentences to a small model, and costs a wasted newline.
+    @Test
+    void templates_noSentenceIsHardWrapped() throws IOException {
+        final List<String> wrapped = new ArrayList<>();
+        for (final Path file : promptFiles()) {
+            final List<String> lines = Files.readAllLines(file);
+            for (int i = 0; i + 1 < lines.size(); i++) {
+                if (isHardWrapped(lines.get(i), lines.get(i + 1))) {
+                    wrapped.add(file.getFileName() + ":" + (i + 1));
+                }
+            }
+        }
+        assertThat(wrapped).isEmpty();
+    }
+
+    // "a English" is wrong for every source language that starts with a vowel; the templates name no article before a
+    // slot.
+    @Test
+    void templates_noArticleBeforeALanguageSlot() throws IOException {
+        final List<String> bad = new ArrayList<>();
+        for (final Path file : promptFiles()) {
+            if (WRONG_ARTICLE.matcher(Files.readString(file)).find()) {
+                bad.add(file.getFileName().toString());
+            }
+        }
+        assertThat(bad).isEmpty();
+    }
+
+    private static boolean isHardWrapped(final String line, final String next) {
+        if (line.isBlank()
+                || next.isBlank()
+                || SKIPPED_LINE.matcher(line.strip()).find()) {
+            return false;
+        }
+        return !NEW_BLOCK.matcher(next).find();
+    }
+
+    private static List<Path> promptFiles() throws IOException {
+        try (Stream<Path> files = Files.list(PROMPTS)) {
+            return files.filter(file -> file.toString().endsWith(".prompt"))
+                    .sorted()
+                    .toList();
+        }
     }
 }
