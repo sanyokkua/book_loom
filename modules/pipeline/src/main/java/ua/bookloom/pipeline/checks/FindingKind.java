@@ -55,5 +55,8 @@ public enum FindingKind {
     NAME_SPELLING,
 
     /** A word of another language that the target language's file lists with its replacement. */
-    FOREIGN_WORD
+    FOREIGN_WORD,
+
+    /** A UUID, hexadecimal string, ISBN, web address or e-mail address of the source that the target changed or lost. */
+    IDENTIFIER_CHANGED
 }

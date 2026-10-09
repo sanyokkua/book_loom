@@ -116,6 +116,55 @@ class FrequencyScanTest {
         assertThat(candidates).containsExactly(new NameCandidate("Moreau", 2, "She met Moreau in the hall."));
     }
 
+    @Test
+    void candidates_possessiveEndsARun_nextNameIsSeparate() {
+        final List<String> lines = copies("We saw Chrome’s Zurich office again.", 3);
+
+        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).containsExactlyInAnyOrder("Chrome", "Zurich");
+    }
+
+    @Test
+    void candidates_pluralOfAnotherName_isItsAliasAndAddsToItsCount() {
+        final List<String> lines = new ArrayList<>(copies("We saw Chrome at the door.", 6));
+        lines.addAll(copies("We saw the Chromes at the door.", 3));
+
+        final List<NameCandidate> candidates =
+                FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en");
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.getFirst().term()).isEqualTo("Chrome");
+        assertThat(candidates.getFirst().count()).isEqualTo(9);
+        assertThat(candidates.getFirst().aliases()).containsExactly("Chromes");
+    }
+
+    @Test
+    void candidates_oneEditAtAFifthOfTheCount_isAnAlias() {
+        final List<String> lines = new ArrayList<>(copies("We saw Zurich at the door.", 15));
+        lines.addAll(copies("We saw Zurish at the door.", 3));
+
+        final List<NameCandidate> candidates =
+                FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en");
+
+        assertThat(candidates).extracting(NameCandidate::term).containsExactly("Zurich");
+        assertThat(candidates.getFirst().aliases()).containsExactly("Zurish");
+    }
+
+    @Test
+    void candidates_oneEditAtMoreThanAFifthOfTheCount_isAnotherName() {
+        final List<String> lines = new ArrayList<>(copies("We saw Zurich at the door.", 10));
+        lines.addAll(copies("We saw Zurish at the door.", 4));
+
+        final List<String> terms = FrequencyScan.candidates(GlossaryTestSegments.of(lines), THRESHOLD, "en").stream()
+                .map(NameCandidate::term)
+                .toList();
+
+        assertThat(terms).containsExactlyInAnyOrder("Zurich", "Zurish");
+    }
+
     private static List<String> namesAndRuns() {
         final List<String> lines = new ArrayList<>(copies("We saw Hale at the door.", 5));
         lines.addAll(copies("They walked to Baker Street later.", 3));

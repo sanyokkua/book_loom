@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -174,7 +175,11 @@ public final class PreScan {
             final CallFrame frame,
             final NamePolicy policy,
             final ModelCalls calls) {
-        return fresh(projectId, proposals, frame.sourceLanguage())
+        return fresh(
+                        projectId,
+                        proposals,
+                        NameHygiene.occurrencesIn(Tokens.visibleTexts(segments)),
+                        frame.sourceLanguage())
                 .flatMap(fresh -> confirmed(fresh, segments, frame, calls))
                 .flatMap(confirmed ->
                         suggestions.suggestOnto(seeded(confirmed, segments, frame), segments, frame, policy, calls))
@@ -271,7 +276,10 @@ public final class PreScan {
 
     /** The proposals as entries, leaving out a term the glossary holds or the person removed. */
     private Result<List<GlossaryEntry>> fresh(
-            final String projectId, final Collection<Proposal> proposals, @Nullable final String language) {
+            final String projectId,
+            final Collection<Proposal> proposals,
+            final ToIntFunction<String> inBook,
+            @Nullable final String language) {
         final Result<List<GlossaryEntry>> held = glossary.all(projectId);
         if (held.isErr()) {
             return held;
@@ -283,7 +291,7 @@ public final class PreScan {
                 proposals.stream().map(proposal -> proposal.candidate().term()).toList();
         for (final Proposal proposal : proposals) {
             final String term = proposal.candidate().term();
-            if (NameHygiene.rejection(term, proposed, language).isPresent()) {
+            if (NameHygiene.rejection(term, proposed, language, inBook).isPresent()) {
                 continue;
             }
             final Result<Boolean> removed = glossary.wasRemoved(projectId, term);

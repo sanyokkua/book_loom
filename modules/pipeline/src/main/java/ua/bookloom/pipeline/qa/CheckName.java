@@ -67,6 +67,9 @@ public enum CheckName {
     /** Text check, soft: a woman's name followed by a masculine verb or declined like a man's name. */
     NAME_GENDER(0.0, "gender", "name-gender", false),
 
+    /** Text check, blocking: a UUID, hexadecimal string, ISBN, web address or e-mail address the target changed or lost. */
+    IDENTIFIER(0.0, "meaning", "identifier", true),
+
     /** Text check, soft: a number the source writes in digits that the target changed or lost. */
     NUMBER(0.0, "meaning", "number", false),
 

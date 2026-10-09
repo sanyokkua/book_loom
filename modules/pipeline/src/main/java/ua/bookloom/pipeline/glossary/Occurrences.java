@@ -50,11 +50,13 @@ final class Occurrences {
      * @param text the word as written, without a trailing possessive
      * @param start where it starts in the segment's text
      * @param end where it ends, after a trailing possessive
+     * @param possessive whether it carries a trailing possessive, which ends a name run
      * @param capitalised whether it starts with a capital and is not a title such as {@code Mr.}
      * @param initial whether it starts a sentence
      * @param sentence the index of its sentence
      */
-    record Word(String text, int start, int end, boolean capitalised, boolean initial, int sentence) {
+    record Word(
+            String text, int start, int end, boolean possessive, boolean capitalised, boolean initial, int sentence) {
 
         /** The key a word's counts are kept under. */
         String key() {
@@ -90,7 +92,7 @@ final class Occurrences {
 
     /**
      * The runs of a read segment: a word the test accepts, followed by up to two more accepted words separated from it
-     * by spaces only.
+     * by spaces only; a possessive ends a run, so {@code Chrome’s Zurich} is two names.
      *
      * @param read the segment
      * @param nameLike whether a word may be (part of) a name
@@ -129,7 +131,13 @@ final class Occurrences {
             final boolean honorific = isHonorific(text, matcher.start(), matcher.end(1));
             final boolean capitalised = !honorific && Character.isUpperCase(text.codePointAt(matcher.start()));
             words.add(new Word(
-                    matcher.group(1), matcher.start(), matcher.end(), capitalised, initial, sentenceStarts.size() - 1));
+                    matcher.group(1),
+                    matcher.start(),
+                    matcher.end(),
+                    matcher.end() > matcher.end(1),
+                    capitalised,
+                    initial,
+                    sentenceStarts.size() - 1));
             previousEnd = matcher.end();
             previousHonorific = honorific;
         }
@@ -168,6 +176,7 @@ final class Occurrences {
         int end = first + 1;
         while (end < words.size()
                 && end - first < MAX_RUN_WORDS
+                && !words.get(end - 1).possessive()
                 && nameLike.test(words.get(end))
                 && SPACES.matcher(text.substring(
                                 words.get(end - 1).end(), words.get(end).start()))

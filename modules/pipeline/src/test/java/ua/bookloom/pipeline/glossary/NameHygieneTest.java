@@ -63,4 +63,30 @@ class NameHygieneTest {
         assertThat(NameHygiene.rejection("Corvin", List.of("Corvin", "Flint"), "en"))
                 .isEmpty();
     }
+
+    @Test
+    void rejection_pluralOfAnotherCandidate_isRejected() {
+        assertThat(NameHygiene.rejection("Ikons", List.of("Ikon", "Ikons"), "en"))
+                .hasValueSatisfying(reason -> assertThat(reason).contains("Ikon"));
+        assertThat(NameHygiene.rejection("Ikon", List.of("Ikon", "Ikons"), "en"))
+                .isEmpty();
+    }
+
+    @Test
+    void rejection_pluralSuffixOfAnotherLanguage_followsItsFile() {
+        assertThat(NameHygiene.rejection("Ікони", List.of("Ікон", "Ікони"), "uk"))
+                .isPresent();
+        assertThat(NameHygiene.rejection("Ikons", List.of("Ikon", "Ikons"), "xx"))
+                .isEmpty();
+    }
+
+    @Test
+    void rejection_fragmentWithTheBookText_isJudgedByItsStandaloneUse() {
+        final List<String> all = List.of("Flint", "Flint & Chisel");
+        final java.util.function.ToIntFunction<String> mostlyAlone = term -> term.equals("Flint") ? 20 : 3;
+        final java.util.function.ToIntFunction<String> onlyInside = term -> 3;
+
+        assertThat(NameHygiene.rejection("Flint", all, "en", mostlyAlone)).isEmpty();
+        assertThat(NameHygiene.rejection("Flint", all, "en", onlyInside)).isPresent();
+    }
 }

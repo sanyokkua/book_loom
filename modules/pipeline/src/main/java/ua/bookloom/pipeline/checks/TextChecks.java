@@ -65,7 +65,19 @@ public final class TextChecks {
             log.debug("Text checks skipped: the target is only digits and locators");
             return List.of();
         }
-        final List<CheckFinding> findings = new ArrayList<>();
+        return runOn(source, target, sourceLanguage, targetLanguage, glossaryPairs);
+    }
+
+    // The identifiers are overwritten by filler first: no language or script check may hold them against the text.
+    private static List<CheckFinding> runOn(
+            final String original,
+            final String originalTarget,
+            @Nullable final String sourceLanguage,
+            final String targetLanguage,
+            final List<String> glossaryPairs) {
+        final String source = Identifiers.masked(original);
+        final String target = Identifiers.masked(originalTarget);
+        final List<CheckFinding> findings = new ArrayList<>(IdentifierCheck.find(original, originalTarget));
         ResidueCheck.find(source, target, targetLanguage).ifPresent(findings::add);
         findings.addAll(ScriptPurityCheck.find(target, Languages.scriptOf(targetLanguage)));
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
