@@ -60,6 +60,26 @@ class BatchPromptTest {
     }
 
     @Test
+    void messagesFor_batchWithoutToken_sendsNoTokenRulesAndNoTokenBlock() {
+        final List<BatchItem> plain = List.of(new BatchItem("1", "She opened the door."), new BatchItem("2", "1881"));
+
+        final List<ChatMessage> messages = builder("en", "uk").messagesFor(fullContext(), plain);
+
+        assertThat(messages.getFirst().content())
+                .doesNotContain("⟦gN⟧", "tokens", "Two tokens", "list-marker")
+                .contains("7. Follow any [Extra instruction]");
+        assertThat(messages.get(1).content()).doesNotContain("Immutable", "token");
+    }
+
+    @Test
+    void messagesFor_batchWithOneTokenItem_sendsTheFullTokenRules() {
+        final List<ChatMessage> messages = builder("en", "uk").messagesFor(fullContext(), ITEMS);
+
+        assertThat(messages.getFirst().content())
+                .contains("4. ⟦gN⟧ tokens stand for", "10. Follow any [Extra instruction]");
+    }
+
+    @Test
     void messagesFor_lexiconAndKeyTerms_carryTheRenderingsAndTheClosedList() {
         final BatchContext context = new BatchContext(
                 new DraftContext(List.of(), null, List.of(), List.of(), List.of(), List.of("master → господар")),
@@ -105,7 +125,7 @@ class BatchPromptTest {
 
         final String first =
                 builder.messagesFor(fullContext(), ITEMS).getFirst().content();
-        final String second = builder.messagesFor(BatchContext.empty(), List.of(ITEMS.getFirst()))
+        final String second = builder.messagesFor(BatchContext.empty(), List.of(ITEMS.getLast()))
                 .getFirst()
                 .content();
 

@@ -45,6 +45,9 @@ public final class PromptTemplates {
 
     private static final String EXAMPLES = "examples";
     private static final String LANGUAGE_RULES = "languageRules";
+    private static final String TOKEN_RULES = "tokenRules";
+    private static final String NO_TOKEN_RULES = "noTokenRules";
+    private static final String GATE_OPEN = "on";
 
     private final Map<PromptName, Template> systems = new EnumMap<>(PromptName.class);
     private final Map<PromptName, Template> users = new EnumMap<>(PromptName.class);
@@ -110,21 +113,58 @@ public final class PromptTemplates {
     }
 
     /**
+     * The system slots that choose the token rules of a draft or batch call: a call whose text holds no
+     * {@code ⟦gN⟧} token is sent the rules without the token paragraphs, so a small model is not taught a markup it
+     * has nothing to copy. A call that names neither slot gets the token rules.
+     *
+     * @param hasTokens whether any text the call translates holds a token
+     * @return never null; the slot values to pass as {@code extra}
+     */
+    public static Map<String, String> tokenGate(final boolean hasTokens) {
+        return hasTokens
+                ? Map.of(TOKEN_RULES, GATE_OPEN, NO_TOKEN_RULES, "")
+                : Map.of(TOKEN_RULES, "", NO_TOKEN_RULES, GATE_OPEN);
+    }
+
+    /** Whether a block slot only chooses between two wordings of the fixed rules and so is no part of its own. */
+    static boolean isRuleGate(final String slot) {
+        return TOKEN_RULES.equals(slot) || NO_TOKEN_RULES.equals(slot);
+    }
+
+    /**
+     * As {@link #sectionsOf(PromptName, CallFrame, Map, Map)} with the system message's default slots.
+     *
+     * @param name the non-null call
+     * @param frame the non-null run's language pair, style sheet and foreign-passage policy
+     * @param userValues the non-null user slot values, as {@link #renderUser} takes them
+     * @return never null; the parts with a value
+     */
+    public List<PromptSection> sectionsOf(
+            final PromptName name, final CallFrame frame, final Map<String, String> userValues) {
+        return sectionsOf(name, frame, Map.of(), userValues);
+    }
+
+    /**
      * The filled parts of {@code name}'s prompt as {@link #renderSystem(PromptName, CallFrame)} and
      * {@link #renderUser} send them: the system message's parts first, then the user message's, each in its
      * template's order.
      *
      * @param name the non-null call
      * @param frame the non-null run's language pair, style sheet and foreign-passage policy
+     * @param extra the non-null further system slot values, as {@link #renderSystem(PromptName, CallFrame, Map)} takes
+     *     them
      * @param userValues the non-null user slot values, as {@link #renderUser} takes them
      * @return never null; the parts with a value, a part left empty not being sent
      */
     public List<PromptSection> sectionsOf(
-            final PromptName name, final CallFrame frame, final Map<String, String> userValues) {
+            final PromptName name,
+            final CallFrame frame,
+            final Map<String, String> extra,
+            final Map<String, String> userValues) {
         final List<PromptSection> sections = new ArrayList<>();
         final Template system = systems.get(Objects.requireNonNull(name, "name"));
         if (system != null) {
-            final Map<String, String> values = systemValues(name, frame, Map.of());
+            final Map<String, String> values = systemValues(name, frame, extra);
             check(system, values);
             sections.addAll(PromptSections.of(system.text(), values, PromptSection.Origin.SYSTEM));
         }
@@ -155,6 +195,9 @@ public final class PromptTemplates {
         Objects.requireNonNull(extra, "extra");
         final Map<String, String> values = new HashMap<>(frame.systemSlotValues());
         values.putAll(extra);
+        if (declares(name, TOKEN_RULES) && !extra.containsKey(TOKEN_RULES)) {
+            values.putAll(tokenGate(true));
+        }
         if (declares(name, EXAMPLES)) {
             values.put(EXAMPLES, examplesFor(name, frame));
         }

@@ -51,9 +51,11 @@ Write each term as shown, inflected as the sentence needs, unless the glossary s
 
 Translate from {{source}} to {{target}}.
 
+{{#tokens}}
 [Immutable tokens for this text]
 Copy this exact ordered sequence unchanged: {{tokens}}
 Do not add, reorder, split, translate, or omit these tokens.
+{{/tokens}}
 
 {{#extraInstruction}}
 [Extra instruction]

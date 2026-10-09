@@ -1644,7 +1644,7 @@ Burning Chrome was translated with gemma-4-e4b and gemma-4-26b (Balanced, LM Stu
 
 ### Prompt rounds (one per round, eval on e4b and 26b: default, realrun, replay of both Oct 9 logs, plus the suite named; keep only when the target moves by 2+ cases and no key metric loses 2+)
 - [ ] 15h.C1 Prompt bug fixes as one round: reviewer example ids `e1`–`e6` instead of the real `s1`–`s6`, "an English"/"the … translation" instead of "a English" in prescan, review-terms, suggest-targets and suspicious-words, unwrapped template lines. Gate: no regression. → `:pipeline` — code done, eval round pending owner
-- [ ] 15h.C2 Round 7: a call with no `⟦gN⟧` token sends no token rules and no empty token block; a call with tokens keeps the system message unchanged. → `:pipeline`
+- [ ] 15h.C2 Round 7: a call with no `⟦gN⟧` token sends no token rules and no empty token block; a call with tokens keeps the system message unchanged. → `:pipeline` — code done, eval round pending owner
 - [ ] 15h.C3 Round 8: the quote line carries one worked ASCII-quoted dialogue example for the pair. → `:pipeline`, language files
 - [ ] 15h.C4 Round 9: the batch prompt stops asking for `keyTerms` once a run's first N batches answered none (e4b answered 1 of 40), so the field costs nothing on a model that ignores it. Suite: batch, sequence. → `:pipeline`
 - [ ] 15h.C5 Measure the time to first token per call kind from the provider's timings and record it; reorder the shared style and language block to the front only if prefill is over 10 % of call time on 26b. → `:llm`, `:pipeline`, docs

@@ -61,8 +61,9 @@ public final class BatchPromptBuilder {
                 context.precedingPairs().size(),
                 context.nextSource() != null,
                 context.characters().size());
-        final String system =
-                templates.renderSystem(PromptName.DRAFT_BATCH_JSON, frame).strip();
+        final String system = templates
+                .renderSystem(PromptName.DRAFT_BATCH_JSON, frame, PromptTemplates.tokenGate(hasTokens(items)))
+                .strip();
         final String user = templates
                 .renderUser(PromptName.DRAFT_BATCH_JSON, userValues(context, items))
                 .strip();
@@ -81,7 +82,11 @@ public final class BatchPromptBuilder {
      */
     public List<PromptSection> sectionsFor(final BatchContext context, final List<BatchItem> items) {
         Objects.requireNonNull(context, "context");
-        return templates.sectionsOf(PromptName.DRAFT_BATCH_JSON, frame, userValues(context, items));
+        return templates.sectionsOf(
+                PromptName.DRAFT_BATCH_JSON,
+                frame,
+                PromptTemplates.tokenGate(hasTokens(items)),
+                userValues(context, items));
     }
 
     /**
@@ -97,6 +102,10 @@ public final class BatchPromptBuilder {
         final OutputLimit limit = OutputLimit.forBatch(
                 items.stream().map(BatchItem::masked).toList(), frame.sourceLanguage(), frame.targetLanguage());
         return ChatRequests.build(PromptName.DRAFT_BATCH_JSON, messages, limit, lowerTemperature);
+    }
+
+    private static boolean hasTokens(final List<BatchItem> items) {
+        return items.stream().anyMatch(item -> !Tokens.inOrder(item.masked()).isEmpty());
     }
 
     private Map<String, String> userValues(final BatchContext context, final List<BatchItem> items) {

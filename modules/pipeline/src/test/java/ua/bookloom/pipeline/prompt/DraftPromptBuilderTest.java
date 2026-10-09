@@ -47,10 +47,6 @@ class DraftPromptBuilderTest {
 
                         Translate from English (en) to Ukrainian (uk).
 
-                        [Immutable tokens for this text]
-                        Copy this exact ordered sequence unchanged: (none — write no ⟦gN⟧ token at all; write every name as plain text)
-                        Do not add, reorder, split, translate, or omit these tokens.
-
                         <Text>
                         Hello.
                         </Text>
@@ -285,9 +281,10 @@ class DraftPromptBuilderTest {
         assertThat(user).isEqualTo(golden("draft-en-uk.user.txt"));
     }
 
-    // The instruction sits directly above the text, after the token rule, so the source is still the last thing read.
+    // The instruction sits directly above the text, after the language line, so the source is still the last thing
+    // read.
     @Test
-    void messagesFor_extraInstruction_rendersItsBlockBetweenTheTokenRuleAndTheText() {
+    void messagesFor_extraInstruction_rendersItsBlockBetweenTheLanguageLineAndTheText() {
         final DraftPromptBuilder builder = builder("en", "uk", BookBrief.defaults("en"));
 
         final String user = builder.messagesFor(
@@ -296,7 +293,7 @@ class DraftPromptBuilderTest {
                 .content();
 
         assertThat(user).contains("""
-                Do not add, reorder, split, translate, or omit these tokens.
+                Translate from English (en) to Ukrainian (uk).
 
                 [Extra instruction]
                 echo similarity 1.0

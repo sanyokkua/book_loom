@@ -87,8 +87,7 @@ class PlaceholderRecoveryTest {
 
         assertThat(model.requests().getFirst().messages().get(1).content())
                 .contains("<Text>\n“Above all,” said his master.\n</Text>")
-                .contains(
-                        "Copy this exact ordered sequence unchanged: (none — write no ⟦gN⟧ token at all; write every name as plain text)");
+                .doesNotContain("Immutable tokens", "⟦gN⟧");
         assertThat(drafted.restoredTarget())
                 .isEqualTo("<span class=\"calibre8\">«П</span>онад усе», — сказав його господар.");
         assertThat(drafted.autoRepair()).isNull();

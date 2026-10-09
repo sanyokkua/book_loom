@@ -80,7 +80,7 @@ public final class DraftPromptBuilder {
                 target,
                 segment.id(),
                 shownText.length());
-        final String system = systemMessage();
+        final String system = systemMessage(shownText);
         final String user = userMessage(source, target, shownText, context, extraInstruction);
         if (log.isTraceEnabled()) {
             log.trace("Draft prompt system={} user={}", system, user);
@@ -186,6 +186,7 @@ public final class DraftPromptBuilder {
         final List<PromptSection> sections = new ArrayList<>(templates.sectionsOf(
                 PromptName.DRAFT,
                 frame,
+                PromptTemplates.tokenGate(hasTokens(shownText)),
                 userValues(
                         PromptLanguages.describe(frame.sourceLanguage()),
                         PromptLanguages.describe(frame.targetLanguage()),
@@ -231,8 +232,10 @@ public final class DraftPromptBuilder {
                 new ChatMessage(ChatRole.USER, original.get(1).content() + "\n" + correction));
     }
 
-    private String systemMessage() {
-        return templates.renderSystem(PromptName.DRAFT, frame).strip();
+    private String systemMessage(final String shownText) {
+        return templates
+                .renderSystem(PromptName.DRAFT, frame, PromptTemplates.tokenGate(hasTokens(shownText)))
+                .strip();
     }
 
     private String userMessage(
@@ -257,7 +260,7 @@ public final class DraftPromptBuilder {
         return Map.ofEntries(
                 Map.entry("source", source),
                 Map.entry("target", target),
-                Map.entry("tokens", expectedTokenSequence(shownText)),
+                Map.entry("tokens", hasTokens(shownText) ? expectedTokenSequence(shownText) : ""),
                 Map.entry("text", shownText),
                 Map.entry("summary", summary == null || summary.isBlank() ? "" : summary),
                 Map.entry("glossaryTerms", linesWhere(context.glossaryLines(), false)),
@@ -269,6 +272,10 @@ public final class DraftPromptBuilder {
                 Map.entry("precedingTargets", String.join("\n\n", context.precedingTargets())),
                 Map.entry("followingTarget", following == null ? "" : following),
                 Map.entry("extraInstruction", extraInstruction));
+    }
+
+    private static boolean hasTokens(final String shownText) {
+        return !Tokens.inOrder(shownText).isEmpty();
     }
 
     /**

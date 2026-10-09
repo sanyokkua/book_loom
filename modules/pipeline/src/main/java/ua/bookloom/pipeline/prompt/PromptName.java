@@ -26,10 +26,11 @@ public enum PromptName {
             0.1,
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-                    Set.of("examples", "languageRules")),
+                    Set.of("examples", "languageRules", "tokenRules", "noTokenRules")),
             new Slots(
-                    Set.of("source", "target", "tokens", "text"),
+                    Set.of("source", "target", "text"),
                     Set.of(
+                            "tokens",
                             "summary",
                             "glossaryTerms",
                             "lockedNames",
@@ -54,7 +55,7 @@ public enum PromptName {
             0.1,
             new Slots(
                     Set.of("sourceLanguage", "targetLanguage", "styleSheet", "foreignPassageRule"),
-                    Set.of("examples", "languageRules")),
+                    Set.of("examples", "languageRules", "tokenRules", "noTokenRules")),
             BatchSlots.USER),
 
     /** The correction call after a reply is not the required JSON object. */

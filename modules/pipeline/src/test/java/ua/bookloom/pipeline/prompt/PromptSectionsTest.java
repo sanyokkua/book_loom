@@ -102,7 +102,9 @@ class PromptSectionsTest {
                 .filteredOn(section -> section.slot().equals("tokens"))
                 .singleElement()
                 .extracting(PromptSection::lines)
-                .isEqualTo(List.of("Copy this exact ordered sequence unchanged: ⟦g0⟧"));
+                .isEqualTo(List.of(
+                        "Copy this exact ordered sequence unchanged: ⟦g0⟧",
+                        "Do not add, reorder, split, translate, or omit these tokens."));
     }
 
     // The style sheet is sent in the system message; a person asking "what did the model see" must see it too.

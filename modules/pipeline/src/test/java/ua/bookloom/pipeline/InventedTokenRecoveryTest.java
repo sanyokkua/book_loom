@@ -81,14 +81,15 @@ class InventedTokenRecoveryTest {
     }
 
     @Test
-    void translate_textWithNoToken_tellsTheModelToWriteNoTokenAndNamesAsText() {
+    void translate_textWithNoToken_sendsNoTokenBlockAndNoTokenRules() {
         final ScriptedChatModel model = TranslationJobTestSupport.replies(
                 "Слова описують вагу, а не масу, і Венс ніколи не дозволяла студентам їх плутати.");
 
         drafted(model);
 
-        assertThat(model.requests().getFirst().messages().get(1).content())
-                .contains("(none — write no ⟦gN⟧ token at all; write every name as plain text)");
+        final var messages = model.requests().getFirst().messages();
+        assertThat(messages.get(1).content()).doesNotContain("token", "⟦gN⟧");
+        assertThat(messages.getFirst().content()).doesNotContain("token", "⟦gN⟧");
     }
 
     private DraftOutcome.Drafted drafted(final ScriptedChatModel model) {
