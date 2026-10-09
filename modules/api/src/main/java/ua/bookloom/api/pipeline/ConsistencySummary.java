@@ -1,5 +1,6 @@
 package ua.bookloom.api.pipeline;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import ua.bookloom.api.project.DeferralReason;
@@ -15,6 +16,8 @@ import ua.bookloom.api.project.DeferralReason;
  *     say what it is waiting for
  * @param neighbourFixes paragraphs the check against the paragraphs around them corrected
  * @param checks what the retry of doubted segments and the neighbour check came to besides the fixes
+ * @param awaitingGender the characters whose unknown gender still holds segments back, most waiting first; never
+ *     null, empty when none does
  */
 public record ConsistencySummary(
         Status status,
@@ -22,7 +25,8 @@ public record ConsistencySummary(
         int genderReRenders,
         Map<DeferralReason, Integer> openDeferrals,
         int neighbourFixes,
-        ConsistencyChecks checks) {
+        ConsistencyChecks checks,
+        List<GenderWait> awaitingGender) {
 
     /** The summary of an export whose pass was switched off: nothing ran, nothing is to be said. */
     public static final ConsistencySummary NOT_RUN = new ConsistencySummary(Status.NOT_RUN, 0, 0);
@@ -35,6 +39,17 @@ public record ConsistencySummary(
         RAN,
         /** The pass ran without a model, so only the name sweep ran and gender deferrals stayed open. */
         RAN_WITHOUT_MODEL
+    }
+
+    /** A summary that names no waiting character. */
+    public ConsistencySummary(
+            final Status status,
+            final int termSubstitutions,
+            final int genderReRenders,
+            final Map<DeferralReason, Integer> openDeferrals,
+            final int neighbourFixes,
+            final ConsistencyChecks checks) {
+        this(status, termSubstitutions, genderReRenders, openDeferrals, neighbourFixes, checks, List.of());
     }
 
     /** A summary with no count of the model steps besides their fixes. */
@@ -66,6 +81,7 @@ public record ConsistencySummary(
         Objects.requireNonNull(status, "status");
         openDeferrals = Map.copyOf(Objects.requireNonNull(openDeferrals, "openDeferrals"));
         Objects.requireNonNull(checks, "checks");
+        awaitingGender = List.copyOf(Objects.requireNonNull(awaitingGender, "awaitingGender"));
         if (termSubstitutions < 0 || genderReRenders < 0 || neighbourFixes < 0) {
             throw new IllegalArgumentException(
                     "no count may be negative: " + termSubstitutions + ", " + genderReRenders);

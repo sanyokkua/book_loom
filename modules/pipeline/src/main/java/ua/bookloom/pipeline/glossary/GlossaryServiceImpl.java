@@ -28,6 +28,7 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.Gender;
@@ -61,6 +62,15 @@ public final class GlossaryServiceImpl implements GlossaryService {
     public Result<List<GlossaryEntry>> entries(final String projectId) {
         Objects.requireNonNull(projectId, "projectId");
         return guarded("entries", projectId, () -> glossary.all(projectId));
+    }
+
+    @Override
+    public Result<List<UnknownGender>> unknownGenders(final String projectId, final int minMentions) {
+        Objects.requireNonNull(projectId, "projectId");
+        return guarded(
+                "unknownGenders",
+                projectId,
+                () -> CharacterMentions.read(glossary, openProjects.get(projectId), projectId, minMentions));
     }
 
     @Override

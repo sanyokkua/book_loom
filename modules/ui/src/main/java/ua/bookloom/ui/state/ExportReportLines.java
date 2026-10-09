@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.pipeline.SourceFallback;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -25,6 +26,8 @@ import ua.bookloom.ui.i18n.Messages;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExportReportLines {
+
+    private static final int MAX_NAMED_CHARACTERS = 5;
 
     /**
      * The file names of the side files written beside the book.
@@ -47,8 +50,7 @@ public final class ExportReportLines {
      * @param summary the pass's summary from the report
      * @return the lines to show; empty when the pass was off, otherwise the count of segments it adjusted, what its
      *     retry and neighbour check came to (improved, kept, unchanged, refused by rule, skipped), the note that the
-     *     gender step was skipped without a model or the count of segments that await a character's gender, or, when
-     *     none of these applies, that it ran and changed nothing
+     *     gender step was skipped without a model, or, when none of these applies, that it ran and changed nothing
      */
     public static List<String> consistency(final Messages messages, final ConsistencySummary summary) {
         Objects.requireNonNull(messages, "messages");
@@ -66,13 +68,35 @@ public final class ExportReportLines {
         lines.addAll(checks(messages, summary.checks()));
         if (summary.status() == ConsistencySummary.Status.RAN_WITHOUT_MODEL) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NO_MODEL));
-        } else if (summary.openGenderDeferrals() > 0) {
-            lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_AWAITING_GENDER, summary.openGenderDeferrals()));
         }
         if (lines.isEmpty()) {
             lines.add(messages.get(MessageKey.EXPORT_CHECK_CONSISTENCY_NOTHING));
         }
         return lines;
+    }
+
+    /**
+     * The warning that segments wait on characters whose gender is unknown, which names them and their segments.
+     *
+     * @param messages the catalogue the line is worded from
+     * @param summary the consistency pass's summary from the report
+     * @return the line, or empty when no segment waits on a character's gender
+     */
+    public static Optional<String> awaitingGender(final Messages messages, final ConsistencySummary summary) {
+        Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(summary, "summary");
+        final List<GenderWait> waits = summary.awaitingGender();
+        if (waits.isEmpty()) {
+            return Optional.empty();
+        }
+        final String named = waits.stream()
+                .limit(MAX_NAMED_CHARACTERS)
+                .map(wait -> wait.character() + " ×" + wait.segments())
+                .collect(Collectors.joining(", "));
+        final int unnamed = waits.size() - MAX_NAMED_CHARACTERS;
+        final String characters =
+                unnamed > 0 ? named + " " + messages.get(MessageKey.EXPORT_AWAITING_GENDER_MORE, unnamed) : named;
+        return Optional.of(messages.get(MessageKey.EXPORT_AWAITING_GENDER, summary.openGenderDeferrals(), characters));
     }
 
     // What the model steps came to besides their fixes, so a pass that read thirty paragraphs and changed none says so.

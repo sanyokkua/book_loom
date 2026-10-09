@@ -80,6 +80,32 @@ class ExportCompleteDialogTest extends ShellTestBase {
                         "Consistency pass: 1 segment adjusted");
     }
 
+    // More characters wait than the line names: the five most waiting are named and the rest counted.
+    @Test
+    void show_sevenCharactersAwaitGender_namesFiveAndCountsTheRest() {
+        show(
+                List.of(),
+                new ConsistencySummary(
+                        ConsistencySummary.Status.RAN,
+                        0,
+                        0,
+                        java.util.Map.of(ua.bookloom.api.project.DeferralReason.GENDER_UNKNOWN, 20),
+                        0,
+                        ua.bookloom.api.pipeline.ConsistencyChecks.NONE,
+                        List.of(
+                                new ua.bookloom.api.pipeline.GenderWait("A", 7),
+                                new ua.bookloom.api.pipeline.GenderWait("B", 6),
+                                new ua.bookloom.api.pipeline.GenderWait("C", 5),
+                                new ua.bookloom.api.pipeline.GenderWait("D", 4),
+                                new ua.bookloom.api.pipeline.GenderWait("E", 3),
+                                new ua.bookloom.api.pipeline.GenderWait("F", 2),
+                                new ua.bookloom.api.pipeline.GenderWait("G", 1))));
+
+        assertThat(textsUnder(required("export-complete-awaiting-gender")))
+                .contains("20 segments wait on a character's gender: A ×7, B ×6, C ×5, D ×4, E ×3 and 2 more."
+                        + " Set it in Names & style; the next export re-renders them.");
+    }
+
     @Test
     void show_noSideFilesAndNoPass_mentionsNeither() {
         show();

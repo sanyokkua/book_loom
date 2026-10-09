@@ -1646,8 +1646,17 @@ public enum MessageKey {
     EXPORT_CHECK_CONSISTENCY_NEIGHBOURS("export.check.consistency.neighbours"),
     /** Check line after an export: the consistency pass ran and changed nothing. */
     EXPORT_CHECK_CONSISTENCY_NOTHING("export.check.consistency.nothing"),
-    /** Check line after an export: segments still wait for a character's gender; argument 0 is their count. */
-    EXPORT_CHECK_CONSISTENCY_AWAITING_GENDER("export.check.consistency.awaitingGender"),
+    /**
+     * Warning after an export: segments wait on characters whose gender is unknown; argument 0 is the segment count,
+     * argument 1 the characters with their segment counts.
+     */
+    EXPORT_AWAITING_GENDER("export.awaitingGender"),
+    /** The control that opens Names &amp; style from the warning labelled by {@link #EXPORT_AWAITING_GENDER}. */
+    EXPORT_AWAITING_GENDER_OPEN("export.awaitingGender.open"),
+    /** Hover explanation of the control labelled by {@link #EXPORT_AWAITING_GENDER_OPEN}. */
+    EXPORT_AWAITING_GENDER_OPEN_TIP("export.awaitingGender.open.tip"),
+    /** The tail of the warning's character list when more characters wait than are named; argument 0 is how many. */
+    EXPORT_AWAITING_GENDER_MORE("export.awaitingGender.more"),
     /** Check line after an export: the consistency pass skipped its gender step because no model was available. */
     EXPORT_CHECK_CONSISTENCY_NO_MODEL("export.check.consistency.noModel"),
     /**
@@ -1798,6 +1807,20 @@ public enum MessageKey {
     DIALOG_NARRATOR_BACK("dialog.narrator.back"),
     /** Hover explanation of the control labelled by {@link #DIALOG_NARRATOR_BACK}. */
     DIALOG_NARRATOR_BACK_TIP("dialog.narrator.back.tip"),
+    /** Title of the question asked at Start about characters whose gender is unknown. */
+    DIALOG_GENDERS_TITLE("dialog.genders.title"),
+    /** Body of that question; argument 0 is the number of characters listed. */
+    DIALOG_GENDERS_TEXT("dialog.genders.text"),
+    /** One listed character; argument 0 is its name, argument 1 how often the book names it. */
+    DIALOG_GENDERS_ROW("dialog.genders.row"),
+    /** The control that starts without setting the genders. */
+    DIALOG_GENDERS_START("dialog.genders.start"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_START}. */
+    DIALOG_GENDERS_START_TIP("dialog.genders.start.tip"),
+    /** The control that returns without starting. */
+    DIALOG_GENDERS_BACK("dialog.genders.back"),
+    /** Hover explanation of the control labelled by {@link #DIALOG_GENDERS_BACK}. */
+    DIALOG_GENDERS_BACK_TIP("dialog.genders.back.tip"),
     /** Title of the question asked before leaving a screen whose model work is still running. */
     DIALOG_LEAVE_TITLE("dialog.leave.title"),
     /** Body of the leave question; argument 0 is the name of the running work. */

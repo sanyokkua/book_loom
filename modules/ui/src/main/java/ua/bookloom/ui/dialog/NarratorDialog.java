@@ -29,8 +29,10 @@ import ua.bookloom.ui.state.NarratorHints;
 import ua.bookloom.ui.state.OpenedBook;
 
 /**
- * The question asked once at Start translation when the source was found to be told in the first person and the brief
- * does not say the narrator's gender: male, female, or not stated (start anyway). The choice is written to the brief,
+ * The questions asked at Start translation: first the narrator, then the characters without a gender
+ * ({@link CharacterGendersDialog}). The narrator question is asked once when the source was found to be told in the
+ * first person and the brief does not say the narrator's gender: male, female, or not stated (start anyway). The
+ * choice is written to the brief,
  * and any answer is remembered for the book, so the question is never asked twice in a session. Back, and Escape,
  * which the host guarantees for every card, return without starting and without remembering anything. Enter chooses
  * "not stated", never a gender, and the run starts only after the chosen gender has been stored in the project.
@@ -49,6 +51,7 @@ public final class NarratorDialog {
     private final Messages messages;
     private final CurrentProject project;
     private final BookBriefViewModel brief;
+    private final CharacterGendersDialog genders;
     // Touched on the FX thread only, like every dialog; holds the books the question has been answered for.
     private final Set<String> answered = new HashSet<>();
 
@@ -59,17 +62,20 @@ public final class NarratorDialog {
      * @param messages the catalogue every word of the card comes from
      * @param project the holder of the open book, whose narrator hint and brief decide whether to ask
      * @param brief the view model the chosen narrator is written through
+     * @param genders the question about characters without a gender, asked after the narrator's
      */
     @Inject
     public NarratorDialog(
             final ModalHost modalHost,
             final Messages messages,
             final CurrentProject project,
-            final BookBriefViewModel brief) {
+            final BookBriefViewModel brief,
+            final CharacterGendersDialog genders) {
         this.modalHost = Objects.requireNonNull(modalHost, "modalHost");
         this.messages = Objects.requireNonNull(messages, "messages");
         this.project = Objects.requireNonNull(project, "project");
         this.brief = Objects.requireNonNull(brief, "brief");
+        this.genders = Objects.requireNonNull(genders, "genders");
     }
 
     /**
@@ -80,6 +86,10 @@ public final class NarratorDialog {
      */
     public void startAfterAsking(final Runnable start) {
         Objects.requireNonNull(start, "start");
+        askNarrator(() -> genders.startAfterAsking(start));
+    }
+
+    private void askNarrator(final Runnable start) {
         final OpenedBook book = project.book().get();
         if (book == null || !mustAsk(book, project.brief().get())) {
             log.debug("the narrator is not asked about: starting");

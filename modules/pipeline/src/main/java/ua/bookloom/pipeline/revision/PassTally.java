@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import ua.bookloom.api.pipeline.ConsistencyChecks;
+import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.project.DeferralReason;
 
 /**
@@ -82,7 +83,7 @@ final class PassTally {
         return changedSegments.size();
     }
 
-    ConsistencyReport report(final Map<DeferralReason, Integer> openDeferrals) {
+    ConsistencyReport report(final Map<DeferralReason, Integer> openDeferrals, final List<GenderWait> awaitingGender) {
         return new ConsistencyReport(
                 termSubstitutions,
                 genderReRenders,
@@ -90,7 +91,8 @@ final class PassTally {
                 notes,
                 openDeferrals,
                 neighbourFixes,
-                new ConsistencyChecks(retriedImproved, retriedKept, neighbourUnchanged, refused, skipped));
+                new ConsistencyChecks(retriedImproved, retriedKept, neighbourUnchanged, refused, skipped),
+                awaitingGender);
     }
 
     private void changed(final String segmentId, final String locator, final String what) {

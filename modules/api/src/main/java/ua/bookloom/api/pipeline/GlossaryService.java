@@ -22,6 +22,15 @@ public interface GlossaryService {
     Result<List<GlossaryEntry>> entries(String projectId);
 
     /**
+     * Lists the characters whose gender is still unknown and whom the book names often enough to be worth asking about.
+     *
+     * @param projectId the non-null project id
+     * @param minMentions how many times the body text must name a character for it to be listed; at least one
+     * @return the characters, most mentioned first; never null, empty when none qualifies or the glossary is empty
+     */
+    Result<List<UnknownGender>> unknownGenders(String projectId, int minMentions);
+
+    /**
      * Runs the deterministic frequency scan over the project's book and adds any newly proposed term.
      *
      * @param projectId the non-null project id

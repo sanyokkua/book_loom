@@ -15,6 +15,7 @@ import ua.bookloom.api.pipeline.ConsistencyChecks;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportService;
+import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.ui.BookFixtures;
 import ua.bookloom.ui.ScriptedExportService;
@@ -42,26 +43,49 @@ class ExportScreenCountsTest extends TranslatingScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
     }
 
-    // The log showed 142 gender deferrals left open and the dialog said nothing needed changing.
+    // The log showed 142 gender deferrals left open and the dialog said nothing needed changing; the warning now says
+    // who the segments wait on.
     @Test
-    void screen_afterConsistencyPassThatChangedNothingWithOpenGenders_namesTheWaitingSegments()
-            throws TimeoutException {
-        exportBook(new ExportReport(
-                Path.of("Frankenstein.uk.epub"),
-                10,
+    void screen_afterConsistencyPassWithOpenGenders_warnsWhichCharactersTheSegmentsWaitOn() throws TimeoutException {
+        exportBook(reportWith(new ConsistencySummary(
+                ConsistencySummary.Status.RAN,
                 0,
                 0,
+                Map.of(DeferralReason.GENDER_UNKNOWN, 142),
                 0,
-                10,
-                0,
-                List.of(),
-                10,
-                new ConsistencySummary(ConsistencySummary.Status.RAN, 0, 0, Map.of(DeferralReason.GENDER_UNKNOWN, 142)),
-                0));
+                ConsistencyChecks.NONE,
+                List.of(new GenderWait("Chrome", 120), new GenderWait("Finn", 30)))));
 
-        assertThat(textOf("export-check-consistency"))
-                .contains("142 segments await the gender of a character; set it in Names & style")
-                .doesNotContain("nothing needed changing");
+        assertThat(labelText("export-check-awaiting-gender"))
+                .isEqualTo("142 segments wait on a character's gender: Chrome ×120, Finn ×30. Set it in Names & style;"
+                        + " the next export re-renders them.");
+    }
+
+    // The warning is only useful if the person can get to the place that fixes it.
+    @Test
+    void awaitingGenderLink_pressed_opensNamesAndStyle() throws TimeoutException {
+        exportBook(reportWith(new ConsistencySummary(
+                ConsistencySummary.Status.RAN,
+                0,
+                0,
+                Map.of(DeferralReason.GENDER_UNKNOWN, 1),
+                0,
+                ConsistencyChecks.NONE,
+                List.of(new GenderWait("Chrome", 1)))));
+
+        onFx(() -> button("export-awaiting-gender-open").fire());
+
+        assertThat(ua.bookloom.ui.ThemeTestSupport.onFx(
+                        () -> navigator.currentView().get()))
+                .isEqualTo(ViewNames.NAMES_STYLE);
+    }
+
+    @Test
+    void screen_afterConsistencyPassWithNoOpenGenders_showsNoWarningAndNoLink() throws TimeoutException {
+        exportBook(reportWith(new ConsistencySummary(ConsistencySummary.Status.RAN, 1, 0)));
+
+        assertThat(scene.getRoot().lookup("#export-check-awaiting-gender")).isNull();
+        assertThat(scene.getRoot().lookup("#export-awaiting-gender-open")).isNull();
     }
 
     // IF the pass reported only its fixes, THEN a pass that drafted 6 segments again and read 30 paragraphs would read

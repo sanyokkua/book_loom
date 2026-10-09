@@ -15,6 +15,8 @@ import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.document.BookFormat;
 import ua.bookloom.api.document.BookInspection;
 import ua.bookloom.api.pipeline.ExportReport;
+import ua.bookloom.ui.Navigator;
+import ua.bookloom.ui.ViewNames;
 import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.control.Tips;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -44,12 +46,14 @@ final class ExportResult {
     private final Label auto = number("export-auto-value");
     private final Label reviewed = number("export-reviewed-value");
     private final Label valid = number("export-valid-value");
+    private final Navigator navigator;
     private final VBox checks = new VBox(ROW_SPACING);
     private final HBox actions = new HBox(ROW_SPACING);
     private @Nullable Path file;
 
-    ExportResult(final Messages messages, final FileRevealer revealer) {
+    ExportResult(final Messages messages, final FileRevealer revealer, final Navigator navigator) {
         this.messages = Objects.requireNonNull(messages, "messages");
+        this.navigator = Objects.requireNonNull(navigator, "navigator");
         checks.setId("export-checks");
         actions.setId("export-actions");
         actions.getChildren()
@@ -140,11 +144,23 @@ final class ExportResult {
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-source-fallbacks", line)));
         ExportReportLines.noTargetFallbacks(messages, report)
                 .ifPresent(line -> checks.getChildren().add(warning("export-check-no-target", line)));
+        ExportReportLines.awaitingGender(messages, report.consistency()).ifPresent(line -> {
+            checks.getChildren().add(warning("export-check-awaiting-gender", line));
+            checks.getChildren().add(namesStyleLink());
+        });
         final List<String> passLines = ExportReportLines.consistency(messages, report.consistency());
         for (int index = 0; index < passLines.size(); index++) {
             checks.getChildren()
                     .add(check("export-check-consistency" + (index == 0 ? "" : "-" + index), passLines.get(index)));
         }
+    }
+
+    private Button namesStyleLink() {
+        return action(
+                "export-awaiting-gender-open",
+                MessageKey.EXPORT_AWAITING_GENDER_OPEN,
+                MessageKey.EXPORT_AWAITING_GENDER_OPEN_TIP,
+                () -> navigator.navigate(ViewNames.NAMES_STYLE));
     }
 
     private void reset() {

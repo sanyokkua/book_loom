@@ -23,6 +23,7 @@ import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.SegmentStatus;
+import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
@@ -127,7 +128,8 @@ class ConsistencyPassGenderTest {
         assertThat(book.stored(SAM_DOOR).maskedMachineTarget()).isEqualTo(DOOR_MASKED);
         assertThat(book.stored(SAM_DOOR).status()).isEqualTo(SegmentStatus.ACCEPTED);
         assertThat(report)
-                .isEqualTo(new ConsistencyReport(0, 0, 0, List.of(), Map.of(DeferralReason.GENDER_UNKNOWN, 1)));
+                .extracting(ConsistencyReport::openDeferrals)
+                .isEqualTo(Map.of(DeferralReason.GENDER_UNKNOWN, 1));
         assertThat(book.openDeferrals())
                 .extracting(Deferral::segmentId, Deferral::reason)
                 .containsExactly(tuple(SAM_DOOR, DeferralReason.GENDER_UNKNOWN));
@@ -183,6 +185,19 @@ class ConsistencyPassGenderTest {
         assertThat(book.model().requests()).isEmpty();
         assertThat(book.openDeferrals()).hasSize(1);
         assertThat(report.openGenderDeferrals()).isEqualTo(1);
+    }
+
+    // The export names who the waiting segments wait on, most waiting first, so the warning can say it.
+    @Test
+    void run_unknownGenderDeferrals_namesEachWaitingCharacterWithItsSegments() {
+        book.add(book.character("Sam", "Сем", Gender.UNKNOWN, false));
+        book.add(book.character("Hale", "Хейл", Gender.UNKNOWN, false));
+        book.decide(SAM_MET_HALE, "Сем зустрів Хейла.", "Сем зустрів Хейла.");
+        book.recordUnknownGender(SAM_MET_HALE);
+
+        final ConsistencyReport report = ok(book.run(true));
+
+        assertThat(report.awaitingGender()).containsExactly(new GenderWait("Hale", 1), new GenderWait("Sam", 1));
     }
 
     // Two unknown-gender characters of one segment are one waiting segment, not two.

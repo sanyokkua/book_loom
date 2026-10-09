@@ -249,7 +249,8 @@ final class ExportJobImpl implements ExportJob {
                 pass.genderReRenders(),
                 pass.openDeferrals(),
                 pass.neighbourFixes(),
-                pass.checks());
+                pass.checks(),
+                pass.awaitingGender());
     }
 
     private Result<List<GlossaryEntry>> glossaryEntries(final String projectId) {

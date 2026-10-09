@@ -16,6 +16,7 @@ import ua.bookloom.api.pipeline.GlossaryImportReport;
 import ua.bookloom.api.pipeline.GlossaryReviewReport;
 import ua.bookloom.api.pipeline.GlossaryService;
 import ua.bookloom.api.pipeline.JobEvent;
+import ua.bookloom.api.pipeline.UnknownGender;
 import ua.bookloom.api.project.GlossaryEntry;
 
 /**
@@ -32,6 +33,8 @@ public final class ScriptedGlossaryService implements GlossaryService {
     private final Queue<Result<?>> answers = new ConcurrentLinkedQueue<>();
     private final Queue<JobEvent> events = new ConcurrentLinkedQueue<>();
     private final CountDownLatch release = new CountDownLatch(1);
+    private final List<String> unknownGenderCalls = new CopyOnWriteArrayList<>();
+    private volatile List<UnknownGender> unknownGenders = List.of();
     private volatile boolean holding;
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
@@ -57,6 +60,22 @@ public final class ScriptedGlossaryService implements GlossaryService {
     @Override
     public Result<List<GlossaryEntry>> entries(final String projectId) {
         return answer("entries(" + projectId + ")");
+    }
+
+    /** Sets the characters {@code unknownGenders} answers with; none until a test says so. */
+    public void willListUnknownGenders(final List<UnknownGender> characters) {
+        unknownGenders = List.copyOf(characters);
+    }
+
+    /** Every {@code unknownGenders} call as {@code projectId:minMentions}, kept apart from {@link #calls()}. */
+    public List<String> unknownGenderCalls() {
+        return List.copyOf(unknownGenderCalls);
+    }
+
+    @Override
+    public Result<List<UnknownGender>> unknownGenders(final String projectId, final int minMentions) {
+        unknownGenderCalls.add(projectId + ":" + minMentions);
+        return Result.ok(unknownGenders);
     }
 
     @Override

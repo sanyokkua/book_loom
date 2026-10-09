@@ -64,7 +64,7 @@ final class ExportView {
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.destination = new ExportDestinationCard(viewModel, messages, chooser);
         this.sideFiles = new ExportSideFilesColumn(viewModel, messages);
-        this.result = new ExportResult(messages, revealer);
+        this.result = new ExportResult(messages, revealer, navigator);
     }
 
     /** The screen's content for {@code book}, filled for the export the view model last finished, if any. */
