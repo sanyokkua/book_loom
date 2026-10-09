@@ -137,7 +137,7 @@ class ConsistencyPassRetryTest {
     // IF an audit-doubted accepted segment were left out, THEN only the run's own flags would ever be retried.
     @Test
     void run_acceptedSegmentTheAuditDoubts_isDraftedAgainAndImproved() {
-        book.decide(BOBBY, "Він зайшов. Він сів.", "Він зайшов. Він сів.");
+        book.decide(BOBBY, "Боббі зайшов зайшов. Він сів.", "Боббі зайшов зайшов. Він сів.");
         ReviewFixtures.withContext(book.desk(), BOBBY, SNAPSHOT);
         book.model().answerTo(DRAFT, reply(WHOLE));
         neighbourKeeps(WHOLE);

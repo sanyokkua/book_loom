@@ -70,6 +70,18 @@ public enum CheckName {
     /** Text check, soft: a number the source writes in digits that the target changed or lost. */
     NUMBER(0.0, "meaning", "number", false),
 
+    /** Text check, blocking: a run of Latin words of the source left as it is in a target of another script. */
+    LATIN_RUN(0.0, "language", "latin-run", true),
+
+    /** Text check, soft: a glossary name of the source that the target has lost. */
+    NAME_MISSING(0.0, "glossary", "name-missing", false),
+
+    /** Text check, soft: a glossary name the target spells another way, with the exact replacement. */
+    NAME_SPELLING(0.0, "glossary", "name-spelling", false),
+
+    /** Text check, soft: a word of another language the target language's file replaces (тоже → теж). */
+    FOREIGN_WORD(0.0, "language", "foreign-word", false),
+
     /** Text check, soft: a word the word validator doubts is a real word of the target language. */
     UNKNOWN_WORD(0.0, "fluency", "unknown-word", false),
 

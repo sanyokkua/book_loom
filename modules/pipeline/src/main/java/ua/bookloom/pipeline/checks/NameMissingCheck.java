@@ -1,17 +1,14 @@
-package ua.bookloom.pipeline.audit;
+package ua.bookloom.pipeline.checks;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ua.bookloom.api.project.GlossaryEntry;
-import ua.bookloom.api.project.QaFinding;
-import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.lexicon.TermMappingVerifier;
 import ua.bookloom.pipeline.lexicon.TermMatch;
@@ -19,7 +16,8 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
  * A name the glossary renders that the source holds and the target has lost — the case the draft-time glossary check
- * cannot see for an unlocked name, since only a locked one travels as a token. Conservative on purpose: only a person
+ * cannot see for an unlocked name, since only a locked one travels as a token. {@link NameLossCheck} turns it into a
+ * soft finding the directed fix mends. Conservative on purpose: only a person
  * or place entry with a non-empty target counts, the source form must stand as a whole word, and the target is held to
  * the same stem match the lexicon uses for an inflected rendering, so a declined name is not a loss.
  */
@@ -28,7 +26,6 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 final class NameMissingCheck {
 
-    static final String NAME = "name-missing";
     private static final int MIN_VARIANT_LETTERS = 4;
     private static final List<String> VARIANT_VOWELS = List.of("иіїы", "еє");
 
@@ -39,9 +36,10 @@ final class NameMissingCheck {
      * @param source the non-null source display text
      * @param target the non-null target display text
      * @param targetLanguage the non-null target language tag, whose stem data lets a declined or derived name pass
-     * @return one low finding naming every lost name, or empty when none is lost
+     * @return the entries whose source form stands in the source and whose rendering is nowhere in the target; never
+     *     null, empty when no name is lost
      */
-    static Optional<QaFinding> find(
+    static List<GlossaryEntry> lost(
             final List<GlossaryEntry> glossary, final String source, final String target, final String targetLanguage) {
         final List<String> alternations = LanguageRules.bundled().stemAlternations(targetLanguage);
         final List<GlossaryEntry> inSource = glossary.stream()
@@ -51,21 +49,14 @@ final class NameMissingCheck {
         final List<GlossaryEntry> missing = inSource.stream()
                 .filter(entry -> isMissing(entry, source, target, alternations))
                 .toList();
-        final List<String> lost = missing.stream()
+        final List<GlossaryEntry> lost = missing.stream()
                 .filter(entry -> !hasPresentVariant(entry, inSource, missing))
-                .map(entry -> "\"" + entry.term() + "\" → \"" + entry.target() + "\"")
                 .toList();
-        if (lost.isEmpty()) {
-            return Optional.empty();
+        if (!lost.isEmpty()) {
+            log.debug("Name check: {} glossary name(s) are in the source and not in the target", lost.size());
+            log.trace("Name check lost: {}", lost);
         }
-        log.debug("Name check: {} glossary name(s) are in the source and not in the target", lost.size());
-        log.trace("Name check lost: {}", lost);
-        return Optional.of(new QaFinding(
-                "glossary",
-                Severity.LOW,
-                "A name of the glossary is in the source but its target form is not in the target: "
-                        + String.join(", ", lost) + ".",
-                NAME));
+        return lost;
     }
 
     // Two entries that spell one name nearly alike (Моріс, Морис) are one name: it is not lost when the other is there.

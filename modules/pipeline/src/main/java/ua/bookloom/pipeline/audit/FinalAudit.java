@@ -80,18 +80,20 @@ public final class FinalAudit {
         final Map<String, Segment> sources = sourcesOf(book.document());
         final Map<String, List<QaFinding>> doubted = new LinkedHashMap<>();
         final Map<String, String> targets = new LinkedHashMap<>();
+        final Map<String, String> sourceTexts = new LinkedHashMap<>();
         final Set<SegmentKind> kept = book.brief().alsoTranslate().keptKinds();
         for (final SegmentRecord record : records) {
             final Segment source = sources.get(record.segmentId());
             if (source != null && isAudited(record, kept)) {
                 targets.put(record.segmentId(), DisplayText.of(maskedTarget(record)));
+                sourceTexts.put(record.segmentId(), DisplayText.of(source.masked()));
                 final List<QaFinding> findings = findingsOf(book, source, record);
                 if (!findings.isEmpty()) {
                     doubted.put(record.segmentId(), findings);
                 }
             }
         }
-        addNameVariants(book, targets, doubted);
+        addNameVariants(book, targets, sourceTexts, doubted);
         log.debug("Final audit looked at {} record(s) and doubts {}", records.size(), doubted.size());
         return doubted;
     }
@@ -131,12 +133,6 @@ public final class FinalAudit {
         final String sourceText = DisplayText.of(source.masked());
         final String target = DisplayText.of(maskedTarget);
         final List<QaFinding> found = new ArrayList<>(textChecks(book, source, sourceText, target));
-        NameMissingCheck.find(
-                        book.glossary(),
-                        sourceText,
-                        target,
-                        Objects.requireNonNull(book.brief().targetLanguage(), "target language"))
-                .ifPresent(found::add);
         final List<String> checks =
                 found.stream().map(QaFinding::raisedBy).distinct().toList();
         log.debug("Audit checks of segment {}: {}", source.id(), checks);
@@ -145,10 +141,14 @@ public final class FinalAudit {
 
     // One name spelled two ways is a fact about the whole book, so it is found after every segment has been read.
     private static void addNameVariants(
-            final Book book, final Map<String, String> targets, final Map<String, List<QaFinding>> doubted) {
+            final Book book,
+            final Map<String, String> targets,
+            final Map<String, String> sourceTexts,
+            final Map<String, List<QaFinding>> doubted) {
         NameVariants.find(
                         book.glossary(),
                         targets,
+                        sourceTexts,
                         Objects.requireNonNull(book.brief().targetLanguage(), "target"))
                 .forEach((segmentId, variants) -> {
                     final List<QaFinding> merged = new ArrayList<>(doubted.getOrDefault(segmentId, List.of()));
@@ -179,12 +179,6 @@ public final class FinalAudit {
         final List<QaFinding> found = new ArrayList<>();
         textChecks(book, source, sourceText, target).forEach(found::add);
         tokenLeak(record).ifPresent(found::add);
-        NameMissingCheck.find(
-                        book.glossary(),
-                        sourceText,
-                        target,
-                        Objects.requireNonNull(book.brief().targetLanguage(), "target language"))
-                .ifPresent(found::add);
         final List<QaFinding> audited = found.stream().map(AuditFindings::of).toList();
         if (!audited.isEmpty()) {
             log.debug("Final audit doubts segment {}: {}", record.segmentId(), AuditFindings.checksOf(audited));
@@ -207,8 +201,11 @@ public final class FinalAudit {
                 book.glossary().stream().map(GlossaryEntry::term).toList(),
                 List.of(),
                 brief.narrator());
+        // The audit reads a kept foreign run restored in place and cannot tell it from a copied phrase; the run-time
+        // check already blocked the copy, so the audit leaves the Latin-run doubt out.
         return QaEvaluator.textChecks(input, book.words()).stream()
                 .filter(result -> result.check() != CheckName.SPACING)
+                .filter(result -> result.check() != CheckName.LATIN_RUN)
                 .filter(result -> !isEnglishQuoteNote(result))
                 .map(CheckResult::finding)
                 .filter(Objects::nonNull)

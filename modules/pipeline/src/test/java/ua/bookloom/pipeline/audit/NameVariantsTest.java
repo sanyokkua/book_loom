@@ -77,4 +77,27 @@ class NameVariantsTest {
 
         assertThat(found).isEmpty();
     }
+
+    // IF a segment that never names the term counted, THEN another name that folds into it would be a "variant".
+    @Test
+    void find_segmentWhoseSourceDoesNotNameTheTerm_isNotCounted() {
+        final Map<String, List<QaFinding>> found = NameVariants.find(
+                List.of(name("Miles", "Майлз", TermType.CHARACTER)),
+                targets("s1", "Майлз пішов.", "s2", "Майлс сказав."),
+                Map.of("s1", "Miles left.", "s2", "Mike said."),
+                "uk");
+
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    void find_segmentWhoseSourceNamesTheTerm_isCounted() {
+        final Map<String, List<QaFinding>> found = NameVariants.find(
+                List.of(name("Miles", "Майлз", TermType.CHARACTER)),
+                targets("s1", "Майлз пішов.", "s2", "Майлс сказав."),
+                Map.of("s1", "Miles left.", "s2", "Miles said."),
+                "uk");
+
+        assertThat(found).containsOnlyKeys("s2");
+    }
 }

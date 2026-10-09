@@ -137,13 +137,13 @@ class ConsistencyPassNeighbourContextTest {
     // IF an accepted paragraph the audit doubts were left out, THEN only the run's own trouble would ever be checked.
     @Test
     void run_acceptedParagraphTheAuditDoubts_isChecked() {
-        book.decide(SAM_MET_HALE, "Сем зустріла його.", "Сем зустріла його.");
+        book.decide(SAM_MET_HALE, "Сем зустріла зустріла його.", "Сем зустріла зустріла його.");
         book.model().answerTo(CONSISTENCY, reply(BEFORE));
 
         ok(book.runExport(EXPORT));
 
         assertThat(book.model().requests()).hasSize(1);
-        assertThat(book.userMessage(0)).contains("<Translation>\nСем зустріла його.");
+        assertThat(book.userMessage(0)).contains("<Translation>\nСем зустріла зустріла його.");
     }
 
     // IF "every segment" were ignored, THEN a Max export would check only the doubted paragraphs.

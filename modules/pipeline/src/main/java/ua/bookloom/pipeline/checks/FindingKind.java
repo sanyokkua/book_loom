@@ -43,5 +43,17 @@ public enum FindingKind {
     NAME_SWAP,
 
     /** A woman's name written with a man's verb ending or declension. */
-    NAME_GENDER
+    NAME_GENDER,
+
+    /** A run of Latin words copied from the source into a target written in another script. */
+    LATIN_RUN,
+
+    /** A glossary name the source holds that the target has lost. */
+    NAME_MISSING,
+
+    /** A glossary name the target spells another way than the glossary does. */
+    NAME_SPELLING,
+
+    /** A word of another language that the target language's file lists with its replacement. */
+    FOREIGN_WORD
 }

@@ -1190,7 +1190,9 @@ empty, is unreadable — the previous summary is kept and one WARN is logged; th
 
 Not a prompt: the final audit (15d.12) makes no model call. After a run completes, on demand from the review desk and
 when an export is made, it re-runs the deterministic checks (leftover source-language text, mixed-alphabet words,
-unbalanced quotes, doubled words, the gender check, the run's word validator), a placeholder-token leak and a soft
-`name-missing` check over every accepted, unreviewed segment, and records each hit as a finding raised by
-`audit:<check>`. A model that drops an unlocked glossary name or leaves a paragraph in English therefore shows up in the
+unbalanced quotes, doubled words, the gender check, the run's word validator), a placeholder-token leak and the book-wide
+`name-variants` check (a name spelled two ways, counted only in segments whose source names it and never for a common
+word the targets also write in lower case) over every accepted, unreviewed segment, and records each hit as a finding raised by
+`audit:<check>`. A lost glossary name is no audit doubt since 15h.A5: it is a soft finding while the segment is drafted and earns a
+directed fix. A model that leaves a paragraph in English therefore shows up in the
 "suspicious" list, the outcome card, the report and the command's `--report` JSON even though every gate passed it.

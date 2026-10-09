@@ -132,6 +132,10 @@ final class TextCheckGates {
             case NUMBER_CHANGED -> CheckName.NUMBER;
             case NAME_SWAP -> CheckName.NAME_SWAP;
             case NAME_GENDER -> CheckName.NAME_GENDER;
+            case LATIN_RUN -> CheckName.LATIN_RUN;
+            case NAME_MISSING -> CheckName.NAME_MISSING;
+            case NAME_SPELLING -> CheckName.NAME_SPELLING;
+            case FOREIGN_WORD -> CheckName.FOREIGN_WORD;
         };
     }
 }

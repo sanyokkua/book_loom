@@ -47,8 +47,8 @@ import ua.bookloom.pipeline.run.RunAudit;
 import ua.bookloom.pipeline.run.RunStores;
 
 /**
- * A finished scripted run over a four-paragraph book: the audit lists an English leftover, a stray quote and a dropped
- * glossary name that a target now holds, names the check that fired for each, and says nothing about the clean one.
+ * A finished scripted run over a four-paragraph book: the audit lists an English leftover, a stray quote and a name spelled another way
+ * across the book, names the check that fired for each, and says nothing about the clean one.
  */
 class FinalAuditJobTest {
 
@@ -65,7 +65,6 @@ class FinalAuditJobTest {
     private static final String ENGLISH_LEFTOVER =
             "The old wooden door opened slowly and the captain looked into the dark room again.";
     private static final String STRAY_QUOTE = "Він сказав: «човни повернуться до початку бурі і пішов додому.";
-    private static final String NAME_DROPPED = "Вона двічі перерахувала кожен ящик на причалі того ранку.";
     private static final String DOUBLED = "Гавань на на світанку була тихою.";
 
     @TempDir
@@ -145,40 +144,37 @@ class FinalAuditJobTest {
     }
 
     @Test
-    void audit_leftoverStrayQuoteAndDroppedName_areNamedWithTheCheckThatFired() {
+    void audit_leftoverAndStrayQuote_areNamedWithTheCheckThatFired() {
         final TestProject run = finished(Map.of());
         damage(run, "Book.md:1", ENGLISH_LEFTOVER);
         damage(run, "Book.md:2", STRAY_QUOTE);
-        damage(run, "Book.md:3", NAME_DROPPED);
 
         final List<SuspiciousSegment> suspicious = audited(run);
 
         assertThat(suspicious)
                 .extracting(SuspiciousSegment::segmentId, SuspiciousSegment::checks)
                 .containsExactly(
-                        tuple("Book.md:1", List.of("language-identity")),
-                        tuple("Book.md:2", List.of("quote-balance")),
-                        tuple("Book.md:3", List.of("name-missing")));
+                        tuple("Book.md:1", List.of("language-identity")), tuple("Book.md:2", List.of("quote-balance")));
     }
 
     // IF no check read the whole book, THEN one name spelled two ways would never be seen: no single segment shows it.
     @Test
     void audit_nameSpelledTwoWaysAcrossTheBook_isReportedOnceOnTheOddSpelling() {
         final TestProject run = finished(Map.of());
-        damage(run, "Book.md:0", "Гавань на світанку була тихою, як Нел.");
+        damage(run, "Book.md:3", "Нел двічі перерахувала кожен ящик на причалі того ранку.");
 
         final List<SuspiciousSegment> suspicious = audited(run);
 
         assertThat(suspicious)
                 .extracting(SuspiciousSegment::segmentId, SuspiciousSegment::checks)
-                .containsExactly(tuple("Book.md:0", List.of("name-variants")));
+                .containsExactly(tuple("Book.md:3", List.of("name-variants")));
     }
 
     @Test
     void audit_damagedBook_listsThemUnderTheSuspiciousFilterAndCountsThem() {
         final TestProject run = finished(Map.of());
         damage(run, "Book.md:1", ENGLISH_LEFTOVER);
-        damage(run, "Book.md:3", NAME_DROPPED);
+        damage(run, "Book.md:2", STRAY_QUOTE);
         audited(run);
 
         final List<SegmentView> listed = Objects.requireNonNull(new ReviewQueries(
@@ -190,7 +186,7 @@ class FinalAuditJobTest {
                 .data());
         final ReviewCounts counts = ReviewCounting.count(stored(run), Set.of());
 
-        assertThat(listed).extracting(SegmentView::segmentId).containsExactly("Book.md:1", "Book.md:3");
+        assertThat(listed).extracting(SegmentView::segmentId).containsExactly("Book.md:1", "Book.md:2");
         assertThat(listed.getFirst().findings())
                 .anyMatch(finding -> finding.raisedBy().equals("audit:language-identity"));
         assertThat(counts.suspicious()).isEqualTo(2);

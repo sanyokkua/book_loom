@@ -261,4 +261,103 @@ class TextChecksTest {
 
         assertThat(finding.note()).startsWith("\"навчg3вся\" — The word mixes alphabets");
     }
+
+    // IF a run of source Latin words left in a Cyrillic target were let through, THEN English reaches the book.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "a two-word run|He read the Daily Courier on the train.|Він читав Daily Courier у поїзді.|Daily Courier",
+                "a three-word run in other case|They sold Old Harbour Press books.|Вони продавали книжки old harbour press.|old harbour press",
+            })
+    void run_sourceLatinRunLeftInCyrillicTarget_isBlockingWithTheRunAsSpan(
+            final String name, final String source, final String target, final String run) {
+        assertThat(uk(source, target))
+                .filteredOn(CheckFinding::blocking)
+                .extracting(finding -> finding.kind(), finding -> finding.span().text())
+                .containsExactly(tuple(FindingKind.LATIN_RUN, run));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "a single kept word|He read Courier on the train.|Він читав Courier у поїзді.",
+                "a run the source does not have|He read the paper on the train.|Він читав Daily Courier у поїзді.",
+            })
+    void run_latinWordsThatAreNotASourceRun_areNotBlocked(final String name, final String source, final String target) {
+        assertThat(uk(source, target)).noneMatch(CheckFinding::blocking);
+    }
+
+    @Test
+    void run_latinRunInALatinTarget_isNotAFinding() {
+        assertThat(pl("He read the Daily Courier on the train.", "Czytał Daily Courier w pociągu."))
+                .isEmpty();
+    }
+
+    // IF a listed Russian word got no exact replacement, THEN the fix call has to guess the Ukrainian word.
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "lower case|He came too.|Він тоже прийшов.|тоже|теж",
+                "capitalised|Too late.|Тоже пізно.|Тоже|Теж",
+            })
+    void run_listedRussianWord_isSoftWithTheExactReplacement(
+            final String name, final String source, final String target, final String word, final String replacement) {
+        final List<CheckFinding> found = uk(source, target).stream()
+                .filter(finding -> finding.kind() == FindingKind.FOREIGN_WORD)
+                .toList();
+
+        assertThat(found).singleElement().satisfies(finding -> {
+            assertThat(finding.blocking()).isFalse();
+            assertThat(finding.span().text()).isEqualTo(word);
+            assertThat(finding.explanation()).contains("\"" + replacement + "\"");
+        });
+    }
+
+    @Test
+    void run_listedWordThatTheSourceAlsoHas_isLeftAlone() {
+        assertThat(uk("Он сказал тоже.", "Він сказав «тоже».")).noneMatch(f -> f.kind() == FindingKind.FOREIGN_WORD);
+    }
+
+    // IF the lost name were not reported at run time, THEN the draft keeps the sentence without the place.
+    @Test
+    void run_glossaryNameLostFromTheTarget_isSoftWithTheRenderingToPutBack() {
+        final List<CheckFinding> found = TextChecks.run(
+                "They reached Zurich at dawn.",
+                "Вони дісталися до міста на світанку.",
+                "en",
+                "uk",
+                List.of("Zurich → Цюріх"));
+
+        assertThat(found).singleElement().satisfies(finding -> {
+            assertThat(finding.kind()).isEqualTo(FindingKind.NAME_MISSING);
+            assertThat(finding.blocking()).isFalse();
+            assertThat(finding.explanation()).contains("\"Цюріх\"");
+        });
+    }
+
+    // IF the model wrote the name another way, THEN the finding must name that word and the exact replacement.
+    @Test
+    void run_glossaryNameSpelledAnotherWay_isSoftWithTheWordAndTheReplacement() {
+        final List<CheckFinding> found =
+                TextChecks.run("David stayed home.", "Тавид залишився вдома.", "en", "uk", List.of("David → Давид"));
+
+        assertThat(found).singleElement().satisfies(finding -> {
+            assertThat(finding.kind()).isEqualTo(FindingKind.NAME_SPELLING);
+            assertThat(finding.blocking()).isFalse();
+            assertThat(finding.span().text()).isEqualTo("Тавид");
+            assertThat(finding.explanation()).contains("replace \"Тавид\" with \"Давид\"");
+        });
+    }
+
+    // IF a pronoun that folds into the name were its spelling, THEN the fix would put the name over every "Він".
+    @Test
+    void run_pronounThatFoldsIntoTheLostName_isNotItsSpelling() {
+        final List<CheckFinding> found =
+                TextChecks.run("Finn stayed home.", "Він залишився вдома.", "en", "uk", List.of("Finn → Фінн"));
+
+        assertThat(found).singleElement().extracting(CheckFinding::kind).isEqualTo(FindingKind.NAME_MISSING);
+    }
 }

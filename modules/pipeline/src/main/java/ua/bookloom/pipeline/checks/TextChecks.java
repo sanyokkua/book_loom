@@ -14,7 +14,7 @@ import ua.bookloom.util.lang.Languages;
  * The deterministic text checks that need no model, run on one segment's display texts — a defect found here is a
  * fact, not an opinion, so a blocking finding fails the segment before any reviewer is asked. Blocking: a word that
  * mixes alphabets, a quote pair the source balanced and the target did not, a paragraph left in the source language.
- * A glossary name swapped for another one blocks too. Soft: a doubled word, a spacing artefact, a changed number. The length check stays beside the other soft checks in
+ * A glossary name swapped for another one and a run of source Latin words left in a target of another script block too. Soft: a doubled word, a spacing artefact, a changed number, a glossary name lost or spelled another way, a listed foreign word. The length check stays beside the other soft checks in
  * {@code qa}, where its band and its blend weight live.
  */
 @Slf4j
@@ -70,6 +70,10 @@ public final class TextChecks {
         findings.addAll(ScriptPurityCheck.find(target, Languages.scriptOf(targetLanguage)));
         QuoteBalanceCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
         findings.addAll(LanguageIdentityCheck.find(target, sourceLanguage, targetLanguage));
+        if (findings.stream().noneMatch(finding -> finding.kind() == FindingKind.LEFTOVER_LANGUAGE)) {
+            findings.addAll(LatinRunCheck.find(source, target, Languages.scriptOf(targetLanguage)));
+        }
+        findings.addAll(ForeignWordCheck.find(source, target, targetLanguage));
         findings.addAll(DuplicateWordCheck.find(source, target));
         findings.addAll(SpacingCheck.find(source, target));
         SentenceCountCheck.find(source, target, sourceLanguage, targetLanguage).ifPresent(findings::add);
@@ -92,6 +96,7 @@ public final class TextChecks {
         final List<CheckFinding> found =
                 new ArrayList<>(VocativeCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
         found.addAll(NameSwapCheck.find(source, target, glossaryPairs, alternations, sourceLanguage));
+        found.addAll(NameLossCheck.find(source, target, glossaryPairs, sourceLanguage, targetLanguage));
         return found;
     }
 

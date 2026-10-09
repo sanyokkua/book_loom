@@ -11,7 +11,8 @@ import ua.bookloom.pipeline.qa.QaResult;
 
 /**
  * Which soft findings a directed fix can mend: a narrator's word of the wrong gender, a woman's name written with a
- * man's verb or declension, a word with a letter outside the target alphabet, a number the translation changed. Such
+ * man's verb or declension, a word with a letter outside the target alphabet, a number the translation changed, a glossary name the translation lost or spelled another way, a word of another
+ * language the language file replaces. Such
  * a finding never refuses a segment, it earns one fix call ({@link SoftFix}).
  */
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
@@ -22,7 +23,10 @@ public final class SoftFindings {
             CheckName.GENDER.raisedBy(),
             CheckName.NAME_GENDER.raisedBy(),
             CheckName.ALPHABET.raisedBy(),
-            CheckName.NUMBER.raisedBy());
+            CheckName.NUMBER.raisedBy(),
+            CheckName.NAME_MISSING.raisedBy(),
+            CheckName.NAME_SPELLING.raisedBy(),
+            CheckName.FOREIGN_WORD.raisedBy());
 
     /**
      * Whether a directed fix can mend a finding.

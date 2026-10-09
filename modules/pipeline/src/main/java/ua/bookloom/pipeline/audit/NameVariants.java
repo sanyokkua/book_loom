@@ -4,12 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +16,8 @@ import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.Severity;
 import ua.bookloom.api.project.TermType;
+import ua.bookloom.pipeline.checks.NameSpelling;
+import ua.bookloom.pipeline.lexicon.TermMatch;
 import ua.bookloom.pipeline.prompt.LanguageRules;
 
 /**
@@ -32,8 +33,6 @@ import ua.bookloom.pipeline.prompt.LanguageRules;
 final class NameVariants {
 
     static final String NAME = "name-variants";
-    private static final Pattern CAPITALISED = Pattern.compile("\\p{Lu}[\\p{L}\\p{M}'’ʼ-]+");
-    private static final Pattern DOUBLED = Pattern.compile("(\\p{L})\\1");
     private static final int MIN_NAME_LETTERS = 4;
 
     /**
@@ -46,13 +45,35 @@ final class NameVariants {
      */
     static Map<String, List<QaFinding>> find(
             final List<GlossaryEntry> glossary, final Map<String, String> targets, final String targetLanguage) {
+        return find(glossary, targets, Map.of(), targetLanguage);
+    }
+
+    /**
+     * Finds the names spelled more than one way, counting a word only in a segment whose source names the term and
+     * never when it is a common word the targets also write in lower case.
+     *
+     * @param glossary the non-null glossary entries of the project
+     * @param targets the non-null display text of each audited segment's target, by segment id, in document order
+     * @param sources the non-null display text of each segment's source, by segment id; a segment with no source here
+     *     is counted as if it named every term
+     * @param targetLanguage the non-null target language tag, whose voicing pairs fold the spellings
+     * @return the findings by the segment that carries them; never null, empty when every name has one spelling
+     */
+    static Map<String, List<QaFinding>> find(
+            final List<GlossaryEntry> glossary,
+            final Map<String, String> targets,
+            final Map<String, String> sources,
+            final String targetLanguage) {
         Objects.requireNonNull(glossary, "glossary");
         Objects.requireNonNull(targets, "targets");
+        Objects.requireNonNull(sources, "sources");
         final List<String> pairs = LanguageRules.bundled().voicingPairs(targetLanguage);
+        final Set<String> lowerCase = NameSpelling.lowerCaseWords(targets.values());
+        final Common common = new Common(targetLanguage, lowerCase, sources);
         final Map<String, List<QaFinding>> found = new LinkedHashMap<>();
         glossary.stream()
                 .filter(NameVariants::isCheckable)
-                .forEach(entry -> variantOf(entry, targets, pairs)
+                .forEach(entry -> variantOf(entry, targets, pairs, common)
                         .ifPresent(variant -> found.computeIfAbsent(variant.segmentId(), id -> new ArrayList<>())
                                 .add(variant.finding())));
         log.debug("Name variants: {} name(s) are spelled more than one way", found.size());
@@ -60,6 +81,8 @@ final class NameVariants {
     }
 
     private record Variant(String segmentId, QaFinding finding) {}
+
+    private record Common(String language, Set<String> lowerCase, Map<String, String> sources) {}
 
     private static boolean isCheckable(final GlossaryEntry entry) {
         final String target = entry.target();
@@ -70,18 +93,26 @@ final class NameVariants {
     }
 
     private static java.util.Optional<Variant> variantOf(
-            final GlossaryEntry entry, final Map<String, String> targets, final List<String> pairs) {
+            final GlossaryEntry entry,
+            final Map<String, String> targets,
+            final List<String> pairs,
+            final Common common) {
         final String rendering =
                 Objects.requireNonNull(entry.target(), "target").strip();
-        final String folded = fold(rendering, pairs);
+        final String folded = NameSpelling.fold(rendering, pairs);
         final Map<String, Integer> spellings = new HashMap<>();
         String firstSegment = null;
         String firstSpelling = null;
         for (final Map.Entry<String, String> target : targets.entrySet()) {
-            final Matcher words = CAPITALISED.matcher(target.getValue());
+            if (!namesTerm(entry.term(), target.getKey(), common.sources())) {
+                continue;
+            }
+            final Matcher words = NameSpelling.CAPITALISED.matcher(target.getValue());
             while (words.find()) {
                 final String word = words.group();
-                if (!word.equalsIgnoreCase(rendering) && fold(word, pairs).equals(folded)) {
+                if (!word.equalsIgnoreCase(rendering)
+                        && NameSpelling.fold(word, pairs).equals(folded)
+                        && !NameSpelling.isCommonWord(word, common.language(), common.lowerCase())) {
                     spellings.merge(word, 1, Integer::sum);
                     firstSegment = firstSegment == null ? target.getKey() : firstSegment;
                     firstSpelling = firstSpelling == null ? word : firstSpelling;
@@ -110,11 +141,10 @@ final class NameVariants {
                 NAME);
     }
 
-    private static String fold(final String word, final List<String> pairs) {
-        String folded = DOUBLED.matcher(word.toLowerCase(Locale.ROOT)).replaceAll("$1");
-        for (final String pair : pairs) {
-            folded = folded.replace(pair.charAt(0), pair.charAt(1));
-        }
-        return folded;
+    // Without sources (the caller has none) every segment counts; with them, only a segment whose source names the
+    // term.
+    private static boolean namesTerm(final String term, final String segmentId, final Map<String, String> sources) {
+        return sources.isEmpty()
+                || (sources.containsKey(segmentId) && TermMatch.occursIn(term, sources.get(segmentId)));
     }
 }
