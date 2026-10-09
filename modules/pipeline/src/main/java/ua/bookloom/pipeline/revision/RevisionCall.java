@@ -35,7 +35,6 @@ import ua.bookloom.pipeline.prompt.PromptTemplates;
 final class RevisionCall {
 
     private static final String LABEL = "Revision";
-    private static final String UNREADABLE = "unreadable";
     private static final String GATE = "gate";
 
     private final PromptTemplates templates;
@@ -107,13 +106,26 @@ final class RevisionCall {
                 request,
                 SelfHealCalls.descriptor(templates, name, inputs.frame(), segment.masked(), user));
         SelfHealCalls.logTraceReply(log, LABEL, reply);
+        if (name == PromptName.CONSISTENCY && UnchangedReply.isUnchanged(reply)) {
+            log.debug("Revision answered unchanged segmentId={}", segment.id());
+            return Result.ok(new RevisionAnswer.Unchanged());
+        }
         final Result<RepairReply> read = RepairReplies.read(
                 reply, replyParser, segment.masked(), inputs.frame().targetLanguage());
         SelfHealCalls.logOutcome(log, LABEL, segment.id(), read);
         if (read.isErr()) {
             return Result.err(Objects.requireNonNull(read.error(), "error"));
         }
-        return switch (Objects.requireNonNull(read.data(), "read")) {
+        return answerOf(Objects.requireNonNull(read.data(), "read"), inputs, segment, maskedTarget, mode);
+    }
+
+    private static Result<RevisionAnswer> answerOf(
+            final RepairReply read,
+            final PassInputs inputs,
+            final Segment segment,
+            final String maskedTarget,
+            final RevisionGuards.Mode mode) {
+        return switch (read) {
             case RepairReply.Rewritten rewritten ->
                 gated(inputs, segment, maskedTarget, rewritten.maskedTarget(), mode);
             case RepairReply.Malformed malformed -> {
@@ -123,7 +135,7 @@ final class RevisionCall {
                         malformed.diagnostic());
                 yield Result.ok(new RevisionAnswer.Refused(malformed.reason()));
             }
-            case RepairReply.FlagNow flagNow -> Result.ok(new RevisionAnswer.Refused(UNREADABLE));
+            case RepairReply.FlagNow flagNow -> Result.ok(new RevisionAnswer.Refused(RevisionAnswer.UNREADABLE));
         };
     }
 

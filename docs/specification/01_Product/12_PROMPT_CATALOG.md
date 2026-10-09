@@ -748,7 +748,7 @@ Copy this exact ordered sequence unchanged: {{tokens}}
 {{text}}
 </Translation>
 
-Return one JSON object: {"target":"<the checked translation, or the same text if nothing changes>"}
+Return one JSON object: {"unchanged":true} if nothing needs to change, else {"target":"<the corrected translation>"}
 ```
 
 | Variable            | Required? | Source / notes                                                                                              |
@@ -760,7 +760,9 @@ Return one JSON object: {"target":"<the checked translation, or the same text if
 | `{{summary}}`       | Optional  | The rolling summary in the target language.                                                                 |
 | `{{source}}`, `{{text}}`, `{{tokens}}` | Required / optional | The masked source, the stored masked target and the source's `⟦gN⟧` sequence.        |
 
-**Parameters:** temperature 0.1; output format = JSON object / schema `{"target":"…"}`.
+**Parameters:** temperature 0.1; output format = JSON object / schema `{"unchanged":true}` or `{"target":"…"}` (neither key required). A paragraph the model leaves as it is costs a few tokens instead of the paragraph again.
+
+The pass remembers each paragraph it has checked, for the application run, by a hash of the slots above, the guard mode, the languages and the style sheet (`CheckedParagraphs`): a paragraph whose check ended unchanged, or with a refused change, and whose hash has not moved is not sent again, so a second export of an unchanged book sends no consistency call. A stored fix is not remembered, since it changed the paragraph.
 
 ## book-brief-tone-setup {#book-brief-tone-setup}
 

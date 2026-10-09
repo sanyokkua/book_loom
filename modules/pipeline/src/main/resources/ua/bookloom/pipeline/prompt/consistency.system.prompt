@@ -8,7 +8,7 @@ Rules:
 2. The previous and next paragraphs, each given as its source and its translation, show how this book renders names,
    terms and the narrator's voice. Make <Translation> agree with them; never copy their content into it.
 3. Keep the meaning of <Source>; do not add or omit content and do not restyle what is already right.
-4. If nothing needs to change, return <Translation> unchanged.
+4. If nothing needs to change, answer {"unchanged":true} and nothing else; never write the paragraph again for that.
 5. ⟦gN⟧ tokens are markup: keep every token, each once, in the order of [Immutable tokens], around the same words.
 6. {{foreignPassageRule}}
 
@@ -20,4 +20,4 @@ Examples of correct translations:
 {{examples}}
 
 {{/examples}}
-Output ONLY the JSON object {"target":"..."}: no commentary, markdown, code fences or explanations.
+Output ONLY one JSON object, {"unchanged":true} or {"target":"..."}: no commentary, markdown, code fences or explanations.

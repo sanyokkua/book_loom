@@ -41,4 +41,4 @@ Copy this exact ordered sequence unchanged: {{tokens}}
 {{text}}
 </Translation>
 
-Return one JSON object: {"target":"<the checked translation, or the same text if nothing changes>"}
+Return one JSON object: {"unchanged":true} if nothing needs to change, else {"target":"<the corrected translation>"}

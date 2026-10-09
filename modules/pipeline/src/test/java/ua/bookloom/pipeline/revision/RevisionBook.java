@@ -21,6 +21,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.ScriptedChatModel;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
+import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.ReviewFixtures;
@@ -52,6 +53,7 @@ final class RevisionBook {
 
     private final Desk desk;
     private final ScriptedChatModel model = new ScriptedChatModel();
+    private final CheckedParagraphs checked = new CheckedParagraphs();
 
     private RevisionBook(final Desk desk) {
         this.desk = desk;
@@ -103,7 +105,8 @@ final class RevisionBook {
                 new ObjectMapper(),
                 desk.retryDraft(ReviewMode.UNATTENDED),
                 desk.lexicon(),
-                desk.summaries());
+                desk.summaries(),
+                checked);
     }
 
     GlossaryEntry character(

@@ -38,6 +38,7 @@ import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.FinalAudit;
 import ua.bookloom.pipeline.checks.WordValidator;
 import ua.bookloom.pipeline.heal.GateFunction;
+import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.project.OpenProjects;
 import ua.bookloom.pipeline.project.SegmentLocators;
 import ua.bookloom.pipeline.prompt.CallFrame;
@@ -70,6 +71,7 @@ public final class ConsistencyPass {
     private final RetryDraft retryDraft;
     private final LexiconRepository lexicon;
     private final SummaryRepository summaries;
+    private final CheckedParagraphs checked;
 
     /**
      * Runs the pass over a project's open deferrals.
@@ -157,7 +159,7 @@ public final class ConsistencyPass {
                 .revise(inputs, open, calls, tally)
                 .flatMap(revised -> doubted(inputs, options))
                 .flatMap(doubted -> retryDoubted(inputs, doubted, calls, tally)
-                        .flatMap(retried -> new NeighbourRevision(segments, writer, call)
+                        .flatMap(retried -> new NeighbourRevision(segments, writer, call, checked)
                                 .revise(
                                         inputs,
                                         calls,

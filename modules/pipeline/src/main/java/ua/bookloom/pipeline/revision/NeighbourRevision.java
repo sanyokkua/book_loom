@@ -19,6 +19,7 @@ import ua.bookloom.api.persistence.SegmentRepository;
 import ua.bookloom.api.project.SegmentPath;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.heal.GateResult;
+import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.prompt.ModelCalls;
 import ua.bookloom.pipeline.qa.BlockingFindings;
 
@@ -36,6 +37,7 @@ final class NeighbourRevision {
     private final SegmentRepository segments;
     private final RevisionWriter writer;
     private final RevisionCall call;
+    private final CheckedParagraphs checked;
 
     /**
      * Which paragraphs are checked.
@@ -129,24 +131,57 @@ final class NeighbourRevision {
         }
         final Map<String, String> user = NeighbourPrompt.slots(
                 inputs, source, masked, neighbour(inputs, order, at - 1, byId), neighbour(inputs, order, at + 1, byId));
-        // A flagged paragraph's text failed a check, often a lost sentence or quote mark: its fix may add one back.
-        final RevisionGuards.Mode mode = record.status() == SegmentStatus.FLAGGED
-                ? RevisionGuards.Mode.NO_LOSS
-                : RevisionGuards.Mode.SAME_COUNTS;
+        final RevisionGuards.Mode mode = guardMode(record);
+        final String fingerprint = ParagraphFingerprint.of(inputs, user, mode);
+        if (checked.has(inputs.projectId(), id, fingerprint)) {
+            log.debug("Neighbour check segmentId={} skipped: checked before in this state", id);
+            tally.neighbourUnchanged();
+            return Result.ok(false);
+        }
         log.debug("Neighbour check segmentId={} status={} guards={}", id, record.status(), mode);
         final Result<RevisionAnswer> answered = call.checkAgainstNeighbours(inputs, source, masked, user, mode, calls);
         if (answered.isErr()) {
-            // One paragraph's failed call (a timeout, an unreadable reply) is no reason to lose the whole pass or the
-            // book's export; only the person's stop ends it.
-            final AppError error = Objects.requireNonNull(answered.error(), "error");
-            if (error.code() == ErrorCode.cancelled) {
-                return Result.err(error);
-            }
-            log.warn("Neighbour check segmentId={} skipped: the call failed code={}", id, error.code());
-            tally.skipped();
-            return Result.ok(false);
+            return skipped(id, Objects.requireNonNull(answered.error(), "error"), tally);
         }
-        return settle(inputs, record, masked, Objects.requireNonNull(answered.data(), "answered"), tally);
+        final RevisionAnswer answer = Objects.requireNonNull(answered.data(), "answered");
+        rememberIfSettled(inputs.projectId(), id, fingerprint, masked, answer);
+        return settle(inputs, record, masked, answer, tally);
+    }
+
+    // A paragraph left as it was, or whose change was refused for what it broke, is not asked again until something it
+    // was shown changes; a fix that was stored changes the paragraph itself, so the next pass checks the new text.
+    private void rememberIfSettled(
+            final String projectId,
+            final String id,
+            final String fingerprint,
+            final String masked,
+            final RevisionAnswer answer) {
+        final boolean settled =
+                switch (answer) {
+                    case RevisionAnswer.Unchanged unchanged -> true;
+                    case RevisionAnswer.Refused refused -> !refused.isUnreadable();
+                    case RevisionAnswer.Revised revised ->
+                        revised.restored().maskedForm().equals(masked);
+                };
+        if (settled) {
+            checked.remember(projectId, id, fingerprint);
+        }
+    }
+
+    // One paragraph's failed call (a timeout, an unreadable reply) is no reason to lose the whole pass or the book's
+    // export; only the person's stop ends it.
+    private static Result<Boolean> skipped(final String id, final AppError error, final PassTally tally) {
+        if (error.code() == ErrorCode.cancelled) {
+            return Result.err(error);
+        }
+        log.warn("Neighbour check segmentId={} skipped: the call failed code={}", id, error.code());
+        tally.skipped();
+        return Result.ok(false);
+    }
+
+    // A flagged paragraph's text failed a check, often a lost sentence or quote mark: its fix may add one back.
+    private static RevisionGuards.Mode guardMode(final SegmentRecord record) {
+        return record.status() == SegmentStatus.FLAGGED ? RevisionGuards.Mode.NO_LOSS : RevisionGuards.Mode.SAME_COUNTS;
     }
 
     private static NeighbourPrompt.@Nullable Neighbour neighbour(
@@ -166,6 +201,11 @@ final class NeighbourRevision {
             final PassTally tally) {
         final String id = record.segmentId();
         return switch (answer) {
+            case RevisionAnswer.Unchanged unchanged -> {
+                log.debug("Neighbour check segmentId={} answered unchanged", id);
+                tally.neighbourUnchanged();
+                yield Result.ok(false);
+            }
             case RevisionAnswer.Refused refused -> {
                 log.debug("Neighbour check segmentId={} refused rule={}", id, refused.reason());
                 tally.refused(refused.reason());

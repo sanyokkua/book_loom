@@ -9,6 +9,7 @@ import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.pipeline.TranslationJobTestSupport.TestProject;
 import ua.bookloom.pipeline.heal.QualityLoop;
+import ua.bookloom.pipeline.memory.CheckedParagraphs;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
 import ua.bookloom.pipeline.review.RetryDraft;
 import ua.bookloom.pipeline.revision.ConsistencyPass;
@@ -30,7 +31,8 @@ final class ConsistencyPassFixture {
                 new ObjectMapper(),
                 retryDraft(project),
                 project.stores().lexicon(),
-                project.stores().summaries());
+                project.stores().summaries(),
+                new CheckedParagraphs());
     }
 
     static RetryDraft retryDraft(final TestProject project) {

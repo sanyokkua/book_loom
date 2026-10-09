@@ -130,7 +130,7 @@ public enum PromptName {
             "consistency",
             CallKind.REVISION,
             "consistency",
-            DraftSchema.SCHEMA,
+            ConsistencySchema.SCHEMA,
             0.1,
             null,
             new Slots(
