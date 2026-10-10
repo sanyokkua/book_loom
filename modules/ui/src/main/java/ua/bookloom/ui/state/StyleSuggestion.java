@@ -22,11 +22,12 @@ import ua.bookloom.api.project.BookBrief;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.NarratorPerson;
+import ua.bookloom.api.project.Register;
 
 /**
  * The model's proposal of the Book Brief's tone and style: asks for it, and writes the answer into the brief through the
- * view model's own change path, so it is saved and observed like a person's edit. A narrator the model could not tell
- * leaves the person's own choice alone; a narrator gender it proved fills only an unknown one, and is shown as
+ * view model's own change path, so it is saved and observed like a person's edit. A register the samples did not
+ * agree on and a narrator the model could not tell leave the person's own choice alone; a narrator gender it proved fills only an unknown one, and is shown as
  * suggested. The evidence behind each field (the book's words the model quoted, and how many of the samples agreed) is
  * kept for the screen to show while the field still holds the value the suggestion wrote. FX thread only.
  */
@@ -184,7 +185,7 @@ public final class StyleSuggestion {
                 brief.sourceLanguage(),
                 brief.targetLanguage(),
                 suggestion.genre() == null ? brief.genre() : knownGenre(suggestion.genre()),
-                suggestion.register(),
+                registerFor(brief, suggestion),
                 suggestion.voiceEra() == null ? brief.voiceEra() : suggestion.voiceEra(),
                 suggestion.audience() == null ? brief.audience() : suggestion.audience(),
                 brief.names(),
@@ -195,6 +196,16 @@ public final class StyleSuggestion {
                 brief.alsoTranslate(),
                 brief.dial(),
                 narratorFor(brief, suggestion));
+    }
+
+    // An uncertain register is not a suggestion: the person's own stays, as the field's tip says.
+    private static Register registerFor(final BookBrief brief, final BriefSuggestion suggestion) {
+        return suggestion
+                        .evidenceOf(BriefField.REGISTER)
+                        .filter(proof -> !proof.isKept())
+                        .isPresent()
+                ? brief.register()
+                : suggestion.register();
     }
 
     /** The genre as the list names it when the model named one of the predefined genres, else as free text. */

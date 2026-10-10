@@ -60,12 +60,18 @@ final class BriefAgreement {
             }
             combineField(field, given, samples, values, evidence);
         }
+        final NarratorPerson person = narrator(values.get(BriefField.NARRATOR));
+        // A gender belongs to a first-person narrator; a third-person book has no narrator character to give one.
+        if (person == NarratorPerson.THIRD && evidence.remove(BriefField.NARRATOR_GENDER) != null) {
+            log.debug("Narrator gender dropped: the samples agree the book is third person");
+            values.remove(BriefField.NARRATOR_GENDER);
+        }
         return new BriefSuggestion(
                 blankToNull(values.get(BriefField.GENRE)),
                 register(values.get(BriefField.REGISTER)),
                 blankToNull(values.get(BriefField.VOICE)),
                 blankToNull(values.get(BriefField.AUDIENCE)),
-                narrator(values.get(BriefField.NARRATOR)),
+                person,
                 gender(values.get(BriefField.NARRATOR_GENDER)),
                 evidence);
     }

@@ -125,4 +125,18 @@ class BriefAgreementTest {
         assertThat(suggestion.narratorGender()).isEqualTo(Gender.UNKNOWN);
         assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER)).contains(new FieldEvidence(List.of(), 2, 2));
     }
+
+    // IF a gender were kept for a third-person book, THEN the brief would name a narrator character that does not
+    // exist.
+    @Test
+    void combine_samplesAgreeOnThirdPerson_dropsAProvenNarratorGender() {
+        final Map<BriefField, Answer> sample = Map.of(
+                BriefField.NARRATOR, new Answer("third", "She walked in."),
+                BriefField.NARRATOR_GENDER, new Answer("female", "Yes, ma'am"));
+
+        final BriefSuggestion suggestion = BriefAgreement.combine(List.of(sample, sample), 2);
+
+        assertThat(suggestion.narratorGender()).isEqualTo(Gender.UNKNOWN);
+        assertThat(suggestion.evidenceOf(BriefField.NARRATOR_GENDER)).isEmpty();
+    }
 }

@@ -123,6 +123,28 @@ class BookBriefViewModelSuggestStyleTest extends ExportViewModelTestBase {
         assertThat(stored().narrator().person()).isEqualTo(NarratorPerson.FIRST);
     }
 
+    // IF an uncertain register were written as neutral, THEN the tip "left it as it was" would be false.
+    @Test
+    void suggestStyle_registerUncertain_keepsThePersonsRegister() {
+        chooseModel();
+        onFx(() -> {
+            brief.setRegister(Register.CASUAL);
+            return null;
+        });
+        assistant.answersBrief(Result.ok(new BriefSuggestion(
+                null,
+                Register.NEUTRAL,
+                null,
+                null,
+                NarratorPerson.UNSPECIFIED,
+                Gender.UNKNOWN,
+                Map.of(BriefField.REGISTER, new FieldEvidence(List.of(), 1, 2)))));
+
+        suggest();
+
+        assertThat(stored().register()).isEqualTo(Register.CASUAL);
+    }
+
     @Test
     void suggestStyle_noModelChosen_saysSoAndChangesNothing() {
         final BookBrief before = stored();
