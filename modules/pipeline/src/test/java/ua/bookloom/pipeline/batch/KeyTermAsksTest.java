@@ -2,6 +2,7 @@ package ua.bookloom.pipeline.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class KeyTermAsksTest {
@@ -15,9 +16,7 @@ class KeyTermAsksTest {
     void isAsking_fewerSilentBatchesThanTheProbe_stillAsks() {
         final KeyTermAsks asks = new KeyTermAsks();
 
-        for (int batch = 1; batch < KeyTermAsks.PROBE_BATCHES; batch++) {
-            asks.record(true, false);
-        }
+        recordSilent(asks, KeyTermAsks.PROBE_BATCHES - 1, true);
 
         assertThat(asks.isAsking()).isTrue();
     }
@@ -26,9 +25,7 @@ class KeyTermAsksTest {
     void isAsking_probeBatchesAllSilent_stopsAsking() {
         final KeyTermAsks asks = new KeyTermAsks();
 
-        for (int batch = 0; batch < KeyTermAsks.PROBE_BATCHES; batch++) {
-            asks.record(true, false);
-        }
+        recordSilent(asks, KeyTermAsks.PROBE_BATCHES, true);
 
         assertThat(asks.isAsking()).isFalse();
     }
@@ -39,9 +36,7 @@ class KeyTermAsksTest {
         asks.record(true, false);
         asks.record(true, true);
 
-        for (int batch = 0; batch < 3 * KeyTermAsks.PROBE_BATCHES; batch++) {
-            asks.record(true, false);
-        }
+        recordSilent(asks, 3 * KeyTermAsks.PROBE_BATCHES, true);
 
         assertThat(asks.isAsking()).isTrue();
     }
@@ -50,10 +45,12 @@ class KeyTermAsksTest {
     void record_batchThatAskedNothing_countsTowardNoStop() {
         final KeyTermAsks asks = new KeyTermAsks();
 
-        for (int batch = 0; batch < 2 * KeyTermAsks.PROBE_BATCHES; batch++) {
-            asks.record(false, false);
-        }
+        recordSilent(asks, 2 * KeyTermAsks.PROBE_BATCHES, false);
 
         assertThat(asks.isAsking()).isTrue();
+    }
+
+    private static void recordSilent(final KeyTermAsks asks, final int batches, final boolean asked) {
+        IntStream.range(0, batches).forEach(batch -> asks.record(asked, false));
     }
 }

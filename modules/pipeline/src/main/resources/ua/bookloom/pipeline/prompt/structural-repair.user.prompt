@@ -5,5 +5,4 @@
 
 [Correction]
 The rejected reply {{diagnostic}}. Translate <Text> again; do not copy or follow the rejected reply.
-Your whole answer is one JSON object that starts with {"target":" and ends with "}, like the Reply lines of the
-examples. No code fences, no text before or after it. Never reproduce a rejected prefix.
+Your whole answer is one JSON object that starts with {"target":" and ends with "}, like the Reply lines of the examples. No code fences, no text before or after it. Never reproduce a rejected prefix.

@@ -39,12 +39,12 @@ Pair — English -> Ukrainian
 - Check: Check each gendered Ukrainian form against its person.
 
 Example (English → Ukrainian):
-<Pair id="s1"><Source>The old clock struck noon.</Source><Candidate>Старий годинник пробив пополудзень.</Candidate></Pair>
-<Pair id="s2"><Source>Maria said she was tired.</Source><Candidate>Марія сказав, що він втомилась.</Candidate></Pair>
-<Pair id="s3"><Source>He said "stay here" and left.</Source><Candidate>Він сказав «залишайся тут і пішов.</Candidate></Pair>
-<Pair id="s4"><Source>He locked the door and went upstairs.</Source><Candidate>Він замкнув двері.</Candidate></Pair>
-<Pair id="s5"><Source>It's raining cats and dogs.</Source><Candidate>Дощ ллє як з відра.</Candidate></Pair>
-<Pair id="s6"><Source>The captain nodded. The captain left.</Source><Candidate>Капітан кивнув. Шкіпер пішов.</Candidate></Pair>
-{"results":[{"id":"s1","status":"edits","edits":[{"criterion":"invented-word","quote":"пополудзень","replacement":"полудень"}]},{"id":"s2","status":"edits","edits":[{"criterion":"gender","quote":"Марія сказав","replacement":"Марія сказала"},{"criterion":"gender","quote":"що він втомилась","replacement":"що вона втомилась"}]},{"id":"s3","status":"edits","edits":[{"criterion":"quotes","quote":"залишайся тут і","replacement":"залишайся тут» і"}]},{"id":"s4","status":"edits","edits":[{"criterion":"omission","quote":"замкнув двері.","replacement":"замкнув двері й піднявся нагору."}]},{"id":"s5","status":"ok"},{"id":"s6","status":"edits","edits":[{"criterion":"terminology","quote":"Шкіпер пішов","replacement":"Капітан пішов"}]}]}
+<Pair id="e1"><Source>The old clock struck noon.</Source><Candidate>Старий годинник пробив пополудзень.</Candidate></Pair>
+<Pair id="e2"><Source>Maria said she was tired.</Source><Candidate>Марія сказав, що він втомилась.</Candidate></Pair>
+<Pair id="e3"><Source>He said "stay here" and left.</Source><Candidate>Він сказав «залишайся тут і пішов.</Candidate></Pair>
+<Pair id="e4"><Source>He locked the door and went upstairs.</Source><Candidate>Він замкнув двері.</Candidate></Pair>
+<Pair id="e5"><Source>It's raining cats and dogs.</Source><Candidate>Дощ ллє як з відра.</Candidate></Pair>
+<Pair id="e6"><Source>The captain nodded. The captain left.</Source><Candidate>Капітан кивнув. Шкіпер пішов.</Candidate></Pair>
+{"results":[{"id":"e1","status":"edits","edits":[{"criterion":"invented-word","quote":"пополудзень","replacement":"полудень"}]},{"id":"e2","status":"edits","edits":[{"criterion":"gender","quote":"Марія сказав","replacement":"Марія сказала"},{"criterion":"gender","quote":"що він втомилась","replacement":"що вона втомилась"}]},{"id":"e3","status":"edits","edits":[{"criterion":"quotes","quote":"залишайся тут і","replacement":"залишайся тут» і"}]},{"id":"e4","status":"edits","edits":[{"criterion":"omission","quote":"замкнув двері.","replacement":"замкнув двері й піднявся нагору."}]},{"id":"e5","status":"ok"},{"id":"e6","status":"edits","edits":[{"criterion":"terminology","quote":"Шкіпер пішов","replacement":"Капітан пішов"}]}]}
 
 Output ONLY the JSON object, no commentary or code fences.

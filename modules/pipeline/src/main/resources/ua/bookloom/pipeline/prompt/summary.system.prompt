@@ -7,8 +7,7 @@ You keep a short rolling summary of a book being translated from {{sourceLanguag
 Update the summary so far with what this chapter establishes: characters (with their gender when known), relationships, places and terminology decisions.
 - "summary.source": the updated summary in {{sourceLanguage}}, at most 150 words.
 - "summary.target": the same summary in {{targetLanguage}}, at most 150 words.
-- "facts": at most five facts a translator must keep consistent — a name and its rendering, a character's gender,
-  a term — each one short sentence in {{targetLanguage}}.
+- "facts": at most five facts a translator must keep consistent — a name and its rendering, a character's gender, a term — each one short sentence in {{targetLanguage}}.
 
 Output ONLY the JSON object: no commentary, markdown or code fences.
 Example reply (English → Ukrainian; write yours in the languages above):
