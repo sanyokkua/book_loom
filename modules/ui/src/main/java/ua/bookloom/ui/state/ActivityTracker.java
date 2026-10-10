@@ -15,6 +15,8 @@ import java.util.function.UnaryOperator;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +41,7 @@ public final class ActivityTracker {
     private final ObservableList<Activity> running = FXCollections.observableArrayList();
     private final ObservableList<Activity> runningView = FXCollections.unmodifiableObservableList(running);
     private final Map<Long, Runnable> cancels = new HashMap<>();
+    private final ReadOnlyObjectWrapper<LiveCalls> lastCalls = new ReadOnlyObjectWrapper<>(LiveCalls.EMPTY);
     private long lastId;
     private @Nullable Handle translation;
     private final KeepAwake keepAwake;
@@ -118,6 +121,11 @@ public final class ActivityTracker {
         } else {
             log.debug("the translation activity stays {}", translating ? "registered" : "absent");
         }
+    }
+
+    /** The calls of the last work that made any, kept for the results dialog once its card is gone. */
+    public ReadOnlyObjectProperty<LiveCalls> lastCalls() {
+        return lastCalls.getReadOnlyProperty();
     }
 
     /**
@@ -363,6 +371,9 @@ public final class ActivityTracker {
          */
         public void calls(final LiveCalls calls) {
             Objects.requireNonNull(calls, "calls");
+            if (!ended && calls.current() != null) {
+                lastCalls.set(calls);
+            }
             update(shown -> shown.withProgress(
                     new Activity.Progress(shown.fraction(), shown.stepText(), shown.details(), shown.eta(), calls)));
         }

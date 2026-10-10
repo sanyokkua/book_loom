@@ -13,6 +13,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.TokenUsage;
@@ -60,6 +61,8 @@ public final class LiveCallView extends VBox {
     private final List<CallSegmentRow> built = new ArrayList<>();
     private final FlowPane header;
     private final ScrollPane segments;
+    private final InputPane input;
+    private final Label replyNote = new Label();
     private final ReplyPane reply;
     private final PromptContextPane prompt;
     private @Nullable CallSnapshot shownCall;
@@ -86,13 +89,17 @@ public final class LiveCallView extends VBox {
         this.messages = Objects.requireNonNull(messages, "messages");
         this.sourceName = Objects.requireNonNull(sourceName, "sourceName");
         this.targetName = Objects.requireNonNull(targetName, "targetName");
+        this.input = new InputPane(id + "-input", messages);
         this.reply = new ReplyPane(id + "-reply", messages);
         this.prompt = new PromptContextPane(id + "-prompt", messages);
         this.header = header();
         this.segments = segmentsArea();
         getStyleClass().add("live-call");
         setPadding(new Insets(SPACING));
-        getChildren().addAll(header, caption, segments, reply, prompt);
+        replyNote.getStyleClass().addAll("live-body", "live-placeholder");
+        replyNote.setWrapText(true);
+        replyNote.setMinHeight(Region.USE_PREF_SIZE);
+        getChildren().addAll(header, caption, segments, input, replyNote, reply, prompt);
         name(id);
         heading.textProperty().bind(Objects.requireNonNull(title, "title"));
         show(null, LiveCalls.EMPTY);
@@ -174,6 +181,8 @@ public final class LiveCallView extends VBox {
         for (int index = 0; index < built.size(); index++) {
             built.get(index).rename(rowId(index));
         }
+        input.rename(id + "-input");
+        replyNote.setId(id + "-reply-note");
         reply.rename(id + "-reply");
         prompt.rename(id + "-prompt");
     }
@@ -241,11 +250,32 @@ public final class LiveCallView extends VBox {
     }
 
     private void showBody(final CallSnapshot call, final Map<String, SegmentLive> live) {
+        final boolean aboutNone = call.segments().isEmpty();
         caption.setText(
-                call.segments().isEmpty()
-                        ? messages.get(MessageKey.LIVE_CALL_NO_SEGMENTS)
+                aboutNone
+                        ? summaryOf(call)
                         : messages.get(
                                 MessageKey.LIVE_CALL_SEGMENTS, call.segments().size()));
+        segments.setVisible(!aboutNone);
+        segments.setManaged(!aboutNone);
+        input.show(aboutNone ? call.sent() : null);
+        showRows(call, live);
+        showReplyNote(call);
+        reply.show(call.reply());
+        prompt.show(call.sections(), call.sent());
+    }
+
+    // What a call about no segment sent and got back, in a line, where the segments' box would stand empty.
+    private String summaryOf(final CallSnapshot call) {
+        final int sent =
+                call.sent().stream().map(message -> message.content().length()).reduce(0, Integer::sum);
+        final String received = call.reply();
+        return received == null
+                ? messages.get(MessageKey.LIVE_CALL_SUMMARY_PENDING, sent)
+                : messages.get(MessageKey.LIVE_CALL_SUMMARY, sent, received.length());
+    }
+
+    private void showRows(final CallSnapshot call, final Map<String, SegmentLive> live) {
         final int count = call.segments().size();
         while (built.size() < count) {
             final CallSegmentRow row = new CallSegmentRow(rowId(built.size()), sourceName, targetName, messages);
@@ -260,8 +290,19 @@ public final class LiveCallView extends VBox {
             final CallSegment segment = call.segments().get(index);
             built.get(index).show(segment, live.get(segment.id()), notesOf(call, segment), call.state());
         }
-        reply.show(call.reply());
-        prompt.show(call.sections(), call.sent());
+    }
+
+    // A call that has not answered says what it is doing, so the reply's place is never silently empty.
+    private void showReplyNote(final CallSnapshot call) {
+        final boolean noteShown = call.reply() == null;
+        replyNote.setVisible(noteShown);
+        replyNote.setManaged(noteShown);
+        if (noteShown) {
+            replyNote.setText(messages.get(
+                    call.state() == CallState.WAITING
+                            ? MessageKey.LIVE_CALL_REPLY_WAITING
+                            : MessageKey.LIVE_CALL_REPLY_NONE));
+        }
     }
 
     private static List<SegmentOutcomeNote> notesOf(final CallSnapshot call, final CallSegment segment) {

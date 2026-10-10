@@ -48,8 +48,8 @@ import ua.bookloom.ui.state.LiveCalls;
  * it has got, how long it has taken and what is left, with Cancel when the work can be stopped. It sits between the
  * frame and the {@link ModalHost}, so an error dialog arriving while it is up is shown above it and leaves it intact.
  *
- * <p>Work that makes model calls, such as the export's consistency pass, also shows its current call in a folded
- * "Model calls" section, the same view the Translating screen's live panel uses.
+ * <p>Work that makes model calls, such as the export's consistency pass, also shows its current call and the one before it in a
+ * folded "Model calls" section, the same view the Translating screen's live panel uses.
  *
  * <p>The card appears only after {@link #DELAY} so work that ends at once never flashes it, and fades in and out. It
  * cannot be dismissed from the keyboard or by a click: Escape is swallowed, Tab stays on the card, the focus moves onto
@@ -91,6 +91,7 @@ public final class BusyHost {
     private final Label eta = new Label();
     private final VBox details = new VBox();
     private final LiveCallView call;
+    private final LiveCallView previousCall;
     private final TitledPane calls;
     private final ButtonType cancelType;
     private final Button cancel;
@@ -113,13 +114,9 @@ public final class BusyHost {
         this.activities = Objects.requireNonNull(activities, "activities");
         this.messages = Objects.requireNonNull(messages, "messages");
         cancelType = new ButtonType(messages.get(MessageKey.BUSY_CANCEL), ButtonBar.ButtonData.CANCEL_CLOSE);
-        call = new LiveCallView(
-                CALL_ID,
-                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_CALL_CURRENT)),
-                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_SOURCE_FALLBACK)),
-                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_TARGET_FALLBACK)),
-                messages);
-        calls = new TitledPane(messages.get(MessageKey.BUSY_CALLS), call);
+        call = callView(CALL_ID, MessageKey.LIVE_CALL_CURRENT);
+        previousCall = callView(CALL_ID + "-previous", MessageKey.LIVE_CALL_PREVIOUS);
+        calls = new TitledPane(messages.get(MessageKey.BUSY_CALLS), new VBox(call, previousCall));
         buildCard();
         cancel = (Button) card.lookupButton(cancelType);
         wireCancel();
@@ -174,6 +171,15 @@ public final class BusyHost {
         card.setContent(body);
         card.getButtonTypes().setAll(cancelType);
         card.setMaxSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
+    }
+
+    private LiveCallView callView(final String id, final MessageKey heading) {
+        return new LiveCallView(
+                id,
+                new ReadOnlyStringWrapper(messages.get(heading)),
+                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_SOURCE_FALLBACK)),
+                new ReadOnlyStringWrapper(messages.get(MessageKey.LIVE_TARGET_FALLBACK)),
+                messages);
     }
 
     private void buildCalls() {
@@ -273,6 +279,7 @@ public final class BusyHost {
         calls.setVisible(current != null);
         calls.setManaged(current != null);
         call.show(current, live);
+        previousCall.show(live.previous(), live);
     }
 
     private String stepText(final Activity now) {

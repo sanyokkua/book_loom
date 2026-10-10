@@ -2,11 +2,13 @@ package ua.bookloom.pipeline.review;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.RunRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.JobState;
 import ua.bookloom.api.pipeline.ReviewMode;
 import ua.bookloom.api.project.BookBrief;
@@ -32,7 +35,6 @@ import ua.bookloom.api.project.Project;
 import ua.bookloom.api.project.RunRecord;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.api.project.SnapshotTerm;
-import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.pipeline.SegmentTranslator;
 import ua.bookloom.pipeline.context.ContextBudget;
 import ua.bookloom.pipeline.context.ContextPackageAssembler;
@@ -80,6 +82,7 @@ public final class RetryDraft {
     private final QualityLoop qualityLoop;
     private final SentenceSplitter splitter;
     private final ReviewMode mode;
+    private final Clock clock;
 
     /**
      * Drafts one segment again.
@@ -101,20 +104,41 @@ public final class RetryDraft {
             @Nullable final String note,
             final boolean lowerTemperature,
             final ChatModel model) {
+        return retry(projectId, segmentId, note, lowerTemperature, model, event -> {});
+    }
+
+    /**
+     * Drafts one segment again, announcing each model call to {@code progress} as a run does.
+     *
+     * @param progress the non-null receiver of the announcements, called on the calling thread
+     * @see #retry(String, String, String, boolean, ChatModel)
+     */
+    public Result<SegmentRecord> retry(
+            final String projectId,
+            final String segmentId,
+            @Nullable final String note,
+            final boolean lowerTemperature,
+            final ChatModel model,
+            final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(segmentId, "segmentId");
         Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
         final String instruction = note == null ? "" : note.strip();
         if (log.isTraceEnabled()) {
             log.trace("retry segment={} note={}", segmentId, instruction);
         }
-        final ModelCalls calls = (kind, id, request) -> model.chat(request);
         return load(projectId, segmentId)
                 .flatMap(this::retryable)
                 .flatMap(this::notRunning)
                 .flatMap(this::plan)
-                .flatMap(plan ->
-                        drafted(plan, instruction, lowerTemperature, calls).flatMap(outcome -> store(plan, outcome)));
+                .flatMap(plan -> drafted(
+                                plan,
+                                instruction,
+                                lowerTemperature,
+                                RetryCalls.over(
+                                        model, progress, clock, plan.frame().targetLanguage(), plan.document()))
+                        .flatMap(outcome -> store(plan, outcome)));
     }
 
     /**
@@ -217,7 +241,8 @@ public final class RetryDraft {
             final RetryPlan plan, final String instruction, final boolean lowerTemperature, final ModelCalls calls) {
         final Segment segment = plan.segment();
         final ContextSnapshot snapshot = plan.snapshot();
-        final List<GlossaryEntry> terms = termsOf(snapshot, plan.record().projectId());
+        final List<GlossaryEntry> terms =
+                SnapshotTerms.entriesOf(snapshot, plan.record().projectId());
         final ProtectedMask mask = ProtectedSpans.mask(segment, plan.frame(), terms);
         final DraftContext context =
                 ContextPackageAssembler.replay(snapshot, mask, segment).withFollowingTarget(plan.followingTarget());
@@ -329,20 +354,6 @@ public final class RetryDraft {
                 .map(Result::ok)
                 .orElseGet(() ->
                         refuse(ErrorCode.validation, segmentId, "This project holds no segment " + segmentId + "."));
-    }
-
-    private static List<GlossaryEntry> termsOf(final ContextSnapshot snapshot, final String projectId) {
-        return snapshot.glossary().stream()
-                .map(term -> new GlossaryEntry(
-                        term.term(),
-                        projectId,
-                        term.term(),
-                        term.target(),
-                        term.type(),
-                        term.gender(),
-                        term.locked(),
-                        term.suggested() ? TargetOrigin.SUGGESTED : TargetOrigin.PERSON))
-                .toList();
     }
 
     private static Optional<Segment> sourceOf(final Document document, final String segmentId) {

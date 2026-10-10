@@ -100,7 +100,8 @@ public final class ReviewFixtures {
                     new ObjectMapper(),
                     Guice.createInjector().getInstance(QualityLoop.class),
                     splitter,
-                    mode);
+                    mode,
+                    java.time.Clock.systemUTC());
         }
 
         /** The audit over the same stores, with no word validator. */

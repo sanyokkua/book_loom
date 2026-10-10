@@ -14,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.llm.ChatModelFactory;
 import ua.bookloom.api.llm.ModelSelection;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -26,7 +27,8 @@ import ua.bookloom.ui.i18n.Messages;
  * <p>The model is built with the provider settings' selection, read on the FX thread, and created off it, because
  * creating one can load it. The hold is published before the call is queued and withdrawn when the call returns,
  * whatever it returns. A retry is refused in place while other model work runs (a glossary scan, an export, a provider
- * inference test), and is registered with the {@link ActivityTracker} while it runs.
+ * inference test), and is registered with the {@link ActivityTracker} while it runs. The retry's model calls reach
+ * the busy card of that activity as a run's reach the live panel, and stay in the tracker for the results view.
  */
 @Slf4j
 public final class ReviewRetry {
@@ -106,9 +108,12 @@ public final class ReviewRetry {
         mirror.review().publishRetryInFlight(true);
         final InterruptibleWork running = new InterruptibleWork();
         final ActivityTracker.Handle handle = activities.begin(ActivityKind.REVIEW_RETRY, running::stop);
+        final CallFeed feed = new CallFeed(handle, activities::now);
+        final Consumer<JobEvent> progress = event -> Platform.runLater(() -> feed.accept(event));
         final BiFunction<String, String, Result<SegmentRecord>> call = (projectId, id) -> {
             try {
-                return running.run(() -> call(projectId, id, chosen.get(), note, lowerTemperature), () -> stopped(id));
+                return running.run(
+                        () -> call(projectId, id, chosen.get(), note, lowerTemperature, progress), () -> stopped(id));
             } finally {
                 Platform.runLater(handle::end);
             }
@@ -142,7 +147,8 @@ public final class ReviewRetry {
             final String segmentId,
             final ModelSelection selection,
             final @Nullable String note,
-            final boolean lowerTemperature) {
+            final boolean lowerTemperature,
+            final Consumer<JobEvent> progress) {
         try {
             final Result<ChatModel> created = models.create(selection);
             final ChatModel model = created.data();
@@ -150,7 +156,7 @@ public final class ReviewRetry {
                 log.debug("no model was created for the retry of segment {}", segmentId);
                 return Result.err(Objects.requireNonNull(created.error(), "error"));
             }
-            return desk.retry(projectId, segmentId, note, lowerTemperature, model);
+            return desk.retry(projectId, segmentId, note, lowerTemperature, model, progress);
         } finally {
             mirror.review().publishRetryInFlight(false);
         }

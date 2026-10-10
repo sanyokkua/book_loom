@@ -56,4 +56,33 @@ class CallFeedTest {
 
         assertThat(tracker.running().getFirst().calls()).isEqualTo(LiveCalls.EMPTY);
     }
+
+    // IF the calls vanished with the card, THEN the results dialog could not show what the work sent the model.
+    @Test
+    void lastCalls_afterTheWorkEnds_stillHoldTheCallsItMade() {
+        final ActivityTracker.Handle handle = tracker.begin(ActivityKind.GLOSSARY_SCAN, null);
+        final CallFeed feed = new CallFeed(handle, () -> AT);
+        feed.accept(new CallSnapshotUpdated(call(1, CallKind.PRESCAN)));
+        feed.accept(new CallSnapshotUpdated(call(2, CallKind.REVIEW_TERMS)));
+
+        handle.end();
+
+        final LiveCalls kept = tracker.lastCalls().get();
+        assertThat(kept.current()).extracting(CallSnapshot::callId).isEqualTo(2L);
+        assertThat(kept.previous()).extracting(CallSnapshot::callId).isEqualTo(1L);
+        assertThat(tracker.running()).isEmpty();
+    }
+
+    @Test
+    void lastCalls_workThatMadeNoCall_keepsTheCallsOfTheWorkBefore() {
+        final ActivityTracker.Handle scan = tracker.begin(ActivityKind.GLOSSARY_SCAN, null);
+        new CallFeed(scan, () -> AT).accept(new CallSnapshotUpdated(call(1, CallKind.PRESCAN)));
+        scan.end();
+
+        tracker.begin(ActivityKind.IMPORT, null).end();
+
+        assertThat(tracker.lastCalls().get().current())
+                .extracting(CallSnapshot::callId)
+                .isEqualTo(1L);
+    }
 }

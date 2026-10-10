@@ -1,6 +1,7 @@
 package ua.bookloom.api.pipeline;
 
 import java.util.List;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
@@ -49,10 +50,35 @@ public interface ReviewDesk {
      * @param note an optional instruction added to the retry, or null for none
      * @param lowerTemperature whether the retry should use a lower sampling temperature
      * @param model the non-null model to call
+     * @param progress the non-null receiver of the retry's model-call announcements, called on the calling thread
      * @return the segment's stored record after the action
      */
     Result<SegmentRecord> retry(
-            String projectId, String segmentId, @Nullable String note, boolean lowerTemperature, ChatModel model);
+            String projectId,
+            String segmentId,
+            @Nullable String note,
+            boolean lowerTemperature,
+            ChatModel model,
+            Consumer<JobEvent> progress);
+
+    /**
+     * Retries a segment's translation with nobody following its model calls.
+     *
+     * @param projectId the non-null project id
+     * @param segmentId the non-null segment id
+     * @param note an optional instruction added to the retry, or null for none
+     * @param lowerTemperature whether the retry should use a lower sampling temperature
+     * @param model the non-null model to call
+     * @return the segment's stored record after the action
+     */
+    default Result<SegmentRecord> retry(
+            final String projectId,
+            final String segmentId,
+            @Nullable final String note,
+            final boolean lowerTemperature,
+            final ChatModel model) {
+        return retry(projectId, segmentId, note, lowerTemperature, model, event -> {});
+    }
 
     /**
      * Skips a segment: nothing about it changes and it is not marked reviewed, and the record answered is the next

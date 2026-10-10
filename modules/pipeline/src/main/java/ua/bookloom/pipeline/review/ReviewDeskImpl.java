@@ -3,6 +3,7 @@ package ua.bookloom.pipeline.review;
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
 import ua.bookloom.api.persistence.ProjectRepository;
 import ua.bookloom.api.persistence.SegmentRepository;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
@@ -73,17 +75,22 @@ public final class ReviewDeskImpl implements ReviewDesk {
             final String segmentId,
             @Nullable final String note,
             final boolean lowerTemperature,
-            final ChatModel model) {
+            final ChatModel model,
+            final Consumer<JobEvent> progress) {
         Objects.requireNonNull(projectId, "projectId");
         Objects.requireNonNull(segmentId, "segmentId");
         Objects.requireNonNull(model, "model");
+        Objects.requireNonNull(progress, "progress");
         log.debug(
                 "retry project={} segment={} hasNote={} lowerTemperature={} part=RetryDraft",
                 projectId,
                 segmentId,
                 note != null && !note.isBlank(),
                 lowerTemperature);
-        return guarded("retry", segmentId, () -> retryDraft.retry(projectId, segmentId, note, lowerTemperature, model));
+        return guarded(
+                "retry",
+                segmentId,
+                () -> retryDraft.retry(projectId, segmentId, note, lowerTemperature, model, progress));
     }
 
     @Override

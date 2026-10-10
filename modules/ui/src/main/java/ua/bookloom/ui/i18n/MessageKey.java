@@ -1313,8 +1313,22 @@ public enum MessageKey {
     LIVE_CALL_STATE("live.call.state"),
     /** Caption above the segments a call sent; argument 0 is their number. */
     LIVE_CALL_SEGMENTS("live.call.segments"),
-    /** Text of a call that is about no particular segment. */
-    LIVE_CALL_NO_SEGMENTS("live.call.noSegments"),
+    /** Summary of an answered call about no segment; arguments: 0 characters sent, 1 characters in the reply. */
+    LIVE_CALL_SUMMARY("live.call.summary"),
+    /** Summary of a call about no segment that has no reply; argument 0 is the characters sent. */
+    LIVE_CALL_SUMMARY_PENDING("live.call.summary.pending"),
+    /** Heading of the section holding the user message a call about no segment sent. */
+    LIVE_CALL_INPUT("live.call.input"),
+    /** Hover explanation of the input section. */
+    LIVE_CALL_INPUT_TIP("live.call.input.tip"),
+    /** Button in the input section that copies the message. */
+    LIVE_CALL_INPUT_COPY("live.call.input.copy"),
+    /** Hover explanation of Copy in the input section. */
+    LIVE_CALL_INPUT_COPY_TIP("live.call.input.copy.tip"),
+    /** Line where the reply will stand while the call waits for it. */
+    LIVE_CALL_REPLY_WAITING("live.call.replyWaiting"),
+    /** Line where the reply would stand when the call ended without one. */
+    LIVE_CALL_REPLY_NONE("live.call.replyNone"),
     /** Heading of the collapsed section holding the model's reply as received. */
     LIVE_CALL_REPLY("live.call.reply"),
     /** Hover explanation of the reply section. */

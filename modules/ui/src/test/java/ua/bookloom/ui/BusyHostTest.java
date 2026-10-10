@@ -89,6 +89,24 @@ class BusyHostTest extends ShellTestBase {
         assertThat(text(BusyHost.CALL_ID + "-label")).isEqualTo("draft-batch-json");
     }
 
+    // IF the card showed only the current call, THEN the person could not compare what the last two calls sent.
+    @Test
+    void card_workWithTwoCalls_showsThePreviousCallBelowTheCurrentOne() throws TimeoutException {
+        final ActivityTracker.Handle scan = begin(ActivityKind.GLOSSARY_SCAN, true);
+        awaitCard();
+        final var first =
+                LiveCallFixtures.answered(LiveCallFixtures.waiting(1, 1, "One.", LiveCallFixtures.smallPrompt()), "{}");
+        final var second = LiveCallFixtures.waiting(2, 1, "Two.", LiveCallFixtures.smallPrompt());
+
+        onFx(() -> scan.calls(LiveCallFixtures.calls(second, first)));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(required(BusyHost.CALL_ID + "-previous").isVisible()).isTrue();
+        assertThat(text(BusyHost.CALL_ID + "-previous-title")).isEqualTo("Previous call");
+        assertThat(text(BusyHost.CALL_ID + "-previous-segment-1-source-text")).isEqualTo("One. #1");
+        assertThat(text(BusyHost.CALL_ID + "-segment-1-source-text")).isEqualTo("Two. #1");
+    }
+
     // IF the delay were not cancelled by the end of the work, THEN a card would appear for work that already finished.
     @Test
     void card_workEndsBeforeTheDelay_neverShows() throws InterruptedException {

@@ -3,6 +3,7 @@ package ua.bookloom.ui.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static ua.bookloom.ui.ThemeTestSupport.onFx;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -14,6 +15,12 @@ import org.testfx.util.WaitForAsyncUtils;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
+import ua.bookloom.api.llm.ChatMessage;
+import ua.bookloom.api.llm.ChatRole;
+import ua.bookloom.api.pipeline.CallKind;
+import ua.bookloom.api.pipeline.CallSegment;
+import ua.bookloom.api.pipeline.CallSnapshot;
+import ua.bookloom.api.pipeline.CallSnapshotUpdated;
 import ua.bookloom.api.pipeline.SegmentView;
 import ua.bookloom.ui.RecordingToasts.Raised;
 import ua.bookloom.ui.i18n.MessageKey;
@@ -128,6 +135,34 @@ class ReviewViewModelRetryTest extends ReviewViewModelTestBase {
 
         assertThat(desk.calls()).contains(retryCall("null", false));
         assertThat(models.selections()).hasSize(1);
+    }
+
+    // IF a retry's calls were not published like a run's, THEN the person could not see what the retry sent the model.
+    @Test
+    void retry_callsTheDeskAnnounces_reachTheActivityAndStayAfterIt() {
+        buildReview();
+        selectLowScore(RunState.PAUSED);
+        final CallSnapshot call = CallSnapshot.waiting(
+                        1,
+                        CallKind.DRAFT,
+                        "draft",
+                        null,
+                        List.of(new CallSegment(SEGMENT, "ch5 · p11", "Source.")),
+                        List.of(),
+                        Instant.parse("2026-01-01T00:00:10Z"),
+                        1,
+                        1,
+                        null)
+                .withSent(List.of(new ChatMessage(ChatRole.USER, "Translate this.")));
+        desk.willAnnounceOnRetry(List.of(new CallSnapshotUpdated(call)));
+
+        press(() -> review.retry(null, false));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        final LiveCalls kept = onFx(() -> activities.lastCalls().get());
+        assertThat(kept.current()).isNotNull();
+        assertThat(kept.current().sent()).extracting(ChatMessage::content).containsExactly("Translate this.");
+        assertThat(onFx(() -> activities.running())).isEmpty();
     }
 
     // IF Resume stayed live during a retry, THEN the run and the retry would race for the model.

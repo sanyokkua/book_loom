@@ -8,11 +8,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.AppError;
 import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatModel;
+import ua.bookloom.api.pipeline.JobEvent;
 import ua.bookloom.api.pipeline.ReviewCounts;
 import ua.bookloom.api.pipeline.ReviewDesk;
 import ua.bookloom.api.pipeline.ReviewFilter;
@@ -36,6 +38,7 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     private volatile @Nullable CountDownLatch acceptGate;
     private final CountDownLatch acceptEntered = new CountDownLatch(1);
     private volatile @Nullable CountDownLatch retryGate;
+    private final List<JobEvent> retryAnnouncements = new CopyOnWriteArrayList<>();
 
     /** Queues the answer the next call gets, whatever the method; the caller states the matching result type. */
     public void willAnswer(final Result<?> answer) {
@@ -63,6 +66,12 @@ public final class ScriptedReviewDesk implements ReviewDesk {
     /** From now on {@code accept} blocks before it answers until {@link #releaseAccept()}, as a slow desk would. */
     public void holdAccept() {
         acceptGate = new CountDownLatch(1);
+    }
+
+    /** Makes every {@code retry} announce these events to its listener before it answers, as a real retry's calls do. */
+    public void willAnnounceOnRetry(final List<JobEvent> events) {
+        retryAnnouncements.clear();
+        retryAnnouncements.addAll(events);
     }
 
     /** From now on {@code retry} blocks before it answers until {@link #releaseRetry()}, as a slow model would. */
@@ -121,7 +130,9 @@ public final class ScriptedReviewDesk implements ReviewDesk {
             final String segmentId,
             @Nullable final String note,
             final boolean lowerTemperature,
-            final ChatModel model) {
+            final ChatModel model,
+            final Consumer<JobEvent> progress) {
+        retryAnnouncements.forEach(progress);
         await(retryGate);
         return action(
                 "retry(" + projectId + ", " + segmentId + ", note=" + note + ", lowerTemperature=" + lowerTemperature
