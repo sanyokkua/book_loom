@@ -153,6 +153,22 @@ class TitleConsistencyTest {
         records.add(record(segment, SegmentStatus.ACCEPTED, target));
     }
 
+    // IF a quote mark anywhere in a separator quoted the title, THEN the author's own quotes would wrap the title.
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "“Mara Voss” Amber Tide|Мара Восс Бурштиновий Приплив",
+                "Amber Tide, ‘Mara Voss’|Бурштиновий Приплив, Мара Восс",
+            })
+    void apply_quoteThatDoesNotTouchTheTitle_leavesTheTitleUnquoted(final String source, final String expected) {
+        decided(aux("aux:title", SegmentKind.METADATA_TITLE, TITLE), BRIEF_TITLE);
+        decided(aux("aux:author", SegmentKind.METADATA_AUTHOR, "Mara Voss"), "Мара Восс");
+        decided(body("c1:1", SegmentKind.HEADING, source), "інше");
+
+        assertThat(written(Set.of())).containsEntry("c1:1", expected);
+    }
+
     // IF the composed heading were logged at DEBUG, THEN the book's title would reach an ordinary log file.
     @Test
     void apply_composedHeading_logsItsTextAtTraceOnly() {

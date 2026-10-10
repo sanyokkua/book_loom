@@ -117,7 +117,7 @@ final class TitleConsistency {
                 return Optional.empty();
             }
             final int end = nameAt + entry.get().source().length();
-            final boolean isQuoted = entry.get().isTitle() && isQuotedAround(text, at, nameAt, end);
+            final boolean isQuoted = entry.get().isTitle() && isQuotedAround(text, nameAt, end);
             out.append(
                     isQuoted
                             ? quotes.open() + entry.get().replacement().target() + quotes.close()
@@ -151,15 +151,11 @@ final class TitleConsistency {
         return -1;
     }
 
-    // A title is quoted when a quote mark touches it on either side: the separator before it or the one after it.
-    private static boolean isQuotedAround(final String text, final int separatorFrom, final int start, final int end) {
-        final int next = firstLetterOrDigit(text, end);
-        return hasQuote(text.substring(separatorFrom, start))
-                || hasQuote(text.substring(end, next == -1 ? text.length() : next));
-    }
-
-    private static boolean hasQuote(final String part) {
-        return part.chars().anyMatch(c -> QUOTE_CHARS.indexOf(c) >= 0);
+    // A title is quoted when a quote mark touches it: right before its first letter or right after its last. A quote
+    // elsewhere in a separator belongs to the author's name or to nothing, and is dropped with the separator's marks.
+    private static boolean isQuotedAround(final String text, final int start, final int end) {
+        return (start > 0 && QUOTE_CHARS.indexOf(text.charAt(start - 1)) >= 0)
+                || (end < text.length() && QUOTE_CHARS.indexOf(text.charAt(end)) >= 0);
     }
 
     // A separator keeps its spaces and punctuation but loses its quote marks; the edges of the heading lose the
