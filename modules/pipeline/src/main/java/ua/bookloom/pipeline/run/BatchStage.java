@@ -220,9 +220,9 @@ final class BatchStage {
         final AppError error = answered.error();
         if (error == null) {
             final BatchReply first = Objects.requireNonNull(answered.data(), "reply");
-            return Result.ok(BatchAttempt.answered(
-                    drafter.reaskMissing(context, items, shown.segmentIds(), shown.sources(), shown.position(), first),
-                    first));
+            // A stopped re-ask ends the attempt like a stopped batch call, so no single draft starts after Stop.
+            return drafter.reaskMissing(context, items, shown.segmentIds(), shown.sources(), shown.position(), first)
+                    .map(merged -> BatchAttempt.answered(merged, first));
         }
         if (PauseDecider.route(error.code()) == PauseDecider.Route.FLAG_AT_ONCE) {
             log.warn("The batch call answered code={}; every segment is drafted on its own", error.code());

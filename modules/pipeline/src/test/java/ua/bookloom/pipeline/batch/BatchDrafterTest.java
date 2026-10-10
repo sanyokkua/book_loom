@@ -143,7 +143,7 @@ class BatchDrafterTest {
                 reply(entries("2", "Він мовчав.", "3", "Дощ припинився."))));
         final BatchReply first = firstReply(drafter);
 
-        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+        final BatchReply merged = reasked(drafter, first);
 
         assertThat(segments).containsExactly(FOUR_IDS, List.of("s2", "s3"));
         assertThat(merged.acceptedIds()).containsExactly("1", "2", "3", "4");
@@ -156,7 +156,7 @@ class BatchDrafterTest {
                 List.of(reply(entries("1", "Вона відчинила двері.", "2", "Він мовчав.", "4", "Настала ніч."))));
         final BatchReply first = firstReply(drafter);
 
-        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+        final BatchReply merged = reasked(drafter, first);
 
         assertThat(merged).isSameAs(first);
         assertThat(segments).hasSize(1);
@@ -167,7 +167,7 @@ class BatchDrafterTest {
         final BatchDrafter drafter = drafterAnswering(List.of(reply("I cannot help with that.")));
         final BatchReply first = firstReply(drafter);
 
-        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+        final BatchReply merged = reasked(drafter, first);
 
         assertThat(merged).isSameAs(first);
         assertThat(segments).hasSize(1);
@@ -180,9 +180,30 @@ class BatchDrafterTest {
                 drafterAnswering(List.of(reply(entries("1", "Вона відчинила двері.")), Result.err(error)));
         final BatchReply first = firstReply(drafter);
 
-        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+        final BatchReply merged = reasked(drafter, first);
 
         assertThat(merged).isSameAs(first);
+    }
+
+    // IF a stopped run's re-ask fell back one by one, THEN Stop would start a single draft for every missing id.
+    @Test
+    void reaskMissing_secondCallCancelled_returnsTheCancelInsteadOfTheFirstReply() {
+        final AppError error = AppError.of(ErrorCode.cancelled, "Cancelled", "Stopped.");
+        final BatchDrafter drafter =
+                drafterAnswering(List.of(reply(entries("1", "Вона відчинила двері.")), Result.err(error)));
+        final BatchReply first = firstReply(drafter);
+
+        final Result<BatchReply> merged =
+                drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+
+        assertThat(merged.error()).isNotNull().extracting(AppError::code).isEqualTo(ErrorCode.cancelled);
+    }
+
+    private static BatchReply reasked(final BatchDrafter drafter, final BatchReply first) {
+        return Objects.requireNonNull(
+                drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first)
+                        .data(),
+                "reply");
     }
 
     @Test
@@ -192,7 +213,7 @@ class BatchDrafterTest {
                 reply(entries("2", "Він мовчав.", "9", "Зайве."))));
         final BatchReply first = firstReply(drafter);
 
-        final BatchReply merged = drafter.reaskMissing(BatchContext.empty(), FOUR, FOUR_IDS, FOUR_SOURCES, null, first);
+        final BatchReply merged = reasked(drafter, first);
 
         assertThat(merged.acceptedIds()).containsExactly("1", "2", "4");
         assertThat(merged.failingIds()).containsExactly("3");

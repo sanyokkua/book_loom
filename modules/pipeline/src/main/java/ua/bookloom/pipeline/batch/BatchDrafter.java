@@ -6,6 +6,8 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.AppError;
+import ua.bookloom.api.ErrorCode;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.llm.ChatRequest;
 import ua.bookloom.api.llm.ChatResponse;
@@ -181,9 +183,10 @@ public final class BatchDrafter {
      * @param position the chunk the batch is made in, or null when it is not known
      * @param first the non-null reply of the first call
      * @return {@code first} with each re-asked id taken from the second reply, or {@code first} itself when no call
-     *     was made or it brought nothing
+     *     was made or it brought nothing; {@code cancelled} when the run was stopped or the step skipped during the
+     *     second call, so no single draft follows
      */
-    public BatchReply reaskMissing(
+    public Result<BatchReply> reaskMissing(
             final BatchContext context,
             final List<BatchItem> items,
             final List<String> segmentIds,
@@ -194,7 +197,7 @@ public final class BatchDrafter {
         final long missing = first.count(ItemStatus.MISSING);
         if (!first.readable() || missing < MIN_MISSING_TO_REASK) {
             log.debug("No re-ask readable={} missing={}", first.readable(), missing);
-            return first;
+            return Result.ok(first);
         }
         final List<Integer> at = new ArrayList<>();
         for (int i = 0; i < items.size(); i++) {
@@ -211,12 +214,24 @@ public final class BatchDrafter {
                 at.stream().map(segmentIds::get).toList(),
                 at.stream().map(sources::get).toList(),
                 position);
+        return merged(first, second);
+    }
+
+    // A stopped re-ask ends the attempt; a failed or unreadable one leaves the missing ids to their single drafts.
+    private static Result<BatchReply> merged(final BatchReply first, final Result<BatchReply> second) {
+        final AppError failure = second.error();
+        if (failure != null && failure.code() == ErrorCode.cancelled) {
+            log.info("The re-ask for the missing ids was stopped code={}; no single draft follows", failure.code());
+            return Result.err(failure);
+        }
         final BatchReply again = second.data();
         if (again == null || !again.readable()) {
-            log.warn("The re-ask for the missing ids brought nothing; they fall back one by one");
-            return first;
+            log.warn(
+                    "The re-ask for the missing ids brought nothing code={}; they fall back one by one",
+                    failure == null ? "unreadable" : failure.code());
+            return Result.ok(first);
         }
-        return withAnswers(first, again);
+        return Result.ok(withAnswers(first, again));
     }
 
     private static BatchReply withAnswers(final BatchReply first, final BatchReply again) {
