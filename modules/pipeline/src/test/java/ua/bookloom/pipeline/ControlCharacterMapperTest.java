@@ -71,4 +71,30 @@ class ControlCharacterMapperTest {
         assertThat(ControlCharacterMapper.map(SOURCE, "«Привіт, \u001fсвіте", "uk"))
                 .isEmpty();
     }
+
+    // IF a single-quoted source counted as quote-less, THEN the codes of its dialogue were dropped with the quotes.
+    @Test
+    void map_singleQuotedDialogueSource_writesTheTargetQuotePair() {
+        assertThat(ControlCharacterMapper.map("'Run,' he said.", "\u001cБіжи,\u001d — сказав він.", "uk"))
+                .contains("«Біжи,» — сказав він.");
+    }
+
+    // IF an apostrophe between letters counted as a quote, THEN a quote-less source would get invented marks.
+    @Test
+    void map_sourceWithOnlyAnApostrophe_getsNoQuoteMarks() {
+        assertThat(ControlCharacterMapper.map("Don't go, he said.", "\u001cНе йди\u001d, сказав він.", "uk"))
+                .contains("Не йди, сказав він.");
+    }
+
+    // IF a code beside a real mark of the other side were dropped, THEN the quote it opens could never pair up.
+    @Test
+    void map_codeOpeningRightAfterARealCloser_opensTheNextQuote() {
+        assertThat(ControlCharacterMapper.map(SOURCE, "«Ні,»\u001cтак\u001d.", "uk"))
+                .contains("«Ні,»«так».");
+    }
+
+    @Test
+    void map_codeClosingRightAfterARealCloser_isDroppedAsADuplicate() {
+        assertThat(ControlCharacterMapper.map(SOURCE, "«Привіт.»\u001d", "uk")).contains("«Привіт.»");
+    }
 }
