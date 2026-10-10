@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import ua.bookloom.api.Result;
 import ua.bookloom.api.document.Segment;
 import ua.bookloom.api.llm.ChatMessage;
@@ -27,6 +28,7 @@ import ua.bookloom.api.project.ForeignPassagePolicy;
 import ua.bookloom.api.project.Gender;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.NamePolicy;
+import ua.bookloom.api.project.TargetOrigin;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.document.DocumentModule;
 import ua.bookloom.persistence.PersistenceModule;
@@ -61,10 +63,10 @@ class ReviewGenderEvidenceTest {
         preScan = new PreScan(new PromptTemplates(), new ObjectMapper(), glossary, review, SUGGEST);
     }
 
-    // IF a clear pronoun case still went to the model, THEN a small model could overrule five "she"s with a guess.
+    // IF a character's clear pronoun case still went to the model, THEN a small model could overrule five "she"s.
     @Test
     void review_strongPronounCase_isDecidedWithoutAskingTheModel() {
-        glossary.add(entry("p1:wren", "Wren", null, TermType.OTHER, Gender.UNKNOWN, false));
+        glossary.add(entry("p1:wren", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false));
         final List<Segment> book = GlossaryTestSegments.of(List.of(
                 "Wren sat. She ate.",
                 "Wren ran. She fell.",
@@ -165,6 +167,76 @@ class ReviewGenderEvidenceTest {
         assertThat(glossary.all(PROJECT).data())
                 .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
                 .containsExactly(tuple(expected, suggestedOnly));
+    }
+
+    // Five "she"s after Wren: a strong pronoun case.
+    private static final List<Segment> STRONG_BOOK = GlossaryTestSegments.of(IntStream.range(0, 5)
+            .mapToObj(index -> "Day " + index + ". Wren smiled. She left.")
+            .toList());
+
+    // IF a term or an untyped candidate were decided by its pronouns, THEN a ship called "she" became a character.
+    @ParameterizedTest
+    @EnumSource(
+            value = TermType.class,
+            names = {"TERM", "OTHER"})
+    void review_strongPronounsOnATermOrUntypedEntry_stillAskTheModelAndForceNoCharacter(final TermType type) {
+        // Seeding already tried (as after the scan), so only the review itself could retype the entry here.
+        glossary.add(new GlossaryEntry(
+                "p1:wren", PROJECT, "Wren", null, type, Gender.UNKNOWN, false, TargetOrigin.PERSON, false, true));
+        final String verdicts = "{\"verdicts\":["
+                + "{\"term\":\"Wren\",\"verdict\":\"name\",\"type\":\"term\",\"gender\":\"unknown\"}]}";
+        final List<CallKind> kinds = new ArrayList<>();
+        final ModelCalls calls = (kind, segmentId, request) -> {
+            kinds.add(kind);
+            return reply(kind == CallKind.REVIEW_TERMS ? verdicts : NO_SUGGESTIONS);
+        };
+
+        review.review(PROJECT, STRONG_BOOK, FRAME, POLICY, calls);
+
+        assertThat(kinds).contains(CallKind.REVIEW_TERMS);
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::type, GlossaryEntry::gender)
+                .containsExactly(tuple(TermType.TERM, Gender.UNKNOWN));
+    }
+
+    @Test
+    void review_strongPronounsOnACharacter_decideTheGenderWithoutTheModel() {
+        glossary.add(entry("p1:wren", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false));
+        final List<CallKind> kinds = new ArrayList<>();
+        final ModelCalls calls = (kind, segmentId, request) -> {
+            kinds.add(kind);
+            return reply(NO_SUGGESTIONS);
+        };
+
+        review.review(PROJECT, STRONG_BOOK, FRAME, POLICY, calls);
+
+        assertThat(kinds).doesNotContain(CallKind.REVIEW_TERMS);
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
+                .containsExactly(tuple(Gender.FEMALE, false));
+    }
+
+    // IF a first-name seed outranked a verdict the book's own window proves, THEN Hale stayed a man.
+    @Test
+    void review_verifiedVerdict_replacesASuggestedGenderButNeverAPersonsOne() {
+        glossary.add(entry("p1:hale", "Hale", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withSuggestedGender(Gender.MALE));
+        glossary.add(entry("p1:wren", "Wren", null, TermType.CHARACTER, Gender.UNKNOWN, false)
+                .withGender(Gender.MALE));
+        final List<Segment> book = GlossaryTestSegments.of(List.of("Hale smiled. She left.", "Wren smiled. She left."));
+        final String verdicts = "{\"verdicts\":["
+                + "{\"term\":\"Hale\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\","
+                + "\"windows\":[1]},"
+                + "{\"term\":\"Wren\",\"verdict\":\"name\",\"type\":\"person\",\"gender\":\"female\","
+                + "\"windows\":[1]}]}";
+        final ScriptedChatModel model =
+                new ScriptedChatModel().answer(reply(verdicts)).answer(reply(NO_SUGGESTIONS));
+
+        review.review(PROJECT, book, FRAME, POLICY, calls(model));
+
+        assertThat(glossary.all(PROJECT).data())
+                .extracting(GlossaryEntry::term, GlossaryEntry::gender, GlossaryEntry::isGenderSuggested)
+                .containsExactly(tuple("Hale", Gender.FEMALE, false), tuple("Wren", Gender.MALE, false));
     }
 
     private static final String NO_SUGGESTIONS = "{\"suggestions\":[]}";

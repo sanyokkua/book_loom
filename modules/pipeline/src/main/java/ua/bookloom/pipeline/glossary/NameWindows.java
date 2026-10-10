@@ -135,7 +135,8 @@ final class NameWindows {
         final WindowReader reader = new WindowReader(
                 PronounReader.of(entry.term(), languageTag == null ? DEFAULT_LANGUAGE : languageTag),
                 reads,
-                new HashMap<>());
+                new HashMap<>(),
+                pronouns.usesObjectForms());
         final List<Use> chosen = chosen(uses, wanted(entry, uses.size()), reader);
         final List<Window> windows = chosen.stream().map(reader::window).toList();
         log.trace(
@@ -224,9 +225,16 @@ final class NameWindows {
         return String.join(" ", words.stream().map(Occurrences.Word::key).toList());
     }
 
-    /** Reads the windows of one name, keeping each segment's mentions once they are read. */
+    /**
+     * Reads the windows of one name, keeping each segment's mentions once they are read. An object or possessive form
+     * gives a window its gender only when {@code objectForms}: by {@link PronounGender.Evidence#usesObjectForms()},
+     * the name's subject pronouns are scarce and none of them names the other gender.
+     */
     private record WindowReader(
-            @Nullable PronounReader pronouns, List<Occurrences.Read> reads, Map<Integer, List<Mention>> mentions) {
+            @Nullable PronounReader pronouns,
+            List<Occurrences.Read> reads,
+            Map<Integer, List<Mention>> mentions,
+            boolean objectForms) {
 
         Window window(final Use use) {
             final Occurrences.Read read = reads.get(use.segment());
@@ -248,7 +256,7 @@ final class NameWindows {
             final int windowEnd = sentenceStart(read, use.sentence() + 2);
             return found.stream()
                     .filter(mention -> mention.start() == use.start())
-                    .map(Mention::attributed)
+                    .map(mention -> objectForms ? mention.attributed() : mention.subject())
                     .filter(Objects::nonNull)
                     .filter(pronoun -> pronoun.end() <= windowEnd)
                     .map(Pronoun::gender)

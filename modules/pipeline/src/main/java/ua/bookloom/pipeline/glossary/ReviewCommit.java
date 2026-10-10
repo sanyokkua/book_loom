@@ -219,17 +219,41 @@ final class ReviewCommit {
     /**
      * The entry with the verdict's type where its own is unset, and, for a person whose gender is unknown, the
      * verdict's gender: as decided when a cited window shows it, else as a suggestion nobody has verified (15h.A2). A
-     * place or a thing takes no gender from the review.
+     * verified gender also replaces a suggested one (a first-name seed, a pre-scan proposal, an earlier unverified
+     * review); a gender the person set is kept. A place or a thing takes no gender from the review.
      */
     static GlossaryEntry guessed(final GlossaryEntry now, final Verdict verdict) {
         final GlossaryEntry typed = now.withType(now.type() == TermType.OTHER ? verdict.type() : now.type());
-        if (now.gender() != Gender.UNKNOWN
-                || typed.type() != TermType.CHARACTER
-                || verdict.gender() == Gender.UNKNOWN) {
+        if (typed.type() != TermType.CHARACTER || verdict.gender() == Gender.UNKNOWN) {
             return typed;
         }
-        return verdict.genderVerified()
-                ? typed.withInferredGender(verdict.gender())
-                : typed.withSuggestedGender(verdict.gender());
+        if (now.gender() == Gender.UNKNOWN) {
+            return verdict.genderVerified()
+                    ? typed.withInferredGender(verdict.gender())
+                    : typed.withSuggestedGender(verdict.gender());
+        }
+        final boolean replaces = now.isGenderSuggested() && verdict.genderVerified();
+        log.debug(
+                "Glossary review gender for entry {}: held suggested={} verified={} replaces={}",
+                now.id(),
+                now.isGenderSuggested(),
+                verdict.genderVerified(),
+                replaces);
+        return replaces ? confirmed(typed, verdict.gender()) : typed;
+    }
+
+    // A verified verdict stands as an inferred gender even where it agrees with the suggestion it replaces.
+    private static GlossaryEntry confirmed(final GlossaryEntry entry, final Gender gender) {
+        return new GlossaryEntry(
+                entry.id(),
+                entry.projectId(),
+                entry.term(),
+                entry.target(),
+                entry.type(),
+                gender,
+                entry.locked(),
+                entry.origin(),
+                false,
+                entry.genderSeedTried());
     }
 }

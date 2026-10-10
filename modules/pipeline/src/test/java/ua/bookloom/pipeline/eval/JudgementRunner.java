@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -21,8 +22,10 @@ import ua.bookloom.api.project.Narrator;
 import ua.bookloom.api.project.TermType;
 import ua.bookloom.pipeline.SequenceJobs;
 import ua.bookloom.pipeline.SequenceJobs.Prepared;
+import ua.bookloom.pipeline.Tokens;
 import ua.bookloom.pipeline.glossary.FrequencyScan;
 import ua.bookloom.pipeline.glossary.GlossaryIds;
+import ua.bookloom.pipeline.glossary.PronounGender;
 import ua.bookloom.pipeline.glossary.SuggestTargets;
 import ua.bookloom.pipeline.glossary.TermReview;
 import ua.bookloom.pipeline.prompt.PromptTemplates;
@@ -32,7 +35,8 @@ import ua.bookloom.pipeline.setup.SetupAssistantImpl;
  * Asks a model for its judgement of one book the way the app does: the book is imported through the real project
  * service with nothing stated about it, the production {@link SetupAssistantImpl} suggests the Book Brief from its
  * samples, and the production {@link TermReview} reviews a glossary that holds the gold's main characters as a scan
- * leaves them (untyped, gender unknown), with the code's pronoun and first-name seeding after it. What the model and
+ * leaves them (untyped and gender unknown, unless the book's pronouns suggest one), with the code's pronoun and
+ * first-name seeding after it. What the model and
  * the code concluded is returned for scoring; nothing is judged here.
  */
 @Slf4j
@@ -101,19 +105,24 @@ final class JudgementRunner {
                 Clock.systemUTC());
     }
 
+    // The scan seeds its proposals from the book's pronouns before storing them, as the app's scan does.
     private static void seed(final Prepared prepared, final JudgementGold gold) {
         final String project = prepared.projectId();
+        final List<String> texts = Tokens.visibleTexts(FrequencyScan.storyText(prepared.document()));
         gold.characters()
                 .forEach(character -> prepared.stores()
                         .glossary()
-                        .add(new GlossaryEntry(
-                                GlossaryIds.of(project, character.term()),
-                                project,
-                                character.term(),
-                                null,
-                                TermType.OTHER,
-                                Gender.UNKNOWN,
-                                false)));
+                        .add(PronounGender.seeded(
+                                new GlossaryEntry(
+                                        GlossaryIds.of(project, character.term()),
+                                        project,
+                                        character.term(),
+                                        null,
+                                        TermType.OTHER,
+                                        Gender.UNKNOWN,
+                                        false),
+                                texts,
+                                gold.sourceLanguage())));
     }
 
     private static Map<String, GlossaryEntry> byTerm(final GlossaryReviewReport report) {

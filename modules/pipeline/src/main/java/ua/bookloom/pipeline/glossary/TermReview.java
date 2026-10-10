@@ -205,13 +205,21 @@ public final class TermReview {
         return Result.ok(verdicts);
     }
 
-    // A strong pronoun case decides a person's gender alone; a place or a title is never read for one.
+    // A strong pronoun case decides a person's gender alone: a character, or an untyped entry a first-name seed already
+    // marked as a person. A term, a place, a title and any other untyped entry go to the model, since "she" after a
+    // ship's or a company's name does not make it a character.
     private static Optional<Verdict> decidedByCode(final GlossaryEntry entry, final Map<String, Evidence> evidence) {
         final PronounGender.Evidence pronouns =
                 evidence.getOrDefault(entry.term(), Evidence.NONE).pronouns();
-        final boolean personLike =
-                entry.type() == TermType.CHARACTER || entry.type() == TermType.TERM || entry.type() == TermType.OTHER;
-        final Optional<Gender> decided = personLike && pronouns.isStrong() ? pronouns.dominant() : Optional.empty();
+        final boolean person =
+                entry.type() == TermType.CHARACTER || (entry.type() == TermType.OTHER && entry.isGenderSuggested());
+        log.debug(
+                "Glossary review code decision for entry {}: type={} person={} strong={}",
+                entry.id(),
+                entry.type(),
+                person,
+                pronouns.isStrong());
+        final Optional<Gender> decided = person && pronouns.isStrong() ? pronouns.dominant() : Optional.empty();
         decided.ifPresent(gender -> log.debug(
                 "Glossary review decides entry {} without the model: {} ({})", entry.id(), gender, pronouns.compact()));
         return decided.map(gender -> Verdict.decided(entry, gender));

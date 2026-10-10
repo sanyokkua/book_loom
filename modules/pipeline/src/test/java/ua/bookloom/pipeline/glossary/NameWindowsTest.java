@@ -113,4 +113,28 @@ class NameWindowsTest {
                         .windows())
                 .isEmpty();
     }
+
+    // IF an object form counted against the name's own subject pronouns, THEN "Tiger hit him" made Tiger a man.
+    @Test
+    void of_objectFormWhileSubjectPronounsNameTheOtherGender_givesTheWindowNoPronoun() {
+        final Evidence evidence = windowsOf(
+                entry("Tiger", TermType.CHARACTER),
+                List.of(
+                        "Tiger hit him.",
+                        "Tiger laughed. She ran.",
+                        "Tiger laughed. She ran.",
+                        "Tiger laughed. She ran."));
+
+        assertThat(evidence.windows())
+                .extracting(Window::pronoun)
+                .containsExactly(null, Gender.FEMALE, Gender.FEMALE, Gender.FEMALE);
+        assertThat(evidence.shows(List.of(1), Gender.MALE)).isFalse();
+    }
+
+    @Test
+    void of_objectFormWithNoSubjectPronouns_stillGivesTheWindowItsGender() {
+        final Evidence evidence = windowsOf(entry("Tiger", TermType.CHARACTER), List.of("Tiger hit him."));
+
+        assertThat(evidence.windows()).extracting(Window::pronoun).containsExactly(Gender.MALE);
+    }
 }
