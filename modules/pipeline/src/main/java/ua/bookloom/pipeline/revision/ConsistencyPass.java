@@ -33,6 +33,7 @@ import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
 import ua.bookloom.api.project.GlossaryEntry;
 import ua.bookloom.api.project.Project;
+import ua.bookloom.api.project.QaFinding;
 import ua.bookloom.api.project.RollingSummary;
 import ua.bookloom.api.project.SegmentRecord;
 import ua.bookloom.pipeline.audit.FinalAudit;
@@ -164,28 +165,33 @@ public final class ConsistencyPass {
                                         inputs,
                                         calls,
                                         tally,
-                                        new NeighbourRevision.Scope(Set.copyOf(doubted), options.everySegment()))));
+                                        new NeighbourRevision.Scope(
+                                                Set.copyOf(doubted.keySet()), options.everySegment()))));
     }
 
     // The audit reads the records as they stand once the gender step has run, so a segment it re-rendered is judged
     // on its new text; the ids are read once, so the neighbour check still reads a segment the retry improved.
-    private Result<List<String>> doubted(final PassInputs inputs, final PassOptions options) {
+    private Result<Map<String, List<QaFinding>>> doubted(final PassInputs inputs, final PassOptions options) {
         if (!options.reviseDoubted()) {
             log.debug("Doubted segments not revised project={}", inputs.projectId());
-            return Result.ok(List.of());
+            return Result.ok(Map.of());
         }
         return inOrder(inputs).map(records -> {
-            final List<String> doubted = RetryPass.doubted(records, FinalAudit.scan(inputs.book(), records));
+            final Map<String, List<QaFinding>> doubted =
+                    RetryPass.doubted(records, FinalAudit.scan(inputs.book(), records));
             log.debug("Doubted segments project={} count={}", inputs.projectId(), doubted.size());
             return doubted;
         });
     }
 
     private Result<Boolean> retryDoubted(
-            final PassInputs inputs, final List<String> doubted, final ModelCalls calls, final PassTally tally) {
+            final PassInputs inputs,
+            final Map<String, List<QaFinding>> doubted,
+            final ModelCalls calls,
+            final PassTally tally) {
         return doubted.isEmpty()
                 ? Result.ok(false)
-                : new RetryPass(segments, retryDraft).retry(inputs, doubted, calls, tally);
+                : new RetryPass(segments, retryDraft, checked).retry(inputs, doubted, calls, tally);
     }
 
     private Result<List<SegmentRecord>> inOrder(final PassInputs inputs) {

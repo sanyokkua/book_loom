@@ -29,8 +29,20 @@ final class ParagraphFingerprint {
      * @return the lowercase hex SHA-256 of the question
      */
     static String of(final PassInputs inputs, final Map<String, String> user, final RevisionGuards.Mode mode) {
+        return of(inputs, user, mode.toString());
+    }
+
+    /**
+     * Fingerprints one question of a pass step.
+     *
+     * @param inputs what the pass read as it started
+     * @param user everything the step's question is built from, by slot
+     * @param step which step asks, so two steps never share a fingerprint
+     * @return the lowercase hex SHA-256 of the question
+     */
+    static String of(final PassInputs inputs, final Map<String, String> user, final String step) {
         final StringBuilder question = new StringBuilder()
-                .append(mode)
+                .append(step)
                 .append(FIELD_SEPARATOR)
                 .append(inputs.frame().sourceLanguage())
                 .append(FIELD_SEPARATOR)
