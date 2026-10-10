@@ -16,6 +16,7 @@ import ua.bookloom.api.document.SegmentStatus;
 import ua.bookloom.api.pipeline.ConsistencySummary;
 import ua.bookloom.api.pipeline.ExportReport;
 import ua.bookloom.api.pipeline.ExportRequest;
+import ua.bookloom.api.pipeline.GenderWait;
 import ua.bookloom.api.pipeline.SideFile;
 import ua.bookloom.api.project.Deferral;
 import ua.bookloom.api.project.DeferralReason;
@@ -131,6 +132,21 @@ class ExportJobConsistencyTest {
 
         assertThat(report.consistency().adjusted()).isZero();
         assertThat(report.consistency().openDeferrals()).containsExactly(Map.entry(DeferralReason.GENDER_UNKNOWN, 1));
+    }
+
+    // IF the warning came from the pass alone, THEN switching it off would hide the segments that wait on a gender.
+    @Test
+    void run_passOffWithOpenGenderDeferrals_stillNamesTheWaitingCharacter() {
+        fixture.accept(projectId, WENT, "Джастін пішла.");
+        ok(fixture.deferrals()
+                .add(new Deferral("d1", projectId, WENT, DeferralReason.GENDER_UNKNOWN, "Justine", null, null, null)));
+
+        final ExportReport report =
+                exportWithModel(new ExportRequest(projectId, tempDir.resolve("F.uk.epub"), false, Set.of(), false));
+
+        assertThat(report.consistency().status()).isEqualTo(ConsistencySummary.Status.NOT_RUN);
+        assertThat(report.consistency().awaitingGender()).containsExactly(new GenderWait("Justine", 1));
+        assertThat(report.consistency().openGenderDeferrals()).isEqualTo(1);
     }
 
     // Without a model the name sweep still runs and the report says the gender step was skipped.

@@ -120,6 +120,32 @@ public final class ConsistencyPass {
         }
     }
 
+    /**
+     * What still waits on the person without running the pass: the open deferrals, and the characters whose unknown
+     * gender holds segments back. Nothing is changed and no model is asked.
+     *
+     * @param projectId the project; never null
+     * @return a report that changed nothing and names the open deferrals; or the storage error that read them
+     */
+    public Result<ConsistencyReport> waiting(final String projectId) {
+        Objects.requireNonNull(projectId, "projectId");
+        try {
+            return deferrals.open(projectId).map(open -> {
+                log.debug("Open deferrals read without the pass project={} deferrals={}", projectId, byReason(open));
+                return new PassTally().report(byReason(open), awaitingGender(open));
+            });
+        } catch (Throwable cause) {
+            final AppError error = AppError.of(
+                    ErrorCode.internal,
+                    "Open deferrals unreadable",
+                    "An unexpected failure stopped reading what waits on the person.",
+                    null,
+                    cause);
+            log.error("Unexpected failure reading open deferrals project={}", projectId, cause);
+            return Result.err(error);
+        }
+    }
+
     private Result<ConsistencyReport> runWith(
             final PassInputs inputs, @Nullable final ModelCalls calls, final PassOptions options) {
         final Result<List<Deferral>> read = deferrals.open(inputs.projectId());
