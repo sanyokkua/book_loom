@@ -2,6 +2,7 @@ package ua.bookloom.ui.control;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -13,7 +14,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import ua.bookloom.api.llm.TokenUsage;
 import ua.bookloom.api.pipeline.CallSegment;
@@ -32,10 +32,12 @@ import ua.bookloom.ui.state.WaitingCall;
  * and how long it has taken; its body lists every segment the call carried with the target the run has for it and
  * what became of it, then the reply as received and the filled parts of the prompt in the order they were sent.
  *
- * <p>The header is redrawn on every published change, so a waiting call's clock moves; the body is rebuilt only when
- * the call or its segments' state changed. Showing logs the call's id and state only, never a text.
+ * <p>The header is redrawn on every published change, so a waiting call's clock moves; its clock, timeout and token
+ * figures are {@link FigureLabel}s, so a tick lays out only them. The body is updated only when the call or its
+ * segments' state changed, and in place: a row per segment is kept and reused, and only a call with more segments adds
+ * rows. The block can take another role ({@link #takeRole}) without being rebuilt. Showing logs nothing, as it runs on
+ * every publication; the calls it shows are logged where they are worked out.
  */
-@Slf4j
 public final class LiveCallView extends VBox {
 
     private static final double SPACING = 8;
@@ -45,15 +47,19 @@ public final class LiveCallView extends VBox {
     private final Messages messages;
     private final ObservableValue<String> sourceName;
     private final ObservableValue<String> targetName;
+    private final Label heading = new Label();
     private final Label label = new Label();
     private final Label kind = chip();
     private final Label state = chip();
     private final Label attempt = new Label();
-    private final Label clock = new Label();
-    private final Label timeout = new Label();
-    private final Label tokens = new Label();
+    private final Label clock = new FigureLabel();
+    private final Label timeout = new FigureLabel();
+    private final Label tokens = new FigureLabel();
     private final Label caption = new Label();
     private final VBox rows = new VBox(SPACING);
+    private final List<CallSegmentRow> built = new ArrayList<>();
+    private final FlowPane header;
+    private final ScrollPane segments;
     private final ReplyPane reply;
     private final PromptContextPane prompt;
     private @Nullable CallSnapshot shownCall;
@@ -82,11 +88,40 @@ public final class LiveCallView extends VBox {
         this.targetName = Objects.requireNonNull(targetName, "targetName");
         this.reply = new ReplyPane(id + "-reply", messages);
         this.prompt = new PromptContextPane(id + "-prompt", messages);
-        setId(id);
+        this.header = header();
+        this.segments = segmentsArea();
         getStyleClass().add("live-call");
         setPadding(new Insets(SPACING));
-        getChildren().addAll(header(id, title), caption, segmentsArea(id), reply, prompt);
+        getChildren().addAll(header, caption, segments, reply, prompt);
+        name(id);
+        heading.textProperty().bind(Objects.requireNonNull(title, "title"));
         show(null, LiveCalls.EMPTY);
+    }
+
+    /**
+     * Gives the block another role — the current call's or the previous one's — keeping everything it shows: its ids
+     * take the new name, its heading the new title, and its reply and prompt sections open or close as the person
+     * last left the sections of that role.
+     *
+     * @param id the block's new node id, named as in the constructor
+     * @param title the heading of the new role
+     */
+    public void takeRole(final String id, final ObservableValue<String> title) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(title, "title");
+        name(id);
+        heading.textProperty().bind(title);
+    }
+
+    /**
+     * Whether this block shows a call.
+     *
+     * @param callId the call's id
+     * @return {@code true} if the block shows that call, {@code false} if it shows another or none
+     */
+    public boolean isShowing(final long callId) {
+        final CallSnapshot call = shownCall;
+        return call != null && call.callId() == callId;
     }
 
     /**
@@ -117,45 +152,49 @@ public final class LiveCallView extends VBox {
         showHeader(call, context.asOf());
         final Map<String, SegmentLive> live = liveOf(call, context);
         if (!call.equals(shownCall) || !live.equals(shownSegments)) {
-            log.debug(
-                    "live call {} shown {} with {} segments",
-                    call.callId(),
-                    call.state(),
-                    call.segments().size());
             shownCall = call;
             shownSegments = live;
             showBody(call, live);
         }
     }
 
-    private FlowPane header(final String id, final ObservableValue<String> title) {
-        final Label heading = new Label();
-        heading.textProperty().bind(title);
-        heading.getStyleClass().add("live-call-title");
+    private void name(final String id) {
+        setId(id);
         heading.setId(id + "-title");
-        label.getStyleClass().add("muted");
         label.setId(id + "-label");
         kind.setId(id + "-kind");
-        kind.getStyleClass().add("chip-neutral");
         state.setId(id + "-state");
         attempt.setId(id + "-attempt");
         clock.setId(id + "-clock");
         timeout.setId(id + "-timeout");
         tokens.setId(id + "-tokens");
+        header.setId(id + "-header");
+        caption.setId(id + "-caption");
+        segments.setId(id + "-segments");
+        for (int index = 0; index < built.size(); index++) {
+            built.get(index).rename(rowId(index));
+        }
+        reply.rename(id + "-reply");
+        prompt.rename(id + "-prompt");
+    }
+
+    private String rowId(final int index) {
+        return getId() + "-segment-" + (index + 1);
+    }
+
+    private FlowPane header() {
+        heading.getStyleClass().add("live-call-title");
+        label.getStyleClass().add("muted");
+        kind.getStyleClass().add("chip-neutral");
         for (final Label stat : List.of(attempt, clock, timeout, tokens)) {
             stat.getStyleClass().add("muted");
         }
-        final FlowPane header =
-                new FlowPane(SPACING, SPACING, heading, label, kind, state, attempt, clock, timeout, tokens);
-        header.setId(id + "-header");
-        return header;
+        return new FlowPane(SPACING, SPACING, heading, label, kind, state, attempt, clock, timeout, tokens);
     }
 
-    private ScrollPane segmentsArea(final String id) {
+    private ScrollPane segmentsArea() {
         caption.getStyleClass().add("stat-caption");
-        caption.setId(id + "-caption");
         final ScrollPane area = new ScrollPane(rows);
-        area.setId(id + "-segments");
         area.setFitToWidth(true);
         area.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         area.getStyleClass().add("edge-to-edge");
@@ -207,21 +246,20 @@ public final class LiveCallView extends VBox {
                         ? messages.get(MessageKey.LIVE_CALL_NO_SEGMENTS)
                         : messages.get(
                                 MessageKey.LIVE_CALL_SEGMENTS, call.segments().size()));
-        final String id = getId();
-        final List<CallSegmentRow> built = new java.util.ArrayList<>();
-        for (int index = 0; index < call.segments().size(); index++) {
-            final CallSegment segment = call.segments().get(index);
-            built.add(new CallSegmentRow(
-                    id + "-segment-" + (index + 1),
-                    segment,
-                    live.get(segment.id()),
-                    notesOf(call, segment),
-                    call.state(),
-                    sourceName,
-                    targetName,
-                    messages));
+        final int count = call.segments().size();
+        while (built.size() < count) {
+            final CallSegmentRow row = new CallSegmentRow(rowId(built.size()), sourceName, targetName, messages);
+            built.add(row);
+            rows.getChildren().add(row);
         }
-        rows.getChildren().setAll(built);
+        if (built.size() > count) {
+            built.subList(count, built.size()).clear();
+            rows.getChildren().remove(count, rows.getChildren().size());
+        }
+        for (int index = 0; index < count; index++) {
+            final CallSegment segment = call.segments().get(index);
+            built.get(index).show(segment, live.get(segment.id()), notesOf(call, segment), call.state());
+        }
         reply.show(call.reply());
         prompt.show(call.sections(), call.sent());
     }
@@ -248,9 +286,12 @@ public final class LiveCallView extends VBox {
         };
     }
 
+    // Changed only when the role changes: a changed class list restyles and re-measures the chip on every tick.
     private static void role(final Label chip, final String role) {
-        chip.getStyleClass().removeAll("chip-warn", "chip-ok", "chip-err", "chip-neutral");
-        chip.getStyleClass().add(role);
+        if (!chip.getStyleClass().contains(role)) {
+            chip.getStyleClass().removeAll("chip-warn", "chip-ok", "chip-err", "chip-neutral");
+            chip.getStyleClass().add(role);
+        }
     }
 
     private static Label chip() {

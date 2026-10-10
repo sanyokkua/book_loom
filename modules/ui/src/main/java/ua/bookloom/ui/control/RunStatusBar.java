@@ -61,9 +61,10 @@ public final class RunStatusBar {
     private final Label fileName = new Label();
     private final Label stateText = new Label();
     private final Label modeText = new Label();
-    private final Label elapsed = new Label();
-    private final Label timeLeft = new Label();
-    private final Label rate = new Label();
+    // The three figures that change every second are their own layout roots, so a tick does not re-measure the bar.
+    private final Label elapsed = new FigureLabel();
+    private final Label timeLeft = new FigureLabel();
+    private final Label rate = new FigureLabel();
     private final Button control = new Button();
     private final Button connection = new Button();
     private final Tooltip connectionTip = new Tooltip();
@@ -256,8 +257,11 @@ public final class RunStatusBar {
                             case UNSTEADY ->
                                 messages.get(MessageKey.SHELL_CONNECTION_UNSTEADY, status.failuresRecently());
                         });
-        connection.getStyleClass().removeAll(HEALTH_CLASSES);
-        connection.getStyleClass().add(health.styleClass());
+        // Changed only when the health changes: a changed class list restyles and re-measures the chip.
+        if (!connection.getStyleClass().contains(health.styleClass())) {
+            connection.getStyleClass().removeAll(HEALTH_CLASSES);
+            connection.getStyleClass().add(health.styleClass());
+        }
         final String model = viewModel.modelText().get();
         connectionTip.setText(messages.get(MessageKey.SHELL_CONNECTION) + "\n"
                 + messages.get(

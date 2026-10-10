@@ -60,12 +60,16 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
         onFx(() -> {});
     }
 
-    // The natural height of what the body scrolls: its sections laid out at the width the body gives them.
-    private double contentHeight(final String row) {
-        final ScrollPane body = (ScrollPane) required(row + "-prompt-body");
+    // How much of the opened body's text lies below its frame: the text area's own scroll pane's content past its
+    // viewport, zero when everything shows.
+    private double hiddenBelow(final String row) {
+        final Node body = required(row + "-prompt-body");
         return ThemeTestSupport.onFx(() -> {
-            final Region sections = (Region) body.getContent();
-            return sections.prefHeight(sections.getWidth());
+            final ScrollPane inner = (ScrollPane) body.lookup(".scroll-pane");
+            return Math.max(
+                    0,
+                    inner.getContent().getLayoutBounds().getHeight()
+                            - inner.getViewportBounds().getHeight());
         });
     }
 
@@ -112,7 +116,9 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
         expand(row, true);
 
         final double body = heightOf(row + "-prompt-body");
-        assertThat(body).isGreaterThanOrEqualTo(Math.min(contentHeight(row), BODY_MAX) - SLACK);
+        assertThat(Math.min(hiddenBelow(row), BODY_MAX - body))
+                .as("either the whole text shows or the body is at its 320 px")
+                .isLessThanOrEqualTo(SLACK);
         assertThat(body).isLessThanOrEqualTo(BODY_MAX + SLACK);
         assertThat(heightOf(row) - rowBefore).isGreaterThanOrEqualTo(body);
         assertThat(heightOf("translating-live-card") - cardBefore).isCloseTo(heightOf(row) - rowBefore, within(SLACK));
@@ -129,7 +135,7 @@ class ContextSectionLayoutTest extends TranslatingScreenTestBase {
 
         expand("translating-live-card-current", true);
 
-        assertThat(contentHeight("translating-live-card-current")).isGreaterThan(BODY_MAX);
+        assertThat(hiddenBelow("translating-live-card-current")).isGreaterThan(0);
         assertThat(heightOf("translating-live-card-current-prompt-body")).isCloseTo(BODY_MAX, within(SLACK));
     }
 

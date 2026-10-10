@@ -10,6 +10,8 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
+import ua.bookloom.api.pipeline.CallSnapshot;
 import ua.bookloom.ui.i18n.MessageKey;
 import ua.bookloom.ui.i18n.Messages;
 import ua.bookloom.ui.state.LiveCalls;
@@ -20,8 +22,13 @@ import ua.bookloom.ui.state.SectionMemory;
  * The live card of the Translating screen: the model call in flight above the call before it. When the run has ended
  * the first block is the last call it made, and before any call the card says that nothing was sent yet.
  *
+ * <p>When a new call pushes the current one back, the two blocks swap roles instead of being drawn again: the block
+ * that showed the call becomes the previous one where it stands (moved below the other without leaving the scene) and
+ * the other block takes the new call. A tick that only moves the clock changes the clock's text and nothing else.
+ *
  * <p>It holds no state of its own; the mirror's calls are observed through a weak listener that this card's field
- * keeps alive, so a card replaced on the next visit is not kept alive by the mirror.
+ * keeps alive, so a card replaced on the next visit is not kept alive by the mirror. Showing logs nothing, as it runs
+ * on every publication.
  */
 @Slf4j
 public final class LiveCallPanel extends VBox {
@@ -29,9 +36,13 @@ public final class LiveCallPanel extends VBox {
     private static final double SPACING = 10;
     private static final Set<RunState> ENDED = Set.of(RunState.COMPLETED, RunState.FAILED, RunState.STOPPED);
 
-    private final LiveCallView current;
-    private final LiveCallView previous;
+    private final String id;
+    private final ObservableValue<String> currentTitle;
+    private final ObservableValue<String> previousTitle;
     private final Label none;
+    // Swapped when the blocks change roles; the scene keeps both nodes throughout.
+    private LiveCallView current;
+    private LiveCallView previous;
     private final ChangeListener<LiveCalls> onCalls = (observed, was, now) -> show(now);
 
     /**
@@ -52,17 +63,14 @@ public final class LiveCallPanel extends VBox {
             final ObservableValue<String> targetName,
             final Messages messages) {
         super(SPACING);
-        Objects.requireNonNull(id, "id");
+        this.id = Objects.requireNonNull(id, "id");
         Objects.requireNonNull(calls, "calls");
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(messages, "messages");
-        current = new LiveCallView(id + "-current", currentTitle(state, messages), sourceName, targetName, messages);
-        previous = new LiveCallView(
-                id + "-previous",
-                Bindings.createStringBinding(() -> messages.get(MessageKey.LIVE_CALL_PREVIOUS)),
-                sourceName,
-                targetName,
-                messages);
+        currentTitle = currentTitle(state, messages);
+        previousTitle = Bindings.createStringBinding(() -> messages.get(MessageKey.LIVE_CALL_PREVIOUS));
+        current = new LiveCallView(id + "-current", currentTitle, sourceName, targetName, messages);
+        previous = new LiveCallView(id + "-previous", previousTitle, sourceName, targetName, messages);
         final Label heading = new Label(messages.get(MessageKey.LIVE_TITLE));
         heading.getStyleClass().add("card-title");
         none = new Label(messages.get(MessageKey.LIVE_CALL_NONE));
@@ -97,13 +105,24 @@ public final class LiveCallPanel extends VBox {
     }
 
     private void show(final LiveCalls calls) {
-        log.debug(
-                "live call panel: current {}, previous {}",
-                calls.current() == null ? "none" : calls.current().callId(),
-                calls.previous() == null ? "none" : calls.previous().callId());
+        swapIfPushedBack(calls.previous());
         none.setVisible(calls.current() == null);
         none.setManaged(calls.current() == null);
         current.show(calls.current(), calls);
         previous.show(calls.previous(), calls);
+    }
+
+    // The call now published as the previous one is the one the current block shows: that block takes the previous
+    // role and moves below the other, which takes the new call. toFront reorders without taking it out of the scene.
+    private void swapIfPushedBack(final @Nullable CallSnapshot pushedBack) {
+        if (pushedBack == null || !current.isShowing(pushedBack.callId())) {
+            return;
+        }
+        final LiveCallView moved = current;
+        current = previous;
+        previous = moved;
+        current.takeRole(id + "-current", currentTitle);
+        previous.takeRole(id + "-previous", previousTitle);
+        moved.toFront();
     }
 }

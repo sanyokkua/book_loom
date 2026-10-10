@@ -15,6 +15,8 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -38,6 +40,10 @@ public final class ContextSection extends CopyablePane {
     private static final double TERM_SHARE = 40;
     private static final String INDENT = "    ";
     private static final String CONTEXT_TEXT = "context-text";
+    private static final double SECTION_SPACING = 10;
+
+    private final VBox sections;
+    private @Nullable ContextSnapshot shown;
 
     /**
      * Builds a hidden, collapsed section; {@link #show(ContextSnapshot)} fills it.
@@ -50,13 +56,21 @@ public final class ContextSection extends CopyablePane {
     }
 
     ContextSection(final String id, final Messages messages, final Consumer<String> clipboard) {
+        this(id, messages, clipboard, new VBox(SECTION_SPACING));
+    }
+
+    private ContextSection(
+            final String id, final Messages messages, final Consumer<String> clipboard, final VBox sections) {
         super(
                 id,
                 messages,
                 clipboard,
                 MessageKey.LIVE_CONTEXT_TIP,
                 MessageKey.LIVE_CONTEXT_COPY,
-                MessageKey.LIVE_CONTEXT_COPY_TIP);
+                MessageKey.LIVE_CONTEXT_COPY_TIP,
+                new ScrollingBody(sections));
+        this.sections = sections;
+        sections.getStyleClass().add("context-sections");
         show(null);
     }
 
@@ -77,11 +91,20 @@ public final class ContextSection extends CopyablePane {
      */
     public void show(final @Nullable ContextSnapshot context, final String title) {
         Objects.requireNonNull(title, "title");
+        shown = context;
         if (context == null) {
             hideSection();
+            sections.getChildren().clear();
             return;
         }
-        display(title, plainText(context), parts(context));
+        showSection(title);
+        sections.getChildren().setAll(parts(context));
+    }
+
+    @Override
+    String plainText() {
+        final ContextSnapshot context = shown;
+        return context == null ? "" : plainOf(context);
     }
 
     private String counts(final ContextSnapshot context) {
@@ -200,7 +223,7 @@ public final class ContextSection extends CopyablePane {
         return cell;
     }
 
-    private String plainText(final ContextSnapshot context) {
+    private String plainOf(final ContextSnapshot context) {
         final StringJoiner text = new StringJoiner("\n\n");
         final String sheet = context.styleSheet();
         section(text, MessageKey.LIVE_CONTEXT_STYLE, sheet.isBlank() ? List.of() : List.of(sheet));
@@ -256,5 +279,23 @@ public final class ContextSection extends CopyablePane {
 
     private String renderingLine(final SnapshotRendering rendering) {
         return messages().get(MessageKey.LIVE_CONTEXT_HIT, rendering.term(), rendering.rendering());
+    }
+
+    private static Label text(final String styleClass, final String value) {
+        final Label label = new Label(value);
+        label.getStyleClass().add(styleClass);
+        label.setWrapText(true);
+        label.setMinHeight(Region.USE_PREF_SIZE);
+        label.setMaxWidth(Double.MAX_VALUE);
+        return label;
+    }
+
+    /** A headed block: the heading above its nodes. */
+    private static VBox block(final String heading, final List<? extends Node> nodes) {
+        final Label title = new Label(heading);
+        title.getStyleClass().add("context-heading");
+        final VBox block = new VBox(SPACING, title);
+        block.getChildren().addAll(nodes);
+        return block;
     }
 }

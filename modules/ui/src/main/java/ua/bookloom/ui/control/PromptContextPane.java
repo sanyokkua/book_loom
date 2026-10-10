@@ -1,13 +1,10 @@
 package ua.bookloom.ui.control;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.function.Consumer;
-import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jspecify.annotations.Nullable;
@@ -23,8 +20,11 @@ import ua.bookloom.ui.i18n.Messages;
  * user message where the prompt switches from one to the other. The fixed instruction text is not here, except when
  * the person switches on the full prompt, which shows the messages exactly as the request carried them; a call that
  * has no parts of its own (a glossary scan, a setup proposal) shows the full prompt always.
+ *
+ * <p>The body is one read-only text, filled only while the section is open, and the same text is what Copy puts on the
+ * clipboard.
  */
-public final class PromptContextPane extends CopyablePane {
+public final class PromptContextPane extends TextBodyPane {
 
     private static final String PLAIN_SEPARATOR = "\n\n";
 
@@ -35,8 +35,8 @@ public final class PromptContextPane extends CopyablePane {
     /**
      * Builds a hidden, collapsed section; {@link #show(List)} fills it.
      *
-     * @param id the section's node id; the body is {@code <id>-body}, Copy is {@code <id>-copy} and each part is
-     *     {@code <id>-part-<n>} with its heading {@code -head} and its text {@code -text}, counted from one
+     * @param id the section's node id; the body is {@code <id>-body}, Copy is {@code <id>-copy} and the full-prompt
+     *     switch is {@code <id>-full}
      * @param messages the catalogue the headings are worded from
      */
     public PromptContextPane(final String id, final Messages messages) {
@@ -57,7 +57,7 @@ public final class PromptContextPane extends CopyablePane {
         full.setOnAction(event -> render());
         final VBox content = (VBox) getContent();
         ((HBox) content.getChildren().getFirst()).getChildren().addFirst(full);
-        show(List.of());
+        render();
     }
 
     /**
@@ -76,9 +76,32 @@ public final class PromptContextPane extends CopyablePane {
      * @param messages the request's messages in wire order, or empty when the call site did not say
      */
     public void show(final List<PromptSection> sections, final List<ChatMessage> messages) {
-        parts = Objects.requireNonNull(sections, "sections");
-        sent = Objects.requireNonNull(messages, "messages");
+        Objects.requireNonNull(sections, "sections");
+        Objects.requireNonNull(messages, "messages");
+        if (sections.equals(parts) && messages.equals(sent)) {
+            return;
+        }
+        parts = sections;
+        sent = messages;
         render();
+    }
+
+    @Override
+    void rename(final String id) {
+        super.rename(id);
+        full.setId(id + "-full");
+    }
+
+    @Override
+    String plainText() {
+        if (sent.isEmpty() && parts.isEmpty()) {
+            return "";
+        }
+        return isShowingSent() ? plainSent() : plain(parts);
+    }
+
+    private boolean isShowingSent() {
+        return !sent.isEmpty() && (full.isSelected() || parts.isEmpty());
     }
 
     private void render() {
@@ -87,74 +110,21 @@ public final class PromptContextPane extends CopyablePane {
         full.setManaged(toggleable);
         if (parts.isEmpty() && sent.isEmpty()) {
             hideSection();
-        } else if (!sent.isEmpty() && (full.isSelected() || parts.isEmpty())) {
-            display(messages().get(MessageKey.LIVE_CALL_PROMPT_FULL_TITLE, sent.size()), plainSent(), sentNodes());
+        } else if (isShowingSent()) {
+            showSection(messages().get(MessageKey.LIVE_CALL_PROMPT_FULL_TITLE, sent.size()));
         } else {
-            display(messages().get(MessageKey.LIVE_CALL_PROMPT, parts.size()), plain(parts), nodes(parts));
+            showSection(messages().get(MessageKey.LIVE_CALL_PROMPT, parts.size()));
         }
-    }
-
-    private List<Node> sentNodes() {
-        final List<Node> nodes = new ArrayList<>();
-        int number = 0;
-        for (final ChatMessage message : sent) {
-            number++;
-            nodes.add(divider(roleKey(message.role())));
-            final Label text = text("context-text", message.content());
-            text.setId(getId() + "-full-message-" + number);
-            nodes.add(text);
-        }
-        return nodes;
+        refill();
     }
 
     private String plainSent() {
         final StringJoiner text = new StringJoiner(PLAIN_SEPARATOR);
         for (final ChatMessage message : sent) {
-            text.add("== " + messages().get(roleKey(message.role())) + " ==");
+            text.add(divider(roleKey(message.role())));
             text.add(message.content());
         }
         return text.toString();
-    }
-
-    private static MessageKey roleKey(final ChatRole role) {
-        return switch (role) {
-            case SYSTEM -> MessageKey.LIVE_CALL_PROMPT_SYSTEM;
-            case USER -> MessageKey.LIVE_CALL_PROMPT_USER;
-            case ASSISTANT -> MessageKey.LIVE_CALL_PROMPT_ASSISTANT;
-        };
-    }
-
-    private List<Node> nodes(final List<PromptSection> sections) {
-        final List<Node> nodes = new ArrayList<>();
-        PromptSection.@Nullable Origin shown = null;
-        int number = 0;
-        for (final PromptSection section : sections) {
-            if (section.origin() != shown) {
-                shown = section.origin();
-                nodes.add(divider(shown));
-            }
-            number++;
-            nodes.add(part(getId() + "-part-" + number, section));
-        }
-        return nodes;
-    }
-
-    private Node divider(final PromptSection.Origin origin) {
-        return divider(originKey(origin));
-    }
-
-    private Node divider(final MessageKey key) {
-        final Label label = new Label(messages().get(key));
-        label.getStyleClass().addAll("context-heading", "context-origin");
-        return label;
-    }
-
-    private static Node part(final String id, final PromptSection section) {
-        final VBox part = block(headingOf(section), List.of(text("context-text", String.join("\n", section.lines()))));
-        part.setId(id);
-        part.getChildren().get(0).setId(id + "-head");
-        part.getChildren().get(1).setId(id + "-text");
-        return part;
     }
 
     private String plain(final List<PromptSection> sections) {
@@ -163,11 +133,23 @@ public final class PromptContextPane extends CopyablePane {
         for (final PromptSection section : sections) {
             if (section.origin() != shown) {
                 shown = section.origin();
-                text.add("== " + messages().get(originKey(shown)) + " ==");
+                text.add(divider(originKey(shown)));
             }
             text.add(headingOf(section) + "\n" + String.join("\n", section.lines()));
         }
         return text.toString();
+    }
+
+    private String divider(final MessageKey key) {
+        return "== " + messages().get(key) + " ==";
+    }
+
+    private static MessageKey roleKey(final ChatRole role) {
+        return switch (role) {
+            case SYSTEM -> MessageKey.LIVE_CALL_PROMPT_SYSTEM;
+            case USER -> MessageKey.LIVE_CALL_PROMPT_USER;
+            case ASSISTANT -> MessageKey.LIVE_CALL_PROMPT_ASSISTANT;
+        };
     }
 
     private static String headingOf(final PromptSection section) {

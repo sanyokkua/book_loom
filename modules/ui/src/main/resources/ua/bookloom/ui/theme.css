@@ -1923,6 +1923,27 @@
     -fx-background-color: transparent;
 }
 
+/* The prompt and reply bodies are one read-only text area: its own scroll pane is a frame only, painted by the body. */
+.text-area.context-body {
+    -fx-control-inner-background: -color-surface-alt;
+    -fx-highlight-fill: -color-primary-soft;
+    -fx-highlight-text-fill: -color-text-strong;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.text-area.context-body .scroll-pane,
+.text-area.context-body .scroll-pane > .viewport,
+.text-area.context-body .scroll-pane > .corner {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.text-area.context-body .content {
+    -fx-background-insets: 0;
+    -fx-padding: 8px 10px 8px 10px;
+}
+
 .context-sections {
     -fx-padding: 8px 10px 8px 10px;
 }

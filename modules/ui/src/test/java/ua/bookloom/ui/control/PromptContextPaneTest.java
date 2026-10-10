@@ -8,7 +8,7 @@ import java.util.Locale;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.Test;
 import ua.bookloom.api.llm.ChatMessage;
 import ua.bookloom.api.llm.ChatRole;
@@ -108,7 +108,28 @@ class PromptContextPaneTest extends FxTestBase {
 
                 Translate from English to Ukrainian.
                 <s id="1">He left.</s>""");
-        assertThat(((Label) pane.lookup("#prompt-full-message-1")).getText()).startsWith("Rules:");
+        ThemeTestSupport.onFx(() -> {
+            pane.setExpanded(true);
+            return null;
+        });
+        assertThat(((TextArea) pane.lookup("#prompt-body")).getText()).startsWith("== System message ==\n\nRules:");
+    }
+
+    // IF Copy read the text the open body holds, THEN a closed section would copy nothing.
+    @Test
+    void copy_sectionClosed_buildsTheTextOnDemand() {
+        final List<String> copied = new ArrayList<>();
+        final PromptContextPane pane = shown(
+                List.of(new PromptSection("summary", "[Book so far]", PromptSection.Origin.USER, List.of("Rain."))),
+                copied);
+
+        ThemeTestSupport.onFx(() -> {
+            ((Button) pane.lookup("#prompt-copy")).fire();
+            return null;
+        });
+
+        assertThat(((TextArea) pane.lookup("#prompt-body")).getText()).isEmpty();
+        assertThat(copied).containsExactly("== User message ==\n\n[Book so far]\nRain.");
     }
 
     @Test

@@ -3,9 +3,16 @@ package ua.bookloom.ui.screen;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.FlowPane;
 import org.jspecify.annotations.Nullable;
@@ -24,6 +31,7 @@ import ua.bookloom.ui.state.BookBriefViewModel;
 import ua.bookloom.ui.state.LiveCalls;
 import ua.bookloom.ui.state.RunState;
 import ua.bookloom.ui.state.SegmentLive;
+import ua.bookloom.ui.state.Throughput;
 
 /** The live panel on the running dashboard: the two model calls as the mirror publishes them. */
 class LiveCallPanelTest extends TranslatingScreenTestBase {
@@ -78,11 +86,14 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         assertThat(labelText(CURRENT + "-clock")).isEqualTo("took 0:07");
         assertThat(labelText(CURRENT + "-tokens")).isEqualTo("tokens: 412 in · 96 out");
         assertThat(isShown(CURRENT + "-reply")).isTrue();
-        assertThat(replyText()).isEqualTo("{\"items\":[]}");
+        assertThat(bodyText(CURRENT + "-reply")).isEmpty();
+        onFx(() -> ((TitledPane) required(CURRENT + "-reply")).setExpanded(true));
+        assertThat(bodyText(CURRENT + "-reply")).isEqualTo("{\"items\":[]}");
     }
 
-    private String replyText() {
-        return textsUnder(required(CURRENT + "-reply-body")).get(0);
+    // The text of a section's body; it is filled only while the section is open.
+    private String bodyText(final String section) {
+        return ThemeTestSupport.onFx(() -> ((TextArea) required(section + "-body")).getText());
     }
 
     private static TokenUsage usage(final int prompt, final int completion) {
@@ -104,21 +115,27 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
 
     // IF the prompt parts came out in another order than they were sent, THEN the person could not trust the context.
     @Test
-    void promptContext_showsEveryPartInTheOrderItWasSent() {
+    void promptContext_opened_showsEveryPartInTheOrderItWasSent() {
         showCalls(waiting(1, 1), null);
 
-        assertThat(labelText(CURRENT + "-prompt-part-1-head")).isEqualTo("Style:");
-        assertThat(labelText(CURRENT + "-prompt-part-2-head")).isEqualTo("[Book so far]");
-        assertThat(labelText(CURRENT + "-prompt-part-3-head")).isEqualTo("[Glossary]");
-        assertThat(labelText(CURRENT + "-prompt-part-4-head")).isEqualTo("[Characters]");
-        assertThat(labelText(CURRENT + "-prompt-part-5-head")).isEqualTo("[Previous pairs]");
-        assertThat(labelText(CURRENT + "-prompt-part-5-text")).isEqualTo("Rain.\nДощ.");
-        assertThat(textsUnder(required(CURRENT + "-prompt-body")).stream()
-                        .distinct()
-                        .toList()
-                        .subList(0, 3))
-                .containsExactly("System message", "Style:", "Literary, warm.");
+        onFx(() -> ((TitledPane) required(CURRENT + "-prompt")).setExpanded(true));
+
+        assertThat(bodyText(CURRENT + "-prompt"))
+                .startsWith("== System message ==\n\nStyle:\nLiterary, warm.\n\n== User message ==\n\n[Book so far]")
+                .containsSubsequence("[Glossary]", "[Characters]", "[Previous pairs]\nRain.\nДощ.");
         assertThat(((TitledPane) required(CURRENT + "-prompt")).getText()).isEqualTo("Prompt context · 5 parts");
+    }
+
+    // IF a closed section held its text, THEN every call would lay out a prompt nobody opened.
+    @Test
+    void promptContext_closed_holdsNoTextUntilOpenedAndEmptiesWhenClosed() {
+        showCalls(waiting(1, 1), null);
+        assertThat(bodyText(CURRENT + "-prompt")).isEmpty();
+
+        onFx(() -> ((TitledPane) required(CURRENT + "-prompt")).setExpanded(true));
+        onFx(() -> ((TitledPane) required(CURRENT + "-prompt")).setExpanded(false));
+
+        assertThat(bodyText(CURRENT + "-prompt")).isEmpty();
     }
 
     // IF a new call replaced the old one outright, THEN what the person was reading would vanish.
@@ -216,5 +233,113 @@ class LiveCallPanelTest extends TranslatingScreenTestBase {
         WaitForAsyncUtils.waitForFxEvents();
 
         assertThat(labelText(CURRENT + "-clock")).isEqualTo("waiting 1:15");
+    }
+
+    // IF a tick of the call's clock re-measured the window, THEN a long run would stutter on every second; only the
+    // clock lays itself out again.
+    @Test
+    void clockTick_laysOutOnlyTheClock() {
+        mirror().publishRunStarted("Frankenstein.epub", null);
+        publish(RunState.RUNNING);
+        showCalls(waiting(1, 2), null);
+        interact(() -> {});
+
+        final List<String> relaidOut = relaidOutOn(
+                mirror().live().calls(),
+                () -> mirror().live()
+                        .publishCalls(new LiveCalls(
+                                waiting(1, 2), null, Map.of(), LiveCallFixtures.STARTED.plusSeconds(13))));
+
+        assertThat(labelText(CURRENT + "-clock")).isEqualTo("waiting 0:13");
+        assertThat(relaidOut).containsExactly(CURRENT + "-clock");
+    }
+
+    // IF a tick of the pace figures re-measured the window, THEN the title bar and the screen would be laid out again
+    // every second; only the figures that changed lay themselves out.
+    @Test
+    void paceTick_laysOutOnlyTheFigures() {
+        mirror().publishRunStarted("Frankenstein.epub", null);
+        publish(RunState.RUNNING);
+        showCalls(waiting(1, 2), null);
+        mirror().live().publishThroughput(pace(80, 62, 31));
+        interact(() -> {});
+
+        final List<String> relaidOut =
+                relaidOutOn(mirror().live().throughput(), () -> mirror().live().publishThroughput(pace(81, 61, 32)));
+
+        assertThat(labelText("shell-run-elapsed")).isEqualTo("1h 21m elapsed");
+        assertThat(relaidOut)
+                .containsExactlyInAnyOrder(
+                        "shell-run-elapsed", "shell-run-left", "shell-run-rate", "translating-pace-text");
+    }
+
+    private static Throughput pace(final int elapsedMinutes, final int leftMinutes, final double rate) {
+        return new Throughput(
+                rate, false, Duration.ofMinutes(leftMinutes), Duration.ofMinutes(elapsedMinutes), rate - 3);
+    }
+
+    // The ids of every node of the window that needs its own layout pass right after the publication reached the
+    // screen, read before the next pulse lays them out.
+    // A change listener, as the screen's own change listeners run after every invalidation listener and before it.
+    private <T> List<String> relaidOutOn(final ObservableValue<T> published, final Runnable publication) {
+        final Parent root = required("translating-screen").getScene().getRoot();
+        final List<String> found = new ArrayList<>();
+        final ChangeListener<T> probe = (observed, was, now) -> found.addAll(needingLayout(root));
+        onFx(() -> published.addListener(probe));
+        publication.run();
+        WaitForAsyncUtils.waitForFxEvents();
+        onFx(() -> published.removeListener(probe));
+        return found;
+    }
+
+    private static List<String> needingLayout(final Node node) {
+        final Stream<String> own = node instanceof Parent parent && parent.isNeedsLayout()
+                ? Stream.of(String.valueOf(parent.getId()))
+                : Stream.empty();
+        final Stream<String> below = node instanceof Parent parent
+                ? parent.getChildrenUnmodifiable().stream().flatMap(child -> needingLayout(child).stream())
+                : Stream.empty();
+        return Stream.concat(own, below).toList();
+    }
+
+    // IF an update rebuilt the rows, THEN a person scrolling or selecting in one would lose it on every decision.
+    @Test
+    void segmentUpdate_keepsTheRowsAndUpdatesThemInPlace() {
+        showCalls(waiting(1, 2), null);
+        final Node row = required(CURRENT + "-segment-1");
+        final Node target = required(CURRENT + "-segment-1-target-text");
+
+        mirror().live()
+                .publishCalls(LiveCallFixtures.calls(
+                        LiveCallFixtures.answered(waiting(1, 2), "{}"),
+                        null,
+                        Map.of("s-1-1", new SegmentLive("Дощ лив стіною.", 0.93, SegmentPath.DRAFT))));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(required(CURRENT + "-segment-1")).isSameAs(row);
+        assertThat(required(CURRENT + "-segment-1-target-text")).isSameAs(target);
+        assertThat(labelText(CURRENT + "-segment-1-target-text")).isEqualTo("Дощ лив стіною.");
+        assertThat(chipTexts(CURRENT + "-segment-1-chips")).containsExactly("judge 0.93", "auto-accepted");
+    }
+
+    // IF a new call rebuilt both blocks, THEN the call the person was reading would be drawn again from scratch; the
+    // block that showed it becomes the previous one, and the other block takes the new call.
+    @Test
+    void newCall_swapsTheBlocksInsteadOfRebuildingThem() {
+        showCalls(waiting(1, 2), null);
+        final Node block = required(CURRENT);
+        final Node row = required(CURRENT + "-segment-1");
+
+        mirror().live()
+                .publishCalls(LiveCallFixtures.calls(waiting(2, 3), LiveCallFixtures.answered(waiting(1, 2), "{}")));
+        WaitForAsyncUtils.waitForFxEvents();
+
+        assertThat(required(PREVIOUS)).isSameAs(block);
+        assertThat(required(PREVIOUS + "-segment-1")).isSameAs(row);
+        assertThat(labelText(PREVIOUS + "-state")).isEqualTo("Answered");
+        assertThat(labelText(CURRENT + "-caption")).isEqualTo("3 segments sent to the model");
+        assertThat(ThemeTestSupport.onFx(
+                        () -> block.getParent().getChildrenUnmodifiable().indexOf(block)))
+                .isEqualTo(3);
     }
 }

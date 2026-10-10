@@ -22,7 +22,9 @@ import org.jspecify.annotations.Nullable;
  * content is briefly shorter (a live row hidden between two segments, a card swapped for another), the pane is clamped
  * to its new end and stays there when the content grows back, so the view lands somewhere else. This class remembers
  * where the person put the view — every change of the value while the content keeps its height is theirs — and puts it
- * back whenever the content's height or the viewport changes. Its listeners run on every scroll, so they log nothing; a restore that moves the view logs one DEBUG line.
+ * back whenever the content's height or the viewport changes. Its listeners run on every scroll and on every change of
+ * the content's height, so they log nothing (the logging rule forbids lines in such listeners); only a reset and a
+ * focus that went away are logged.
  *
  * <p>One change of the value is not the person's although the height stays: when the focused control goes away (a
  * banner's action hidden once the model answers, a row's control replaced), JavaFX moves the focus to the next control
@@ -70,7 +72,7 @@ public final class ScrollAnchor {
         Objects.requireNonNull(pane, "pane");
         final ScrollAnchor anchor = new ScrollAnchor(pane, nanos);
         pane.vvalueProperty().addListener(observed -> anchor.onValue());
-        pane.viewportBoundsProperty().addListener(observed -> anchor.restoreAfterResize("viewport changed"));
+        pane.viewportBoundsProperty().addListener(observed -> anchor.restoreAfterResize());
         pane.skinProperty().addListener((observed, was, now) -> anchor.attach());
         pane.sceneProperty().addListener((observed, was, now) -> anchor.watchFocus(now));
         anchor.attach();
@@ -147,18 +149,17 @@ public final class ScrollAnchor {
     private void onBounds(final Bounds now) {
         if (now.getHeight() != knownHeight) {
             knownHeight = now.getHeight();
-            restoreAfterResize("content height changed");
+            restoreAfterResize();
         }
     }
 
     // A change of the view's size is no reason to move it while the person is scrolling it.
-    private void restoreAfterResize(final String reason) {
+    private void restoreAfterResize() {
         if (isScrolling()) {
-            log.debug("{} while {} is being scrolled: keeping the view where the person has it", reason, pane.getId());
             adoptValue();
             return;
         }
-        restore(reason);
+        restore();
     }
 
     private void onValue() {
@@ -166,7 +167,7 @@ public final class ScrollAnchor {
             return;
         }
         if (holding) {
-            restore("focus went away");
+            restore();
             return;
         }
         final Node content = pane.getContent();
@@ -182,22 +183,18 @@ public final class ScrollAnchor {
         offset = range <= 0 || overflow <= 0 ? 0 : (pane.getVvalue() - pane.getVmin()) / range * overflow;
     }
 
-    private void restore(final String reason) {
+    private void restore() {
         final double overflow = overflow();
         final double range = pane.getVmax() - pane.getVmin();
         if (overflow <= 0 || range <= 0) {
             return;
         }
-        final double before = pane.getVvalue();
         final double target = pane.getVmin() + Math.clamp(offset / overflow, 0, 1) * range;
         restoring = true;
         try {
             pane.setVvalue(target);
         } finally {
             restoring = false;
-        }
-        if (before != pane.getVvalue()) {
-            log.debug("{} of {}: view restored from {} to {}", reason, pane.getId(), before, pane.getVvalue());
         }
     }
 

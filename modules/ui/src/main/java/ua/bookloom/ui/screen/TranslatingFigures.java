@@ -19,6 +19,7 @@ import javafx.scene.layout.VBox;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import ua.bookloom.ui.control.DurationText;
+import ua.bookloom.ui.control.FigureLabel;
 import ua.bookloom.ui.control.Motion;
 import ua.bookloom.ui.control.StatTile;
 import ua.bookloom.ui.control.Tips;
@@ -63,7 +64,9 @@ final class TranslatingFigures {
                 mirror.sections(),
                 mirror.chunk(),
                 mirror.chunks());
-        final Label pace = boundLabel(
+        // The pace changes on every tick, so its label is its own layout root and the card is not re-measured.
+        final Label pace = bind(
+                new FigureLabel(),
                 "translating-pace-text",
                 "muted",
                 () -> paceText(mirror.live().throughput().get(), messages),
@@ -229,7 +232,15 @@ final class TranslatingFigures {
 
     static Label boundLabel(
             final String id, final String styleClass, final Callable<String> text, final Observable... sources) {
-        final Label label = new Label();
+        return bind(new Label(), id, styleClass, text, sources);
+    }
+
+    private static Label bind(
+            final Label label,
+            final String id,
+            final String styleClass,
+            final Callable<String> text,
+            final Observable... sources) {
         label.setId(id);
         label.getStyleClass().add(styleClass);
         label.textProperty().bind(Bindings.createStringBinding(text, sources));

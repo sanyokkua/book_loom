@@ -63,6 +63,10 @@ final class PriorityRow extends HBox {
      * @param shown {@code true} if the owner wants it shown
      */
     void want(final Node part, final boolean shown) {
+        // The owner repeats its wish on every refresh; only a change of it may lay the row out again.
+        if (Boolean.valueOf(shown).equals(wanted.get(part))) {
+            return;
+        }
         wanted.put(part, shown);
         apply(part);
         requestLayout();
